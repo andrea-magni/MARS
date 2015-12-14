@@ -1,0 +1,114 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 505
+  ClientWidth = 751
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+  object StringGrid1: TStringGrid
+    Align = Client
+    Margins.Left = 10.000000000000000000
+    Margins.Top = 10.000000000000000000
+    Margins.Right = 100.000000000000000000
+    Margins.Bottom = 10.000000000000000000
+    Size.Width = 641.000000000000000000
+    Size.Height = 435.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 4
+    RowCount = 42
+    RowHeight = 21.000000000000000000
+    Viewport.Width = 621.000000000000000000
+    Viewport.Height = 394.000000000000000000
+  end
+  object Layout1: TLayout
+    Align = Top
+    Size.Width = 751.000000000000000000
+    Size.Height = 50.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 18
+    object BindNavigator1: TBindNavigator
+      Position.X = 8.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 234.000000000000000000
+      Size.Height = 25.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      DataSource = BindSourceDB2
+      VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast, nbInsert, nbDelete, nbEdit, nbPost, nbCancel]
+      xRadius = 4.000000000000000000
+      yRadius = 4.000000000000000000
+    end
+    object ButtonPOST: TButton
+      Position.X = 264.000000000000000000
+      Position.Y = 10.000000000000000000
+      Size.Width = 121.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      Text = 'POST to Server'
+      OnClick = ButtonPOSTClick
+    end
+  end
+  object MARSClient1: TMARSClient
+    MARSEngineURL = 'http://localhost:8080/rest'
+    ConnectTimeout = 0
+    ReadTimeout = -1
+    Left = 688
+    Top = 56
+  end
+  object MARSClientApplication1: TMARSClientApplication
+    DefaultMediaType = 'application/json'
+    AppName = 'default'
+    Client = MARSClient1
+    Left = 688
+    Top = 120
+  end
+  object MARSFDResource1: TMARSFDResource
+    Application = MARSClientApplication1
+    Resource = 'maindata'
+    ResourceDataSets = <
+      item
+        DataSetName = 'employee'
+        DataSet = employee1
+        SendDelta = True
+        Synchronize = True
+      end>
+    Left = 688
+    Top = 184
+  end
+  object BindingsList1: TBindingsList
+    Methods = <>
+    OutputConverters = <>
+    Left = 692
+    Top = 373
+    object LinkGridToDataSourceBindSourceDB2: TLinkGridToDataSource
+      Category = 'Quick Bindings'
+      DataSource = BindSourceDB2
+      GridControl = StringGrid1
+      Columns = <>
+    end
+  end
+  object employee1: TFDMemTable
+    ActiveStoredUsage = []
+    Active = True
+    CachedUpdates = True
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.CheckRequired = False
+    Left = 688
+    Top = 248
+  end
+  object BindSourceDB2: TBindSourceDB
+    DataSet = employee1
+    ScopeMappings = <>
+    Left = 688
+    Top = 320
+  end
+end

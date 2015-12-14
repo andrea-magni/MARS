@@ -1,0 +1,10 @@
+<div class="row" ng-controller="LoginController as loginCtrl">
+	<div class="col-md-4">
+		<login-form ng-hide="loginCtrl.isAuthenticated()"></login-form>
+	</div>
+	<div class="col-md-4">
+		<user-info ng-show="loginCtrl.isAuthenticated()"></user-info>
+	</div>
+</div>	
+
+<todo-items-list ng-show="todo.isAuthenticated()"></todo-items-list>

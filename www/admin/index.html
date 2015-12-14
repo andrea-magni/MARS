@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta charset="utf-8">
+		<title>MARS Admin console</title>
+		<meta name="generator" content="Bootply" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+		<!--[if lt IE 9]>
+			<script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+		<link href="css/styles.css" rel="stylesheet">
+</head>
+
+<body>
+
+  <!-- Header -->
+  <div id="top-nav" class="navbar navbar-inverse navbar-static-top">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="#">MARS Admin console</a>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-right">
+          
+          <li class="dropdown">
+            <a class="dropdown-toggle" role="button" data-toggle="dropdown" href="#"><i class="glyphicon glyphicon-user"></i> Admin <span class="caret"></span></a>
+            <ul id="g-account-menu" class="dropdown-menu" role="menu">
+              <li><a href="#">My Profile</a></li>
+            </ul>
+          </li>
+          <li><a href="#"><i class="glyphicon glyphicon-lock"></i> Logout</a></li>
+        </ul>
+      </div>
+    </div><!-- /container -->
+  </div>
+  <!-- /Header -->
+
+  <!-- Main -->
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-3">
+          <!-- Left column -->
+
+          <a href="javascript:set_mode_diagnostics();"><i class="glyphicon glyphicon-eye-open"></i> Diagnostics</a>
+          
+          <hr/>
+          
+          <a href="javascript:set_mode_resources();"><i class="glyphicon glyphicon-link"></i> Resources</a>  
+          
+          <hr/>
+                
+      </div><!-- /col-3 -->
+      
+
+<!-- ################################ -->
+      <div class="col-sm-9">
+        <div class="row resources">
+          <div class="col-md-12">
+                         
+            <span class="title"><strong><i class="glyphicon glyphicon-plane"></i> Resources</strong></span>
+            <a href="javascript:update_diagnostics()"><i class="glyphicon glyphicon-refresh pull-right"></i></a>            
+
+            <div id="app_resources"></div>
+            <hr/>
+                  
+          </div> 
+        </div><!--/row-->                    
+
+<!-- ################################ -->
+
+        <div class="row diagnostics">
+                         
+                <!-- center left-->	
+          <div class="col-md-6">
+            <span class="title"><strong><i class="glyphicon glyphicon-plane"></i> Engine</strong></span>
+            <a href="javascript:update_diagnostics()"><i class="glyphicon glyphicon-refresh pull-right"></i></a>            
+
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Item</th><th>Value</th>
+                </tr>
+              </thead>
+              <tbody class="engine_table">
+                <tr>
+                  <td>Request count</td><td class="text-center"><span class="engineRequestCount"></span></td>
+                </tr>
+                <tr>
+                  <td>Last request time</td><td class="text-center"><span class="engineLastRequestTime"></span></td>
+                </tr>
+                <tr>
+                  <td>Sessions (all)</td><td class="text-center"><span class="engineSessionCount"></span></td>
+                </tr>
+                <tr>
+                  <td>Sessions (active)</td><td class="text-center"><span class="engineActiveSessionCount"></span></td>
+                </tr>  
+                <tr>
+                  <td>Last session start</td><td class="text-center"><span class="engineLastSessionStart"></span></td>
+                </tr>  
+                <tr> 
+                  <td>Last session end</td><td class="text-center"><span class="engineLastSessionEnd"></span></td>
+                </tr>  
+                </tr>
+              </tbody>
+            </table>
+
+            <hr/>
+                  
+          </div><!--/col-->
+          
+          <div class="col-md-6">
+            <strong class="title"><i class="glyphicon glyphicon-leaf"></i> Applications</strong>
+            <a href="javascript:update_diagnostics()"><i class="glyphicon glyphicon-refresh pull-right"></i></a>
+
+            <table class="table table-striped">
+              <thead>
+                <tr><th>Name</th><th>Requests</th><th>Avg. Time/req.</th><th>Last Req. time</th></tr>
+              </thead>
+              <tbody class="app_table">
+              </tbody>
+            </table>
+                  
+            <hr/>
+                  
+    		  </div><!--/col-span-6-->
+         
+        </div><!--/row-->
+          
+        <div class="row diagnostics">
+          <div class="col-md-12">
+
+            <strong class="title"><i class="glyphicon glyphicon-list"></i> Sessions</strong>
+            <a href="javascript:update_diagnostics()"><i class="glyphicon glyphicon-refresh pull-right"></i></a>          
+
+            <table class="table table-striped">
+              <thead>
+                <tr><th>Token</th><th>StartTime</th><th>UserName</th><th>Authenticated</th><th>Roles</th></tr>
+              </thead>
+              <tbody class="session_table">
+              </tbody>
+            </table>
+
+            <hr/>
+          </div>
+        </div>
+
+      </div><!--/col-span-9-->
+    </div> <!-- row -->
+
+
+  </div><!-- container fluid -->
+  <!-- /Main -->
+
+  <footer class="text-center">
+    <strong>MARS</strong> is the <strong>Wi</strong>ntech <strong>R</strong>est <strong>L</strong>ibrary
+  </footer>
+  
+  <!-- script references -->
+  <script src="js/jquery.min.js"></script>
+  <script src="/bootstrap/js/bootstrap.min.js"></script>  
+  <script src="js/MARS_admin.js"></script>
+
+  <script type="text/javascript">
+    $(
+      function(){
+        set_mode_diagnostics();
+      }
+    );
+  </script>
+
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+body {
+	margin: 2em;
+}
+
+.todo-text {
+	font-weight: bold;
+}
+
+.todo-details {
+	font-size: 75%;
+	
+}

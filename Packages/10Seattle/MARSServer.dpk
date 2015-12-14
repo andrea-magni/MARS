@@ -1,0 +1,90 @@
+package MARSServer;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS REST Library'}
+{$LIBSUFFIX '230'}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  inet,
+  xmlrtl,
+  DbxCommonDriver,
+  dbrtl,
+  fmx,
+  FireDAC,
+  FireDACCommonDriver,
+  FireDACCommon,
+  fmxFireDAC,
+  dsnap,
+  DataSnapFireDAC,
+  IndySystem,
+  IndyProtocols,
+  IndyCore;
+
+contains
+  MARS.Core.Application in '..\..\Source\Core\MARS.Core.Application.pas',
+  MARS.Core.Attributes in '..\..\Source\Core\MARS.Core.Attributes.pas',
+  MARS.Core.Cache in '..\..\Source\Core\MARS.Core.Cache.pas',
+  MARS.Core.Classes in '..\..\Source\Core\MARS.Core.Classes.pas',
+  MARS.Core.Declarations in '..\..\Source\Core\MARS.Core.Declarations.pas',
+  MARS.Core.Engine in '..\..\Source\Core\MARS.Core.Engine.pas',
+  MARS.Core.Exceptions in '..\..\Source\Core\MARS.Core.Exceptions.pas',
+  MARS.Core.JSON in '..\..\Source\Core\MARS.Core.JSON.pas',
+  MARS.Core.MediaType in '..\..\Source\Core\MARS.Core.MediaType.pas',
+  MARS.Core.MessageBodyReader in '..\..\Source\Core\MARS.Core.MessageBodyReader.pas',
+  MARS.Core.MessageBodyWriter in '..\..\Source\Core\MARS.Core.MessageBodyWriter.pas',
+  MARS.Core.MessageBodyWriters in '..\..\Source\Core\MARS.Core.MessageBodyWriters.pas',
+  MARS.Core.Registry in '..\..\Source\Core\MARS.Core.Registry.pas',
+  MARS.Core.Request in '..\..\Source\Core\MARS.Core.Request.pas',
+  MARS.Core.Response in '..\..\Source\Core\MARS.Core.Response.pas',
+  MARS.Core.Singleton in '..\..\Source\Core\MARS.Core.Singleton.pas',
+  MARS.Core.Token in '..\..\Source\Core\MARS.Core.Token.pas',
+  MARS.Core.Token.Resource in '..\..\Source\Core\MARS.Core.Token.Resource.pas',
+  MARS.Core.URL in '..\..\Source\Core\MARS.Core.URL.pas',
+  MARS.Core.Utils in '..\..\Source\Core\MARS.Core.Utils.pas',
+  MARS.Rtti.Utils in '..\..\Source\Core\MARS.Rtti.Utils.pas',
+  MARS.Data.MessageBodyWriters in '..\..\Source\Data\MARS.Data.MessageBodyWriters.pas',
+  MARS.Data.Utils in '..\..\Source\Data\MARS.Data.Utils.pas',
+  MARS.Data.FireDAC.DataModule in '..\..\Source\Data\FireDAC\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule},
+  MARS.Data.FireDAC.MessageBodyWriters in '..\..\Source\Data\FireDAC\MARS.Data.FireDAC.MessageBodyWriters.pas',
+  MARS.Data.FireDAC in '..\..\Source\Data\FireDAC\MARS.Data.FireDAC.pas',
+  MARS.Data.FireDAC.Utils in '..\..\Source\Data\FireDAC\MARS.Data.FireDAC.Utils.pas',
+  MARS.Diagnostics.Manager in '..\..\Source\Extensions\MARS.Diagnostics.Manager.pas',
+  MARS.Diagnostics.Resources in '..\..\Source\Extensions\MARS.Diagnostics.Resources.pas',
+  MARS.Stateful.Dictionary in '..\..\Source\Extensions\MARS.Stateful.Dictionary.pas',
+  MARS.Stateful.WrappedResource in '..\..\Source\Extensions\MARS.Stateful.WrappedResource.pas',
+  MARS.WebServer.Resources in '..\..\Source\Extensions\MARS.WebServer.Resources.pas',
+  MARS.Messaging.Dispatcher in '..\..\Source\Messaging\MARS.Messaging.Dispatcher.pas',
+  MARS.Messaging.Message in '..\..\Source\Messaging\MARS.Messaging.Message.pas',
+  MARS.Messaging.Queue in '..\..\Source\Messaging\MARS.Messaging.Queue.pas',
+  MARS.Messaging.Resource in '..\..\Source\Messaging\MARS.Messaging.Resource.pas',
+  MARS.Messaging.Subscriber in '..\..\Source\Messaging\MARS.Messaging.Subscriber.pas';
+
+end.
+

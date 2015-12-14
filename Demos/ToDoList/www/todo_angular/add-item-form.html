@@ -1,0 +1,10 @@
+<form name="addItemForm" ng-submit="todo.addItem()" novalidate>
+
+	<fieldset class="form-group">
+		<input class="form-control" type="text" ng-model="todo.itemText" title="Text" placeholder="Item Text" required>
+	</fieldset>
+
+	<fieldset class="form-group">
+		<input type="submit" ng-disabled="addItemForm.$invalid" class="btn btn-primary pull-right" value="Add Item" />
+	</fieldset>
+</form>

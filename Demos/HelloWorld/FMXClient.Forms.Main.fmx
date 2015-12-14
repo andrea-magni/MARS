@@ -1,0 +1,192 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 480
+  ClientWidth = 640
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object ToolBar1: TToolBar
+    Size.Width = 640.000000000000000000
+    Size.Height = 40.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+  end
+  object MainTabControl: TTabControl
+    Align = Client
+    Size.Width = 640.000000000000000000
+    Size.Height = 440.000000000000000000
+    Size.PlatformDefault = False
+    TabIndex = 0
+    TabOrder = 1
+    TabPosition = PlatformDefault
+    object HelloWorldTabItem: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = True
+      Size.Width = 123.000000000000000000
+      Size.Height = 24.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'HelloWorldTabItem'
+      object Memo1: TMemo
+        Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+        DataDetectorTypes = []
+        Align = Client
+        Size.Width = 640.000000000000000000
+        Size.Height = 366.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Viewport.Width = 636.000000000000000000
+        Viewport.Height = 362.000000000000000000
+      end
+      object Layout1: TLayout
+        Align = Top
+        Size.Width = 640.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+        object Execute: TButton
+          Align = Center
+          TabOrder = 0
+          Text = 'Execute'
+          OnClick = ExecuteClick
+        end
+        object Button3: TButton
+          Position.X = 456.000000000000000000
+          Position.Y = 16.000000000000000000
+          TabOrder = 1
+          Text = 'Button3'
+        end
+      end
+    end
+    object StringDemosTabItem: TTabItem
+      CustomIcon = <
+        item
+        end>
+      IsSelected = False
+      Size.Width = 131.000000000000000000
+      Size.Height = 24.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Text = 'StringDemosTabItem'
+      object Layout2: TLayout
+        Align = Top
+        Size.Width = 640.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 1
+        object Edit1: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 1
+          Text = 'This is a test!'
+          Position.X = 56.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 137.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          object Label1: TLabel
+            AutoSize = True
+            Position.X = -35.000000000000000000
+            Position.Y = 2.000000000000000000
+            Size.Width = 34.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'Input:'
+          end
+        end
+        object Button1: TButton
+          Position.X = 224.000000000000000000
+          Position.Y = 16.000000000000000000
+          TabOrder = 2
+          Text = 'Echo'
+          OnClick = Button1Click
+        end
+        object Edit2: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 0
+          Position.X = 392.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 137.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          object Label2: TLabel
+            AutoSize = True
+            Position.X = -50.000000000000000000
+            Position.Y = 2.000000000000000000
+            Size.Width = 44.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'Output:'
+          end
+        end
+      end
+      object Layout3: TLayout
+        Align = Top
+        Position.Y = 50.000000000000000000
+        Size.Width = 640.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        object Edit3: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 1
+          Text = 'This is a test!'
+          Position.X = 56.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 137.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          object Label3: TLabel
+            AutoSize = True
+            Position.X = -35.000000000000000000
+            Position.Y = 2.000000000000000000
+            Size.Width = 34.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'Input:'
+          end
+        end
+        object Button2: TButton
+          Position.X = 224.000000000000000000
+          Position.Y = 16.000000000000000000
+          TabOrder = 2
+          Text = 'Reverse'
+          OnClick = Button2Click
+        end
+        object Edit4: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 0
+          Position.X = 392.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 137.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          object Label4: TLabel
+            AutoSize = True
+            Position.X = -50.000000000000000000
+            Position.Y = 2.000000000000000000
+            Size.Width = 44.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'Output:'
+          end
+        end
+      end
+      object ButtonPost: TButton
+        Position.X = 24.000000000000000000
+        Position.Y = 120.000000000000000000
+        TabOrder = 2
+        Text = 'ButtonPost'
+        OnClick = ButtonPostClick
+      end
+    end
+  end
+end

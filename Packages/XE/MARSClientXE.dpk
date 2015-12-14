@@ -1,0 +1,57 @@
+package MARSClientXE;
+
+{$R *.res}
+{$R 'MARSClient.dres'}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DESCRIPTION 'MARS Client Library'}
+{$DESIGNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  soaprtl,
+  DbxCommonDriver,
+  IndySystem,
+  IndyProtocols,
+  IndyCore;
+
+contains
+  MARS.Client.Application in '..\..\Source\Client\MARS.Client.Application.pas',
+  MARS.Client.Client in '..\..\Source\Client\MARS.Client.Client.pas',
+  MARS.Client.CustomResource.Editor in '..\..\Source\Client\MARS.Client.CustomResource.Editor.pas',
+  MARS.Client.CustomResource in '..\..\Source\Client\MARS.Client.CustomResource.pas',
+  MARS.Client.Messaging.Resource in '..\..\Source\Client\MARS.Client.Messaging.Resource.pas',
+  MARS.Client.Resource.JSON in '..\..\Source\Client\MARS.Client.Resource.JSON.pas',
+  MARS.Client.Resource in '..\..\Source\Client\MARS.Client.Resource.pas',
+  MARS.Client.Resource.Stream in '..\..\Source\Client\MARS.Client.Resource.Stream.pas',
+  MARS.Client.SubResource.JSON in '..\..\Source\Client\MARS.Client.SubResource.JSON.pas',
+  MARS.Client.SubResource in '..\..\Source\Client\MARS.Client.SubResource.pas',
+  MARS.Client.SubResource.Stream in '..\..\Source\Client\MARS.Client.SubResource.Stream.pas',
+  MARS.Client.Token in '..\..\Source\Client\MARS.Client.Token.pas',
+  MARS.Client.Utils in '..\..\Source\Client\MARS.Client.Utils.pas',
+  MARS.Core.JSON in '..\..\Source\Core\MARS.Core.JSON.pas',
+  MARS.Core.URL in '..\..\Source\Core\MARS.Core.URL.pas',
+  MARS.Core.Utils in '..\..\Source\Core\MARS.Core.Utils.pas',
+  MARS.Rtti.Utils in '..\..\Source\Core\MARS.Rtti.Utils.pas';
+
+end.

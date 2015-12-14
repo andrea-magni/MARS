@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MARSTemplateServer.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSTemplateClient.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MARSTemplateServer">
+        <MSBuild Projects="MARSTemplateServer.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServer:Clean">
+        <MSBuild Projects="MARSTemplateServer.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServer:Make">
+        <MSBuild Projects="MARSTemplateServer.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateClient">
+        <MSBuild Projects="MARSTemplateClient.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateClient:Clean">
+        <MSBuild Projects="MARSTemplateClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateClient:Make">
+        <MSBuild Projects="MARSTemplateClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MARSTemplateServer;MARSTemplateClient"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MARSTemplateServer:Clean;MARSTemplateClient:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MARSTemplateServer:Make;MARSTemplateClient:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
