@@ -9,7 +9,7 @@ unit Server.Resources;
 interface
 
 uses
-  SysUtils, Classes, DB
+  SysUtils, Classes, DB, HttpApp
 
   , FireDAC.Comp.Client
 
@@ -39,6 +39,9 @@ type
 
     [GET, Path('/pdf'), Produces('application/pdf')]
     function PdfDocument: TStream;
+
+    [GET, Path('/stream'), Produces(TMediaType.APPLICATION_OCTET_STREAM)]
+    function GetStream([Context] Response: TWebResponse): TStream;
 
     [GET, Path('/dataset1')
     , Produces(TMediaType.APPLICATION_XML)
@@ -97,6 +100,12 @@ end;
 function THelloWorldResource.DataSet3: TDataset;
 begin
   Result := DataSet2;
+end;
+
+function THelloWorldResource.GetStream(Response: TWebResponse): TStream;
+begin
+  Result := TFileStream.Create(ParamStr(0), fmOpenRead or fmShareDenyNone);
+  Response.CustomHeaders.Values['Content-Disposition'] := 'attachment; filename="ThisIsMyServer.exe"';
 end;
 
 function THelloWorldResource.HtmlDocument: string;
