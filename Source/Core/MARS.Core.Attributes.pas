@@ -173,6 +173,16 @@ type
     property ContentType: string read FContentType;
   end;
 
+  CustomHeaderAttribute = class(TCustomAttribute)
+  private
+    FHeaderName: string;
+    FValue: string;
+  public
+    constructor Create(const AHeaderName, AValue: string);
+    property HeaderName: string read FHeaderName;
+    property Value: string read FValue;
+  end;
+
   RestAttribute = class(TCustomAttribute)
   end;
 
@@ -341,6 +351,15 @@ end;
 function HEADAttribute.Matches(const ARequest: TWebRequest): Boolean;
 begin
   Result := ARequest.MethodType = TMethodType.mtHead;
+end;
+
+{ CustomHeaderAttribute }
+
+constructor CustomHeaderAttribute.Create(const AHeaderName, AValue: string);
+begin
+  inherited Create;
+  FHeaderName := AHeaderName;
+  FValue := AValue;
 end;
 
 end.

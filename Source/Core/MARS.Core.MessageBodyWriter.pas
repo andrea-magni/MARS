@@ -22,26 +22,11 @@ uses
   ;
 
 type
-  IMessageBodyWriterOld = interface
-  ['{C23E02D3-489B-4DEE-B6AF-952504BD71AB}']
-    procedure WriteTo(AEntityStream: TStream);
-  end;
-
   IMessageBodyWriter = interface
   ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
     procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
       AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
-//    function AsObject: TObject;
   end;
-
-  {
-  TMBWriter = class
-    function IsWritable(AType: TRttiType; AAttributes: TAttributeArray; AMediaType: TMediaType): Boolean;
-    procedure WriteTo(AValue: TValue; AAttributes: TAttributeArray; AMediaType: TMediaType;
-      AResponseHeaders: TStringList; AEntityStream: TStream);
-
-  end;
-  }
 
   TIsWritableFunction = reference to function(AType: TRttiType;
     const AAttributes: TAttributeArray; AMediaType: string): Boolean;

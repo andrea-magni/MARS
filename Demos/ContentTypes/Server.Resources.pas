@@ -43,6 +43,14 @@ type
     [GET, Path('/stream'), Produces(TMediaType.APPLICATION_OCTET_STREAM)]
     function GetStream([Context] Response: TWebResponse): TStream;
 
+    [
+     GET
+     , Path('/attachment'), Produces(TMediaType.APPLICATION_OCTET_STREAM)
+     , CustomHeader('Content-Disposition', 'attachment; filename="ThisIsMyFile.exe"')
+     ]
+    function GetStreamAsAttachment(): TStream;
+
+
     [GET, Path('/dataset1')
     , Produces(TMediaType.APPLICATION_XML)
     , Produces(TMediaType.APPLICATION_JSON)]
@@ -106,6 +114,11 @@ function THelloWorldResource.GetStream(Response: TWebResponse): TStream;
 begin
   Result := TFileStream.Create(ParamStr(0), fmOpenRead or fmShareDenyNone);
   Response.CustomHeaders.Values['Content-Disposition'] := 'attachment; filename="ThisIsMyServer.exe"';
+end;
+
+function THelloWorldResource.GetStreamAsAttachment: TStream;
+begin
+  Result := TFileStream.Create(ParamStr(0), fmOpenRead or fmShareDenyNone);
 end;
 
 function THelloWorldResource.HtmlDocument: string;

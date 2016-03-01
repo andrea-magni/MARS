@@ -665,6 +665,13 @@ begin
     FillResourceMethodParameters(AInstance, AMethod, LArgumentArray);
     LMethodResult := AMethod.Invoke(AInstance, LArgumentArray);
 
+    AMethod.ForEachAttribute<CustomHeaderAttribute>(
+      procedure (ACustomHeader: CustomHeaderAttribute)
+      begin
+        Response.CustomHeaders.Values[ACustomHeader.HeaderName] := ACustomHeader.Value;
+      end
+    );
+
     if LMethodResult.IsInstanceOf(TMARSResponse) then // Response Object
     begin
       LMARSResponse := TMARSResponse(LMethodResult.AsObject);
