@@ -37,7 +37,6 @@ type
     Edit4: TEdit;
     Label4: TLabel;
     ButtonPost: TButton;
-    Button3: TButton;
     procedure ExecuteClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
@@ -59,6 +58,7 @@ uses
    FMXClient.DataModules.Main
   , MARS.Rtti.Utils
   , MARS.Client.Utils
+  , MARS.Core.Utils
   , MARS.Core.JSON
   ;
 

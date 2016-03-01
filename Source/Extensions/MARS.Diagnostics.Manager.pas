@@ -74,7 +74,7 @@ type
     property LastSessionEnd: TDateTime read FLastSessionEnd;
   end;
 
-  TMARSDiagnosticsManager = class(TNonInterfacedObject, IMARSTokenEventListener, IMARSHandleRequestEventListener)
+  TMARSDiagnosticsManager = class(TNonInterfacedObject, IMARSHandleRequestEventListener)
   private
     type TDiagnosticsManagerSingleton = TMARSSingleton<TMARSDiagnosticsManager>;
   private
@@ -155,14 +155,12 @@ begin
 
   inherited Create;
 
-  TMARSTokenList.Instance.AddSubscriber(Self);
   FEngine.AddSubscriber(Self);
 end;
 
 destructor TMARSDiagnosticsManager.Destroy;
 begin
   FEngine.RemoveSubscriber(Self);
-  TMARSTokenList.Instance.RemoveSubscriber(Self);
 
   FEngineInfo.Free;
   FCriticalSection.Free;

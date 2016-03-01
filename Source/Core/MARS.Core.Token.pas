@@ -21,78 +21,58 @@ uses
   , HTTPApp
   , IdGlobal
   , MARS.Core.Singleton
+
+  , JOSE.Types.Bytes, JOSE.Core.Builder
+  , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA, JOSE.Types.JSON
   ;
 
 type
+  TMARSClaims = class(TJWTClaims)
+  private
+  protected
+    function GetRoles: string;
+    function GetUserName: string;
+    procedure SetRoles(const Value: string);
+    procedure SetUserName(const Value: string);
+  public
+    property Roles: string read GetRoles write SetRoles;
+    property UserName: string read GetUserName write SetUserName;
+
+    const Name_Roles = 'MARS.Roles';
+    const Name_UserName = 'MARS.UserName';
+  end;
+
   TMARSToken = class
   private
     FToken: string;
+    FRoles: TStringList;
+    FIsVerified: Boolean;
     FUserName: string;
-    FAuthenticated: Boolean;
-    FRequestCount: Integer;
-    FUserRoles: TStringList;
-    FStartTime: TDateTime;
-    FEndTime: TDateTime;
-    FLastRequest: string;
   public
-    constructor Create(const AToken: string); virtual;
+    constructor Create(const AToken, ASecret: string); overload; virtual;
+    constructor Create(const AWebRequest: TWebRequest; const ASecret: string); overload; virtual;
     destructor Destroy; override;
 
-    procedure IncRequestCount;
+    procedure Build(const ASecret: string);
+    procedure Load(const AToken, ASecret: string);
+    procedure Clear;
+
+    function HasRole(const ARole: string): Boolean; virtual;
     procedure SetUserNameAndRoles(const AUserName: string; const ARoles: TArray<string>); virtual;
-    function UserHasRole(const ARole: string): Boolean; virtual;
+
     function ToJSON: TJSONObject; virtual;
     function ToJSONString: string;
 
-    property UserRoles: TStringList read FUserRoles;
-    property UserName: string read FUserName write FUserName;
-    property Authenticated: Boolean read FAuthenticated write FAuthenticated;
-    property RequestCount: Integer read FRequestCount write FRequestCount;
-    property StartTime: TDateTime read FStartTime;
-    property EndTime: TDateTime read FEndTime;
-    property LastRequest: string read FLastRequest write FLastRequest;
-
     property Token: string read FToken;
+    property UserName: string read FUserName write FUserName;
+    property Roles: TStringList read FRoles;
+    property IsVerified: Boolean read FIsVerified;
+
+    const JWT_ISSUER = 'MARS REST Library';
+    const JWT_SECRET_PARAM = 'JWT.Secret';
+    const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
+    const JWT_TOKEN_HEADER = 'auth_token';
   end;
-
-  IMARSTokenEventListener = interface
-    procedure OnTokenStart(const AToken: string);
-    procedure OnTokenEnd(const AToken: string);
-  end;
-
-  TMARSTokenList = class
-  private
-    type
-      TMARSTokenListSingleton = TMARSSingleton<TMARSTokenList>;
-  private
-    FTokens: TObjectDictionary<string, TMARSToken>;
-    FCriticalSection: TCriticalSection;
-    FSubscribers: TList<IMARSTokenEventListener>;
-    procedure KeyNotify(Sender: TObject; const Value: string; Action: TCollectionNotification);
-    class function GetInstance: TMARSTokenList; static; inline;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    function GetToken(const AToken: string): TMARSToken; overload;
-    function GetToken(const ARequest: TWebRequest): TMARSToken; overload;
-
-    procedure AddToken(const AToken: string);
-    procedure RemoveToken(const AToken: string);
-
-    procedure AddSubscriber(const ASubscriber: IMARSTokenEventListener);
-    procedure RemoveSubscriber(const ASubscriber: IMARSTokenEventListener);
-
-    procedure EnumerateTokens(const ADoSomething: TProc<string, TMARSToken>);
-
-    class property Instance: TMARSTokenList read GetInstance;
-  end;
-
-  function GetTokenString(ARequest: TWebRequest): string;
-  function DecodeAuthorization(const AAuthorization: string; var AUserName, APassword: string): Boolean;
-
-threadvar
-  _TOKEN: string;
 
 implementation
 
@@ -105,175 +85,135 @@ uses
   , System.NetEncoding
   {$endif}
   , MARS.Core.Utils
-  //, MARS.Diagnostics.Manager
   ;
 
-function DecodeAuthorization(const AAuthorization: string; var AUserName, APassword: string): Boolean;
+{
+  Dummy procedure to warm up the JOSE JWT library, avoiding penalty to the
+  first real request to be served. (At the moment, 2016 Feb. 15th, it amounts
+  up to a couple of seconds).
+  This procedure is called in the initialization section of this unit.
+}
+procedure WarmUpJWT;
 var
-  LEncodedData: string;
-  LDecodedData: string;
+  LToken: TMARSToken;
 begin
-  AUserName := '';
-  APassword := '';
-
-  LEncodedData := StringReplace(AAuthorization, 'Basic ', '', [rfIgnoreCase]);
-  {$ifndef DelphiXE7_UP}
-  LDecodedData := TIdDecoderMIME.DecodeString(LEncodedData);
-  {$else}
-  LDecodedData := TNetEncoding.Base64.Decode(LEncodedData);  
-  {$endif}
-  
-
-  Result := Pos(':', LDecodedData) > 0;
-  if Result then
-  begin
-    AUserName := Copy(LDecodedData, 1, Pos(':', LDecodedData) - 1);
-    APassword := Copy(LDecodedData, Pos(':', LDecodedData) + 1, MAXINT);
-  end;
-end;
-
-function GetTokenString(ARequest: TWebRequest): string;
-begin
-  Result := ARequest.CookieFields.Values['IDHTTPSESSIONID'];
-end;
-
-procedure TMARSTokenList.KeyNotify(Sender: TObject; const Value: string;
-  Action: TCollectionNotification);
-var
-  LIntf: IMARSTokenEventListener;
-begin
-  inherited;
-
-  case Action of
-    cnAdded:
-        for LIntf in FSubscribers do
-          LIntf.OnTokenStart(Value);
-    cnRemoved:
-        for LIntf in FSubscribers do
-          LIntf.OnTokenEnd(Value);
-    cnExtracted: ; //  notifications not supported
-  end;
-end;
-
-procedure TMARSTokenList.RemoveSubscriber(
-  const ASubscriber: IMARSTokenEventListener);
-begin
-  FSubscribers.Remove(ASubscriber);
-end;
-
-procedure TMARSTokenList.RemoveToken(const AToken: string);
-begin
-  FCriticalSection.Enter;
+  LToken := TMARSToken.Create('', 'dummy_secret');
   try
-    FTokens.Remove(AToken);
+    LToken.Build('dummy_secret');
   finally
-    FCriticalSection.Leave;
+    LToken.Free;
   end;
-end;
-
-function TMARSTokenList.GetToken(const AToken: string): TMARSToken;
-begin
-  FCriticalSection.Enter;
-  try
-    Result := nil;
-    FTokens.TryGetValue(AToken, Result);
-  finally
-    FCriticalSection.Leave;
-  end;
-end;
-
-procedure TMARSTokenList.AddSubscriber(
-  const ASubscriber: IMARSTokenEventListener);
-begin
-  FSubscribers.Add(ASubscriber);
-end;
-
-procedure TMARSTokenList.AddToken(const AToken: string);
-begin
-  FCriticalSection.Enter;
-  try
-    if not FTokens.ContainsKey(AToken) then
-      FTokens.Add(AToken, TMARSToken.Create(AToken));
-    // raise exception when token already exists?
-  finally
-    FCriticalSection.Leave
-  end;
-end;
-
-constructor TMARSTokenList.Create;
-begin
-  inherited Create;
-
-  FCriticalSection := TCriticalSection.Create;
-  FSubscribers := TList<IMARSTokenEventListener>.Create;
-  FTokens := TObjectDictionary<string, TMARSToken>.Create([doOwnsValues]);
-  FTokens.OnKeyNotify := KeyNotify;
-end;
-
-destructor TMARSTokenList.Destroy;
-begin
-  FTokens.Free;
-  FSubscribers.Free;
-  FCriticalSection.Free;
-  inherited;
-end;
-
-procedure TMARSTokenList.EnumerateTokens(
-  const ADoSomething: TProc<string, TMARSToken>);
-var
-  LPair: TPair<string, TMARSToken>;
-begin
-  if Assigned(ADoSomething) then
-  begin
-    FCriticalSection.Enter;
-    try
-      for LPair in FTokens do
-        ADoSomething(LPair.Key, LPair.Value);
-    finally
-      FCriticalSection.Leave;
-    end;
-  end;
-end;
-
-class function TMARSTokenList.GetInstance: TMARSTokenList;
-begin
-  Result := TMARSTokenListSingleton.Instance;
-end;
-
-function TMARSTokenList.GetToken(const ARequest: TWebRequest): TMARSToken;
-begin
-  Result := GetToken(GetTokenString(ARequest));
-  if not Assigned(Result) then
-    Result := GetToken(_TOKEN);
 end;
 
 { TMARSToken }
 
-constructor TMARSToken.Create(const AToken: string);
+constructor TMARSToken.Create(const AToken, ASecret: string);
 begin
   inherited Create;
 
-  FToken := AToken;
+  FRoles := TStringList.Create;
+  try
+    FRoles.Sorted := True;
+    FRoles.Duplicates := dupIgnore;
+    FRoles.CaseSensitive := False;
+  except
+    FRoles.Free;
+    raise;
+  end;
+
+  Clear;
+  Load(AToken, ASecret);
+end;
+
+procedure TMARSToken.Clear;
+begin
+  FToken := '';
   FUserName := '';
-  FAuthenticated := false;
-  FRequestCount := 0;
-  FUserRoles := TStringList.Create;
-  FUserRoles.Sorted := True;
-  FUserRoles.Duplicates := TDuplicates.dupIgnore;
-  FStartTime := Now;
-  FEndTime := 0;
-  FLastRequest := '';
+  FIsVerified := False;
+  Roles.Clear;
+end;
+
+constructor TMARSToken.Create(const AWebRequest: TWebRequest; const ASecret: string);
+begin
+  Create(string(AWebRequest.GetFieldByName(TMARSToken.JWT_TOKEN_HEADER)), ASecret);
 end;
 
 destructor TMARSToken.Destroy;
 begin
-  FUserRoles.Free;
+  FRoles.Free;
   inherited;
 end;
 
-procedure TMARSToken.IncRequestCount;
+procedure TMARSToken.Build(const ASecret: string);
+var
+  LJWT: TJWT;
+  LSigner: TJWS;
+  LKey: TJWK;
+  LClaims: TMARSClaims;
 begin
-  Inc(FRequestCount);
+  LJWT := TJWT.Create(TMARSClaims);
+  try
+    LClaims := LJWT.Claims as TMARSClaims;
+    LClaims.Issuer := JWT_ISSUER;
+    LClaims.IssuedAt := Now;
+    LClaims.Expiration := LClaims.IssuedAt + 1;
+    LClaims.UserName := UserName;
+    LClaims.Roles := Roles.CommaText;
+
+    LSigner := TJWS.Create(LJWT);
+    LKey := TJWK.Create(ASecret);
+    try
+      LSigner.Sign(LKey, HS256);
+
+      FToken := LSigner.CompactToken;
+      FIsVerified := True;
+    finally
+      LKey.Free;
+      LSigner.Free;
+    end;
+  finally
+    LJWT.Free;
+  end;
+end;
+
+procedure TMARSToken.Load(const AToken, ASecret: string);
+var
+  LKey: TJWK;
+  LJWT: TJWT;
+  LMARSClaims: TMARSClaims;
+begin
+  Clear;
+  if AToken <> '' then
+  begin
+    FToken := AToken;
+    LKey := TJWK.Create(ASecret);
+    try
+      LJWT := TJOSE.Verify(LKey, Token);
+      if Assigned(LJWT) then
+      begin
+        try
+          FIsVerified := LJWT.Verified;
+          if FIsVerified then
+          begin
+  //          LMARSClaims := LJWT.Claims as TMARSClaims;
+            // Workaround: JOSE does not allow to have a custom claims class
+            LMARSClaims := TMARSClaims.Create;
+            try
+              LMARSClaims.JSON := LJWT.Claims.JSON.Clone as TJSONObject;
+              Roles.CommaText := LMARSClaims.Roles;
+              UserName := LMARSClaims.UserName;
+            finally
+              LMARSClaims.Free;
+            end;
+          end;
+        finally
+          LJWT.Free;
+        end;
+      end;
+    finally
+      LKey.Free;
+    end;
+  end;
 end;
 
 procedure TMARSToken.SetUserNameAndRoles(const AUserName: string;
@@ -281,10 +221,10 @@ procedure TMARSToken.SetUserNameAndRoles(const AUserName: string;
 var
   LRole: string;
 begin
-  FUserName := AUserName;
-  FUserRoles.Clear;
+  UserName := AUserName;
+  Roles.Clear;
   for LRole in ARoles do
-    FUserRoles.Add(LRole);
+    Roles.Add(LRole);
 end;
 
 function TMARSToken.ToJSON: TJSONObject;
@@ -292,12 +232,9 @@ begin
   Result := TJSONObject.Create;
   try
     Result.AddPair('Token', Token);
+    Result.AddPair('IsVerified', BooleanToTJSON(IsVerified));
     Result.AddPair('UserName', UserName);
-    Result.AddPair('Authenticated', BooleanToTJSON(Authenticated));
-    Result.AddPair('UserRoles', UserRoles.CommaText);
-    Result.AddPair('StartTime', DateToJSON(StartTime));
-    Result.AddPair('EndTime', DateToJSON(EndTime));
-    Result.AddPair('LastRequest', LastRequest);
+    Result.AddPair('Roles', Roles.CommaText);
   except
     Result.Free;
     raise;
@@ -316,10 +253,40 @@ begin
   end;
 end;
 
-function TMARSToken.UserHasRole(const ARole: string): Boolean;
+function TMARSToken.HasRole(const ARole: string): Boolean;
 begin
-  Assert(Assigned(UserRoles));
-  Result := UserRoles.IndexOf(ARole) <> -1;
+  Result := FRoles.IndexOf(ARole) <> -1;
 end;
+
+{ TMARSClaims }
+
+function TMARSClaims.GetRoles: string;
+begin
+  Result := TJSONUtils.GetJSONValue(Name_Roles, FJSON).AsString;
+end;
+
+function TMARSClaims.GetUserName: string;
+begin
+  Result := TJSONUtils.GetJSONValue(Name_UserName, FJSON).AsString;
+end;
+
+procedure TMARSClaims.SetRoles(const Value: string);
+begin
+  if Value = '' then
+    TJSONUtils.RemoveJSONNode(Name_Roles, FJSON)
+  else
+    TJSONUtils.SetJSONValueFrom<string>(Name_Roles, Value, FJSON);
+end;
+
+procedure TMARSClaims.SetUserName(const Value: string);
+begin
+  if Value = '' then
+    TJSONUtils.RemoveJSONNode(Name_UserName, FJSON)
+  else
+    TJSONUtils.SetJSONValueFrom<string>(Name_UserName, Value, FJSON);
+end;
+
+initialization
+  WarmUpJWT;
 
 end.

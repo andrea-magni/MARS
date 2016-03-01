@@ -23,7 +23,7 @@ uses
 //  , MARS.Core.Utils
   , MARS.Core.Application
   , MARS.Diagnostics.Manager
-  , MARS.Diagnostics.Resources
+  , MARS.Diagnostics.Resources, System.Actions
 //  , MARS.Core.Token
   ;
 
@@ -60,6 +60,7 @@ uses
    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Core.URL
+  , MARS.Core.Token
   ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -84,7 +85,11 @@ begin
 
   FEngine.AddApplication('Default', '/default'
     , ['Server.Resources.THelloWorldResource']
-  );
+  ).SetParamByName(TMARSToken.JWT_SECRET_PARAM, 'helloworld');
+
+  FEngine.AddApplication('diagnostics', '/diagnostics', ['*']);
+  TMARSDiagnosticsManager.FEngine := FEngine; // TODO: REMOVE!!!
+  TMARSDiagnosticsManager.Instance;
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);

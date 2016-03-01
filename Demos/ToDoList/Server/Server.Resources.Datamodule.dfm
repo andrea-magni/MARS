@@ -4,6 +4,7 @@ inherited DataResource: TDataResource
     Params.Strings = (
       'ConnectionDef=MARS_TODO_LIST')
     Connected = True
+    LoginPrompt = False
     Left = 48
     Top = 32
   end

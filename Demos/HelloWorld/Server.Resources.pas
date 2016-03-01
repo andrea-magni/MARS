@@ -57,8 +57,8 @@ type
     [Produces(TMediaType.APPLICATION_JSON)]
     function EchoURL: TJSONObject;
 
-    [GET, Path('/sessioninfo')]
-    function GetSessionInfo: string;
+    [GET, Path('/token'), Produces(TMediaType.APPLICATION_JSON)]
+    function GetToken: string;
 
     [GET, Path('/somma/{Addendo1}/{Addendo2}')]
     function Somma(
@@ -107,10 +107,9 @@ begin
   Result := TFileStream.Create('C:\temp\test.pdf', fmOpenRead or fmShareDenyWrite);
 end;
 
-function THelloWorldResource.GetSessionInfo: string;
+function THelloWorldResource.GetToken: string;
 begin
-  Result := 'ID: ' + Token.Token
-    + ' Data start: ' + DateTimeToStr(Token.StartTime);
+  Result := Token.ToJSONString;
 end;
 
 function THelloWorldResource.HelloWorld(): string;

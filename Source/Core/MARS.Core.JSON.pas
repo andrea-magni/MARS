@@ -33,7 +33,7 @@ type
   TJSONValueHelper = class helper for TJSONValue
   public
 {$ifndef DelphiXE7_UP}
-    function TryGetValue<T>(const APath: string; out AValue: T): Boolean; overload;
+    function TryGetValue<T: TJSONValue>(const APath: string; out AValue: T): Boolean; overload;
     function ToJSON: string;
 {$endif}
   end;
@@ -104,17 +104,24 @@ function TJSONValueHelper.TryGetValue<T>(const APath: string;
   out AValue: T): Boolean;
 var
   LJSONValue: TJSONValue;
+  LPair: TJSONPair;
 begin
-//  LJSONValue := FindValue(APath);
-//  Result := LJSONValue <> nil;
-//  if Result then
-//  begin
-//    try
-//      AValue := LJSONValue.Cast<T>;
-//    except
-//      Result := False;
-//    end;
-//  end;
+  LJSONValue := nil;
+  if Self is TJSONObject then
+  begin
+    LPair := TJSONObject(Self).Get(APath);
+    if Assigned(LPair) then
+      LJSONValue := LPair.JsonValue;
+  end;
+  Result := LJSONValue <> nil;
+  if Result then
+  begin
+    try
+      AValue := T(LJSONValue);
+    except
+      Result := False;
+    end;
+  end;
 end;
 {$endif}
 

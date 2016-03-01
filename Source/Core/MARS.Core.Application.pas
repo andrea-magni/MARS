@@ -41,10 +41,12 @@ type
     FName: string;
     FEngine: TObject;
     FSystem: Boolean;
+    FParameters: TDictionary<string, TValue>;
     function GetResources: TArray<string>;
     function GetRequest: TWebRequest;
     function GetResponse: TWebResponse;
     function GetURL: TMARSURL;
+    function GetToken: TMARSToken;
   protected
     function FindMethodToInvoke(const AURL: TMARSURL;
       const AInfo: TMARSConstructorInfo): TRttiMethod; virtual;
@@ -74,6 +76,7 @@ type
     property Request: TWebRequest read GetRequest;
     property Response: TWebResponse read GetResponse;
     property URL: TMARSURL read GetURL;
+    property Token: TMARSToken read GetToken;
   public
     constructor Create(const AEngine: TObject);
     destructor Destroy; override;
@@ -87,6 +90,10 @@ type
     property BasePath: string read FBasePath write FBasePath;
     property System: Boolean read FSystem write FSystem;
     property Resources: TArray<string> read GetResources;
+    property Parameters: TDictionary<string, TValue> read FParameters;
+    function GetParamByName(const AName: string; const ADefault: TValue): TValue; overload;
+    function GetParamByName(const AName: string): TValue; overload;
+    procedure SetParamByName(const AName: string; AValue: TValue);
   end;
 
   TMARSApplicationDictionary = class(TObjectDictionary<string, TMARSApplication>)
@@ -166,6 +173,7 @@ var
   LAllowedRoles: TStringList;
   LAllowed: Boolean;
   LRole: string;
+  LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
 begin
   LAllowed := True; // Default = True for non annotated-methods
   LDenyAll := False;
@@ -175,7 +183,7 @@ begin
     LAllowedRoles.Sorted := True;
     LAllowedRoles.Duplicates := TDuplicates.dupIgnore;
 
-    AMethod.ForEachAttribute<AuthorizationAttribute>(
+    LProcessAuthorizationAttribute :=
       procedure (AAttribute: AuthorizationAttribute)
       begin
         if AAttribute is DenyAllAttribute then
@@ -187,30 +195,33 @@ begin
           LRolesAllowed := True;
           LAllowedRoles.AddStrings(RolesAllowedAttribute(AAttribute).Roles);
         end;
-      end
-    );
-
-  if LDenyAll then
-    LAllowed := False
-  else
-  begin
-    if LRolesAllowed then
-    begin
-      LAllowed := False;
-      for LRole in LAllowedRoles do
-      begin
-        LAllowed := AToken.UserRoles.IndexOf(LRole) <> -1;
-        if LAllowed then
-          Break;
       end;
+
+    AMethod.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
+    // also check the class (resource) of the method
+    AMethod.Parent.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
+
+    if LDenyAll then
+      LAllowed := False
+    else
+    begin
+      if LRolesAllowed then
+      begin
+        LAllowed := False;
+        for LRole in LAllowedRoles do
+        begin
+          LAllowed := AToken.HasRole(LRole);
+          if LAllowed then
+            Break;
+        end;
+      end;
+
+      if LPermitAll then
+        LAllowed := True;
     end;
 
-    if LPermitAll then
-      LAllowed := True;
-  end;
-
-  if not LAllowed then
-    raise EMARSWebApplicationException.Create('Forbidden', 403);
+    if not LAllowed then
+      raise EMARSWebApplicationException.Create('Forbidden', 403);
 
   finally
     LAllowedRoles.Free;
@@ -291,7 +302,7 @@ begin
   Result := True;
   // Token
   if (AType.InheritsFrom(TMARSToken)) then
-    AValue := TMARSTokenList.Instance.GetToken(Request)
+    AValue := Token
   // HTTP request
   else if (AType.InheritsFrom(TWebRequest)) then
     AValue := Request
@@ -304,6 +315,9 @@ begin
   // Engine
   else if (AType.InheritsFrom(TMARSEngine)) then
     AValue := Engine
+  // Application
+  else if (AType.InheritsFrom(TMARSApplication)) then
+    AValue := Self
   else
     Result := False;
 end;
@@ -314,10 +328,12 @@ begin
   FEngine := AEngine;
   FRttiContext := TRttiContext.Create;
   FResourceRegistry := TObjectDictionary<string, TMARSConstructorInfo>.Create([doOwnsValues]);
+  FParameters := TDictionary<string,TValue>.Create;
 end;
 
 destructor TMARSApplication.Destroy;
 begin
+  FParameters.Free;
   FResourceRegistry.Free;
   inherited;
 end;
@@ -390,6 +406,11 @@ end;
 function TMARSApplication.GetResponse: TWebResponse;
 begin
   Result := TMARSEngine(Engine).CurrentResponse;
+end;
+
+function TMARSApplication.GetToken: TMARSToken;
+begin
+  Result := TMARSEngine(Engine).CurrentToken;
 end;
 
 function TMARSApplication.GetURL: TMARSURL;
@@ -597,7 +618,7 @@ begin
       raise Exception.CreateFmt('[%s] No method found to handle %s'
         , [URL.Resource, GetEnumName(TypeInfo(TMethodType), Ord(ARequest.MethodType))]);
 
-    CheckAuthorization(LMethod, TMARSTokenList.Instance.GetToken(Request));
+    CheckAuthorization(LMethod, Token);
 
     LInstance := LInfo.ConstructorFunc();
     try
@@ -701,6 +722,22 @@ begin
   end;
 end;
 
+function TMARSApplication.GetParamByName(const AName: string;
+  const ADefault: TValue): TValue;
+var
+  LValue: TValue;
+begin
+  if Parameters.TryGetValue(AName, LValue) then
+    Result := LValue
+  else
+    Result := ADefault;
+end;
+
+function TMARSApplication.GetParamByName(const AName: string): TValue;
+begin
+  Result := GetParamByName(AName, TValue.Empty);
+end;
+
 function TMARSApplication.ParamNameToParamIndex(AResourceInstance: TObject;
   const AParamName: string; AMethod: TRttiMethod): Integer;
 var
@@ -745,5 +782,11 @@ begin
   Result := LParamIndex;
 end;
 
+
+procedure TMARSApplication.SetParamByName(const AName: string;
+  AValue: TValue);
+begin
+  Parameters.AddOrSetValue(AName, AValue);
+end;
 
 end.

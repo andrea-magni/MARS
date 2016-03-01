@@ -39,7 +39,7 @@ type
       const ABeforeExecute: TProc<TFDQuery>; const AOnRecord: TProc<TFDQuery>);
 
     function Authenticate(var AUserName: string; const APassword: string;
-      var ARoles: string): Boolean;
+      out ARoles: TArray<string>): Boolean;
 
     destructor Destroy; override;
   end;
@@ -68,14 +68,15 @@ begin
 end;
 
 function TDBAccessor.Authenticate(var AUserName: string; const APassword: string;
-  var ARoles: string): Boolean;
+  out ARoles: TArray<string>): Boolean;
 var
   LFound: Boolean;
-  LRoles, LUserName: string;
+  LUserName: string;
+  LRoles: TArray<string>;
 begin
   LFound := False;
   LUserName := AUserName;
-  LRoles := '';
+  SetLength(LRoles, 0);
   WithQuery(
     procedure (AQuery: TFDQuery)
     begin
@@ -89,9 +90,9 @@ begin
         LFound := True;
         LUserName := AQuery.FieldByName('USERNAME').AsString;
         if AQuery.FieldByName('IS_ADMIN').AsInteger > 0 then
-          LRoles := 'admin'
+          LRoles := TArray<string>.Create('user', 'admin')
         else
-          LRoles := 'user';
+          LRoles := TArray<string>.Create('user');
       end;
 
     end

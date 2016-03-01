@@ -180,14 +180,14 @@ function TTokenResource.Authenticate(const AUserName,
   APassword: string): Boolean;
 var
   LAccessor: TDBAccessor;
-  LRoles: string;
+  LRoles: TArray<string>;
   LUserName: string;
 begin
   LAccessor := TDBAccessor.Create;
   try
     LUserName := AUserName;
     Result := LAccessor.Authenticate(LUserName, APassword, LRoles);
-    Token.SetUserNameAndRoles(LUserName, TArray<string>.Create(LRoles));
+    Token.SetUserNameAndRoles(LUserName, LRoles);
   finally
     LAccessor.Free;
   end;

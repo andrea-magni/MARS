@@ -54,6 +54,7 @@ implementation
 uses
    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
+  , MARS.Core.Token
   ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -79,10 +80,9 @@ begin
   FEngine.AddApplication(
       'Default'
     , '/default'
-    , ['Server.Resources.TFirstResource',
-       'Server.Resources.TTokenResource'
-      ]
-  );
+    , ['Server.Resources.*']
+  ).SetParamByName(TMARSToken.JWT_SECRET_PARAM, 'andrea');
+
 
 //  FEngine.AddApplication(
 //      'Diagnostics'
@@ -96,7 +96,6 @@ begin
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);
-
   if not FServer.Active then
     FServer.Active := True;
 end;

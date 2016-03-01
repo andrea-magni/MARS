@@ -17,6 +17,7 @@ uses
   , MARS.Core.Registry
   , MARS.Core.Application
   , MARS.Core.URL
+  , MARS.Core.Token
 ;
 
 {$M+}
@@ -35,7 +36,6 @@ type
     FSubscribers: TList<IMARSHandleRequestEventListener>;
     FCriticalSection: TCriticalSection;
     FBasePath: string;
-    FSessionTimeOut: Integer;
     FPort: Integer;
     FThreadPoolSize: Integer;
     FName: string;
@@ -43,10 +43,12 @@ type
     FWebRequest: TWebRequest;
     FWebResponse: TWebResponse;
     FURL: TMARSURL;
+    FToken: TMARSToken;
 
     function GetCurrentRequest: TWebRequest;
     function GetCurrentResponse: TWebResponse;
-    function GetURL: TMARSURL;
+    function GetCurrentURL: TMARSURL;
+    function GetCurrentToken: TMARSToken;
   protected
     procedure DoBeforeHandleRequest(const AApplication: TMARSApplication); virtual;
     procedure DoAfterHandleRequest(const AApplication: TMARSApplication; const AStopWatch: TStopWatch); virtual;
@@ -66,11 +68,11 @@ type
     property BasePath: string read FBasePath write FBasePath;
     property Name: string read FName write FName;
     property Port: Integer read FPort write FPort;
-    property SessionTimeOut: Integer read FSessionTimeOut write FSessionTimeOut;
     property ThreadPoolSize: Integer read FThreadPoolSize write FThreadPoolSize;
 
     // Transient properties
-    property CurrentURL: TMARSURL read GetURL;
+    property CurrentURL: TMARSURL read GetCurrentURL;
+    property CurrentToken: TMARSToken read GetCurrentToken;
     property CurrentRequest: TWebRequest read GetCurrentRequest;
     property CurrentResponse: TWebResponse read GetCurrentResponse;
   end;
@@ -114,7 +116,6 @@ begin
   FApplications := TMARSApplicationDictionary.Create([doOwnsValues]);
   FCriticalSection := TCriticalSection.Create;
   FSubscribers := TList<IMARSHandleRequestEventListener>.Create;
-  FSessionTimeOut := 1200000;
   FPort := 8080;
   FThreadPoolSize := 75;
   FBasePath := '/rest';
@@ -190,11 +191,16 @@ begin
       FWebRequest := ARequest;
       FWebResponse := AResponse;
       FURL := LURL;
-      DoBeforeHandleRequest(LApplication);
-      LStopWatch := TStopwatch.StartNew;
-      LApplication.HandleRequest(ARequest, AResponse, LURL);
-      LStopWatch.Stop;
-      DoAfterHandleRequest(LApplication, LStopWatch);
+      FToken := TMARSToken.Create(FWebRequest, LApplication.GetParamByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString);
+      try
+        DoBeforeHandleRequest(LApplication);
+        LStopWatch := TStopwatch.StartNew;
+        LApplication.HandleRequest(ARequest, AResponse, LURL);
+        LStopWatch.Stop;
+        DoAfterHandleRequest(LApplication, LStopWatch);
+      finally
+        FToken.Free;
+      end;
 
       Result := True;
     end
@@ -221,7 +227,12 @@ begin
   Result := FWebResponse;
 end;
 
-function TMARSEngine.GetURL: TMARSURL;
+function TMARSEngine.GetCurrentToken: TMARSToken;
+begin
+  Result := FToken;
+end;
+
+function TMARSEngine.GetCurrentURL: TMARSURL;
 begin
   Result := FURL;
 end;

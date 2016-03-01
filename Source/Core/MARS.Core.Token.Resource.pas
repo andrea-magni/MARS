@@ -29,20 +29,23 @@ type
   private
   protected
     [Context] Token: TMARSToken;
+    [Context] App: TMARSApplication;
     function Authenticate(const AUserName, APassword: string): Boolean; virtual;
     procedure BeforeLogin(const AUserName, APassword: string); virtual;
     procedure AfterLogin(const AUserName, APassword: string); virtual;
+
+    procedure BeforeLogout(); virtual;
+    procedure AfterLogout(); virtual;
   public
-    [GET]
-    [Produces(TMediaType.APPLICATION_JSON)]
+    [GET, Produces(TMediaType.APPLICATION_JSON)]
     function GetCurrent: TJSONObject;
 
-    [POST]
+    [POST, Produces(TMediaType.APPLICATION_JSON)]
     function DoLogin(
       [FormParam('username')] const AUsername: string;
       [FormParam('password')] const APassword: string): TJSONObject;
 
-    [DELETE]
+    [DELETE, Produces(TMediaType.APPLICATION_JSON)]
     function Logout: TJSONObject;
   end;
 
@@ -50,11 +53,17 @@ type
 implementation
 
 uses
-  DateUtils;
+  DateUtils
+  ;
 
 { TMARSTokenResource }
 
 procedure TMARSTokenResource.AfterLogin(const AUserName, APassword: string);
+begin
+
+end;
+
+procedure TMARSTokenResource.AfterLogout;
 begin
 
 end;
@@ -69,12 +78,15 @@ begin
       Token.SetUserNameAndRoles(AUserName, TArray<string>.Create('standard', 'admin'))
     else
       Token.SetUserNameAndRoles(AUserName, TArray<string>.Create('standard'));
-  end
-  else // not authenticated, clear user roles and username
-    Token.SetUserNameAndRoles('', nil);
+  end;
 end;
 
 procedure TMARSTokenResource.BeforeLogin(const AUserName, APassword: string);
+begin
+
+end;
+
+procedure TMARSTokenResource.BeforeLogout;
 begin
 
 end;
@@ -83,8 +95,17 @@ function TMARSTokenResource.DoLogin(const AUsername, APassword: string): TJSONOb
 begin
   BeforeLogin(AUserName, APassword);
   try
-    Token.Authenticated := Authenticate(AUserName, APassword);
-    Result := GetCurrent;
+    if Authenticate(AUserName, APassword) then
+    begin
+      Token.Build(App.GetParamByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString);
+      Result := Token.ToJSON;
+      Result.AddPair('success', TJSONTrue.Create);
+    end
+    else
+    begin
+      Token.Clear;
+      Result := TJSONObject.Create(TJSONPair.Create('success', TJSONFalse.Create));
+    end;
   finally
     AfterLogin(AUserName, APassword);
   end;
@@ -97,11 +118,7 @@ end;
 
 function TMARSTokenResource.Logout: TJSONObject;
 begin
-  Token.Authenticated := False;
-  Token.SetUserNameAndRoles('', nil);
-  // Token.End;
-
-  Result := GetCurrent;
+  Result := Token.ToJSON;
 end;
 
 end.

@@ -44,6 +44,30 @@ type
     function DetailsInfo: string;
   end;
 
+
+  {
+    This 'second' resource will be allowed only to users with 'admin' role.
+    Note that the resource is decorated with RolesAllowed attribute and their
+    methods (Default, One, Two, Three) are not.
+    A fallback mechanism (from method to class) is used to determine authorization settings.
+  }
+  [Path('second'), RolesAllowed('admin'), DenyAll]
+  TSecondResource = class
+  private
+  protected
+  public
+    [GET]
+    function Default: string;
+
+    [GET, Path('/one')]
+    function One: string;
+    [GET, Path('/two')]
+    function Two: string;
+    [GET, Path('/three')]
+    function Three: string;
+  end;
+
+
   [Path('token')]
   TTokenResource = class(TMARSTokenResource)
   private
@@ -69,8 +93,31 @@ begin
   Result := 'Public informations here!';
 end;
 
+{ TSecondResource }
+
+function TSecondResource.Default: string;
+begin
+  Result := 'Default';
+end;
+
+function TSecondResource.One: string;
+begin
+  Result := 'One';
+end;
+
+function TSecondResource.Three: string;
+begin
+  Result := 'Three';
+end;
+
+function TSecondResource.Two: string;
+begin
+  Result := 'Two';
+end;
+
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<TFirstResource>;
+  TMARSResourceRegistry.Instance.RegisterResource<TSecondResource>;
   TMARSResourceRegistry.Instance.RegisterResource<TTokenResource>;
 
 end.

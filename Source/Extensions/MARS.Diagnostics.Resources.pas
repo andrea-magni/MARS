@@ -42,10 +42,6 @@ type
     [GET][Path('app')]
     [Produces(TMediaType.APPLICATION_JSON)]
     function RetrieveApp: TJSONObject;
-
-    [GET][Path('sessions')]
-    [Produces(TMediaType.APPLICATION_JSON)]
-    function RetrieveSessions: TJSONValue;
   end;
 
   [Path('resources')]
@@ -66,8 +62,6 @@ implementation
 function TDiagnosticsResource.RetrieveAll: TJSONObject;
 begin
   Result := TMARSDiagnosticsManager.Instance.ToJSON;
-
-  Result.AddPair('sessions', RetrieveSessions);
 end;
 
 function TDiagnosticsResource.RetrieveApp: TJSONObject;
@@ -104,22 +98,6 @@ begin
 
   LObj.AddPair('app', LAppName);
   Result := LObj;
-end;
-
-function TDiagnosticsResource.RetrieveSessions: TJSONValue;
-var
-  LResult: TJSONArray;
-begin
-  LResult := TJSONArray.Create;
-
-  TMARSTokenList.Instance.EnumerateTokens(
-    procedure(ATokenId: string; AToken: TMARSToken)
-    begin
-      LResult.Add(AToken.ToJSON);
-    end
-  );
-
-  Result := LResult;
 end;
 
 { TResourcesResource }

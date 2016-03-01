@@ -22,12 +22,7 @@ type
   TMARShttpServerIndy = class(TIdCustomHTTPServer)
   private
     FEngine: TMARSEngine;
-    FTokenList: TMARSTokenList;
   protected
-    procedure DoOnCreateSession(AContext: TIdContext;
-      var VNewSession: TIdHTTPSession); override;
-    procedure DoSessionEnd(Sender: TIdHTTPSession); override;
-    procedure DoSessionStart(Sender: TIdHTTPSession); override;
     procedure Startup; override;
     procedure Shutdown; override;
     procedure DoCommandGet(AContext: TIdContext;
@@ -35,7 +30,6 @@ type
     procedure DoCommandOther(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); override;
 
-    procedure InitComponent; override;
     procedure SetupThreadPooling(const APoolSize: Integer = 25);
   public
     constructor Create(AEngine: TMARSEngine); virtual;
@@ -63,7 +57,6 @@ procedure TMARShttpServerIndy.DoCommandGet(AContext: TIdContext;
 var
   LRequest: TIdHTTPAppRequest;
   LResponse: TIdHTTPAppResponse;
-  LToken: TMARSToken;
 begin
   inherited;
 
@@ -77,10 +70,6 @@ begin
       // skip browser requests (can be dangerous since it is a bit wide as approach)
       if not EndsText('favicon.ico', string(LRequest.PathInfo)) then
       begin
-        LToken := FTokenList.GetToken(LRequest);
-        if Assigned(LToken) then
-          LToken.LastRequest := string(LRequest.PathInfo);
-
         if not FEngine.HandleRequest(LRequest, LResponse) then
         begin
           LResponse.ContentType := 'application/json';
@@ -109,39 +98,6 @@ begin
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
 end;
 
-procedure TMARShttpServerIndy.DoOnCreateSession(AContext: TIdContext;
-  var VNewSession: TIdHTTPSession);
-var
-  LTokenID: string;
-begin
-  inherited;
-
-  LTokenID := CreateCompactGuidStr;
-  MARS.Core.Token._TOKEN := LTokenID;
-
-  VNewSession := TIdHTTPSession.CreateInitialized(SessionList, LTokenID, AContext.Connection.Socket.Binding.PeerIP);
-end;
-
-procedure TMARShttpServerIndy.DoSessionEnd(Sender: TIdHTTPSession);
-begin
-  inherited;
-
-  FTokenList.RemoveToken(Sender.SessionID);
-end;
-
-procedure TMARShttpServerIndy.DoSessionStart(Sender: TIdHTTPSession);
-begin
-  inherited;
-
-  FTokenList.AddToken(Sender.SessionID);
-  end;
-
-procedure TMARShttpServerIndy.InitComponent;
-begin
-  inherited;
-  FTokenList := TMARSTokenList.Instance;
-end;
-
 procedure TMARShttpServerIndy.SetupThreadPooling(const APoolSize: Integer);
 var
   LScheduler: TIdSchedulerOfThreadPool;
@@ -168,10 +124,8 @@ procedure TMARShttpServerIndy.Startup;
 begin
   Bindings.Clear;
   DefaultPort := FEngine.Port;
-
-  AutoStartSession := True;
-  SessionTimeOut := FEngine.SessionTimeout;
-  SessionState := True;
+  AutoStartSession := False;
+  SessionState := False;
 
   inherited;
 end;

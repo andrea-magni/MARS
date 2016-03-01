@@ -267,6 +267,18 @@ begin
     end
   );
 
+  // if AObject is a method, fall back to its class
+  if (LList.Count = 0) and (AObject is TRttiMethod) then
+  begin
+     (TRttiMethod(AObject).Parent).ForEachAttribute<ProducesAttribute>(
+        procedure (AProduces: ProducesAttribute)
+        begin
+          LList.Add( TMediaType.Create(AProduces.Value) );
+        end
+     );
+  end;
+
+
   Result := LList;
 end;
 
