@@ -41,6 +41,7 @@ type
       end;
   private
     FRegistry: TList<TEntryInfo>;
+    class var _Instance: TMessageBodyReaderRegistry;
     class function GetInstance: TMessageBodyReaderRegistry; static;
   public
     constructor Create;
@@ -64,6 +65,7 @@ type
 
     class property Instance: TMessageBodyReaderRegistry read GetInstance;
     class function GetDefaultClassAffinityFunc<T: class>: TGetAffinityFunction;
+    class destructor ClassDestructor;
   end;
 
 
@@ -74,10 +76,13 @@ uses
   , MARS.Core.Attributes
   ;
 
-var
-  _Instance: TMessageBodyReaderRegistry = nil;
-
 { TMessageBodyReaderRegistry }
+
+class destructor TMessageBodyReaderRegistry.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
+end;
 
 constructor TMessageBodyReaderRegistry.Create;
 begin
@@ -225,11 +230,5 @@ begin
 
   FRegistry.Add(LEntryInfo)
 end;
-
-initialization
-
-finalization
-  if Assigned(_Instance) then
-    FreeAndNil(_Instance);
 
 end.

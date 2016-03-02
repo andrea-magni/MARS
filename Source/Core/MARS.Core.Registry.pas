@@ -31,6 +31,8 @@ type
   TMARSResourceRegistry = class(TObjectDictionary<string, TMARSConstructorInfo>)
   private
   protected
+    class var _Instance: TMARSResourceRegistry;
+
     class function GetInstance: TMARSResourceRegistry; static;
   public
     constructor Create; virtual;
@@ -41,6 +43,7 @@ type
     function GetResourceInstance<T: class>: T;
 
     class property Instance: TMARSResourceRegistry read GetInstance;
+    class destructor ClassDestroy;
   end;
 
 {$ifdef DelphiXE}
@@ -65,10 +68,6 @@ begin
 end;
 {$endif}
 
-var
-  _Instance: TMARSResourceRegistry = nil;
-
-
 { TMARSResourceRegistry }
 
 function TMARSResourceRegistry.GetResourceInstance<T>: T;
@@ -92,6 +91,12 @@ function TMARSResourceRegistry.RegisterResource<T>(
 begin
   Result := TMARSConstructorInfo.Create(TClass(T), AConstructorFunc);
   Self.Add(T.QualifiedClassName, Result);
+end;
+
+class destructor TMARSResourceRegistry.ClassDestroy;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 end;
 
 constructor TMARSResourceRegistry.Create;
@@ -139,12 +144,5 @@ begin
         Result := FTypeTClass.Create as TObject;
       end;
 end;
-
-initialization
-
-finalization
-  if Assigned(_Instance) then
-    FreeAndNil(_Instance);
-
 
 end.

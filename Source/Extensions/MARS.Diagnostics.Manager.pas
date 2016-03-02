@@ -80,6 +80,7 @@ type
     FAppDictionary: TObjectDictionary<string, TMARSDiagnosticAppInfo>;
     FCriticalSection: TCriticalSection;
   protected
+    class var _Instance: TMARSDiagnosticsManager;
     class function GetInstance: TMARSDiagnosticsManager; static;
     function GetAppInfo(const App: string; const ADoSomething: TProc<TMARSDiagnosticAppInfo>): Boolean; overload;
   public
@@ -100,6 +101,7 @@ type
     procedure BeforeHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication);
     procedure AfterHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; const AStopWatch: TStopWatch);
     class var FEngine: TMARSEngine; //TODO: remove, as you remove the singleton from TMARSDiagnosticsManager
+    class destructor ClassDestructor;
   end;
 
 
@@ -110,9 +112,6 @@ uses
   , DateUtils
   , MARS.Core.Utils
   ;
-
-var
-  _Instance: TMARSDiagnosticsManager = nil;
 
 { TMARSDiagnosticsManager }
 
@@ -143,6 +142,12 @@ procedure TMARSDiagnosticsManager.BeforeHandleRequest(const ASender: TMARSEngine
   const AApplication: TMARSApplication);
 begin
 
+end;
+
+class destructor TMARSDiagnosticsManager.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 end;
 
 constructor TMARSDiagnosticsManager.Create;
@@ -361,11 +366,5 @@ begin
   Result.AddPair('LastSessionStart',  DateToISO8601(FLastSessionStart));
   Result.AddPair('LastSessionEnd', DateToISO8601(FLastSessionEnd));
 end;
-
-initialization
-
-finalization
-  if Assigned(_Instance) then
-    FreeAndNil(_Instance);
 
 end.

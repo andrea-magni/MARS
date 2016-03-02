@@ -42,6 +42,7 @@ type
     FCriticalSection: TCriticalSection;
     FDictionary: TObjectDictionary<string, TMARSStatefulDictionary>;
   protected
+    class var _Instance: TMARSStatefulDictionaryRegistry;
     class function GetInstance: TMARSStatefulDictionaryRegistry; static;
   public
     constructor Create; virtual;
@@ -56,13 +57,11 @@ type
     procedure OnTokenEnd(const AToken: string);
 
     class property Instance: TMARSStatefulDictionaryRegistry read GetInstance;
+    class destructor ClassDestructor;
   end;
 
 
 implementation
-
-var
-  _Instance: TMARSStatefulDictionaryRegistry;
 
 { TMARSStatefulDictionary }
 
@@ -186,6 +185,12 @@ end;
 
 { TMARSStatefulDictionaryRegistry }
 
+class destructor TMARSStatefulDictionaryRegistry.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
+end;
+
 constructor TMARSStatefulDictionaryRegistry.Create;
 begin
   inherited Create;
@@ -241,11 +246,5 @@ procedure TMARSStatefulDictionaryRegistry.OnTokenStart(const AToken: string);
 begin
 
 end;
-
-initialization
-
-finalization
-  if Assigned(_Instance) then
-    FreeAndNil(_Instance);
 
 end.

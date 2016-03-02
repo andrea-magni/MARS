@@ -34,6 +34,7 @@ type
     FWorkerTask: ITask;
 {$endif}
   protected
+    class var _Instance: TMARSMessageDispatcher;
     class function GetInstance: TMARSMessageDispatcher; static;
 
     procedure DoRegisterSubscriber(const ASubscriber: IMARSMessageSubscriber); virtual;
@@ -50,15 +51,19 @@ type
     procedure UnRegisterSubscriber(const ASubscriber: IMARSMessageSubscriber);
 
     class property Instance: TMARSMessageDispatcher read GetInstance;
+    class destructor ClassDestructor;
   end;
 
 
 implementation
 
-var
-  _Instance: TMARSMessageDispatcher = nil;
-
 { TMARSMessageDispatcher }
+
+class destructor TMARSMessageDispatcher.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
+end;
 
 constructor TMARSMessageDispatcher.Create;
 begin
@@ -152,11 +157,5 @@ procedure TMARSMessageDispatcher.UnRegisterSubscriber(
 begin
   DoUnRegisterSubscriber(ASubscriber);
 end;
-
-initialization
-
-finalization
-  if Assigned(_Instance) then
-    FreeAndNil(_Instance);
 
 end.

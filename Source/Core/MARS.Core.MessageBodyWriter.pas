@@ -45,6 +45,7 @@ type
   private
     FRegistry: TList<TEntryInfo>;
     FRttiContext: TRttiContext;
+    class var _Instance: TMARSMessageBodyRegistry;
     class function GetInstance: TMARSMessageBodyRegistry; static;
   protected
     function GetProducesMediaTypes(const AObject: TRttiObject): TMediaTypeList;
@@ -75,6 +76,7 @@ type
 
     class property Instance: TMARSMessageBodyRegistry read GetInstance;
     class function GetDefaultClassAffinityFunc<T: class>: TGetAffinityFunction;
+    class destructor ClassDestructor;
 
     const AFFINITY_HIGH = 30;
     const AFFINITY_LOW = 10;
@@ -89,10 +91,13 @@ uses
   , MARS.Rtti.Utils
   ;
 
-var
-  _Instance: TMARSMessageBodyRegistry = nil;
-
 { TMARSMessageBodyRegistry }
+
+class destructor TMARSMessageBodyRegistry.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
+end;
 
 constructor TMARSMessageBodyRegistry.Create;
 begin
@@ -325,11 +330,5 @@ begin
 
   FRegistry.Add(LEntryInfo)
 end;
-
-initialization
-
-finalization
-  if Assigned(_Instance) then
-    FreeAndNil(_Instance);
 
 end.

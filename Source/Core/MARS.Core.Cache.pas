@@ -58,23 +58,20 @@ type
      procedure AcquireAndDo(const ADoSomething: TProc);
    end;
 
-
-   function CacheManager: TMARSCache;
+   TCacheManager = class
+   private
+   protected
+     class var _Instance: TMARSCache;
+     class function GetInstance: TMARSCache; static;
+   public
+     class property Instance: TMARSCache read GetInstance;
+     class destructor ClassDestructor;
+   end;
 
 implementation
 
 uses
   System.DateUtils, System.Math;
-
-var
-  _Cache: TMARSCache = nil;
-
-function CacheManager: TMARSCache;
-begin
-  if not Assigned(_Cache) then
-    _Cache := TMARSCache.Create;
-  Result := _Cache;
-end;
 
 { TCache }
 
@@ -240,10 +237,19 @@ begin
   end;
 end;
 
-initialization
+{ TCacheManager }
 
-finalization
-  if Assigned(_Cache) then
-    FreeAndNil(_Cache);
+class destructor TCacheManager.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
+end;
+
+class function TCacheManager.GetInstance: TMARSCache;
+begin
+  if not Assigned(_Instance) then
+    _Instance := TMARSCache.Create;
+  Result := _Instance;
+end;
 
 end.
