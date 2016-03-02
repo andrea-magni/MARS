@@ -65,7 +65,8 @@ begin
     LResponse := TIdHTTPAppResponse.Create(LRequest, AContext, ARequestInfo, AResponseInfo);
     try
       // WebBroker will free it and we cannot change this behaviour
-      AResponseInfo.FreeContentStream := False;
+      LResponse.FreeContentStream := False;
+      AResponseInfo.FreeContentStream := True;
 
       // skip browser requests (can be dangerous since it is a bit wide as approach)
       if not EndsText('favicon.ico', string(LRequest.PathInfo)) then

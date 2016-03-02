@@ -22,6 +22,7 @@ type
     FContentEncoding: AnsiString;
     FStatusCode: Integer;
     FContentStream: TStream;
+    FFreeContentStream: Boolean;
   public
     procedure CopyTo(AWebResponse: TWebResponse);
     destructor Destroy; override;
@@ -31,6 +32,7 @@ type
     property ContentType: AnsiString read FContentType write FContentType;
     property ContentEncoding: AnsiString read FContentEncoding write FContentEncoding;
     property StatusCode: Integer read FStatusCode write FStatusCode;
+    property FreeContentStream: Boolean read FFreeContentStream write FFreeContentStream;
   end;
 
 
@@ -40,18 +42,11 @@ implementation
 { TMARSResponse }
 
 procedure TMARSResponse.CopyTo(AWebResponse: TWebResponse);
-var
-  LStream: TStringStream;
 begin
   if Assigned(ContentStream) then
   begin
-    LStream := TStringStream.Create();
-    try
-      LStream.CopyFrom(ContentStream, 0);
-      AWebResponse.Content := LStream.DataString;
-    finally
-      LStream.Free;
-    end;
+    AWebResponse.ContentStream := ContentStream;
+    FreeContentStream := False;
   end
   else
     AWebResponse.Content := Content;
@@ -63,7 +58,8 @@ end;
 
 destructor TMARSResponse.Destroy;
 begin
-  FreeAndNil(FContentStream);
+  if FFreeContentStream then
+    FreeAndNil(FContentStream);
   inherited;
 end;
 

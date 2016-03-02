@@ -222,6 +222,8 @@ end;
 
 destructor TMARSURL.Destroy;
 begin
+  FPathParams.Free;
+  FSubResources.Free;
   FQueryTokens.Free;
   inherited;
 end;

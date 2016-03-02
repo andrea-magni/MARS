@@ -9,17 +9,12 @@ program MARSContentTypes;
 uses
   Forms,
   Server.Forms.Main in 'Server.Forms.Main.pas' {MainForm},
-  Server.Resources in 'Server.Resources.pas'
-  , Xml.xmldom, XML.OmniXMLDom;
+  Server.Resources in 'Server.Resources.pas';
 
 
 {$R *.res}
 
 begin
-  DefaultDOMVendor := sOmniXmlVendor;
-
-  ReportMemoryLeaksOnShutdown := False;
-
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   Application.CreateForm(TMainForm, MainForm);

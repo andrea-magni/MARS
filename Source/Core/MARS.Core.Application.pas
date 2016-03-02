@@ -630,6 +630,7 @@ begin
         InvokeResourceMethod(LInstance, LMethod, LWriter, ARequest, LMediaType);
       finally
         LWriter := nil;
+        FreeAndNil(LMediaType);
       end;
 
     finally
@@ -655,8 +656,9 @@ var
   LMethodResult: TValue;
   LArgumentArray: TArgumentArray;
   LMARSResponse: TMARSResponse;
-  LStream: TStringStream;
+  LStream: TBytesStream;
   LContentType: AnsiString;
+  LCustomAtributeProcessor: TProc<CustomHeaderAttribute>;
 begin
   // The returned object MUST be initially nil (needs to be consistent with the Free method)
   LMethodResult := nil;
@@ -665,12 +667,14 @@ begin
     FillResourceMethodParameters(AInstance, AMethod, LArgumentArray);
     LMethodResult := AMethod.Invoke(AInstance, LArgumentArray);
 
-    AMethod.ForEachAttribute<CustomHeaderAttribute>(
+    LCustomAtributeProcessor :=
       procedure (ACustomHeader: CustomHeaderAttribute)
       begin
         Response.CustomHeaders.Values[ACustomHeader.HeaderName] := ACustomHeader.Value;
-      end
-    );
+      end;
+    AMethod.Parent.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
+    AMethod.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
+
 
     if LMethodResult.IsInstanceOf(TMARSResponse) then // Response Object
     begin
@@ -690,14 +694,14 @@ begin
       if Response.ContentType = LContentType then
         Response.ContentType := AnsiString(AMediaType.ToString);
 
-      LStream := TStringStream.Create();
+      LStream := TBytesStream.Create();
       try
-        AWriter.WriteTo(LMethodResult, AMethod.GetAttributes, AMediaType, Response.CustomHeaders, LStream);
-        LStream.Position := 0;
-
-        Response.Content := LStream.DataString;
-      finally
+        AWriter.WriteTo(LMethodResult, AMethod.GetAttributes, AMediaType
+          , Response.CustomHeaders, LStream);
+        Response.ContentStream := LStream;
+      except
         LStream.Free;
+        raise;
       end;
     end
     else // fallback (no MBW, no TMARSResponse)
