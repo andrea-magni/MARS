@@ -67,7 +67,7 @@ uses
   System.DateUtils, System.Math;
 
 var
-  _Cache: TMARSCache;
+  _Cache: TMARSCache = nil;
 
 function CacheManager: TMARSCache;
 begin
@@ -239,5 +239,11 @@ begin
     Self.Leave;
   end;
 end;
+
+initialization
+
+finalization
+  if Assigned(_Cache) then
+    FreeAndNil(_Cache);
 
 end.

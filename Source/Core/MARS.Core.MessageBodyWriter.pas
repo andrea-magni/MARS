@@ -14,7 +14,6 @@ uses
   , Rtti
   , Generics.Defaults
   , Generics.Collections
-  , MARS.Core.Singleton
   , MARS.Core.MediaType
   , MARS.Core.Declarations
   , MARS.Core.Classes
@@ -43,12 +42,10 @@ type
 
   TMARSMessageBodyRegistry = class
   private
-    type
-      TMARSMessageBodyRegistrySingleton = TMARSSingleton<TMARSMessageBodyRegistry>;
   private
     FRegistry: TList<TEntryInfo>;
     FRttiContext: TRttiContext;
-    class function GetInstance: TMARSMessageBodyRegistry; static; inline;
+    class function GetInstance: TMARSMessageBodyRegistry; static;
   protected
     function GetProducesMediaTypes(const AObject: TRttiObject): TMediaTypeList;
   public
@@ -92,12 +89,13 @@ uses
   , MARS.Rtti.Utils
   ;
 
+var
+  _Instance: TMARSMessageBodyRegistry = nil;
+
 { TMARSMessageBodyRegistry }
 
 constructor TMARSMessageBodyRegistry.Create;
 begin
-  TMARSMessageBodyRegistrySingleton.CheckInstance(Self);
-
   inherited Create;
 
   FRegistry := TList<TEntryInfo>.Create;
@@ -235,7 +233,9 @@ end;
 
 class function TMARSMessageBodyRegistry.GetInstance: TMARSMessageBodyRegistry;
 begin
-  Result := TMARSMessageBodyRegistrySingleton.Instance;
+  if not Assigned(_Instance) then
+    _Instance := TMARSMessageBodyRegistry.Create;
+  Result := _Instance;
 end;
 
 function TMARSMessageBodyRegistry.GetProducesMediaTypes(
@@ -325,5 +325,11 @@ begin
 
   FRegistry.Add(LEntryInfo)
 end;
+
+initialization
+
+finalization
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 
 end.

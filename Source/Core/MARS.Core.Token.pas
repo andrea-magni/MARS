@@ -20,7 +20,6 @@ uses
 
   , HTTPApp
   , IdGlobal
-  , MARS.Core.Singleton
 
   , JOSE.Types.Bytes, JOSE.Core.Builder
   , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA, JOSE.Types.JSON

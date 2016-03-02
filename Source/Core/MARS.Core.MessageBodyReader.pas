@@ -16,7 +16,6 @@ uses
   , Rtti
   , Generics.Defaults
   , Generics.Collections
-  , MARS.Core.Singleton
   , MARS.Core.MediaType
   , MARS.Core.Declarations
   , MARS.Core.Classes
@@ -34,7 +33,6 @@ type
   TMessageBodyReaderRegistry = class
   private
     type
-      TMARSRegistrySingleton = TMARSSingleton<TMessageBodyReaderRegistry>;
       TEntryInfo = record
         TypeMetadata: TRttiType;
         CreateInstance: TFunc<IMessageBodyReader>;
@@ -43,7 +41,7 @@ type
       end;
   private
     FRegistry: TList<TEntryInfo>;
-    class function GetInstance: TMessageBodyReaderRegistry; static; inline;
+    class function GetInstance: TMessageBodyReaderRegistry; static;
   public
     constructor Create;
     destructor Destroy; override;
@@ -75,6 +73,9 @@ uses
     MARS.Rtti.Utils
   , MARS.Core.Attributes
   ;
+
+var
+  _Instance: TMessageBodyReaderRegistry = nil;
 
 { TMessageBodyReaderRegistry }
 
@@ -161,7 +162,9 @@ end;
 
 class function TMessageBodyReaderRegistry.GetInstance: TMessageBodyReaderRegistry;
 begin
-  Result := TMARSRegistrySingleton.Instance;
+  if not Assigned(_Instance) then
+    _Instance := TMessageBodyReaderRegistry.Create;
+  Result := _Instance;
 end;
 
 procedure TMessageBodyReaderRegistry.RegisterReader(const AReaderClass: TClass;
@@ -222,5 +225,11 @@ begin
 
   FRegistry.Add(LEntryInfo)
 end;
+
+initialization
+
+finalization
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 
 end.

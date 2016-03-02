@@ -19,7 +19,6 @@ uses
   , Diagnostics
 
   , MARS.Core.Classes
-  , MARS.Core.Singleton
   , MARS.Core.URL
   , MARS.Core.Token
   , MARS.Core.Engine
@@ -76,13 +75,12 @@ type
 
   TMARSDiagnosticsManager = class(TNonInterfacedObject, IMARSHandleRequestEventListener)
   private
-    type TDiagnosticsManagerSingleton = TMARSSingleton<TMARSDiagnosticsManager>;
   private
     FEngineInfo: TMARSDiagnosticEngineInfo;
     FAppDictionary: TObjectDictionary<string, TMARSDiagnosticAppInfo>;
     FCriticalSection: TCriticalSection;
   protected
-    class function GetInstance: TMARSDiagnosticsManager; static; inline;
+    class function GetInstance: TMARSDiagnosticsManager; static;
     function GetAppInfo(const App: string; const ADoSomething: TProc<TMARSDiagnosticAppInfo>): Boolean; overload;
   public
     constructor Create;
@@ -111,8 +109,10 @@ uses
     Math
   , DateUtils
   , MARS.Core.Utils
-
   ;
+
+var
+  _Instance: TMARSDiagnosticsManager = nil;
 
 { TMARSDiagnosticsManager }
 
@@ -147,7 +147,6 @@ end;
 
 constructor TMARSDiagnosticsManager.Create;
 begin
-  TDiagnosticsManagerSingleton.CheckInstance(Self);
   FAppDictionary := TObjectDictionary<string, TMARSDiagnosticAppInfo>.Create([doOwnsValues]);
   FCriticalSection := TCriticalSection.Create;
 
@@ -200,7 +199,9 @@ end;
 
 class function TMARSDiagnosticsManager.GetInstance: TMARSDiagnosticsManager;
 begin
-  Result := TDiagnosticsManagerSingleton.Instance;
+  if not Assigned(_Instance) then
+    _Instance := TMARSDiagnosticsManager.Create;
+  Result := _Instance;
 end;
 
 procedure TMARSDiagnosticsManager.OnTokenEnd(const AToken: string);
@@ -360,5 +361,11 @@ begin
   Result.AddPair('LastSessionStart',  DateToISO8601(FLastSessionStart));
   Result.AddPair('LastSessionEnd', DateToISO8601(FLastSessionEnd));
 end;
+
+initialization
+
+finalization
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 
 end.

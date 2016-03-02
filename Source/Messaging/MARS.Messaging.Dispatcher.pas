@@ -19,7 +19,6 @@ uses
 {$endif}
   , SyncObjs
 
-  , MARS.Core.Singleton
   , MARS.Core.Utils
   , MARS.Messaging.Message
   , MARS.Messaging.Subscriber
@@ -28,9 +27,6 @@ uses
 type
   TMARSMessageDispatcher = class
   private
-    type
-      TMARSMessageDispatcherSingleton = TMARSSingleton<TMARSMessageDispatcher>;
-  private
     FSubscribers: TList<IMARSMessageSubscriber>;
     FQueue: TThreadedQueue<TMARSMessage>;
     FCriticalSection: TCriticalSection;
@@ -38,7 +34,7 @@ type
     FWorkerTask: ITask;
 {$endif}
   protected
-    class function GetInstance: TMARSMessageDispatcher; static; inline;
+    class function GetInstance: TMARSMessageDispatcher; static;
 
     procedure DoRegisterSubscriber(const ASubscriber: IMARSMessageSubscriber); virtual;
     procedure DoUnRegisterSubscriber(const ASubscriber: IMARSMessageSubscriber); virtual;
@@ -59,12 +55,13 @@ type
 
 implementation
 
+var
+  _Instance: TMARSMessageDispatcher = nil;
+
 { TMARSMessageDispatcher }
 
 constructor TMARSMessageDispatcher.Create;
 begin
-  TMARSMessageDispatcherSingleton.CheckInstance(Self);
-
   inherited Create();
 
   FSubscribers := TList<IMARSMessageSubscriber>.Create;
@@ -139,7 +136,9 @@ end;
 
 class function TMARSMessageDispatcher.GetInstance: TMARSMessageDispatcher;
 begin
-  Result := TMARSMessageDispatcherSingleton.Instance;
+  if not Assigned(_Instance) then
+    _Instance := TMARSMessageDispatcher.Create;
+  Result := _Instance;
 end;
 
 procedure TMARSMessageDispatcher.RegisterSubscriber(
@@ -153,5 +152,11 @@ procedure TMARSMessageDispatcher.UnRegisterSubscriber(
 begin
   DoUnRegisterSubscriber(ASubscriber);
 end;
+
+initialization
+
+finalization
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 
 end.

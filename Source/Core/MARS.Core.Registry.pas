@@ -13,8 +13,6 @@ interface
 uses
   SysUtils, Classes
   , Generics.Collections
-
-  , MARS.Core.Singleton
 ;
 
 type
@@ -32,10 +30,8 @@ type
 
   TMARSResourceRegistry = class(TObjectDictionary<string, TMARSConstructorInfo>)
   private
-    type
-      TMARSResourceRegistrySingleton = TMARSSingleton<TMARSResourceRegistry>;
   protected
-    class function GetInstance: TMARSResourceRegistry; static; inline;
+    class function GetInstance: TMARSResourceRegistry; static;
   public
     constructor Create; virtual;
     function RegisterResource<T: class>: TMARSConstructorInfo; overload;
@@ -69,6 +65,9 @@ begin
 end;
 {$endif}
 
+var
+  _Instance: TMARSResourceRegistry = nil;
+
 
 { TMARSResourceRegistry }
 
@@ -97,14 +96,14 @@ end;
 
 constructor TMARSResourceRegistry.Create;
 begin
-  TMARSResourceRegistrySingleton.CheckInstance(Self);
-
   inherited Create([doOwnsValues]);
 end;
 
 class function TMARSResourceRegistry.GetInstance: TMARSResourceRegistry;
 begin
-  Result := TMARSResourceRegistrySingleton.Instance;
+  if not Assigned(_Instance) then
+    _Instance := TMARSResourceRegistry.Create;
+  Result := _Instance;
 end;
 
 function TMARSResourceRegistry.GetResourceClass(const AResource: string;
@@ -140,5 +139,12 @@ begin
         Result := FTypeTClass.Create as TObject;
       end;
 end;
+
+initialization
+
+finalization
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
+
 
 end.

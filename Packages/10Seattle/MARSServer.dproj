@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{D44362A0-1BCF-45FD-80B4-281FB36C0E08}</ProjectGuid>
         <MainSource>MARSServer.dpk</MainSource>
-        <ProjectVersion>18.0</ProjectVersion>
+        <ProjectVersion>18.1</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
@@ -146,7 +146,6 @@
         <DCCReference Include="..\..\Source\Core\MARS.Core.Registry.pas"/>
         <DCCReference Include="..\..\Source\Core\MARS.Core.Request.pas"/>
         <DCCReference Include="..\..\Source\Core\MARS.Core.Response.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Singleton.pas"/>
         <DCCReference Include="..\..\Source\Core\MARS.Core.Token.pas"/>
         <DCCReference Include="..\..\Source\Core\MARS.Core.Token.Resource.pas"/>
         <DCCReference Include="..\..\Source\Core\MARS.Core.URL.pas"/>

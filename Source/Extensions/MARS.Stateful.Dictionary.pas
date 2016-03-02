@@ -1,4 +1,4 @@
-(*
+﻿(*
   Copyright 2015, MARS - REST Library
 
   Home: https://github.com/MARS-library
@@ -17,7 +17,6 @@ uses
   , MARS.Core.Classes
   , MARS.Core.Attributes
   , MARS.Core.Token
-  , MARS.Core.Singleton
   , MARS.Core.Utils
   ;
 
@@ -37,14 +36,13 @@ type
 
   end;
 
-  TMARSStatefulDictionaryRegistry = class(TNonInterfacedObject, IMARSTokenEventListener)
+  TMARSStatefulDictionaryRegistry = class(TNonInterfacedObject {AM , IMARSTokenEventListener} )
   private
-    type TMARSStatefulDictionaryRegistrySingleton = TMARSSingleton<TMARSStatefulDictionaryRegistry>;
   private
     FCriticalSection: TCriticalSection;
     FDictionary: TObjectDictionary<string, TMARSStatefulDictionary>;
   protected
-    class function GetInstance: TMARSStatefulDictionaryRegistry; static; inline;
+    class function GetInstance: TMARSStatefulDictionaryRegistry; static;
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -62,6 +60,9 @@ type
 
 
 implementation
+
+var
+  _Instance: TMARSStatefulDictionaryRegistry;
 
 { TMARSStatefulDictionary }
 
@@ -187,17 +188,16 @@ end;
 
 constructor TMARSStatefulDictionaryRegistry.Create;
 begin
-  TMARSStatefulDictionaryRegistrySingleton.CheckInstance(Self);
   inherited Create;
   FCriticalSection := TCriticalSection.Create;
   FDictionary := TObjectDictionary<string, TMARSStatefulDictionary>.Create([doOwnsValues]);
 
-  TMARSTokenList.Instance.AddSubscriber(Self);
+//AM  TMARSTokenList.Instance.AddSubscriber(Self);
 end;
 
 destructor TMARSStatefulDictionaryRegistry.Destroy;
 begin
-  TMARSTokenList.Instance.RemoveSubscriber(Self);
+//AM  TMARSTokenList.Instance.RemoveSubscriber(Self);
 
   FCriticalSection.Free;
   FDictionary.Free;
@@ -222,7 +222,9 @@ end;
 
 class function TMARSStatefulDictionaryRegistry.GetInstance: TMARSStatefulDictionaryRegistry;
 begin
-  Result := TMARSStatefulDictionaryRegistrySingleton.Instance;
+  if not Assigned(_Instance) then
+    _Instance := TMARSStatefulDictionaryRegistry.Create;
+  Result := _Instance;
 end;
 
 procedure TMARSStatefulDictionaryRegistry.OnTokenEnd(const AToken: string);
@@ -239,5 +241,11 @@ procedure TMARSStatefulDictionaryRegistry.OnTokenStart(const AToken: string);
 begin
 
 end;
+
+initialization
+
+finalization
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 
 end.

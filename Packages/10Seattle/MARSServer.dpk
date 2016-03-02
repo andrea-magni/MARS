@@ -63,7 +63,6 @@ contains
   MARS.Core.Registry in '..\..\Source\Core\MARS.Core.Registry.pas',
   MARS.Core.Request in '..\..\Source\Core\MARS.Core.Request.pas',
   MARS.Core.Response in '..\..\Source\Core\MARS.Core.Response.pas',
-  MARS.Core.Singleton in '..\..\Source\Core\MARS.Core.Singleton.pas',
   MARS.Core.Token in '..\..\Source\Core\MARS.Core.Token.pas',
   MARS.Core.Token.Resource in '..\..\Source\Core\MARS.Core.Token.Resource.pas',
   MARS.Core.URL in '..\..\Source\Core\MARS.Core.URL.pas',
@@ -87,4 +86,5 @@ contains
   MARS.Messaging.Subscriber in '..\..\Source\Messaging\MARS.Messaging.Subscriber.pas';
 
 end.
+
 
