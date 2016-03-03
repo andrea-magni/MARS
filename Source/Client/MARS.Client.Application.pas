@@ -60,7 +60,6 @@ begin
   FAppName := 'default';
   if TMARSComponentHelper.IsDesigning(Self) then
     FClient := TMARSComponentHelper.FindDefault<TMARSClient>(Self);
-
 end;
 
 function TMARSClientApplication.GetPath: string;
