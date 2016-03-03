@@ -718,7 +718,7 @@ begin
           Response.StatusCode := 200;
         end;
 
-        tkUnknown : ; // it's a procedure, not a function!
+        tkUnknown : Response.StatusCode := 200; // it's a procedure, not a function!
 
         //tkRecord: ;
         //tkInterface: ;
