@@ -39,17 +39,19 @@ type
     FPort: Integer;
     FThreadPoolSize: Integer;
     FName: string;
-  class threadvar
-    FWebRequest: TWebRequest;
-    FWebResponse: TWebResponse;
-    FURL: TMARSURL;
-    FToken: TMARSToken;
+
+    class threadvar FWebRequest: TWebRequest;
+    class threadvar FWebResponse: TWebResponse;
+    class threadvar FURL: TMARSURL;
+    class threadvar FToken: TMARSToken;
 
     function GetCurrentRequest: TWebRequest;
     function GetCurrentResponse: TWebResponse;
     function GetCurrentURL: TMARSURL;
     function GetCurrentToken: TMARSToken;
   protected
+    class var _Instance: TMARSEngine;
+    class function GetInstance: TMARSEngine; static;
     procedure DoBeforeHandleRequest(const AApplication: TMARSApplication); virtual;
     procedure DoAfterHandleRequest(const AApplication: TMARSApplication; const AStopWatch: TStopWatch); virtual;
   public
@@ -75,6 +77,8 @@ type
     property CurrentToken: TMARSToken read GetCurrentToken;
     property CurrentRequest: TWebRequest read GetCurrentRequest;
     property CurrentResponse: TWebResponse read GetCurrentResponse;
+    class property Instance: TMARSEngine read GetInstance;
+    class destructor ClassDestructor;
   end;
 
 implementation
@@ -109,6 +113,12 @@ procedure TMARSEngine.AddSubscriber(
   const ASubscriber: IMARSHandleRequestEventListener);
 begin
   FSubscribers.Add(ASubscriber);
+end;
+
+class destructor TMARSEngine.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 end;
 
 constructor TMARSEngine.Create;
@@ -235,6 +245,13 @@ end;
 function TMARSEngine.GetCurrentURL: TMARSURL;
 begin
   Result := FURL;
+end;
+
+class function TMARSEngine.GetInstance: TMARSEngine;
+begin
+  if not Assigned(_Instance) then
+    _Instance := TMARSEngine.Create;
+  Result := _Instance;
 end;
 
 end.
