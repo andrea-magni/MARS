@@ -23,6 +23,9 @@ uses
 
 {$M+}
 
+const
+  DEFAULT_ENGINE_NAME = 'DefaultEngine';
+
 type
   TMARSEngine = class;
 
@@ -33,16 +36,16 @@ type
 
   TMARSEngine = class
   private
+    class threadvar FWebRequest: TWebRequest;
+    class threadvar FWebResponse: TWebResponse;
+    class threadvar FURL: TMARSURL;
+    class threadvar FToken: TMARSToken;
+  private
     FApplications: TMARSApplicationDictionary;
     FSubscribers: TList<IMARSHandleRequestEventListener>;
     FCriticalSection: TCriticalSection;
     FParameters: TMARSParameters;
     FName: string;
-   private
-    class threadvar FWebRequest: TWebRequest;
-    class threadvar FWebResponse: TWebResponse;
-    class threadvar FURL: TMARSURL;
-    class threadvar FToken: TMARSToken;
 
     function GetCurrentRequest: TWebRequest;
     function GetCurrentResponse: TWebResponse;
@@ -58,7 +61,7 @@ type
     procedure DoBeforeHandleRequest(const AApplication: TMARSApplication); virtual;
     procedure DoAfterHandleRequest(const AApplication: TMARSApplication; const AStopWatch: TStopWatch); virtual;
   public
-    constructor Create(const AName: string = 'DefaultEngine'); virtual;
+    constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
     destructor Destroy; override;
 
     function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse): Boolean;
@@ -83,6 +86,31 @@ type
     property CurrentToken: TMARSToken read GetCurrentToken;
     property CurrentRequest: TWebRequest read GetCurrentRequest;
     property CurrentResponse: TWebResponse read GetCurrentResponse;
+  end;
+
+  TMARSEngineRegistry=class
+  private
+    FItems: TDictionary<string, TMARSEngine>;
+    function GetCount: Integer;
+  protected
+    class var _Instance: TMARSEngineRegistry;
+    class function GetInstance: TMARSEngineRegistry; static;
+    function GetEngine(const AName: string): TMARSEngine;
+    class function GetDefaultEngine: TMARSEngine; static;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+
+    procedure RegisterEngine(const AEngine: TMARSEngine);
+    procedure UnregisterEngine(const AEngine: TMARSEngine); overload;
+    procedure UnregisterEngine(const AEngineName: string); overload;
+
+    property Engine[const AName: string]: TMARSEngine read GetEngine; default;
+
+    property Count: Integer read GetCount;
+
+    class property Instance: TMARSEngineRegistry read GetInstance;
+    class property DefaultEngine: TMARSEngine read GetDefaultEngine;
   end;
 
 implementation
@@ -139,10 +167,14 @@ begin
   Parameters.Values['Port'] := 8080;
   Parameters.Values['ThreadPoolSize'] := 75;
   Parameters.Values['BasePath'] := '/rest';
+
+  TMARSEngineRegistry.Instance.RegisterEngine(Self);
 end;
 
 destructor TMARSEngine.Destroy;
 begin
+  TMARSEngineRegistry.Instance.UnregisterEngine(Self);
+
   FParameters.Free;
   FCriticalSection.Free;
   FApplications.Free;
@@ -285,6 +317,60 @@ end;
 function TMARSEngine.GetThreadPoolSize: Integer;
 begin
   Result := Parameters['ThreadPoolSize'].AsInteger;
+end;
+
+{ TMARSEngineRegistry }
+
+constructor TMARSEngineRegistry.Create;
+begin
+  inherited Create;
+  FItems := TDictionary<string, TMARSEngine>.Create;
+end;
+
+destructor TMARSEngineRegistry.Destroy;
+begin
+  FItems.Free;
+  inherited;
+end;
+
+function TMARSEngineRegistry.GetCount: Integer;
+begin
+  Result := FItems.Count;
+end;
+
+class function TMARSEngineRegistry.GetDefaultEngine: TMARSEngine;
+begin
+  Result := Instance.Engine[DEFAULT_ENGINE_NAME];
+end;
+
+function TMARSEngineRegistry.GetEngine(const AName: string): TMARSEngine;
+begin
+  if not FItems.TryGetValue(AName, Result) then
+    Result := nil;
+end;
+
+class function TMARSEngineRegistry.GetInstance: TMARSEngineRegistry;
+begin
+  if not Assigned(_Instance) then
+    _Instance := TMARSEngineRegistry.Create;
+  Result := _Instance;
+end;
+
+procedure TMARSEngineRegistry.RegisterEngine(const AEngine: TMARSEngine);
+begin
+  Assert(Assigned(AEngine));
+  FItems.AddOrSetValue(AEngine.Name, AEngine);
+end;
+
+procedure TMARSEngineRegistry.UnregisterEngine(const AEngine: TMARSEngine);
+begin
+  Assert(Assigned(AEngine));
+  UnregisterEngine(AEngine.Name);
+end;
+
+procedure TMARSEngineRegistry.UnregisterEngine(const AEngineName: string);
+begin
+  FItems.Remove(AEngineName);
 end;
 
 end.
