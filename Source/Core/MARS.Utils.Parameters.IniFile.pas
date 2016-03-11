@@ -25,6 +25,7 @@ implementation
 
 uses
   StrUtils
+  , IOUtils
   , Rtti
   ;
 
@@ -50,10 +51,17 @@ end;
 
 class function TMARSParametersIniFileReaderWriter.GetActualFileName(
   const AFileName: string): string;
+var
+  LConfigFileName: string;
 begin
   Result := AFileName;
   if Result = '' then
-    Result := ChangeFileExt(ParamStr(0), '.ini');
+  begin
+    if FindCmdLineSwitch('configFileName', LConfigFileName) then
+      Result := TPath.GetFullPath(LConfigFileName)
+    else
+      Result := ChangeFileExt(ParamStr(0), '.ini');
+  end
 end;
 
 class procedure TMARSParametersIniFileReaderWriter.Load(
@@ -99,7 +107,7 @@ begin
 
             LParameterName := TMARSParameters.CombineSliceAndParamName(LSection, LName);
 
-            AParameters.Values[LParameterName] := TValue.From<string>(LValue);
+            AParameters.Values[LParameterName] := GuessTValueFromString(LValue);
           end;
         end;
       finally
