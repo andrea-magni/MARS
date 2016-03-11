@@ -111,6 +111,7 @@ type
 
     class property Instance: TMARSEngineRegistry read GetInstance;
     class property DefaultEngine: TMARSEngine read GetDefaultEngine;
+    class destructor ClassDestructor;
   end;
 
 implementation
@@ -320,6 +321,12 @@ begin
 end;
 
 { TMARSEngineRegistry }
+
+class destructor TMARSEngineRegistry.ClassDestructor;
+begin
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
+end;
 
 constructor TMARSEngineRegistry.Create;
 begin
