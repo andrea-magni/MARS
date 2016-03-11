@@ -97,7 +97,7 @@ begin
   try
     if Authenticate(AUserName, APassword) then
     begin
-      Token.Build(App.GetParamByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString);
+      Token.Build(App.Parameters.ByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString);
       Result := Token.ToJSON;
       Result.AddPair('success', TJSONTrue.Create);
     end
