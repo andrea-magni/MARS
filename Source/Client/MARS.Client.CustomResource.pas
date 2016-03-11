@@ -243,6 +243,7 @@ end;
 
 destructor TMARSClientCustomResource.Destroy;
 begin
+  FQueryParams.Free;
   FPathParamsValues.Free;
   inherited;
 end;
