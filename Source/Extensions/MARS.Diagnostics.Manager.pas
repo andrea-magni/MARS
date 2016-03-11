@@ -164,7 +164,8 @@ end;
 
 destructor TMARSDiagnosticsManager.Destroy;
 begin
-  FEngine.RemoveSubscriber(Self);
+  if Assigned(FEngine) then
+    FEngine.RemoveSubscriber(Self);
 
   FEngineInfo.Free;
   FCriticalSection.Free;

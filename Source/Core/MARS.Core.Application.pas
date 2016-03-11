@@ -27,6 +27,7 @@ uses
   , MARS.Core.Registry
   , MARS.Core.MediaType
   , MARS.Core.Token
+  , MARS.Utils.Parameters
   ;
 
 type
@@ -41,7 +42,7 @@ type
     FName: string;
     FEngine: TObject;
     FSystem: Boolean;
-    FParameters: TDictionary<string, TValue>;
+    FParameters: TMARSParameters;
     function GetResources: TArray<string>;
     function GetRequest: TWebRequest;
     function GetResponse: TWebResponse;
@@ -78,7 +79,7 @@ type
     property URL: TMARSURL read GetURL;
     property Token: TMARSToken read GetToken;
   public
-    constructor Create(const AEngine: TObject);
+    constructor Create(const AEngine: TObject; const AName: string);
     destructor Destroy; override;
 
     function AddResource(AResource: string): Boolean;
@@ -86,14 +87,11 @@ type
     function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL): Boolean;
     procedure CollectGarbage(const AValue: TValue);
 
-    property Name: string read FName write FName;
+    property Name: string read FName;
     property BasePath: string read FBasePath write FBasePath;
     property System: Boolean read FSystem write FSystem;
     property Resources: TArray<string> read GetResources;
-    property Parameters: TDictionary<string, TValue> read FParameters;
-    function GetParamByName(const AName: string; const ADefault: TValue): TValue; overload;
-    function GetParamByName(const AName: string): TValue; overload;
-    procedure SetParamByName(const AName: string; AValue: TValue);
+    property Parameters: TMARSParameters read FParameters;
   end;
 
   TMARSApplicationDictionary = class(TObjectDictionary<string, TMARSApplication>)
@@ -322,13 +320,14 @@ begin
     Result := False;
 end;
 
-constructor TMARSApplication.Create(const AEngine: TObject);
+constructor TMARSApplication.Create(const AEngine: TObject; const AName: string);
 begin
   inherited Create;
+  FName := AName;
   FEngine := AEngine;
   FRttiContext := TRttiContext.Create;
   FResourceRegistry := TObjectDictionary<string, TMARSConstructorInfo>.Create([doOwnsValues]);
-  FParameters := TDictionary<string,TValue>.Create;
+  FParameters := TMARSParameters.Create(AName);
 end;
 
 destructor TMARSApplication.Destroy;
@@ -733,22 +732,6 @@ begin
   end;
 end;
 
-function TMARSApplication.GetParamByName(const AName: string;
-  const ADefault: TValue): TValue;
-var
-  LValue: TValue;
-begin
-  if Parameters.TryGetValue(AName, LValue) then
-    Result := LValue
-  else
-    Result := ADefault;
-end;
-
-function TMARSApplication.GetParamByName(const AName: string): TValue;
-begin
-  Result := GetParamByName(AName, TValue.Empty);
-end;
-
 function TMARSApplication.ParamNameToParamIndex(AResourceInstance: TObject;
   const AParamName: string; AMethod: TRttiMethod): Integer;
 var
@@ -791,13 +774,6 @@ begin
   end);
 
   Result := LParamIndex;
-end;
-
-
-procedure TMARSApplication.SetParamByName(const AName: string;
-  AValue: TValue);
-begin
-  Parameters.AddOrSetValue(AName, AValue);
 end;
 
 end.

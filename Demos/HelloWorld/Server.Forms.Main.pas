@@ -12,19 +12,17 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, ActnList,
   StdCtrls, ExtCtrls
-
+  , System.Actions
   , Diagnostics
   , IdContext
 
   , MARS.Core.Engine
   , MARS.http.Server.Indy
 
-
-//  , MARS.Core.Utils
   , MARS.Core.Application
-  , MARS.Diagnostics.Manager
-  , MARS.Diagnostics.Resources, System.Actions
-//  , MARS.Core.Token
+
+//  , MARS.Diagnostics.Manager
+//  , MARS.Diagnostics.Resources
   ;
 
 type
@@ -60,7 +58,8 @@ uses
    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Core.URL
-  , MARS.Core.Token
+//  , MARS.Core.Token
+  , MARS.Utils.Parameters.IniFile
   ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -75,21 +74,15 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
-  FEngine := TMARSEngine.Create;
+  FEngine := TMARSEngine.Create('MARS HelloWorld');
 
-  // Engine configuration
-  FEngine.Port := StrToIntDef(PortNumberEdit.Text, 8080);
-  FEngine.ThreadPoolSize := 10;
-  FEngine.Name := 'MARS HelloWorld';
-  FEngine.BasePath := '/rest';
+  FEngine.Parameters.LoadFromIniFile;
 
-  FEngine.AddApplication('Default', '/default'
-    , ['Server.Resources.THelloWorldResource']
-  ).SetParamByName(TMARSToken.JWT_SECRET_PARAM, 'helloworld');
+  FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
 
-  FEngine.AddApplication('diagnostics', '/diagnostics', ['*']);
-  TMARSDiagnosticsManager.FEngine := FEngine; // TODO: REMOVE!!!
-  TMARSDiagnosticsManager.Instance;
+//  FEngine.AddApplication('diagnostics', '/diagnostics', ['*']);
+//  TMARSDiagnosticsManager.FEngine := FEngine; // TODO: REMOVE!!!
+//  TMARSDiagnosticsManager.Instance;
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);
@@ -111,6 +104,7 @@ begin
 
   FEngine.Free;
   FEngine := nil;
+//  TMARSDiagnosticsManager.FEngine := nil; // TODO: REMOVE!!!
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);

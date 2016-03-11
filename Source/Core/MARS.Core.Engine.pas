@@ -18,6 +18,7 @@ uses
   , MARS.Core.Application
   , MARS.Core.URL
   , MARS.Core.Token
+  , MARS.Utils.Parameters
 ;
 
 {$M+}
@@ -35,40 +36,47 @@ type
     FApplications: TMARSApplicationDictionary;
     FSubscribers: TList<IMARSHandleRequestEventListener>;
     FCriticalSection: TCriticalSection;
-    FBasePath: string;
-    FPort: Integer;
-    FThreadPoolSize: Integer;
+    FParameters: TMARSParameters;
     FName: string;
-  class threadvar
-    FWebRequest: TWebRequest;
-    FWebResponse: TWebResponse;
-    FURL: TMARSURL;
-    FToken: TMARSToken;
+   private
+    class threadvar FWebRequest: TWebRequest;
+    class threadvar FWebResponse: TWebResponse;
+    class threadvar FURL: TMARSURL;
+    class threadvar FToken: TMARSToken;
 
     function GetCurrentRequest: TWebRequest;
     function GetCurrentResponse: TWebResponse;
     function GetCurrentURL: TMARSURL;
     function GetCurrentToken: TMARSToken;
+    function GetBasePath: string;
+    function GetPort: Integer;
+    function GetThreadPoolSize: Integer;
+    procedure SetBasePath(const Value: string);
+    procedure SetPort(const Value: Integer);
+    procedure SetThreadPoolSize(const Value: Integer);
   protected
     procedure DoBeforeHandleRequest(const AApplication: TMARSApplication); virtual;
     procedure DoAfterHandleRequest(const AApplication: TMARSApplication; const AStopWatch: TStopWatch); virtual;
   public
-    constructor Create;
+    constructor Create(const AName: string = 'DefaultEngine'); virtual;
     destructor Destroy; override;
 
     function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse): Boolean;
 
-    function AddApplication(const AName, ABasePath: string; const AResources: array of string): TMARSApplication; virtual;
+    function AddApplication(const AName, ABasePath: string;
+      const AResources: array of string; const AParametersSliceName: string = ''): TMARSApplication; virtual;
     procedure AddSubscriber(const ASubscriber: IMARSHandleRequestEventListener);
     procedure RemoveSubscriber(const ASubscriber: IMARSHandleRequestEventListener);
 
     procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>);
 
     property Applications: TMARSApplicationDictionary read FApplications;
-    property BasePath: string read FBasePath write FBasePath;
-    property Name: string read FName write FName;
-    property Port: Integer read FPort write FPort;
-    property ThreadPoolSize: Integer read FThreadPoolSize write FThreadPoolSize;
+    property Parameters: TMARSParameters read FParameters;
+
+    property BasePath: string read GetBasePath write SetBasePath;
+    property Name: string read FName;
+    property Port: Integer read GetPort write SetPort;
+    property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
 
     // Transient properties
     property CurrentURL: TMARSURL read GetCurrentURL;
@@ -84,16 +92,21 @@ uses
   ;
 
 function TMARSEngine.AddApplication(const AName, ABasePath: string;
-  const AResources: array of string): TMARSApplication;
+  const AResources: array of string; const AParametersSliceName: string): TMARSApplication;
 var
   LResource: string;
+  LParametersSliceName: string;
 begin
-  Result := TMARSApplication.Create(Self);
+  Result := TMARSApplication.Create(Self, AName);
   try
-    Result.Name := AName;
     Result.BasePath := ABasePath;
     for LResource in AResources do
       Result.AddResource(LResource);
+
+    LParametersSliceName := AParametersSliceName;
+    if LParametersSliceName = '' then
+      LParametersSliceName := AName;
+    Result.Parameters.CopyFrom(Parameters, LParametersSliceName);
 
     Applications.Add(
       TMARSURL.CombinePath([BasePath, ABasePath])
@@ -111,21 +124,26 @@ begin
   FSubscribers.Add(ASubscriber);
 end;
 
-constructor TMARSEngine.Create;
+constructor TMARSEngine.Create(const AName: string);
 begin
+  inherited Create;
+
+  FName := AName;
+
   FApplications := TMARSApplicationDictionary.Create([doOwnsValues]);
   FCriticalSection := TCriticalSection.Create;
   FSubscribers := TList<IMARSHandleRequestEventListener>.Create;
-  FPort := 8080;
-  FThreadPoolSize := 75;
-  FBasePath := '/rest';
-  FName := 'MARS Engine';
+  FParameters := TMARSParameters.Create(FName);
 
-  inherited Create;
+  // default parameters
+  Parameters.Values['Port'] := 8080;
+  Parameters.Values['ThreadPoolSize'] := 75;
+  Parameters.Values['BasePath'] := '/rest';
 end;
 
 destructor TMARSEngine.Destroy;
 begin
+  FParameters.Free;
   FCriticalSection.Free;
   FApplications.Free;
   FSubscribers.Free;
@@ -191,7 +209,9 @@ begin
       FWebRequest := ARequest;
       FWebResponse := AResponse;
       FURL := LURL;
-      FToken := TMARSToken.Create(FWebRequest, LApplication.GetParamByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString);
+      FToken := TMARSToken.Create(FWebRequest
+        , LApplication.Parameters.ByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString
+      );
       try
         DoBeforeHandleRequest(LApplication);
         LStopWatch := TStopwatch.StartNew;
@@ -217,6 +237,26 @@ begin
   FSubscribers.Remove(ASubscriber);
 end;
 
+function TMARSEngine.GetBasePath: string;
+begin
+  Result := Parameters['BasePath'].AsString;
+end;
+
+procedure TMARSEngine.SetBasePath(const Value: string);
+begin
+  Parameters['BasePath'] := Value;
+end;
+
+procedure TMARSEngine.SetPort(const Value: Integer);
+begin
+  Parameters['Port'] := Value;
+end;
+
+procedure TMARSEngine.SetThreadPoolSize(const Value: Integer);
+begin
+  Parameters['ThreadPoolSize'] := Value;
+end;
+
 function TMARSEngine.GetCurrentRequest: TWebRequest;
 begin
   Result := FWebRequest;
@@ -235,6 +275,16 @@ end;
 function TMARSEngine.GetCurrentURL: TMARSURL;
 begin
   Result := FURL;
+end;
+
+function TMARSEngine.GetPort: Integer;
+begin
+  Result := Parameters['Port'].AsInteger;
+end;
+
+function TMARSEngine.GetThreadPoolSize: Integer;
+begin
+  Result := Parameters['ThreadPoolSize'].AsInteger;
 end;
 
 end.
