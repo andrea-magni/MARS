@@ -75,5 +75,9 @@ This is an open source project, so obviously every contribution/help/suggestion 
 
 Beware: I don't plan to reintegrate this fork in the MARS-library branch.
 
-Andrea Magni
-www.andreamagni.eu
+# Contributions
+This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
+
+Beware: I don't plan to reintegrate this fork in the MARS-library branch.
+
+[Andrea Magni](http://www.andreamagni.eu)
