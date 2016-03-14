@@ -63,3 +63,17 @@ The name of the rover was given after running a contest through the NASA website
 - [ ] Enable emission of API schema and information
 - [ ] Provide an example of high scability (multiple application servers, possibly with a session persistence server node)
 - [ ] Fix the static webserver extension
+
+Aside of these functionalities, I will add unit and integration testing (refactoring code where needed).
+
+# Resources
+- [MARS-curiosity Google+ Community](https://plus.google.com/communities/109223723982639531185)
+- [Andrea Magni's Blog](http://www.andreamagni.eu/wp/tags/mars-curiosity)
+
+# Contributions
+This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
+
+Beware: I don't plan to reintegrate this fork in the MARS-library branch.
+
+Andrea Magni
+www.andreamagni.eu
