@@ -10,7 +10,7 @@ uses
   Vcl.Forms,
   Server.Forms.Main in 'Server.Forms.Main.pas' {MainForm},
   Server.MainData in 'Server.MainData.pas' {MainDataResource: TDataModule},
-  MARS.Data.FireDAC.DataModule in '..\..\Source\Data\FireDAC\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule};
+  MARS.Data.FireDAC.DataModule in '..\..\Source\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule};
 
 {$R *.res}
 

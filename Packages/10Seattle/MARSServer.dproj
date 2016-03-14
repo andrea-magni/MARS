@@ -117,10 +117,13 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="dbrtl.dcp"/>
         <DCCReference Include="inet.dcp"/>
+        <DCCReference Include="IndySystem.dcp"/>
+        <DCCReference Include="IndyProtocols.dcp"/>
+        <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="xmlrtl.dcp"/>
         <DCCReference Include="DbxCommonDriver.dcp"/>
-        <DCCReference Include="dbrtl.dcp"/>
         <DCCReference Include="fmx.dcp"/>
         <DCCReference Include="FireDAC.dcp"/>
         <DCCReference Include="FireDACCommonDriver.dcp"/>
@@ -128,48 +131,40 @@
         <DCCReference Include="fmxFireDAC.dcp"/>
         <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="DataSnapFireDAC.dcp"/>
-        <DCCReference Include="IndySystem.dcp"/>
-        <DCCReference Include="IndyProtocols.dcp"/>
-        <DCCReference Include="IndyCore.dcp"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Application.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Attributes.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Cache.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Classes.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Declarations.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Engine.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Exceptions.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.JSON.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.MediaType.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.MessageBodyReader.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.MessageBodyWriter.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.MessageBodyWriters.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Registry.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Request.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Response.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Token.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Token.Resource.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.URL.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Utils.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Rtti.Utils.pas"/>
-        <DCCReference Include="..\..\Source\Data\MARS.Data.MessageBodyWriters.pas"/>
-        <DCCReference Include="..\..\Source\Data\MARS.Data.Utils.pas"/>
-        <DCCReference Include="..\..\Source\Data\FireDAC\MARS.Data.FireDAC.DataModule.pas">
+        <DCCReference Include="..\..\Source\MARS.Core.Application.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Attributes.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Cache.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Classes.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Declarations.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Engine.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Exceptions.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.MediaType.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReader.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriter.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Registry.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Request.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Response.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Singleton.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Token.Resource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.URL.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.DataModule.pas">
             <Form>MARSFDDataModuleResource</Form>
+            <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
-        <DCCReference Include="..\..\Source\Data\FireDAC\MARS.Data.FireDAC.MessageBodyWriters.pas"/>
-        <DCCReference Include="..\..\Source\Data\FireDAC\MARS.Data.FireDAC.pas"/>
-        <DCCReference Include="..\..\Source\Data\FireDAC\MARS.Data.FireDAC.Utils.pas"/>
-        <DCCReference Include="..\..\Source\Extensions\MARS.Diagnostics.Manager.pas"/>
-        <DCCReference Include="..\..\Source\Extensions\MARS.Diagnostics.Resources.pas"/>
-        <DCCReference Include="..\..\Source\Extensions\MARS.Stateful.Dictionary.pas"/>
-        <DCCReference Include="..\..\Source\Extensions\MARS.Stateful.WrappedResource.pas"/>
-        <DCCReference Include="..\..\Source\Extensions\MARS.WebServer.Resources.pas"/>
-        <DCCReference Include="..\..\Source\Messaging\MARS.Messaging.Dispatcher.pas"/>
-        <DCCReference Include="..\..\Source\Messaging\MARS.Messaging.Message.pas"/>
-        <DCCReference Include="..\..\Source\Messaging\MARS.Messaging.Queue.pas"/>
-        <DCCReference Include="..\..\Source\Messaging\MARS.Messaging.Resource.pas"/>
-        <DCCReference Include="..\..\Source\Messaging\MARS.Messaging.Subscriber.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.MessageBodyWriters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.http.Core.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.IniFile.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -219,16 +214,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployClass Name="DependencyModule">
-                    <Platform Name="Win32">
-                        <Operation>0</Operation>
-                        <Extensions>.dll;.bpl</Extensions>
-                    </Platform>
-                    <Platform Name="OSX32">
-                        <Operation>1</Operation>
-                        <Extensions>.dylib</Extensions>
-                    </Platform>
-                </DeployClass>
+                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
                 <DeployClass Name="ProjectOSXResource">
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\Resources</RemoteDir>
@@ -542,7 +528,16 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
+                <DeployClass Name="DependencyModule">
+                    <Platform Name="Win32">
+                        <Operation>0</Operation>
+                        <Extensions>.dll;.bpl</Extensions>
+                    </Platform>
+                    <Platform Name="OSX32">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                </DeployClass>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>

@@ -20,14 +20,9 @@ uses
 type
   [Path('helloworld')]
   THelloWorldResource = class
-  private
-  protected
-    [Context] Req: TWebRequest;
   public
-
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
-
   end;
 
 implementation

@@ -51,6 +51,7 @@ uses
   , MARS.Rtti.Utils
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
+  , MARS.Utils.Parameters.IniFile
   ;
 
 
@@ -64,19 +65,11 @@ begin
   FEngine := TMARSEngine.Create;
 
   // Engine configuration
-  FEngine.Port := StrToIntDef(PortNumberEdit.Text, 8080);
-  FEngine.Name := 'MARS Template';
-  FEngine.BasePath := '/rest';
-  FEngine.ThreadPoolSize := 5;
+  FEngine.Parameters.LoadFromIniFile;
 
   // Application configuration
 
-  FEngine.AddApplication(
-      'Default'
-    , '/default'
-    , [ 'Server.Resources.THelloWorldResource'
-      ]
-  );
+  FEngine.AddApplication('Default', '/default', [ 'Server.Resources.*']);
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);

@@ -55,6 +55,7 @@ uses
    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Core.Token
+  , MARS.Utils.Parameters.IniFile
   ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -69,33 +70,15 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
-  FEngine := TMARSEngine.Create;
+  FEngine := TMARSEngine.Create('MARS HelloWorld');
 
-  // Engine configuration
-  FEngine.Port := StrToIntDef(PortNumberEdit.Text, 8080);
-  FEngine.ThreadPoolSize := 75;
-  FEngine.Name := 'MARS HelloWorld';
-  FEngine.BasePath := '/rest';
+  FEngine.Parameters.LoadFromIniFile;
 
-  FEngine.AddApplication(
-      'Default'
-    , '/default'
-    , ['Server.Resources.*']
-  ).SetParamByName(TMARSToken.JWT_SECRET_PARAM, 'andrea');
-
-
-//  FEngine.AddApplication(
-//      'Diagnostics'
-//    , '/diagnostics'
-//    , [ 'MARS.Diagnostics.Resources.TDiagnosticsResource'
-//       ,'MARS.Diagnostics.Resources.TResourcesResource'
-//      ]
-//  ).System := True;
-//  TMARSDiagnosticsManager.FEngine := FEngine;
-//  TMARSDiagnosticsManager.Instance; // force instance creation
+  FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);
+
   if not FServer.Active then
     FServer.Active := True;
 end;

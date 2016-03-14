@@ -61,6 +61,7 @@ uses
   , MARS.Core.MessageBodyWriters
   , MARS.Data.MessageBodyWriters
   , MARS.Data.FireDAC.MessageBodyWriters
+  , MARS.Utils.Parameters.IniFile
   ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -77,20 +78,12 @@ procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
   FEngine := TMARSEngine.Create;
 
-  FEngine.Port := StrToIntDef(PortNumberEdit.Text, 8080);
-  FEngine.Name := 'MARS HelloWorld';
-  FEngine.BasePath := '/rest';
-  FEngine.ThreadPoolSize := 5;
+  FEngine.Parameters.LoadFromIniFile;
 
-  FEngine.AddApplication(
-      'Default'
-    , '/default'
-    , ['Server.MainData.TMainDataResource']
-  );
+  FEngine.AddApplication('Default', '/default', ['Server.MainData.TMainDataResource']);
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);
-//  FServer.SetupThreadPooling(25);
 
   if not FServer.Active then
     FServer.Active := True;
