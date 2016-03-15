@@ -4,7 +4,7 @@
 
 - Known compatibility: **Delphi versions from XE4 to 10 Seattle**
 - *Some functionalities requires FireDAC*
-- *Should compile since Delphi XE, maybe 2010, with some small changes*
+- *Should compile since Delphi XE, maybe 2010, with minor changes*
 
 
 # The project
