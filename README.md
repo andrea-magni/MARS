@@ -41,6 +41,7 @@ The name of the rover was given after running a contest through the NASA website
 - refactoring (from Java-like to more Delphi-like approach)
 - added some utilities (i.e. Parameters support) and shortcuts
 - added Engine registry
+- restructured Source folder (unique folder now)
 
 # The roadmap
 
