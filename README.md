@@ -10,7 +10,7 @@
 # The project
 
 I started this project in 2015, it was formerly named WiRL and it started as an experiment to show Delphi's modern language features applied.
-At the time (December, 2015) the project was published on GitHub under its new name of MARS-library, most (>80%) of the code was written by me with contributions by Nando Dessena, Stefan Glienke and Paolo Rossi (alphabetically listed), plus some other minor contributors who provided some bugfixes here and there.
+At the time (December, 2015) the project was published on GitHub under its new name of MARS-library, most (>80%) of the code was written by me with contributions by Nando Dessena, Stefan Glienke and Paolo Rossi, plus some other minor contributors who provided some bugfixes here and there.
 
 In January, 2016, I decided to start my own fork of the MARS-library project and to give it the name of MARS-Curiosity.
 What really makes me happy about this project is that some of real world applications are already out there, built with this technology and developers who had the chance to try it were happy to embrace its philosophy and ease of use.
@@ -73,7 +73,5 @@ Aside of these functionalities, I will add unit and integration testing (refacto
 
 # Contributions
 This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
-
-Beware: I don't plan to reintegrate this fork in the MARS-library branch.
 
 [Andrea Magni](http://www.andreamagni.eu)
