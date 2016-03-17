@@ -1,0 +1,3 @@
+[submodule "ThirdParty/delphi-jose-jwt"]
+	path = ThirdParty/delphi-jose-jwt
+	url = https://github.com/andrea-magni/delphi-jose-jwt.git
