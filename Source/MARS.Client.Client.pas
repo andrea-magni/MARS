@@ -87,7 +87,11 @@ end;
 
 procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream);
 begin
+{$ifdef DelphiXE7_UP}
   FHttpClient.Delete(AURL, AResponseContent);
+{$else}
+  FHttpClient.Delete(AURL{, AResponseContent});
+{$endif}
 end;
 
 destructor TMARSClient.Destroy;
