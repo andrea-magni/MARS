@@ -1,4 +1,7 @@
 ![MARS-curiosity logo](http://www.andreamagni.eu/images/MARS-Curiosity-d.png)
+
+_\* The Delphi stylized helmet icon is trademark of Embarcadero Technologies._
+
 # MARS - Curiosity
 *Delphi REST Library*
 
