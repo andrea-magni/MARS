@@ -61,6 +61,7 @@ The name of the rover was given after running a contest through the NASA website
 - [ ] Deploy server as Apache module
 - [ ] Deploy server as IIS ISAPI module 
 - [ ] Implement a session persistence mechanism (server-side)
+- [ ] Proxy emitted by the server (JS and Delphi)
 - [ ] Cache mechanisms support
 
 ### Minor functionalities:
