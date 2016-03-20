@@ -36,44 +36,13 @@ The name of the rover was given after running a contest through the NASA website
 > - Clara Ma
 
 # Change log
-### Since the fork (Jan 2016)
-- fixed binary streaming
-- several fixes for bugs and memory leaks
-- integration of (part of) JWT method (http://jwt.io/) against Indy's (cookie based) session management
-- enhanced support for HTTP custom headers
-- refactoring (from Java-like to more Delphi-like approach)
-- added some utilities (i.e. Parameters support) and shortcuts
-- added Engine registry
-- restructured Source folder (unique folder now)
+[A list of main changes is available at this wiki page.](https://github.com/andrea-magni/MARS/wiki/Change-Log)
 
 # The roadmap
-
-### Major functionalities:
-- [ ] Fix the MARS Client library (JWT changes)
-- [ ] Refactor the MARS Client library (separate core from components)
-- [ ] Move Token handling to a plugin
-- [ ] Deploy server as a Windows service
-- [ ] Improve error management (server side)
-- [ ] Improve error management (client side)
-- [ ] Enable parallel requests from client library
-- [ ] Readers (automatic deserialization from http request body and parameters)
-- [ ] Deploy server as Apache module
-- [ ] Deploy server as IIS ISAPI module 
-- [ ] Implement a session persistence mechanism (server-side)
-- [ ] Proxy emitted by the server (JS and Delphi)
-- [ ] Cache mechanisms support
-
-### Minor functionalities:
-- [ ] Parameters JSON persistence
-- [ ] Enable emission of API schema and information
-- [ ] Provide an example of high scability (multiple application servers, possibly with a session persistence server node)
-- [ ] Fix the static webserver extension
-
-Aside of these functionalities, I will add unit and integration testing (refactoring code where needed).
+[The current roadmap is available at this wiki page.](https://github.com/andrea-magni/MARS/wiki/Roadmap)
 
 # Resources
-- [MARS-curiosity Google+ Community](https://plus.google.com/communities/109223723982639531185)
-- [Andrea Magni's Blog](http://www.andreamagni.eu/wp/tags/mars-curiosity)
+[A list of useful resources is available at this wiki page.](https://github.com/andrea-magni/MARS/wiki/Resources)
 
 # Contributions
 This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
