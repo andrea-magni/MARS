@@ -21,11 +21,11 @@ What really makes me happy about this project is that some of real world applica
 ## The name
 
 It is always challenging to find a good name for a new project: usually you have to balance between a brand new name and some classical or already taken names. The first option mean originality, the second can carry some more meaning with the name itself.
-I have chosen MARS-curiosity (not exactly an original name) not only because I love space exploration but also because they represents the highest level of human skills applied to technology and I admire the enthusiasm and strength that can lead so many people to work hard to bring success in these space exploration missions.
+I have chosen MARS-Curiosity (not exactly an original name) not only because I love space exploration but also because they represents the highest level of human skills applied to technology and I admire the enthusiasm and strength that can lead so many people to work hard to bring success in these space exploration missions.
 
 ### MARS
 
-Mars is the fourth planet in the solar sistem. One of the smallest, compared to other planets in the system, but it represents the next "giant leap" for humanity since it has been choosen as the target for next manned space exploration mission. Currently, it hosts seven functioning spacecraft (5 in orbite, 2 on the surface), making it a planet under robot control :wink:
+Mars is the fourth planet in the solar system. One of the smallest, compared to other planets in the system, but it represents the next "giant leap" for humanity since it has been chosen as the target for next manned space exploration mission. Currently, it hosts seven functioning spacecraft (5 in orbite, 2 on the surface), making it a planet under robot control :wink:
 
 ### Curiosity
 Curiosity is the name of the Mars Science Laboratory rover. It was launched on November 2011 26th and successfully landed on Mars (Gale Crater) on August 2012 6th.
