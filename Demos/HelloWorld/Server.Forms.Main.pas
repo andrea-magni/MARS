@@ -10,18 +10,14 @@
 *)
 unit Server.Forms.Main;
 
+{$I MARS.inc}
+
 interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, StdCtrls, ExtCtrls
-
-  {$ifdef DelphiXE4_UP}
   , ActnList
-  , System.Actions
-  {$else}
-  , ActnList
-  {$endif}
 
   , Diagnostics
   , IdContext
@@ -30,6 +26,8 @@ uses
   , MARS.http.Server.Indy
 
   , MARS.Core.Application
+
+  , System.Actions
 ;
 
 type
