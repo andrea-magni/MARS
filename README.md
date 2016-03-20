@@ -7,9 +7,8 @@ _\* The Delphi stylized helmet icon is trademark of Embarcadero Technologies._
 
 Pure REST approach, standard concepts in a familiar Delphi flavor (including a component based client library).
 
-- Known compatibility: **Delphi versions from XE4 to 10 Seattle**
+- Known compatibility: **Delphi versions from XE to 10 Seattle**
 - *Some functionalities requires FireDAC*
-- *Should compile since Delphi XE, maybe 2010, with minor changes*
 
 # The project
 
