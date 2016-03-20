@@ -14,18 +14,22 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, ActnList,
-  StdCtrls, ExtCtrls
+  Controls, Forms, Dialogs, StdCtrls, ExtCtrls
+
+  {$ifdef DelphiXE4_UP}
+  , ActnList
+  , System.Actions
+  {$else}
+  , ActnList
+  {$endif}
+
   , Diagnostics
   , IdContext
-  {$ifdef DelphiXE4_UP}
-  , System.Actions
-  {$endif}
 
   , MARS.Core.Engine
   , MARS.http.Server.Indy
 
-  , MARS.Core.Application
+  , MARS.Core.Application, System.Actions
 ;
 
 type

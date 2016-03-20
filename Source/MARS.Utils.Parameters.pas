@@ -1,4 +1,16 @@
+(*
+  Copyright 2015, MARS - REST Library
+
+  Home: https://github.com/MARS-library
+
+  ### ### ### ###
+  MARS-Curiosity edition
+  Home: https://github.com/andrea-magni/MARS
+
+*)
 unit MARS.Utils.Parameters;
+
+{$I MARS.inc}
 
 interface
 
@@ -53,10 +65,11 @@ type
 
 implementation
 
-  {$ifdef DelphiXE2_UP}
+{$ifdef DelphiXE2_UP}
+{$else}
 uses
   StrUtils;
-  {$endif}
+{$endif}
 
 { TMARSParametersSlice }
 
