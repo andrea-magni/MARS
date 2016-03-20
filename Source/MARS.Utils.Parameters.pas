@@ -53,6 +53,11 @@ type
 
 implementation
 
+  {$ifdef DelphiXE2_UP}
+uses
+  StrUtils;
+  {$endif}
+
 { TMARSParametersSlice }
 
 function TMARSParametersSlice.ByName(const AName: string): TValue;
@@ -103,7 +108,11 @@ begin
   Result := False;
   for LKey in FItems.Keys.ToArray do
   begin
+    {$ifdef DelphiXE2_UP}
     if LKey.StartsWith(ASliceName + SLICE_SEPARATOR, True) then
+    {$else}
+    if StartsText(ASliceName + SLICE_SEPARATOR, LKey) then
+    {$endif}
     begin
       Result := True;
       Break;
@@ -148,7 +157,11 @@ begin
   ASliceName := '';
   AParamName := AName;
 
+  {$ifdef DelphiXE2_UP}
   LTokens := AName.Split([SLICE_SEPARATOR]);
+  {$else}
+  LTokens := TArray<string>(SplitString(AName, SLICE_SEPARATOR));
+  {$endif}
   if Length(LTokens) > 1 then
   begin
     ASliceName := LTokens[0];

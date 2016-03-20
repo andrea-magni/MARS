@@ -16,18 +16,17 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, ActnList,
   StdCtrls, ExtCtrls
-  , System.Actions
   , Diagnostics
   , IdContext
+  {$ifdef DelphiXE4_UP}
+  , System.Actions
+  {$endif}
 
   , MARS.Core.Engine
   , MARS.http.Server.Indy
 
   , MARS.Core.Application
-
-//  , MARS.Diagnostics.Manager
-//  , MARS.Diagnostics.Resources
-  ;
+;
 
 type
   TMainForm = class(TForm)
@@ -62,7 +61,6 @@ uses
    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Core.URL
-//  , MARS.Core.Token
   , MARS.Utils.Parameters.IniFile
   ;
 

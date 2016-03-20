@@ -23,7 +23,10 @@ uses
   , MARS.http.Server.Indy
 
 
-  , MARS.Core.Application, System.Actions
+  , MARS.Core.Application
+  {$ifdef DelphiXE4_UP}
+  , System.Actions
+  {$endif}
   ;
 
 type
@@ -74,17 +77,24 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
+  // MARS Engine
   FEngine := TMARSEngine.Create('MARS HelloWorld');
+  try
+    FEngine.Parameters.LoadFromIniFile;
+    FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
 
-  FEngine.Parameters.LoadFromIniFile;
-
-  FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
-
-  // Create http server
-  FServer := TMARShttpServerIndy.Create(FEngine);
-
-  if not FServer.Active then
-    FServer.Active := True;
+    // http server implementation
+    FServer := TMARShttpServerIndy.Create(FEngine);
+    try
+      FServer.Active := True;
+    except
+      FServer.Free;
+      raise;
+    end;
+  except
+    FEngine.Free;
+    raise;
+  end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
@@ -95,11 +105,9 @@ end;
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
   FServer.Active := False;
-  FServer.Free;
-  FServer := nil;
+  FreeAndNil(FServer);
 
-  FEngine.Free;
-  FEngine := nil;
+  FreeAndNil(FEngine);
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);
