@@ -12,7 +12,7 @@ Pure REST approach, standard concepts in a familiar Delphi flavor (including a c
 
 # The project
 
-I started this project in 2014 (later it was has been known with name WiRL for a while) and it begun as an experiment to show Delphi's modern language features applied, during a training course to some experienced Delphi developers.
+I started this project in 2014 (later it has been known with name WiRL for a while) and it begun as an experiment to show Delphi's modern language features applied, during a training course to some experienced Delphi developers.
 At the time when the project was published on GitHub under its new name of MARS-library (December, 2015), most (>80%) of the code was written by me with contributions by Nando Dessena, Stefan Glienke and Paolo Rossi, plus some other minor contributors who provided some bugfixes here and there.
 
 In January, 2016, I decided to start my own fork of the MARS-library project and to give it the name of MARS-Curiosity.
