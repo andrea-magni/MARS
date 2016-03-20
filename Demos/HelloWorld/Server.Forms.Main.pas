@@ -3,16 +3,22 @@
 
   Home: https://github.com/MARS-library
 
+  ### ### ### ###
+  MARS-Curiosity edition
+  Home: https://github.com/andrea-magni/MARS
+
 *)
 unit Server.Forms.Main;
+
+{$I MARS.inc}
 
 interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, ActnList,
-  StdCtrls, ExtCtrls
-  , System.Actions
+  Controls, Forms, Dialogs, StdCtrls, ExtCtrls
+  , ActnList
+
   , Diagnostics
   , IdContext
 
@@ -21,9 +27,8 @@ uses
 
   , MARS.Core.Application
 
-//  , MARS.Diagnostics.Manager
-//  , MARS.Diagnostics.Resources
-  ;
+  , System.Actions
+;
 
 type
   TMainForm = class(TForm)
@@ -58,7 +63,6 @@ uses
    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Core.URL
-//  , MARS.Core.Token
   , MARS.Utils.Parameters.IniFile
   ;
 
@@ -74,21 +78,24 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
+  // MARS Engine
   FEngine := TMARSEngine.Create('MARS HelloWorld');
+  try
+    FEngine.Parameters.LoadFromIniFile;
+    FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
 
-  FEngine.Parameters.LoadFromIniFile;
-
-  FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
-
-//  FEngine.AddApplication('diagnostics', '/diagnostics', ['*']);
-//  TMARSDiagnosticsManager.FEngine := FEngine; // TODO: REMOVE!!!
-//  TMARSDiagnosticsManager.Instance;
-
-  // Create http server
-  FServer := TMARShttpServerIndy.Create(FEngine);
-
-  if not FServer.Active then
-    FServer.Active := True;
+    // http server implementation
+    FServer := TMARShttpServerIndy.Create(FEngine);
+    try
+      FServer.Active := True;
+    except
+      FServer.Free;
+      raise;
+    end;
+  except
+    FEngine.Free;
+    raise;
+  end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
@@ -99,12 +106,9 @@ end;
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
   FServer.Active := False;
-  FServer.Free;
-  FServer := nil;
+  FreeAndNil(FServer);
 
-  FEngine.Free;
-  FEngine := nil;
-//  TMARSDiagnosticsManager.FEngine := nil; // TODO: REMOVE!!!
+  FreeAndNil(FEngine);
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);

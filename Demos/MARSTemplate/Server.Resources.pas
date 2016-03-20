@@ -3,6 +3,10 @@
 
   Home: https://github.com/MARS-library
 
+  ### ### ### ###
+  MARS-Curiosity edition
+  Home: https://github.com/andrea-magni/MARS
+
 *)
 unit Server.Resources;
 
@@ -20,14 +24,9 @@ uses
 type
   [Path('helloworld')]
   THelloWorldResource = class
-  private
-  protected
-    [Context] Req: TWebRequest;
   public
-
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
-
   end;
 
 implementation

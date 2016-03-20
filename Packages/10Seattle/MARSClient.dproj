@@ -2,8 +2,8 @@
     <PropertyGroup>
         <ProjectGuid>{48E75129-EE24-48D4-AE54-2F549C909CC8}</ProjectGuid>
         <MainSource>MARSClient.dpk</MainSource>
-        <ProjectVersion>18.0</ProjectVersion>
-        <FrameworkType>None</FrameworkType>
+        <ProjectVersion>18.1</ProjectVersion>
+        <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
@@ -184,27 +184,27 @@
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="bindengine.dcp"/>
         <DCCReference Include="bindcomp.dcp"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Application.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Client.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.CustomResource.Editor.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.CustomResource.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.FireDAC.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Messaging.Resource.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Resource.JSON.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Resource.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Resource.Stream.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.SubResource.JSON.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.SubResource.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.SubResource.Stream.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Token.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Utils.LiveBindings.pas"/>
-        <DCCReference Include="..\..\Source\Client\MARS.Client.Utils.pas"/>
-        <DCCReference Include="..\..\Source\Data\FireDAC\MARS.Data.FireDAC.Editor.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.JSON.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.URL.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Core.Utils.pas"/>
-        <DCCReference Include="..\..\Source\Core\MARS.Rtti.Utils.pas"/>
-        <DCCReference Include="..\..\Source\Data\FireDAC\MARS.Data.FireDAC.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.Editor.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.FireDAC.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Messaging.Resource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.Stream.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.SubResource.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.SubResource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.SubResource.Stream.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Utils.LiveBindings.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Editor.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.URL.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
         <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
@@ -303,7 +303,16 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
+                <DeployClass Name="DependencyModule">
+                    <Platform Name="Win32">
+                        <Operation>0</Operation>
+                        <Extensions>.dll;.bpl</Extensions>
+                    </Platform>
+                    <Platform Name="OSX32">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                </DeployClass>
                 <DeployClass Name="ProjectOSXResource">
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\Resources</RemoteDir>
@@ -617,16 +626,7 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <DeployClass Name="DependencyModule">
-                    <Platform Name="Win32">
-                        <Operation>0</Operation>
-                        <Extensions>.dll;.bpl</Extensions>
-                    </Platform>
-                    <Platform Name="OSX32">
-                        <Operation>1</Operation>
-                        <Extensions>.dylib</Extensions>
-                    </Platform>
-                </DeployClass>
+                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>

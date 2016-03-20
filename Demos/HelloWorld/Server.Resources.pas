@@ -3,6 +3,10 @@
 
   Home: https://github.com/MARS-library
 
+  ### ### ### ###
+  MARS-Curiosity edition
+  Home: https://github.com/andrea-magni/MARS
+
 *)
 unit Server.Resources;
 
@@ -99,12 +103,12 @@ end;
 
 function THelloWorldResource.GetImage: TStream;
 begin
-  Result := TFileStream.Create('C:\Users\Andrea Magni\Pictures\Wallpaper.jpg', fmOpenRead or fmShareDenyWrite);
+  Result := TFileStream.Create('..\SampleData\Sample.jpg', fmOpenRead or fmShareDenyWrite);
 end;
 
 function THelloWorldResource.GetPDF: TStream;
 begin
-  Result := TFileStream.Create('C:\temp\test.pdf', fmOpenRead or fmShareDenyWrite);
+  Result := TFileStream.Create('..\SampleData\Sample.pdf', fmOpenRead or fmShareDenyWrite);
 end;
 
 function THelloWorldResource.GetToken: string;
