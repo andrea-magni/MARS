@@ -90,8 +90,9 @@ begin
 
   Result := LCDS;
   Result.AppendRecord(['Andrea', 'Magni']);
-  Result.AppendRecord(['Paolo', 'Rossi']);
+  Result.AppendRecord(['Paolo', 'Verdi']);
   Result.AppendRecord(['Mario', 'Bianchi']);
+  Result.AppendRecord(['Luca', 'Viola']);
 end;
 
 function THelloWorldResource.DataSet2: TFDMemTable;
@@ -101,8 +102,9 @@ begin
   Result.FieldDefs.Add('Surname', ftString, 100);
   Result.CreateDataSet;
   Result.AppendRecord(['Andrea', 'Magni']);
-  Result.AppendRecord(['Paolo', 'Rossi']);
+  Result.AppendRecord(['Paolo', 'Verdi']);
   Result.AppendRecord(['Mario', 'Bianchi']);
+  Result.AppendRecord(['Luca', 'Viola']);
 end;
 
 function THelloWorldResource.DataSet3: TDataset;
@@ -131,7 +133,7 @@ end;
 
 function THelloWorldResource.JpegImage: TStream;
 begin
-  Result := TFileStream.Create('C:\Users\Andrea Magni\Pictures\Wallpaper.jpg', fmOpenRead or fmShareDenyWrite);
+  Result := TFileStream.Create('..\SampleData\Sample.jpg', fmOpenRead or fmShareDenyWrite);
 end;
 
 function THelloWorldResource.JSON1: TJSONObject;
@@ -142,7 +144,7 @@ end;
 
 function THelloWorldResource.PdfDocument: TStream;
 begin
-  Result := TFileStream.Create('C:\temp\test.pdf', fmOpenRead or fmShareDenyWrite);
+  Result := TFileStream.Create('..\SampleData\Sample.pdf', fmOpenRead or fmShareDenyWrite);
 end;
 
 function THelloWorldResource.SayHelloWorld: string;
