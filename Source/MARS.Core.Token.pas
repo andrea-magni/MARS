@@ -124,7 +124,6 @@ begin
     raise;
   end;
 
-  Clear;
   Load(AToken, ASecret);
 end;
 

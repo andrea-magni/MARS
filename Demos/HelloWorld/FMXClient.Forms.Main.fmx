@@ -1,9 +1,10 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'Form1'
+  Caption = 'MARS HelloWorld - FMXClient'
   ClientHeight = 480
   ClientWidth = 640
+  Position = ScreenCenter
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
@@ -19,20 +20,20 @@ object MainForm: TMainForm
     Size.Width = 640.000000000000000000
     Size.Height = 440.000000000000000000
     Size.PlatformDefault = False
-    TabIndex = 1
+    TabIndex = 0
     TabOrder = 1
     TabPosition = PlatformDefault
     object HelloWorldTabItem: TTabItem
       CustomIcon = <
         item
         end>
-      IsSelected = False
-      Size.Width = 121.000000000000000000
+      IsSelected = True
+      Size.Width = 88.000000000000000000
       Size.Height = 26.000000000000000000
       Size.PlatformDefault = False
       StyleLookup = ''
       TabOrder = 0
-      Text = 'HelloWorldTabItem'
+      Text = 'Hello, World!'
       ExplicitSize.cx = 123.000000000000000000
       ExplicitSize.cy = 24.000000000000000000
       object Memo1: TMemo
@@ -54,32 +55,33 @@ object MainForm: TMainForm
         TabOrder = 1
         object Execute: TButton
           Align = Center
+          Default = True
           TabOrder = 0
           Text = 'Execute'
           OnClick = ExecuteClick
         end
       end
     end
-    object StringDemosTabItem: TTabItem
+    object SubresourcesTabItem: TTabItem
       CustomIcon = <
         item
         end>
-      IsSelected = True
-      Size.Width = 130.000000000000000000
+      IsSelected = False
+      Size.Width = 91.000000000000000000
       Size.Height = 26.000000000000000000
       Size.PlatformDefault = False
       StyleLookup = ''
       TabOrder = 0
-      Text = 'StringDemosTabItem'
+      Text = 'Subresources'
       ExplicitSize.cx = 131.000000000000000000
       ExplicitSize.cy = 24.000000000000000000
-      object Layout2: TLayout
+      object EchoStringLayout: TLayout
         Align = Top
         Size.Width = 640.000000000000000000
         Size.Height = 50.000000000000000000
         Size.PlatformDefault = False
-        TabOrder = 1
-        object Edit1: TEdit
+        TabOrder = 2
+        object InputEchoStringEdit: TEdit
           Touch.InteractiveGestures = [LongTap, DoubleTap]
           TabOrder = 1
           Text = 'This is a test!'
@@ -99,16 +101,17 @@ object MainForm: TMainForm
             Text = 'Input:'
           end
         end
-        object Button1: TButton
+        object EchoStringButton: TButton
           Position.X = 224.000000000000000000
           Position.Y = 16.000000000000000000
           TabOrder = 2
-          Text = 'Echo'
-          OnClick = Button1Click
+          Text = 'EchoString'
+          OnClick = EchoStringButtonClick
         end
-        object Edit2: TEdit
+        object OutputEchoStringEdit: TEdit
           Touch.InteractiveGestures = [LongTap, DoubleTap]
           TabOrder = 0
+          ReadOnly = True
           Position.X = 392.000000000000000000
           Position.Y = 16.000000000000000000
           Size.Width = 137.000000000000000000
@@ -132,8 +135,8 @@ object MainForm: TMainForm
         Size.Width = 640.000000000000000000
         Size.Height = 50.000000000000000000
         Size.PlatformDefault = False
-        TabOrder = 0
-        object Edit3: TEdit
+        TabOrder = 1
+        object InputReverseStringEdit: TEdit
           Touch.InteractiveGestures = [LongTap, DoubleTap]
           TabOrder = 1
           Text = 'This is a test!'
@@ -153,16 +156,17 @@ object MainForm: TMainForm
             Text = 'Input:'
           end
         end
-        object Button2: TButton
+        object ReverseStringButton: TButton
           Position.X = 224.000000000000000000
           Position.Y = 16.000000000000000000
           TabOrder = 2
-          Text = 'Reverse'
-          OnClick = Button2Click
+          Text = 'ReverseString'
+          OnClick = ReverseStringButtonClick
         end
-        object Edit4: TEdit
+        object OutputReverseStringEdit: TEdit
           Touch.InteractiveGestures = [LongTap, DoubleTap]
           TabOrder = 0
+          ReadOnly = True
           Position.X = 392.000000000000000000
           Position.Y = 16.000000000000000000
           Size.Width = 137.000000000000000000
@@ -180,12 +184,80 @@ object MainForm: TMainForm
           end
         end
       end
-      object ButtonPost: TButton
-        Position.X = 24.000000000000000000
-        Position.Y = 120.000000000000000000
-        TabOrder = 2
-        Text = 'ButtonPost'
-        OnClick = ButtonPostClick
+      object Layout4: TLayout
+        Align = Top
+        Position.Y = 100.000000000000000000
+        Size.Width = 640.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        object InputSum1Edit: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 2
+          Text = '10'
+          Position.X = 56.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 41.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          object Label5: TLabel
+            Position.X = -55.000000000000000000
+            Position.Y = 2.000000000000000000
+            Size.Width = 50.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.HorzAlign = Trailing
+            TextSettings.WordWrap = False
+            Text = 'First:'
+          end
+        end
+        object SumButton: TButton
+          Position.X = 224.000000000000000000
+          Position.Y = 16.000000000000000000
+          TabOrder = 3
+          Text = 'Sum'
+          OnClick = SumButtonClick
+        end
+        object OutputSumEdit: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 0
+          ReadOnly = True
+          Position.X = 392.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 137.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          object Label6: TLabel
+            AutoSize = True
+            Position.X = -50.000000000000000000
+            Position.Y = 2.000000000000000000
+            Size.Width = 44.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.WordWrap = False
+            Text = 'Output:'
+          end
+        end
+        object InputSum2Edit: TEdit
+          Touch.InteractiveGestures = [LongTap, DoubleTap]
+          TabOrder = 1
+          Text = '20'
+          Position.X = 152.000000000000000000
+          Position.Y = 16.000000000000000000
+          Size.Width = 41.000000000000000000
+          Size.Height = 22.000000000000000000
+          Size.PlatformDefault = False
+          object Label7: TLabel
+            Position.X = -55.000000000000000000
+            Position.Y = 2.000000000000000000
+            Size.Width = 50.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.HorzAlign = Trailing
+            TextSettings.WordWrap = False
+            Text = 'Second:'
+          end
+        end
       end
     end
   end
