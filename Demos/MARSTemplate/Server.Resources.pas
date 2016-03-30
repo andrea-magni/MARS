@@ -17,8 +17,6 @@ uses
 
   , MARS.Core.Attributes
   , MARS.Core.MediaType
-
-  , Web.HttpApp
   ;
 
 type
