@@ -51,7 +51,7 @@ implementation
 {$R *.dfm}
 
 uses
-  MARS.Core.JSON
+    MARS.Core.JSON
   , MARS.Rtti.Utils
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
@@ -73,11 +73,10 @@ begin
 
   // Application configuration
 
-  FEngine.AddApplication('Default', '/default', [ 'Server.Resources.*']);
+  FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);
-
   if not FServer.Active then
     FServer.Active := True;
 end;
@@ -90,11 +89,9 @@ end;
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
   FServer.Active := False;
-  FServer.Free;
-  FServer := nil;
+  FreeAndNil(FServer);
 
-  FEngine.Free;
-  FEngine := nil;
+  FreeAndNil(FEngine);
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);
