@@ -20,7 +20,6 @@ uses
   , ActnList
 
   , Diagnostics
-  , IdContext
 
   , MARS.Core.Engine
   , MARS.http.Server.Indy
@@ -60,7 +59,7 @@ implementation
 {$R *.dfm}
 
 uses
-   MARS.Core.MessageBodyWriter
+    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Core.URL
   , MARS.Utils.Parameters.IniFile
@@ -79,10 +78,10 @@ end;
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
   // MARS Engine
-  FEngine := TMARSEngine.Create('MARS HelloWorld');
+  FEngine := TMARSEngine.Create;
   try
     FEngine.Parameters.LoadFromIniFile;
-    FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
+    FEngine.AddApplication('DefaultApp', '/default', ['Server.Resources.*']);
 
     // http server implementation
     FServer := TMARShttpServerIndy.Create(FEngine);

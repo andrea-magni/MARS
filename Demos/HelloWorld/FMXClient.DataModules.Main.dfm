@@ -26,21 +26,21 @@ object MainDataModule: TMainDataModule
     Application = MARSClientApplication1
     Resource = 'echostring'
     ParentResource = HelloWorldResource
-    Left = 224
-    Top = 208
+    Left = 136
+    Top = 192
   end
   object ReverseStringResource: TMARSClientSubResource
     Application = MARSClientApplication1
     Resource = 'reversestring'
     ParentResource = HelloWorldResource
-    Left = 328
+    Left = 280
     Top = 192
   end
-  object PostExampleResource: TMARSClientSubResourceJSON
+  object SumSubResource: TMARSClientSubResource
     Application = MARSClientApplication1
-    Resource = 'postexample'
+    Resource = 'sum'
     ParentResource = HelloWorldResource
-    Left = 72
-    Top = 288
+    Left = 424
+    Top = 192
   end
 end
