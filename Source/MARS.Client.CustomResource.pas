@@ -37,6 +37,7 @@ type
     FPathParamsValues: TStrings;
     FQueryParams: TStrings;
     FSpecificAccept: string;
+    FToken: TMARSClientCustomResource;
     procedure SetPathParamsValues(const Value: TStrings);
     procedure SetQueryParams(const Value: TStrings);
   protected
@@ -45,6 +46,7 @@ type
     function GetURL: string; virtual;
     function GetApplication: TMARSClientApplication; virtual;
     function GetAccept: string;
+    function GetAuthToken: string; virtual;
 
     procedure BeforeGET; virtual;
     procedure AfterGET; virtual;
@@ -99,6 +101,7 @@ type
 
     property Accept: string read GetAccept;
     property Application: TMARSClientApplication read GetApplication write FApplication;
+    property AuthToken: string read GetAuthToken;
     property Client: TMARSClient read GetClient;
     property SpecificAccept: string read FSpecificAccept write FSpecificAccept;
     property SpecificClient: TMARSClient read FSpecificClient write FSpecificClient;
@@ -106,6 +109,7 @@ type
     property Path: string read GetPath;
     property PathParamsValues: TStrings read FPathParamsValues write SetPathParamsValues;
     property QueryParams: TStrings read FQueryParams write SetQueryParams;
+    property Token: TMARSClientCustomResource read FToken write FToken;
     property URL: string read GetURL;
   published
   end;
@@ -117,6 +121,7 @@ uses
   MARS.Client.Utils
   , MARS.Core.URL
   , MARS.Core.Utils
+  , MARS.Client.Token
   ;
 
 { TMARSClientCustomResource }
@@ -166,9 +171,19 @@ begin
   inherited;
   FResource := 'main';
   if TMARSComponentHelper.IsDesigning(Self) then
+  begin
     FApplication := TMARSComponentHelper.FindDefault<TMARSClientApplication>(Self);
+    FToken := TMARSComponentHelper.FindDefault<TMARSClientToken>(Self);
+  end;
   FPathParamsValues := TStringList.Create;
   FQueryParams := TStringList.Create;
+end;
+
+function TMARSClientCustomResource.GetAuthToken: string;
+begin
+  Result := ''; // SpecificToken
+  if (Result = '') and Assigned(Token) then
+    Result := (Token as TMARSClientToken).Token;
 end;
 
 function TMARSClientCustomResource.GetClient: TMARSClient;
@@ -225,7 +240,7 @@ begin
 
     LResponseStream := TMemoryStream.Create;
     try
-      Client.Delete(URL, LResponseStream);
+      Client.Delete(URL, LResponseStream, AuthToken);
 
       AfterDELETE();
 
@@ -266,7 +281,7 @@ begin
 
     LResponseStream := TMemoryStream.Create;
     try
-      Client.Get(URL, LResponseStream, Accept);
+      Client.Get(URL, LResponseStream, Accept, AuthToken);
 
       AfterGET();
 
@@ -373,7 +388,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Post(URL, LContent, LResponseStream);
+        Client.Post(URL, LContent, LResponseStream, AuthToken);
 
         AfterPOST();
 
@@ -434,7 +449,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Put(URL, LContent, LResponseStream);
+        Client.Put(URL, LContent, LResponseStream, AuthToken);
 
         AfterPUT();
 

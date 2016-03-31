@@ -19,7 +19,6 @@ uses
   , MARS.Core.JSON
 
   , MARS.Client.Resource
-  , MARS.Client.Client
   ;
 
 type
@@ -29,7 +28,7 @@ type
   TMARSClientToken = class(TMARSClientResource)
   private
     FData: TJSONObject;
-    FAuthenticated: Boolean;
+    FIsVerified: Boolean;
     FUserRoles: TStrings;
     FStartTime: TDateTime;
     FToken: string;
@@ -54,7 +53,8 @@ type
     property UserName: string read FUserName write FUserName;
     property Password: string read FPassword write FPassword;
     property Token: string read FToken;
-    property Authenticated: Boolean read FAuthenticated;
+    property Authenticated: Boolean read FIsVerified;
+    property IsVerified: Boolean read FIsVerified;
     property UserRoles: TStrings read FUserRoles;
     property StartTime: TDateTime read FStartTime;
   end;
@@ -135,7 +135,7 @@ procedure TMARSClientToken.ParseData;
 begin
   FUserName := FData.ReadStringValue('UserName');
   FToken := FData.ReadStringValue('Token');
-  FAuthenticated := FData.ReadBoolValue('Authenticated');
+  FIsVerified := FData.ReadBoolValue('IsVerified');
   FStartTime := FData.ReadDateTimeValue('StartTime');
   FUserRoles.Text := FData.ReadStringValue('UserRoles');
 end;

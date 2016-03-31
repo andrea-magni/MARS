@@ -72,8 +72,8 @@ type
   public
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
-    function ReadBoolValue(const AName: string): Boolean;
-    function ReadDateTimeValue(const AName: string): TDateTime;
+    function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
+    function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
 
     property Values[const name: string]: Variant read GetValue; default;
   end;
@@ -206,27 +206,26 @@ begin
   Result := value.Value;
 end;
 
-function TJSONObjectHelper.ReadBoolValue(const AName: string): Boolean;
+function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
 var
-  LValue: TJSONValue;
+  LValue: TJSONBool;
 begin
-  Result := False;
-  try
-    LValue := Get(AName).JsonValue;
-    if LValue is TJSONTrue then
-      Result := True;
-  except
-  end;
+  Result := ADefault;
+  if Assigned(Self) and TryGetValue<TJSONBool>(AName, LValue) then
+    Result := LValue is TJSONTrue;
 end;
 
-function TJSONObjectHelper.ReadDateTimeValue(const AName: string): TDateTime;
+function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault: TDateTime): TDateTime;
 var
   LString: string;
 begin
-  Result := 0;
-  LString := ReadStringValue(AName);
-  if LString <> '' then
-    Result := ISO8601ToDate(LString);
+  Result := ADefault;
+  if Assigned(Self) then
+  begin
+    LString := ReadStringValue(AName);
+    if LString <> '' then
+      Result := ISO8601ToDate(LString);
+  end;
 end;
 
 function TJSONObjectHelper.ReadIntegerValue(const AName: string;
@@ -235,7 +234,7 @@ var
   LValue: TJSONNumber;
 begin
   Result := ADefault;
-  if TryGetValue<TJSONNumber>(AName, LValue) then
+  if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsInt;
 end;
 
@@ -245,7 +244,7 @@ var
   LValue: TJSONString;
 begin
   Result := ADefault;
-  if TryGetValue<TJSONString>(AName, LValue) then
+  if Assigned(Self) and TryGetValue<TJSONString>(AName, LValue) then
     Result := LValue.Value;
 end;
 
