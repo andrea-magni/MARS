@@ -30,8 +30,7 @@ type
     MainActionList: TActionList;
     StartServerAction: TAction;
     StopServerAction: TAction;
-    PortNumberEdit: TEdit;
-    Label1: TLabel;
+    StatusLabel: TLabel;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -40,6 +39,7 @@ type
   private
     FServer: TMARShttpServerIndy;
     FEngine: TMARSEngine;
+    procedure UpdateStatusLabel;
   public
   end;
 
@@ -51,9 +51,7 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.JSON
-  , MARS.Rtti.Utils
-  , MARS.Core.MessageBodyWriter
+    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Utils.Parameters.IniFile
   ;
@@ -67,18 +65,28 @@ end;
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
   FEngine := TMARSEngine.Create;
+  try
+    // Engine configuration
+    FEngine.Parameters.LoadFromIniFile;
 
-  // Engine configuration
-  FEngine.Parameters.LoadFromIniFile;
+    // Application configuration
+    FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
 
-  // Application configuration
+    // Create http server
+    FServer := TMARShttpServerIndy.Create(FEngine);
+    try
+      if not FServer.Active then
+        FServer.Active := True;
 
-  FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
-
-  // Create http server
-  FServer := TMARShttpServerIndy.Create(FEngine);
-  if not FServer.Active then
-    FServer.Active := True;
+      UpdateStatusLabel;
+    except
+      FreeAndNil(FServer);
+      raise;
+    end;
+  except
+    FreeAndNil(FEngine);
+    raise;
+  end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
@@ -92,11 +100,21 @@ begin
   FreeAndNil(FServer);
 
   FreeAndNil(FEngine);
+
+  UpdateStatusLabel;
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);
 begin
   StopServerAction.Enabled := Assigned(FServer) and (FServer.Active = True);
+end;
+
+procedure TMainForm.UpdateStatusLabel;
+begin
+  if Assigned(FServer) and FServer.Active then
+    StatusLabel.Caption := 'Listening on port ' + FEngine.Port.ToString
+  else
+    StatusLabel.Caption := 'Not active';
 end;
 
 initialization
