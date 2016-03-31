@@ -24,36 +24,28 @@ object MainForm: TMainForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    object Label1: TLabel
-      Left = 28
-      Top = 17
-      Width = 63
+    object StatusLabel: TLabel
+      Left = 24
+      Top = 48
+      Width = 56
       Height = 13
-      Caption = 'Port number:'
+      Caption = 'StatusLabel'
     end
     object StartButton: TButton
-      Left = 16
-      Top = 41
+      Left = 24
+      Top = 9
       Width = 75
       Height = 25
       Action = StartServerAction
       TabOrder = 0
     end
     object StopButton: TButton
-      Left = 104
-      Top = 41
+      Left = 112
+      Top = 9
       Width = 75
       Height = 25
       Action = StopServerAction
       TabOrder = 1
-    end
-    object PortNumberEdit: TEdit
-      Left = 97
-      Top = 14
-      Width = 82
-      Height = 21
-      TabOrder = 2
-      Text = '8080'
     end
   end
   object MainActionList: TActionList

@@ -17,6 +17,7 @@ uses
 
   , MARS.Core.Attributes
   , MARS.Core.MediaType
+  , MARS.Core.JSON
   ;
 
 type
@@ -35,6 +36,7 @@ uses
 
 
 { THelloWorldResource }
+
 
 function THelloWorldResource.SayHelloWorld: string;
 begin
