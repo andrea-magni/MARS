@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS Authorization'
+  Caption = 'MARS Authorization - Server'
   ClientHeight = 289
   ClientWidth = 554
   Color = clBtnFace
@@ -11,6 +11,7 @@ object MainForm: TMainForm
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  Position = poScreenCenter
   OnClose = FormClose
   OnCreate = FormCreate
   PixelsPerInch = 96

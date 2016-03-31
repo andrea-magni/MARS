@@ -23,7 +23,7 @@ uses
   , MARS.http.Server.Indy
 
 
-  , MARS.Core.Application
+  , MARS.Core.Application, System.Actions
   {$ifdef DelphiXE4_UP}
   , System.Actions
   {$endif}

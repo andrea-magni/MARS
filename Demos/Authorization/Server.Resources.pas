@@ -34,9 +34,6 @@ type
   TFirstResource = class
   private
   protected
-    [Context] URL: TMARSURL;
-    [Context] Request: TWebRequest;
-    [Context] Response: TWebResponse;
   public
     [GET, PermitAll]
     [Produces(TMediaType.TEXT_PLAIN)]
@@ -47,7 +44,6 @@ type
     [Produces(TMediaType.TEXT_PLAIN)]
     function DetailsInfo: string;
   end;
-
 
   {
     This 'second' resource will be allowed only to users with 'admin' role.
@@ -71,7 +67,6 @@ type
     function Three: string;
   end;
 
-
   [Path('token')]
   TTokenResource = class(TMARSTokenResource)
   private
@@ -80,10 +75,6 @@ type
   end;
 
 implementation
-
-{ TFirstResource }
-
-
 
 { TFirstResource }
 

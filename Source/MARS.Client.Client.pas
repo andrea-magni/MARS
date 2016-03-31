@@ -18,12 +18,11 @@ uses
   SysUtils, Classes
 
 {$ifdef DelphiXE7_UP}
-   , System.Threading
+  , System.Threading
 {$endif}
 
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP
-
   ;
 
 type
@@ -52,10 +51,10 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure Delete(const AURL: string; AResponseContent: TStream);
-    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string);
-    procedure Post(const AURL: string; AContent, AResponse: TStream);
-    procedure Put(const AURL: string; AContent, AResponse: TStream);
+    procedure Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
+    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string);
+    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
     function LastCmdSuccess: Boolean;
     function ResponseText: string;
 
@@ -68,7 +67,6 @@ type
     property MARSEngineURL: string read FMARSEngineURL write FMARSEngineURL;
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
-
   end;
 
 procedure Register;
@@ -89,8 +87,9 @@ begin
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
 
-procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream);
+procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
 begin
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
 {$ifdef DelphiXE7_UP}
   FHttpClient.Delete(AURL, AResponseContent);
 {$else}
@@ -116,9 +115,10 @@ begin
 end;
 
 procedure TMARSClient.Get(const AURL: string; AResponseContent: TStream;
-  const AAccept: string);
+  const AAccept: string; const AAuthToken: string);
 begin
   FHttpClient.Request.Accept := AAccept;
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
   FHttpClient.Get(AURL, AResponseContent);
 end;
 
@@ -156,13 +156,15 @@ begin
   Result := FHttpClient.ResponseCode = 200;
 end;
 
-procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream);
+procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
   FHttpClient.Post(AURL, AContent, AResponse);
 end;
 
-procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream);
+procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
   FHttpClient.Put(AURL, AContent, AResponse);
 end;
 

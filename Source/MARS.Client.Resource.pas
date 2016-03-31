@@ -31,6 +31,7 @@ type
   published
     property Accept;
     property Application;
+    property AuthToken;
     property Client;
     property SpecificAccept;
     property SpecificClient;
@@ -38,6 +39,7 @@ type
     property Path;
     property PathParamsValues;
     property QueryParams;
+    property Token;
   end;
 
 procedure Register;
