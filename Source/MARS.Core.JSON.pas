@@ -207,6 +207,7 @@ begin
 end;
 
 function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
+{$ifdef Delphi10Seattle_UP}
 var
   LValue: TJSONBool;
 begin
@@ -214,6 +215,16 @@ begin
   if Assigned(Self) and TryGetValue<TJSONBool>(AName, LValue) then
     Result := LValue is TJSONTrue;
 end;
+{$else}
+var
+  LValue: TJSONValue;
+begin
+  Result := ADefault;
+  if Assigned(Self) and TryGetValue<TJSONValue>(AName, LValue) then
+    Result := LValue is TJSONTrue;
+end;
+{$endif}
+
 
 function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault: TDateTime): TDateTime;
 var

@@ -434,11 +434,14 @@ begin
             var
               LWriter: TStreamWriter;
             begin
-              LWriter := TStreamWriter.Create(AStream);
-              try
-                LWriter.Write(AContent.ToJSON);
-              finally
-                LWriter.Free;
+              if Assigned(AContent) then
+              begin
+                LWriter := TStreamWriter.Create(AStream);
+                try
+                  LWriter.Write(AContent.ToJSON);
+                finally
+                  LWriter.Free;
+                end;
               end;
             end
           );
@@ -496,9 +499,12 @@ begin
           LResource.POST(
             procedure (AStream: TMemoryStream)
             begin
-              AStream.Size := 0; // reset
-              AContent.Position := 0;
-              AStream.CopyFrom(AContent, AContent.Size);
+              if Assigned(AContent) then
+              begin
+                AStream.Size := 0; // reset
+                AContent.Position := 0;
+                AStream.CopyFrom(AContent, AContent.Size);
+              end;
             end
           );
           Result := LClient.Response.ResponseCode = 200;
