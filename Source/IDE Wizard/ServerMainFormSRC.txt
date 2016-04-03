@@ -19,7 +19,7 @@ type
     MainActionList: TActionList;
     StartServerAction: TAction;
     StopServerAction: TAction;
-    Label1: TLabel;
+    StatusLabel: TLabel;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -80,7 +80,7 @@ begin
   if not FServer.Active then
     FServer.Active := True;
 
-  Label1.Caption := 'Listening on port ' + FEngine.Port.ToString;
+  StatusLabel.Caption := 'Listening on port ' + FEngine.Port.ToString;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
@@ -94,7 +94,7 @@ begin
   FreeAndNil(FServer);
 
   FreeAndNil(FEngine);
-  Label1.Caption := 'Not listening';
+  StatusLabel.Caption := 'Not listening';
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);

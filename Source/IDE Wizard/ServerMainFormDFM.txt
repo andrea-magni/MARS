@@ -23,12 +23,12 @@ object MainForm: TMainForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    object Label1: TLabel
+    object StatusLabel: TLabel
       Left = 28
       Top = 17
       Width = 63
       Height = 13
-      Caption = 'Port number:'
+      Caption = ''
     end
     object StartButton: TButton
       Left = 16

@@ -1,4 +1,5 @@
 unit MARS.Wizards.ProjectCreator;
+{$WARN SYMBOL_DEPRECATED OFF}
 
 interface
 
