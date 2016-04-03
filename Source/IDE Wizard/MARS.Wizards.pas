@@ -6,14 +6,14 @@ uses
   ToolsAPI;
 
 resourcestring
-  SName = 'MARS Server Application Wizard';
-  SComment = 'Creates a new MARS Server Application';
-  SAuthor = 'MARS Development Team';
-  SGalleryCategory = 'MARS Library';
-  SIDString = 'MARS.Wizards';
+  SName = 'MARS-Curiosity Server Application Wizard';
+  SComment = 'Creates a new MARS-Curiosity Server Application';
+  SAuthor = 'MARS-Curiosity Development Team';
+  SGalleryCategory = 'MARS-Curiosity Library';
+  SIDString = 'MARS-Curiosity.Wizards';
 
 type
-  TMarsServeProjectWizard = class(TNotifierObject, IOTAWizard, IOTARepositoryWizard, IOTARepositoryWizard60,
+  TMARSServerProjectWizard = class(TNotifierObject, IOTAWizard, IOTARepositoryWizard, IOTARepositoryWizard60,
     IOTARepositoryWizard80, IOTAProjectWizard, IOTAProjectWizard100)
   public
     constructor Create;
@@ -52,9 +52,9 @@ implementation
 uses
   MARS.Wizards.ProjectCreator;
 
-{ TMarsServeProjectWizard }
+{ TMARSServerProjectWizard }
 
-constructor TMarsServeProjectWizard.Create;
+constructor TMARSServerProjectWizard.Create;
 var
   LCategoryServices: IOTAGalleryCategoryManager;
 begin
@@ -65,62 +65,62 @@ end;
 
 {$REGION 'IOTAWizard'}
 
-procedure TMarsServeProjectWizard.Execute;
+procedure TMARSServerProjectWizard.Execute;
 begin
   (BorlandIDEServices as IOTAModuleServices).CreateModule(TMarsServerProjectCreator.Create);
 end;
 
-function TMarsServeProjectWizard.GetIDString: string;
+function TMARSServerProjectWizard.GetIDString: string;
 begin
   Result := SIDString + '.Server';
 end;
 
-function TMarsServeProjectWizard.GetName: string;
+function TMARSServerProjectWizard.GetName: string;
 begin
   Result := SName;
 end;
 
-function TMarsServeProjectWizard.GetState: TWizardState;
+function TMARSServerProjectWizard.GetState: TWizardState;
 begin
   Result := [wsEnabled];
 end;
 
-procedure TMarsServeProjectWizard.AfterSave;
+procedure TMARSServerProjectWizard.AfterSave;
 begin
 end;
 
-procedure TMarsServeProjectWizard.BeforeSave;
+procedure TMARSServerProjectWizard.BeforeSave;
 begin
 end;
 
-procedure TMarsServeProjectWizard.Destroyed;
+procedure TMARSServerProjectWizard.Destroyed;
 begin
 end;
 
-procedure TMarsServeProjectWizard.Modified;
+procedure TMARSServerProjectWizard.Modified;
 begin
 end;
 
 {$ENDREGION}
 {$REGION 'IOTARepositoryWizard'}
 
-function TMarsServeProjectWizard.GetAuthor: string;
+function TMARSServerProjectWizard.GetAuthor: string;
 begin
   Result := SAuthor;
 end;
 
-function TMarsServeProjectWizard.GetComment: string;
+function TMARSServerProjectWizard.GetComment: string;
 begin
   Result := SComment;
 end;
 
-function TMarsServeProjectWizard.GetGlyph: Cardinal;
+function TMARSServerProjectWizard.GetGlyph: Cardinal;
 begin
-{ TODO : function TMarsServeProjectWizard.GetGlyph: Cardinal; }
+{ TODO : function TMARSServerProjectWizard.GetGlyph: Cardinal; }
   Result := 0;
 end;
 
-function TMarsServeProjectWizard.GetPage: string;
+function TMARSServerProjectWizard.GetPage: string;
 begin
   Result := SGalleryCategory;
 end;
@@ -128,7 +128,7 @@ end;
 {$ENDREGION}
 {$REGION 'IOTARepositoryWizard60'}
 
-function TMarsServeProjectWizard.GetDesigner: string;
+function TMARSServerProjectWizard.GetDesigner: string;
 begin
   Result := dAny;
 end;
@@ -136,12 +136,12 @@ end;
 {$ENDREGION}
 {$REGION 'IOTARepositoryWizard80'}
 
-function TMarsServeProjectWizard.GetGalleryCategory: IOTAGalleryCategory;
+function TMARSServerProjectWizard.GetGalleryCategory: IOTAGalleryCategory;
 begin
   Result := (BorlandIDEServices as IOTAGalleryCategoryManager).FindCategory(SIDString);
 end;
 
-function TMarsServeProjectWizard.GetPersonality: string;
+function TMARSServerProjectWizard.GetPersonality: string;
 begin
   Result := sDelphiPersonality;
 end;
@@ -149,7 +149,7 @@ end;
 {$ENDREGION}
 {$REGION 'IOTAProjectWizard100'}
 
-function TMarsServeProjectWizard.IsVisible(Project: IOTAProject): Boolean;
+function TMARSServerProjectWizard.IsVisible(Project: IOTAProject): Boolean;
 begin
   Result := True;
 end;
@@ -158,7 +158,7 @@ end;
 
 procedure Register;
 begin
-  RegisterPackageWizard(TMarsServeProjectWizard.Create);
+  RegisterPackageWizard(TMARSServerProjectWizard.Create);
 end;
 
 

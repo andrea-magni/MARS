@@ -46,7 +46,7 @@ type
 /// <summary>
 ///   Reads source code from a RT_RCDATA Resource
 /// </summary>
-  TMarsSourceFile = class(TInterfacedObject, IOTAFile)
+  TMARSSourceFile = class(TInterfacedObject, IOTAFile)
   strict private
     FResourceName: string;
   strict protected
@@ -161,20 +161,20 @@ begin
   end;
 end;
 
-{$REGION 'TMarsSourceFile'}
+{$REGION 'TMARSSourceFile'}
 
-constructor TMarsSourceFile.Create(const AResourceName: string);
+constructor TMARSSourceFile.Create(const AResourceName: string);
 begin
   inherited Create;
   FResourceName := AResourceName;
 end;
 
-function TMarsSourceFile.GetAge: TDateTime;
+function TMARSSourceFile.GetAge: TDateTime;
 begin
   Result := -1;
 end;
 
-function TMarsSourceFile.GetSource: string;
+function TMARSSourceFile.GetSource: string;
 var
   Res: TResourceStream;
   S: TStrings;

@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS Server'
+  Caption = 'MARS-Curiosity Server'
   ClientHeight = 201
   ClientWidth = 464
   Color = clBtnFace
@@ -45,14 +45,6 @@ object MainForm: TMainForm
       Height = 25
       Action = StopServerAction
       TabOrder = 1
-    end
-    object PortNumberEdit: TEdit
-      Left = 97
-      Top = 14
-      Width = 82
-      Height = 21
-      TabOrder = 2
-      Text = '8080'
     end
   end
   object MainActionList: TActionList

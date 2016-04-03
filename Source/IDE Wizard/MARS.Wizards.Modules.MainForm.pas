@@ -117,7 +117,7 @@ end;
 
 function TMarsServerMainFormCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
 begin
-  Result := NIL;
+  Result := nil;
 end;
 
 procedure TMarsServerMainFormCreator.FormCreated(const FormEditor: IOTAFormEditor);

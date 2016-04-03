@@ -3,16 +3,13 @@ unit ServerMainForm;
 interface
 
 uses
-  MARS.Core.Engine,
-  MARS.http.Server.Indy,
-  MARS.Core.Application,
-  Actions,
-  Classes,
-  Forms,
-  ActnList,
-  StdCtrls,
-  Controls,
-  ExtCtrls;
+  Classes, SysUtils, Forms, Actions, ActnList, StdCtrls, Controls, ExtCtrls
+
+  // MARS-Curiosity units
+  , MARS.Core.Engine
+  , MARS.http.Server.Indy
+  , MARS.Core.Application
+;
 
 type
   TMainForm = class(TForm)
@@ -22,7 +19,6 @@ type
     MainActionList: TActionList;
     StartServerAction: TAction;
     StopServerAction: TAction;
-    PortNumberEdit: TEdit;
     Label1: TLabel;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
@@ -47,12 +43,14 @@ implementation
 {$R *.dfm}
 
 uses
-  MARS.Core.JSON,
-  MARS.Rtti.Utils,
-  MARS.Core.MessageBodyWriter,
-  MARS.Core.MessageBodyWriters,
-  MARS.Utils.Parameters.IniFile,
-  ServerResources;
+    MARS.Core.JSON
+  , MARS.Rtti.Utils
+  , MARS.Core.MessageBodyWriter
+  , MARS.Core.MessageBodyWriters
+  , MARS.Utils.Parameters.IniFile
+
+  , ServerResources
+;
 
 constructor TMainForm.Create(AOwner: TComponent);
 begin
@@ -74,13 +72,15 @@ begin
   FEngine.Parameters.LoadFromIniFile;
 
   // Application configuration
-  FEngine.AddApplication('Default', '/default', [ 'ServerResources.*']);
+  FEngine.AddApplication('Default', '/default', [ 'ServerResources.*' ]);
 
   // Create http server
   FServer := TMARShttpServerIndy.Create(FEngine);
 
   if not FServer.Active then
     FServer.Active := True;
+
+  Label1.Caption := 'Listening on port ' + FEngine.Port.ToString;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
@@ -91,11 +91,10 @@ end;
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
   FServer.Active := False;
-  FServer.Free;
-  FServer := NIL;
+  FreeAndNil(FServer);
 
-  FEngine.Free;
-  FEngine := NIL;
+  FreeAndNil(FEngine);
+  Label1.Caption := 'Not listening';
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);

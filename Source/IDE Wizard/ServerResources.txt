@@ -3,11 +3,11 @@ unit ServerResources;
 interface
 
 uses
-  MARS.Core.Attributes,
-  MARS.Core.MediaType,
-  Web.HttpApp,
-  SysUtils,
-  Classes;
+  SysUtils, Classes
+
+  , MARS.Core.Attributes
+  , MARS.Core.MediaType
+;
 
 type
   [Path('helloworld')]
@@ -20,7 +20,8 @@ type
 implementation
 
 uses
-  MARS.Core.Registry;
+  MARS.Core.Registry
+;
 
 { THelloWorldResource }
 
