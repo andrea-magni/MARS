@@ -84,7 +84,7 @@ end;
 
 function TMarsServerProjectCreator.GetFileName: string;
 begin
-  Result := GetCurrentDir + '\' + 'MARSServerProjectd.dpr';
+  Result := GetCurrentDir + '\' + 'MARSServerProject.dpr';
 end;
 
 function TMarsServerProjectCreator.GetOptionFileName: string; deprecated;
