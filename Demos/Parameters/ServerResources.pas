@@ -48,8 +48,7 @@ uses
 
 function THelloWorldResource.GetIniFileName: string;
 begin
-  Result := ExtractFilePath(ParamStr(0)) + '\..\..\'
-    + ChangeFileExt(ExtractFileName(ParamStr(0)), '.ini');
+  Result := ExtractFilePath(ParamStr(0)) + 'HelloWorld.ini';
 end;
 
 function THelloWorldResource.LoadFromFile(const ALang,
