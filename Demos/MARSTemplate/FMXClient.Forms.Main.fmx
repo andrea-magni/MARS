@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'WhatsApp Clone'
+  Caption = 'MARS Template Client'
   ClientHeight = 480
   ClientWidth = 640
   FormFactor.Width = 320
@@ -16,7 +16,7 @@ object MainForm: TMainForm
     object TitleLabel: TLabel
       Align = Center
       AutoSize = True
-      Size.Width = 117.000000000000000000
+      Size.Width = 121.000000000000000000
       Size.Height = 16.000000000000000000
       Size.PlatformDefault = False
       StyleLookup = 'toollabel'

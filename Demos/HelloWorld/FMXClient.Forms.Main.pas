@@ -24,27 +24,34 @@ type
     ToolBar1: TToolBar;
     MainTabControl: TTabControl;
     HelloWorldTabItem: TTabItem;
-    StringDemosTabItem: TTabItem;
+    SubresourcesTabItem: TTabItem;
     Execute: TButton;
     Memo1: TMemo;
     Layout1: TLayout;
-    Layout2: TLayout;
-    Edit1: TEdit;
+    EchoStringLayout: TLayout;
+    InputEchoStringEdit: TEdit;
     Label1: TLabel;
-    Button1: TButton;
-    Edit2: TEdit;
+    EchoStringButton: TButton;
+    OutputEchoStringEdit: TEdit;
     Label2: TLabel;
     Layout3: TLayout;
-    Edit3: TEdit;
+    InputReverseStringEdit: TEdit;
     Label3: TLabel;
-    Button2: TButton;
-    Edit4: TEdit;
+    ReverseStringButton: TButton;
+    OutputReverseStringEdit: TEdit;
     Label4: TLabel;
-    ButtonPost: TButton;
+    Layout4: TLayout;
+    InputSum1Edit: TEdit;
+    Label5: TLabel;
+    SumButton: TButton;
+    OutputSumEdit: TEdit;
+    Label6: TLabel;
+    InputSum2Edit: TEdit;
+    Label7: TLabel;
     procedure ExecuteClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
-    procedure Button2Click(Sender: TObject);
-    procedure ButtonPostClick(Sender: TObject);
+    procedure EchoStringButtonClick(Sender: TObject);
+    procedure ReverseStringButtonClick(Sender: TObject);
+    procedure SumButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -66,51 +73,19 @@ uses
   , MARS.Core.JSON
   ;
 
-procedure TMainForm.Button1Click(Sender: TObject);
+procedure TMainForm.EchoStringButtonClick(Sender: TObject);
 begin
-  Edit2.Text := MainDataModule.EchoString(Edit1.Text);
+  OutputEchoStringEdit.Text := MainDataModule.EchoString(InputEchoStringEdit.Text);
 end;
 
-procedure TMainForm.Button2Click(Sender: TObject);
+procedure TMainForm.ReverseStringButtonClick(Sender: TObject);
 begin
-  Edit4.Text := MainDataModule.ReverseString(Edit3.Text);
+  OutputReverseStringEdit.Text := MainDataModule.ReverseString(InputReverseStringEdit.Text);
 end;
 
-procedure TMainForm.ButtonPostClick(Sender: TObject);
-var
-  LArray: TJSONArray;
+procedure TMainForm.SumButtonClick(Sender: TObject);
 begin
-  LArray := TJSONArray.Create;
-  try
-    LArray.Add('Prova 1');
-    LArray.Add('Prova 2');
-    LArray.Add('Prova 3');
-
-    MainDataModule.PostExampleResource.POST(
-      procedure(AContent: TMemoryStream)
-      var
-        LWriter: TStreamWriter;
-      begin
-        LWriter := TStreamWriter.Create(AContent);
-        try
-          LWriter.Write(LArray.ToJSON);
-          AContent.Position := 0;
-        finally
-          LWriter.Free;
-        end;
-      end
-      ,
-      procedure (AResponse: TStream)
-      begin
-        AResponse.Position := 0;
-
-        ShowMessage('OK, ' + AResponse.Size.ToString() + ' bytes: ' + sLineBreak
-          + StreamToString(AResponse));
-      end
-    );
-  finally
-    LArray.Free;
-  end;
+  OutputSumEdit.Text := MainDataModule.Sum(InputSum1Edit.Text.ToInteger, InputSum2Edit.Text.ToInteger).ToString;
 end;
 
 procedure TMainForm.ExecuteClick(Sender: TObject);

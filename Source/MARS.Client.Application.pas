@@ -33,7 +33,6 @@ type
     function GetPath: string; virtual;
   public
     constructor Create(AOwner: TComponent); override;
-
   published
     property DefaultMediaType: string read FDefaultMediaType write FDefaultMediaType;
     property AppName: string read FAppName write FAppName;

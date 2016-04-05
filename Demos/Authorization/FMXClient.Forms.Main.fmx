@@ -1,0 +1,146 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  Caption = 'MARS Authorization - Client'
+  ClientHeight = 480
+  ClientWidth = 640
+  Position = ScreenCenter
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object Layout1: TLayout
+    Align = Top
+    Position.Y = 50.000000000000000000
+    Size.Width = 640.000000000000000000
+    Size.Height = 50.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 6
+    object FirstButton: TButton
+      Position.X = 16.000000000000000000
+      Position.Y = 16.000000000000000000
+      TabOrder = 3
+      Text = 'First'
+      OnClick = FirstButtonClick
+    end
+    object FirstDetailsButton: TButton
+      Position.X = 112.000000000000000000
+      Position.Y = 16.000000000000000000
+      TabOrder = 2
+      Text = 'First/Details'
+      OnClick = FirstDetailsButtonClick
+    end
+  end
+  object Layout3: TLayout
+    Align = Top
+    Position.Y = 100.000000000000000000
+    Size.Width = 640.000000000000000000
+    Size.Height = 200.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 7
+    object Memo1: TMemo
+      Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+      DataDetectorTypes = []
+      Align = Client
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 10.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Margins.Bottom = 10.000000000000000000
+      Size.Width = 620.000000000000000000
+      Size.Height = 180.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      Viewport.Width = 616.000000000000000000
+      Viewport.Height = 176.000000000000000000
+    end
+  end
+  object EchoStringLayout: TLayout
+    Align = Top
+    Size.Width = 640.000000000000000000
+    Size.Height = 50.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    object UsernameEdit: TEdit
+      Touch.InteractiveGestures = [LongTap, DoubleTap]
+      TabOrder = 1
+      Text = 'admin'
+      Position.X = 72.000000000000000000
+      Position.Y = 16.000000000000000000
+      Size.Width = 89.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+      object Label1: TLabel
+        Position.X = -100.000000000000000000
+        Position.Y = 2.000000000000000000
+        Size.Width = 95.000000000000000000
+        Size.Height = 16.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.HorzAlign = Trailing
+        TextSettings.WordWrap = False
+        Text = 'Username:'
+      end
+    end
+    object LoginButton: TButton
+      Position.X = 352.000000000000000000
+      Position.Y = 16.000000000000000000
+      TabOrder = 2
+      Text = 'Login'
+      OnClick = LoginButtonClick
+    end
+    object PasswordEdit: TEdit
+      Touch.InteractiveGestures = [LongTap, DoubleTap]
+      TabOrder = 0
+      Position.X = 240.000000000000000000
+      Position.Y = 16.000000000000000000
+      Size.Width = 89.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+      object Label2: TLabel
+        Position.X = -100.000000000000000000
+        Position.Y = 2.000000000000000000
+        Size.Width = 95.000000000000000000
+        Size.Height = 16.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.HorzAlign = Trailing
+        TextSettings.WordWrap = False
+        Text = 'Password:'
+      end
+    end
+  end
+  object DefaultClient: TMARSClient
+    MARSEngineURL = 'http://localhost:8080/rest'
+    ConnectTimeout = 0
+    ReadTimeout = -1
+    Left = 480
+    Top = 176
+  end
+  object DefaultApplication: TMARSClientApplication
+    DefaultMediaType = 'application/json'
+    AppName = 'default'
+    Client = DefaultClient
+    Left = 480
+    Top = 232
+  end
+  object Token: TMARSClientToken
+    Application = DefaultApplication
+    Resource = 'token'
+    Password = '3'
+    Left = 576
+    Top = 232
+  end
+  object FirstResource: TMARSClientResource
+    Application = DefaultApplication
+    Resource = 'first'
+    Token = Token
+    Left = 480
+    Top = 296
+  end
+  object DetailsSubResource: TMARSClientSubResource
+    Application = DefaultApplication
+    Resource = 'details'
+    Token = Token
+    ParentResource = FirstResource
+    Left = 480
+    Top = 360
+  end
+end

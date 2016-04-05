@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{552184A3-D9D0-4A1C-87CC-981399F361BD}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MARSAuthorization.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FMXClientAuthorization.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MARSAuthorization">
+        <MSBuild Projects="MARSAuthorization.dproj"/>
+    </Target>
+    <Target Name="MARSAuthorization:Clean">
+        <MSBuild Projects="MARSAuthorization.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSAuthorization:Make">
+        <MSBuild Projects="MARSAuthorization.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FMXClientAuthorization">
+        <MSBuild Projects="FMXClientAuthorization.dproj"/>
+    </Target>
+    <Target Name="FMXClientAuthorization:Clean">
+        <MSBuild Projects="FMXClientAuthorization.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FMXClientAuthorization:Make">
+        <MSBuild Projects="FMXClientAuthorization.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MARSAuthorization;FMXClientAuthorization"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MARSAuthorization:Clean;FMXClientAuthorization:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MARSAuthorization:Make;FMXClientAuthorization:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

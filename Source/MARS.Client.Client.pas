@@ -16,14 +16,14 @@ interface
 
 uses
   SysUtils, Classes
+  , MARS.Core.JSON
 
 {$ifdef DelphiXE7_UP}
-   , System.Threading
+  , System.Threading
 {$endif}
 
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP
-
   ;
 
 type
@@ -52,10 +52,10 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure Delete(const AURL: string; AResponseContent: TStream);
-    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string);
-    procedure Post(const AURL: string; AContent, AResponse: TStream);
-    procedure Put(const AURL: string; AContent, AResponse: TStream);
+    procedure Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
+    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string);
+    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
     function LastCmdSuccess: Boolean;
     function ResponseText: string;
 
@@ -64,16 +64,52 @@ type
 
     property Request: TIdHTTPRequest read GetRequest;
     property Response: TIdHTTPResponse read GetResponse;
+
+    // shortcuts
+    class function GetJSON<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
+      const ASilentMode: Boolean = False): T; overload;
+
+    class function GetJSON<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const ASilentMode: Boolean = False; const AIgnoreResult: Boolean = False): T; overload;
+
+    class function GetAsString(const AEngineURL, AAppName, AResourceName: string;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const ASilentMode: Boolean = False): string; overload;
+
+    class function PostJSON(const AEngineURL, AAppName, AResourceName: string;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const AContent: TJSONValue;
+      const ASilentMode: Boolean = False): Boolean;
+
+    class function GetStream(const AEngineURL, AAppName, AResourceName: string;
+      const ASilentMode: Boolean = False): TStream; overload;
+
+    class function GetStream(const AEngineURL, AAppName, AResourceName: string;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const ASilentMode: Boolean = False): TStream; overload;
+
+    class function PostStream(const AEngineURL, AAppName, AResourceName: string;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const AContent: TStream;
+      const ASilentMode: Boolean = False): Boolean;
+
   published
     property MARSEngineURL: string read FMARSEngineURL write FMARSEngineURL;
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
-
   end;
 
 procedure Register;
 
 implementation
+
+uses
+    MARS.Client.Resource
+  , MARS.Client.Resource.JSON
+  , MARS.Client.Resource.Stream
+  , MARS.Client.Application
+;
 
 procedure Register;
 begin
@@ -89,8 +125,9 @@ begin
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
 
-procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream);
+procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
 begin
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
 {$ifdef DelphiXE7_UP}
   FHttpClient.Delete(AURL, AResponseContent);
 {$else}
@@ -116,9 +153,10 @@ begin
 end;
 
 procedure TMARSClient.Get(const AURL: string; AResponseContent: TStream;
-  const AAccept: string);
+  const AAccept: string; const AAuthToken: string);
 begin
   FHttpClient.Request.Accept := AAccept;
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
   FHttpClient.Get(AURL, AResponseContent);
 end;
 
@@ -156,13 +194,15 @@ begin
   Result := FHttpClient.ResponseCode = 200;
 end;
 
-procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream);
+procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
   FHttpClient.Post(AURL, AContent, AResponse);
 end;
 
-procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream);
+procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
+  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
   FHttpClient.Put(AURL, AContent, AResponse);
 end;
 
@@ -180,5 +220,312 @@ procedure TMARSClient.SetReadTimeout(const Value: Integer);
 begin
   FHttpClient.ReadTimeout := Value;
 end;
+
+class function TMARSClient.GetAsString(const AEngineURL, AAppName,
+  AResourceName: string; const APathParams: TArray<string>;
+  const AQueryParams: TStrings; const ASilentMode: Boolean): string;
+var
+  LClient: TMARSClient;
+  LResource: TMARSClientResource;
+  LApp: TMARSClientApplication;
+  LIndex: Integer;
+  LFinalURL: string;
+begin
+  try
+    LClient := TMARSClient.Create(nil);
+    try
+      LClient.MARSEngineURL := AEngineURL;
+      LApp := TMARSClientApplication.Create(nil);
+      try
+        LApp.Client := LClient;
+        LApp.AppName := AAppName;
+        LResource := TMARSClientResource.Create(nil);
+        try
+          LResource.Application := LApp;
+          LResource.Resource := AResourceName;
+
+          LResource.PathParamsValues.Clear;
+          for LIndex := 0 to Length(APathParams)-1 do
+            LResource.PathParamsValues.Add(APathParams[LIndex]);
+
+          if Assigned(AQueryParams) then
+            LResource.QueryParams.Assign(AQueryParams);
+
+          LFinalURL := LResource.URL;
+          Result := LResource.GETAsString();
+        finally
+          LResource.Free;
+        end;
+      finally
+        LApp.Free;
+      end;
+    finally
+      LClient.Free;
+    end;
+  except on E:Exception do
+    begin
+//      Logger.LogWarning('GetAsString exception: [%s] %s, Engine: [%s], App: [%s], Resource: [%s], URL: [%s]'
+//        , [E.ClassName, E.Message, AEngineURL, AAppName, AResourceName, LFinalURL]);
+      if not ASilentMode then
+        raise E;
+    end;
+  end;
+end;
+
+class function TMARSClient.GetJSON<T>(const AEngineURL, AAppName,
+  AResourceName: string; const APathParams: TArray<string>;
+  const AQueryParams: TStrings; const ASilentMode: Boolean;
+  const AIgnoreResult: Boolean): T;
+var
+  LClient: TMARSClient;
+  LResource: TMARSClientResourceJSON;
+  LApp: TMARSClientApplication;
+  LIndex: Integer;
+  LFinalURL: string;
+begin
+  Result := nil;
+  try
+    LClient := TMARSClient.Create(nil);
+    try
+      LClient.MARSEngineURL := AEngineURL;
+      LApp := TMARSClientApplication.Create(nil);
+      try
+        LApp.Client := LClient;
+        LApp.AppName := AAppName;
+        LResource := TMARSClientResourceJSON.Create(nil);
+        try
+          LResource.Application := LApp;
+          LResource.Resource := AResourceName;
+
+          LResource.PathParamsValues.Clear;
+          for LIndex := 0 to Length(APathParams)-1 do
+            LResource.PathParamsValues.Add(APathParams[LIndex]);
+
+          if Assigned(AQueryParams) then
+            LResource.QueryParams.Assign(AQueryParams);
+
+          LFinalURL := LResource.URL;
+          LResource.GET();
+
+          Result := nil;
+          if not AIgnoreResult then
+            Result := LResource.Response.Clone as T;
+        finally
+          LResource.Free;
+        end;
+      finally
+        LApp.Free;
+      end;
+    finally
+      LClient.Free;
+    end;
+  except on E:Exception do
+    begin
+//      Logger.LogWarning('GetJSON exception: [%s] %s, Engine: [%s], App: [%s], Resource: [%s], URL: [%s]'
+//        , [E.ClassName, E.Message, AEngineURL, AAppName, AResourceName, LFinalURL]);
+      if not ASilentMode then
+        raise E;
+    end;
+  end;
+end;
+
+class function TMARSClient.GetStream(const AEngineURL, AAppName,
+  AResourceName: string; const ASilentMode: Boolean): TStream;
+begin
+  Result := GetStream(AEngineURL, AAppName, AResourceName, nil, nil, ASilentMode);
+end;
+
+class function TMARSClient.GetJSON<T>(const AEngineURL, AAppName,
+  AResourceName: string; const ASilentMode: Boolean): T;
+begin
+  Result := GetJSON<T>(AEngineURL, AAppName, AResourceName, nil, nil, ASilentMode);
+end;
+
+class function TMARSClient.GetStream(const AEngineURL, AAppName,
+  AResourceName: string; const APathParams: TArray<string>;
+  const AQueryParams: TStrings; const ASilentMode: Boolean): TStream;
+var
+  LClient: TMARSClient;
+  LResource: TMARSClientResourceStream;
+  LApp: TMARSClientApplication;
+  LIndex: Integer;
+begin
+  Result := nil;
+  try
+    LClient := TMARSClient.Create(nil);
+    try
+      LClient.MARSEngineURL := AEngineURL;
+      LApp := TMARSClientApplication.Create(nil);
+      try
+        LApp.Client := LClient;
+        LApp.AppName := AAppName;
+        LResource := TMARSClientResourceStream.Create(nil);
+        try
+          LResource.Application := LApp;
+          LResource.Resource := AResourceName;
+
+          LResource.PathParamsValues.Clear;
+          for LIndex := 0 to Length(APathParams)-1 do
+            LResource.PathParamsValues.Add(APathParams[LIndex]);
+
+          if Assigned(AQueryParams) then
+            LResource.QueryParams.Assign(AQueryParams);
+
+          LResource.GET();
+
+          Result := TMemoryStream.Create;
+          try
+            Result.CopyFrom(LResource.Response, LResource.Response.Size);
+          except
+            Result.Free;
+            raise;
+          end;
+        finally
+          LResource.Free;
+        end;
+      finally
+        LApp.Free;
+      end;
+    finally
+      LClient.Free;
+    end;
+  except on E:Exception do
+    begin
+//      Logger.LogWarning('GetStream exception: [%s] %s, Engine: [%s], App: [%s], Resource: [%s]'
+//        , [E.ClassName, E.Message, AEngineURL, AAppName, AResourceName]);
+      if not ASilentMode then
+        raise E;
+    end;
+  end;
+end;
+
+class function TMARSClient.PostJSON(const AEngineURL, AAppName,
+  AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
+  const AContent: TJSONValue; const ASilentMode: Boolean): Boolean;
+var
+  LClient: TMARSClient;
+  LResource: TMARSClientResourceJSON;
+  LApp: TMARSClientApplication;
+  LIndex: Integer;
+begin
+  Result := False;
+  try
+    LClient := TMARSClient.Create(nil);
+    try
+      LClient.MARSEngineURL := AEngineURL;
+      LApp := TMARSClientApplication.Create(nil);
+      try
+        LApp.Client := LClient;
+        LApp.AppName := AAppName;
+        LResource := TMARSClientResourceJSON.Create(nil);
+        try
+          LResource.Application := LApp;
+          LResource.Resource := AResourceName;
+
+          LResource.PathParamsValues.Clear;
+          for LIndex := 0 to Length(APathParams)-1 do
+            LResource.PathParamsValues.Add(APathParams[LIndex]);
+
+          if Assigned(AQueryParams) then
+            LResource.QueryParams.Assign(AQueryParams);
+
+          LResource.POST(
+            procedure (AStream: TMemoryStream)
+            var
+              LWriter: TStreamWriter;
+            begin
+              if Assigned(AContent) then
+              begin
+                LWriter := TStreamWriter.Create(AStream);
+                try
+                  LWriter.Write(AContent.ToJSON);
+                finally
+                  LWriter.Free;
+                end;
+              end;
+            end
+          );
+          Result := LClient.Response.ResponseCode = 200;
+        finally
+          LResource.Free;
+        end;
+      finally
+        LApp.Free;
+      end;
+    finally
+      LClient.Free;
+    end;
+  except on E:Exception do
+    begin
+//      Logger.LogWarning('PostJSON exception: [%s] %s, Engine: [%s], App: [%s], Resource: [%s]'
+//        , [E.ClassName, E.Message, AEngineURL, AAppName, AResourceName]);
+      if not ASilentMode then
+        raise E;
+    end;
+  end;
+end;
+
+class function TMARSClient.PostStream(const AEngineURL, AAppName,
+  AResourceName: string; const APathParams: TArray<string>;
+  const AQueryParams: TStrings; const AContent: TStream;
+  const ASilentMode: Boolean): Boolean;
+var
+  LClient: TMARSClient;
+  LResource: TMARSClientResourceStream;
+  LApp: TMARSClientApplication;
+  LIndex: Integer;
+begin
+  Result := False;
+  try
+    LClient := TMARSClient.Create(nil);
+    try
+      LClient.MARSEngineURL := AEngineURL;
+      LApp := TMARSClientApplication.Create(nil);
+      try
+        LApp.Client := LClient;
+        LApp.AppName := AAppName;
+        LResource := TMARSClientResourceStream.Create(nil);
+        try
+          LResource.Application := LApp;
+          LResource.Resource := AResourceName;
+
+          LResource.PathParamsValues.Clear;
+          for LIndex := 0 to Length(APathParams)-1 do
+            LResource.PathParamsValues.Add(APathParams[LIndex]);
+
+          if Assigned(AQueryParams) then
+            LResource.QueryParams.Assign(AQueryParams);
+
+          LResource.POST(
+            procedure (AStream: TMemoryStream)
+            begin
+              if Assigned(AContent) then
+              begin
+                AStream.Size := 0; // reset
+                AContent.Position := 0;
+                AStream.CopyFrom(AContent, AContent.Size);
+              end;
+            end
+          );
+          Result := LClient.Response.ResponseCode = 200;
+        finally
+          LResource.Free;
+        end;
+      finally
+        LApp.Free;
+      end;
+    finally
+      LClient.Free;
+    end;
+  except on E:Exception do
+    begin
+//      Logger.LogWarning('PostStream exception: [%s] %s, Engine: [%s], App: [%s], Resource: [%s]'
+//        , [E.ClassName, E.Message, AEngineURL, AAppName, AResourceName]);
+      if not ASilentMode then
+        raise E;
+    end;
+  end;
+end;
+
 
 end.

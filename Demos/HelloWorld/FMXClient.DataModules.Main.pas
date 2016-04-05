@@ -19,21 +19,20 @@ uses
   MARS.Client.Messaging.Resource, System.JSON;
 
 type
-  TJobMessageSubscriber = TProc<string,Integer>;
-
   TMainDataModule = class(TDataModule)
     MARSClient1: TMARSClient;
     MARSClientApplication1: TMARSClientApplication;
     HelloWorldResource: TMARSClientResource;
     EchoStringResource: TMARSClientSubResource;
     ReverseStringResource: TMARSClientSubResource;
-    PostExampleResource: TMARSClientSubResourceJSON;
+    SumSubResource: TMARSClientSubResource;
   private
     { Private declarations }
   public
     function ExecuteHelloWorld: string;
     function EchoString(AString: string): string;
     function ReverseString(AString: string): string;
+    function Sum(AFirst, ASecond: Integer) : Integer;
   end;
 
 var
@@ -42,12 +41,6 @@ var
 implementation
 
 {%CLASSGROUP 'FMX.Controls.TControl'}
-
-uses
-  FMXClient.Forms.Main
-  , MARS.Rtti.Utils
-  , MARS.Core.JSON
-  ;
 
 {$R *.dfm}
 
@@ -68,6 +61,14 @@ function TMainDataModule.ReverseString(AString: string): string;
 begin
   ReverseStringResource.PathParamsValues.Text := AString;
   Result := ReverseStringResource.GETAsString();
+end;
+
+function TMainDataModule.Sum(AFirst, ASecond: Integer): Integer;
+begin
+  SumSubResource.PathParamsValues.Clear;
+  SumSubResource.PathParamsValues.Add(AFirst.ToString);
+  SumSubResource.PathParamsValues.Add(ASecond.ToString);
+  Result := SumSubResource.GETAsString().ToInteger;
 end;
 
 end.
