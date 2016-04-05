@@ -13,6 +13,7 @@ object MainForm: TMainForm
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object TopPanel: TPanel
@@ -24,23 +25,23 @@ object MainForm: TMainForm
     BevelOuter = bvNone
     TabOrder = 0
     object StatusLabel: TLabel
-      Left = 28
-      Top = 17
-      Width = 63
+      Left = 24
+      Top = 48
+      Width = 56
       Height = 13
-      Caption = ''
+      Caption = 'StatusLabel'
     end
     object StartButton: TButton
-      Left = 16
-      Top = 41
+      Left = 24
+      Top = 9
       Width = 75
       Height = 25
       Action = StartServerAction
       TabOrder = 0
     end
     object StopButton: TButton
-      Left = 104
-      Top = 41
+      Left = 112
+      Top = 9
       Width = 75
       Height = 25
       Action = StopServerAction
