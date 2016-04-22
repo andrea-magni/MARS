@@ -82,6 +82,13 @@ type
       const AContent: TJSONValue;
       const ASilentMode: Boolean = False): Boolean;
 
+    class procedure PostJSONAsync(const AEngineURL, AAppName, AResourceName: string;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const AContent: TJSONValue;
+      const ACompletionHandler: TProc = nil;
+      const ASilentMode: Boolean = False);
+
+
     class function GetStream(const AEngineURL, AAppName, AResourceName: string;
       const ASilentMode: Boolean = False): TStream; overload;
 
@@ -454,6 +461,86 @@ begin
       end;
     finally
       LClient.Free;
+    end;
+  except on E:Exception do
+    begin
+//      Logger.LogWarning('PostJSON exception: [%s] %s, Engine: [%s], App: [%s], Resource: [%s]'
+//        , [E.ClassName, E.Message, AEngineURL, AAppName, AResourceName]);
+      if not ASilentMode then
+        raise E;
+    end;
+  end;
+end;
+
+class procedure TMARSClient.PostJSONAsync(const AEngineURL, AAppName,
+  AResourceName: string; const APathParams: TArray<string>;
+  const AQueryParams: TStrings; const AContent: TJSONValue;
+  const ACompletionHandler: TProc;
+  const ASilentMode: Boolean);
+var
+  LClient: TMARSClient;
+  LResource: TMARSClientResourceJSON;
+  LApp: TMARSClientApplication;
+  LIndex: Integer;
+begin
+  try
+    LClient := TMARSClient.Create(nil);
+    try
+      LClient.MARSEngineURL := AEngineURL;
+      LApp := TMARSClientApplication.Create(nil);
+      try
+        LApp.Client := LClient;
+        LApp.AppName := AAppName;
+        LResource := TMARSClientResourceJSON.Create(nil);
+        try
+          LResource.Application := LApp;
+          LResource.Resource := AResourceName;
+
+          LResource.PathParamsValues.Clear;
+          for LIndex := 0 to Length(APathParams)-1 do
+            LResource.PathParamsValues.Add(APathParams[LIndex]);
+
+          if Assigned(AQueryParams) then
+            LResource.QueryParams.Assign(AQueryParams);
+
+          LResource.POSTAsync(
+            procedure (AStream: TMemoryStream)
+            var
+              LWriter: TStreamWriter;
+            begin
+              if Assigned(AContent) then
+              begin
+                LWriter := TStreamWriter.Create(AStream);
+                try
+                  LWriter.Write(AContent.ToJSON);
+                finally
+                  LWriter.Free;
+                end;
+              end;
+            end
+          , procedure
+            begin
+              try
+                if Assigned(ACompletionHandler) then
+                  ACompletionHandler();
+              finally
+                LResource.Free;
+                LApp.Free;
+                LClient.Free;
+              end;
+            end
+          );
+        except
+          LResource.Free;
+          raise;
+        end;
+      except
+        LApp.Free;
+        raise;
+      end;
+    except
+      LClient.Free;
+      raise;
     end;
   except on E:Exception do
     begin

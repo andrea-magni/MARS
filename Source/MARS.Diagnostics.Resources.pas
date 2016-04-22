@@ -61,6 +61,10 @@ type
 
 implementation
 
+uses
+  MARS.Core.Exceptions
+;
+
 { TDiagnosticsResource }
 
 function TDiagnosticsResource.RetrieveAll: TJSONObject;
@@ -90,7 +94,7 @@ begin
   if URL.HasSubResources then
     LAppName := URL.SubResources[0]
   else
-    raise Exception.Create('No app name provided');
+    raise EMARSException.Create('No app name provided');
 
   LObj := nil;
   TMARSDiagnosticsManager.Instance.RetrieveAppInfo(LAppName,

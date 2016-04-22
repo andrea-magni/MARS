@@ -95,7 +95,9 @@ type
     procedure GETAsync(const ACompletionHandler: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       ASynchronize: Boolean = True);
-    procedure POSTAsync(const ACompletionHandler: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
+    procedure POSTAsync(
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       ASynchronize: Boolean = True);
 
@@ -412,6 +414,7 @@ begin
 end;
 
 procedure TMARSClientCustomResource.POSTAsync(
+  const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TMARSClientProc;
   const AOnException: TMARSClientExecptionProc;
   ASynchronize: Boolean);
@@ -419,7 +422,7 @@ begin
   Client.ExecuteAsync(
     procedure
     begin
-      POST(nil, nil, AOnException);
+      POST(ABeforeExecute, nil, AOnException);
       if Assigned(ACompletionHandler) then
       begin
         if ASynchronize then

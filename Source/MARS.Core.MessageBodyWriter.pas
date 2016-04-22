@@ -93,6 +93,7 @@ implementation
 uses
     MARS.Core.Utils
   , MARS.Rtti.Utils
+  , MARS.Core.Exceptions
   ;
 
 { TMARSMessageBodyRegistry }
@@ -286,7 +287,7 @@ begin
     begin
       LInstance := AWriterClass.Create;
       if not Supports(LInstance, IMessageBodyWriter, Result) then
-        raise Exception.Create('Interface IMessageBodyWriter not implemented');
+        raise EMARSException.Create('Interface IMessageBodyWriter not implemented');
     end
     , AIsWritable
     , AGetAffinity

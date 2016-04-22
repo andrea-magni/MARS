@@ -74,6 +74,7 @@ implementation
 uses
     Generics.Collections
   , MARS.Rtti.Utils
+  , MARS.Core.Exceptions
   , Rtti, TypInfo
   ;
 
@@ -173,7 +174,7 @@ begin
   try
     // build FireDAC delta objects
     if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONDeltas, LDeltas) then
-      raise Exception.Create('Error de-serializing deltas');
+      raise EMARSException.Create('Error de-serializing deltas');
 
     // apply updates
     LResult := TJSONArray.Create;

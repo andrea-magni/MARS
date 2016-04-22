@@ -53,6 +53,7 @@ uses
   , FireDAC.Stan.StorageXML
 
   , MARS.Core.JSON
+  , MARS.Core.Exceptions
   , MARS.Rtti.Utils
   ;
 
@@ -82,7 +83,7 @@ begin
             TFDJSONDataSetsWriter.ListAdd(LDatasetList, LCurrent.Name, LCurrent);
 
           if not TFDJSONInterceptor.DataSetsToJSONObject(LDataSetList, LResult) then
-            raise Exception.Create('Error serializing datasets to JSON');
+            raise EMARSException.Create('Error serializing datasets to JSON');
         end;
 
         LStreamWriter.Write(LResult.ToJSON);
@@ -114,7 +115,7 @@ begin
   else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
     LStorageFormat := sfBinary
   else
-    raise Exception.CreateFmt('Unsupported media type: %s', [AMediaType.ToString]);
+    raise EMARSException.CreateFmt('Unsupported media type: %s', [AMediaType.ToString]);
 
   LDataSet.SaveToStream(AOutputStream, LStorageFormat);
 end;
