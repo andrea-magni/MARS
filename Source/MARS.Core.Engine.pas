@@ -22,6 +22,7 @@ uses
   , MARS.Core.Application
   , MARS.Core.URL
   , MARS.Core.Token
+  , MARS.Core.Exceptions
   , MARS.Utils.Parameters
 ;
 
@@ -31,6 +32,7 @@ const
   DEFAULT_ENGINE_NAME = 'DefaultEngine';
 
 type
+  EMARSEngineException = class(EMARSHttpException);
   TMARSEngine = class;
 
   IMARSHandleRequestEventListener = interface
@@ -236,7 +238,10 @@ begin
     if (BasePath <> '') and (BasePath <> TMARSURL.URL_PATH_SEPARATOR) then
     begin
       if not LURL.MatchPath(BasePath) then
-        raise Exception.CreateFmt('[Engine] Requested URL [%s] does not match base engine URL [%s]', [LURL.URL, BasePath]);
+        raise EMARSEngineException.Create(
+            Format('Bad request [%s] does not match engine URL [%s]', [LURL.URL, BasePath])
+            , 404
+          );
       LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
     end;
 
@@ -262,7 +267,10 @@ begin
       Result := True;
     end
     else
-      raise Exception.CreateFmt('[Engine] Requested URL [%s] belongs to an unknown application [%s]', [LURL.URL, LApplicationPath]);
+      raise EMARSEngineException.Create(
+        Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath])
+        , 404
+      );
   finally
     LURL.Free;
   end;

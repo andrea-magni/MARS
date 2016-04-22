@@ -15,6 +15,7 @@ interface
 uses
   Classes, SysUtils
   , MARS.Core.JSON
+  , MARS.Core.Exceptions
   , FireDACJSONReflect
   , FireDAC.Comp.Client
   , FireDAC.Stan.StorageBin;
@@ -35,7 +36,7 @@ begin
   LDataSets := TFDJSONDataSets.Create;
   try
     if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONObj, LDataSets) then
-      raise Exception.Create('Error deserializing data');
+      raise EMARSException.Create('Error deserializing data');
 
     AMemTable.Close;
     AMemTable.Data := TFDJSONDataSetsReader.GetListValueByName(LDataSets, ADataSetName);

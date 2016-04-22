@@ -78,6 +78,7 @@ implementation
 uses
     MARS.Rtti.Utils
   , MARS.Core.Attributes
+  , MARS.Core.Exceptions
   ;
 
 { TMessageBodyReaderRegistry }
@@ -186,7 +187,7 @@ begin
     begin
       LInstance := AReaderClass.Create;
       if not Supports(LInstance, IMessageBodyReader, Result) then
-        raise Exception.Create('Interface IMessageBodyReader not implemented');
+        raise EMARSException.Create('Interface IMessageBodyReader not implemented');
     end
     , AIsWritable
     , AGetAffinity

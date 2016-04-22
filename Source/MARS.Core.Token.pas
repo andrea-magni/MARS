@@ -91,10 +91,10 @@ uses
   ;
 
 {
-  Dummy procedure to warm up the JOSE JWT library, avoiding penalty to the
-  first real request to be served. (At the moment, 2016 Feb. 15th, it amounts
-  up to a couple of seconds).
-  This procedure is called in the initialization section of this unit.
+  Dummy procedure to warm up the JOSE JWT library.
+  Call this procedure once (for example at server startup) to avoid the
+  first real request to pay the penalty.
+  (At the moment, 2016 Feb. 15th, it amounts up to a couple of seconds).
 }
 procedure WarmUpJWT;
 var
@@ -287,8 +287,5 @@ begin
   else
     TJSONUtils.SetJSONValueFrom<string>(Name_UserName, Value, FJSON);
 end;
-
-initialization
-  WarmUpJWT;
 
 end.

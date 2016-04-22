@@ -72,20 +72,16 @@ begin
       LResponse.FreeContentStream := False;
       AResponseInfo.FreeContentStream := True;
 
-      // skip browser requests (can be dangerous since it is a bit wide as approach)
-      if not EndsText('favicon.ico', string(LRequest.PathInfo)) then
+      if not FEngine.HandleRequest(LRequest, LResponse) then
       begin
-        if not FEngine.HandleRequest(LRequest, LResponse) then
-        begin
-          LResponse.ContentType := 'application/json';
-          LResponse.Content :=
-            '{"success": false, "details": '
-            + '{'
-              + '"error": "Request not found",'
-              + '"pathinfo": "' + string(LRequest.PathInfo) + '"'
-            + '}'
-          + '}';
-        end;
+        LResponse.ContentType := 'application/json';
+        LResponse.Content :=
+          '{"success": false, "details": '
+          + '{'
+            + '"error": "Request not found",'
+            + '"pathinfo": "' + string(LRequest.PathInfo) + '"'
+          + '}'
+        + '}';
       end;
       AResponseInfo.CustomHeaders.AddStrings(LResponse.CustomHeaders);
     finally

@@ -31,10 +31,14 @@ uses
   , MARS.Core.Registry
   , MARS.Core.MediaType
   , MARS.Core.Token
+  , MARS.Core.Exceptions
   , MARS.Utils.Parameters
   ;
 
 type
+  EMARSApplicationException = class(EMARSHttpException);
+  EMARSAuthorizationException = class(EMARSApplicationException);
+
   TAttributeArray = TArray<TCustomAttribute>;
   TArgumentArray = array of TValue;
 
@@ -106,7 +110,6 @@ implementation
 uses
   StrUtils
   , TypInfo
-  , MARS.Core.Exceptions
   , MARS.Core.Utils
   , MARS.Rtti.Utils
   , MARS.Core.Response
@@ -223,7 +226,7 @@ begin
     end;
 
     if not LAllowed then
-      raise EMARSWebApplicationException.Create('Forbidden', 403);
+      raise EMARSAuthorizationException.Create('Forbidden', 403);
 
   finally
     LAllowedRoles.Free;
@@ -431,7 +434,7 @@ begin
   if ATokenIndex < Length(LTokens) then
     Result := LTokens[ATokenIndex]
   else
-    raise Exception.CreateFmt('ExtractToken, index: %d from %s', [ATokenIndex, AString]);
+    raise EMARSException.CreateFmt('ExtractToken, index: %d from %s', [ATokenIndex, AString]);
 end;
 
 
@@ -446,7 +449,7 @@ var
   LContextValue: TValue;
 begin
   if Length(AAttrArray) > 1 then
-    raise Exception.Create('Only 1 attribute permitted');
+    raise EMARSException.Create('Only 1 attribute permitted');
 
   LParamName := '';
   LParamValue := '';
@@ -558,7 +561,7 @@ begin
       Result := TValue.From(Request)
     else
       Result := TValue.From(nil);
-      //Exception.Create('Only TMARSRequest object if the method is not annotated');
+      //EMARSException.Create('Only TMARSRequest object if the method is not annotated');
   end
   else
   begin
@@ -575,6 +578,7 @@ var
 
   LIndex: Integer;
 begin
+  Assert(Assigned(AMethod));
   try
     LParamArray := AMethod.GetParameters;
 
@@ -598,7 +602,7 @@ begin
 
   except
     on E: Exception do
-      raise EMARSWebApplicationException.Create('Error in FillResourceMethodParameters');
+      raise EMARSApplicationException.Create('Bad parameter values for resource method ' + AMethod.Name);
   end;
 end;
 
@@ -613,13 +617,13 @@ begin
   Result := False;
   try
     if not FResourceRegistry.TryGetValue(URL.Resource, LInfo) then
-      raise Exception.CreateFmt('[%s] not found',[URL.Resource]);
+      raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 
     LMethod := FindMethodToInvoke(URL, LInfo);
 
     if not Assigned(LMethod) then
-      raise Exception.CreateFmt('[%s] No method found to handle %s'
-        , [URL.Resource, GetEnumName(TypeInfo(TMethodType), Ord(ARequest.MethodType))]);
+      raise EMARSApplicationException.Create(Format('[%s] No implementation found for http method %s'
+        , [URL.Resource, GetEnumName(TypeInfo(TMethodType), Ord(ARequest.MethodType))]), 404);
 
     CheckAuthorization(LMethod, Token);
 
@@ -642,7 +646,7 @@ begin
 
     Result := True;
   except
-    on E: EMARSWebApplicationException do
+    on E: EMARSHttpException do
     begin
       Response.StatusCode := E.Status;
       Response.Content := E.Message;
