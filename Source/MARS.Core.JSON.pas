@@ -72,6 +72,7 @@ type
   public
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
+    function ReadDoubleValue(const AName: string; const ADefault: Double = 0.0): Double;
     function ReadInt64Value(const AName: string; const ADefault: Int64 = 0): Int64;
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
@@ -238,6 +239,16 @@ begin
     if LString <> '' then
       Result := ISO8601ToDate(LString);
   end;
+end;
+
+function TJSONObjectHelper.ReadDoubleValue(const AName: string;
+  const ADefault: Double): Double;
+var
+  LValue: TJSONNumber;
+begin
+  Result := ADefault;
+  if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
+    Result := LValue.AsDouble;
 end;
 
 function TJSONObjectHelper.ReadInt64Value(const AName: string;
