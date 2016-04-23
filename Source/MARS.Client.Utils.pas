@@ -17,6 +17,10 @@ uses
   ;
 
 type
+  TMARSClientProc = TProc;
+  TMARSClientResponseProc = TProc<TStream>;
+  TMARSClientExecptionProc = TProc<Exception>;
+
   TMARSComponentHelper = class
   public
     class function IsDesigning(AComponent: TComponent): Boolean;

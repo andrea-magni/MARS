@@ -19,13 +19,10 @@ uses
 
   , MARS.Client.Application
   , MARS.Client.Client
+  , MARS.Client.Utils
   ;
 
 type
-  TMARSClientProc = TProc;
-  TMARSClientResponseProc = TProc<TStream>;
-  TMARSClientExecptionProc = TProc<Exception>;
-
   {$ifdef DelphiXE2_UP}
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or pidOSX32 or pidiOSSimulator or pidiOSDevice or pidAndroid)]
   {$endif}
@@ -120,8 +117,7 @@ type
 implementation
 
 uses
-  MARS.Client.Utils
-  , MARS.Core.URL
+    MARS.Core.URL
   , MARS.Core.Utils
   , MARS.Client.Token
   ;
@@ -422,14 +418,20 @@ begin
   Client.ExecuteAsync(
     procedure
     begin
-      POST(ABeforeExecute, nil, AOnException);
-      if Assigned(ACompletionHandler) then
-      begin
-        if ASynchronize then
-          TThread.Queue(nil, TThreadProcedure(ACompletionHandler))
-        else
-          ACompletionHandler();
-      end;
+      POST(
+        ABeforeExecute
+      , procedure (AStream: TStream)
+        begin
+          if Assigned(ACompletionHandler) then
+          begin
+            if ASynchronize then
+              TThread.Queue(nil, TThreadProcedure(ACompletionHandler))
+            else
+              ACompletionHandler();
+          end;
+        end
+      , AOnException
+      );
     end
   );
 end;
