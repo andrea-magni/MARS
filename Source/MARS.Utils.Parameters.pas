@@ -51,7 +51,6 @@ type
 
     class function CombineSliceAndParamName(const ASlice, AParam: string): string;
     class procedure GetSliceAndParamName(const AName: string; out ASliceName, AParamName: string);
-
   public
     type TEnumerator = TEnumerator<TPair<string, TValue>>;
     function GetEnumerator: TEnumerator;
@@ -106,7 +105,9 @@ end;
 class function TMARSParametersSlice.CombineSliceAndParamName(const ASlice,
   AParam: string): string;
 begin
-  Result := ASlice + SLICE_SEPARATOR + AParam;
+  Result := AParam;
+  if ASlice <> '' then
+    Result := ASlice + SLICE_SEPARATOR + AParam;
 end;
 
 function TMARSParametersSlice.ContainsParam(const AParamName: string): Boolean;

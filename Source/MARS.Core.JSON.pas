@@ -72,10 +72,20 @@ type
   public
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
-    function ReadDoubleValue(const AName: string; const ADefault: Double = 0.0): Double;
     function ReadInt64Value(const AName: string; const ADefault: Int64 = 0): Int64;
+    function ReadDoubleValue(const AName: string; const ADefault: Double = 0.0): Double;
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
+    function ReadUnixTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
+
+    procedure WriteStringValue(const AName: string; const AValue: string);
+    procedure WriteIntegerValue(const AName: string; const AValue: Integer);
+    procedure WriteInt64Value(const AName: string; const AValue: Int64);
+    procedure WriteDoubleValue(const AName: string; const AValue: Double);
+    procedure WriteBoolValue(const AName: string; const AValue: Boolean);
+    procedure WriteDateTimeValue(const AName: string; const AValue: TDateTime; const AInputIsUTC: Boolean = True);
+    procedure WriteUnixTimeValue(const AName: string; const AValue: TDateTime);
+
 
     property Values[const name: string]: Variant read GetValue; default;
   end;
@@ -188,24 +198,24 @@ end;
 
 function TJSONObjectHelper.GetValue(const name: string): Variant;
 var
-  pair: TJSONPair;
-  value: TJSONValue;
+  LPair: TJSONPair;
+  LValue: TJSONValue;
 begin
 {$ifdef DelphiXE6_UP}
-  pair := GetPairByName(name);
+  LPair := GetPairByName(name);
 {$else}
-  pair := Get(name);
+  LPair := Get(name);
 {$endif}
-  if not Assigned(pair) then
+  if not Assigned(LPair) then
     Exit(Unassigned);
-  value := pair.JsonValue;
-  if value is TJSONTrue then
+  LValue := LPair.JsonValue;
+  if LValue is TJSONTrue then
     Exit(True);
-  if value is TJSONFalse then
+  if LValue is TJSONFalse then
     Exit(False);
-  if value is TJSONNumber then
-    Exit(TJSONNumber(value).AsDouble);
-  Result := value.Value;
+  if LValue is TJSONNumber then
+    Exit(TJSONNumber(LValue).AsDouble);
+  Result := LValue.Value;
 end;
 
 function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
@@ -274,11 +284,97 @@ end;
 function TJSONObjectHelper.ReadStringValue(const AName,
   ADefault: string): string;
 var
-  LValue: TJSONString;
+  LPair: TJSONPair;
 begin
   Result := ADefault;
-  if Assigned(Self) and TryGetValue<TJSONString>(AName, LValue) then
-    Result := LValue.Value;
+  if not Assigned(Self) then
+    Exit;
+
+{$ifdef DelphiXE6_UP}
+  LPair := GetPairByName(AName);
+{$else}
+  LPair := Get(AName);
+{$endif}
+  if Assigned(LPair) then
+    Result := LPair.JsonValue.Value;
+end;
+
+function TJSONObjectHelper.ReadUnixTimeValue(const AName: string;
+  const ADefault: TDateTime): TDateTime;
+var
+  LValue: Int64;
+begin
+  Result := ADefault;
+  LValue := ReadInt64Value(AName);
+  if LValue <> 0 then
+    Result := UnixToDateTime(LValue)
+end;
+
+procedure TJSONObjectHelper.WriteBoolValue(const AName: string;
+  const AValue: Boolean);
+var
+  LDummy: TJSONValue;
+begin
+  if TryGetValue<TJSONValue>(AName, LDummy) then
+    RemovePair(AName);
+
+  AddPair(AName, BooleanToTJSON(AValue));
+end;
+
+procedure TJSONObjectHelper.WriteDateTimeValue(const AName: string;
+  const AValue: TDateTime; const AInputIsUTC: Boolean);
+begin
+  WriteStringValue(AName, DateToJSON(AValue, AInputIsUTC));
+end;
+
+procedure TJSONObjectHelper.WriteDoubleValue(const AName: string;
+  const AValue: Double);
+var
+  LDummy: TJSONValue;
+begin
+  if TryGetValue<TJSONValue>(AName, LDummy) then
+    RemovePair(AName);
+
+  AddPair(AName, TJSONNumber.Create(AValue));
+end;
+
+procedure TJSONObjectHelper.WriteInt64Value(const AName: string;
+  const AValue: Int64);
+var
+  LDummy: TJSONValue;
+begin
+  if TryGetValue<TJSONValue>(AName, LDummy) then
+    RemovePair(AName);
+
+  AddPair(AName, TJSONNumber.Create(AValue));
+end;
+
+procedure TJSONObjectHelper.WriteIntegerValue(const AName: string;
+  const AValue: Integer);
+var
+  LDummy: TJSONValue;
+begin
+  if TryGetValue<TJSONValue>(AName, LDummy) then
+    RemovePair(AName);
+
+  AddPair(AName, TJSONNumber.Create(AValue));
+end;
+
+procedure TJSONObjectHelper.WriteStringValue(const AName, AValue: string);
+var
+  LDummy: TJSONValue;
+begin
+  if TryGetValue<TJSONValue>(AName, LDummy) then
+    RemovePair(AName);
+
+  if AValue <> '' then
+    AddPair(AName, TJSONString.Create(AValue));
+end;
+
+procedure TJSONObjectHelper.WriteUnixTimeValue(const AName: string;
+  const AValue: TDateTime);
+begin
+  WriteInt64Value(AName, DateTimeToUnix(AValue));
 end;
 
 end.

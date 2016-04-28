@@ -27,25 +27,8 @@ uses
   StrUtils
   , IOUtils
   , Rtti
+  , MARS.Core.Utils
   ;
-
-function GuessTValueFromString(const AString: string): TValue;
-var
-  LValueInteger: Integer;
-  LErrorCode: Integer;
-  LValueDouble: Double;
-  LValueBool: Boolean;
-begin
-  Val(AString, LValueInteger, LErrorCode);
-  if LErrorCode = 0 then
-    Result := LValueInteger
-  else if TryStrToFloat(AString, LValueDouble) then
-    Result := LValueDouble
-  else if TryStrToBool(AString, LValueBool) then
-    Result := LValueBool
-  else
-    Result := TValue.From<string>(AString);
-end;
 
 { TMARSParametersIniFileReaderWriter }
 
