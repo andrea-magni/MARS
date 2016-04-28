@@ -63,8 +63,8 @@ type
     AOverWriteDest: Boolean = True; AThenResetDestPosition: Boolean = True);
 
 {$ifndef DelphiXE6_UP}
-function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
-function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = True): TDateTime;
+  function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
+  function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = True): TDateTime;
 {$endif}
 
   function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
@@ -72,6 +72,8 @@ function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = True): TDat
 
   function IsMask(const AString: string): Boolean;
   function MatchesMask(const AString, AMask: string): Boolean;
+
+  function GuessTValueFromString(const AString: string): TValue;
 
 implementation
 
@@ -83,6 +85,25 @@ uses
   , StrUtils, DateUtils
   , Masks
   ;
+
+function GuessTValueFromString(const AString: string): TValue;
+var
+  LValueInteger: Integer;
+  LErrorCode: Integer;
+  LValueDouble: Double;
+  LValueBool: Boolean;
+begin
+  Val(AString, LValueInteger, LErrorCode);
+  if LErrorCode = 0 then
+    Result := LValueInteger
+  else if TryStrToFloat(AString, LValueDouble) then
+    Result := LValueDouble
+  else if TryStrToBool(AString, LValueBool) then
+    Result := LValueBool
+  else
+    Result := TValue.From<string>(AString);
+end;
+
 
 function StreamToString(AStream: TStream): string;
 var

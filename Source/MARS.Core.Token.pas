@@ -26,7 +26,7 @@ uses
   , IdGlobal
 
   , JOSE.Types.Bytes, JOSE.Core.Builder
-  , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA, JOSE.Types.JSON
+  , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA
   ;
 
 type
@@ -35,8 +35,8 @@ type
   protected
     function GetRoles: string;
     function GetUserName: string;
-    procedure SetRoles(const Value: string);
-    procedure SetUserName(const Value: string);
+    procedure SetRoles(const AValue: string);
+    procedure SetUserName(const AValue: string);
   public
     property Roles: string read GetRoles write SetRoles;
     property UserName: string read GetUserName write SetUserName;
@@ -71,10 +71,12 @@ type
     property Roles: TStringList read FRoles;
     property IsVerified: Boolean read FIsVerified;
 
-    const JWT_ISSUER = 'MARS REST Library';
+    const JWT_ISSUER = 'MARS-Curiosity';
     const JWT_SECRET_PARAM = 'JWT.Secret';
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
     const JWT_TOKEN_HEADER = 'auth_token';
+
+    class procedure WarmUpJWT;
   end;
 
 implementation
@@ -96,7 +98,7 @@ uses
   first real request to pay the penalty.
   (At the moment, 2016 Feb. 15th, it amounts up to a couple of seconds).
 }
-procedure WarmUpJWT;
+class procedure TMARSToken.WarmUpJWT;
 var
   LToken: TMARSToken;
 begin
@@ -264,28 +266,22 @@ end;
 
 function TMARSClaims.GetRoles: string;
 begin
-  Result := TJSONUtils.GetJSONValue(Name_Roles, FJSON).AsString;
+  Result := FJSON.ReadStringValue(Name_Roles);
 end;
 
 function TMARSClaims.GetUserName: string;
 begin
-  Result := TJSONUtils.GetJSONValue(Name_UserName, FJSON).AsString;
+  Result := FJSON.ReadStringValue(Name_UserName);
 end;
 
-procedure TMARSClaims.SetRoles(const Value: string);
+procedure TMARSClaims.SetRoles(const AValue: string);
 begin
-  if Value = '' then
-    TJSONUtils.RemoveJSONNode(Name_Roles, FJSON)
-  else
-    TJSONUtils.SetJSONValueFrom<string>(Name_Roles, Value, FJSON);
+  FJSON.WriteStringValue(Name_Roles, AValue);
 end;
 
-procedure TMARSClaims.SetUserName(const Value: string);
+procedure TMARSClaims.SetUserName(const AValue: string);
 begin
-  if Value = '' then
-    TJSONUtils.RemoveJSONNode(Name_UserName, FJSON)
-  else
-    TJSONUtils.SetJSONValueFrom<string>(Name_UserName, Value, FJSON);
+  FJSON.WriteStringValue(Name_UserName, AValue);
 end;
 
 end.
