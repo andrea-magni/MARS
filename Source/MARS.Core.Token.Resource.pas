@@ -76,12 +76,14 @@ function TMARSTokenResource.Authenticate(const AUserName, APassword: string): Bo
 begin
   Result := SameText(APassword, IntToStr(HourOf(Now)));
 
-  if Result then // authenticated, set user roles
+  if Result then
   begin
+    Token.UserName := AUserName;
+    Token.Claims['Custom1'] := 123;
     if SameText(AUserName, 'admin') then
-      Token.SetUserNameAndRoles(AUserName, TArray<string>.Create('standard', 'admin'))
+      Token.Roles := ['standard', 'admin']
     else
-      Token.SetUserNameAndRoles(AUserName, TArray<string>.Create('standard'));
+      Token.Roles := ['standard'];
   end;
 end;
 

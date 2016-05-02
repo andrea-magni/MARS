@@ -124,7 +124,7 @@ uses
 
 procedure Register;
 begin
-  RegisterComponents('MARS Client', [TMARSClient]);
+  RegisterComponents('MARS-Curiosity Client', [TMARSClient]);
 end;
 
 { TMARSClient }

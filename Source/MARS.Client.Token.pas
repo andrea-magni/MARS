@@ -17,6 +17,8 @@ interface
 uses
   SysUtils, Classes
   , MARS.Core.JSON
+  , MARS.Utils.Parameters
+  , MARS.Utils.Parameters.JSON
 
   , MARS.Client.Resource
   ;
@@ -29,24 +31,24 @@ type
   private
     FData: TJSONObject;
     FIsVerified: Boolean;
-    FUserRoles: TStrings;
-    FStartTime: TDateTime;
     FToken: string;
     FPassword: string;
     FUserName: string;
+    FUserRoles: TStrings;
+    FClaims: TMARSParameters;
+    FExpiration: TDateTime;
+    FIssuedAt: TDateTime;
+    function GetIsExpired: Boolean;
   protected
     procedure AfterGET(); override;
-
     procedure BeforePOST(AContent: TMemoryStream); override;
     procedure AfterPOST(); override;
-
     procedure AfterDELETE; override;
-
     procedure ParseData; virtual;
+    function GetAuthToken: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-
   published
     property Data: TJSONObject read FData;
 
@@ -56,7 +58,10 @@ type
     property Authenticated: Boolean read FIsVerified;
     property IsVerified: Boolean read FIsVerified;
     property UserRoles: TStrings read FUserRoles;
-    property StartTime: TDateTime read FStartTime;
+    property IssuedAt: TDateTime read FIssuedAt;
+    property Expiration: TDateTime read FExpiration;
+    property Claims: TMARSParameters read FClaims;
+    property IsExpired: Boolean read GetIsExpired;
   end;
 
 procedure Register;
@@ -64,12 +69,13 @@ procedure Register;
 implementation
 
 uses
-    MARS.Core.Utils
+    DateUtils
+  , MARS.Core.Utils
   , MARS.Rtti.Utils;
 
 procedure Register;
 begin
-  RegisterComponents('MARS Client', [TMARSClientToken]);
+  RegisterComponents('MARS-Curiosity Client', [TMARSClientToken]);
 end;
 
 { TMARSClientToken }
@@ -118,26 +124,48 @@ end;
 constructor TMARSClientToken.Create(AOwner: TComponent);
 begin
   inherited;
+  Resource := 'token';
   FData := TJSONObject.Create;
   FUserRoles := TStringList.Create;
-  Resource := 'token';
+  FClaims := TMARSParameters.Create('');
 end;
 
 destructor TMARSClientToken.Destroy;
 begin
+  FClaims.Free;
   FUserRoles.Free;
   FData.Free;
 
   inherited;
 end;
 
-procedure TMARSClientToken.ParseData;
+function TMARSClientToken.GetAuthToken: string;
 begin
-  FUserName := FData.ReadStringValue('UserName');
+  Result := FToken;
+end;
+
+function TMARSClientToken.GetIsExpired: Boolean;
+begin
+  Result := Expiration < Now;
+end;
+
+procedure TMARSClientToken.ParseData;
+var
+  LClaims: TJSONObject;
+begin
   FToken := FData.ReadStringValue('Token');
   FIsVerified := FData.ReadBoolValue('IsVerified');
-  FStartTime := FData.ReadDateTimeValue('StartTime');
-  FUserRoles.Text := FData.ReadStringValue('UserRoles');
+
+  FClaims.Clear;
+  if FData.TryGetValue('Claims', LClaims) then
+  begin
+    FClaims.LoadFromJSON(LClaims);
+
+    FIssuedAt := UnixToDateTime(FClaims['iat'].AsInt64);
+    FExpiration := UnixToDateTime(FClaims['exp'].AsInt64);
+    FUserName := FClaims['UserName'].AsString;
+    FUserRoles.CommaText := FClaims['Roles'].AsString;
+  end;
 end;
 
 end.

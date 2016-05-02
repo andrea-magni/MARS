@@ -13,8 +13,7 @@ unit MARS.Core.Exceptions;
 interface
 
 uses
-  SysUtils
-  , MARS.Core.Response;
+  SysUtils;
 
 type
   EMARSException = class(Exception);

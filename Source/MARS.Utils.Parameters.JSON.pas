@@ -13,13 +13,15 @@ type
   protected
   public
     class procedure Load(const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string = '');
-    class function Save(const AParameters: TMARSParameters): TJSONObject;
+    class function Save(const AParameters: TMARSParameters): TJSONObject; overload;
+    class procedure Save(const AParameters: TMARSParameters; ADestination: TJSONObject); overload;
   end;
 
   TMARSParametersJSONReaderWriterHelper=class helper for TMARSParameters
   public
     procedure LoadFromJSON(const ASource: TJSONObject);
-    function SaveToJSON: TJSONObject;
+    function SaveToJSON: TJSONObject; overload;
+    procedure SaveToJSON(ADestination: TJSONObject); overload;
   end;
 
 implementation
@@ -69,45 +71,51 @@ end;
 
 class function TMARSParametersJSONReaderWriter.Save(
   const AParameters: TMARSParameters): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  try
+    Save(AParameters, Result);
+  except
+    FreeAndNil(Result);
+    raise;
+  end;
+end;
+
+class procedure TMARSParametersJSONReaderWriter.Save(
+  const AParameters: TMARSParameters; ADestination: TJSONObject);
 var
   LPair: TPair<string, TValue>;
   LSlice: string;
   LParamName: string;
-  LValue: TJSONValue;
 begin
-  Result := TJSONObject.Create;
+  Assert(Assigned(AParameters));
+  Assert(Assigned(ADestination));
+
 
   for LPair in AParameters do
   begin
     TMARSParameters.GetSliceAndParamName(LPair.Key, LSlice, LParamName);
 
-    LValue := nil;
     case LPair.Value.Kind of
-//      tkUnknown: ;
-      tkInteger: LValue := TJSONNumber.Create(LPair.Value.AsInteger);
-        tkInt64: LValue := TJSONNumber.Create(LPair.Value.AsInt64);
-        tkFloat: LValue := TJSONNumber.Create(LPair.Value.AsExtended);
+      tkInteger: ADestination.WriteIntegerValue(LPair.Key, LPair.Value.AsInteger);
+        tkInt64: ADestination.WriteInt64Value(LPair.Key, LPair.Value.AsInt64);
+        tkFloat: ADestination.WriteDoubleValue(LPair.Key, LPair.Value.AsExtended);
 
       tkChar,
       tkString,
       tkWChar,
       tkLString,
       tkWString,
-      tkUString: LValue := TJSONString.Create(LPair.Value.AsString);
+      tkUString: ADestination.WriteStringValue(LPair.Key, LPair.Value.AsString);
 
       tkEnumeration: begin
         if LPair.Value.IsType<Boolean> then
-        begin
-          if LPair.Value.AsBoolean then
-            LValue := TJSONTrue.Create
-          else
-            LValue := TJSONFalse.Create;
-        end
+          ADestination.WriteBoolValue(LPair.Key, LPair.Value.AsBoolean)
         else
-        begin
-          LValue := TJSONString.Create( GetEnumName(LPair.Value.TypeInfo, LPair.Value.AsOrdinal) );
-        end;
+          ADestination.WriteStringValue(LPair.Key, GetEnumName(LPair.Value.TypeInfo, LPair.Value.AsOrdinal));
       end;
+
+//      tkUnknown: ;
 //      tkSet: ;
 
 //      tkClass: ;
@@ -121,16 +129,6 @@ begin
 //      tkPointer: ;
 //      tkProcedure: ;
     end;
-
-    if Assigned(LValue) then
-    begin
-
-      Result.AddPair(LPair.Key, LValue);
-    end;
-//    else
-//      raise Exception.Create('Unsupported value');
-
-//    Result.AddElement(TJSONObject.Create(TJSONPair.Create(LName, AParameters[LName].AsString)));
   end;
 end;
 
@@ -145,6 +143,12 @@ end;
 function TMARSParametersJSONReaderWriterHelper.SaveToJSON: TJSONObject;
 begin
   Result := TMARSParametersJSONReaderWriter.Save(Self);
+end;
+
+procedure TMARSParametersJSONReaderWriterHelper.SaveToJSON(
+  ADestination: TJSONObject);
+begin
+  TMARSParametersJSONReaderWriter.Save(Self, ADestination);
 end;
 
 end.

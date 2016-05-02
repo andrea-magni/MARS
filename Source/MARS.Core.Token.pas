@@ -20,6 +20,8 @@ uses
   , Generics.Collections
   , SyncObjs
   , MARS.Core.JSON
+  , MARS.Utils.Parameters
+  , MARS.Utils.Parameters.JSON
   , Rtti
 
   , HTTPApp
@@ -30,27 +32,15 @@ uses
   ;
 
 type
-  TMARSClaims = class(TJWTClaims)
-  private
-  protected
-    function GetRoles: string;
-    function GetUserName: string;
-    procedure SetRoles(const AValue: string);
-    procedure SetUserName(const AValue: string);
-  public
-    property Roles: string read GetRoles write SetRoles;
-    property UserName: string read GetUserName write SetUserName;
-
-    const Name_Roles = 'MARS.Roles';
-    const Name_UserName = 'MARS.UserName';
-  end;
-
   TMARSToken = class
   private
     FToken: string;
-    FRoles: TStringList;
     FIsVerified: Boolean;
-    FUserName: string;
+    FClaims: TMARSParameters;
+    function GetUserName: string;
+    procedure SetUserName(const AValue: string);
+    function GetRoles: TArray<string>;
+    procedure SetRoles(const AValue: TArray<string>);
   public
     constructor Create(const AToken, ASecret: string); overload; virtual;
     constructor Create(const AWebRequest: TWebRequest; const ASecret: string); overload; virtual;
@@ -67,11 +57,14 @@ type
     function ToJSONString: string;
 
     property Token: string read FToken;
-    property UserName: string read FUserName write FUserName;
-    property Roles: TStringList read FRoles;
+    property UserName: string read GetUserName write SetUserName;
+    property Roles: TArray<string> read GetRoles write SetRoles;
     property IsVerified: Boolean read FIsVerified;
+    property Claims: TMARSParameters read FClaims;
 
     const JWT_ISSUER = 'MARS-Curiosity';
+    const JWT_USERNAME = 'UserName';
+    const JWT_ROLES = 'Roles';
     const JWT_SECRET_PARAM = 'JWT.Secret';
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
     const JWT_TOKEN_HEADER = 'auth_token';
@@ -116,25 +109,15 @@ constructor TMARSToken.Create(const AToken, ASecret: string);
 begin
   inherited Create;
 
-  FRoles := TStringList.Create;
-  try
-    FRoles.Sorted := True;
-    FRoles.Duplicates := dupIgnore;
-    FRoles.CaseSensitive := False;
-  except
-    FRoles.Free;
-    raise;
-  end;
-
+  FClaims := TMARSParameters.Create('');
   Load(AToken, ASecret);
 end;
 
 procedure TMARSToken.Clear;
 begin
   FToken := '';
-  FUserName := '';
   FIsVerified := False;
-  Roles.Clear;
+  FClaims.Clear;
 end;
 
 constructor TMARSToken.Create(const AWebRequest: TWebRequest; const ASecret: string);
@@ -144,8 +127,18 @@ end;
 
 destructor TMARSToken.Destroy;
 begin
-  FRoles.Free;
+  FClaims.Free;
   inherited;
+end;
+
+function TMARSToken.GetRoles: TArray<string>;
+begin
+  Result := FClaims[JWT_ROLES].AsString.Split([',']); // do not localize
+end;
+
+function TMARSToken.GetUserName: string;
+begin
+  Result := FClaims[JWT_USERNAME].AsString;
 end;
 
 procedure TMARSToken.Build(const ASecret: string);
@@ -153,26 +146,29 @@ var
   LJWT: TJWT;
   LSigner: TJWS;
   LKey: TJWK;
-  LClaims: TMARSClaims;
+  LClaims: TJWTClaims;
 begin
-  LJWT := TJWT.Create(TMARSClaims);
+  LJWT := TJWT.Create(TJWTClaims);
   try
-    LClaims := LJWT.Claims as TMARSClaims;
+    LClaims := LJWT.Claims;
     LClaims.Issuer := JWT_ISSUER;
     LClaims.IssuedAt := Now;
-    LClaims.Expiration := LClaims.IssuedAt + 1;
-    LClaims.UserName := UserName;
-    LClaims.Roles := Roles.CommaText;
+    LClaims.Expiration := LClaims.IssuedAt + 1; { TODO -oAndrea : Make customizable }
+
+    FClaims.SaveToJSON(LClaims.JSON);
 
     LSigner := TJWS.Create(LJWT);
-    LKey := TJWK.Create(ASecret);
     try
-      LSigner.Sign(LKey, HS256);
+      LKey := TJWK.Create(ASecret);
+      try
+        LSigner.Sign(LKey, HS256);
 
-      FToken := LSigner.CompactToken;
-      FIsVerified := True;
+        FToken := LSigner.CompactToken;
+        FIsVerified := True;
+      finally
+        LKey.Free;
+      end;
     finally
-      LKey.Free;
       LSigner.Free;
     end;
   finally
@@ -184,7 +180,6 @@ procedure TMARSToken.Load(const AToken, ASecret: string);
 var
   LKey: TJWK;
   LJWT: TJWT;
-  LMARSClaims: TMARSClaims;
 begin
   Clear;
   if AToken <> '' then
@@ -198,18 +193,7 @@ begin
         try
           FIsVerified := LJWT.Verified;
           if FIsVerified then
-          begin
-  //          LMARSClaims := LJWT.Claims as TMARSClaims;
-            // Workaround: JOSE does not allow to have a custom claims class
-            LMARSClaims := TMARSClaims.Create;
-            try
-              LMARSClaims.JSON := LJWT.Claims.JSON.Clone as TJSONObject;
-              Roles.CommaText := LMARSClaims.Roles;
-              UserName := LMARSClaims.UserName;
-            finally
-              LMARSClaims.Free;
-            end;
-          end;
+            FClaims.LoadFromJSON(LJWT.Claims.JSON);
         finally
           LJWT.Free;
         end;
@@ -220,15 +204,21 @@ begin
   end;
 end;
 
+procedure TMARSToken.SetRoles(const AValue: TArray<string>);
+begin
+  FClaims[JWT_ROLES] := SmartConcat(AValue);
+end;
+
+procedure TMARSToken.SetUserName(const AValue: string);
+begin
+  FClaims[JWT_USERNAME] := AValue;
+end;
+
 procedure TMARSToken.SetUserNameAndRoles(const AUserName: string;
   const ARoles: TArray<string>);
-var
-  LRole: string;
 begin
   UserName := AUserName;
-  Roles.Clear;
-  for LRole in ARoles do
-    Roles.Add(LRole);
+  Roles := ARoles;
 end;
 
 function TMARSToken.ToJSON: TJSONObject;
@@ -238,7 +228,8 @@ begin
     Result.AddPair('Token', Token);
     Result.AddPair('IsVerified', BooleanToTJSON(IsVerified));
     Result.AddPair('UserName', UserName);
-    Result.AddPair('Roles', Roles.CommaText);
+    Result.AddPair('Roles', StringArrayToString(Roles));
+    Result.AddPair('Claims', FClaims.SaveToJSON);
   except
     Result.Free;
     raise;
@@ -258,30 +249,18 @@ begin
 end;
 
 function TMARSToken.HasRole(const ARole: string): Boolean;
+var
+  LRole: string;
 begin
-  Result := FRoles.IndexOf(ARole) <> -1;
-end;
-
-{ TMARSClaims }
-
-function TMARSClaims.GetRoles: string;
-begin
-  Result := FJSON.ReadStringValue(Name_Roles);
-end;
-
-function TMARSClaims.GetUserName: string;
-begin
-  Result := FJSON.ReadStringValue(Name_UserName);
-end;
-
-procedure TMARSClaims.SetRoles(const AValue: string);
-begin
-  FJSON.WriteStringValue(Name_Roles, AValue);
-end;
-
-procedure TMARSClaims.SetUserName(const AValue: string);
-begin
-  FJSON.WriteStringValue(Name_UserName, AValue);
+  Result := False;
+  for LRole in GetRoles do
+  begin
+    if SameText(LRole, ARole) then
+    begin
+      Result := True;
+      Break;
+    end;
+  end;
 end;
 
 end.
