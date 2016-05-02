@@ -76,7 +76,20 @@ contains
   MARS.http.Core in '..\..\Source\MARS.http.Core.pas',
   MARS.Rtti.Utils in '..\..\Source\MARS.Rtti.Utils.pas',
   MARS.Utils.Parameters.IniFile in '..\..\Source\MARS.Utils.Parameters.IniFile.pas',
-  MARS.Utils.Parameters in '..\..\Source\MARS.Utils.Parameters.pas';
+  MARS.Utils.Parameters in '..\..\Source\MARS.Utils.Parameters.pas',
+  MARS.Utils.Parameters.JSON in '..\..\Source\MARS.Utils.Parameters.JSON.pas',
+  JOSE.Core.Base in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas',
+  JOSE.Core.Builder in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas',
+  JOSE.Core.JWA in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas',
+  JOSE.Core.JWE in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWE.pas',
+  JOSE.Core.JWK in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWK.pas',
+  JOSE.Core.JWS in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWS.pas',
+  JOSE.Core.JWT in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWT.pas',
+  JOSE.Core.Parts in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Parts.pas',
+  JOSE.Cryptography.RSA in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Cryptography.RSA.pas',
+  JOSE.Encoding.Base64 in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas',
+  JOSE.Hashing.HMAC in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas',
+  JOSE.Types.Bytes in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas';
 
 end.
 

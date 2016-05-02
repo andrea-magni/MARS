@@ -64,7 +64,6 @@
         <GenPackage>true</GenPackage>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <GenDll>true</GenDll>
-        <DCC_CBuilderOutput>All</DCC_CBuilderOutput>
         <SanitizedProjectName>MARSServer</SanitizedProjectName>
         <DCC_DcuOutput>..\..\Lib\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
@@ -164,6 +163,19 @@
         <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.IniFile.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.JSON.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWE.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWK.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWS.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWT.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Parts.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Cryptography.RSA.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -185,8 +197,6 @@
                     <Source Name="MainSource">MARSServer.dpk</Source>
                 </Source>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\bcboffice2k230.bpl">Embarcadero C++Builder Office 2000 Servers Package</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\bcbofficexp230.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k230.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp230.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
@@ -213,16 +223,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployClass Name="DependencyModule">
-                    <Platform Name="Win32">
-                        <Operation>0</Operation>
-                        <Extensions>.dll;.bpl</Extensions>
-                    </Platform>
-                    <Platform Name="OSX32">
-                        <Operation>1</Operation>
-                        <Extensions>.dylib</Extensions>
-                    </Platform>
-                </DeployClass>
+                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
                 <DeployClass Name="ProjectOSXResource">
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\Resources</RemoteDir>
@@ -536,7 +537,16 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
+                <DeployClass Name="DependencyModule">
+                    <Platform Name="Win32">
+                        <Operation>0</Operation>
+                        <Extensions>.dll;.bpl</Extensions>
+                    </Platform>
+                    <Platform Name="OSX32">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                </DeployClass>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
