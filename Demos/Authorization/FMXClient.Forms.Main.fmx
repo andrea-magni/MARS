@@ -124,7 +124,7 @@ object MainForm: TMainForm
   object Token: TMARSClientToken
     Application = DefaultApplication
     Resource = 'token'
-    Password = '3'
+    Password = ''
     Left = 576
     Top = 232
   end

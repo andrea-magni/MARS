@@ -67,7 +67,13 @@ contains
   MARS.Data.FireDAC.Editor in '..\..\Source\MARS.Data.FireDAC.Editor.pas',
   MARS.Data.FireDAC.Utils in '..\..\Source\MARS.Data.FireDAC.Utils.pas',
   MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
-  MARS.Rtti.Utils in '..\..\Source\MARS.Rtti.Utils.pas';
+  MARS.Rtti.Utils in '..\..\Source\MARS.Rtti.Utils.pas',
+  MARS.Utils.Parameters.JSON in '..\..\Source\MARS.Utils.Parameters.JSON.pas',
+  MARS.Utils.Parameters in '..\..\Source\MARS.Utils.Parameters.pas',
+  MARS.Core.Exceptions in '..\..\Source\MARS.Core.Exceptions.pas',
+  MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas',
+  MARS.Core.Declarations in '..\..\Source\MARS.Core.Declarations.pas';
 
 end.
+
 

@@ -84,7 +84,7 @@ uses
 
 procedure Register;
 begin
-  RegisterComponents('MARS Client', [TMARSFDResource]);
+  RegisterComponents('MARS-Curiosity Client', [TMARSFDResource]);
 end;
 
 { TMARSFDResource }

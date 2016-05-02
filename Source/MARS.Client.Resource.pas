@@ -48,7 +48,7 @@ implementation
 
 procedure Register;
 begin
-  RegisterComponents('MARS Client', [TMARSClientResource]);
+  RegisterComponents('MARS-Curiosity Client', [TMARSClientResource]);
 end;
 
 end.

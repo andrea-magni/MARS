@@ -51,7 +51,7 @@ uses
 
 procedure Register;
 begin
-  RegisterComponents('MARS Client', [TMARSClientSubResource]);
+  RegisterComponents('MARS-Curiosity Client', [TMARSClientSubResource]);
 end;
 
 { TMARSClientSubResource }
