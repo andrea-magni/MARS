@@ -81,9 +81,9 @@ begin
     Token.UserName := AUserName;
     Token.Claims['Custom1'] := 123;
     if SameText(AUserName, 'admin') then
-      Token.Roles := ['standard', 'admin']
+      Token.Roles := TArray<string>.Create('standard', 'admin')
     else
-      Token.Roles := ['standard'];
+      Token.Roles := TArray<string>.Create('standard');
   end;
 end;
 
