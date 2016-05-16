@@ -57,6 +57,7 @@ type
 {$ifdef DelphiXE7_UP}
     property WorkerTask: ITask read FWorkerTask;
 {$endif}
+    procedure EndorseAuthorization(const AAuthToken: string);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -146,11 +147,7 @@ end;
 
 procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
 begin
-  if not AAuthToken.IsEmpty then
-  begin
-    FHttpClient.Request.CustomHeaders.FoldLines := False;
-    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
-  end;
+  EndorseAuthorization(AAuthToken);
 {$ifdef DelphiXE7_UP}
   FHttpClient.Delete(AURL, AResponseContent);
 {$else}
@@ -162,6 +159,17 @@ destructor TMARSClient.Destroy;
 begin
   FHttpClient.Free;
   inherited;
+end;
+
+procedure TMARSClient.EndorseAuthorization(const AAuthToken: string);
+begin
+  if not AAuthToken.IsEmpty then
+  begin
+    FHttpClient.Request.CustomHeaders.FoldLines := False;
+    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
+  end
+  else
+    FHttpClient.Request.CustomHeaders.Values['Authorization'] := '';
 end;
 
 procedure TMARSClient.ExecuteAsync(const AProc: TProc);
@@ -179,11 +187,7 @@ procedure TMARSClient.Get(const AURL: string; AResponseContent: TStream;
   const AAccept: string; const AAuthToken: string);
 begin
   FHttpClient.Request.Accept := AAccept;
-  if not AAuthToken.IsEmpty then
-  begin
-    FHttpClient.Request.CustomHeaders.FoldLines := False;
-    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
-  end;
+  EndorseAuthorization(AAuthToken);
   FHttpClient.Get(AURL, AResponseContent);
 end;
 
@@ -223,21 +227,13 @@ end;
 
 procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
-  if not AAuthToken.IsEmpty then
-  begin
-    FHttpClient.Request.CustomHeaders.FoldLines := False;
-    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
-  end;
+  EndorseAuthorization(AAuthToken);
   FHttpClient.Post(AURL, AContent, AResponse);
 end;
 
 procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
-  if not AAuthToken.IsEmpty then
-  begin
-    FHttpClient.Request.CustomHeaders.FoldLines := False;
-    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
-  end;
+  EndorseAuthorization(AAuthToken);
   FHttpClient.Put(AURL, AContent, AResponse);
 end;
 
