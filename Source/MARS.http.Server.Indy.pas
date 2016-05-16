@@ -34,6 +34,10 @@ type
     procedure DoCommandOther(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); override;
 
+    procedure ParseAuthenticationHandler(AContext: TIdContext;
+      const AAuthType, AAuthData: String; var VUsername, VPassword: String;
+      var VHandled: Boolean); virtual;
+
     procedure SetupThreadPooling(const APoolSize: Integer = 25);
   public
     constructor Create(AEngine: TMARSEngine); virtual;
@@ -53,6 +57,7 @@ uses
 constructor TMARShttpServerIndy.Create(AEngine: TMARSEngine);
 begin
   inherited Create(nil);
+  OnParseAuthentication := ParseAuthenticationHandler;
   FEngine := AEngine;
 end;
 
@@ -97,6 +102,14 @@ procedure TMARShttpServerIndy.DoCommandOther(AContext: TIdContext;
 begin
   inherited;
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
+end;
+
+procedure TMARShttpServerIndy.ParseAuthenticationHandler(AContext: TIdContext;
+  const AAuthType, AAuthData: String; var VUsername, VPassword: String;
+  var VHandled: Boolean);
+begin
+  if SameText(AAuthType, 'Bearer') then
+    VHandled := True;
 end;
 
 procedure TMARShttpServerIndy.SetupThreadPooling(const APoolSize: Integer);

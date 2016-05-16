@@ -41,6 +41,8 @@ type
     procedure SetUserName(const AValue: string);
     function GetRoles: TArray<string>;
     procedure SetRoles(const AValue: TArray<string>);
+  protected
+    function GetToken(const AWebRequest: TWebRequest): string;
   public
     constructor Create(const AToken, ASecret: string); overload; virtual;
     constructor Create(const AWebRequest: TWebRequest; const ASecret: string); overload; virtual;
@@ -67,7 +69,6 @@ type
     const JWT_ROLES = 'Roles';
     const JWT_SECRET_PARAM = 'JWT.Secret';
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
-    const JWT_TOKEN_HEADER = 'auth_token';
 
     class procedure WarmUpJWT;
   end;
@@ -122,7 +123,7 @@ end;
 
 constructor TMARSToken.Create(const AWebRequest: TWebRequest; const ASecret: string);
 begin
-  Create(string(AWebRequest.GetFieldByName(TMARSToken.JWT_TOKEN_HEADER)), ASecret);
+  Create(GetToken(AWebRequest), ASecret);
 end;
 
 destructor TMARSToken.Destroy;
@@ -134,6 +135,19 @@ end;
 function TMARSToken.GetRoles: TArray<string>;
 begin
   Result := FClaims[JWT_ROLES].AsString.Split([',']); // do not localize
+end;
+
+function TMARSToken.GetToken(const AWebRequest: TWebRequest): string;
+var
+  LAuth: string;
+  LAuthTokens: TArray<string>;
+begin
+  Result := '';
+  LAuth := AWebRequest.Authorization;
+  LAuthTokens := LAuth.Split([' ']);
+  if (Length(LAuthTokens) >= 2) then
+    if SameText(LAuthTokens[0], 'Bearer') then
+      Result := LAuthTokens[1];
 end;
 
 function TMARSToken.GetUserName: string;
