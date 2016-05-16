@@ -146,7 +146,11 @@ end;
 
 procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
 begin
-  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
+  if not AAuthToken.IsEmpty then
+  begin
+    FHttpClient.Request.CustomHeaders.FoldLines := False;
+    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
+  end;
 {$ifdef DelphiXE7_UP}
   FHttpClient.Delete(AURL, AResponseContent);
 {$else}
@@ -175,7 +179,11 @@ procedure TMARSClient.Get(const AURL: string; AResponseContent: TStream;
   const AAccept: string; const AAuthToken: string);
 begin
   FHttpClient.Request.Accept := AAccept;
-  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
+  if not AAuthToken.IsEmpty then
+  begin
+    FHttpClient.Request.CustomHeaders.FoldLines := False;
+    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
+  end;
   FHttpClient.Get(AURL, AResponseContent);
 end;
 
@@ -215,13 +223,21 @@ end;
 
 procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
-  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
+  if not AAuthToken.IsEmpty then
+  begin
+    FHttpClient.Request.CustomHeaders.FoldLines := False;
+    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
+  end;
   FHttpClient.Post(AURL, AContent, AResponse);
 end;
 
 procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
-  FHttpClient.Request.CustomHeaders.Values['auth_token'] := AAuthToken;
+  if not AAuthToken.IsEmpty then
+  begin
+    FHttpClient.Request.CustomHeaders.FoldLines := False;
+    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
+  end;
   FHttpClient.Put(AURL, AContent, AResponse);
 end;
 
