@@ -1,0 +1,79 @@
+package MARSClient;
+
+{$R *.res}
+{$R *.dres}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library (Client)'}
+{$LIBSUFFIX '240'}
+{$DESIGNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  inet,
+  DbxCommonDriver,
+  dbrtl,
+  FireDACCommon,
+  FireDACCommonDriver,
+  FireDAC,
+  DataSnapFireDAC,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  bindengine,
+  bindcomp;
+
+contains
+  MARS.Client.Application in '..\..\Source\MARS.Client.Application.pas',
+  MARS.Client.Client in '..\..\Source\MARS.Client.Client.pas',
+  MARS.Client.CustomResource.Editor in '..\..\Source\MARS.Client.CustomResource.Editor.pas',
+  MARS.Client.CustomResource in '..\..\Source\MARS.Client.CustomResource.pas',
+  MARS.Client.FireDAC in '..\..\Source\MARS.Client.FireDAC.pas',
+  MARS.Client.Messaging.Resource in '..\..\Source\MARS.Client.Messaging.Resource.pas',
+  MARS.Client.Resource.JSON in '..\..\Source\MARS.Client.Resource.JSON.pas',
+  MARS.Client.Resource in '..\..\Source\MARS.Client.Resource.pas',
+  MARS.Client.Resource.Stream in '..\..\Source\MARS.Client.Resource.Stream.pas',
+  MARS.Client.SubResource.JSON in '..\..\Source\MARS.Client.SubResource.JSON.pas',
+  MARS.Client.SubResource in '..\..\Source\MARS.Client.SubResource.pas',
+  MARS.Client.SubResource.Stream in '..\..\Source\MARS.Client.SubResource.Stream.pas',
+  MARS.Client.Token in '..\..\Source\MARS.Client.Token.pas',
+  MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',
+  MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas',
+  MARS.Core.JSON in '..\..\Source\MARS.Core.JSON.pas',
+  MARS.Core.Utils in '..\..\Source\MARS.Core.Utils.pas',
+  MARS.Data.FireDAC.Editor in '..\..\Source\MARS.Data.FireDAC.Editor.pas',
+  MARS.Data.FireDAC.Utils in '..\..\Source\MARS.Data.FireDAC.Utils.pas',
+  MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
+  MARS.Rtti.Utils in '..\..\Source\MARS.Rtti.Utils.pas',
+  MARS.Utils.Parameters.JSON in '..\..\Source\MARS.Utils.Parameters.JSON.pas',
+  MARS.Utils.Parameters in '..\..\Source\MARS.Utils.Parameters.pas',
+  MARS.Core.Exceptions in '..\..\Source\MARS.Core.Exceptions.pas',
+  MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas',
+  MARS.Core.Declarations in '..\..\Source\MARS.Core.Declarations.pas';
+
+end.
+
+
