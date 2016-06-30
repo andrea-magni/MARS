@@ -90,7 +90,8 @@ type
     property Values[const name: string]: Variant read GetValue; default;
   end;
 
-function StringArrayToJsonArray(const values: TArray<string>): string;
+function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
+function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
 
 implementation
 
@@ -99,18 +100,40 @@ uses
   Variants,
   MARS.Core.Utils;
 
-function StringArrayToJsonArray(const values: TArray<string>): string;
+function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
 var
-  arr: TJSONArray;
-  i: Integer;
+  LIndex: Integer;
 begin
-  arr := TJSONArray.Create;
+  Result := TJSONArray.Create;
   try
-    for i := 0 to High(values) do
-      arr.Add(values[i]);
-    Result := arr.ToJSON;
-  finally
-    arr.Free;
+    for LIndex := Low(AStringArray) to High(AStringArray) do
+      Result.Add(AStringArray[LIndex]);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
+var
+  LElement: TJSONValue;
+  LIndex: Integer;
+begin
+  SetLength(Result, AJSONArray.Size);
+
+  for LIndex := 0 to AJSONArray.Size-1 do
+  begin
+    LElement := AJSONArray.Items[LIndex];
+    if LElement is TJSONString then
+      Result[LIndex] := TJSONString(LElement).Value
+    else if LElement is TJSONNumber then
+      Result[LIndex] := TJSONNumber(LElement).ToString
+    else if LElement is TJSONTrue then
+      Result[LIndex] := 'true'
+    else if LElement is TJSONFalse then
+      Result[LIndex] := 'false'
+    else
+      Result[LIndex] := LElement.ToString;
   end;
 end;
 
