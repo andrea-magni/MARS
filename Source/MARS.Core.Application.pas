@@ -27,6 +27,7 @@ uses
   , Generics.Collections
   , MARS.Core.Classes
   , MARS.Core.URL
+  , MARS.Core.MessageBodyReader
   , MARS.Core.MessageBodyWriter
   , MARS.Core.Registry
   , MARS.Core.MediaType
@@ -60,9 +61,8 @@ type
     function FindMethodToInvoke(const AURL: TMARSURL;
       const AInfo: TMARSConstructorInfo): TRttiMethod; virtual;
 
-    function FillAnnotatedParam(AParam: TRttiParameter; const AAttrArray: TAttributeArray;
-      AResourceInstance: TObject; AMethod: TRttiMethod): TValue;
-    function FillNonAnnotatedParam(AParam: TRttiParameter): TValue;
+    function FillAnnotatedParam(const AParam: TRttiParameter;
+      const AResourceInstance: TObject; const AMethod: TRttiMethod): TValue;
     procedure FillResourceMethodParameters(AInstance: TObject; AMethod: TRttiMethod; var AArgumentArray: TArgumentArray);
 
     /// <summary>
@@ -240,9 +240,7 @@ var
 begin
   case AValue.Kind of
     tkClass: AValue.AsObject.Free;
-
-    { TODO -opaolo -c : could be dangerous?? 14/01/2015 13:18:38 }
-    tkInterface: TObject(AValue.AsInterface).Free;
+//    tkInterface: TObject(AValue.AsInterface).Free;
 
     tkArray,
     tkDynArray:
@@ -438,167 +436,131 @@ begin
 end;
 
 
-function TMARSApplication.FillAnnotatedParam(AParam: TRttiParameter;
-  const AAttrArray: TAttributeArray; AResourceInstance: TObject;
-  AMethod: TRttiMethod): TValue;
+function StringToTValue(const AString: string; const ATypeKind: TTypeKind): TValue;
+begin
+  Result := TValue.Empty;
+  // type conversions
+  case ATypeKind of
+    tkInt64,
+    tkInteger: Result := TValue.From(StrToInt(AString));
+
+    tkFloat: Result := TValue.From<Double>(StrToFloat(AString));
+
+    tkChar: Result := TValue.From(AnsiChar(AString.Chars[0]));
+
+    tkLString,
+    tkUString,
+    tkWString,
+    tkString: Result := TValue.From(AString);
+
+    tkVariant: Result := TValue.From(AString);
+
+    // not yet supported
+//      tkWChar: ;
+//      tkEnumeration: ;
+//      tkSet: ;
+//      tkClass: ;
+//      tkMethod: ;
+//      tkArray: ;
+//      tkRecord: ;
+//      tkInterface: ;
+//      tkDynArray: ;
+//      tkClassRef: ;
+//      tkPointer: ;
+//      tkProcedure: ;
+  end;
+end;
+
+function TMARSApplication.FillAnnotatedParam(const AParam: TRttiParameter;
+  const AResourceInstance: TObject; const AMethod: TRttiMethod): TValue;
 var
-  LAttr: TCustomAttribute;
+  LAttributes: TArray<TCustomAttribute>;
+  LAttribute: TCustomAttribute;
   LParamName, LParamValue: string;
   LParamIndex: Integer;
   LParamClassType: TClass;
   LContextValue: TValue;
+  LMediaType: TMediaType;
+  LReader: IMessageBodyReader;
+  LReaderResult: TValue;
+  LReaderFound: Boolean;
 begin
-  if Length(AAttrArray) > 1 then
-    raise EMARSException.Create('Only 1 attribute permitted');
+  Result := TValue.Empty;
+
+  LAttributes := AParam.GetAttributes;
+  case Length(LAttributes) of
+    0: Exit;
+    1: LAttribute := LAttributes[0];
+    else
+      raise EMARSException.Create('Only 1 attribute permitted');
+  end;
 
   LParamName := '';
   LParamValue := '';
-  LAttr := AAttrArray[0];
+  LReaderFound := False;
 
   // context injection
-  if (LAttr is ContextAttribute) and (AParam.ParamType.IsInstance) then
+  if (LAttribute is ContextAttribute) and (AParam.ParamType.IsInstance) then
   begin
     LParamClassType := TRttiInstanceType(AParam.ParamType).MetaclassType;
     if ContextInjectionByType(LParamClassType, LContextValue) then
       Result := LContextValue;
   end
-  else // http values injection
+  // fill with content from request (params, body, ...)
+  else if LAttribute is MethodParamAttribute then
   begin
-    if LAttr is PathParamAttribute then
-    begin
-      LParamName := (LAttr as PathParamAttribute).Value;
-      if LParamName = '' then
-        LParamName := AParam.Name;
+    LParamName := MethodParamAttribute(LAttribute).Value;
+    if LParamName = '' then
+      LParamName := AParam.Name;
 
+    if LAttribute is PathParamAttribute then // resource/value1
+    begin
       LParamIndex := ParamNameToParamIndex(AResourceInstance, LParamName, AMethod);
       LParamValue := URL.PathTokens[LParamIndex];
     end
-    else
-    if LAttr is QueryParamAttribute then
+    else if LAttribute is QueryParamAttribute then  // ?param1=value1
+      LParamValue := Request.QueryFields.Values[LParamName]
+    else if LAttribute is FormParamAttribute then   // forms
+      LParamValue := Request.ContentFields.Values[LParamName]
+    else if LAttribute is CookieParamAttribute then // cookies
+      LParamValue := Request.CookieFields.Values[LParamName]
+    else if LAttribute is HeaderParamAttribute then // http headers
+      LParamValue := string(Request.GetFieldByName(AnsiString(LParamName)))
+    else if LAttribute is BodyParamAttribute then   // body content
     begin
-      LParamName := (LAttr as QueryParamAttribute).Value;
-      if LParamName = '' then
-        LParamName := AParam.Name;
-
-      // Prendere il valore (come stringa) dalla lista QueryFields
-      LParamValue := Request.QueryFields.Values[LParamName];
-    end
-    else
-    if LAttr is FormParamAttribute then
-    begin
-      LParamName := (LAttr as FormParamAttribute).Value;
-      if LParamName = '' then
-        LParamName := AParam.Name;
-
-      // Prendere il valore (come stringa) dalla lista ContentFields
-      LParamValue := Request.ContentFields.Values[LParamName];
-    end
-    else
-    if LAttr is CookieParamAttribute then
-    begin
-      LParamName := (LAttr as CookieParamAttribute).Value;
-      if LParamName = '' then
-        LParamName := AParam.Name;
-
-      // Prendere il valore (come stringa) dalla lista CookieFields
-      LParamValue := Request.CookieFields.Values[LParamName];
-    end
-    else
-    if LAttr is HeaderParamAttribute then
-    begin
-      LParamName := (LAttr as HeaderParamAttribute).Value;
-      if LParamName = '' then
-        LParamName := AParam.Name;
-
-      // Prendere il valore (come stringa) dagli Header HTTP
-      LParamValue := string(Request.GetFieldByName(AnsiString(LParamName)));
-    end
-    else
-    if LAttr is BodyParamAttribute then
-    begin
-      LParamValue := Request.Content;
+      TMARSMessageBodyReaderRegistry.Instance.FindReader(AMethod, AParam, LReader, LMediaType);
+      try
+        if Assigned(LReader) then
+        begin
+          LReaderFound := True;
+          LReaderResult := LReader.ReadFrom(Request.RawContent, AMethod.GetAttributes, LMediaType, nil)
+        end
+        else
+          LParamValue := Request.Content;
+      finally
+        FreeAndNil(LMediaType);
+      end;
     end;
 
-    case AParam.ParamType.TypeKind of
-      tkInt64,
-      tkInteger: Result := TValue.From(StrToInt(LParamValue));
-      tkFloat: Result := TValue.From<Double>(StrToFloat(LParamValue));
-
-      tkChar: Result := TValue.From(AnsiChar(LParamValue[1]));
-      tkWChar: ;
-      tkEnumeration: ;
-      tkSet: ;
-      tkClass: ;
-      tkMethod: ;
-
-      tkLString,
-      tkUString,
-      tkWString,
-      tkString: Result := TValue.From(LParamValue);
-
-      tkVariant: Result := TValue.From(LParamValue);
-
-      tkArray: ;
-      tkRecord: ;
-      tkInterface: ;
-      tkDynArray: ;
-      tkClassRef: ;
-      tkPointer: ;
-      tkProcedure: ;
-    end;
-  end;
-end;
-
-function TMARSApplication.FillNonAnnotatedParam(AParam: TRttiParameter): TValue;
-var
-  LClass: TClass;
-begin
-  // 1) Valid objects (TMARSRequest, )
-  if AParam.ParamType.IsInstance then
-  begin
-    LClass := AParam.ParamType.AsInstance.MetaclassType;
-    if LClass.InheritsFrom(TWebRequest) then
-      Result := TValue.From(Request)
+    if LReaderFound then
+      Result := LReaderResult
     else
-      Result := TValue.From(nil);
-      //EMARSException.Create('Only TMARSRequest object if the method is not annotated');
-  end
-  else
-  begin
-    // 2) parameter default value
-    Result := TValue.Empty;
+      Result := StringToTValue(LParamValue, AParam.ParamType.TypeKind);
   end;
 end;
 
 procedure TMARSApplication.FillResourceMethodParameters(AInstance: TObject; AMethod: TRttiMethod; var AArgumentArray: TArgumentArray);
 var
-  LParam: TRttiParameter;
   LParamArray: TArray<TRttiParameter>;
-  LAttrArray: TArray<TCustomAttribute>;
-
   LIndex: Integer;
 begin
   Assert(Assigned(AMethod));
   try
     LParamArray := AMethod.GetParameters;
 
-    // The method has no parameters so simply call as it is
-    if Length(LParamArray) = 0 then
-      Exit;
-
     SetLength(AArgumentArray, Length(LParamArray));
-
     for LIndex := Low(LParamArray) to High(LParamArray) do
-    begin
-      LParam := LParamArray[LIndex];
-
-      LAttrArray := LParam.GetAttributes;
-
-      if Length(LAttrArray) = 0 then
-        AArgumentArray[LIndex] := FillNonAnnotatedParam(LParam)
-      else
-        AArgumentArray[LIndex] := FillAnnotatedParam(LParam, LAttrArray, AInstance, AMethod);
-    end;
+      AArgumentArray[LIndex] := FillAnnotatedParam(LParamArray[LIndex], AInstance, AMethod);
 
   except
     on E: Exception do
@@ -666,13 +628,20 @@ var
   LStream: TBytesStream;
   LContentType: AnsiString;
   LCustomAtributeProcessor: TProc<CustomHeaderAttribute>;
+  LArgument: TValue;
 begin
   // The returned object MUST be initially nil (needs to be consistent with the Free method)
   LMethodResult := nil;
   try
     LContentType := Response.ContentType;
+
     FillResourceMethodParameters(AInstance, AMethod, LArgumentArray);
-    LMethodResult := AMethod.Invoke(AInstance, LArgumentArray);
+    try
+      LMethodResult := AMethod.Invoke(AInstance, LArgumentArray);
+    finally
+      for LArgument in LArgumentArray do
+        CollectGarbage(LArgument);
+    end;
 
     LCustomAtributeProcessor :=
       procedure (ACustomHeader: CustomHeaderAttribute)
