@@ -234,7 +234,10 @@ begin
 
   LURL := TMARSURL.Create(ARequest);
   try
-    LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0]]);
+    LApplicationPath := '';
+    if LURL.HasPathTokens then
+      LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0]]);
+
     if (BasePath <> '') and (BasePath <> TMARSURL.URL_PATH_SEPARATOR) then
     begin
       if not LURL.MatchPath(BasePath) then
@@ -242,7 +245,8 @@ begin
             Format('Bad request [%s] does not match engine URL [%s]', [LURL.URL, BasePath])
             , 404
           );
-      LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
+      if LURL.HasPathTokens(2) then
+        LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
     end;
 
     if FApplications.TryGetValue(LApplicationPath, LApplication) then

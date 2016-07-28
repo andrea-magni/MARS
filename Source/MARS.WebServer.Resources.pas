@@ -293,7 +293,7 @@ begin
   AResponse.ContentStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
   if not ContentTypesForExt.TryGetValue(LFileExt, LContentType) then
     LContentType := TMediaType.APPLICATION_OCTET_STREAM;  // default = binary
-  AResponse.ContentType := AnsiString(LContentType);
+  AResponse.ContentType := LContentType;
 end;
 
 { RootFolderAttribute }
