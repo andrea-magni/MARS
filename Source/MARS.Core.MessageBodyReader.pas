@@ -28,7 +28,7 @@ type
   IMessageBodyReader = interface
   ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
     function ReadFrom(const AInputData: TBytes; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue;
+      AMediaType: TMediaType; ARequestHeaders: TStrings; var AFreeWhenDone: Boolean): TValue;
   end;
 
   TIsReadableFunction = reference to function(AType: TRttiType;
