@@ -41,7 +41,6 @@ type
   EMARSAuthorizationException = class(EMARSApplicationException);
 
   TAttributeArray = TArray<TCustomAttribute>;
-  TArgumentArray = array of TValue;
 
   TMARSApplication = class
   private
@@ -63,7 +62,9 @@ type
 
     function FillAnnotatedParam(const AParam: TRttiParameter;
       const AResourceInstance: TObject; const AMethod: TRttiMethod): TValue;
-    procedure FillResourceMethodParameters(AInstance: TObject; AMethod: TRttiMethod; var AArgumentArray: TArgumentArray);
+    procedure FillResourceMethodParameters(const AInstance: TObject;
+      const AMethod: TRttiMethod; var AArgumentArray: TArray<TValue>);
+    procedure CleanupResourceMethodParameters(const AMethod: TRttiMethod; const AArguments: TArray<TValue>);
 
     /// <summary>
     ///   Invoke the resource's method filling it's parameters (if any)
@@ -231,6 +232,33 @@ begin
   finally
     LAllowedRoles.Free;
   end;
+end;
+
+procedure TMARSApplication.CleanupResourceMethodParameters(
+  const AMethod: TRttiMethod; const AArguments: TArray<TValue>);
+var
+  LArgument: TValue;
+  LParam: TRttiParameter;
+  LParams: TArray<TRttiParameter>;
+  LIndex: Integer;
+  LCollect: Boolean;
+begin
+  LParams := AMethod.GetParameters;
+  for LIndex := 0 to Length(LParams)-1 do
+  begin
+    LParam := LParams[LIndex];
+    LArgument := AArguments[LIndex];
+    LCollect := True;
+    LParam.HasAttribute<ContextAttribute>(
+      procedure (AAttr: ContextAttribute)
+      begin
+        LCollect := False;
+      end
+    );
+    if LCollect then
+      CollectGarbage(LArgument);
+  end;
+
 end;
 
 procedure TMARSApplication.CollectGarbage(const AValue: TValue);
@@ -549,7 +577,8 @@ begin
   end;
 end;
 
-procedure TMARSApplication.FillResourceMethodParameters(AInstance: TObject; AMethod: TRttiMethod; var AArgumentArray: TArgumentArray);
+procedure TMARSApplication.FillResourceMethodParameters(const AInstance: TObject;
+  const AMethod: TRttiMethod; var AArgumentArray: TArray<TValue>);
 var
   LParamArray: TArray<TRttiParameter>;
   LIndex: Integer;
@@ -623,12 +652,11 @@ procedure TMARSApplication.InvokeResourceMethod(AInstance: TObject;
   ARequest: TWebRequest; AMediaType: TMediaType);
 var
   LMethodResult: TValue;
-  LArgumentArray: TArgumentArray;
+  LArgumentArray: TArray<TValue>;
   LMARSResponse: TMARSResponse;
   LStream: TBytesStream;
   LContentType: AnsiString;
   LCustomAtributeProcessor: TProc<CustomHeaderAttribute>;
-  LArgument: TValue;
 begin
   // The returned object MUST be initially nil (needs to be consistent with the Free method)
   LMethodResult := nil;
@@ -639,8 +667,7 @@ begin
     try
       LMethodResult := AMethod.Invoke(AInstance, LArgumentArray);
     finally
-      for LArgument in LArgumentArray do
-        CollectGarbage(LArgument);
+      CleanupResourceMethodParameters(AMethod, LArgumentArray);
     end;
 
     LCustomAtributeProcessor :=
