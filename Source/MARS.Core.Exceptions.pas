@@ -22,9 +22,7 @@ type
   private
     FStatus: Integer;
   public
-    constructor Create; overload;
-    constructor Create(const AMessage: string); overload;
-    constructor Create(const AMessage: string; AStatus: Integer); overload;
+    constructor Create(const AMessage: string; AStatus: Integer = 500); virtual;
 
     property Status: Integer read FStatus write FStatus;
   end;
@@ -32,18 +30,6 @@ type
 implementation
 
 { EMARSHttpException }
-
-constructor EMARSHttpException.Create;
-begin
-  inherited Create('');
-  FStatus := 500;
-end;
-
-constructor EMARSHttpException.Create(const AMessage: string);
-begin
-  inherited Create(AMessage);
-  FStatus := 500;
-end;
 
 constructor EMARSHttpException.Create(const AMessage: string; AStatus: Integer);
 begin
