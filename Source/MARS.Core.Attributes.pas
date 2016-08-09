@@ -21,8 +21,6 @@ uses
   , MARS.Core.Utils;
 
 type
-{$REGION 'JAX-Like Attributes'}
-
   PathAttribute = class(TCustomAttribute)
   private
     FValue: string;
@@ -102,28 +100,56 @@ type
     property Value: string read FValue write FValue;
   end;
 
-  MethodParamAttribute = class(TCustomAttribute)
+  RequestParamAttribute = class(TCustomAttribute)
   private
-    FValue: string;
+  protected
   public
-    constructor Create(const AValue: string = '');
-
-    property Value: string read FValue write FValue;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; virtual;
   end;
 
-  PathParamAttribute = class(MethodParamAttribute)
+  NamedRequestParamAttribute = class(RequestParamAttribute)
+  private
+    FName: string;
+  protected
+    function GetActualName(const AParam: TRttiParameter): string; virtual;
+  public
+    constructor Create(const AName: string); virtual;
+    property Name: string read FName write FName;
+  end;
+
+  PathParamAttribute = class(NamedRequestParamAttribute)
   private
     FParamIndex: Integer;
+  protected
+    function GetParamIndex(const AParam: TRttiParameter): Integer;
   public
     property ParamIndex: Integer read FParamIndex write FParamIndex;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
   end;
-  QueryParamAttribute = class(MethodParamAttribute);
-  FormParamAttribute = class(MethodParamAttribute);
-  HeaderParamAttribute = class(MethodParamAttribute);
-  CookieParamAttribute = class(MethodParamAttribute);
-  BodyParamAttribute = class(MethodParamAttribute)
+
+  QueryParamAttribute = class(NamedRequestParamAttribute)
   public
-    constructor Create;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+  end;
+
+  FormParamAttribute = class(NamedRequestParamAttribute)
+  public
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+  end;
+
+  HeaderParamAttribute = class(NamedRequestParamAttribute)
+  public
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+  end;
+
+  CookieParamAttribute = class(NamedRequestParamAttribute)
+  public
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+  end;
+
+  BodyParamAttribute = class(RequestParamAttribute)
+  public
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
   end;
 
   ContextAttribute = class(TCustomAttribute);
@@ -144,30 +170,15 @@ type
     property Roles: TStringList read FRoles;
   end;
 
-{$ENDREGION}
+  ResultIsReference = class(TCustomAttribute)
+  end deprecated 'Use IsReference instead';
 
-{$REGION 'MARS-specific Attributes'}
-  ResultIsReference = class(TCustomAttribute);
-{$ENDREGION}
+{$WARNINGS OFF}
+  IsReference = ResultIsReference;
+{$WARNINGS ON}
+
 
   LoginRequiredAttribute = class(TCustomAttribute);
-
-  URLParamAttribute = class(TCustomAttribute)
-  private
-    FPosition: Integer;
-    FDefaultValue: TValue;
-  public
-    constructor Create(APosition: Integer; const ADefaultValue: TValue); overload;
-
-    constructor Create(APosition: Integer); overload;
-    constructor Create(APosition: Integer; const ADefaultValue: string); overload;
-    constructor Create(APosition: Integer; ADefaultValue: Integer); overload;
-    constructor Create(APosition: Integer; ADefaultValue: Double); overload;
-    constructor Create(APosition: Integer; ADefaultValue: Boolean); overload;
-
-    property Position: Integer read FPosition write FPosition;
-    property DefaultValue: TValue read FDefaultValue write FDefaultValue;
-  end;
 
   ContentTypeAttribute = class(TCustomAttribute)
   private
@@ -192,41 +203,12 @@ type
 
 implementation
 
-
-{ URLParamAttribute }
-
-constructor URLParamAttribute.Create(APosition: Integer; const ADefaultValue: string);
-begin
-  Create(APosition, TValue.From<string>(ADefaultValue));
-end;
-
-constructor URLParamAttribute.Create(APosition: Integer; ADefaultValue: Integer);
-begin
-  Create(APosition, TValue.From<Integer>(ADefaultValue));
-end;
-
-constructor URLParamAttribute.Create(APosition: Integer; const ADefaultValue: TValue);
-begin
-  inherited Create;
-  FPosition := APosition;
-  FDefaultValue := ADefaultValue;
-end;
-
-constructor URLParamAttribute.Create(APosition: Integer; ADefaultValue: Double);
-begin
-  Create(APosition, TValue.From<Double>(ADefaultValue));
-end;
-
-constructor URLParamAttribute.Create(APosition: Integer;
-  ADefaultValue: Boolean);
-begin
-  Create(APosition, TValue.From<Boolean>(ADefaultValue));
-end;
-
-constructor URLParamAttribute.Create(APosition: Integer);
-begin
-  Create(APosition, TValue.Empty);
-end;
+uses
+    MARS.Rtti.Utils
+  , MARS.Core.URL
+  , MARS.Core.MessageBodyReader
+  , MARS.Core.MediaType
+;
 
 { ContentTypeAttribute }
 
@@ -260,14 +242,6 @@ begin
   FValue := AValue;
 end;
 
-{ MethodParamAttribute }
-
-constructor MethodParamAttribute.Create(const AValue: string);
-begin
-  inherited Create;
-  FValue := AValue;
-end;
-
 { RolesAllowedAttribute }
 
 constructor RolesAllowedAttribute.Create(ARoleName: string);
@@ -295,9 +269,42 @@ end;
 
 { BodyParamAttribute }
 
-constructor BodyParamAttribute.Create;
+function BodyParamAttribute.GetValue(const ARequest: TWebRequest;
+  const AParam: TRttiParameter): TValue;
+var
+  LMediaType: TMediaType;
+  LReader: IMessageBodyReader;
+  LMethod: TRttiMethod;
 begin
-  inherited Create('body');
+  // 1 - MessageBodyReader mechanism (standard)
+  TMARSMessageBodyReaderRegistry.Instance.FindReader(AParam, LReader, LMediaType);
+  if Assigned(LReader) then
+    try
+      LMethod := AParam.Parent as TRttiMethod;
+      Result := LReader.ReadFrom(ARequest.RawContent, LMethod.GetAttributes, LMediaType, nil);
+    finally
+      FreeAndNil(LMediaType);
+    end
+  else // 2 - fallback (raw)
+  begin
+    case AParam.ParamType.TypeKind of
+      tkInt64,
+      tkInteger: Result := StrToInt(ARequest.Content);
+
+      tkFloat: Result := StrToFloat(ARequest.Content);
+
+      tkChar: Result := TValue.From(AnsiChar(ARequest.Content.Chars[0]));
+
+      tkLString,
+      tkWString,
+      tkString: Result := ARequest.Content;
+
+      tkUString: Result := TEncoding.UTF8.GetString(ARequest.RawContent);
+
+      else
+        Result := TValue.From<TBytes>(ARequest.RawContent);
+    end;
+  end;
 end;
 
 { HttpMethodAttribute }
@@ -364,6 +371,144 @@ begin
   inherited Create;
   FHeaderName := AHeaderName;
   FValue := AValue;
+end;
+
+{ NamedRequestParamAttribute }
+
+constructor NamedRequestParamAttribute.Create(const AName: string);
+begin
+  inherited Create;
+  FName := AName;
+end;
+
+function NamedRequestParamAttribute.GetActualName(
+  const AParam: TRttiParameter): string;
+begin
+  Result := Name;
+  if Name.IsEmpty and Assigned(AParam) then
+    Result := AParam.Name;
+end;
+
+{ RequestParamAttribute }
+
+function RequestParamAttribute.GetValue(const ARequest: TWebRequest;
+  const AParam: TRttiParameter): TValue;
+begin
+  Result := TValue.Empty;
+end;
+
+{ QueryParamAttribute }
+
+function QueryParamAttribute.GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue;
+begin
+  Result := ARequest.QueryFields.Values[GetActualName(AParam)];
+end;
+
+{ FormParamAttribute }
+
+function FormParamAttribute.GetValue(const ARequest: TWebRequest;
+  const AParam: TRttiParameter): TValue;
+begin
+  Result := ARequest.ContentFields.Values[GetActualName(AParam)];
+end;
+
+{ HeaderParamAttribute }
+
+function HeaderParamAttribute.GetValue(const ARequest: TWebRequest;
+  const AParam: TRttiParameter): TValue;
+begin
+  Result := ARequest.GetFieldByName(GetActualName(AParam));
+end;
+
+{ CookieParamAttribute }
+
+function CookieParamAttribute.GetValue(const ARequest: TWebRequest;
+  const AParam: TRttiParameter): TValue;
+begin
+  Result := ARequest.CookieFields.Values[GetActualName(AParam)];
+end;
+
+{ PathParamAttribute }
+
+function PathParamAttribute.GetParamIndex(
+  const AParam: TRttiParameter): Integer;
+var
+  LParamIndex: Integer;
+  LSubResourcePath: string;
+  LMethod: TRttiMethod;
+  LResource: TRttiType;
+begin
+  Assert(Assigned(AParam));
+
+  LMethod := AParam.Parent as TRttiMethod;
+  Assert(Assigned(LMethod));
+
+  LResource := LMethod.Parent;
+  Assert(Assigned(LResource));
+
+  LParamIndex := -1;
+
+  LSubResourcePath := '';
+  LMethod.HasAttribute<PathAttribute>(
+    procedure (ASubResourcePathAttrib: PathAttribute)
+    begin
+      LSubResourcePath := ASubResourcePathAttrib.Value;
+    end
+  );
+
+  LResource.HasAttribute<PathAttribute>(
+    procedure (AResourcePathAttrib: PathAttribute)
+    var
+      LResURL: TMARSURL;
+      LPair: TPair<Integer, string>;
+      LParamName: string;
+    begin
+
+      //AM TODO: find a way to use Engine.BasePath, Application.BasePath
+      // instead of '/rest', '/default' consts.
+      // Reason:
+      // The following piece of code calculates a positional index of the
+      // parameter in the URL and it builds a dummy URL to get a prototype
+      // (with all parameters listed) of the resource. It is unusual (yet
+      // not impossible) to have a parameter in the BasePath of the Engine or
+      // of the Application. I assume here that there is no parameter defined
+      // into the BasePath of current Engine and current Application.
+      // i.e. http://host:port/rest/default/myres/{first}/subres/{second}/{third}
+      //                     ^^^^^^^^^^^^^^ no params allowed here!
+
+      LResURL := TMARSURL.CreateDummy(['/rest', '/default'
+        , AResourcePathAttrib.Value, LSubResourcePath]);
+      try
+        LParamName := GetActualName(AParam);
+        LParamIndex := -1;
+        for LPair in LResURL.PathParams do
+        begin
+          if SameText(LParamName, LPair.Value) then
+          begin
+            LParamIndex := LPair.Key;
+            Break;
+          end;
+        end;
+      finally
+        LResURL.Free;
+      end;
+    end
+  );
+
+  Result := LParamIndex;
+end;
+
+function PathParamAttribute.GetValue(const ARequest: TWebRequest;
+  const AParam: TRttiParameter): TValue;
+var
+  LURL: TMARSURL;
+begin
+  LURL := TMARSURL.Create(ARequest);
+  try
+    Result := LURL.PathTokens[GetParamIndex(AParam)];
+  finally
+    LURL.Free;
+  end;
 end;
 
 end.

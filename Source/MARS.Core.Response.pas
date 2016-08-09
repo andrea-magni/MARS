@@ -22,8 +22,8 @@ type
   TMARSResponse = class
   private
     FContent: string;
-    FContentType: AnsiString;
-    FContentEncoding: AnsiString;
+    FContentType: string;
+    FContentEncoding: string;
     FStatusCode: Integer;
     FContentStream: TStream;
     FFreeContentStream: Boolean;
@@ -33,8 +33,8 @@ type
 
     property Content: string read FContent write FContent;
     property ContentStream: TStream read FContentStream write FContentStream;
-    property ContentType: AnsiString read FContentType write FContentType;
-    property ContentEncoding: AnsiString read FContentEncoding write FContentEncoding;
+    property ContentType: string read FContentType write FContentType;
+    property ContentEncoding: string read FContentEncoding write FContentEncoding;
     property StatusCode: Integer read FStatusCode write FStatusCode;
     property FreeContentStream: Boolean read FFreeContentStream write FFreeContentStream;
   end;

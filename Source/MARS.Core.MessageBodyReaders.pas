@@ -34,7 +34,7 @@ type
     function AsObject: TObject;
     function ReadFrom(const AInputData: TBytes;
       const AAttributes: System.TArray<System.TCustomAttribute>;
-      AMediaType: TMediaType; ARequestHeaders: TStrings; var AFreeWhenDone: Boolean): TValue;
+      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue; virtual;
   end;
 
 //  [Produces(TMediaType.WILDCARD)]
@@ -90,7 +90,7 @@ end;
 
 function TJSONValueReader.ReadFrom(const AInputData: TBytes;
   const AAttributes: System.TArray<System.TCustomAttribute>;
-  AMediaType: TMediaType; ARequestHeaders: TStrings; var AFreeWhenDone: Boolean): TValue;
+  AMediaType: TMediaType; ARequestHeaders: TStrings): TValue;
 var
   LJSONValue: TJSONValue;
 begin

@@ -21,6 +21,7 @@ uses
   , Rtti
   , MARS.Core.URL
   , MARS.Core.Application
+  , MARS.Core.Engine
   , MARS.Core.Attributes
   , MARS.Core.Token
   , MARS.Core.Registry
@@ -41,18 +42,23 @@ type
     FRttiContext: TRttiContext;
     FConstructorInfo: TMARSConstructorInfo;
     FMethod: TRttiMethod;
+    FResource: TRttiType;
     FResourceInstance: TObject;
+    FMethodArguments: TArray<TValue>;
     FWriter: IMessageBodyWriter;
+    FWriterMediaType: TMediaType;
 
-    procedure CleanupMethodArguments;
+    procedure CleanupMethodArguments; virtual;
     procedure CollectGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
-    function ContextInjectionByType(const AType: TClass; out AValue: TValue): Boolean; virtual;
-    function FillAnnotatedParam(const AParam: TRttiParameter): TValue;
-    procedure FillResourceMethodParameters(var AArgumentArray: TArray<TValue>);
-    function FindMethodToInvoke: TRttiMethod; virtual;
-    procedure InvokeResourceMethod(const AWriter: IMessageBodyWriter; AMediaType: TMediaType); virtual;
-    function ParamNameToParamIndex(AResourceInstance: TObject; const AParamName: string; AMethod: TRttiMethod): Integer;
+    function ContextInjectionByType(const AType: TRttiType; out AValue: TValue): Boolean; virtual;
+    function GetEngine: TMARSEngine; virtual;
+    function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
+    procedure FillResourceMethodParameters; virtual;
+    procedure FindMethodToInvoke; virtual;
+    procedure InvokeResourceMethod; virtual;
+    function ParamNameToParamIndex(const AParamName: string): Integer; virtual;
+    procedure SetCustomHeaders;
   public
     constructor Create(const AApplication: TMARSApplication;
       ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL;
@@ -66,6 +72,7 @@ type
     procedure Invoke; virtual;
 
     property Application: TMARSApplication read FApplication;
+    property Engine: TMARSEngine read GetEngine;
     property Request: TWebRequest read FRequest;
     property Response: TWebResponse read FResponse;
     property URL: TMARSURL read FURL;
@@ -81,7 +88,6 @@ uses
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
-  , MARS.Core.Engine
   ;
 
 { TMARSActivationRecord }
@@ -121,110 +127,52 @@ begin
   end;
 end;
 
-function TMARSActivationRecord.FillAnnotatedParam(const AParam: TRttiParameter): TValue;
+function TMARSActivationRecord.GetMethodArgument(const AParam: TRttiParameter): TValue;
 var
-  LAttributes: TArray<TCustomAttribute>;
-  LAttribute: TCustomAttribute;
-  LParamName, LParamValue: string;
-  LParamIndex: Integer;
-  LParamClassType: TClass;
-  LContextValue: TValue;
-  LMediaType: TMediaType;
-  LReader: IMessageBodyReader;
-  LReaderResult: TValue;
-  LReaderFound: Boolean;
-  LFreeWhenDone: Boolean;
+  LParamValue: TValue;
 begin
-  Result := TValue.Empty;
-
-  LAttributes := AParam.GetAttributes;
-  case Length(LAttributes) of
-    0: Exit;
-    1: LAttribute := LAttributes[0];
-    else
-      raise EMARSException.Create('Only 1 attribute permitted');
-  end;
-
-  LParamName := '';
-  LParamValue := '';
-  LReaderFound := False;
+  LParamValue := TValue.Empty;
 
   // context injection
-  if (LAttribute is ContextAttribute) and (AParam.ParamType.IsInstance) then
-  begin
-    LParamClassType := TRttiInstanceType(AParam.ParamType).MetaclassType;
-    if ContextInjectionByType(LParamClassType, LContextValue) then
-      Result := LContextValue;
-  end
-  // fill with content from request (params, body, ...)
-  else if LAttribute is MethodParamAttribute then
-  begin
-    LParamName := MethodParamAttribute(LAttribute).Value;
-    if LParamName = '' then
-      LParamName := AParam.Name;
-
-    if LAttribute is PathParamAttribute then // resource/value1
+  AParam.HasAttribute<ContextAttribute>(
+    procedure (AContextAttr: ContextAttribute)
     begin
-      LParamIndex := ParamNameToParamIndex(FResourceInstance, LParamName, FMethod);
-      LParamValue := URL.PathTokens[LParamIndex];
+      ContextInjectionByType(AParam.ParamType, LParamValue);
     end
-    else if LAttribute is QueryParamAttribute then  // ?param1=value1
-      LParamValue := Request.QueryFields.Values[LParamName]
-    else if LAttribute is FormParamAttribute then   // forms
-      LParamValue := Request.ContentFields.Values[LParamName]
-    else if LAttribute is CookieParamAttribute then // cookies
-      LParamValue := Request.CookieFields.Values[LParamName]
-    else if LAttribute is HeaderParamAttribute then // http headers
-      LParamValue := string(Request.GetFieldByName(LParamName))
-    else if LAttribute is BodyParamAttribute then   // body content
-    begin
-      TMARSMessageBodyReaderRegistry.Instance.FindReader(FMethod, AParam, LReader, LMediaType);
-      try
-        if Assigned(LReader) then
-        begin
-          LReaderFound := True;
-          LFreeWhenDone := True;
-          LReaderResult := LReader.ReadFrom(Request.RawContent, FMethod.GetAttributes, LMediaType, nil, LFreeWhenDone);
-          if LFreeWhenDone then
-            FMethodArgumentsToCollect.Add(LReaderResult);
-        end
-        else
-          LParamValue := Request.Content;
-      finally
-        FreeAndNil(LMediaType);
-      end;
-    end;
+  );
 
-    if LReaderFound then
-      Result := LReaderResult
-    else
-      Result := StringToTValue(LParamValue, AParam.ParamType.TypeKind);
-  end;
+  // fill parameter with content from request (params, body, ...)
+  AParam.HasAttribute<RequestParamAttribute>(
+    procedure (ARequestParamAttr: RequestParamAttribute)
+    begin
+      LParamValue := ARequestParamAttr.GetValue(Request, AParam);
+      if not (LParamValue.IsEmpty or AParam.HasAttribute<IsReference>) then
+        FMethodArgumentsToCollect.Add(LParamValue);
+    end
+  );
+
+  Result := LParamValue;
 end;
 
-procedure TMARSActivationRecord.FillResourceMethodParameters(
-  var AArgumentArray: TArray<TValue>);
+procedure TMARSActivationRecord.FillResourceMethodParameters;
 var
-  LParamArray: TArray<TRttiParameter>;
+  LParameters: TArray<TRttiParameter>;
   LIndex: Integer;
 begin
   Assert(Assigned(FMethod));
   try
-    LParamArray := FMethod.GetParameters;
-
-    SetLength(AArgumentArray, Length(LParamArray));
-    for LIndex := Low(LParamArray) to High(LParamArray) do
-      AArgumentArray[LIndex] := FillAnnotatedParam(LParamArray[LIndex]);
-
+    LParameters := FMethod.GetParameters;
+    SetLength(FMethodArguments, Length(LParameters));
+    for LIndex := Low(LParameters) to High(LParameters) do
+      FMethodArguments[LIndex] := GetMethodArgument(LParameters[LIndex]);
   except
     on E: Exception do
       raise EMARSApplicationException.Create('Bad parameter values for resource method ' + FMethod.Name);
   end;
 end;
 
-function TMARSActivationRecord.FindMethodToInvoke: TRttiMethod;
+procedure TMARSActivationRecord.FindMethodToInvoke;
 var
-  LResourceType: TRttiType;
   LMethod: TRttiMethod;
   LResourcePath: string;
   LAttribute: TCustomAttribute;
@@ -233,18 +181,18 @@ var
   LHttpMethodMatches: Boolean;
   LMethodPath: string;
 begin
-  LResourceType := FRttiContext.GetType(FConstructorInfo.TypeTClass);
-  Result := nil;
-  LResourcePath := '';
+  FResource := FRttiContext.GetType(FConstructorInfo.TypeTClass);
+  FMethod := nil;
 
-  LResourceType.HasAttribute<PathAttribute>(
+  LResourcePath := '';
+  FResource.HasAttribute<PathAttribute>(
     procedure (APathAttribute: PathAttribute)
     begin
       LResourcePath := APathAttribute.Value;
     end
   );
 
-  for LMethod in LResourceType.GetMethods do
+  for LMethod in FResource.GetMethods do
   begin
     LMethodPath := '';
     LHttpMethodMatches := False;
@@ -260,7 +208,7 @@ begin
 
     if LHttpMethodMatches then
     begin
-      LPrototypeURL := TMARSURL.CreateDummy([TMARSEngine(Application.Engine).BasePath, Application.BasePath, LResourcePath, LMethodPath]);
+      LPrototypeURL := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, LResourcePath, LMethodPath]);
       try
         LPathMatches := LPrototypeURL.MatchPath(URL);
       finally
@@ -269,13 +217,19 @@ begin
 
       if LPathMatches and LHttpMethodMatches then
       begin
-        Result := LMethod;
+        FMethod := LMethod;
         Break;
       end;
     end;
   end;
 end;
 
+
+function TMARSActivationRecord.GetEngine: TMARSEngine;
+begin
+  Assert(Assigned(Application));
+  Result := TMARSEngine(Application.Engine);
+end;
 
 procedure TMARSActivationRecord.CollectGarbage(const AValue: TValue);
 var
@@ -314,160 +268,150 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.InvokeResourceMethod(
-  const AWriter: IMessageBodyWriter; AMediaType: TMediaType);
+procedure TMARSActivationRecord.InvokeResourceMethod();
 var
   LMethodResult: TValue;
-  LArgumentArray: TArray<TValue>;
-  LMARSResponse: TMARSResponse;
   LStream: TBytesStream;
   LContentType: string;
-  LCustomAtributeProcessor: TProc<CustomHeaderAttribute>;
 begin
-  // The returned object MUST be initially nil (needs to be consistent with the Free method)
-  LMethodResult := nil;
+  Assert(Assigned(FMethod));
+
+  TMARSMessageBodyRegistry.Instance.FindWriter(FMethod, string(Request.Accept)
+    , FWriter, FWriterMediaType);
   try
+
+    // cache initial ContentType value to check later if it has been changed
     LContentType := Response.ContentType;
 
-    FillResourceMethodParameters(LArgumentArray);
+    FillResourceMethodParameters;
     try
-      LMethodResult := FMethod.Invoke(FResourceInstance, LArgumentArray);
+      LMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
+
+      // handle response
+      SetCustomHeaders;
+
+      // 1 - TMARSResponse (override)
+      if LMethodResult.IsInstanceOf(TMARSResponse) then
+        TMARSResponse(LMethodResult.AsObject).CopyTo(Response)
+      // 2 - MessageBodyWriter mechanism (standard)
+      else if Assigned(FWriter) then
+      begin
+        if Response.ContentType = LContentType then
+          Response.ContentType := FWriterMediaType.ToString;
+
+        LStream := TBytesStream.Create();
+        try
+          FWriter.WriteTo(LMethodResult, FMethod.GetAttributes, FWriterMediaType
+            , Response.CustomHeaders, LStream);
+          Response.ContentStream := LStream;
+        except
+          LStream.Free;
+          raise;
+        end;
+      end
+      // 3 - fallback (no MBW, no TMARSResponse)
+      else
+      begin
+        case LMethodResult.Kind of
+
+          tkString, tkLString, tkUString, tkWString
+          , tkWideChar, tkAnsiChar
+          , tkInteger, tkInt64, tkFloat, tkVariant:
+          begin
+            Response.Content := LMethodResult.AsString;
+            if (Response.ContentType = LContentType) then
+              Response.ContentType := TMediaType.TEXT_PLAIN; // or check Produces of method!
+            Response.StatusCode := 200;
+          end;
+
+          // a procedure has Kind = tkUnknown
+          tkUnknown : Response.StatusCode := 200;
+
+          //tkRecord: ;
+          //tkInterface: ;
+          //tkDynArray: ;
+          else
+            Response.StatusCode := 400;
+        end;
+      end;
     finally
       CleanupMethodArguments;
-    end;
 
-    LCustomAtributeProcessor :=
-      procedure (ACustomHeader: CustomHeaderAttribute)
-      begin
-        Response.CustomHeaders.Values[ACustomHeader.HeaderName] := ACustomHeader.Value;
-      end;
-    FMethod.Parent.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
-    FMethod.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
-
-
-    if LMethodResult.IsInstanceOf(TMARSResponse) then // Response Object
-    begin
-      LMARSResponse := TMARSResponse(LMethodResult.AsObject);
-      LMARSResponse.CopyTo(Response);
-    end
-    else if Assigned(AWriter) then // MessageBodyWriters mechanism
-    begin
-      {
-        If the ContentType has been already changed (i.e., using the Context DI mechanism),
-        we should not override the new value.
-        This means the application developer has more power than the MBW developer in order
-        to determine the ContentType.
-
-        Andrea Magni, 19/11/2015
-      }
-      if Response.ContentType = LContentType then
-        Response.ContentType := AMediaType.ToString;
-
-      LStream := TBytesStream.Create();
-      try
-        AWriter.WriteTo(LMethodResult, FMethod.GetAttributes, AMediaType
-          , Response.CustomHeaders, LStream);
-        Response.ContentStream := LStream;
-      except
-        LStream.Free;
-        raise;
-      end;
-    end
-    else // fallback (no MBW, no TMARSResponse)
-    begin
-      // handle result
-      case LMethodResult.Kind of
-
-        tkString, tkLString, tkUString, tkWString // string types
-        , tkInteger, tkInt64, tkFloat, tkVariant: // Threated as string, nothing more
-        begin
-          Response.Content := LMethodResult.AsString;
-          if (Response.ContentType = LContentType) then
-            Response.ContentType := TMediaType.TEXT_PLAIN; // or check Produces of method!
-          Response.StatusCode := 200;
-        end;
-
-        tkUnknown : Response.StatusCode := 200; // it's a procedure, not a function!
-
-        //tkRecord: ;
-        //tkInterface: ;
-        //tkDynArray: ;
-        else
-          Response.StatusCode := 400;
-      end;
+      if not FMethod.HasAttribute<IsReference>(nil) then
+        CollectGarbage(LMethodResult);
     end;
   finally
-    if not FMethod.HasAttribute<ResultIsReference>(nil) then
-      CollectGarbage(LMethodResult);
+    FWriter := nil;
+    FreeAndNil(FWriterMediaType);
   end;
 end;
 
 
-function TMARSActivationRecord.ParamNameToParamIndex(AResourceInstance: TObject;
-  const AParamName: string; AMethod: TRttiMethod): Integer;
+function TMARSActivationRecord.ParamNameToParamIndex(const AParamName: string): Integer;
 var
   LParamIndex: Integer;
-  LAttrib: TCustomAttribute;
   LSubResourcePath: string;
 begin
   LParamIndex := -1;
 
   LSubResourcePath := '';
-  for LAttrib in AMethod.GetAttributes do
-  begin
-    if LAttrib is PathAttribute then
+  FMethod.HasAttribute<PathAttribute>(
+    procedure (ASubResourcePathAttrib: PathAttribute)
     begin
-      LSubResourcePath := PathAttribute(LAttrib).Value;
-      Break;
-    end;
-  end;
+      LSubResourcePath := ASubResourcePathAttrib.Value;
+    end
+  );
 
-  FRttiContext.GetType(AResourceInstance.ClassType).HasAttribute<PathAttribute>(
-  procedure (AResourcePathAttrib: PathAttribute)
-  var
-    LResURL: TMARSURL;
-    LPair: TPair<Integer, string>;
-  begin
-    LResURL := TMARSURL.CreateDummy([TMARSEngine(Application.Engine).BasePath
-      , Application.BasePath, AResourcePathAttrib.Value, LSubResourcePath]);
-    try
-      LParamIndex := -1;
-      for LPair in LResURL.PathParams do
-      begin
-        if SameText(AParamName, LPair.Value) then
+  FRttiContext.GetType(FResourceInstance.ClassType).HasAttribute<PathAttribute>(
+    procedure (AResourcePathAttrib: PathAttribute)
+    var
+      LResURL: TMARSURL;
+      LPair: TPair<Integer, string>;
+    begin
+      LResURL := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath
+        , AResourcePathAttrib.Value, LSubResourcePath]);
+      try
+        LParamIndex := -1;
+        for LPair in LResURL.PathParams do
         begin
-          LParamIndex := LPair.Key;
-          Break;
+          if SameText(AParamName, LPair.Value) then
+          begin
+            LParamIndex := LPair.Key;
+            Break;
+          end;
         end;
+      finally
+        LResURL.Free;
       end;
-    finally
-      LResURL.Free;
-    end;
-  end);
+    end
+  );
 
   Result := LParamIndex;
 end;
 
-procedure TMARSActivationRecord.Invoke;
+procedure TMARSActivationRecord.SetCustomHeaders;
 var
-  LMediaType: TMediaType;
+  LCustomAtributeProcessor: TProc<CustomHeaderAttribute>;
+
+begin
+  LCustomAtributeProcessor :=
+    procedure (ACustomHeader: CustomHeaderAttribute)
+    begin
+      Response.CustomHeaders.Values[ACustomHeader.HeaderName] := ACustomHeader.Value;
+    end;
+  FMethod.Parent.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
+  FMethod.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
+end;
+
+procedure TMARSActivationRecord.Invoke;
 begin
   Assert(Assigned(FConstructorInfo));
   Assert(Assigned(FMethod));
 
   FResourceInstance := FConstructorInfo.ConstructorFunc();
   try
-    TMARSMessageBodyRegistry.Instance.FindWriter(FMethod, string(Request.Accept)
-      , FWriter, LMediaType);
-
     ContextInjection;
-    try
-      InvokeResourceMethod(FWriter, LMediaType);
-    finally
-      FWriter := nil;
-      FreeAndNil(LMediaType);
-    end;
-
+    InvokeResourceMethod;
   finally
     FResourceInstance.Free;
   end;
@@ -536,7 +480,7 @@ end;
 
 procedure TMARSActivationRecord.CheckMethod;
 begin
-  FMethod := FindMethodToInvoke;
+  FindMethodToInvoke;
 
   if not Assigned(FMethod) then
     raise EMARSApplicationException.Create(
@@ -555,21 +499,16 @@ var
   LType: TRttiType;
 begin
   LType := FRttiContext.GetType(FResourceInstance.ClassType);
-  // Context injection
+
+  // fields
   LType.ForEachFieldWithAttribute<ContextAttribute>(
     function (AField: TRttiField; AAttrib: ContextAttribute): Boolean
     var
-      LFieldClassType: TClass;
       LValue: TValue;
     begin
       Result := True; // enumerate all
-      if (AField.FieldType.IsInstance) then
-      begin
-        LFieldClassType := TRttiInstanceType(AField.FieldType).MetaclassType;
-
-        if ContextInjectionByType(LFieldClassType, LValue) then
-          AField.SetValue(FResourceInstance, LValue);
-      end;
+      if ContextInjectionByType(AField.FieldType, LValue) then
+        AField.SetValue(FResourceInstance, LValue);
     end
   );
 
@@ -577,21 +516,16 @@ begin
   LType.ForEachPropertyWithAttribute<ContextAttribute>(
     function (AProperty: TRttiProperty; AAttrib: ContextAttribute): Boolean
     var
-      LPropertyClassType: TClass;
       LValue: TValue;
     begin
-      Result := True; // enumerate all
-      if (AProperty.PropertyType.IsInstance) then
-      begin
-        LPropertyClassType := TRttiInstanceType(AProperty.PropertyType).MetaclassType;
-        if ContextInjectionByType(LPropertyClassType, LValue) then
-          AProperty.SetValue(FResourceInstance, LValue);
-      end;
+      Result := True;
+      if ContextInjectionByType(AProperty.PropertyType, LValue) then
+        AProperty.SetValue(FResourceInstance, LValue);
     end
   );
 end;
 
-function TMARSActivationRecord.ContextInjectionByType(const AType: TClass;
+function TMARSActivationRecord.ContextInjectionByType(const AType: TRttiType;
   out AValue: TValue): Boolean;
 begin
   Result := True;
@@ -604,7 +538,7 @@ begin
   else if (AType.InheritsFrom(TMARSURL)) then
     AValue := URL
   else if (AType.InheritsFrom(TMARSEngine)) then
-    AValue := Application.Engine
+    AValue := Engine
   else if (AType.InheritsFrom(TMARSApplication)) then
     AValue := Application
   else

@@ -119,9 +119,9 @@ var
   LElement: TJSONValue;
   LIndex: Integer;
 begin
-  SetLength(Result, AJSONArray.Size);
+  SetLength(Result, AJSONArray.Count);
 
-  for LIndex := 0 to AJSONArray.Size-1 do
+  for LIndex := 0 to AJSONArray.Count-1 do
   begin
     LElement := AJSONArray.Items[LIndex];
     if LElement is TJSONString then
