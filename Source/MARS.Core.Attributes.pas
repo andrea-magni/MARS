@@ -113,7 +113,7 @@ type
   protected
     function GetActualName(const AParam: TRttiParameter): string; virtual;
   public
-    constructor Create(const AName: string); virtual;
+    constructor Create(const AName: string = ''); virtual;
     property Name: string read FName write FName;
   end;
 
@@ -210,6 +210,21 @@ uses
   , MARS.Core.MediaType
 ;
 
+function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
+begin
+  case ADesiredType.TypeKind of
+    tkInt64,
+    tkInteger: Result := StrToInt(AString);
+
+    tkFloat: Result := StrToFloat(AString);
+
+    tkChar: Result := TValue.From(AnsiChar(AString.Chars[0]));
+
+    else
+      Result := AString;
+  end;
+end;
+
 { ContentTypeAttribute }
 
 constructor ContentTypeAttribute.Create(const AContentType: string);
@@ -288,16 +303,8 @@ begin
   else // 2 - fallback (raw)
   begin
     case AParam.ParamType.TypeKind of
-      tkInt64,
-      tkInteger: Result := StrToInt(ARequest.Content);
-
-      tkFloat: Result := StrToFloat(ARequest.Content);
-
-      tkChar: Result := TValue.From(AnsiChar(ARequest.Content.Chars[0]));
-
-      tkLString,
-      tkWString,
-      tkString: Result := ARequest.Content;
+      tkInt64, tkInteger, tkFloat, tkChar
+      , tkLString, tkWString, tkString: StringToTValue(ARequest.Content, AParam.ParamType);
 
       tkUString: Result := TEncoding.UTF8.GetString(ARequest.RawContent);
 
@@ -401,7 +408,7 @@ end;
 
 function QueryParamAttribute.GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue;
 begin
-  Result := ARequest.QueryFields.Values[GetActualName(AParam)];
+  Result := StringToTValue(ARequest.QueryFields.Values[GetActualName(AParam)], AParam.ParamType);
 end;
 
 { FormParamAttribute }
@@ -409,7 +416,7 @@ end;
 function FormParamAttribute.GetValue(const ARequest: TWebRequest;
   const AParam: TRttiParameter): TValue;
 begin
-  Result := ARequest.ContentFields.Values[GetActualName(AParam)];
+  Result := StringToTValue(ARequest.ContentFields.Values[GetActualName(AParam)], AParam.ParamType);
 end;
 
 { HeaderParamAttribute }
@@ -417,7 +424,7 @@ end;
 function HeaderParamAttribute.GetValue(const ARequest: TWebRequest;
   const AParam: TRttiParameter): TValue;
 begin
-  Result := ARequest.GetFieldByName(GetActualName(AParam));
+  Result := StringToTValue(ARequest.GetFieldByName(GetActualName(AParam)), AParam.ParamType);
 end;
 
 { CookieParamAttribute }
@@ -425,7 +432,7 @@ end;
 function CookieParamAttribute.GetValue(const ARequest: TWebRequest;
   const AParam: TRttiParameter): TValue;
 begin
-  Result := ARequest.CookieFields.Values[GetActualName(AParam)];
+  Result := StringToTValue(ARequest.CookieFields.Values[GetActualName(AParam)], AParam.ParamType);
 end;
 
 { PathParamAttribute }
@@ -505,7 +512,7 @@ var
 begin
   LURL := TMARSURL.Create(ARequest);
   try
-    Result := LURL.PathTokens[GetParamIndex(AParam)];
+    Result := StringToTValue(LURL.PathTokens[GetParamIndex(AParam)], AParam.ParamType);
   finally
     LURL.Free;
   end;
