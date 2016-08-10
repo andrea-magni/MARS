@@ -92,41 +92,6 @@ uses
 
 { TMARSActivationRecord }
 
-function StringToTValue(const AString: string; const ATypeKind: TTypeKind): TValue;
-begin
-  Result := TValue.Empty;
-  // type conversions
-  case ATypeKind of
-    tkInt64,
-    tkInteger: Result := TValue.From(StrToInt(AString));
-
-    tkFloat: Result := TValue.From<Double>(StrToFloat(AString));
-
-    tkChar: Result := TValue.From(AnsiChar(AString.Chars[0]));
-
-    tkLString,
-    tkUString,
-    tkWString,
-    tkString: Result := TValue.From(AString);
-
-    tkVariant: Result := TValue.From(AString);
-
-    // not yet supported
-//      tkWChar: ;
-//      tkEnumeration: ;
-//      tkSet: ;
-//      tkClass: ;
-//      tkMethod: ;
-//      tkArray: ;
-//      tkRecord: ;
-//      tkInterface: ;
-//      tkDynArray: ;
-//      tkClassRef: ;
-//      tkPointer: ;
-//      tkProcedure: ;
-  end;
-end;
-
 function TMARSActivationRecord.GetMethodArgument(const AParam: TRttiParameter): TValue;
 var
   LParamValue: TValue;
@@ -309,7 +274,7 @@ begin
           raise;
         end;
       end
-      // 3 - fallback (no MBW, no TMARSResponse)
+      // 3 - fallback (raw)
       else
       begin
         case LMethodResult.Kind of
@@ -399,7 +364,7 @@ begin
     begin
       Response.CustomHeaders.Values[ACustomHeader.HeaderName] := ACustomHeader.Value;
     end;
-  FMethod.Parent.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
+  FResource.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
   FMethod.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
 end;
 
@@ -419,13 +384,10 @@ end;
 
 procedure TMARSActivationRecord.CheckAuthorization;
 var
-  LDenyAll, LPermitAll, LRolesAllowed: Boolean;
+  LDenyAll, LPermitAll: Boolean;
   LAllowedRoles: TStringList;
-  LAllowed: Boolean;
-  LRole: string;
   LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
 begin
-  LAllowed := True; // Default = True for non annotated-methods
   LDenyAll := False;
   LPermitAll := False;
   LAllowedRoles := TStringList.Create;
@@ -441,38 +403,18 @@ begin
         else if AAttribute is PermitAllAttribute then
           LPermitAll := True
         else if AAttribute is RolesAllowedAttribute then
-        begin
-          LRolesAllowed := True;
           LAllowedRoles.AddStrings(RolesAllowedAttribute(AAttribute).Roles);
-        end;
       end;
 
     FMethod.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
-    // also check the class (resource) of the method
-    FMethod.Parent.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
+    FResource.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
 
-    if LDenyAll then
-      LAllowed := False
-    else
-    begin
-      if LRolesAllowed then
-      begin
-        LAllowed := False;
-        for LRole in LAllowedRoles do
-        begin
-          LAllowed := Token.HasRole(LRole);
-          if LAllowed then
-            Break;
-        end;
-      end;
-
-      if LPermitAll then
-        LAllowed := True;
-    end;
-
-    if not LAllowed then
+    if LDenyAll // DenyAll (stronger than PermitAll and Roles-based authorization)
+       or (
+         not LPermitAll  // PermitAll (stronger than Role-based authorization)
+         and ((LAllowedRoles.Count > 0) and (not Token.HasRole(LAllowedRoles)))
+       ) then
       raise EMARSAuthorizationException.Create('Forbidden', 403);
-
   finally
     LAllowedRoles.Free;
   end;

@@ -52,7 +52,9 @@ type
     procedure Load(const AToken, ASecret: string);
     procedure Clear;
 
-    function HasRole(const ARole: string): Boolean; virtual;
+    function HasRole(const ARole: string): Boolean; overload; virtual;
+    function HasRole(const ARoles: TArray<string>): Boolean; overload; virtual;
+    function HasRole(const ARoles: TStrings): Boolean; overload; virtual;
     procedure SetUserNameAndRoles(const AUserName: string; const ARoles: TArray<string>); virtual;
 
     function ToJSON: TJSONObject; virtual;
@@ -153,6 +155,24 @@ end;
 function TMARSToken.GetUserName: string;
 begin
   Result := FClaims[JWT_USERNAME].AsString;
+end;
+
+function TMARSToken.HasRole(const ARoles: TStrings): Boolean;
+begin
+  Result := HasRole(ARoles.ToStringArray);
+end;
+
+function TMARSToken.HasRole(const ARoles: TArray<string>): Boolean;
+var
+  LRole: string;
+begin
+  Result := False;
+  for LRole in ARoles do
+  begin
+    Result := HasRole(LRole);
+    if Result then
+      Break;
+  end;
 end;
 
 procedure TMARSToken.Build(const ASecret: string);
