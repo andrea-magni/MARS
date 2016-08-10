@@ -124,7 +124,7 @@ begin
     begin
       LResources := TJSONArray.Create;
 
-      for LResource in AApplication.Resources do
+      for LResource in AApplication.Resources.Keys.ToArray do
         LResources.Add(LResource);
 
       LObj := TJSONObject.Create;
