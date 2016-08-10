@@ -529,17 +529,17 @@ function TMARSActivationRecord.ContextInjectionByType(const AType: TRttiType;
   out AValue: TValue): Boolean;
 begin
   Result := True;
-  if (AType.InheritsFrom(TMARSToken)) then
+  if (AType.IsObjectOfType(TMARSToken)) then
     AValue := Token
-  else if (AType.InheritsFrom(TWebRequest)) then
+  else if (AType.IsObjectOfType(TWebRequest)) then
     AValue := Request
-  else if (AType.InheritsFrom(TWebResponse)) then
+  else if (AType.IsObjectOfType(TWebResponse)) then
     AValue := Response
-  else if (AType.InheritsFrom(TMARSURL)) then
+  else if (AType.IsObjectOfType(TMARSURL)) then
     AValue := URL
-  else if (AType.InheritsFrom(TMARSEngine)) then
+  else if (AType.IsObjectOfType(TMARSEngine)) then
     AValue := Engine
-  else if (AType.InheritsFrom(TMARSApplication)) then
+  else if (AType.IsObjectOfType(TMARSApplication)) then
     AValue := Application
   else
     Result := False;
