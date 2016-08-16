@@ -222,13 +222,10 @@ begin
 end;
 
 procedure TMARSActivationRecord.CleanupMethodArguments;
-var
-  LArgument: TValue;
 begin
   while FMethodArgumentsToCollect.Count > 0 do
   begin
-    LArgument := FMethodArgumentsToCollect[0];
-    CollectGarbage(LArgument);
+    CollectGarbage(FMethodArgumentsToCollect[0]);
     FMethodArgumentsToCollect.Delete(0);
   end;
 end;

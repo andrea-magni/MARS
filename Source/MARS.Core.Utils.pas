@@ -21,30 +21,10 @@ uses
   , SyncObjs
   ;
 
-type
-  TDataFolderType = (dftCustom, dftAppData, dftLocalAppData, dftCommonAppData, dftMyDocuments, dftCommonDocuments);
-
-  TCustomAttributeClass = class of TCustomAttribute;
-
-
   function CreateCompactGuidStr: string;
 
   function ObjectToJSON(const AObject: TObject): TJSONObject;
   function ObjectToJSONString(const AObject: TObject): string;
-
-  /// <summary>
-  ///   Returns th efile name without the extension
-  /// </summary>
-  function ExtractFileNameOnly(const filename: string): string;
-
-  /// <summary>
-  ///   Returns the directory up (1) level
-  /// </summary>
-  function DirectoryUp(const APath: string; ALevel: Integer = 1): string;
-
-//  function DateToString(ADate: TDateTime; const AZeroDateAsEmptyString: Boolean = True): string;
-//  function DateTimeToString(ADate: TDateTime; const AZeroDateAsEmptyString: Boolean = True): string;
-//  function TimeToString(ADate: TDateTime; const AZeroDateAsEmptyString: Boolean = True): string;
 
   function BooleanToTJSON(AValue: Boolean): TJSONValue;
 
@@ -261,29 +241,6 @@ begin
     Result := TJSONFalse.Create;
 end;
 
-
-
-function DateToString(ADate: TDateTime; const AZeroDateAsEmptyString: Boolean = True): string;
-begin
-  Result := DateToStr(ADate);
-  if AZeroDateAsEmptyString and (ADate = 0) then
-    Result := '';
-end;
-
-function DateTimeToString(ADate: TDateTime; const AZeroDateAsEmptyString: Boolean = True): string;
-begin
-  Result := DateTimeToStr(ADate);
-  if AZeroDateAsEmptyString and (ADate = 0) then
-    Result := '';
-end;
-
-function TimeToString(ADate: TDateTime; const AZeroDateAsEmptyString: Boolean = True): string;
-begin
-  Result := TimeToStr(ADate);
-  if AZeroDateAsEmptyString and (ADate = 0) then
-    Result := '';
-end;
-
 function CreateCompactGuidStr: string;
 var
   I: Integer;
@@ -330,24 +287,6 @@ begin
   finally
     LObj.Free;
   end;
-end;
-
-{==============================================================================}
-function ExtractFileNameOnly(const filename: string): string;
-begin
-  Result := ExtractFileName(ChangeFileExt(filename, ''));
-end;
-
-{==============================================================================}
-function DirectoryUp(const APath: string; ALevel: Integer = 1): string;
-var
-  LIndexLevel: Integer;
-begin
-  if APath = '' then
-    Exit;
-  Result := APath;
-  for LIndexLevel := 0 to ALevel - 1 do
-    Result := ExtractFilePath(ExcludeTrailingPathDelimiter(Result));
 end;
 
 end.

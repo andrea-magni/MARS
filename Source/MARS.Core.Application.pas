@@ -58,6 +58,7 @@ type
     destructor Destroy; override;
 
     function AddResource(AResource: string): Boolean;
+    procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
 
     function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse;
       const AURL: TMARSURL): Boolean;
@@ -155,6 +156,16 @@ begin
   FParameters.Free;
   FResourceRegistry.Free;
   inherited;
+end;
+
+procedure TMARSApplication.EnumerateResources(
+  const ADoSomething: TProc<string, TMARSConstructorInfo>);
+var
+  LPair: TPair<string, TMARSConstructorInfo>;
+begin
+  if Assigned(ADoSomething) then
+    for LPair in FResourceRegistry do
+      ADoSomething(LPair.Key, LPair.Value);
 end;
 
 function TMARSApplication.GetRequest: TWebRequest;
