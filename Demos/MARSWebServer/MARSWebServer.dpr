@@ -13,8 +13,7 @@ program MARSWebServer;
 uses
   Forms,
   Server.Forms.Main in 'Server.Forms.Main.pas' {MainForm},
-  Server.Resources in 'Server.Resources.pas',
-  Server.Resources.Web in 'Server.Resources.Web.pas';
+  Server.Resources in 'Server.Resources.pas';
 
 {$R *.res}
 

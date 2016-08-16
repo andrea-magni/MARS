@@ -11,6 +11,8 @@ object Form1: TForm1
   DesignerMasterStyle = 0
   object StringGrid1: TStringGrid
     Align = Client
+    CanFocus = True
+    ClipChildren = True
     Margins.Left = 10.000000000000000000
     Margins.Top = 10.000000000000000000
     Margins.Right = 100.000000000000000000
@@ -19,10 +21,10 @@ object Form1: TForm1
     Size.Height = 435.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 4
-    RowCount = 42
     RowHeight = 21.000000000000000000
-    Viewport.Width = 621.000000000000000000
-    Viewport.Height = 394.000000000000000000
+    RowCount = 42
+    Viewport.Width = 637.000000000000000000
+    Viewport.Height = 410.000000000000000000
   end
   object Layout1: TLayout
     Align = Top
@@ -94,7 +96,6 @@ object Form1: TForm1
   end
   object employee1: TFDMemTable
     ActiveStoredUsage = []
-    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll

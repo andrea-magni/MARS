@@ -3,7 +3,6 @@ inherited DataResource: TDataResource
   object FDConnection1: TFDConnection
     Params.Strings = (
       'ConnectionDef=MARS_TODO_LIST')
-    Connected = True
     LoginPrompt = False
     Left = 48
     Top = 32

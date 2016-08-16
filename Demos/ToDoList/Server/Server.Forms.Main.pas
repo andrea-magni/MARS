@@ -57,6 +57,7 @@ uses
   , MARS.Rtti.Utils
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
+  , MARS.Utils.Parameters.IniFile
   ;
 
 
@@ -72,28 +73,25 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
+  // MARS Engine
   FEngine := TMARSEngine.Create;
+  try
+    FEngine.Parameters.LoadFromIniFile;
+    FEngine.AddApplication('ToDoList', '/todo', ['Server.Resources*']);
+    FEngine.AddApplication('diagnostics', '/diagnostics', ['*']);
 
-  // Engine configuration
-  FEngine.Port := StrToIntDef(PortNumberEdit.Text, 8080);
-  FEngine.Name := 'MARS ToDo List';
-  FEngine.BasePath := '/rest';
-  FEngine.ThreadPoolSize := 5;
-
-  // Application configuration
-
-  FEngine.AddApplication('ToDoList', '/todo', [ 'Server.Resources*' ]);
-
-  FEngine.AddApplication('diagnostics', '/diagnostics', ['*']);
-  TMARSDiagnosticsManager.FEngine := FEngine; // TODO: REMOVE!!!
-  TMARSDiagnosticsManager.Instance;
-
-
-  // Create http server
-  FServer := TMARShttpServerIndy.Create(FEngine);
-
-  if not FServer.Active then
-    FServer.Active := True;
+    // http server implementation
+    FServer := TMARShttpServerIndy.Create(FEngine);
+    try
+      FServer.Active := True;
+    except
+      FServer.Free;
+      raise;
+    end;
+  except
+    FEngine.Free;
+    raise;
+  end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);

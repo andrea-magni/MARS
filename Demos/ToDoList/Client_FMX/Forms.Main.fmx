@@ -43,16 +43,26 @@ object MainForm: TMainForm
     TabIndex = 0
     TabOrder = 1
     TabPosition = PlatformDefault
+    Sizes = (
+      363s
+      414s
+      363s
+      414s
+      363s
+      414s)
     object LoginTabItem: TTabItem
       CustomIcon = <
         item
         end>
       IsSelected = True
       Size.Width = 92.000000000000000000
-      Size.Height = 24.000000000000000000
+      Size.Height = 26.000000000000000000
       Size.PlatformDefault = False
+      StyleLookup = ''
       TabOrder = 0
       Text = 'LoginTabItem'
+      ExplicitSize.cx = 92.000000000000000000
+      ExplicitSize.cy = 24.000000000000000000
       object EditUser: TEdit
         Touch.InteractiveGestures = [LongTap, DoubleTap]
         TabOrder = 0
@@ -76,7 +86,7 @@ object MainForm: TMainForm
         AutoSize = True
         Position.X = 32.000000000000000000
         Position.Y = 64.000000000000000000
-        Size.Width = 29.000000000000000000
+        Size.Width = 26.000000000000000000
         Size.Height = 16.000000000000000000
         Size.PlatformDefault = False
         TextSettings.WordWrap = False
@@ -86,7 +96,7 @@ object MainForm: TMainForm
         AutoSize = True
         Position.X = 32.000000000000000000
         Position.Y = 24.000000000000000000
-        Size.Width = 30.000000000000000000
+        Size.Width = 27.000000000000000000
         Size.Height = 16.000000000000000000
         Size.PlatformDefault = False
         TextSettings.WordWrap = False
@@ -107,11 +117,14 @@ object MainForm: TMainForm
         item
         end>
       IsSelected = False
-      Size.Width = 81.000000000000000000
-      Size.Height = 24.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 26.000000000000000000
       Size.PlatformDefault = False
+      StyleLookup = ''
       TabOrder = 0
       Text = 'ListTabItem'
+      ExplicitSize.cx = 81.000000000000000000
+      ExplicitSize.cy = 24.000000000000000000
       object ItemsListView: TListView
         ItemAppearanceClassName = 'TListItemRightDetailAppearance'
         ItemEditAppearanceClassName = 'TListItemRightDetailDeleteAppearance'
@@ -119,7 +132,7 @@ object MainForm: TMainForm
         FooterAppearanceClassName = 'TListHeaderObjects'
         Align = Client
         Size.Width = 363.000000000000000000
-        Size.Height = 416.000000000000000000
+        Size.Height = 414.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 0
         ItemAppearanceObjects.ItemObjects.Accessory.Visible = False
@@ -132,11 +145,14 @@ object MainForm: TMainForm
         item
         end>
       IsSelected = False
-      Size.Width = 87.000000000000000000
-      Size.Height = 24.000000000000000000
+      Size.Width = 86.000000000000000000
+      Size.Height = 26.000000000000000000
       Size.PlatformDefault = False
+      StyleLookup = ''
       TabOrder = 0
       Text = 'ItemTabItem'
+      ExplicitSize.cx = 87.000000000000000000
+      ExplicitSize.cy = 24.000000000000000000
       object Memo1: TMemo
         Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
         DataDetectorTypes = []

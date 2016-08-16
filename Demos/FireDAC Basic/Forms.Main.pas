@@ -23,7 +23,8 @@ uses
   Data.Bind.Components, Data.Bind.Grid, Data.Bind.DBScope, FMX.Layouts,
   FMX.Grid, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
   FMX.Controls.Presentation, FMX.StdCtrls, Data.Bind.Controls,
-  Fmx.Bind.Navigator, FMX.ListView.Types, FMX.ListView;
+  Fmx.Bind.Navigator, FMX.ListView.Types, FMX.ListView, FMX.Grid.Style,
+  FMX.ScrollBox;
 
 type
   TForm1 = class(TForm)
