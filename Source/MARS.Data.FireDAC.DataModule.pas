@@ -30,7 +30,7 @@ uses
   ;
 
 type
-  RESTIncludeDefault = class(TCustomAttribute)
+  RESTIncludeDefault = class(MARSAttribute)
   private
     FDefaultValue: Boolean;
   public
@@ -38,7 +38,7 @@ type
     property DefaultValue: Boolean read FDefaultValue write FDefaultValue;
   end;
 
-  RESTExposeAttribute = class(TCustomAttribute);
+  RESTExposeAttribute = class(MARSAttribute);
   RESTInclude = class(RESTExposeAttribute);
   RESTExclude = class(RESTExposeAttribute);
 

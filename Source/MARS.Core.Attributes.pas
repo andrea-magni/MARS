@@ -21,7 +21,9 @@ uses
   , MARS.Core.Utils;
 
 type
-  PathAttribute = class(TCustomAttribute)
+  MARSAttribute = class(TCustomAttribute);
+
+  PathAttribute = class(MARSAttribute)
   private
     FValue: string;
   public
@@ -29,11 +31,13 @@ type
     property Value: string read FValue write FValue;
   end;
 
-  HttpMethodAttribute = class(TCustomAttribute)
+  HttpMethodAttribute = class(MARSAttribute)
   private
   protected
+    function GetHttpMethodName: string; virtual;
   public
     function Matches(const ARequest: TWebRequest): Boolean; virtual;
+    property HttpMethodName: string read GetHttpMethodName;
   end;
 
   GETAttribute     = class(HttpMethodAttribute)
@@ -68,39 +72,23 @@ type
 
   OPTIONSAttribute = class(HttpMethodAttribute);
 
-  /// <summary>
-  ///   A list of media types. Each entry may specify a single type or consist of a comma separated list of types. E.g.
-  ///   {"text/html, application/pdf"}. <br />Use of the comma-separated form allows definition of a common string
-  ///   constant for use on multiple targets
-  /// </summary>
-  ConsumesAttribute = class(TCustomAttribute)
+  ConsumesAttribute = class(MARSAttribute)
   private
     FValue: string;
   public
     constructor Create(const AValue: string);
-    /// <summary>
-    ///   A list of media types
-    /// </summary>
     property Value: string read FValue write FValue;
   end;
 
-  /// <summary>
-  ///   A list of media types. Each entry may specify a single type or consist of a comma separated list of types. E.g.
-  ///   {"text/html, application/pdf"}. <br />Use of the comma-separated form allows definition of a common string
-  ///   constant for use on multiple targets
-  /// </summary>
-  ProducesAttribute = class(TCustomAttribute)
+  ProducesAttribute = class(MARSAttribute)
   private
     FValue: string;
   public
     constructor Create(const AValue: string);
-    /// <summary>
-    ///   A list of media types
-    /// </summary>
     property Value: string read FValue write FValue;
   end;
 
-  RequestParamAttribute = class(TCustomAttribute)
+  RequestParamAttribute = class(MARSAttribute)
   private
   protected
   public
@@ -152,9 +140,9 @@ type
     function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
   end;
 
-  ContextAttribute = class(TCustomAttribute);
+  ContextAttribute = class(MARSAttribute);
 
-  AuthorizationAttribute = class(TCustomAttribute);
+  AuthorizationAttribute = class(MARSAttribute);
 
   PermitAllAttribute = class(AuthorizationAttribute);
   DenyAllAttribute = class(AuthorizationAttribute);
@@ -170,17 +158,14 @@ type
     property Roles: TStringList read FRoles;
   end;
 
-  ResultIsReference = class(TCustomAttribute)
+  ResultIsReference = class(MARSAttribute)
   end deprecated 'Use IsReference instead';
 
 {$WARNINGS OFF}
   IsReference = ResultIsReference;
 {$WARNINGS ON}
 
-
-  LoginRequiredAttribute = class(TCustomAttribute);
-
-  ContentTypeAttribute = class(TCustomAttribute)
+  ContentTypeAttribute = class(MARSAttribute)
   private
     FContentType: string;
   public
@@ -188,7 +173,7 @@ type
     property ContentType: string read FContentType;
   end;
 
-  CustomHeaderAttribute = class(TCustomAttribute)
+  CustomHeaderAttribute = class(MARSAttribute)
   private
     FHeaderName: string;
     FValue: string;
@@ -196,9 +181,6 @@ type
     constructor Create(const AHeaderName, AValue: string);
     property HeaderName: string read FHeaderName;
     property Value: string read FValue;
-  end;
-
-  RestAttribute = class(TCustomAttribute)
   end;
 
 implementation
@@ -315,6 +297,11 @@ begin
 end;
 
 { HttpMethodAttribute }
+
+function HttpMethodAttribute.GetHttpMethodName: string;
+begin
+  Result := ClassName.Replace('Attribute', '');
+end;
 
 function HttpMethodAttribute.Matches(const ARequest: TWebRequest): Boolean;
 begin
