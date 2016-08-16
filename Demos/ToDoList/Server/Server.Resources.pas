@@ -83,7 +83,7 @@ var
   LAccessor: TDBAccessor;
 begin
   if AText = '' then
-    raise EMARSWebApplicationException.Create('Text cannot be empty', 500);
+    raise EMARSHttpException.Create('Text cannot be empty');
 
   LAccessor := TDBAccessor.Create;
   try
@@ -122,7 +122,7 @@ begin
   try
     Result := LAccessor.Retrieve(id);
     if not Assigned(Result) then
-      raise EMARSWebApplicationException.Create(
+      raise EMARSHttpException.Create(
         Format('Item not found: %d', [id]), 404);
   finally
     LAccessor.Free;

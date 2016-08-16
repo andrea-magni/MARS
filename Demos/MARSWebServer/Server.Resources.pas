@@ -20,7 +20,7 @@ uses
   , MARS.Core.Response
 
   , Web.HttpApp
-  , Server.Resources.Web
+  , MARS.WebServer.Resources
   ;
 
 type

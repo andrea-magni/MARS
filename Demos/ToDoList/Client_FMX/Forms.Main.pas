@@ -16,7 +16,8 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
   FMX.Edit, FMX.TabControl, FMX.Controls.Presentation, System.Actions,
-  FMX.ActnList, FMX.ListView.Types, FMX.ListView, FMX.ScrollBox, FMX.Memo;
+  FMX.ActnList, FMX.ListView.Types, FMX.ListView, FMX.ScrollBox, FMX.Memo,
+  FMX.ListView.Appearances, FMX.ListView.Adapters.Base;
 
 type
   TMainForm = class(TForm)
@@ -86,7 +87,7 @@ end;
 
 function TMainForm.GetCurrentId: Integer;
 begin
-  Result := StrToInt(ItemsListView.Selected.Detail);
+  Result := StrToInt((ItemsListView.Selected as TListViewItem).Detail);
 end;
 
 procedure TMainForm.ItemsListViewDeletingItem(Sender: TObject; AIndex: Integer;

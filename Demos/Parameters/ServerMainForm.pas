@@ -71,21 +71,25 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
-  FEngine := TMARSEngine.Create;
+  // MARS Engine
+  FEngine := TMARSEngine.Create('MARS HelloWorld');
+  try
+    FEngine.Parameters.LoadFromIniFile;
+    FEngine.AddApplication('Default', '/default', ['ServerResources.*']);
 
-  // Engine configuration
-  FEngine.Parameters.LoadFromIniFile;
-
-  // Application configuration
-  FEngine.AddApplication('Default', '/default', [ 'ServerResources.*' ]);
-
-  // Create http server
-  FServer := TMARShttpServerIndy.Create(FEngine);
-
-  if not FServer.Active then
-    FServer.Active := True;
-
-  StatusLabel.Caption := 'Listening on port ' + FEngine.Port.ToString;
+    // http server implementation
+    FServer := TMARShttpServerIndy.Create(FEngine);
+    try
+      FServer.Active := True;
+      StatusLabel.Caption := 'Listening on port ' + FEngine.Port.ToString;
+    except
+      FServer.Free;
+      raise;
+    end;
+  except
+    FEngine.Free;
+    raise;
+  end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);

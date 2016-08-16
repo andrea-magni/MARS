@@ -53,6 +53,7 @@ implementation
 uses
   MARS.Core.JSON
   , MARS.Rtti.Utils
+  , MARS.Utils.Parameters.IniFile
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   ;
@@ -65,28 +66,24 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
+  // MARS Engine
   FEngine := TMARSEngine.Create;
+  try
+    FEngine.Parameters.LoadFromIniFile;
+    FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
 
-  // Engine configuration
-  FEngine.Port := StrToIntDef(PortNumberEdit.Text, 8080);
-  FEngine.Name := 'MARS Template';
-  FEngine.BasePath := '/rest';
-  FEngine.ThreadPoolSize := 5;
-
-  // Application configuration
-
-  FEngine.AddApplication(
-      'Default'
-    , '/default'
-    , [ 'Server.Resources.THelloWorldResource'
-      ]
-  );
-
-  // Create http server
-  FServer := TMARShttpServerIndy.Create(FEngine);
-
-  if not FServer.Active then
-    FServer.Active := True;
+    // http server implementation
+    FServer := TMARShttpServerIndy.Create(FEngine);
+    try
+      FServer.Active := True;
+    except
+      FServer.Free;
+      raise;
+    end;
+  except
+    FEngine.Free;
+    raise;
+  end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
@@ -97,11 +94,8 @@ end;
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
   FServer.Active := False;
-  FServer.Free;
-  FServer := nil;
-
-  FEngine.Free;
-  FEngine := nil;
+  FreeAndNil(FServer);
+  FreeAndNil(FEngine);
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);
