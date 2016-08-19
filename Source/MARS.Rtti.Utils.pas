@@ -72,8 +72,10 @@ function TValueToJSONObject(AObject: TJSONObject; const AName: string; const AVa
 implementation
 
 uses
-  MARS.Core.Utils
-  , DateUtils;
+    Generics.Collections
+  , MARS.Core.Utils
+  , DateUtils
+;
 
 function TValueToJSONObject(AObject: TJSONObject; const AName: string; const AValue: TValue): TJSONObject;
 begin
