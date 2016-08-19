@@ -18,7 +18,9 @@ uses
   Classes, SysUtils, RTTI, Generics.Collections
   , HttpApp
   , MARS.Core.Declarations
-  , MARS.Core.Utils;
+  , MARS.Core.Utils
+  , MARS.Core.JSON
+;
 
 type
   MARSAttribute = class(TCustomAttribute);
