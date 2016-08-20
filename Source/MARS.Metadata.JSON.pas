@@ -13,24 +13,82 @@ unit MARS.Metadata.JSON;
 interface
 
 uses
-    MARS.Metadata
+    System.Rtti
+  , MARS.Metadata
   , MARS.Core.JSON
 ;
 
 type
   TMARSMetadataJSON=class helper for TMARSMetadata
+  protected
+    procedure ReadItem(const AItem: TJSONObject; const AMetadataClass: TMARSMetadataClass);
+    procedure ReadField(const AField: TRttiField; const AJSONObject: TJSONObject); virtual;
+    procedure ReadFieldList(const AField: TRttiField; const AJSONArray: TJSONArray); virtual;
+    procedure ReadProperty(const AProperty: TRttiProperty; const AJSONObject: TJSONObject); virtual;
+    procedure ReadPropertyList(const AProperty: TRttiProperty; const AJSONArray: TJSONArray); virtual;
   public
     function ToJSON: TJSONObject; virtual;
+    procedure FromJSON(const AJSONObject: TJSONObject); virtual;
   end;
+
 
 implementation
 
 uses
-    System.Rtti, System.TypInfo, Generics.Collections
+    System.TypInfo, Generics.Collections
   , MARS.Rtti.Utils
 ;
 
 { TMARSMetadataJSON }
+
+procedure TMARSMetadataJSON.ReadField(const AField: TRttiField;
+  const AJSONObject: TJSONObject);
+begin
+
+end;
+
+procedure TMARSMetadataJSON.ReadFieldList(const AField: TRttiField;
+  const AJSONArray: TJSONArray);
+begin
+
+end;
+
+procedure TMARSMetadataJSON.ReadItem(const AItem: TJSONObject; const AMetadataClass: TMARSMetadataClass);
+var
+  LMetadata: TMARSMetadata;
+begin
+  LMetadata := AMetadataClass.Create(Self);
+  try
+    LMetadata.FromJSON(AItem);
+  except
+    LMetadata.Free;
+    raise;
+  end;
+end;
+
+procedure TMARSMetadataJSON.ReadProperty(const AProperty: TRttiProperty;
+  const AJSONObject: TJSONObject);
+begin
+
+end;
+
+procedure TMARSMetadataJSON.ReadPropertyList(const AProperty: TRttiProperty;
+  const AJSONArray: TJSONArray);
+var
+  LItem: TJSONValue;
+begin
+  inherited;
+  //AM TODO: ugly (make more general)!
+  for LItem in AJSONArray do
+  begin
+    if AProperty.Name = 'Applications' then
+      ReadItem(LItem as TJSONObject, TMARSApplicationMetadata)
+    else if AProperty.Name = 'Resources' then
+      ReadItem(LItem as TJSONObject, TMARSResourceMetadata)
+    else if AProperty.Name = 'Methods' then
+      ReadItem(LItem as TJSONObject, TMARSMethodMetadata);
+  end;
+end;
 
 function TMARSMetadataJSON.ToJSON: TJSONObject;
 var
@@ -104,6 +162,62 @@ begin
       end
       else
         TValueToJSONObject(Result, LProperty.Name, LProperty.GetValue(Self));
+    end;
+  end;
+end;
+
+procedure TMARSMetadataJSON.FromJSON(const AJSONObject: TJSONObject);
+var
+  LContext: TRttiContext;
+  LType: TRttiType;
+  LField: TRttiField;
+  LFields: TArray<TRttiField>;
+  LProperties: TArray<TRttiProperty>;
+  LProperty: TRttiProperty;
+  LFieldObject: TJSONObject;
+  LFieldArray: TJSONArray;
+begin
+  LType := LContext.GetType(Self.ClassType);
+
+  // fields
+  LFields := LType.GetFields;
+  for LField in LFields do
+  begin
+    if LField.Visibility >= TMemberVisibility.mvPublic then
+    begin
+      if LField.FieldType.IsObjectOfType<TMARSMetadata> then
+      begin
+        if AJSONObject.TryGetValue<TJSONObject>(LField.Name, LFieldObject) then
+          ReadField(LField, LFieldObject);
+      end
+      else if LField.FieldType is TRttiInstanceType then
+      begin
+        if AJSONObject.TryGetValue<TJSONArray>(LField.Name, LFieldArray) then
+          ReadFieldList(LField, LFieldArray);
+      end
+      else
+        LField.SetValue(Self, AJSONObject.ReadValue(LField.Name, TValue.Empty));
+    end;
+  end;
+
+  // properties
+  LProperties := LType.GetProperties;
+  for LProperty in LProperties do
+  begin
+    if (LProperty.Visibility >= TMemberVisibility.mvPublic) then
+    begin
+      if LProperty.PropertyType.IsObjectOfType<TMARSMetadata> then
+      begin
+        if AJSONObject.TryGetValue<TJSONObject>(LProperty.Name, LFieldObject) then
+          ReadProperty(LProperty, LFieldObject);
+      end
+      else if LProperty.PropertyType is TRttiInstanceType then
+      begin
+        if AJSONObject.TryGetValue<TJSONArray>(LProperty.Name, LFieldArray) then
+          ReadPropertyList(LProperty, LFieldArray);
+      end
+      else if (LProperty.IsWritable) then
+        LProperty.SetValue(Self, AJSONObject.ReadValue(LProperty.Name, TValue.Empty));
     end;
   end;
 end;
