@@ -20,7 +20,7 @@ uses
 {$else}
   DBXJSON,
 {$endif}
-  SysUtils;
+  SysUtils, System.Rtti;
 
 type
   TJSONAncestor = {$ifdef DelphiXE6_UP}JSON.TJSONAncestor{$else}DBXJSON.TJSONAncestor{$endif};
@@ -77,6 +77,7 @@ type
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
     function ReadUnixTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
+    function ReadValue(const AName: string; const ADefault: TValue): TValue;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -331,6 +332,31 @@ begin
   LValue := ReadInt64Value(AName);
   if LValue <> 0 then
     Result := UnixToDateTime(LValue)
+end;
+
+function TJSONObjectHelper.ReadValue(const AName: string;
+  const ADefault: TValue): TValue;
+var
+  LValue: TJSONValue;
+begin
+  Result := ADefault;
+  if TryGetValue<TJSONValue>(AName, LValue) then
+  begin
+    if LValue is TJSONTrue then
+      Result := True
+    else if LValue is TJSONFalse then
+      Result := False
+    else if LValue is TJSONString then
+      Result := TJSONString(LValue).Value
+    else if LValue is TJSONNumber then
+      Result := TJSONNumber(LValue).AsDouble
+    else if LValue is TJSONNull then
+      Result := TValue.Empty
+    else
+      raise Exception.CreateFmt('Unable to put JSON Value [%s] in TValue', [LValue.ClassName]);
+    //  TJSONObject
+    //  TJSONArray
+  end;
 end;
 
 procedure TJSONObjectHelper.WriteBoolValue(const AName: string;

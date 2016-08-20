@@ -57,7 +57,7 @@ constructor TMARSMetadataReader.Create(const AEngine: TMARSEngine; const AReadIm
 begin
   inherited Create;
   FEngine := AEngine;
-  FMetadata := TMARSEngineMetadata.Create;
+  FMetadata := TMARSEngineMetadata.Create(nil);
 
   if AReadImmediately then
     Read;
