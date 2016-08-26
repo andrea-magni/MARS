@@ -83,7 +83,10 @@ uses
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
-  ;
+{$ifndef DelphiXE7_UP}
+  , TypInfo
+{$endif}
+;
 
 { TMARSActivationRecord }
 
@@ -272,7 +275,9 @@ begin
         case LMethodResult.Kind of
 
           tkString, tkLString, tkUString, tkWString
+{$ifdef DelphiXE7_UP}
           , tkWideChar, tkAnsiChar
+{$endif}
           , tkInteger, tkInt64, tkFloat, tkVariant:
           begin
             Response.Content := LMethodResult.AsString;
@@ -419,7 +424,13 @@ begin
   if not Assigned(FMethod) then
     raise EMARSApplicationException.Create(
       Format('[%s] No implementation found for http method %s'
-      , [URL.Resource, TRttiEnumerationType.GetName<TMethodType>(Request.MethodType)]), 404);
+      , [URL.Resource
+{$ifndef Delphi10Seattle_UP}
+         , GetEnumName(TypeInfo(TMethodType), Integer(Request.MethodType))
+{$else}
+         , TRttiEnumerationType.GetName<TMethodType>(Request.MethodType)
+{$endif}
+      ]), 404);
 end;
 
 procedure TMARSActivationRecord.CheckResource;
