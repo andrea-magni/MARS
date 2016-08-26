@@ -281,6 +281,7 @@ begin
     end
   else // 2 - fallback (raw)
   begin
+{$ifdef Delphi10Berlin_UP}
     case AParam.ParamType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
       , tkLString, tkWString, tkString: StringToTValue(ARequest.Content, AParam.ParamType);
@@ -290,6 +291,18 @@ begin
       else
         Result := TValue.From<TBytes>(ARequest.RawContent);
     end;
+{$else}
+    case AParam.ParamType.TypeKind of
+      tkInt64, tkInteger, tkFloat, tkChar
+      , tkLString, tkWString, tkString: StringToTValue(ARequest.Content, AParam.ParamType);
+
+      tkUString: Result := ARequest.RawContent;
+
+      else
+        Result := ARequest.RawContent;
+    end;
+
+{$endif}
   end;
 end;
 
