@@ -184,7 +184,6 @@ object MainForm: TMainForm
   end
   object QueryAccounts1: TFDMemTable
     ActiveStoredUsage = []
-    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll
@@ -197,7 +196,6 @@ object MainForm: TMainForm
   end
   object QueryItems1: TFDMemTable
     ActiveStoredUsage = []
-    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll

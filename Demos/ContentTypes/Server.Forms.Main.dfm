@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS ContentTypes Server'
+  Caption = 'MARS-Curiosity ContentTypes Server'
   ClientHeight = 201
   ClientWidth = 464
   Color = clBtnFace

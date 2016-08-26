@@ -1,14 +1,9 @@
 (*
-  Copyright 2015, MARS - REST Library
+  Copyright 2016, MARS-Curiosity library
 
-  Home: https://github.com/MARS-library
-
-  ### ### ### ###
-  MARS-Curiosity edition
   Home: https://github.com/andrea-magni/MARS
-
 *)
-unit Server.Data.Main;
+unit Server.Data.Main;
 
 interface
 
@@ -19,7 +14,7 @@ uses
   FireDAC.Phys.FBDef, Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param,
   FireDAC.DatS, FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.Comp.DataSet
 
-  , MARS.Core.Attributes;
+  , MARS.Core.Attributes, FireDAC.VCLUI.Wait;
 
 type
   TDataMain = class(TDataModule)
