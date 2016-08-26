@@ -165,7 +165,11 @@ begin
     if LMethodConsumesMediaTypes.Count > 0 then
       LAllowedMediaTypes := LMethodConsumesMediaTypes.ToArrayOfString
     else
+{$ifdef DelphiXE7_UP}
       LAllowedMediaTypes := [];
+{$else}
+      SetLength(LAllowedMediaTypes, 0);
+{$endif}
 
     if (Length(LAllowedMediaTypes) = 0)
       or ((Length(LAllowedMediaTypes) = 1) and (LAllowedMediaTypes[0] = TMediaType.WILDCARD))

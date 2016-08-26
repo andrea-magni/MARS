@@ -187,6 +187,9 @@ uses
   , MARS.Core.URL
   , MARS.Core.MessageBodyReader
   , MARS.Core.MediaType
+{$ifndef DelphiXE7_UP}
+  , TypInfo
+{$endif}
 ;
 
 function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
