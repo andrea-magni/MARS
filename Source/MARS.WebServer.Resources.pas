@@ -1,8 +1,7 @@
 (*
-  Copyright 2015, MARS - REST Library
+  Copyright 2016, MARS-Curiosity library
 
-  Authors:
-
+  Home: https://github.com/andrea-magni/MARS
 *)
 unit MARS.WebServer.Resources;
 

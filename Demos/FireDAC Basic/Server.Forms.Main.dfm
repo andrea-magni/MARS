@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS FireDAC Basic'
+  Caption = 'MARS-Curiosity FireDAC Basic'
   ClientHeight = 289
   ClientWidth = 554
   Color = clBtnFace

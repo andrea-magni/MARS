@@ -71,8 +71,8 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
-  // MARS Engine
-  FEngine := TMARSEngine.Create('MARS HelloWorld');
+  // MARS-Curiosity Engine
+  FEngine := TMARSEngine.Create('MARS-Curiosity HelloWorld');
   try
     FEngine.Parameters.LoadFromIniFile;
     FEngine.AddApplication('Default', '/default', ['ServerResources.*']);

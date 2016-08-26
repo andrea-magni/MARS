@@ -1,12 +1,7 @@
 (*
-  Copyright 2015, MARS - REST Library
+  Copyright 2016, MARS-Curiosity library
 
-  Home: https://github.com/MARS-library
-
-  ### ### ### ###
-  MARS-Curiosity edition
   Home: https://github.com/andrea-magni/MARS
-
 *)
 unit Server.Forms.Main;
 
@@ -73,8 +68,8 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
-  // MARS Egine
-  FEngine := TMARSEngine.Create('MARS Template');
+  // MARS-Curiosity Egine
+  FEngine := TMARSEngine.Create('MARS-Curiosity Template');
   try
     FEngine.Parameters.LoadFromIniFile;
     FEngine.AddApplication('Default', '/default', [ 'Server.Resources.*']);

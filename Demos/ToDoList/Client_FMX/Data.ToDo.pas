@@ -1,14 +1,9 @@
 (*
-  Copyright 2015, MARS - REST Library
+  Copyright 2016, MARS-Curiosity library
 
-  Home: https://github.com/MARS-library
-
-  ### ### ### ###
-  MARS-Curiosity edition
   Home: https://github.com/andrea-magni/MARS
-
 *)
-unit Data.ToDo;
+unit Data.ToDo;
 
 interface
 
@@ -16,7 +11,7 @@ uses
   System.SysUtils, System.Classes, MARS.Client.CustomResource,
   MARS.Client.Resource, MARS.Client.Token, MARS.Client.Application,
   MARS.Client.Client, MARS.Client.SubResource, MARS.Client.SubResource.JSON,
-  MARS.Client.Resource.JSON, MARS.Core.JSON, System.JSON;
+  MARS.Client.Resource.JSON, MARS.Core.JSON, System.JSON, MARS.Utils.Parameters;
 
 type
   TTodoDM = class(TDataModule)

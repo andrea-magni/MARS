@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS ToDoList Server'
+  Caption = 'MARS-Curiosity ToDoList Server'
   ClientHeight = 201
   ClientWidth = 464
   Color = clBtnFace

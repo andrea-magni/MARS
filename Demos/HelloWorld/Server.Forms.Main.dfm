@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS HelloWorld - Server'
+  Caption = 'MARS-Curiosity HelloWorld - Server'
   ClientHeight = 215
   ClientWidth = 554
   Color = clBtnFace

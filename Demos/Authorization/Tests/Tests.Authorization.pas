@@ -1,12 +1,7 @@
 (*
-  Copyright 2015, MARS - REST Library
+  Copyright 2016, MARS-Curiosity library
 
-  Home: https://github.com/MARS-library
-
-  ### ### ### ###
-  MARS-Curiosity edition
   Home: https://github.com/andrea-magni/MARS
-
 *)
 unit Tests.Authorization;
 {
@@ -75,7 +70,7 @@ begin
   LParams := TStringList.Create;
   try
     LParams.Add('username=admin');
-    LParams.Add('password=' + IntToStr(HourOf(Now))); // default MARS authentication algorithm
+    LParams.Add('password=' + IntToStr(HourOf(Now))); // default MARS-Curiosity authentication algorithm
 
     FHttp.Post('http://localhost:8080/rest/default/token', LParams);
     CheckEquals(200, FHttp.ResponseCode); // now authenticated
