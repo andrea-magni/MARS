@@ -5,6 +5,8 @@
 *)
 unit MARS.Core.MessageBodyReaders;
 
+{$I MARS.inc}
+
 interface
 
 uses
