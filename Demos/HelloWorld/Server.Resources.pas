@@ -13,7 +13,9 @@ uses
   , MARS.Core.Registry
   , MARS.Core.Attributes
   , MARS.Core.MediaType
+  , MARS.Core.JSON
   , MARS.Core.MessageBodyWriters
+  , MARS.Core.MessageBodyReaders
   ;
 
 type
@@ -39,6 +41,9 @@ type
 
     [GET, Path('/sum/{First}/{Second}')]
     function Sum([PathParam] First: Integer; [PathParam] Second: Integer): Integer;
+
+    [POST, Path('/countitems')]
+    function CountItems([BodyParam] Data: TJSONArray): Integer;
   end;
 
 implementation
@@ -48,6 +53,11 @@ uses
   ;
 
 { THelloWorldResource }
+
+function THelloWorldResource.CountItems(Data: TJSONArray): Integer;
+begin
+  Result := Data.Count;
+end;
 
 function THelloWorldResource.EchoString(AString: string): string;
 begin
