@@ -76,7 +76,7 @@ begin
   FEngine := TMARSEngine.Create;
   try
     FEngine.Parameters.LoadFromIniFile;
-    FEngine.AddApplication('DefaultApp', '/default', ['Server.Resources.*', 'MARS.Metadata.Engine.Resource.*']);
+    FEngine.AddApplication('DefaultApp', '/default', ['Server.Resources.*']);
 
     // http server implementation
     FServer := TMARShttpServerIndy.Create(FEngine);
