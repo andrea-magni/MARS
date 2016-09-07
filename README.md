@@ -18,6 +18,8 @@ At the time when the project was published on GitHub under its new name of MARS-
 In January, 2016, I decided to start my own fork of the MARS-library project and to give it the name of MARS-Curiosity.
 What really makes me happy about this project is that some of real world applications are already out there, built with this technology and developers who had the chance to try it were happy to embrace its philosophy and ease of use.
 
+In August, 2016, I asked GitHub to make MARS-Curiosity a first-class repository, instead of being a fork of MARS-library. The two projects are diverging since the development has no shared coordination. I have no plan to merge MARS-Curiosity back into MARS-library also considering the changes that are being made there. I think a clear position is the best choice to avoid any confusion.
+
 ## The name
 
 It is always challenging to find a good name for a new project: usually you have to balance between a brand new name and some classical or already taken names. The first option mean originality, the second can carry some more meaning with the name itself.
