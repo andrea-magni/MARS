@@ -88,8 +88,10 @@ type
   RequestParamAttribute = class(MARSAttribute)
   private
   protected
+    function GetKind: string; virtual;
   public
     function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; virtual;
+    property Kind: string read GetKind;
   end;
 
   NamedRequestParamAttribute = class(RequestParamAttribute)
@@ -397,6 +399,11 @@ begin
 end;
 
 { RequestParamAttribute }
+
+function RequestParamAttribute.GetKind: string;
+begin
+  Result := ClassName.Replace('Attribute', '');
+end;
 
 function RequestParamAttribute.GetValue(const ARequest: TWebRequest;
   const AParam: TRttiParameter): TValue;

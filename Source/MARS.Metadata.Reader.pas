@@ -27,6 +27,9 @@ type
       const AResourcePath: string; AResourceInfo: TMARSConstructorInfo); virtual;
     procedure ReadMethod(const AResourceMetadata: TMARSResourceMetadata;
       const AMethod: TRttiMethod); virtual;
+    procedure ReadParameter(const AResourceMetadata: TMARSResourceMetadata;
+      const AMethodMetadata: TMARSMethodMetadata;
+      const AParameter: TRttiParameter; const AMethod: TRttiMethod); virtual;
   public
     constructor Create(const AEngine: TMARSEngine; const AReadImmediately: Boolean = True); virtual;
     destructor Destroy; override;
@@ -43,6 +46,7 @@ uses
     MARS.Core.Utils
   , MARS.Rtti.Utils
   , MARS.Core.Attributes
+  , MARS.Core.Exceptions
 ;
 
 
@@ -104,6 +108,8 @@ procedure TMARSMetadataReader.ReadMethod(
   const AResourceMetadata: TMARSResourceMetadata; const AMethod: TRttiMethod);
 var
   LMethodMetadata: TMARSMethodMetadata;
+  LParameters: TArray<TRttiParameter>;
+  LParameter: TRttiParameter;
 begin
   LMethodMetadata := TMARSMethodMetadata.Create(AResourceMetadata);
   try
@@ -141,10 +147,38 @@ begin
     if LMethodMetadata.Consumes.IsEmpty then
       LMethodMetadata.Consumes := AResourceMetadata.Consumes;
 
+    LParameters := AMethod.GetParameters;
+    for LParameter in LParameters do
+      ReadParameter(AResourceMetadata, LMethodMetadata, LParameter, AMethod);
   except
     LMethodMetadata.Free;
     raise;
   end;
+end;
+
+procedure TMARSMetadataReader.ReadParameter(
+  const AResourceMetadata: TMARSResourceMetadata;
+  const AMethodMetadata: TMARSMethodMetadata;
+  const AParameter: TRttiParameter; const AMethod: TRttiMethod);
+begin
+  AParameter.HasAttribute<RequestParamAttribute>(
+    procedure (AAttribute: RequestParamAttribute)
+    var
+      LRequestParamMetadata: TMARSRequestParamMetadata;
+    begin
+      LRequestParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
+      try
+        LRequestParamMetadata.Kind := AAttribute.Kind;
+        if AAttribute is NamedRequestParamAttribute then
+          LRequestParamMetadata.Name := NamedRequestParamAttribute(AAttribute).Name;
+        if LRequestParamMetadata.Name.IsEmpty then
+          LRequestParamMetadata.Name := AParameter.Name;
+      except
+        LRequestParamMetadata.Free;
+        raise;
+      end;
+    end
+  );
 end;
 
 procedure TMARSMetadataReader.ReadResource(const AApplication: TMARSApplication;

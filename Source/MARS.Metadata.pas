@@ -15,6 +15,7 @@ type
   TMARSEngineMetadata=class; //fwd
   TMARSApplicationMetadata=class; //fwd
   TMARSResourceMetadata=class; // fwd
+  TMARSMethodMetadata=class; // fwd
 
   TMARSMetadata=class
   protected
@@ -35,8 +36,21 @@ type
     property FullPath: string read GetFullPath;
   end;
 
+  TMARSRequestParamMetadata = class(TMARSMetadata)
+  private
+  protected
+    function GetMethod: TMARSMethodMetadata;
+    property Method: TMARSMethodMetadata read GetMethod;
+  public
+    Name: string;
+    Kind: string;
+
+    constructor Create(const AParent: TMARSMetadata); override;
+  end;
+
   TMARSMethodMetadata=class(TMARSPathItemMetadata)
   private
+    FParameters: TMARSMetadataList;
   protected
     function GetResource: TMARSResourceMetadata;
     property Resource: TMARSResourceMetadata read GetResource;
@@ -46,6 +60,16 @@ type
     Consumes: string;
 
     constructor Create(const AParent: TMARSMetadata); override;
+    destructor Destroy; override;
+
+    property Parameters: TMARSMetadataList read FParameters;
+
+//    property PathParams: TMARSMetadataList read FPathParams;
+//    property QueryParams: TMARSMetadataList read FQueryParams;
+//    property BodyParams: TMARSMetadataList read FBodyParams;
+//    property FormParams: TMARSMetadataList read FFormParams;
+//    property HeaderParams: TMARSMetadataList read FHeaderParams;
+//    property CookieParams: TMARSMetadataList read FCookieParams;
   end;
 
   TMARSResourceMetadata=class(TMARSPathItemMetadata)
@@ -142,6 +166,14 @@ begin
   inherited Create(AParent);
   if Assigned(Resource) then
     Resource.Methods.Add(Self);
+
+  FParameters := TMARSMetadataList.Create;
+end;
+
+destructor TMARSMethodMetadata.Destroy;
+begin
+  FParameters.Free;
+  inherited;
 end;
 
 function TMARSMethodMetadata.GetResource: TMARSResourceMetadata;
@@ -178,6 +210,20 @@ constructor TMARSMetadata.Create(const AParent: TMARSMetadata);
 begin
   inherited Create;
   FParent := AParent;
+end;
+
+{ TMARSRequestParamMetadata }
+
+constructor TMARSRequestParamMetadata.Create(const AParent: TMARSMetadata);
+begin
+  inherited Create(AParent);
+  if Assigned(Method) then
+    Method.Parameters.Add(Self);
+end;
+
+function TMARSRequestParamMetadata.GetMethod: TMARSMethodMetadata;
+begin
+  Result := Parent as TMARSMethodMetadata;
 end;
 
 end.
