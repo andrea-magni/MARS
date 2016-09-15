@@ -25,7 +25,10 @@ type
     constructor Create(const AParent: TMARSMetadata); virtual;
   end;
   TMARSMetadataClass = class of TMARSMetadata;
-  TMARSMetadataList=TObjectList<TMARSMetadata>;
+  TMARSMetadataList=class(TObjectList<TMARSMetadata>)
+  public
+    function ForEach<T: TMARSMetadata>(const ADoSomething: TProc<T>): Integer;
+  end;
 
   TMARSPathItemMetadata=class(TMARSMetadata)
   protected
@@ -33,6 +36,10 @@ type
   public
     Name: string;
     Path: string;
+
+    Produces: string;
+    Consumes: string;
+
     property FullPath: string read GetFullPath;
   end;
 
@@ -44,6 +51,7 @@ type
   public
     Name: string;
     Kind: string;
+    DataType: string;
 
     constructor Create(const AParent: TMARSMetadata); override;
   end;
@@ -51,25 +59,19 @@ type
   TMARSMethodMetadata=class(TMARSPathItemMetadata)
   private
     FParameters: TMARSMetadataList;
+    function GetQualifiedName: string;
   protected
     function GetResource: TMARSResourceMetadata;
     property Resource: TMARSResourceMetadata read GetResource;
   public
     HttpMethod: string;
-    Produces: string;
-    Consumes: string;
 
     constructor Create(const AParent: TMARSMetadata); override;
     destructor Destroy; override;
 
     property Parameters: TMARSMetadataList read FParameters;
-
-//    property PathParams: TMARSMetadataList read FPathParams;
-//    property QueryParams: TMARSMetadataList read FQueryParams;
-//    property BodyParams: TMARSMetadataList read FBodyParams;
-//    property FormParams: TMARSMetadataList read FFormParams;
-//    property HeaderParams: TMARSMetadataList read FHeaderParams;
-//    property CookieParams: TMARSMetadataList read FCookieParams;
+    property QualifiedName: string read GetQualifiedName;
+    function ForEachParameter(const ADoSomething: TProc<TMARSRequestParamMetadata>): Integer;
   end;
 
   TMARSResourceMetadata=class(TMARSPathItemMetadata)
@@ -79,13 +81,11 @@ type
     function GetApplication: TMARSApplicationMetadata;
     property Application: TMARSApplicationMetadata read GetApplication;
   public
-    Produces: string;
-    Consumes: string;
-
     constructor Create(const AParent: TMARSMetadata); override;
     destructor Destroy; override;
 
     property Methods: TMARSMetadataList read FMethods;
+    function ForEachMethod(const ADoSomething: TProc<TMARSMethodMetadata>): Integer;
   end;
 
   TMARSApplicationMetadata=class(TMARSPathItemMetadata)
@@ -99,6 +99,7 @@ type
     destructor Destroy; override;
 
     property Resources: TMARSMetadataList read FResources;
+    function ForEachResource(const ADoSomething: TProc<TMARSResourceMetadata>): Integer;
   end;
 
   TMARSEngineMetadata=class(TMARSPathItemMetadata)
@@ -109,6 +110,7 @@ type
     destructor Destroy; override;
 
     property Applications: TMARSMetadataList read FApplications;
+    function ForEachApplication(const ADoSomething: TProc<TMARSApplicationMetadata>): Integer;
   end;
 
 implementation
@@ -133,6 +135,12 @@ begin
   inherited;
 end;
 
+function TMARSApplicationMetadata.ForEachResource(
+  const ADoSomething: TProc<TMARSResourceMetadata>): Integer;
+begin
+  Result := Resources.ForEach<TMARSResourceMetadata>(ADoSomething);
+end;
+
 function TMARSApplicationMetadata.GetEngine: TMARSEngineMetadata;
 begin
   Result := Parent as TMARSEngineMetadata;
@@ -152,6 +160,12 @@ destructor TMARSResourceMetadata.Destroy;
 begin
   FMethods.Free;
   inherited;
+end;
+
+function TMARSResourceMetadata.ForEachMethod(
+  const ADoSomething: TProc<TMARSMethodMetadata>): Integer;
+begin
+  Result := Methods.ForEach<TMARSMethodMetadata>(ADoSomething);
 end;
 
 function TMARSResourceMetadata.GetApplication: TMARSApplicationMetadata;
@@ -176,6 +190,19 @@ begin
   inherited;
 end;
 
+function TMARSMethodMetadata.ForEachParameter(
+  const ADoSomething: TProc<TMARSRequestParamMetadata>): Integer;
+begin
+  Result := Parameters.ForEach<TMARSRequestParamMetadata>(ADoSomething);
+end;
+
+function TMARSMethodMetadata.GetQualifiedName: string;
+begin
+  Result := Name;
+  if Assigned(Resource) then
+    Result := Resource.Name + '.' + Name;
+end;
+
 function TMARSMethodMetadata.GetResource: TMARSResourceMetadata;
 begin
   Result := Parent as TMARSResourceMetadata;
@@ -193,6 +220,12 @@ destructor TMARSEngineMetadata.Destroy;
 begin
   FApplications.Free;
   inherited;
+end;
+
+function TMARSEngineMetadata.ForEachApplication(
+  const ADoSomething: TProc<TMARSApplicationMetadata>): Integer;
+begin
+  Result := Applications.ForEach<TMARSApplicationMetadata>(ADoSomething);
 end;
 
 { TMARSPathItemMetadata }
@@ -224,6 +257,26 @@ end;
 function TMARSRequestParamMetadata.GetMethod: TMARSMethodMetadata;
 begin
   Result := Parent as TMARSMethodMetadata;
+end;
+
+{ TMARSMetadataList }
+
+function TMARSMetadataList.ForEach<T>(const ADoSomething: TProc<T>): Integer;
+var
+  LItem: TMARSMetadata;
+begin
+  Result := 0;
+  if not Assigned(ADoSomething) then
+    exit;
+
+  for LItem in Self do
+  begin
+    if LItem is T then
+    begin
+      ADoSomething(LItem as T);
+      Inc(Result);
+    end;
+  end;
 end;
 
 end.

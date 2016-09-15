@@ -81,7 +81,9 @@ begin
     else if AProperty.Name = 'Resources' then
       ReadItem(LItem as TJSONObject, TMARSResourceMetadata)
     else if AProperty.Name = 'Methods' then
-      ReadItem(LItem as TJSONObject, TMARSMethodMetadata);
+      ReadItem(LItem as TJSONObject, TMARSMethodMetadata)
+    else if AProperty.Name = 'Parameters' then
+      ReadItem(LItem as TJSONObject, TMARSRequestParamMetadata);
   end;
 end;
 

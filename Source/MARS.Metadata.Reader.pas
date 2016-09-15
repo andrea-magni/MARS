@@ -173,6 +173,7 @@ begin
           LRequestParamMetadata.Name := NamedRequestParamAttribute(AAttribute).Name;
         if LRequestParamMetadata.Name.IsEmpty then
           LRequestParamMetadata.Name := AParameter.Name;
+        LRequestParamMetadata.DataType := AParameter.ParamType.QualifiedName;
       except
         LRequestParamMetadata.Free;
         raise;
