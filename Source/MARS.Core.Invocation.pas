@@ -108,7 +108,7 @@ begin
   AParam.HasAttribute<RequestParamAttribute>(
     procedure (ARequestParamAttr: RequestParamAttribute)
     begin
-      LParamValue := ARequestParamAttr.GetValue(Request, AParam);
+      LParamValue := ARequestParamAttr.GetValue(Request, AParam, Engine.BasePath, Application.BasePath);
       if not (LParamValue.IsEmpty or AParam.HasAttribute<IsReference>) then
         FMethodArgumentsToCollect.Add(LParamValue);
     end

@@ -15,6 +15,7 @@ uses
   , MARS.Core.Declarations
   , MARS.Core.Utils
   , MARS.Core.JSON
+//  , MARS.Core.Invocation
 ;
 
 type
@@ -90,7 +91,8 @@ type
   protected
     function GetKind: string; virtual;
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; virtual;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter;
+      const AEnginePath: string; const AApplicationPath: string): TValue; virtual;
     property Kind: string read GetKind;
   end;
 
@@ -108,35 +110,35 @@ type
   private
     FParamIndex: Integer;
   protected
-    function GetParamIndex(const AParam: TRttiParameter): Integer;
+    function GetParamIndex(const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): Integer;
   public
     property ParamIndex: Integer read FParamIndex write FParamIndex;
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
   end;
 
   QueryParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
   end;
 
   FormParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
   end;
 
   HeaderParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
   end;
 
   CookieParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
   end;
 
   BodyParamAttribute = class(RequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue; override;
+    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
   end;
 
   ContextAttribute = class(MARSAttribute);
@@ -269,7 +271,7 @@ end;
 { BodyParamAttribute }
 
 function BodyParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter): TValue;
+  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
@@ -406,14 +408,14 @@ begin
 end;
 
 function RequestParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter): TValue;
+  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
 begin
   Result := TValue.Empty;
 end;
 
 { QueryParamAttribute }
 
-function QueryParamAttribute.GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter): TValue;
+function QueryParamAttribute.GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
 begin
   Result := StringToTValue(ARequest.QueryFields.Values[GetActualName(AParam)], AParam.ParamType);
 end;
@@ -421,7 +423,7 @@ end;
 { FormParamAttribute }
 
 function FormParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter): TValue;
+  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
 begin
   Result := StringToTValue(ARequest.ContentFields.Values[GetActualName(AParam)], AParam.ParamType);
 end;
@@ -429,7 +431,7 @@ end;
 { HeaderParamAttribute }
 
 function HeaderParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter): TValue;
+  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
 begin
   Result := StringToTValue(ARequest.GetFieldByName(GetActualName(AParam)), AParam.ParamType);
 end;
@@ -437,7 +439,7 @@ end;
 { CookieParamAttribute }
 
 function CookieParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter): TValue;
+  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
 begin
   Result := StringToTValue(ARequest.CookieFields.Values[GetActualName(AParam)], AParam.ParamType);
 end;
@@ -445,7 +447,7 @@ end;
 { PathParamAttribute }
 
 function PathParamAttribute.GetParamIndex(
-  const AParam: TRttiParameter): Integer;
+  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): Integer;
 var
   LParamIndex: Integer;
   LSubResourcePath: string;
@@ -478,19 +480,7 @@ begin
       LParamName: string;
     begin
 
-      //AM TODO: find a way to use Engine.BasePath, Application.BasePath
-      // instead of '/rest', '/default' consts.
-      // Reason:
-      // The following piece of code calculates a positional index of the
-      // parameter in the URL and it builds a dummy URL to get a prototype
-      // (with all parameters listed) of the resource. It is unusual (yet
-      // not impossible) to have a parameter in the BasePath of the Engine or
-      // of the Application. I assume here that there is no parameter defined
-      // into the BasePath of current Engine and current Application.
-      // i.e. http://host:port/rest/default/myres/{first}/subres/{second}/{third}
-      //                     ^^^^^^^^^^^^^^ no params allowed here!
-
-      LResURL := TMARSURL.CreateDummy(['/rest', '/default'
+      LResURL := TMARSURL.CreateDummy([AEnginePath, AApplicationPath
         , AResourcePathAttrib.Value, LSubResourcePath]);
       try
         LParamName := GetActualName(AParam);
@@ -513,13 +503,13 @@ begin
 end;
 
 function PathParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter): TValue;
+  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
 var
   LURL: TMARSURL;
 begin
   LURL := TMARSURL.Create(ARequest);
   try
-    Result := StringToTValue(LURL.PathTokens[GetParamIndex(AParam)], AParam.ParamType);
+    Result := StringToTValue(LURL.PathTokens[GetParamIndex(AParam, AEnginePath, AApplicationPath)], AParam.ParamType);
   finally
     LURL.Free;
   end;
