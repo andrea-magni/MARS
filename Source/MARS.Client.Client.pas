@@ -577,11 +577,11 @@ begin
               end;
             end;
           end
-        , procedure
+        , procedure (AResource: TMARSClientCustomResource)
           begin
             try
               if Assigned(ACompletionHandler) then
-                ACompletionHandler(LResource.Response);
+                ACompletionHandler((AResource as TMARSClientResourceJSON).Response);
             finally
               LResource.Free;
               LApp.Free;
