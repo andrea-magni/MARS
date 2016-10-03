@@ -26,6 +26,8 @@ type
     FSendDelta: Boolean;
     FSynchronize: Boolean;
     procedure SetDataSet(const Value: TFDMemTable);
+  protected
+    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(Collection: TCollection); override;
   published
@@ -57,6 +59,8 @@ type
     procedure AfterPOST(); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
+    procedure AssignTo(Dest: TPersistent); override;
+
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -171,6 +175,16 @@ begin
   FPOSTResponse := StreamToJSONValue(Client.Response.ContentStream);
 end;
 
+procedure TMARSFDResource.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSFDResource;
+begin
+  inherited AssignTo(Dest);
+  LDest := Dest as TMARSFDResource;
+
+  LDest.ResourceDataSets.Assign(ResourceDataSets);
+end;
+
 procedure TMARSFDResource.BeforePOST(AContent: TMemoryStream);
 var
   LDeltas: TFDJSONDeltas;
@@ -282,6 +296,19 @@ begin
 end;
 
 { TMARSFDResourceDatasetsItem }
+
+procedure TMARSFDResourceDatasetsItem.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSFDResourceDatasetsItem;
+begin
+//   inherited;
+  LDest := Dest as TMARSFDResourceDatasetsItem;
+
+  LDest.DataSetName := DataSetName;
+  LDest.DataSet := DataSet;
+  LDest.SendDelta := SendDelta;
+  LDest.Synchronize := Synchronize;
+end;
 
 constructor TMARSFDResourceDatasetsItem.Create(Collection: TCollection);
 begin
