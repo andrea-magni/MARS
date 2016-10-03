@@ -377,14 +377,18 @@ begin
   Client.ExecuteAsync(
     procedure
     begin
-      GET(nil, nil, AOnException);
-      if Assigned(ACompletionHandler) then
-      begin
-        if ASynchronize then
-          TThread.Queue(nil, TThreadProcedure(ACompletionHandler))
-        else
-          ACompletionHandler();
-      end;
+      GET(nil
+        , procedure (AStream: TStream)
+          begin
+            if Assigned(ACompletionHandler) then
+            begin
+              if ASynchronize then
+                TThread.Queue(nil, TThreadProcedure(ACompletionHandler))
+              else
+                ACompletionHandler();
+            end;
+          end
+        , AOnException);
     end
   );
 end;
