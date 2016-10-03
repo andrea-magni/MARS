@@ -19,6 +19,7 @@ type
   TMARSParametersIniFileReaderWriterHelper=class helper for TMARSParameters
   public
     procedure LoadFromIniFile(const AIniFileName: string = '');
+    procedure SaveToIniFile(const AIniFileName: string = '');
   end;
 
 implementation
@@ -117,7 +118,12 @@ begin
     for LName in AParameters.ParamNames do
     begin
       TMARSParameters.GetSliceAndParamName(LName, LSlice, LParamName);
-      LIniFile.WriteString(LSlice, LParamName, AParameters[LName].AsString);
+      if AParameters[LName].Kind = tkInteger then
+        LIniFile.WriteInteger(LSlice, LParamName, AParameters[LName].AsInteger)
+      else if AParameters[LName].Kind = tkInt64 then
+        LIniFile.WriteInteger(LSlice, LParamName, AParameters[LName].AsInt64)
+      else
+        LIniFile.WriteString(LSlice, LParamName, AParameters[LName].ToString);
     end;
   finally
     LIniFile.Free;
@@ -130,6 +136,12 @@ procedure TMARSParametersIniFileReaderWriterHelper.LoadFromIniFile(
   const AIniFileName: string);
 begin
   TMARSParametersIniFileReaderWriter.Load(Self, AIniFileName);
+end;
+
+procedure TMARSParametersIniFileReaderWriterHelper.SaveToIniFile(
+  const AIniFileName: string);
+begin
+  TMARSParametersIniFileReaderWriter.Save(Self, AIniFileName);
 end;
 
 end.

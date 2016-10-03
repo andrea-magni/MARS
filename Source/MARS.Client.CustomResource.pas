@@ -438,7 +438,7 @@ begin
                     if Assigned(ACompletionHandler) then
                     begin
                       if ASynchronize then
-                        TThread.Queue(nil
+                        TThread.Synchronize(nil
                           , procedure
                             begin
                               ACompletionHandler(LResource);
@@ -562,7 +562,7 @@ begin
                   if Assigned(ACompletionHandler) then
                   begin
                     if ASynchronize then
-                      TThread.Queue(nil
+                      TThread.Synchronize(nil
                         , procedure
                           begin
                             ACompletionHandler(LResource);
