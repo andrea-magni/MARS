@@ -59,6 +59,8 @@ type
 
     procedure BeforeDELETE; virtual;
     procedure AfterDELETE; virtual;
+
+    procedure DoError(const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -256,7 +258,12 @@ begin
       if Assigned(AOnException) then
         AOnException(E)
       else
-        raise Exception.Create(E.Message);
+        DoError(E, TMARSHttpVerb.Delete
+          , procedure (AStream: TStream)
+            begin
+              if Assigned(AAfterExecute) then
+                AAfterExecute();
+            end);
     end;
   end;
 end;
@@ -266,6 +273,17 @@ begin
   FQueryParams.Free;
   FPathParamsValues.Free;
   inherited;
+end;
+
+procedure TMARSClientCustomResource.DoError(const AException: Exception;
+  const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc);
+begin
+  if Assigned(Application) then
+    Application.DoError(Self, AException, AVerb, AAfterExecute)
+  else if Assigned(Client) then
+    Client.DoError(Self, AException, AVerb, AAfterExecute)
+  else
+    raise EMARSClientException.Create(AException.Message);
 end;
 
 procedure TMARSClientCustomResource.GET(const ABeforeExecute: TMARSCLientProc;
@@ -297,7 +315,7 @@ begin
       if Assigned(AOnException) then
         AOnException(E)
       else
-        raise Exception.Create(E.Message);
+        DoError(E, TMARSHttpVerb.Get, AAfterExecute);
     end;
   end;
 end;
@@ -407,7 +425,7 @@ begin
       if Assigned(AOnException) then
         AOnException(E)
       else
-        raise Exception.Create(E.Message);
+        DoError(E, TMARSHttpVerb.Post, AAfterExecute);
     end;
   end;
 end;
@@ -475,7 +493,7 @@ begin
       if Assigned(AOnException) then
         AOnException(E)
       else
-        raise Exception.Create(E.Message);
+        DoError(E, TMARSHttpVerb.Put, AAfterExecute);
     end;
   end;
 end;

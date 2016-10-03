@@ -12,6 +12,8 @@ uses
   ;
 
 type
+  EMARSClientException = class(Exception);
+
   TMARSClientProc = TProc;
   TMARSClientResponseProc = TProc<TStream>;
   TMARSClientExecptionProc = TProc<Exception>;
@@ -21,6 +23,7 @@ type
     class function IsDesigning(AComponent: TComponent): Boolean;
     class function FindDefault<T: class>(AComponent: TComponent): T;
   end;
+
 
 implementation
 

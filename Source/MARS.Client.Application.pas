@@ -11,8 +11,8 @@ interface
 
 uses
   SysUtils, Classes
-
   , MARS.Client.Client
+  , MARS.Client.Utils
   ;
 
 type
@@ -32,15 +32,18 @@ type
     FAppName: string;
     FDefaultMediaType: string;
     FClient: TMARSClient;
+    FOnError: TMARSClientErrorEvent;
   protected
     function GetPath: string; virtual;
   public
     constructor Create(AOwner: TComponent); override;
+    procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
   published
     property DefaultMediaType: string read FDefaultMediaType write FDefaultMediaType;
     property AppName: string read FAppName write FAppName;
     property Client: TMARSClient read FClient write FClient;
     property Path: string read GetPath;
+    property OnError: TMARSClientErrorEvent read FOnError write FOnError;
   end;
 
 procedure Register;
@@ -48,8 +51,7 @@ procedure Register;
 implementation
 
 uses
-    MARS.Client.Utils
-  , MARS.Core.URL
+  MARS.Core.URL
   ;
 
 procedure Register;
@@ -66,6 +68,25 @@ begin
   FAppName := 'default';
   if TMARSComponentHelper.IsDesigning(Self) then
     FClient := TMARSComponentHelper.FindDefault<TMARSClient>(Self);
+end;
+
+procedure TMARSClientApplication.DoError(const AResource: TObject;
+  const AException: Exception; const AVerb: TMARSHttpVerb;
+  const AAfterExecute: TMARSClientResponseProc);
+var
+  LHandled: Boolean;
+begin
+  LHandled := False;
+  if Assigned(FOnError) then
+    FOnError(AResource, AException, AVerb, AAfterExecute, LHandled);
+
+  if not LHandled then
+  begin
+    if Assigned(Client) then
+      Client.DoError(AResource, AException, AVerb, AAfterExecute)
+    else
+      raise EMARSClientException.Create(AException.Message);
+  end;
 end;
 
 function TMARSClientApplication.GetPath: string;

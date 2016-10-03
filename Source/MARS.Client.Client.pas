@@ -23,6 +23,10 @@ uses
   ;
 
 type
+  TMARSHttpVerb = (Get, Put, Post, Head, Delete, Patch);
+  TMARSClientErrorEvent = procedure (AResource: TObject;
+    AException: Exception; AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc; var AHandled: Boolean) of object;
+
   {$ifdef DelphiXE2_UP}
     [ComponentPlatformsAttribute(
         pidWin32 or pidWin64
@@ -38,6 +42,7 @@ type
   private
     FHttpClient: TIdHTTP;
     FMARSEngineURL: string;
+    FOnError: TMARSClientErrorEvent;
 
 {$ifdef DelphiXE7_UP}
     FWorkerTask: ITask;
@@ -56,6 +61,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
 
     procedure Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
     procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string);
@@ -113,14 +120,18 @@ type
     property MARSEngineURL: string read FMARSEngineURL write FMARSEngineURL;
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
+    property OnError: TMARSClientErrorEvent read FOnError write FOnError;
   end;
+
+function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
 
 procedure Register;
 
 implementation
 
 uses
-    MARS.Client.Resource
+    Rtti
+  , MARS.Client.Resource
   , MARS.Client.Resource.JSON
   , MARS.Client.Resource.Stream
   , MARS.Client.Application
@@ -129,6 +140,11 @@ uses
 procedure Register;
 begin
   RegisterComponents('MARS-Curiosity Client', [TMARSClient]);
+end;
+
+function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
+begin
+  Result := TRttiEnumerationType.GetName<TMARSHttpVerb>(AVerb);
 end;
 
 { TMARSClient }
@@ -156,6 +172,21 @@ begin
   inherited;
 end;
 
+procedure TMARSClient.DoError(const AResource: TObject;
+  const AException: Exception; const AVerb: TMARSHttpVerb;
+  const AAfterExecute: TMARSClientResponseProc);
+var
+  LHandled: Boolean;
+begin
+  LHandled := False;
+
+  if Assigned(FOnError) then
+    FOnError(AResource, AException, AVerb, AAfterExecute, LHandled);
+
+  if not LHandled then
+    raise EMARSClientException.Create(AException.Message)
+end;
+
 procedure TMARSClient.EndorseAuthorization(const AAuthToken: string);
 begin
   if not AAuthToken.IsEmpty then
@@ -171,10 +202,10 @@ procedure TMARSClient.ExecuteAsync(const AProc: TProc);
 begin
 {$ifdef DelphiXE7_UP}
   if IsRunningAsync then
-    raise Exception.Create('Multiple async execution not yet supported');
+    raise EMARSClientException.Create('Multiple async execution not yet supported');
   FWorkerTask := TTask.Create(AProc).Start;
 {$else}
-  raise Exception.Create('Async execution not yet supported');
+  raise EMARSClientException.Create('Async execution not yet supported');
 {$endif}
 end;
 

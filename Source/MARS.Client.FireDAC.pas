@@ -101,7 +101,7 @@ begin
   LDataSets := TFDJSONDataSets.Create;
   try
     if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONObj, LDataSets) then
-      raise Exception.Create('Error deserializing data');
+      raise EMARSClientException.Create('Error deserializing data');
 
     LCount := TFDJSONDataSetsReader.GetListCount(LDataSets);
     for LIndex := 0 to LCount-1 do
