@@ -49,6 +49,7 @@ type
     procedure AfterDELETE; override;
     procedure ParseData; virtual;
     function GetAuthToken: string; override;
+    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -109,6 +110,17 @@ begin
     FData.Free;
   FData := StreamToJSONValue(Client.Response.ContentStream) as TJSONObject;
   ParseData;
+end;
+
+procedure TMARSClientToken.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSClientToken;
+begin
+  inherited AssignTo(Dest);
+  LDest := Dest as TMARSClientToken;
+
+  LDest.UserName := UserName;
+  LDest.Password := Password;
 end;
 
 procedure TMARSClientToken.BeforePOST(AContent: TMemoryStream);
