@@ -14,10 +14,6 @@ uses
   , MARS.Core.JSON
   , MARS.Client.Utils
 
-{$ifdef DelphiXE7_UP}
-  , System.Threading
-{$endif}
-
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP
   ;
@@ -43,10 +39,6 @@ type
     FHttpClient: TIdHTTP;
     FMARSEngineURL: string;
     FOnError: TMARSClientErrorEvent;
-
-{$ifdef DelphiXE7_UP}
-    FWorkerTask: ITask;
-{$endif}
     function GetRequest: TIdHTTPRequest;
     function GetResponse: TIdHTTPResponse;
     function GetConnectTimeout: Integer;
@@ -54,10 +46,8 @@ type
     procedure SetConnectTimeout(const Value: Integer);
     procedure SetReadTimeout(const Value: Integer);
   protected
-{$ifdef DelphiXE7_UP}
-    property WorkerTask: ITask read FWorkerTask;
-{$endif}
     procedure EndorseAuthorization(const AAuthToken: string);
+    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -70,9 +60,6 @@ type
     procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
     function LastCmdSuccess: Boolean;
     function ResponseText: string;
-
-    procedure ExecuteAsync(const AProc: TProc);
-    function IsRunningAsync: Boolean;
 
     property Request: TIdHTTPRequest read GetRequest;
     property Response: TIdHTTPResponse read GetResponse;
@@ -131,6 +118,7 @@ implementation
 
 uses
     Rtti
+  , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
   , MARS.Client.Resource.Stream
@@ -149,12 +137,26 @@ end;
 
 { TMARSClient }
 
+procedure TMARSClient.AssignTo(Dest: TPersistent);
+var
+  LDestClient: TMARSClient;
+begin
+//  inherited;
+  LDestClient := Dest as TMARSClient;
+
+  LDestClient.MARSEngineURL := MARSEngineURL;
+  LDestClient.ConnectTimeout := ConnectTimeout;
+  LDestClient.ReadTimeout := ReadTimeout;
+  LDestClient.OnError := OnError;
+end;
+
 constructor TMARSClient.Create(AOwner: TComponent);
 begin
   inherited;
   FHttpClient := TIdHTTP.Create(nil);
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
+
 
 procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
 begin
@@ -198,17 +200,6 @@ begin
     FHttpClient.Request.CustomHeaders.Values['Authorization'] := '';
 end;
 
-procedure TMARSClient.ExecuteAsync(const AProc: TProc);
-begin
-{$ifdef DelphiXE7_UP}
-  if IsRunningAsync then
-    raise EMARSClientException.Create('Multiple async execution not yet supported');
-  FWorkerTask := TTask.Create(AProc).Start;
-{$else}
-  raise EMARSClientException.Create('Async execution not yet supported');
-{$endif}
-end;
-
 procedure TMARSClient.Get(const AURL: string; AResponseContent: TStream;
   const AAccept: string; const AAuthToken: string);
 begin
@@ -235,15 +226,6 @@ end;
 function TMARSClient.GetResponse: TIdHTTPResponse;
 begin
   Result := FHttpClient.Response;
-end;
-
-function TMARSClient.IsRunningAsync: Boolean;
-begin
-{$ifdef DelphiXE7_UP}
-  Result := Assigned(FWorkerTask) and (FWorkerTask.Status < TTaskStatus.Completed);
-{$else}
-  Result := False;
-{$endif}
 end;
 
 function TMARSClient.LastCmdSuccess: Boolean;
@@ -399,11 +381,11 @@ begin
 
         LFinalURL := LResource.URL;
         LResource.GETAsync(
-          procedure
+          procedure (AResource: TMARSClientCustomResource)
           begin
             try
               if Assigned(ACompletionHandler) then
-                ACompletionHandler(LResource.Response as T);
+                ACompletionHandler((AResource as TMARSClientResourceJSON).Response as T);
             finally
               LResource.Free;
               LApp.Free;

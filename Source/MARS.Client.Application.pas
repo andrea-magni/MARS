@@ -35,6 +35,7 @@ type
     FOnError: TMARSClientErrorEvent;
   protected
     function GetPath: string; virtual;
+    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(AOwner: TComponent); override;
     procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
@@ -60,6 +61,19 @@ begin
 end;
 
 { TMARSClientApplication }
+
+procedure TMARSClientApplication.AssignTo(Dest: TPersistent);
+var
+  LDestApp: TMARSClientApplication;
+begin
+//  inherited;
+  LDestApp := Dest as TMARSClientApplication;
+
+  LDestApp.DefaultMediaType := DefaultMediaType;
+  LDestApp.AppName := AppName;
+  LDestApp.Client := Client;
+  LDestApp.OnError := OnError;
+end;
 
 constructor TMARSClientApplication.Create(AOwner: TComponent);
 begin

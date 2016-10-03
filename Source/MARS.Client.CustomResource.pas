@@ -61,6 +61,7 @@ type
     procedure AfterDELETE; virtual;
 
     procedure DoError(const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
+    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -94,7 +95,7 @@ type
 //      const AAfterExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
 //      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
 
-    procedure GETAsync(const ACompletionHandler: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
+    procedure GETAsync(const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       ASynchronize: Boolean = True);
     procedure POSTAsync(
@@ -118,14 +119,19 @@ type
   published
   end;
 
+  TMARSClientCustomResourceClass = class of TMARSClientCustomResource;
+
 
 implementation
 
 uses
-    MARS.Core.URL
+    System.Threading
+  , MARS.Core.URL
   , MARS.Core.Utils
   , MARS.Client.Token
-  ;
+  , MARS.Client.Resource
+  , MARS.Client.SubResource
+;
 
 { TMARSClientCustomResource }
 
@@ -147,6 +153,22 @@ end;
 procedure TMARSClientCustomResource.AfterPUT;
 begin
 
+end;
+
+procedure TMARSClientCustomResource.AssignTo(Dest: TPersistent);
+var
+  LDestResource: TMARSClientCustomResource;
+begin
+//  inherited;
+  LDestResource := Dest as TMARSClientCustomResource;
+  LDestResource.Application := Application;
+
+  LDestResource.SpecificAccept := SpecificAccept;
+  LDestResource.SpecificClient := SpecificClient;
+  LDestResource.Resource := Resource;
+  LDestResource.PathParamsValues.Assign(PathParamsValues);
+  LDestResource.QueryParams.Assign(QueryParams);
+  LDestResource.Token := Token;
 end;
 
 procedure TMARSClientCustomResource.BeforeDELETE;
@@ -370,27 +392,84 @@ begin
 end;
 
 procedure TMARSClientCustomResource.GETAsync(
-  const ACompletionHandler: TMARSClientProc;
+  const ACompletionHandler: TProc<TMARSClientCustomResource>;
   const AOnException: TMARSClientExecptionProc;
   ASynchronize: Boolean);
+var
+  LClient: TMARSClient;
+  LApplication: TMARSClientApplication;
+  LResource, LParentResource: TMARSClientCustomResource;
 begin
-  Client.ExecuteAsync(
-    procedure
-    begin
-      GET(nil
-        , procedure (AStream: TStream)
+  LClient := TMARSClient.Create(nil);
+  try
+    LClient.Assign(Client);
+    LApplication := TMARSClientApplication.Create(nil);
+    try
+      LApplication.Assign(Application);
+      LApplication.Client := LClient;
+      LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
+      try
+        LResource.Assign(Self);
+        LResource.SpecificClient := nil;
+        LResource.Application := LApplication;
+
+        LParentResource := nil;
+        if Self is TMARSClientSubResource then
+        begin
+          LParentResource := TMARSClientCustomResourceClass(TMARSClientSubResource(Self).ParentResource.ClassType).Create(nil);
+          try
+            LParentResource.Assign(TMARSClientSubResource(Self).ParentResource);
+            LParentResource.SpecificClient := nil;
+            LParentResource.Application := LApplication;
+            (LResource as TMARSClientSubResource).ParentResource := LParentResource as TMARSClientResource;
+          except
+            LParentResource.Free;
+            raise;
+          end;
+        end;
+
+        TTask.Run(
+          procedure
           begin
-            if Assigned(ACompletionHandler) then
-            begin
-              if ASynchronize then
-                TThread.Queue(nil, TThreadProcedure(ACompletionHandler))
-              else
-                ACompletionHandler();
-            end;
+            try
+              LResource.GET(nil
+                , procedure (AStream: TStream)
+                  begin
+                    if Assigned(ACompletionHandler) then
+                    begin
+                      if ASynchronize then
+                        TThread.Queue(nil
+                          , procedure
+                            begin
+                              ACompletionHandler(LResource);
+                            end
+                        )
+                      else
+                        ACompletionHandler(LResource);
+                    end;
+                  end
+                , AOnException);
+              finally
+                LResource.Free;
+                if Assigned(LParentResource) then
+                  LParentResource.Free;
+                LApplication.Free;
+                LClient.Free;
+              end;
           end
-        , AOnException);
-    end
-  );
+        );
+      except
+        LResource.Free;
+        raise;
+      end;
+    except
+      LApplication.Free;
+      raise;
+    end;
+  except
+    LClient.Free;
+    raise;
+  end;
 end;
 
 procedure TMARSClientCustomResource.POST(
@@ -440,25 +519,25 @@ procedure TMARSClientCustomResource.POSTAsync(
   const AOnException: TMARSClientExecptionProc;
   ASynchronize: Boolean);
 begin
-  Client.ExecuteAsync(
-    procedure
-    begin
-      POST(
-        ABeforeExecute
-      , procedure (AStream: TStream)
-        begin
-          if Assigned(ACompletionHandler) then
-          begin
-            if ASynchronize then
-              TThread.Queue(nil, TThreadProcedure(ACompletionHandler))
-            else
-              ACompletionHandler();
-          end;
-        end
-      , AOnException
-      );
-    end
-  );
+//  Client.ExecuteAsync(
+//    procedure
+//    begin
+//      POST(
+//        ABeforeExecute
+//      , procedure (AStream: TStream)
+//        begin
+//          if Assigned(ACompletionHandler) then
+//          begin
+//            if ASynchronize then
+//              TThread.Queue(nil, TThreadProcedure(ACompletionHandler))
+//            else
+//              ACompletionHandler();
+//          end;
+//        end
+//      , AOnException
+//      );
+//    end
+//  );
 end;
 
 procedure TMARSClientCustomResource.PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
