@@ -31,9 +31,11 @@ type
   TMARSEngine = class;
 
   IMARSHandleRequestEventListener = interface
-    procedure BeforeHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication);
+    procedure BeforeHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; var AIsAllowed: Boolean);
     procedure AfterHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; const AStopWatch: TStopWatch);
   end;
+
+  TMARSEngineBeforeHandleRequestEvent = TFunc<TMARSEngine, TMARSURL, Boolean>;
 
   TMARSEngine = class
   private
@@ -47,6 +49,7 @@ type
     FCriticalSection: TCriticalSection;
     FParameters: TMARSParameters;
     FName: string;
+    FOnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent;
 
     function GetCurrentRequest: TWebRequest;
     function GetCurrentResponse: TWebResponse;
@@ -59,7 +62,7 @@ type
     procedure SetPort(const Value: Integer);
     procedure SetThreadPoolSize(const Value: Integer);
   protected
-    procedure DoBeforeHandleRequest(const AApplication: TMARSApplication); virtual;
+    function DoBeforeHandleRequest(const AApplication: TMARSApplication): Boolean; virtual;
     procedure DoAfterHandleRequest(const AApplication: TMARSApplication; const AStopWatch: TStopWatch); virtual;
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
@@ -87,6 +90,8 @@ type
     property CurrentToken: TMARSToken read GetCurrentToken;
     property CurrentRequest: TWebRequest read GetCurrentRequest;
     property CurrentResponse: TWebResponse read GetCurrentResponse;
+
+    property OnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent read FOnBeforeHandleRequest write FOnBeforeHandleRequest;
   end;
 
   TMARSEngineRegistry=class
@@ -193,12 +198,13 @@ begin
     LSubscriber.AfterHandleRequest(Self, AApplication, AStopWatch);
 end;
 
-procedure TMARSEngine.DoBeforeHandleRequest(const AApplication: TMARSApplication);
+function TMARSEngine.DoBeforeHandleRequest(const AApplication: TMARSApplication): Boolean;
 var
   LSubscriber: IMARSHandleRequestEventListener;
 begin
+  Result := True;
   for LSubscriber in FSubscribers do
-    LSubscriber.BeforeHandleRequest(Self, AApplication);
+    LSubscriber.BeforeHandleRequest(Self, AApplication, Result);
 end;
 
 procedure TMARSEngine.EnumerateApplications(
@@ -229,6 +235,9 @@ begin
 
   LURL := TMARSURL.Create(ARequest);
   try
+    if Assigned(FOnBeforeHandleRequest) and not FOnBeforeHandleRequest(Self, LURL) then
+      Exit;
+
     LApplicationPath := '';
     if LURL.HasPathTokens then
       LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0]]);
@@ -254,11 +263,12 @@ begin
         , LApplication.Parameters.ByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString
       );
       try
-        DoBeforeHandleRequest(LApplication);
-        LStopWatch := TStopwatch.StartNew;
-        LApplication.HandleRequest(ARequest, AResponse, LURL);
-        LStopWatch.Stop;
-        DoAfterHandleRequest(LApplication, LStopWatch);
+        if DoBeforeHandleRequest(LApplication) then begin
+          LStopWatch := TStopwatch.StartNew;
+          LApplication.HandleRequest(ARequest, AResponse, LURL);
+          LStopWatch.Stop;
+          DoAfterHandleRequest(LApplication, LStopWatch);
+        end;
       finally
         FToken.Free;
       end;
