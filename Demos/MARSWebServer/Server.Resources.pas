@@ -101,12 +101,16 @@ end;
 
 function TRazorResource.GetFilesFolder: string;
 begin
-  Result := 'c:\temp\files\';
+  Result := IncludeTrailingPathDelimiter(
+    TPath.Combine(ExtractFilePath(ParamStr(0)), 'files')
+  );
 end;
 
 function TRazorResource.GetTemplatesFolder: string;
 begin
-  Result := 'c:\temp\templates\';
+  Result := IncludeTrailingPathDelimiter(
+    TPath.Combine(ExtractFilePath(ParamStr(0)), 'templates')
+  );
 end;
 
 function TRazorResource.GetHelloText: string;
