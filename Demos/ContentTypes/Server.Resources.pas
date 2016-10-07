@@ -132,7 +132,7 @@ end;
 
 function THelloWorldResource.JpegImage: TStream;
 begin
-  Result := TFileStream.Create('..\SampleData\Sample.jpg', fmOpenRead or fmShareDenyWrite);
+  Result := TFileStream.Create('..\..\SampleData\Sample.jpg', fmOpenRead or fmShareDenyWrite);
 end;
 
 function THelloWorldResource.JSON1: TJSONObject;
@@ -143,7 +143,7 @@ end;
 
 function THelloWorldResource.PdfDocument: TStream;
 begin
-  Result := TFileStream.Create('..\SampleData\Sample.pdf', fmOpenRead or fmShareDenyWrite);
+  Result := TFileStream.Create('..\..\SampleData\Sample.pdf', fmOpenRead or fmShareDenyWrite);
 end;
 
 function THelloWorldResource.SayHelloWorld: string;

@@ -48,6 +48,7 @@ implementation
 uses
   MARS.Core.JSON
   , MARS.Rtti.Utils
+  , MARS.Core.URL
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Data.MessageBodyWriters
@@ -73,6 +74,11 @@ begin
   try
     FEngine.Parameters.LoadFromIniFile;
     FEngine.AddApplication('Default', '/default', [ 'Server.Resources.*']);
+    FEngine.OnBeforeHandleRequest :=
+      function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
+      begin
+        Result := not AURL.Path.EndsWith('favicon.ico', True);
+      end;
 
     // http server implementation
     FServer := TMARShttpServerIndy.Create(FEngine);
