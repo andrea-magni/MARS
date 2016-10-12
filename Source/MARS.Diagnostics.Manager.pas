@@ -97,7 +97,7 @@ type
     procedure OnTokenEnd(const AToken: string);
 
     // IMARSHandleRequestEventListener
-    procedure BeforeHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication);
+    procedure BeforeHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; var AIsAllowed: Boolean);
     procedure AfterHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; const AStopWatch: TStopWatch);
     class var FEngine: TMARSEngine; //TODO: remove, as you remove the singleton from TMARSDiagnosticsManager
     class destructor ClassDestructor;
@@ -138,7 +138,7 @@ begin
 end;
 
 procedure TMARSDiagnosticsManager.BeforeHandleRequest(const ASender: TMARSEngine;
-  const AApplication: TMARSApplication);
+  const AApplication: TMARSApplication; var AIsAllowed: Boolean);
 begin
 
 end;
