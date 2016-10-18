@@ -230,14 +230,15 @@ var
     LIndex, LPosition: Integer;
   begin
     LUSFormat := TFormatSettings.Create('en');
+    LUSFormat.DecimalSeparator := '.'; // do not localize
     for LIndex := 1 to High(LSplitted) do
     begin
       LPosition := FMediaParameters.Add(Trim(LSplitted[LIndex]));
 
       if FMediaParameters.Names[LPosition] = QFACTOR_NAME then
-        FQFactor := StrToFloat(FMediaParameters.ValueFromIndex[LPosition], LUSFormat)
+        FQFactor := StrToFloatDef(FMediaParameters.ValueFromIndex[LPosition], 0.5, LUSFormat)
       else if FMediaParameters.Names[LPosition] = VERSION_NAME then
-        FVersion := StrToInt(FMediaParameters.ValueFromIndex[LPosition])
+        FVersion := StrToIntDef(FMediaParameters.ValueFromIndex[LPosition], 1)
       else if FMediaParameters.Names[LPosition] = DIALECT_NAME then
         FDialect := FMediaParameters.ValueFromIndex[LPosition]
       else if FMediaParameters.Names[LPosition] = CHARSET_NAME then
