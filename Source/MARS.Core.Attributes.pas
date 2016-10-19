@@ -151,9 +151,10 @@ type
   private
     FRoles: TStringList;
   protected
+    constructor Create(const ARoleNames: TArray<string>); overload; virtual;
   public
-    constructor Create(ARoleName: string); overload; virtual;
-    constructor Create(ARoleNames: array of string); overload; virtual;
+    constructor Create(const ARoleNames: string); overload; virtual;
+
     destructor Destroy; override;
 
     property Roles: TStringList read FRoles;
@@ -245,12 +246,12 @@ end;
 
 { RolesAllowedAttribute }
 
-constructor RolesAllowedAttribute.Create(ARoleName: string);
+constructor RolesAllowedAttribute.Create(const ARoleNames: string);
 begin
-  Create([ARoleName]);
+  Create(ARoleNames.Split([',', ' ', ';'], TStringSplitOptions.ExcludeEmpty));
 end;
 
-constructor RolesAllowedAttribute.Create(ARoleNames: array of string);
+constructor RolesAllowedAttribute.Create(const ARoleNames: TArray<string>);
 var
   LRole: string;
 begin
