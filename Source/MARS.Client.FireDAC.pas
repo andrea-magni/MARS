@@ -26,6 +26,8 @@ type
     FSendDelta: Boolean;
     FSynchronize: Boolean;
     procedure SetDataSet(const Value: TFDMemTable);
+  protected
+    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(Collection: TCollection); override;
   published
@@ -57,6 +59,8 @@ type
     procedure AfterPOST(); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
+    procedure AssignTo(Dest: TPersistent); override;
+
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -101,7 +105,7 @@ begin
   LDataSets := TFDJSONDataSets.Create;
   try
     if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONObj, LDataSets) then
-      raise Exception.Create('Error deserializing data');
+      raise EMARSClientException.Create('Error deserializing data');
 
     LCount := TFDJSONDataSetsReader.GetListCount(LDataSets);
     for LIndex := 0 to LCount-1 do
@@ -169,6 +173,16 @@ begin
   if Assigned(FPOSTResponse) then
     FPOSTResponse.Free;
   FPOSTResponse := StreamToJSONValue(Client.Response.ContentStream);
+end;
+
+procedure TMARSFDResource.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSFDResource;
+begin
+  inherited AssignTo(Dest);
+  LDest := Dest as TMARSFDResource;
+
+  LDest.ResourceDataSets.Assign(ResourceDataSets);
 end;
 
 procedure TMARSFDResource.BeforePOST(AContent: TMemoryStream);
@@ -282,6 +296,19 @@ begin
 end;
 
 { TMARSFDResourceDatasetsItem }
+
+procedure TMARSFDResourceDatasetsItem.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSFDResourceDatasetsItem;
+begin
+//   inherited;
+  LDest := Dest as TMARSFDResourceDatasetsItem;
+
+  LDest.DataSetName := DataSetName;
+  LDest.DataSet := DataSet;
+  LDest.SendDelta := SendDelta;
+  LDest.Synchronize := Synchronize;
+end;
 
 constructor TMARSFDResourceDatasetsItem.Create(Collection: TCollection);
 begin

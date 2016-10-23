@@ -42,21 +42,27 @@ type
     [GET, Path('/sum/{First}/{Second}')]
     function Sum([PathParam] First: Integer; [PathParam] Second: Integer): Integer;
 
-    [POST, Path('/countitems')]
-    function CountItems([BodyParam] Data: TJSONArray): Integer;
+    [POST, Path('/countitems'), Produces(TMediaType.APPLICATION_JSON)]
+    function CountItems([BodyParam] Data: TJSONArray): TJSONObject;
+
+    [GET, Path('/slow/{ms}/{error}')]
+    function Slow([PathParam] ms: Integer; [PathParam] error: Integer): string;
+
   end;
 
 implementation
 
 uses
   StrUtils
+  , MARS.Core.Exceptions
   ;
 
 { THelloWorldResource }
 
-function THelloWorldResource.CountItems(Data: TJSONArray): Integer;
+function THelloWorldResource.CountItems(Data: TJSONArray): TJSONObject;
 begin
-  Result := Data.Count;
+  Result := TJSONObject.Create;
+  Result.WriteIntegerValue('count', Data.Count);
 end;
 
 function THelloWorldResource.EchoString(AString: string): string;
@@ -79,6 +85,14 @@ begin
   Result := StrUtils.ReverseString(AString);
 end;
 
+
+function THelloWorldResource.Slow(ms: Integer; error: Integer): string;
+begin
+  Sleep(ms);
+  Result := 'Waited ' + ms.ToString + ' ms';
+  if error > 0 then
+    raise EMARSHttpException.Create('Ho fatto errore come richiesto', 501);
+end;
 
 function THelloWorldResource.Sum(First, Second: Integer): Integer;
 begin
