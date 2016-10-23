@@ -62,6 +62,7 @@ type
 
     procedure CheckResource; virtual;
     procedure CheckMethod; virtual;
+    procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
 
     procedure Invoke; virtual;
@@ -377,6 +378,12 @@ begin
   finally
     FResourceInstance.Free;
   end;
+end;
+
+procedure TMARSActivationRecord.CheckAuthentication;
+begin
+  if Token.IsVerified and Token.IsExpired then
+    raise EMARSAuthenticationException.Create('Token expired', 403);
 end;
 
 procedure TMARSActivationRecord.CheckAuthorization;

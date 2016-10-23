@@ -28,6 +28,7 @@ uses
 
 type
   EMARSApplicationException = class(EMARSHttpException);
+  EMARSAuthenticationException = class(EMARSApplicationException);
   EMARSAuthorizationException = class(EMARSApplicationException);
 
   TMARSApplication = class
@@ -39,24 +40,25 @@ type
     FEngine: TObject;
     FSystem: Boolean;
     FParameters: TMARSParameters;
-    function GetRequest: TWebRequest;
-    function GetResponse: TWebResponse;
-    function GetURL: TMARSURL;
-    function GetToken: TMARSToken;
   protected
+    function GetRequest: TWebRequest; virtual;
+    function GetResponse: TWebResponse; virtual;
+    function GetURL: TMARSURL; virtual;
+    function GetToken: TMARSToken; virtual;
+
     property Request: TWebRequest read GetRequest;
     property Response: TWebResponse read GetResponse;
     property URL: TMARSURL read GetURL;
     property Token: TMARSToken read GetToken;
   public
-    constructor Create(const AEngine: TObject; const AName: string);
+    constructor Create(const AEngine: TObject; const AName: string); virtual;
     destructor Destroy; override;
 
     function AddResource(AResource: string): Boolean;
     procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
 
     function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse;
-      const AURL: TMARSURL): Boolean;
+      const AURL: TMARSURL): Boolean; virtual;
 
     property Engine: TObject read FEngine;
     property Name: string read FName;
@@ -193,6 +195,7 @@ begin
     try
       LActivationRecord.CheckResource;
       LActivationRecord.CheckMethod;
+      LActivationRecord.CheckAuthentication;
       LActivationRecord.CheckAuthorization;
 
       LActivationRecord.Invoke;

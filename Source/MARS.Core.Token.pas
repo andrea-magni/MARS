@@ -32,6 +32,8 @@ type
     FToken: string;
     FIsVerified: Boolean;
     FClaims: TMARSParameters;
+    FIssuedAt: TDateTime;
+    FExpiration: TDateTime;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetRoles: TArray<string>;
@@ -50,6 +52,7 @@ type
     function HasRole(const ARole: string): Boolean; overload; virtual;
     function HasRole(const ARoles: TArray<string>): Boolean; overload; virtual;
     function HasRole(const ARoles: TStrings): Boolean; overload; virtual;
+    function IsExpired: Boolean; virtual;
     procedure SetUserNameAndRoles(const AUserName: string; const ARoles: TArray<string>); virtual;
 
     function ToJSON: TJSONObject; virtual;
@@ -60,6 +63,8 @@ type
     property Roles: TArray<string> read GetRoles write SetRoles;
     property IsVerified: Boolean read FIsVerified;
     property Claims: TMARSParameters read FClaims;
+    property Expiration: TDateTime read FExpiration;
+    property IssuedAt: TDateTime read FIssuedAt;
 
     const JWT_ISSUER = 'MARS-Curiosity';
     const JWT_USERNAME = 'UserName';
@@ -115,6 +120,8 @@ procedure TMARSToken.Clear;
 begin
   FToken := '';
   FIsVerified := False;
+  FExpiration := 0.0;
+  FIssuedAt := 0.0;
   FClaims.Clear;
 end;
 
@@ -155,6 +162,11 @@ end;
 function TMARSToken.HasRole(const ARoles: TStrings): Boolean;
 begin
   Result := HasRole(ARoles.ToStringArray);
+end;
+
+function TMARSToken.IsExpired: Boolean;
+begin
+  Result := Expiration < Now;
 end;
 
 function TMARSToken.HasRole(const ARoles: TArray<string>): Boolean;
@@ -222,7 +234,11 @@ begin
         try
           FIsVerified := LJWT.Verified;
           if FIsVerified then
+          begin
+            FExpiration := LJWT.Claims.Expiration;
+            FIssuedAt := LJWT.Claims.IssuedAt;
             FClaims.LoadFromJSON(LJWT.Claims.JSON);
+          end;
         finally
           LJWT.Free;
         end;
