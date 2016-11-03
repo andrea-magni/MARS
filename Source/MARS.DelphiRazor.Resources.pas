@@ -28,7 +28,9 @@ type
     Name: string;
     Instance: TObject;
     Owned: Boolean;
-    constructor Create(AName: string; AInstance: TObject; AOwned: Boolean = True);
+    InitFunction: TInitFunction;
+    constructor Create(AName: string; AInstance: TObject; AOwned: Boolean = True); overload;
+    constructor Create(AName: string; AInitFunction: TInitFunction); overload;
   end;
 
   TRazorResource = class
@@ -144,7 +146,16 @@ constructor TContextEntry.Create(AName: string; AInstance: TObject;
 begin
   Name := AName;
   Instance := AInstance;
+  InitFunction := nil;
   Owned := AOwned;
+end;
+
+constructor TContextEntry.Create(AName: string; AInitFunction: TInitFunction);
+begin
+  Name := AName;
+  Instance := nil;
+  InitFunction := AInitFunction;
+  Owned := true;
 end;
 
 end.
