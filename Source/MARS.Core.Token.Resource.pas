@@ -9,6 +9,7 @@ interface
 
 uses
   Classes, SysUtils
+  , Web.HttpApp
 
   , MARS.Core.JSON
   , MARS.Core.Registry
@@ -24,17 +25,22 @@ uses
   ;
 
 type
+  SetCookieAttribute = class(MARSAttribute);
+
   TMARSTokenResource = class
   private
   protected
     [Context] Token: TMARSToken;
     [Context] App: TMARSApplication;
+    [Context] Response: TWebResponse;
+    [Context] URL: TMARSURL;
     function Authenticate(const AUserName, APassword: string): Boolean; virtual;
     procedure BeforeLogin(const AUserName, APassword: string); virtual;
     procedure AfterLogin(const AUserName, APassword: string); virtual;
 
     procedure BeforeLogout(); virtual;
     procedure AfterLogout(); virtual;
+    procedure SetCookieValue(const AValue: string); virtual;
   public
     [GET, Produces(TMediaType.APPLICATION_JSON)]
     function GetCurrent: TJSONObject;
@@ -53,18 +59,21 @@ implementation
 
 uses
   DateUtils
+, MARS.Rtti.Utils
   ;
 
 { TMARSTokenResource }
 
 procedure TMARSTokenResource.AfterLogin(const AUserName, APassword: string);
 begin
-
+  if TRttiHelper.IfHasAttribute<SetCookieAttribute>(Self) then
+    SetCookieValue(Token.Token);
 end;
 
 procedure TMARSTokenResource.AfterLogout;
 begin
-
+  if TRttiHelper.IfHasAttribute<SetCookieAttribute>(Self) then
+    SetCookieValue('');
 end;
 
 function TMARSTokenResource.Authenticate(const AUserName, APassword: string): Boolean;
@@ -122,7 +131,38 @@ end;
 
 function TMARSTokenResource.Logout: TJSONObject;
 begin
-  Result := Token.ToJSON;
+  BeforeLogout();
+  try
+    Token.Clear;
+    Result := Token.ToJSON;
+  finally
+    AfterLogout();
+  end;
+end;
+
+procedure TMARSTokenResource.SetCookieValue(const AValue: string);
+var
+  LCookieName: string;
+  LContent: TStringList;
+begin
+  LContent := TStringList.Create;
+  try
+    LCookieName := App.Parameters.ByName(
+        TMARSToken.JWT_COOKIENAME_PARAM
+      , TMARSToken.JWT_COOKIENAME_PARAM_DEFAULT).AsString;
+
+    if AValue <> '' then
+    begin
+      LContent.Values[LCookieName] := AValue;
+      Response.SetCookieField(LContent, URL.HostName, '/', Token.Expiration, False);
+    end
+    else begin
+      LContent.Values[LCookieName] := 'dummy';
+      Response.SetCookieField(LContent, URL.HostName, '/', Now-1, False);
+    end;
+  finally
+    LContent.Free;
+  end;
 end;
 
 end.
