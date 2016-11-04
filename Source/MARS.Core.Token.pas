@@ -30,6 +30,7 @@ type
   TMARSToken = class
   private
     FToken: string;
+    FDuration: TDateTime;
     FIsVerified: Boolean;
     FClaims: TMARSParameters;
     FIssuedAt: TDateTime;
@@ -69,6 +70,7 @@ type
     property Claims: TMARSParameters read FClaims;
     property Expiration: TDateTime read FExpiration;
     property IssuedAt: TDateTime read FIssuedAt;
+    property Duration: TDateTime read FDuration;
 
     const JWT_ISSUER = 'MARS-Curiosity';
     const JWT_USERNAME = 'UserName';
@@ -78,6 +80,8 @@ type
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
     const JWT_COOKIENAME_PARAM = 'JWT.CookieName';
     const JWT_COOKIENAME_PARAM_DEFAULT = 'access_token';
+    const JWT_DURATION_PARAM = 'JWT.Duration';
+    const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
 
     class procedure WarmUpJWT;
   end;
@@ -125,7 +129,7 @@ end;
 constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSParameters);
 begin
   inherited Create;
-
+  FDuration := AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended;
   FClaims := TMARSParameters.Create('');
   Load(AToken, AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString);
 end;
@@ -225,7 +229,8 @@ begin
     LClaims := LJWT.Claims;
     LClaims.Issuer := JWT_ISSUER;
     LClaims.IssuedAt := Now;
-    LClaims.Expiration := LClaims.IssuedAt + 1; { TODO -oAndrea : Make customizable }
+    LClaims.Expiration := LClaims.IssuedAt + Duration;
+    FExpiration := LClaims.Expiration;
 
     FClaims.SaveToJSON(LClaims.JSON);
 

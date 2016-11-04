@@ -25,7 +25,7 @@ uses
   ;
 
 type
-  SetCookieAttribute = class(MARSAttribute);
+  EnableCookieAttribute = class(MARSAttribute);
 
   TMARSTokenResource = class
   private
@@ -66,13 +66,13 @@ uses
 
 procedure TMARSTokenResource.AfterLogin(const AUserName, APassword: string);
 begin
-  if TRttiHelper.IfHasAttribute<SetCookieAttribute>(Self) then
+  if TRttiHelper.IfHasAttribute<EnableCookieAttribute>(Self) then
     SetCookieValue(Token.Token);
 end;
 
 procedure TMARSTokenResource.AfterLogout;
 begin
-  if TRttiHelper.IfHasAttribute<SetCookieAttribute>(Self) then
+  if TRttiHelper.IfHasAttribute<EnableCookieAttribute>(Self) then
     SetCookieValue('');
 end;
 
@@ -154,11 +154,11 @@ begin
     if AValue <> '' then
     begin
       LContent.Values[LCookieName] := AValue;
-      Response.SetCookieField(LContent, URL.HostName, '/', Token.Expiration, False);
+      Response.SetCookieField(LContent, URL.HostName, URL.BasePath, Token.Expiration, False);
     end
     else begin
       LContent.Values[LCookieName] := 'dummy';
-      Response.SetCookieField(LContent, URL.HostName, '/', Now-1, False);
+      Response.SetCookieField(LContent, URL.HostName, URL.BasePath, Now-1, False);
     end;
   finally
     LContent.Free;

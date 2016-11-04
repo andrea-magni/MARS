@@ -126,10 +126,10 @@ begin
     LIdCookie.CookieName := LCookie.Name;
     LIdCookie.Domain := LCookie.Domain;
     LIdCookie.Expires := LCookie.Expires;
-//    LIdCookie.HttpOnly :=
     LIdCookie.Path := LCookie.Path;
     LIdCookie.Secure := LCookie.Secure;
     LIdCookie.Value := LCookie.Value;
+    LIdCookie.HttpOnly := True;
   end;
 end;
 
