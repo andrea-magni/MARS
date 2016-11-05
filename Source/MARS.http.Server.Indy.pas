@@ -12,6 +12,7 @@ uses
   , SyncObjs
   , IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
   , IdSchedulerOfThreadPool
+  , idHTTPWebBrokerBridge
 
   , MARS.Core.Engine
   , MARS.Core.Token
@@ -22,6 +23,7 @@ type
   private
     FEngine: TMARSEngine;
   protected
+    procedure SetCookies(const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse); virtual;
     procedure Startup; override;
     procedure Shutdown; override;
     procedure DoCommandGet(AContext: TIdContext;
@@ -43,7 +45,8 @@ implementation
 
 uses
   StrUtils
-  , idHTTPWebBrokerBridge
+  , Web.HttpApp
+  , IdCookie
   , MARS.Core.Utils
   ;
 
@@ -84,6 +87,7 @@ begin
         + '}';
       end;
       AResponseInfo.CustomHeaders.AddStrings(LResponse.CustomHeaders);
+      SetCookies(AResponseInfo, LResponse);
     finally
       FreeAndNil(LResponse);
     end;
@@ -105,6 +109,28 @@ procedure TMARShttpServerIndy.ParseAuthenticationHandler(AContext: TIdContext;
 begin
   if SameText(AAuthType, 'Bearer') then
     VHandled := True;
+end;
+
+procedure TMARShttpServerIndy.SetCookies(
+  const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse);
+var
+  LCookie: TCookie;
+  LIdCookie: TIdCookie;
+  LIndex: Integer;
+begin
+  for LIndex := 0 to AResponse.Cookies.Count-1 do
+  begin
+    LCookie := AResponse.Cookies[LIndex];
+
+    LIdCookie := AResponseInfo.Cookies.Add;
+    LIdCookie.CookieName := LCookie.Name;
+    LIdCookie.Domain := LCookie.Domain;
+    LIdCookie.Expires := LCookie.Expires;
+    LIdCookie.Path := LCookie.Path;
+    LIdCookie.Secure := LCookie.Secure;
+    LIdCookie.Value := LCookie.Value;
+    LIdCookie.HttpOnly := True;
+  end;
 end;
 
 procedure TMARShttpServerIndy.SetupThreadPooling(const APoolSize: Integer);

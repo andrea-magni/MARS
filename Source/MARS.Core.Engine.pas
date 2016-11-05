@@ -259,9 +259,7 @@ begin
       FWebRequest := ARequest;
       FWebResponse := AResponse;
       FURL := LURL;
-      FToken := TMARSToken.Create(FWebRequest
-        , LApplication.Parameters.ByName(TMARSToken.JWT_SECRET_PARAM, TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString
-      );
+      FToken := TMARSToken.Create(FWebRequest, LApplication.Parameters);
       try
         if DoBeforeHandleRequest(LApplication) then begin
           LStopWatch := TStopwatch.StartNew;

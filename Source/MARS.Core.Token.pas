@@ -30,19 +30,24 @@ type
   TMARSToken = class
   private
     FToken: string;
+    FDuration: TDateTime;
     FIsVerified: Boolean;
     FClaims: TMARSParameters;
     FIssuedAt: TDateTime;
     FExpiration: TDateTime;
+    FCookieName: string;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetRoles: TArray<string>;
     procedure SetRoles(const AValue: TArray<string>);
   protected
-    function GetToken(const AWebRequest: TWebRequest): string;
+    function GetTokenFromBearer(const ARequest: TWebRequest): string; virtual;
+    function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
+    function GetToken(const ARequest: TWebRequest): string; virtual;
+    property CookieName: string read FCookieName;
   public
-    constructor Create(const AToken, ASecret: string); overload; virtual;
-    constructor Create(const AWebRequest: TWebRequest; const ASecret: string); overload; virtual;
+    constructor Create(const AToken: string; const AParameters: TMARSParameters); overload; virtual;
+    constructor Create(const ARequest: TWebRequest; const AParameters: TMARSParameters); overload; virtual;
     destructor Destroy; override;
 
     procedure Build(const ASecret: string);
@@ -65,12 +70,18 @@ type
     property Claims: TMARSParameters read FClaims;
     property Expiration: TDateTime read FExpiration;
     property IssuedAt: TDateTime read FIssuedAt;
+    property Duration: TDateTime read FDuration;
 
     const JWT_ISSUER = 'MARS-Curiosity';
     const JWT_USERNAME = 'UserName';
     const JWT_ROLES = 'Roles';
+
     const JWT_SECRET_PARAM = 'JWT.Secret';
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
+    const JWT_COOKIENAME_PARAM = 'JWT.CookieName';
+    const JWT_COOKIENAME_PARAM_DEFAULT = 'access_token';
+    const JWT_DURATION_PARAM = 'JWT.Duration';
+    const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
 
     class procedure WarmUpJWT;
   end;
@@ -96,24 +107,31 @@ uses
 }
 class procedure TMARSToken.WarmUpJWT;
 var
+  LParams: TMARSParameters;
   LToken: TMARSToken;
 begin
-  LToken := TMARSToken.Create('', 'dummy_secret');
+  LParams := TMARSParameters.Create('');
   try
-    LToken.Build('dummy_secret');
+    LParams.Values[TMARSToken.JWT_SECRET_PARAM] := 'dummy_secret';
+    LToken := TMARSToken.Create('', LParams);
+    try
+      LToken.Build('dummy_secret');
+    finally
+      LToken.Free;
+    end;
   finally
-    LToken.Free;
+    LParams.Free;
   end;
 end;
 
 { TMARSToken }
 
-constructor TMARSToken.Create(const AToken, ASecret: string);
+constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSParameters);
 begin
   inherited Create;
-
+  FDuration := AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended;
   FClaims := TMARSParameters.Create('');
-  Load(AToken, ASecret);
+  Load(AToken, AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString);
 end;
 
 procedure TMARSToken.Clear;
@@ -125,9 +143,10 @@ begin
   FClaims.Clear;
 end;
 
-constructor TMARSToken.Create(const AWebRequest: TWebRequest; const ASecret: string);
+constructor TMARSToken.Create(const ARequest: TWebRequest; const AParameters: TMARSParameters);
 begin
-  Create(GetToken(AWebRequest), ASecret);
+  FCookieName := AParameters.ByName(JWT_COOKIENAME_PARAM, JWT_COOKIENAME_PARAM_DEFAULT).AsString;
+  Create(GetToken(ARequest), AParameters);
 end;
 
 destructor TMARSToken.Destroy;
@@ -141,17 +160,33 @@ begin
   Result := FClaims[JWT_ROLES].AsString.Split([',']); // do not localize
 end;
 
-function TMARSToken.GetToken(const AWebRequest: TWebRequest): string;
+function TMARSToken.GetToken(const ARequest: TWebRequest): string;
+begin
+  // Beware: First match wins!
+
+  // 1 - check if the authentication bearer schema is used
+  Result := GetTokenFromBearer(ARequest);
+  // 2 - check if a cookie is used
+  if Result = '' then
+    Result := GetTokenFromCookie(ARequest);
+end;
+
+function TMARSToken.GetTokenFromBearer(const ARequest: TWebRequest): string;
 var
   LAuth: string;
   LAuthTokens: TArray<string>;
 begin
   Result := '';
-  LAuth := AWebRequest.Authorization;
+  LAuth := ARequest.Authorization;
   LAuthTokens := LAuth.Split([' ']);
   if (Length(LAuthTokens) >= 2) then
     if SameText(LAuthTokens[0], 'Bearer') then
       Result := LAuthTokens[1];
+end;
+
+function TMARSToken.GetTokenFromCookie(const ARequest: TWebRequest): string;
+begin
+  Result := ARequest.CookieFields.Values[CookieName];
 end;
 
 function TMARSToken.GetUserName: string;
@@ -194,7 +229,8 @@ begin
     LClaims := LJWT.Claims;
     LClaims.Issuer := JWT_ISSUER;
     LClaims.IssuedAt := Now;
-    LClaims.Expiration := LClaims.IssuedAt + 1; { TODO -oAndrea : Make customizable }
+    LClaims.Expiration := LClaims.IssuedAt + Duration;
+    FExpiration := LClaims.Expiration;
 
     FClaims.SaveToJSON(LClaims.JSON);
 
