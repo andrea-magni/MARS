@@ -109,7 +109,6 @@ uses
   , System.NetEncoding
   {$endif}
   , MARS.Core.Utils
-  , MARS.Core.Application
   ;
 
 {
