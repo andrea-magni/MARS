@@ -10,17 +10,13 @@ unit MARS.Core.Token;
 interface
 
 uses
-    SysUtils
-  , Classes
-  , Generics.Collections
-  , SyncObjs
+    SysUtils, Classes, Generics.Collections, SyncObjs, Rtti
+  , HTTPApp, IdGlobal
+
   , MARS.Core.JSON
+  , MARS.Core.URL
   , MARS.Utils.Parameters
   , MARS.Utils.Parameters.JSON
-  , Rtti
-
-  , HTTPApp
-  , IdGlobal
 
   , JOSE.Types.Bytes, JOSE.Core.Builder
   , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA
@@ -28,6 +24,21 @@ uses
 
 type
   TMARSToken = class
+  public
+    const JWT_ISSUER = 'MARS-Curiosity';
+    const JWT_USERNAME = 'UserName';
+    const JWT_ROLES = 'Roles';
+
+    const JWT_SECRET_PARAM = 'JWT.Secret';
+    const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
+    const JWT_COOKIEENABLED_PARAM = 'JWT.CookieEnabled';
+    const JWT_COOKIEENABLED_PARAM_DEFAULT = 'true';
+    const JWT_COOKIENAME_PARAM = 'JWT.CookieName';
+    const JWT_COOKIENAME_PARAM_DEFAULT = 'access_token';
+    const JWT_COOKIEDOMAIN_PARAM = 'JWT.CookieDomain';
+    const JWT_COOKIEPATH_PARAM = 'JWT.CookiePath';
+    const JWT_DURATION_PARAM = 'JWT.Duration';
+    const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
   private
     FToken: string;
     FDuration: TDateTime;
@@ -35,7 +46,12 @@ type
     FClaims: TMARSParameters;
     FIssuedAt: TDateTime;
     FExpiration: TDateTime;
+    FCookieEnabled: Boolean;
     FCookieName: string;
+    FCookieDomain: string;
+    FCookiePath: string;
+    FRequest: TWebRequest;
+    FResponse: TWebResponse;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetRoles: TArray<string>;
@@ -44,10 +60,12 @@ type
     function GetTokenFromBearer(const ARequest: TWebRequest): string; virtual;
     function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
     function GetToken(const ARequest: TWebRequest): string; virtual;
-    property CookieName: string read FCookieName;
+    property Request: TWebRequest read FRequest;
+    property Response: TWebResponse read FResponse;
   public
     constructor Create(const AToken: string; const AParameters: TMARSParameters); overload; virtual;
-    constructor Create(const ARequest: TWebRequest; const AParameters: TMARSParameters); overload; virtual;
+    constructor Create(const ARequest: TWebRequest; const AResponse: TWebResponse;
+      const AParameters: TMARSParameters; const AURL: TMARSURL); overload; virtual;
     destructor Destroy; override;
 
     procedure Build(const ASecret: string);
@@ -59,6 +77,7 @@ type
     function HasRole(const ARoles: TStrings): Boolean; overload; virtual;
     function IsExpired: Boolean; virtual;
     procedure SetUserNameAndRoles(const AUserName: string; const ARoles: TArray<string>); virtual;
+    procedure UpdateCookie; virtual;
 
     function ToJSON: TJSONObject; virtual;
     function ToJSONString: string;
@@ -71,17 +90,10 @@ type
     property Expiration: TDateTime read FExpiration;
     property IssuedAt: TDateTime read FIssuedAt;
     property Duration: TDateTime read FDuration;
-
-    const JWT_ISSUER = 'MARS-Curiosity';
-    const JWT_USERNAME = 'UserName';
-    const JWT_ROLES = 'Roles';
-
-    const JWT_SECRET_PARAM = 'JWT.Secret';
-    const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
-    const JWT_COOKIENAME_PARAM = 'JWT.CookieName';
-    const JWT_COOKIENAME_PARAM_DEFAULT = 'access_token';
-    const JWT_DURATION_PARAM = 'JWT.Duration';
-    const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
+    property CookieEnabled: Boolean read FCookieEnabled;
+    property CookieName: string read FCookieName;
+    property CookieDomain: string read FCookieDomain;
+    property CookiePath: string read FCookiePath;
 
     class procedure WarmUpJWT;
   end;
@@ -143,9 +155,16 @@ begin
   FClaims.Clear;
 end;
 
-constructor TMARSToken.Create(const ARequest: TWebRequest; const AParameters: TMARSParameters);
+constructor TMARSToken.Create(const ARequest: TWebRequest; const AResponse: TWebResponse;
+  const AParameters: TMARSParameters; const AURL: TMARSURL);
 begin
+  FRequest := ARequest;
+  FResponse := AResponse;
+
+  FCookieEnabled := AParameters.ByName(JWT_COOKIEENABLED_PARAM, JWT_COOKIEENABLED_PARAM_DEFAULT).AsBoolean;
   FCookieName := AParameters.ByName(JWT_COOKIENAME_PARAM, JWT_COOKIENAME_PARAM_DEFAULT).AsString;
+  FCookieDomain := AParameters.ByName(JWT_COOKIEDOMAIN_PARAM, AURL.Hostname).AsString;
+  FCookiePath := AParameters.ByName(JWT_COOKIEPATH_PARAM, AURL.BasePath).AsString;
   Create(GetToken(ARequest), AParameters);
 end;
 
@@ -186,7 +205,9 @@ end;
 
 function TMARSToken.GetTokenFromCookie(const ARequest: TWebRequest): string;
 begin
-  Result := ARequest.CookieFields.Values[CookieName];
+  Result := '';
+  if CookieEnabled and (CookieName <> '') then
+    Result := ARequest.CookieFields.Values[CookieName];
 end;
 
 function TMARSToken.GetUserName: string;
@@ -326,6 +347,43 @@ begin
     Result := LObj.ToJSON;
   finally
     LObj.Free;
+  end;
+end;
+
+procedure TMARSToken.UpdateCookie;
+var
+  LContent: TStringList;
+begin
+  if CookieEnabled then
+  begin
+    Assert(Assigned(Response));
+
+    LContent := TStringList.Create;
+    try
+      if IsVerified and not IsExpired then
+      begin
+        LContent.Values[CookieName] := Token;
+
+        Response.SetCookieField(LContent
+          , CookieDomain, CookiePath
+          , Expiration
+          , False { TODO -oAndrea : Make Secure configurable? }
+        );
+      end
+      else begin
+        if Request.CookieFields.Values[CookieName] <> '' then
+        begin
+          LContent.Values[CookieName] := 'dummy';
+          Response.SetCookieField(LContent
+            , CookieDomain, CookiePath
+            , Now-1
+            , False { TODO -oAndrea : Make Secure configurable? }
+          );
+        end;
+      end;
+    finally
+      LContent.Free;
+    end;
   end;
 end;
 
