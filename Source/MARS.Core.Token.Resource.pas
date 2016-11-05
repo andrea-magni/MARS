@@ -25,8 +25,6 @@ uses
   ;
 
 type
-  EnableCookieAttribute = class(MARSAttribute);
-
   TMARSTokenResource = class
   private
   protected
@@ -40,7 +38,6 @@ type
 
     procedure BeforeLogout(); virtual;
     procedure AfterLogout(); virtual;
-    procedure SetCookieValue(const AValue: string); virtual;
   public
     [GET, Produces(TMediaType.APPLICATION_JSON)]
     function GetCurrent: TJSONObject;
@@ -66,14 +63,12 @@ uses
 
 procedure TMARSTokenResource.AfterLogin(const AUserName, APassword: string);
 begin
-  if TRttiHelper.IfHasAttribute<EnableCookieAttribute>(Self) then
-    SetCookieValue(Token.Token);
+  Token.UpdateCookie;
 end;
 
 procedure TMARSTokenResource.AfterLogout;
 begin
-  if TRttiHelper.IfHasAttribute<EnableCookieAttribute>(Self) then
-    SetCookieValue('');
+  Token.UpdateCookie;
 end;
 
 function TMARSTokenResource.Authenticate(const AUserName, APassword: string): Boolean;
@@ -137,31 +132,6 @@ begin
     Result := Token.ToJSON;
   finally
     AfterLogout();
-  end;
-end;
-
-procedure TMARSTokenResource.SetCookieValue(const AValue: string);
-var
-  LCookieName: string;
-  LContent: TStringList;
-begin
-  LContent := TStringList.Create;
-  try
-    LCookieName := App.Parameters.ByName(
-        TMARSToken.JWT_COOKIENAME_PARAM
-      , TMARSToken.JWT_COOKIENAME_PARAM_DEFAULT).AsString;
-
-    if AValue <> '' then
-    begin
-      LContent.Values[LCookieName] := AValue;
-      Response.SetCookieField(LContent, URL.HostName, URL.BasePath, Token.Expiration, False);
-    end
-    else begin
-      LContent.Values[LCookieName] := 'dummy';
-      Response.SetCookieField(LContent, URL.HostName, URL.BasePath, Now-1, False);
-    end;
-  finally
-    LContent.Free;
   end;
 end;
 

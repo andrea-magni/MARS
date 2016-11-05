@@ -74,20 +74,22 @@ begin
       // WebBroker will free it and we cannot change this behaviour
       LResponse.FreeContentStream := False;
       AResponseInfo.FreeContentStream := True;
-
-      if not FEngine.HandleRequest(LRequest, LResponse) then
-      begin
-        LResponse.ContentType := 'application/json';
-        LResponse.Content :=
-          '{"success": false, "details": '
-          + '{'
-            + '"error": "Request not found",'
-            + '"pathinfo": "' + string(LRequest.PathInfo) + '"'
-          + '}'
-        + '}';
+      try
+        if not FEngine.HandleRequest(LRequest, LResponse) then
+        begin
+          LResponse.ContentType := 'application/json';
+          LResponse.Content :=
+            '{"success": false, "details": '
+            + '{'
+              + '"error": "Request not found",'
+              + '"pathinfo": "' + string(LRequest.PathInfo) + '"'
+            + '}'
+          + '}';
+        end;
+      finally
+        AResponseInfo.CustomHeaders.AddStrings(LResponse.CustomHeaders);
+        SetCookies(AResponseInfo, LResponse);
       end;
-      AResponseInfo.CustomHeaders.AddStrings(LResponse.CustomHeaders);
-      SetCookies(AResponseInfo, LResponse);
     finally
       FreeAndNil(LResponse);
     end;
