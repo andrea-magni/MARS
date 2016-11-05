@@ -32,7 +32,7 @@ type
     const JWT_SECRET_PARAM = 'JWT.Secret';
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
     const JWT_COOKIEENABLED_PARAM = 'JWT.CookieEnabled';
-    const JWT_COOKIEENABLED_PARAM_DEFAULT = 'true';
+    const JWT_COOKIEENABLED_PARAM_DEFAULT = true;
     const JWT_COOKIENAME_PARAM = 'JWT.CookieName';
     const JWT_COOKIENAME_PARAM_DEFAULT = 'access_token';
     const JWT_COOKIEDOMAIN_PARAM = 'JWT.CookieDomain';
