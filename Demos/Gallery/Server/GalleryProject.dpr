@@ -1,0 +1,18 @@
+program GalleryProject;
+
+uses
+  Forms,
+  Forms.Main in 'Forms.Main.pas' {MainForm},
+  Resources.Gallery in 'Resources.Gallery.pas',
+  Gallery.Model in '..\Model\Gallery.Model.pas',
+  ReadersAndWriters.Gallery in 'ReadersAndWriters.Gallery.pas',
+  Gallery.Model.JSON in '..\Model\Gallery.Model.JSON.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TMainForm, MainForm);
+  Application.Run;
+end.

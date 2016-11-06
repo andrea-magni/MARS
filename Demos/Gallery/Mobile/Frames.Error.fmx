@@ -1,0 +1,16 @@
+object ErrorFrame: TErrorFrame
+  Align = Client
+  Size.Width = 422.000000000000000000
+  Size.Height = 113.000000000000000000
+  Size.PlatformDefault = False
+  object MessageLabel: TLabel
+    Align = Client
+    StyledSettings = [Family, Style, FontColor]
+    Size.Width = 422.000000000000000000
+    Size.Height = 113.000000000000000000
+    Size.PlatformDefault = False
+    TextSettings.Font.Size = 16.000000000000000000
+    TextSettings.HorzAlign = Center
+    Text = 'MessageLabel'
+  end
+end
