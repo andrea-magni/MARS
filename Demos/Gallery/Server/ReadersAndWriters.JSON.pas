@@ -1,4 +1,4 @@
-unit ReadersAndWriters.Gallery;
+unit ReadersAndWriters.JSON;
 
 interface
 

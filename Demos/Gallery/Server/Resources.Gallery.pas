@@ -103,7 +103,7 @@ begin
   LFileName := ItemFileName(Category, Item);
   if FileExists(LFileName) then
   begin
-    Sleep(1000); // simulate slow network!
+    Sleep(Trunc(Random(1000))); // simulate slow network!
     Result := TFileStream.Create(LFileName, fmOpenRead or fmShareDenyWrite);
   end
   else
