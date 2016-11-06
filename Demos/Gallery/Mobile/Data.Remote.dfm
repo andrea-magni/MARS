@@ -1,5 +1,6 @@
 object RemoteData: TRemoteData
   OldCreateOrder = False
+  OnCreate = DataModuleCreate
   Height = 296
   Width = 441
   object MARSClient: TMARSClient
@@ -25,12 +26,14 @@ object RemoteData: TRemoteData
   end
   object CategoryItemsSubResource: TMARSClientSubResourceJSON
     Application = GalleryApplication
+    Resource = 'main'
     ParentResource = CategoriesResource
     Left = 176
     Top = 144
   end
   object ItemSubResource: TMARSClientSubResourceStream
     Application = GalleryApplication
+    Resource = 'main'
     PathParamsValues.Strings = (
       'city'
       'IMG_0035.jpg')

@@ -212,8 +212,11 @@ object CategoriesFrame: TCategoriesFrame
           FileName = 'C:\Sviluppo\Librerie\MARS\Demos\Gallery\Mobile\camera_2.png'
         end>
       Align = Left
+      Margins.Top = 3.000000000000000000
+      Margins.Bottom = 3.000000000000000000
+      Position.Y = 3.000000000000000000
       Size.Width = 50.000000000000000000
-      Size.Height = 40.000000000000000000
+      Size.Height = 34.000000000000000000
       Size.PlatformDefault = False
     end
   end

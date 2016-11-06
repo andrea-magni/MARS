@@ -23,6 +23,7 @@ type
     procedure GalleryApplicationError(AResource: TObject; AException: Exception;
       AVerb: TMARSHttpVerb; const AAfterExecute: TProc<System.Classes.TStream>;
       var AHandled: Boolean);
+    procedure DataModuleCreate(Sender: TObject);
   private
   public
     procedure GetCategories(const AOnSuccess: TJSONArrayProc);
@@ -42,6 +43,16 @@ uses Data.Main;
 {$R *.dfm}
 
 { TRemoteData }
+
+procedure TRemoteData.DataModuleCreate(Sender: TObject);
+begin
+  {$IFDEF ANDROID} // tethering
+  MARSClient.MARSEngineURL := 'http://192.168.43.152:8080/';
+  {$ENDIF}
+  {$IFDEF MSWINDOWS}
+  MARSClient.MARSEngineURL := 'http://localhost:8080/';
+  {$ENDIF}
+end;
 
 procedure TRemoteData.GalleryApplicationError(AResource: TObject;
   AException: Exception; AVerb: TMARSHttpVerb;
