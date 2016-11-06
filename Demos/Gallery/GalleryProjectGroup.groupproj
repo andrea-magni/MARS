@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{2FD11C09-EC12-4D03-9608-93B192BED29E}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Server\GalleryProject.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Mobile\GalleryMobile.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="GalleryProject">
+        <MSBuild Projects="Server\GalleryProject.dproj"/>
+    </Target>
+    <Target Name="GalleryProject:Clean">
+        <MSBuild Projects="Server\GalleryProject.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GalleryProject:Make">
+        <MSBuild Projects="Server\GalleryProject.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="GalleryMobile">
+        <MSBuild Projects="Mobile\GalleryMobile.dproj"/>
+    </Target>
+    <Target Name="GalleryMobile:Clean">
+        <MSBuild Projects="Mobile\GalleryMobile.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GalleryMobile:Make">
+        <MSBuild Projects="Mobile\GalleryMobile.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="GalleryProject;GalleryMobile"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="GalleryProject:Clean;GalleryMobile:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="GalleryProject:Make;GalleryMobile:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
