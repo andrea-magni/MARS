@@ -19,13 +19,18 @@ type
 
   TGalleryItemList<T: class> = class(TObjectList<T>)
   public
+    constructor CreateFromFolder(const AFolder: string); virtual;
   end;
 
 
   TCategory = class(TGalleryItem)
   public
   end;
-  TCategoryList = TGalleryItemList<TCategory>;
+
+  TCategoryList = class(TGalleryItemList<TCategory>)
+  public
+    constructor CreateFromFolder(const AFolder: string); override;
+  end;
 
   TItem = class(TGalleryItem)
   private
@@ -35,10 +40,15 @@ type
     property Size: Int64 read FSize write FSize;
     property SizeHumanReadable: string read GetSizeHumanReadable;
   end;
-  TItemList = TGalleryItemList<TItem>;
+  TItemList = class(TGalleryItemList<TItem>)
+  public
+    constructor CreateFromFolder(const AFolder: string); override;
+  end;
 
 
 implementation
+
+uses IOUtils, Types;
 
 { TGalleryItem }
 
@@ -58,6 +68,54 @@ begin
     else
       Result := FormatFloat('#,0.00', Size / (1024*1024)) +' MB';
   end;
+end;
+
+{ TGalleryItemList<T> }
+
+constructor TGalleryItemList<T>.CreateFromFolder(const AFolder: string);
+begin
+  inherited Create;
+end;
+
+{ TCategoryList }
+
+constructor TCategoryList.CreateFromFolder(const AFolder: string);
+var
+  LSubFolders: TStringDynArray;
+  LFolder: string;
+begin
+  inherited;
+
+  LSubFolders := TDirectory.GetDirectories(AFolder);
+  for LFolder in LSubFolders do
+    Add(TCategory.Create(ExtractFileName(LFolder)));
+end;
+
+{ TItemList }
+
+constructor TItemList.CreateFromFolder(const AFolder: string);
+var
+  LCategoryContent: TStringDynArray;
+  LItem: TItem;
+begin
+  inherited;
+  LCategoryContent := TDirectory.GetFiles(AFolder
+    , function(const Path: string; const SearchRec: TSearchRec): Boolean
+      begin
+        Result := ExtractFileExt(SearchRec.Name).ToLower = '.jpg';
+        if Result then
+        begin
+          LItem := TItem.Create(ExtractFileName(SearchRec.Name));
+          try
+            LItem.Size := SearchRec.Size;
+            Add(LItem);
+          except
+            LItem.Free;
+            raise;
+          end;
+        end;
+      end
+  );
 end;
 
 end.

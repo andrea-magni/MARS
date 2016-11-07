@@ -73,7 +73,12 @@ begin
     FEngine.Parameters.LoadFromIniFile;
 
     // Application configuration
-    FEngine.AddApplication('Gallery', '/gallery', [ 'Resources.Gallery.*']);
+    FEngine.AddApplication('Gallery', '/gallery'
+    , [
+        'Resources.Gallery.*'
+      , 'Resources.Razor.*'
+      ]
+    );
 
     FEngine.OnBeforeHandleRequest :=
       function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean

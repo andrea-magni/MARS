@@ -53,47 +53,13 @@ begin
 end;
 
 function TCategoryResource.GetCategories: TCategoryList;
-var
-  LSubFolders: TStringDynArray;
-  LFolder: string;
 begin
-  Result := TCategoryList.Create;
-  try
-    LSubFolders := TDirectory.GetDirectories(RootFolder);
-    for LFolder in LSubFolders do
-      Result.Add(TCategory.Create(ExtractFileName(LFolder)));
-  except
-    Result.Free;
-    raise;
-  end;
+  Result := TCategoryList.CreateFromFolder(RootFolder);
 end;
 
 function TCategoryResource.GetCategoryContent([PathParam] Category: string): TItemList;
-var
-  LResultList: TItemList;
-  LCategoryContent: TStringDynArray;
-  LItem: TItem;
 begin
-  LResultList := TItemList.Create;
-
-  LCategoryContent := TDirectory.GetFiles(CategoryFolder(Category)
-    , function(const Path: string; const SearchRec: TSearchRec): Boolean
-      begin
-        Result := ExtractFileExt(SearchRec.Name).ToLower = '.jpg';
-        if Result then
-        begin
-          LItem := TItem.Create(ExtractFileName(SearchRec.Name));
-          try
-            LItem.Size := SearchRec.Size;
-            LResultList.Add(LItem);
-          except
-            LItem.Free;
-            raise;
-          end;
-        end;
-      end
-  );
-  Result := LResultList;
+  Result := TItemList.CreateFromFolder(CategoryFolder(Category));
 end;
 
 function TCategoryResource.GetItem(Category, Item: string): TStream;

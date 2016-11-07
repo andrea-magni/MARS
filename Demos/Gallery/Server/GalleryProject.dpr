@@ -7,7 +7,8 @@ uses
   Gallery.Model in '..\Model\Gallery.Model.pas',
   ReadersAndWriters.HTML in 'ReadersAndWriters.HTML.pas',
   Gallery.Model.JSON in '..\Model\Gallery.Model.JSON.pas',
-  ReadersAndWriters.JSON in 'ReadersAndWriters.JSON.pas';
+  ReadersAndWriters.JSON in 'ReadersAndWriters.JSON.pas',
+  Resources.Razor in 'Resources.Razor.pas';
 
 {$R *.res}
 

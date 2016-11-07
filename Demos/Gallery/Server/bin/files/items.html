@@ -1,0 +1,9 @@
+@LayoutPage base
+
+<h1>Items</h1>
+
+@foreach items {
+	<div class="items">
+		<div class="name">@loop.Name (@loop.SizeHumanReadable)</div>
+	</div>
+}
