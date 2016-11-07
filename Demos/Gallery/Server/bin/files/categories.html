@@ -2,6 +2,9 @@
 
 <h1>Categories</h1>
 
-@foreach categories {
-	<div class="category">@loop.Name</div>
+@foreach categories {	
+	<div class="category">
+		<span class="name">@loop.Name</span>
+		<a href="./items/@loop.Name">See items</a>
+	</div>
 }

@@ -3,8 +3,11 @@
 <h1>Items</h1>
 
 @foreach items {
-	<div class="items">
-		<div class="name">@loop.Name (@loop.SizeHumanReadable)</div>
-		<img width="200" src="/gallery/category/@page.item/@loop.Name">
+	<div class="item">
+		<span class="name">@loop.Name</span>
+		<span class="size">@loop.SizeHumanReadable</span>
+		<a href="/gallery/category/@page.item/@loop.Name">
+			<img class="picture" src="/gallery/category/@page.item/@loop.Name" />
+		</a>
 	</div>
 }
