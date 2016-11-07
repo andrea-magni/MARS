@@ -54,32 +54,30 @@ function TGalleryRazorResource.DoProvideContext(const APathInfo,
 var
   LObjectList: TObjectList;
   LCategoryList: TCategoryList;
-  LCategory: TCategory;
   LItemsList: TItemList;
-  LItem: TItem;
 begin
   Result := inherited DoProvideContext(APathInfo, APathParam);
 
   if SameText(APathInfo, 'categories') then
   begin
-    LObjectList := TObjectList.Create;
     LCategoryList := TCategoryList.CreateFromFolder(GetRootFolder);
-    for LCategory in LCategoryList do
-      LObjectList.Add(LCategory);
-
-    Result := Result + [TContextEntry.Create('categories', LObjectList)];
+    try
+      LObjectList := LCategoryList.ToObjectList;
+      Result := Result + [TContextEntry.Create('categories', LObjectList)];
+    finally
+      LCategoryList.Free;
+    end;
   end
   else if SameText(APathInfo, 'items') then
   begin
-    LObjectList := TObjectList.Create;
     LItemsList := TItemList.CreateFromFolder(CategoryFolder(APathParam));
-    for LItem in LItemsList do
-      LObjectList.Add(LItem);
-
-    Result := Result + [TContextEntry.Create('items', LObjectList)];
+    try
+      LObjectList := LItemsList.ToObjectList;
+      Result := Result + [TContextEntry.Create('items', LObjectList)];
+    finally
+      LItemsList.Free;
+    end;
   end;
-
-
 end;
 
 function TGalleryRazorResource.GetRootFolder: string;
