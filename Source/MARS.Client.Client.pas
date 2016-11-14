@@ -45,6 +45,8 @@ type
     function GetReadTimeout: Integer;
     procedure SetConnectTimeout(const Value: Integer);
     procedure SetReadTimeout(const Value: Integer);
+    function GetProtocolVersion: TIdHTTPProtocolVersion;
+    procedure SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
   protected
     procedure EndorseAuthorization(const AAuthToken: string);
     procedure AssignTo(Dest: TPersistent); override;
@@ -108,6 +110,7 @@ type
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
+    property ProtocolVersion: TIdHTTPProtocolVersion read GetProtocolVersion write SetProtocolVersion;
   end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
@@ -148,6 +151,7 @@ begin
   LDestClient.ConnectTimeout := ConnectTimeout;
   LDestClient.ReadTimeout := ReadTimeout;
   LDestClient.OnError := OnError;
+  LDestClient.ProtocolVersion := ProtocolVersion;
 end;
 
 constructor TMARSClient.Create(AOwner: TComponent);
@@ -253,6 +257,11 @@ end;
 procedure TMARSClient.SetConnectTimeout(const Value: Integer);
 begin
   FHttpClient.ConnectTimeout := Value;
+end;
+
+procedure TMARSClient.SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
+begin
+  FHttpClient.ProtocolVersion := Value;
 end;
 
 procedure TMARSClient.SetReadTimeout(const Value: Integer);
@@ -407,6 +416,11 @@ begin
       LClient.Free;
       raise;
     end;
+end;
+
+function TMARSClient.GetProtocolVersion: TIdHTTPProtocolVersion;
+begin
+  Result := FHttpClient.ProtocolVersion;
 end;
 
 class function TMARSClient.GetStream(const AEngineURL, AAppName,
