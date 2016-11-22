@@ -39,7 +39,8 @@ uses
   , MARS.Core.Exceptions
   , MARS.Core.Utils
   , MARS.Rtti.Utils
-, Gallery.Model;
+  , Gallery.Model
+;
 
 { TGalleryRazorResource }
 

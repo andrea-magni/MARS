@@ -133,6 +133,11 @@ begin
 
     FRazorEngine.OnObjectForPath := OnObjectForPathHandler;
     FRazorEngine.OnPageError := OnPageErrorHandler;
+{ TODO -oandrea : Implementare OnLang e OnValue }
+{
+    FRazorEngine.OnValue
+    FRazorEngine.OnLang
+}
   except
     FRazorEngine.Free;
     raise;

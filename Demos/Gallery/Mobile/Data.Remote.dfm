@@ -7,6 +7,7 @@ object RemoteData: TRemoteData
     MARSEngineURL = 'http://localhost:8080/'
     ConnectTimeout = 0
     ReadTimeout = -1
+    ProtocolVersion = pv1_1
     Left = 64
     Top = 16
   end
