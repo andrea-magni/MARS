@@ -29,6 +29,7 @@ type
   TFirstResource = class
   private
   protected
+    [Context] Token: TMARSToken;
   public
     [GET, PermitAll]
     [Produces(TMediaType.TEXT_PLAIN)]
@@ -75,12 +76,12 @@ implementation
 
 function TFirstResource.DetailsInfo: string;
 begin
-  Result := 'Admin-level access informations here!';
+  Result := 'Admin-level access informations here! Welcome, ' + Token.Username;
 end;
 
 function TFirstResource.PublicInfo: string;
 begin
-  Result := 'Public informations here!';
+  Result := 'Public informations here! Hi, ' + Token.UserName;
 end;
 
 { TSecondResource }
