@@ -5,7 +5,6 @@
 *)
 unit Server.Forms.Main;
 
-{$I MARS.inc}
 
 interface
 

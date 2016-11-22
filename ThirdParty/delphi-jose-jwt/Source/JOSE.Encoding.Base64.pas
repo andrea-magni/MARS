@@ -25,7 +25,7 @@
 /// </summary>
 unit JOSE.Encoding.Base64;
 
-{$I Mars.inc}
+{$I ..\..\..\Source\Mars.inc}
 interface
 
 uses

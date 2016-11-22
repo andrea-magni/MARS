@@ -28,7 +28,7 @@
 /// </seealso>
 unit JOSE.Core.JWA;
 
-{$I MARS.inc}
+{$I ..\..\..\Source\Mars.inc}
 
 interface
 
