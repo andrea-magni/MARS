@@ -1,0 +1,66 @@
+package MARS.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
+{$LIBSUFFIX '240'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  inet,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  xmlrtl,
+  DbxCommonDriver,
+  fmx,
+  dsnap,
+  MARS.Utils,
+  MARS.JOSE;
+
+contains
+  MARS.Core.Application in '..\..\Source\MARS.Core.Application.pas',
+  MARS.Core.Attributes in '..\..\Source\MARS.Core.Attributes.pas',
+  MARS.Core.Cache in '..\..\Source\MARS.Core.Cache.pas',
+  MARS.Core.Classes in '..\..\Source\MARS.Core.Classes.pas',
+  MARS.Core.Declarations in '..\..\Source\MARS.Core.Declarations.pas',
+  MARS.Core.Engine in '..\..\Source\MARS.Core.Engine.pas',
+  MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas',
+  MARS.Core.MessageBodyReader in '..\..\Source\MARS.Core.MessageBodyReader.pas',
+  MARS.Core.MessageBodyWriter in '..\..\Source\MARS.Core.MessageBodyWriter.pas',
+  MARS.Core.Registry in '..\..\Source\MARS.Core.Registry.pas',
+  MARS.Core.Request in '..\..\Source\MARS.Core.Request.pas',
+  MARS.Core.Response in '..\..\Source\MARS.Core.Response.pas',
+  MARS.Core.Token in '..\..\Source\MARS.Core.Token.pas',
+  MARS.http.Core in '..\..\Source\MARS.http.Core.pas',
+  MARS.Core.Invocation in '..\..\Source\MARS.Core.Invocation.pas';
+
+end.
+
+

@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{D44362A0-1BCF-45FD-80B4-281FB36C0E08}</ProjectGuid>
-        <MainSource>MARSServer.dpk</MainSource>
+        <MainSource>MARS.FireDAC.dpk</MainSource>
         <ProjectVersion>18.2</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
@@ -65,7 +65,7 @@
         <GenPackage>true</GenPackage>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <GenDll>true</GenDll>
-        <SanitizedProjectName>MARSServer</SanitizedProjectName>
+        <SanitizedProjectName>MARS_FireDAC</SanitizedProjectName>
         <DCC_DcuOutput>..\..\Lib\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_E>false</DCC_E>
@@ -118,38 +118,19 @@
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="dbrtl.dcp"/>
+        <DCCReference Include="FireDAC.dcp"/>
+        <DCCReference Include="FireDACCommonDriver.dcp"/>
+        <DCCReference Include="FireDACCommon.dcp"/>
+        <DCCReference Include="DataSnapFireDAC.dcp"/>
+        <DCCReference Include="fmx.dcp"/>
         <DCCReference Include="inet.dcp"/>
         <DCCReference Include="IndySystem.dcp"/>
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
-        <DCCReference Include="xmlrtl.dcp"/>
-        <DCCReference Include="DbxCommonDriver.dcp"/>
-        <DCCReference Include="fmx.dcp"/>
-        <DCCReference Include="FireDAC.dcp"/>
-        <DCCReference Include="FireDACCommonDriver.dcp"/>
-        <DCCReference Include="FireDACCommon.dcp"/>
         <DCCReference Include="fmxFireDAC.dcp"/>
         <DCCReference Include="dsnap.dcp"/>
-        <DCCReference Include="DataSnapFireDAC.dcp"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Application.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Attributes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Cache.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Classes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Declarations.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Engine.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Exceptions.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.JSON.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.MediaType.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReader.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriter.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriters.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Registry.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Request.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Response.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Token.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Token.Resource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.URL.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Utils.pas"/>
+        <DCCReference Include="MARS.Core.dcp"/>
+        <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.DataModule.pas">
             <Form>MARSFDDataModuleResource</Form>
             <FormType>dfm</FormType>
@@ -158,26 +139,6 @@
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Utils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.MessageBodyWriters.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.Utils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.http.Core.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.IniFile.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.JSON.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWE.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWK.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWS.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWT.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Parts.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Cryptography.RSA.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Invocation.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -196,7 +157,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">MARSServer.dpk</Source>
+                    <Source Name="MainSource">MARS.FireDAC.dpk</Source>
                 </Source>
                 <Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k240.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
@@ -224,22 +185,13 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\18.0\Bpl\MARSServer240.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\18.0\Bpl\MARS.FireDAC240.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <RemoteName>MARSServer.bpl</RemoteName>
+                        <RemoteName>MARS_FireDAC.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployClass Name="DependencyModule">
-                    <Platform Name="Win32">
-                        <Operation>0</Operation>
-                        <Extensions>.dll;.bpl</Extensions>
-                    </Platform>
-                    <Platform Name="OSX32">
-                        <Operation>1</Operation>
-                        <Extensions>.dylib</Extensions>
-                    </Platform>
-                </DeployClass>
+                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
                 <DeployClass Name="ProjectOSXResource">
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\Resources</RemoteDir>
@@ -579,7 +531,16 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
+                <DeployClass Name="DependencyModule">
+                    <Platform Name="Win32">
+                        <Operation>0</Operation>
+                        <Extensions>.dll;.bpl</Extensions>
+                    </Platform>
+                    <Platform Name="OSX32">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                </DeployClass>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
