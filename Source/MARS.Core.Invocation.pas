@@ -84,7 +84,7 @@ uses
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
-{$ifndef DelphiXE7_UP}
+{$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}
 ;
@@ -276,7 +276,7 @@ begin
         case LMethodResult.Kind of
 
           tkString, tkLString, tkUString, tkWString
-{$ifdef DelphiXE7_UP}
+{$ifdef DelphiXE8_UP}
           , tkWideChar, tkAnsiChar
 {$endif}
           , tkInteger, tkInt64, tkFloat, tkVariant:

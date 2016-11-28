@@ -1,0 +1,63 @@
+package MARSClient.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity Client Core'}
+{$LIBSUFFIX '210'}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  dbrtl,
+  inet,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  bindengine,
+  bindcomp,
+  MARS.Utils,
+  designide;
+
+contains
+  MARS.Client.Application in '..\..\Source\MARS.Client.Application.pas',
+  MARS.Client.Client in '..\..\Source\MARS.Client.Client.pas',
+  MARS.Client.CustomResource.Editor in '..\..\Source\MARS.Client.CustomResource.Editor.pas',
+  MARS.Client.CustomResource in '..\..\Source\MARS.Client.CustomResource.pas',
+  MARS.Client.Messaging.Resource in '..\..\Source\MARS.Client.Messaging.Resource.pas',
+  MARS.Client.Resource.JSON in '..\..\Source\MARS.Client.Resource.JSON.pas',
+  MARS.Client.Resource in '..\..\Source\MARS.Client.Resource.pas',
+  MARS.Client.Resource.Stream in '..\..\Source\MARS.Client.Resource.Stream.pas',
+  MARS.Client.SubResource.JSON in '..\..\Source\MARS.Client.SubResource.JSON.pas',
+  MARS.Client.SubResource in '..\..\Source\MARS.Client.SubResource.pas',
+  MARS.Client.SubResource.Stream in '..\..\Source\MARS.Client.SubResource.Stream.pas',
+  MARS.Client.Token in '..\..\Source\MARS.Client.Token.pas',
+  MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',
+  MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas';
+
+end.
+
+
+

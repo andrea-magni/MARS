@@ -25,7 +25,7 @@ type
      or pidOSX32
      or pidiOSSimulator
      or pidiOSDevice
-    {$ifdef DelphiXE7_UP}
+    {$ifdef DelphiXE8_UP}
      or pidiOSDevice32 or pidiOSDevice64
     {$endif}
      or pidAndroid)]
@@ -172,7 +172,11 @@ begin
   FIsVerified := FData.ReadBoolValue('IsVerified');
 
   FClaims.Clear;
+{$IFNDEF DelphiXE8_UP}
+  if FData.TryGetValue<TJSONObject>('Claims', LClaims) then
+{$ELSE}
   if FData.TryGetValue('Claims', LClaims) then
+{$IFEND}
   begin
     FClaims.LoadFromJSON(LClaims);
 

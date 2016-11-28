@@ -23,7 +23,7 @@ type
      or pidOSX32
      or pidiOSSimulator
      or pidiOSDevice
-    {$ifdef DelphiXE7_UP}
+    {$ifdef DelphiXE8_UP}
      or pidiOSDevice32 or pidiOSDevice64
     {$endif}
      or pidAndroid)]
