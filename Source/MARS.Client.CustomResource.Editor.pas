@@ -28,7 +28,7 @@ procedure Register;
 implementation
 
 uses
-  Dialogs
+  VCL.Dialogs
   , DesignIntf
   , Windows;
 
