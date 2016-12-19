@@ -13,6 +13,7 @@ uses
   , MARS.Core.Attributes
   , MARS.Core.MediaType
   , MARS.Core.JSON
+  , MARS.Core.Response
   ;
 
 type
@@ -29,9 +30,7 @@ uses
     MARS.Core.Registry
   ;
 
-
 { THelloWorldResource }
-
 
 function THelloWorldResource.SayHelloWorld: string;
 begin
@@ -40,6 +39,5 @@ end;
 
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
-
 
 end.

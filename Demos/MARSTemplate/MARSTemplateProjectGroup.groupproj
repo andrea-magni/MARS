@@ -3,7 +3,10 @@
         <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
-        <Projects Include="MARSTemplateServer.dproj">
+        <Projects Include="MARSTemplateServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSTemplateServerApacheModule.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="MARSTemplateClient.dproj">
@@ -17,14 +20,23 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
-    <Target Name="MARSTemplateServer">
-        <MSBuild Projects="MARSTemplateServer.dproj"/>
+    <Target Name="MARSTemplateServerApplication">
+        <MSBuild Projects="MARSTemplateServerApplication.dproj"/>
     </Target>
-    <Target Name="MARSTemplateServer:Clean">
-        <MSBuild Projects="MARSTemplateServer.dproj" Targets="Clean"/>
+    <Target Name="MARSTemplateServerApplication:Clean">
+        <MSBuild Projects="MARSTemplateServerApplication.dproj" Targets="Clean"/>
     </Target>
-    <Target Name="MARSTemplateServer:Make">
-        <MSBuild Projects="MARSTemplateServer.dproj" Targets="Make"/>
+    <Target Name="MARSTemplateServerApplication:Make">
+        <MSBuild Projects="MARSTemplateServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateServerApacheModule">
+        <MSBuild Projects="MARSTemplateServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerApacheModule:Clean">
+        <MSBuild Projects="MARSTemplateServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerApacheModule:Make">
+        <MSBuild Projects="MARSTemplateServerApacheModule.dproj" Targets="Make"/>
     </Target>
     <Target Name="MARSTemplateClient">
         <MSBuild Projects="MARSTemplateClient.dproj"/>
@@ -36,13 +48,13 @@
         <MSBuild Projects="MARSTemplateClient.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARSTemplateServer;MARSTemplateClient"/>
+        <CallTarget Targets="MARSTemplateServerApplication;MARSTemplateServerApacheModule;MARSTemplateClient"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARSTemplateServer:Clean;MARSTemplateClient:Clean"/>
+        <CallTarget Targets="MARSTemplateServerApplication:Clean;MARSTemplateServerApacheModule:Clean;MARSTemplateClient:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARSTemplateServer:Make;MARSTemplateClient:Make"/>
+        <CallTarget Targets="MARSTemplateServerApplication:Make;MARSTemplateServerApacheModule:Make;MARSTemplateClient:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

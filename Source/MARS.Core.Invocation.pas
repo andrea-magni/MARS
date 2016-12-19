@@ -264,6 +264,7 @@ begin
         try
           FWriter.WriteTo(LMethodResult, FMethod.GetAttributes, FWriterMediaType
             , Response.CustomHeaders, LStream);
+          LStream.Position := 0;
           Response.ContentStream := LStream;
         except
           LStream.Free;

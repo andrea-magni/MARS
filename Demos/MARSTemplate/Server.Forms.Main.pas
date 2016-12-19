@@ -8,13 +8,10 @@ unit Server.Forms.Main;
 interface
 
 uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
-  , Diagnostics
+  , System.Actions
 
-  , MARS.Core.Engine
   , MARS.http.Server.Indy
 
-  , MARS.Core.Application
-  , System.Actions
   ;
 
 type
@@ -33,7 +30,6 @@ type
     procedure FormCreate(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
-    FEngine: TMARSEngine;
     procedure UpdateStatusLabel;
   public
   end;
@@ -46,11 +42,7 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.MessageBodyWriter
-  , MARS.Core.MessageBodyWriters
-  , MARS.Utils.Parameters.IniFile
-  ;
-
+  Server.Ignition;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
@@ -59,34 +51,20 @@ end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
-  FEngine := TMARSEngine.Create;
+  // Create http server
+  FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    // Engine configuration
-    FEngine.Parameters.LoadFromIniFile;
-
-    // Application configuration
-    FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
-
-    // Create http server
-    FServer := TMARShttpServerIndy.Create(FEngine);
-    try
-      if not FServer.Active then
-        FServer.Active := True;
-
-      UpdateStatusLabel;
-    except
-      FreeAndNil(FServer);
-      raise;
-    end;
+    FServer.Active := True;
+    UpdateStatusLabel;
   except
-    FreeAndNil(FEngine);
+    FreeAndNil(FServer);
     raise;
   end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
 begin
-  StartServerAction.Enabled := (FServer = nil) or (FServer.Active = False);
+  StartServerAction.Enabled := not (Assigned(FServer) and FServer.Active);
 end;
 
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
@@ -94,20 +72,18 @@ begin
   FServer.Active := False;
   FreeAndNil(FServer);
 
-  FreeAndNil(FEngine);
-
   UpdateStatusLabel;
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);
 begin
-  StopServerAction.Enabled := Assigned(FServer) and (FServer.Active = True);
+  StopServerAction.Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.UpdateStatusLabel;
 begin
   if Assigned(FServer) and FServer.Active then
-    StatusLabel.Caption := 'Listening on port ' + FEngine.Port.ToString
+    StatusLabel.Caption := 'Listening on port ' + TServerEngine.Default.Port.ToString
   else
     StatusLabel.Caption := 'Not active';
 end;
