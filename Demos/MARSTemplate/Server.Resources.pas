@@ -14,6 +14,8 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.JSON
   , MARS.Core.Response
+
+  , MARS.Core.Token.Resource
   ;
 
 type
@@ -22,6 +24,11 @@ type
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
+  end;
+
+  [Path('token')]
+  TTokenResource = class(TMARSTokenResource)
+
   end;
 
 implementation
@@ -39,5 +46,5 @@ end;
 
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
-
+  TMARSResourceRegistry.Instance.RegisterResource<TTokenResource>;
 end.
