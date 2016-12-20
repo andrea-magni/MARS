@@ -49,9 +49,6 @@ begin
   end
   else
     Handled := True;
-
-//  AResponseInfo.CustomHeaders.AddStrings(LResponse.CustomHeaders);
-//  SetCookies(AResponseInfo, LResponse);
 end;
 
 end.
