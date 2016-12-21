@@ -181,7 +181,6 @@
         <DCCReference Include="DataSnapFireDAC.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Client.FireDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Editor.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Utils.pas"/>
         <RcItem Include="..\..\media\TMARSFDResource.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSFDRESOURCE</ResourceId>

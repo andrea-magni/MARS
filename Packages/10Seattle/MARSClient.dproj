@@ -201,7 +201,6 @@
         <DCCReference Include="..\..\Source\MARS.Core.JSON.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Editor.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.URL.pas"/>
         <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.JSON.pas"/>

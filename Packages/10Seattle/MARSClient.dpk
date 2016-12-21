@@ -65,7 +65,6 @@ contains
   MARS.Core.JSON in '..\..\Source\MARS.Core.JSON.pas',
   MARS.Core.Utils in '..\..\Source\MARS.Core.Utils.pas',
   MARS.Data.FireDAC.Editor in '..\..\Source\MARS.Data.FireDAC.Editor.pas',
-  MARS.Data.FireDAC.Utils in '..\..\Source\MARS.Data.FireDAC.Utils.pas',
   MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
   MARS.Rtti.Utils in '..\..\Source\MARS.Rtti.Utils.pas',
   MARS.Utils.Parameters.JSON in '..\..\Source\MARS.Utils.Parameters.JSON.pas',

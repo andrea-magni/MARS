@@ -51,8 +51,7 @@ requires
 contains
   MARS.Data.FireDAC.DataModule in '..\..\Source\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule},
   MARS.Data.FireDAC.MessageBodyWriters in '..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas',
-  MARS.Data.FireDAC in '..\..\Source\MARS.Data.FireDAC.pas',
-  MARS.Data.FireDAC.Utils in '..\..\Source\MARS.Data.FireDAC.Utils.pas';
+  MARS.Data.FireDAC in '..\..\Source\MARS.Data.FireDAC.pas';
 
 end.
 

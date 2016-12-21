@@ -33,8 +33,18 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='OSX32' and '$(Base)'=='true') or '$(Base_OSX32)'!=''">
+        <Base_OSX32>true</Base_OSX32>
+        <CfgParent>Base</CfgParent>
+        <Base>true</Base>
+    </PropertyGroup>
     <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Base)'=='true') or '$(Base_Win32)'!=''">
         <Base_Win32>true</Base_Win32>
+        <CfgParent>Base</CfgParent>
+        <Base>true</Base>
+    </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Base)'=='true') or '$(Base_Win64)'!=''">
+        <Base_Win64>true</Base_Win64>
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
@@ -55,9 +65,9 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <DCC_UnitSearchPath>..\..\Source\Core;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DllSuffix>240</DllSuffix>
         <DCC_Description>MARS-Curiosity REST Library</DCC_Description>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
@@ -75,23 +85,34 @@
         <DCC_K>false</DCC_K>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
+        <DCC_UsePackage>rtl;dbrtl;fmx;inet;IndySystem;IndyProtocols;IndyCore;FireDAC;FireDACCommonDriver;FireDACCommon;fmxFireDAC;dsnap;DataSnapFireDAC;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
         <EnabledSysJars>android-support-v4.dex.jar;apk-expansion.dex.jar;cloud-messaging.dex.jar;fmx.dex.jar;google-analytics-v2.dex.jar;google-play-billing.dex.jar;google-play-licensing.dex.jar;google-play-services.dex.jar</EnabledSysJars>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_iOSDevice32)'!=''">
+        <DCC_UsePackage>rtl;dbrtl;fmx;inet;IndySystem;IndyProtocols;IndyCore;FireDAC;FireDACCommonDriver;FireDACCommon;fmxFireDAC;dsnap;DataSnapFireDAC;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_iOSDevice64)'!=''">
+        <DCC_UsePackage>rtl;dbrtl;fmx;inet;IndySystem;IndyProtocols;IndyCore;FireDAC;FireDACCommonDriver;FireDACCommon;fmxFireDAC;dsnap;DataSnapFireDAC;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_iOSSimulator)'!=''">
+        <DCC_UsePackage>rtl;dbrtl;fmx;inet;IndySystem;IndyProtocols;IndyCore;FireDAC;FireDACCommonDriver;FireDACCommon;fmxFireDAC;dsnap;DataSnapFireDAC;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Base_OSX32)'!=''">
+        <DCC_UsePackage>rtl;dbrtl;fmx;inet;IndySystem;IndyProtocols;IndyCore;FireDAC;FireDACCommonDriver;FireDACCommon;fmxFireDAC;dsnap;DataSnapFireDAC;$(DCC_UsePackage)</DCC_UsePackage>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
+        <DCC_UsePackage>rtl;dbrtl;fmx;inet;IndySystem;IndyProtocols;IndyCore;FireDAC;FireDACCommonDriver;FireDACCommon;fmxFireDAC;dsnap;DataSnapFireDAC;$(DCC_UsePackage)</DCC_UsePackage>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(ModuleName);FileDescription=$(ModuleName);ProductName=$(ModuleName)</VerInfo_Keys>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Base_Win64)'!=''">
+        <DCC_UsePackage>rtl;dbrtl;fmx;inet;IndySystem;IndyProtocols;IndyCore;FireDAC;FireDACCommonDriver;FireDACCommon;fmxFireDAC;dsnap;DataSnapFireDAC;$(DCC_UsePackage)</DCC_UsePackage>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -140,7 +161,6 @@
         </DCCReference>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Utils.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
