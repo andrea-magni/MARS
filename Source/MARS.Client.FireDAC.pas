@@ -76,9 +76,11 @@ implementation
 uses
     Data.FireDACJSONReflect
   , FireDAC.Comp.DataSet
+  , FireDAC.Stan.StorageBin
+  , FireDAC.Stan.StorageJSON
+  , FireDAC.Stan.StorageXML
   , MARS.Core.Utils
   , MARS.Client.Utils
-  , MARS.Data.FireDAC.Utils
   ;
 
 procedure Register;

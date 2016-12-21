@@ -42,6 +42,8 @@ type
     procedure StopServerActionUpdate(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormDestroy(Sender: TObject);
+    procedure PortNumberEditChange(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
     FEngine: TMARSEngine;
@@ -56,7 +58,7 @@ implementation
 {$R *.dfm}
 
 uses
-   MARS.Core.MessageBodyWriter
+    MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Data.MessageBodyWriters
   , MARS.Data.FireDAC.MessageBodyWriters
@@ -70,22 +72,41 @@ end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  StartServerAction.Execute;
+  // MARS-Curiosity Engine
+  FEngine := TMARSEngine.Create;
+  try
+    FEngine.Parameters.LoadFromIniFile;
+    FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
+    PortNumberEdit.Text := FEngine.Port.ToString;
+
+    StartServerAction.Execute;
+  except
+    FreeAndNil(FEngine);
+    raise;
+  end;
+end;
+
+procedure TMainForm.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FEngine);
+end;
+
+procedure TMainForm.PortNumberEditChange(Sender: TObject);
+begin
+  FEngine.Port := StrToInt(PortNumberEdit.Text);
 end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);
 begin
-  FEngine := TMARSEngine.Create;
-
-  FEngine.Parameters.LoadFromIniFile;
-
-  FEngine.AddApplication('Default', '/default', ['Server.MainData.TMainDataResource']);
-
-  // Create http server
+  // http server implementation
   FServer := TMARShttpServerIndy.Create(FEngine);
-
-  if not FServer.Active then
+  try
+    FServer.DefaultPort := FEngine.Port;
     FServer.Active := True;
+  except
+    FServer.Free;
+    raise;
+  end;
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
@@ -96,11 +117,7 @@ end;
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
   FServer.Active := False;
-  FServer.Free;
-  FServer := nil;
-
-  FEngine.Free;
-  FEngine := nil;
+  FreeAndNil(FServer);
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);

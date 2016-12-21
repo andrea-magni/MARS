@@ -59,6 +59,7 @@ object Form1: TForm1
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 0
     ReadTimeout = -1
+    ProtocolVersion = pv1_1
     Left = 688
     Top = 56
   end
