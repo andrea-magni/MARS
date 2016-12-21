@@ -3,19 +3,17 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit Forms.Main;
+unit Server.MainForm;
 
 interface
 
-uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
-  , Diagnostics
+uses
+  Classes, SysUtils, Forms, Actions, ActnList, StdCtrls, Controls, ExtCtrls
 
+  // MARS-Curiosity units
   , MARS.Core.Engine
   , MARS.http.Server.Indy
-
-  , MARS.Core.Application
-  , System.Actions
-  ;
+;
 
 type
   TMainForm = class(TForm)
@@ -31,13 +29,16 @@ type
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
     procedure StopServerActionUpdate(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure FormDestroy(Sender: TObject);
     procedure PortNumberEditChange(Sender: TObject);
-  private
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+  strict private
     FServer: TMARShttpServerIndy;
     FEngine: TMARSEngine;
+  strict protected
+    property Server: TMARShttpServerIndy read FServer;
+    property Engine: TMARSEngine read FEngine;
   public
   end;
 
@@ -65,9 +66,8 @@ begin
   // MARS-Curiosity Engine
   FEngine := TMARSEngine.Create;
   try
-    FEngine.BasePath := '';
     FEngine.Parameters.LoadFromIniFile;
-    FEngine.AddApplication('Gallery', '/gallery', ['Resources.*']);
+    FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
     PortNumberEdit.Text := FEngine.Port.ToString;
 
     // skip favicon requests (browser)

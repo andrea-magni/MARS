@@ -47,7 +47,7 @@ type
     methods (Default, One, Two, Three) are not.
     A fallback mechanism (from method to class) is used to determine authorization settings.
   }
-  [Path('second'), RolesAllowed('admin'), DenyAll]
+  [Path('second'), RolesAllowed('admin')]
   TSecondResource = class
   private
   protected
@@ -72,16 +72,20 @@ type
 
 implementation
 
+uses
+  StrUtils
+;
+
 { TFirstResource }
 
 function TFirstResource.DetailsInfo: string;
 begin
-  Result := 'Admin-level access informations here! Welcome, ' + Token.Username;
+  Result := 'Admin-level access informations here! Welcome, ' + IfThen(Token.IsVerified, Token.Username, '[anonymous]');
 end;
 
 function TFirstResource.PublicInfo: string;
 begin
-  Result := 'Public informations here! Hi, ' + Token.UserName;
+  Result := 'Public informations here! Hi, ' + IfThen(Token.IsVerified, Token.Username, '[anonymous]');
 end;
 
 { TSecondResource }

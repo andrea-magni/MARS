@@ -2,8 +2,8 @@ program MARSParameters;
 
 uses
   Forms,
-  ServerMainForm in 'ServerMainForm.pas' {MainForm},
-  ServerResources in 'ServerResources.pas';
+  Server.MainForm in 'Server.MainForm.pas' {MainForm},
+  Server.Resources in 'Server.Resources.pas';
 
 {$R *.res}
 

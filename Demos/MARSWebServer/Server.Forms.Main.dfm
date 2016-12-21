@@ -13,7 +13,9 @@ object MainForm: TMainForm
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object TopPanel: TPanel
@@ -54,6 +56,7 @@ object MainForm: TMainForm
       Height = 21
       TabOrder = 2
       Text = '8080'
+      OnChange = PortNumberEditChange
     end
   end
   object MainActionList: TActionList

@@ -3,7 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit ServerResources;
+unit Server.Resources;
 
 interface
 

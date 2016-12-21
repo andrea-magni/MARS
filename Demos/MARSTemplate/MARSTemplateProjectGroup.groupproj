@@ -6,6 +6,9 @@
         <Projects Include="MARSTemplateServerApplication.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="MARSTemplateServerService.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="MARSTemplateServerConsoleApplication.dproj">
             <Dependencies/>
         </Projects>
@@ -13,9 +16,6 @@
             <Dependencies/>
         </Projects>
         <Projects Include="MARSTemplateServerISAPI.dproj">
-            <Dependencies/>
-        </Projects>
-        <Projects Include="MARSTemplateServerService.dproj">
             <Dependencies/>
         </Projects>
         <Projects Include="MARSTemplateClient.dproj">
@@ -37,6 +37,15 @@
     </Target>
     <Target Name="MARSTemplateServerApplication:Make">
         <MSBuild Projects="MARSTemplateServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateServerService">
+        <MSBuild Projects="MARSTemplateServerService.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerService:Clean">
+        <MSBuild Projects="MARSTemplateServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerService:Make">
+        <MSBuild Projects="MARSTemplateServerService.dproj" Targets="Make"/>
     </Target>
     <Target Name="MARSTemplateServerConsoleApplication">
         <MSBuild Projects="MARSTemplateServerConsoleApplication.dproj"/>
@@ -65,15 +74,6 @@
     <Target Name="MARSTemplateServerISAPI:Make">
         <MSBuild Projects="MARSTemplateServerISAPI.dproj" Targets="Make"/>
     </Target>
-    <Target Name="MARSTemplateServerService">
-        <MSBuild Projects="MARSTemplateServerService.dproj"/>
-    </Target>
-    <Target Name="MARSTemplateServerService:Clean">
-        <MSBuild Projects="MARSTemplateServerService.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="MARSTemplateServerService:Make">
-        <MSBuild Projects="MARSTemplateServerService.dproj" Targets="Make"/>
-    </Target>
     <Target Name="MARSTemplateClient">
         <MSBuild Projects="MARSTemplateClient.dproj"/>
     </Target>
@@ -84,13 +84,13 @@
         <MSBuild Projects="MARSTemplateClient.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARSTemplateServerApplication;MARSTemplateServerConsoleApplication;MARSTemplateServerApacheModule;MARSTemplateServerISAPI;MARSTemplateServerService;MARSTemplateClient"/>
+        <CallTarget Targets="MARSTemplateServerApplication;MARSTemplateServerService;MARSTemplateServerConsoleApplication;MARSTemplateServerApacheModule;MARSTemplateServerISAPI;MARSTemplateClient"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARSTemplateServerApplication:Clean;MARSTemplateServerConsoleApplication:Clean;MARSTemplateServerApacheModule:Clean;MARSTemplateServerISAPI:Clean;MARSTemplateServerService:Clean;MARSTemplateClient:Clean"/>
+        <CallTarget Targets="MARSTemplateServerApplication:Clean;MARSTemplateServerService:Clean;MARSTemplateServerConsoleApplication:Clean;MARSTemplateServerApacheModule:Clean;MARSTemplateServerISAPI:Clean;MARSTemplateClient:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARSTemplateServerApplication:Make;MARSTemplateServerConsoleApplication:Make;MARSTemplateServerApacheModule:Make;MARSTemplateServerISAPI:Make;MARSTemplateServerService:Make;MARSTemplateClient:Make"/>
+        <CallTarget Targets="MARSTemplateServerApplication:Make;MARSTemplateServerService:Make;MARSTemplateServerConsoleApplication:Make;MARSTemplateServerApacheModule:Make;MARSTemplateServerISAPI:Make;MARSTemplateClient:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -35,6 +35,9 @@ type
     procedure StopServerActionExecute(Sender: TObject);
     procedure StopServerActionUpdate(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure PortNumberEditChange(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormDestroy(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
     FEngine: TMARSEngine;
@@ -49,28 +52,27 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.JSON
-  , MARS.Rtti.Utils
+    MARS.Core.URL
+  , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
+  , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyReaders
   , MARS.Utils.Parameters.IniFile
-  , MARS.Core.URL
-  , MARS.Core.MessageBodyWriter
-  , MARS.Core.MessageBodyWriters
-  , Server.Resources
   ;
 
-
-procedure TMainForm.FormCreate(Sender: TObject);
+procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  StartServerAction.Execute;
+  StopServerAction.Execute;
 end;
 
-procedure TMainForm.StartServerActionExecute(Sender: TObject);
+procedure TMainForm.FormCreate(Sender: TObject);
 begin
   // MARS-Curiosity Engine
   FEngine := TMARSEngine.Create;
   try
     FEngine.Parameters.LoadFromIniFile;
-    FEngine.AddApplication('Default', '/default', ['Server.Resources.*']);
+    FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
+    PortNumberEdit.Text := FEngine.Port.ToString;
+
+    // skip favicon requests (browser)
     FEngine.OnBeforeHandleRequest :=
       function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
       begin
@@ -79,16 +81,32 @@ begin
           Result := False;
       end;
 
-    // http server implementation
-    FServer := TMARShttpServerIndy.Create(FEngine);
-    try
-      FServer.Active := True;
-    except
-      FServer.Free;
-      raise;
-    end;
+    StartServerAction.Execute;
   except
-    FEngine.Free;
+    FreeAndNil(FEngine);
+    raise;
+  end;
+end;
+
+procedure TMainForm.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FEngine);
+end;
+
+procedure TMainForm.PortNumberEditChange(Sender: TObject);
+begin
+  FEngine.Port := StrToInt(PortNumberEdit.Text);
+end;
+
+procedure TMainForm.StartServerActionExecute(Sender: TObject);
+begin
+  // http server implementation
+  FServer := TMARShttpServerIndy.Create(FEngine);
+  try
+    FServer.DefaultPort := FEngine.Port;
+    FServer.Active := True;
+  except
+    FServer.Free;
     raise;
   end;
 end;
@@ -102,15 +120,11 @@ procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
   FServer.Active := False;
   FreeAndNil(FServer);
-  FreeAndNil(FEngine);
 end;
 
 procedure TMainForm.StopServerActionUpdate(Sender: TObject);
 begin
   StopServerAction.Enabled := Assigned(FServer) and (FServer.Active = True);
 end;
-
-initialization
-  ReportMemoryLeaksOnShutdown := True;
 
 end.

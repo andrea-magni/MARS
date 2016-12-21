@@ -13,6 +13,9 @@ object MainForm: TMainForm
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object TopPanel: TPanel
@@ -23,11 +26,12 @@ object MainForm: TMainForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    object StatusLabel: TLabel
+    object Label1: TLabel
       Left = 28
       Top = 17
-      Width = 3
+      Width = 63
       Height = 13
+      Caption = 'Port number:'
     end
     object StartButton: TButton
       Left = 16
@@ -44,6 +48,15 @@ object MainForm: TMainForm
       Height = 25
       Action = StopServerAction
       TabOrder = 1
+    end
+    object PortNumberEdit: TEdit
+      Left = 97
+      Top = 14
+      Width = 82
+      Height = 21
+      TabOrder = 2
+      Text = '8080'
+      OnChange = PortNumberEditChange
     end
   end
   object MainActionList: TActionList
