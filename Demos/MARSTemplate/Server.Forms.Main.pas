@@ -54,6 +54,7 @@ begin
   // Create http server
   FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
+    FServer.DefaultPort := TServerEngine.Default.Port;
     FServer.Active := True;
     UpdateStatusLabel;
   except

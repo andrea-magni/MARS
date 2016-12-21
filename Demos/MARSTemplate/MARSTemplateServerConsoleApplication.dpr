@@ -20,68 +20,25 @@ uses
 
 {$R *.res}
 
-function BindPort(Aport: Integer): Boolean;
-var
-  LTestServer: IIPTestServer;
+procedure StartServer(const AServer: TIdHTTPWebBrokerBridge);
 begin
-  Result := True;
-  try
-    LTestServer := PeerFactory.CreatePeer('', IIPTestServer) as IIPTestServer;
-    LTestServer.TestOpenPort(APort, nil);
-  except
-    Result := False;
-  end;
-end;
-
-function CheckPort(Aport: Integer): Integer;
-begin
-  if BindPort(Aport) then
-    Result := Aport
-  else
-    Result := 0;
-end;
-
-procedure SetPort(const Aserver: TIdHTTPWebBrokerBridge; APort: String);
-begin
-  if not (Aserver.Active) then
+  if not (AServer.Active) then
   begin
-    APort := APort.Replace(cCommandSetPort, '').Trim;
-    if CheckPort(APort.ToInteger) > 0 then
-    begin
-      Aserver.DefaultPort := APort.ToInteger;
-      Writeln(Format(sPortSet, [APort]));
-    end
-    else
-      Writeln(Format(sPortInUse, [Aport]));
+    AServer.DefaultPort := TServerEngine.Default.Port;
+    Writeln(Format(sStartingServer, [AServer.DefaultPort]));
+    AServer.Active := True;
   end
   else
     Writeln(sServerRunning);
   Write(cArrow);
 end;
 
-procedure StartServer(const Aserver: TIdHTTPWebBrokerBridge);
+procedure StopServer(const AServer: TIdHTTPWebBrokerBridge);
 begin
-  if not (Aserver.Active) then
-  begin
-    if CheckPort(Aserver.DefaultPort) > 0 then
-    begin
-      Writeln(Format(sStartingServer, [Aserver.DefaultPort]));
-      Aserver.Active := True;
-    end
-    else
-      Writeln(Format(sPortInUse, [Aserver.DefaultPort]));
-  end
-  else
-    Writeln(sServerRunning);
-  Write(cArrow);
-end;
-
-procedure StopServer(const Aserver: TIdHTTPWebBrokerBridge);
-begin
-  if Aserver.Active  then
+  if AServer.Active  then
   begin
     Writeln(sStoppingServer);
-    Aserver.Active := False;
+    AServer.Active := False;
     Writeln(sServerStopped);
   end
   else
@@ -95,15 +52,15 @@ begin
   Write(cArrow);
 end;
 
-procedure  WriteStatus(const Aserver: TIdHTTPWebBrokerBridge);
+procedure  WriteStatus(const AServer: TIdHTTPWebBrokerBridge);
 begin
-  Writeln(sIndyVersion + Aserver.SessionList.Version);
-  Writeln(sActive + Aserver.Active.ToString(TUseBoolStrs.True));
-  Writeln(sPort + Aserver.DefaultPort.ToString);
+  Writeln(sIndyVersion + AServer.SessionList.Version);
+  Writeln(sActive + AServer.Active.ToString(TUseBoolStrs.True));
+  Writeln(sPort + AServer.DefaultPort.ToString);
   Write(cArrow);
 end;
 
-procedure RunServer(APort: Integer);
+procedure RunServer();
 var
   LServer: TIdHTTPWebBrokerBridge;
   LResponse: string;
@@ -111,14 +68,12 @@ begin
   WriteCommands;
   LServer := TIdHTTPWebBrokerBridge.Create(nil);
   try
-    LServer.DefaultPort := APort;
+    LServer.DefaultPort := TServerEngine.Default.Port;
     while True do
     begin
       Readln(LResponse);
       LResponse := LowerCase(LResponse);
-      if LResponse.StartsWith(cCommandSetPort) then
-        SetPort(LServer, LResponse)
-      else if sametext(LResponse, cCommandStart) then
+      if sametext(LResponse, cCommandStart) then
         StartServer(LServer)
       else if sametext(LResponse, cCommandStatus) then
         WriteStatus(LServer)
@@ -149,7 +104,7 @@ begin
   try
   if WebRequestHandler <> nil then
     WebRequestHandler.WebModuleClass := WebModuleClass;
-    RunServer(8080);
+    RunServer();
   except
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
