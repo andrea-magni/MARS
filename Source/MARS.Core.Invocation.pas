@@ -168,6 +168,8 @@ begin
 
       if LAttribute is HttpMethodAttribute then
         LHttpMethodMatches := HttpMethodAttribute(LAttribute).Matches(Request);
+
+      { TODO -oAndrea : Check MediaType (you might have multiple methods matching, so let's discriminate using Request.Accept and Resource+Method's Produces attribute) }
     end;
 
     if LHttpMethodMatches then

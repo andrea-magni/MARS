@@ -35,7 +35,8 @@ implementation
 {$R *.dfm}
 
 uses
-  Server.Ignition
+  IdSchedulerOfThreadPool
+, Server.Ignition
 , Server.WebModule
 ;
 
@@ -50,6 +51,8 @@ begin
 end;
 
 procedure TServerService.ServiceCreate(Sender: TObject);
+var
+  LScheduler: TIdSchedulerOfThreadPool;
 begin
   if WebRequestHandler <> nil then
     WebRequestHandler.WebModuleClass := WebModuleClass;
@@ -57,6 +60,17 @@ begin
   FServer := TIdHTTPWebBrokerBridge.Create(nil);
   try
     FServer.DefaultPort := TServerEngine.Default.Port;
+
+    LScheduler := TIdSchedulerOfThreadPool.Create(FServer);
+    try
+      LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
+      FServer.Scheduler := LScheduler;
+      FServer.MaxConnections := LScheduler.PoolSize;
+    except
+      FServer.Scheduler.Free;
+      FServer.Scheduler := nil;
+      raise;
+    end;
   except
     FServer.Free;
     raise;

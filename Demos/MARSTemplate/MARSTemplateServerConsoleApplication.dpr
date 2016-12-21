@@ -12,6 +12,7 @@ uses
   IPPeerServer,
   IPPeerAPI,
   IdHTTPWebBrokerBridge,
+  IdSchedulerOfThreadPool,
   Web.WebReq,
   Web.WebBroker,
   ServerConst in 'ServerConst.pas',
@@ -63,12 +64,27 @@ end;
 procedure RunServer();
 var
   LServer: TIdHTTPWebBrokerBridge;
+  LScheduler: TIdSchedulerOfThreadPool;
   LResponse: string;
 begin
   WriteCommands;
   LServer := TIdHTTPWebBrokerBridge.Create(nil);
   try
     LServer.DefaultPort := TServerEngine.Default.Port;
+
+    LScheduler := TIdSchedulerOfThreadPool.Create(LServer);
+    try
+      LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
+      LServer.Scheduler := LScheduler;
+      LServer.MaxConnections := LScheduler.PoolSize;
+    except
+      LServer.Scheduler.Free;
+      LServer.Scheduler := nil;
+      raise;
+    end;
+
+
+
     while True do
     begin
       Readln(LResponse);
