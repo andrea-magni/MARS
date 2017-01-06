@@ -1,3 +1,8 @@
+(*
+  Copyright 2016, MARS-Curiosity - REST Library
+
+  Home: https://github.com/andrea-magni/MARS
+*)
 program MARSTemplateServerFMXApplication;
 
 uses
