@@ -4,7 +4,7 @@
         <ProjectFileVersion>12</ProjectFileVersion>
     </ProjectExtensions>
     <PropertyGroup>
-        <DeviceId Condition="'$(Platform)'=='Android'">027e06f50036bb58</DeviceId>
+        <DeviceId Condition="'$(Platform)'=='Android'"/>
         <DeviceId Condition="'$(Platform)'=='iOSDevice32'"/>
         <DeviceId Condition="'$(Platform)'=='iOSDevice64'"/>
         <DeviceId Condition="'$(Platform)'=='iOSSimulator'">iPhone5</DeviceId>
@@ -52,15 +52,6 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="bin\OSX32\MARSTemplateServerFMXApplication.info.plist" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>MARSTemplateServerFMXApplication.app\Contents\</RemoteDir>
-            <RemoteName>Info.plist</RemoteName>
-            <DeployClass>ProjectOSXInfoPList</DeployClass>
-            <Operation>1</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
         <DeployFile Include="bin\OSX32\MARSTemplateServerFMXApplication.entitlements" Condition="'$(Config)'=='Debug'">
             <RemoteDir>MARSTemplateServerFMXApplication.app\..\</RemoteDir>
             <RemoteName>MARSTemplateServerFMXApplication.entitlements</RemoteName>
@@ -74,6 +65,15 @@
             <RemoteDir>MARSTemplateServerFMXApplication.app\Contents\Resources\</RemoteDir>
             <RemoteName>MARSTemplateServerFMXApplication.icns</RemoteName>
             <DeployClass>ProjectOSXResource</DeployClass>
+            <Operation>1</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="bin\OSX32\MARSTemplateServerFMXApplication.info.plist" Condition="'$(Config)'=='Debug'">
+            <RemoteDir>MARSTemplateServerFMXApplication.app\Contents\</RemoteDir>
+            <RemoteName>Info.plist</RemoteName>
+            <DeployClass>ProjectOSXInfoPList</DeployClass>
             <Operation>1</Operation>
             <LocalCommand/>
             <RemoteCommand/>

@@ -47,6 +47,28 @@ begin
   Write(cArrow);
 end;
 
+procedure SetPort(const AServer: TIdHTTPWebBrokerBridge; const APort: string);
+var
+  LPort: Integer;
+  LWasActive: Boolean;
+begin
+  LPort := StrToIntDef(APort, -1);
+  if LPort = -1 then
+  begin
+    Writeln('Port should be an integer number. Try again.');
+    Exit;
+  end;
+
+  LWasActive := AServer.Active;
+  if LWasActive  then
+    StopServer(AServer);
+  TServerEngine.Default.Port := LPort;
+  if LWasActive then
+    StartServer(AServer);
+  Writeln(Format(sPortSet, [TServerEngine.Default.Port.ToString]));
+  Write(cArrow);
+end;
+
 procedure  WriteCommands;
 begin
   Writeln(sCommands);
@@ -57,7 +79,7 @@ procedure  WriteStatus(const AServer: TIdHTTPWebBrokerBridge);
 begin
   Writeln(sIndyVersion + AServer.SessionList.Version);
   Writeln(sActive + AServer.Active.ToString(TUseBoolStrs.True));
-  Writeln(sPort + AServer.DefaultPort.ToString);
+  Writeln(sPort + TServerEngine.Default.Port.ToString);
   Write(cArrow);
 end;
 
@@ -95,6 +117,8 @@ begin
         WriteStatus(LServer)
       else if sametext(LResponse, cCommandStop) then
         StopServer(LServer)
+      else if LResponse.StartsWith(cCommandSetPort, True) then
+        SetPort(LServer, LResponse.Split([' '])[2])
       else if sametext(LResponse, cCommandHelp) then
         WriteCommands
       else if sametext(LResponse, cCommandExit) then
