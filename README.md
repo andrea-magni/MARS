@@ -1,4 +1,4 @@
-![MARS-curiosity logo](http://www.andreamagni.eu/images/MARS-Curiosity-d.png)
+![MARS-curiosity logo](https://www.andreamagni.eu/images/MARS-Curiosity-d.png)
 
 _\* The Delphi stylized helmet icon is trademark of Embarcadero Technologies._
 
@@ -7,7 +7,7 @@ _\* The Delphi stylized helmet icon is trademark of Embarcadero Technologies._
 
 Pure REST approach, standard concepts in a familiar Delphi flavor (including a component based client library).
 
-- Known compatibility: **Delphi versions from XE to 10 Seattle**
+- Known compatibility: **Delphi versions from XE to 10.1 Berlin**
 - *Some functionalities requires FireDAC*
 
 # The project
