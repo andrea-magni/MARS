@@ -207,7 +207,7 @@ function TMARSToken.GetTokenFromCookie(const ARequest: TWebRequest): string;
 begin
   Result := '';
   if CookieEnabled and (CookieName <> '') then
-    Result := ARequest.CookieFields.Values[CookieName];
+    Result := TNetEncoding.URL.Decode(ARequest.CookieFields.Values[CookieName]);
 end;
 
 function TMARSToken.GetUserName: string;
