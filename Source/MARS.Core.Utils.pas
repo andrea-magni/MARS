@@ -33,6 +33,7 @@ uses
   function StringArrayToString(const AArray: TArray<string>): string;
 
   function StreamToJSONValue(const AStream: TStream; const AEncoding: TEncoding = nil): TJSONValue;
+  procedure JSONValueToStream(const AValue: TJSONValue; const ADestStream: TStream; const AEncoding: TEncoding = nil);
   function StreamToString(AStream: TStream): string;
   procedure CopyStream(ASourceStream, ADestStream: TStream;
     AOverWriteDest: Boolean = True; AThenResetDestPosition: Boolean = True);
@@ -159,6 +160,23 @@ begin
     Result := TJSONObject.ParseJSONValue(LStreamReader.ReadToEnd);
   finally
     LStreamReader.Free;
+  end;
+end;
+
+procedure JSONValueToStream(const AValue: TJSONValue; const ADestStream: TStream; const AEncoding: TEncoding);
+var
+  LStreamWriter: TStreamWriter;
+  LEncoding: TEncoding;
+begin
+  LEncoding := AEncoding;
+  if not Assigned(LEncoding) then
+    LEncoding := TEncoding.Default;
+
+  LStreamWriter := TStreamWriter.Create(ADestStream, LEncoding);
+  try
+    LStreamWriter.Write(AValue.ToJSON);
+  finally
+    LStreamWriter.Free;
   end;
 end;
 

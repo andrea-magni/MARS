@@ -53,6 +53,11 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure SaveToStream(const AStream: TStream); virtual;
+    procedure LoadFromStream(const AStream: TStream); virtual;
+    procedure SaveToFile(const AFilename: string); virtual;
+    procedure LoadFromFile(const AFilename: string); virtual;
   published
     property Data: TJSONObject read FData;
 
@@ -164,6 +169,26 @@ begin
   Result := Expiration < Now;
 end;
 
+procedure TMARSClientToken.LoadFromFile(const AFilename: string);
+var
+  LFileStream: TFileStream;
+begin
+  LFileStream := TFileStream.Create(AFilename, fmOpenRead or fmShareDenyWrite);
+  try
+    LoadFromStream(LFileStream);
+  finally
+    LFileStream.Free;
+  end;
+end;
+
+procedure TMARSClientToken.LoadFromStream(const AStream: TStream);
+begin
+  if Assigned(FData) then
+    FData.Free;
+  FData := StreamToJSONValue(AStream) as TJSONObject;
+  ParseData;
+end;
+
 procedure TMARSClientToken.ParseData;
 var
   LClaims: TJSONObject;
@@ -185,6 +210,23 @@ begin
     FUserName := FClaims['UserName'].AsString;
     FUserRoles.CommaText := FClaims['Roles'].AsString;
   end;
+end;
+
+procedure TMARSClientToken.SaveToFile(const AFilename: string);
+var
+  LFileStream: TFileStream;
+begin
+  LFileStream := TFileStream.Create(AFilename, fmCreate or fmOpenReadWrite);
+  try
+    SaveToStream(LFileStream);
+  finally
+    LFileStream.Free;
+  end;
+end;
+
+procedure TMARSClientToken.SaveToStream(const AStream: TStream);
+begin
+  JSONValueToStream(FData, AStream);
 end;
 
 end.
