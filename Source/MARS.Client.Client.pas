@@ -85,7 +85,8 @@ type
     class function PostJSON(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const AContent: TJSONValue;
-      const ACompletionHandler: TProc<TJSONValue>{$ifdef DelphiXE2_UP} = nil{$endif}
+      const ACompletionHandler: TProc<TJSONValue>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AToken: string = ''
     ): Boolean;
 
     class procedure PostJSONAsync(const AEngineURL, AAppName, AResourceName: string;
@@ -93,17 +94,20 @@ type
       const AContent: TJSONValue;
       const ACompletionHandler: TProc<TJSONValue>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AToken: string = '';
       const ASynchronize: Boolean = True);
 
 
-    class function GetStream(const AEngineURL, AAppName, AResourceName: string): TStream; overload;
+    class function GetStream(const AEngineURL, AAppName, AResourceName: string;
+      const AToken: string = ''): TStream; overload;
 
     class function GetStream(const AEngineURL, AAppName, AResourceName: string;
-      const APathParams: TArray<string>; const AQueryParams: TStrings): TStream; overload;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const AToken: string = ''): TStream; overload;
 
     class function PostStream(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
-      const AContent: TStream): Boolean;
+      const AContent: TStream; const AToken: string = ''): Boolean;
 
   published
     property MARSEngineURL: string read FMARSEngineURL write FMARSEngineURL;
@@ -424,9 +428,9 @@ begin
 end;
 
 class function TMARSClient.GetStream(const AEngineURL, AAppName,
-  AResourceName: string): TStream;
+  AResourceName: string; const AToken: string): TStream;
 begin
-  Result := GetStream(AEngineURL, AAppName, AResourceName, nil, nil);
+  Result := GetStream(AEngineURL, AAppName, AResourceName, nil, nil, AToken);
 end;
 
 class function TMARSClient.GetJSON<T>(const AEngineURL, AAppName,
@@ -437,7 +441,7 @@ end;
 
 class function TMARSClient.GetStream(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
-  const AQueryParams: TStrings): TStream;
+  const AQueryParams: TStrings; const AToken: string): TStream;
 var
   LClient: TMARSClient;
   LResource: TMARSClientResourceStream;
@@ -463,6 +467,7 @@ begin
         if Assigned(AQueryParams) then
           LResource.QueryParams.Assign(AQueryParams);
 
+        LResource.SpecificToken := AToken;
         LResource.GET();
 
         Result := TMemoryStream.Create;
@@ -485,7 +490,7 @@ end;
 
 class function TMARSClient.PostJSON(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
-  const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>
+  const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>; const AToken: string
 ): Boolean;
 var
   LClient: TMARSClient;
@@ -512,6 +517,7 @@ begin
         if Assigned(AQueryParams) then
           LResource.QueryParams.Assign(AQueryParams);
 
+        LResource.SpecificToken := AToken;
         LResource.POST(
           procedure (AStream: TMemoryStream)
           var
@@ -550,6 +556,7 @@ class procedure TMARSClient.PostJSONAsync(const AEngineURL, AAppName,
   const AQueryParams: TStrings; const AContent: TJSONValue;
   const ACompletionHandler: TProc<TJSONValue>;
   const AOnException: TMARSClientExecptionProc;
+  const AToken: string;
   const ASynchronize: Boolean);
 var
   LClient: TMARSClient;
@@ -576,6 +583,7 @@ begin
         if Assigned(AQueryParams) then
           LResource.QueryParams.Assign(AQueryParams);
 
+        LResource.SpecificToken := AToken;
         LResource.POSTAsync(
           procedure (AStream: TMemoryStream)
           var
@@ -621,7 +629,7 @@ end;
 
 class function TMARSClient.PostStream(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
-  const AQueryParams: TStrings; const AContent: TStream
+  const AQueryParams: TStrings; const AContent: TStream; const AToken: string
 ): Boolean;
 var
   LClient: TMARSClient;
@@ -648,6 +656,7 @@ begin
         if Assigned(AQueryParams) then
           LResource.QueryParams.Assign(AQueryParams);
 
+        LResource.SpecificToken := AToken;
         LResource.POST(
           procedure (AStream: TMemoryStream)
           begin

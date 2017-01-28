@@ -34,6 +34,7 @@ type
     FResource: string;
     FApplication: TMARSClientApplication;
     FSpecificClient: TMARSClient;
+    FSpecificToken: string;
     FPathParamsValues: TStrings;
     FQueryParams: TStrings;
     FSpecificAccept: string;
@@ -110,6 +111,7 @@ type
     property Client: TMARSClient read GetClient;
     property SpecificAccept: string read FSpecificAccept write FSpecificAccept;
     property SpecificClient: TMARSClient read FSpecificClient write FSpecificClient;
+    property SpecificToken: string read FSpecificToken write FSpecificToken;
     property Resource: string read FResource write FResource;
     property Path: string read GetPath;
     property PathParamsValues: TStrings read FPathParamsValues write SetPathParamsValues;
@@ -165,6 +167,7 @@ begin
 
   LDestResource.SpecificAccept := SpecificAccept;
   LDestResource.SpecificClient := SpecificClient;
+  LDestResource.SpecificToken := SpecificToken;
   LDestResource.Resource := Resource;
   LDestResource.PathParamsValues.Assign(PathParamsValues);
   LDestResource.QueryParams.Assign(QueryParams);
@@ -206,7 +209,7 @@ end;
 
 function TMARSClientCustomResource.GetAuthToken: string;
 begin
-  Result := ''; // SpecificToken
+  Result := SpecificToken;
   if (Result = '') and Assigned(Token) then
     Result := (Token as TMARSClientToken).Token;
 end;
