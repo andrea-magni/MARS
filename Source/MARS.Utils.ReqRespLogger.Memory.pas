@@ -225,6 +225,8 @@ var
   LContentString: string;
   LReader: TStreamReader;
 begin
+  HTTPRequest.ToDataSet(ADataSet);
+
   LContentString := '';
   if Assigned(ContentStream) then
   begin
@@ -241,7 +243,6 @@ begin
     ADataSet.FieldByName('Content').AsString := LContentString;
   end;
 
-  HTTPRequest.ToDataSet(ADataSet);
   ADataSet.FieldByName('StatusCode').AsInteger := StatusCode;
   ADataSet.FieldByName('StatusText').AsString := ReasonString;
   ADataSet.FieldByName('ContentType').AsString := ContentType;
