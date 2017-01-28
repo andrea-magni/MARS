@@ -39,6 +39,8 @@ type
     const JWT_COOKIEPATH_PARAM = 'JWT.CookiePath';
     const JWT_DURATION_PARAM = 'JWT.Duration';
     const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
+    const JWT_COOKIESECURE_PARAM = 'JWT.CookieSecure';
+    const JWT_COOKIESECURE_PARAM_DEFAULT = false;
   private
     FToken: string;
     FDuration: TDateTime;
@@ -50,6 +52,7 @@ type
     FCookieName: string;
     FCookieDomain: string;
     FCookiePath: string;
+    FCookieSecure: Boolean;
     FRequest: TWebRequest;
     FResponse: TWebResponse;
     function GetUserName: string;
@@ -94,6 +97,7 @@ type
     property CookieName: string read FCookieName;
     property CookieDomain: string read FCookieDomain;
     property CookiePath: string read FCookiePath;
+    property CookieSecure: Boolean read FCookieSecure;
 
     class procedure WarmUpJWT;
   end;
@@ -165,6 +169,7 @@ begin
   FCookieName := AParameters.ByName(JWT_COOKIENAME_PARAM, JWT_COOKIENAME_PARAM_DEFAULT).AsString;
   FCookieDomain := AParameters.ByName(JWT_COOKIEDOMAIN_PARAM, AURL.Hostname).AsString;
   FCookiePath := AParameters.ByName(JWT_COOKIEPATH_PARAM, AURL.BasePath).AsString;
+  FCookieSecure := AParameters.ByName(JWT_COOKIESECURE_PARAM, JWT_COOKIESECURE_PARAM_DEFAULT).AsBoolean;
   Create(GetToken(ARequest), AParameters);
 end;
 
@@ -367,7 +372,7 @@ begin
         Response.SetCookieField(LContent
           , CookieDomain, CookiePath
           , Expiration
-          , False { TODO -oAndrea : Make Secure configurable? }
+          , CookieSecure
         );
       end
       else begin
@@ -377,7 +382,7 @@ begin
           Response.SetCookieField(LContent
             , CookieDomain, CookiePath
             , Now-1
-            , False { TODO -oAndrea : Make Secure configurable? }
+            , CookieSecure
           );
         end;
       end;

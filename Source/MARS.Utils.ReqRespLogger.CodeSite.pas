@@ -1,16 +1,22 @@
-unit MARS.Utils.Logger.CodeSite;
+(*
+  Copyright 2016, MARS-Curiosity - REST Library
+
+  Home: https://github.com/andrea-magni/MARS
+*)
+unit MARS.Utils.ReqRespLogger.CodeSite;
 
 interface
 
 uses
-  Classes, SysUtils, Diagnostics
+  Classes, SysUtils, Diagnostics, Rtti
   , MARS.Core.Engine
-  , MARS.Core.Application
+  , MARS.Core.Application, MARS.Utils.ReqRespLogger.Interfaces
   , Web.HttpApp
 ;
 
 type
-  TMARSLoggerCodeSite=class(TInterfacedObject, IMARSHandleRequestEventListener)
+  TMARSReqRespLoggerCodeSite=class(TInterfacedObject
+    , IMARSHandleRequestEventListener, IMARSReqRespLogger)
   private
   public
     constructor Create; virtual;
@@ -21,6 +27,10 @@ type
       const AApplication: TMARSApplication; const AStopWatch: TStopwatch);
     procedure BeforeHandleRequest(const ASender: TMARSEngine;
       const AApplication: TMARSApplication; var AIsAllowed: Boolean);
+
+    // IMARSReqRespLogger
+    procedure Clear;
+    function GetLogBuffer: TValue;
   end;
 
   TWebRequestHelper = class helper for TWebRequest
@@ -43,9 +53,9 @@ uses
 const
   LOGFIELD_SEPARATOR = ' | ';
 
-{ TMARSLoggerCodeSite }
+{ TMARSReqRespLoggerCodeSite }
 
-procedure TMARSLoggerCodeSite.AfterHandleRequest(const ASender: TMARSEngine;
+procedure TMARSReqRespLoggerCodeSite.AfterHandleRequest(const ASender: TMARSEngine;
   const AApplication: TMARSApplication; const AStopWatch: TStopwatch);
 begin
   CodeSite.SendMsg(
@@ -61,7 +71,7 @@ begin
   );
 end;
 
-procedure TMARSLoggerCodeSite.BeforeHandleRequest(const ASender: TMARSEngine;
+procedure TMARSReqRespLoggerCodeSite.BeforeHandleRequest(const ASender: TMARSEngine;
   const AApplication: TMARSApplication; var AIsAllowed: Boolean);
 begin
   CodeSite.SendMsg(
@@ -76,16 +86,26 @@ begin
   );
 end;
 
-constructor TMARSLoggerCodeSite.Create;
+procedure TMARSReqRespLoggerCodeSite.Clear;
+begin
+  CodeSite.Clear;
+end;
+
+constructor TMARSReqRespLoggerCodeSite.Create;
 begin
   inherited Create;
   CodeSite.SendMsg('Logger started');
 end;
 
-destructor TMARSLoggerCodeSite.Destroy;
+destructor TMARSReqRespLoggerCodeSite.Destroy;
 begin
   CodeSite.SendMsg('Logger stopped');
   inherited;
+end;
+
+function TMARSReqRespLoggerCodeSite.GetLogBuffer: TValue;
+begin
+  Result := TValue.Empty;
 end;
 
 { TWebRequestHelper }
@@ -96,10 +116,10 @@ begin
   , [
         Method
       , PathInfo
-      , 'Content: [' + ContentFields.Text + ']'
+      , 'Content: [' + Content + ']'
       , 'Cookie: ['  + CookieFields.Text  + ']'
       , 'Query: ['   + QueryFields.Text   + ']'
-      , 'Length: '  + Length(RawContent).ToString
+      , 'Length: '  + Length(Content).ToString
       , 'RemoteIP: ' + RemoteIP
       , 'RemoteAddress: ' + RemoteAddr
       , 'RemoteHost: ' + RemoteHost
@@ -119,7 +139,8 @@ begin
       , 'ReasonString: ' + ReasonString
       , 'ContentType: ' + ContentType
       , 'Content.Size: ' + ContentStream.Size.ToString
-      , 'Cookies.Count: '  + Self.Cookies.Count.ToString
+      , 'Content: [' + Content + ']'
+      , 'Cookies.Count: '  + Cookies.Count.ToString
     ]
   );
 end;
