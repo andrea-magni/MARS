@@ -228,6 +228,8 @@ begin
   LContentString := '';
   if Assigned(ContentStream) then
   begin
+    ADataSet.FieldByName('ContentSize').AsInteger := ContentStream.Size;
+
     ContentStream.Position := 0;
     LReader := TStreamReader.Create(ContentStream);
     try
@@ -236,14 +238,13 @@ begin
     finally
       LReader.Free;
     end;
+    ADataSet.FieldByName('Content').AsString := LContentString;
   end;
 
   HTTPRequest.ToDataSet(ADataSet);
   ADataSet.FieldByName('StatusCode').AsInteger := StatusCode;
   ADataSet.FieldByName('StatusText').AsString := ReasonString;
-  ADataSet.FieldByName('Content').AsString := LContentString;
   ADataSet.FieldByName('ContentType').AsString := ContentType;
-  ADataSet.FieldByName('ContentSize').AsInteger := ContentStream.Size;
 
   ADataSet.FieldByName('CookieCount').AsInteger := Cookies.Count;
 

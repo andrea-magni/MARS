@@ -130,7 +130,15 @@ end;
 { TWebResponseHelper }
 
 function TWebResponseHelper.ToLogString: string;
+var
+  LContentSize: Int64;
 begin
+  if Assigned(ContentStream) then
+    LContentSize := ContentStream.Size
+  else
+    LContentSize := 0;
+
+
   Result := string.Join(LOGFIELD_SEPARATOR
     , [
         HTTPRequest.Method
@@ -138,7 +146,7 @@ begin
       , 'StatusCode: ' + StatusCode.ToString
       , 'ReasonString: ' + ReasonString
       , 'ContentType: ' + ContentType
-      , 'Content.Size: ' + ContentStream.Size.ToString
+      , 'Content.Size: ' + LContentSize.ToString
       , 'Content: [' + Content + ']'
       , 'Cookies.Count: '  + Cookies.Count.ToString
     ]
