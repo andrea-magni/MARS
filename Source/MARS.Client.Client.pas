@@ -119,6 +119,7 @@ type
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
     property ProtocolVersion: TIdHTTPProtocolVersion read GetProtocolVersion write SetProtocolVersion;
+    property HttpClient: TIdHTTP read FHttpClient;
   end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
@@ -165,7 +166,14 @@ end;
 constructor TMARSClient.Create(AOwner: TComponent);
 begin
   inherited;
-  FHttpClient := TIdHTTP.Create(nil);
+  FHttpClient := TIdHTTP.Create(Self);
+  try
+    FHttpClient.SetSubComponent(True);
+    FHttpClient.Name := 'HttpClient';
+  except
+    FHttpClient.Free;
+    raise;
+  end;
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
 
