@@ -67,20 +67,24 @@ type
     property Response: TIdHTTPResponse read GetResponse;
 
     // shortcuts
-    class function GetJSON<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string): T; overload;
+    class function GetJSON<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
+      const AToken: string = ''): T; overload;
 
     class function GetJSON<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const AToken: string = '';
       const AIgnoreResult: Boolean = False): T; overload;
 
     class procedure GetJSONAsync<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const ACompletionHandler: TProc<T>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AToken: string = '';
       const ASynchronize: Boolean = True); overload;
 
     class function GetAsString(const AEngineURL, AAppName, AResourceName: string;
-      const APathParams: TArray<string>; const AQueryParams: TStrings): string; overload;
+      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const AToken: string = ''): string; overload;
 
     class function PostJSON(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
@@ -275,7 +279,7 @@ end;
 
 class function TMARSClient.GetAsString(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
-  const AQueryParams: TStrings): string;
+  const AQueryParams: TStrings; const AToken: string): string;
 var
   LClient: TMARSClient;
   LResource: TMARSClientResource;
@@ -303,6 +307,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LFinalURL := LResource.URL;
+        LResource.SpecificToken := AToken;
         Result := LResource.GETAsString();
       finally
         LResource.Free;
@@ -317,7 +322,7 @@ end;
 
 class function TMARSClient.GetJSON<T>(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
-  const AQueryParams: TStrings; const AIgnoreResult: Boolean): T;
+  const AQueryParams: TStrings; const AToken: string; const AIgnoreResult: Boolean): T;
 var
   LClient: TMARSClient;
   LResource: TMARSClientResourceJSON;
@@ -346,6 +351,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LFinalURL := LResource.URL;
+        LResource.SpecificToken := AToken;
         LResource.GET();
 
         Result := nil;
@@ -365,7 +371,8 @@ end;
 class procedure TMARSClient.GetJSONAsync<T>(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const ACompletionHandler: TProc<T>;
-  const AOnException: TMARSClientExecptionProc; const ASynchronize: Boolean);
+  const AOnException: TMARSClientExecptionProc; const AToken: string;
+  const ASynchronize: Boolean);
 var
   LClient: TMARSClient;
   LResource: TMARSClientResourceJSON;
@@ -393,6 +400,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LFinalURL := LResource.URL;
+        LResource.SpecificToken := AToken;
         LResource.GETAsync(
           procedure (AResource: TMARSClientCustomResource)
           begin
@@ -434,9 +442,9 @@ begin
 end;
 
 class function TMARSClient.GetJSON<T>(const AEngineURL, AAppName,
-  AResourceName: string): T;
+  AResourceName: string; const AToken: string): T;
 begin
-  Result := GetJSON<T>(AEngineURL, AAppName, AResourceName, nil, nil);
+  Result := GetJSON<T>(AEngineURL, AAppName, AResourceName, nil, nil, AToken);
 end;
 
 class function TMARSClient.GetStream(const AEngineURL, AAppName,
