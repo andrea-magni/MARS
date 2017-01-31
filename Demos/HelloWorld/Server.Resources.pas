@@ -62,7 +62,10 @@ uses
 function THelloWorldResource.CountItems(Data: TJSONArray): TJSONObject;
 begin
   Result := TJSONObject.Create;
-  Result.WriteIntegerValue('count', Data.Count);
+  if Assigned(Data) then
+    Result.WriteIntegerValue('count', Data.Count)
+  else
+    Result.WriteStringValue('error', 'no input')
 end;
 
 function THelloWorldResource.EchoString(AString: string): string;
