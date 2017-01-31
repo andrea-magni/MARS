@@ -208,7 +208,12 @@ begin
   ADataSet.FieldByName('StatusCode').Clear;
   ADataSet.FieldByName('StatusText').Clear;
 
-  ADataSet.FieldByName('Content').AsString := Content;
+  try
+    ADataSet.FieldByName('Content').AsString := Content;
+  except on E: EEncodingError do
+    ADataSet.FieldByName('Content').AsString := E.ToString;
+  end;
+
   ADataSet.FieldByName('ContentType').AsString := ContentType;
   ADataSet.FieldByName('ContentSize').AsInteger := ContentLength;
   ADataSet.FieldByName('CookieCount').AsInteger := CookieFields.Count;
@@ -235,7 +240,11 @@ begin
     ContentStream.Position := 0;
     LReader := TStreamReader.Create(ContentStream);
     try
-      LContentString := LReader.ReadToEnd;
+      try
+        LContentString := LReader.ReadToEnd;
+      except on E:EEncodingError do
+        LContentString := E.ToString;
+      end;
       ContentStream.Position := 0;
     finally
       LReader.Free;
