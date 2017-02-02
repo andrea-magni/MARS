@@ -1,0 +1,96 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="JsonDataObjectsVCL.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="JsonDataObjectsFMX.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="JsonDataObjectsWinSvc.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="JsonDataObjectsConsole.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="JsonDataObjectsApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="JsonDataObjectsISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="JsonDataObjectsVCL">
+        <MSBuild Projects="JsonDataObjectsVCL.dproj"/>
+    </Target>
+    <Target Name="JsonDataObjectsVCL:Clean">
+        <MSBuild Projects="JsonDataObjectsVCL.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JsonDataObjectsVCL:Make">
+        <MSBuild Projects="JsonDataObjectsVCL.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="JsonDataObjectsFMX">
+        <MSBuild Projects="JsonDataObjectsFMX.dproj"/>
+    </Target>
+    <Target Name="JsonDataObjectsFMX:Clean">
+        <MSBuild Projects="JsonDataObjectsFMX.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JsonDataObjectsFMX:Make">
+        <MSBuild Projects="JsonDataObjectsFMX.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="JsonDataObjectsWinSvc">
+        <MSBuild Projects="JsonDataObjectsWinSvc.dproj"/>
+    </Target>
+    <Target Name="JsonDataObjectsWinSvc:Clean">
+        <MSBuild Projects="JsonDataObjectsWinSvc.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JsonDataObjectsWinSvc:Make">
+        <MSBuild Projects="JsonDataObjectsWinSvc.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="JsonDataObjectsConsole">
+        <MSBuild Projects="JsonDataObjectsConsole.dproj"/>
+    </Target>
+    <Target Name="JsonDataObjectsConsole:Clean">
+        <MSBuild Projects="JsonDataObjectsConsole.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JsonDataObjectsConsole:Make">
+        <MSBuild Projects="JsonDataObjectsConsole.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="JsonDataObjectsApacheModule">
+        <MSBuild Projects="JsonDataObjectsApacheModule.dproj"/>
+    </Target>
+    <Target Name="JsonDataObjectsApacheModule:Clean">
+        <MSBuild Projects="JsonDataObjectsApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JsonDataObjectsApacheModule:Make">
+        <MSBuild Projects="JsonDataObjectsApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="JsonDataObjectsISAPI">
+        <MSBuild Projects="JsonDataObjectsISAPI.dproj"/>
+    </Target>
+    <Target Name="JsonDataObjectsISAPI:Clean">
+        <MSBuild Projects="JsonDataObjectsISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JsonDataObjectsISAPI:Make">
+        <MSBuild Projects="JsonDataObjectsISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="JsonDataObjectsVCL;JsonDataObjectsFMX;JsonDataObjectsWinSvc;JsonDataObjectsConsole;JsonDataObjectsApacheModule;JsonDataObjectsISAPI"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="JsonDataObjectsVCL:Clean;JsonDataObjectsFMX:Clean;JsonDataObjectsWinSvc:Clean;JsonDataObjectsConsole:Clean;JsonDataObjectsApacheModule:Clean;JsonDataObjectsISAPI:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="JsonDataObjectsVCL:Make;JsonDataObjectsFMX:Make;JsonDataObjectsWinSvc:Make;JsonDataObjectsConsole:Make;JsonDataObjectsApacheModule:Make;JsonDataObjectsISAPI:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
