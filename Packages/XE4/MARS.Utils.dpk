@@ -1,0 +1,58 @@
+package MARS.Utils;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity Utils'}
+{$LIBSUFFIX '180'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  inet,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  xmlrtl,
+  soaprtl,
+  DbxCommonDriver;
+
+contains
+  MARS.Core.Utils in '..\..\Source\MARS.Core.Utils.pas',
+  MARS.Data.Utils in '..\..\Source\MARS.Data.Utils.pas',
+  MARS.Rtti.Utils in '..\..\Source\MARS.Rtti.Utils.pas',
+  MARS.Utils.Parameters.IniFile in '..\..\Source\MARS.Utils.Parameters.IniFile.pas',
+  MARS.Utils.Parameters in '..\..\Source\MARS.Utils.Parameters.pas',
+  MARS.Utils.Parameters.JSON in '..\..\Source\MARS.Utils.Parameters.JSON.pas',
+  MARS.Core.JSON in '..\..\Source\MARS.Core.JSON.pas',
+  MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
+  MARS.Core.Exceptions in '..\..\Source\MARS.Core.Exceptions.pas';
+
+end.
+
+
+

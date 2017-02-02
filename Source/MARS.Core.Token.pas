@@ -108,7 +108,7 @@ uses
   DateUtils
 
   {$ifndef DelphiXE7_UP}
-  , IdCoderMIME
+  , IdCoderMIME, IdUri
   {$else}
   , System.NetEncoding
   {$endif}
@@ -180,8 +180,23 @@ begin
 end;
 
 function TMARSToken.GetRoles: TArray<string>;
+{$ifdef DelphiXE7_UP}
 begin
   Result := FClaims[JWT_ROLES].AsString.Split([',']); // do not localize
+{$else}
+var
+  LTokens: TStringList;
+begin
+  LTokens := TStringList.Create;
+  try
+    LTokens.Delimiter := ',';
+    LTokens.StrictDelimiter := True;
+    LTokens.DelimitedText := FClaims[JWT_ROLES].AsString;
+    Result := LTokens.ToStringArray;
+  finally
+    LTokens.Free;
+  end;
+{$endif}
 end;
 
 function TMARSToken.GetToken(const ARequest: TWebRequest): string;
@@ -199,10 +214,25 @@ function TMARSToken.GetTokenFromBearer(const ARequest: TWebRequest): string;
 var
   LAuth: string;
   LAuthTokens: TArray<string>;
+{$ifndef DelphiXE7_UP}
+  LTokens: TStringList;
+{$endif}
 begin
   Result := '';
   LAuth := ARequest.Authorization;
+{$ifdef DelphiXE7_UP}
   LAuthTokens := LAuth.Split([' ']);
+{$else}
+  LTokens := TStringList.Create;
+  try
+    LTokens.Delimiter := ' ';
+    LTokens.StrictDelimiter := True;
+    LTokens.DelimitedText := LAuth;
+    LAuthTokens := LTokens.ToStringArray;
+  finally
+    LTokens.Free;
+  end;
+{$endif}
   if (Length(LAuthTokens) >= 2) then
     if SameText(LAuthTokens[0], 'Bearer') then
       Result := LAuthTokens[1];
@@ -212,7 +242,11 @@ function TMARSToken.GetTokenFromCookie(const ARequest: TWebRequest): string;
 begin
   Result := '';
   if CookieEnabled and (CookieName <> '') then
+{$ifdef DelphiXE7_UP}
     Result := TNetEncoding.URL.Decode(ARequest.CookieFields.Values[CookieName]);
+{$else}
+    Result := TIdURI.URLDecode(ARequest.CookieFields.Values[CookieName]);
+{$endif}
 end;
 
 function TMARSToken.GetUserName: string;

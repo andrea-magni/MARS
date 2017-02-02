@@ -8,8 +8,8 @@ unit MARS.Core.Cache;
 interface
 
 uses
-  System.Classes, System.SysUtils, Generics.Collections, System.Rtti, 
-  System.SyncObjs;
+  Classes, SysUtils, Generics.Collections, Rtti,
+  SyncObjs;
 
 type
   TMARSCacheItem = class
@@ -70,7 +70,7 @@ type
 implementation
 
 uses
-  System.DateUtils, System.Math;
+  DateUtils, Math;
 
 { TCache }
 

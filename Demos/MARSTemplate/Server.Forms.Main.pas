@@ -5,10 +5,14 @@
 *)
 unit Server.Forms.Main;
 
+{$I MARS.inc}
+
 interface
 
 uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
+{$ifdef DelphiXE7_UP}
   , System.Actions
+{$endif}
 
   , MARS.http.Server.Indy
   ;
@@ -43,7 +47,8 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.URL, MARS.Core.Engine
+  StrUtils
+  , MARS.Core.URL, MARS.Core.Engine
   , Server.Ignition;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -53,14 +58,18 @@ end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  PortNumberEdit.Text := TServerEngine.Default.Port.ToString;
+  PortNumberEdit.Text := IntToStr(TServerEngine.Default.Port);
 
   // skip favicon requests (browser)
   TServerEngine.Default.OnBeforeHandleRequest :=
     function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
     begin
       Result := True;
+{$ifdef DelphiXE7_UP}
       if AURL.Resource.EndsWith('favicon.ico', true) then
+{$else}
+      if EndsText('favicon.ico', AURL.Resource) then
+{$endif}
         Result := False;
     end;
 

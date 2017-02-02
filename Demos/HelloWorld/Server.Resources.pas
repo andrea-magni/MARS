@@ -92,7 +92,7 @@ end;
 function THelloWorldResource.Slow(ms: Integer; error: Integer): string;
 begin
   Sleep(ms);
-  Result := 'Waited ' + ms.ToString + ' ms';
+  Result := 'Waited ' + IntToStr(ms) + ' ms';
   if error > 0 then
     raise EMARSHttpException.Create('Ho fatto errore come richiesto', 501);
 end;

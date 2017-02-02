@@ -5,6 +5,8 @@
 *)
 unit MARS.Client.CustomResource.Editor;
 
+{$I MARS.inc}
+
 interface
 
 uses
@@ -28,7 +30,11 @@ procedure Register;
 implementation
 
 uses
+{$ifdef DelphiXE7_UP}
   VCL.Dialogs
+{$else}
+  Dialogs
+{$endif}
   , DesignIntf
   , Windows;
 

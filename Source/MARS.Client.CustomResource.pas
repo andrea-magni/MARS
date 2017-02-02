@@ -96,6 +96,7 @@ type
 //      const AAfterExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
 //      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
 
+{$ifdef DelphiXE7_UP}
     procedure GETAsync(const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       ASynchronize: Boolean = True);
@@ -104,6 +105,7 @@ type
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       ASynchronize: Boolean = True);
+{$endif}
 
     property Accept: string read GetAccept;
     property Application: TMARSClientApplication read GetApplication write FApplication;
@@ -127,8 +129,10 @@ type
 implementation
 
 uses
-    System.Threading
-  , MARS.Core.URL
+  {$ifdef DelphiXE7_UP}
+    System.Threading,
+  {$endif}
+    MARS.Core.URL
   , MARS.Core.Utils
   , MARS.Client.Token
   , MARS.Client.Resource
@@ -394,6 +398,7 @@ begin
   Result := FApplication;
 end;
 
+{$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.GETAsync(
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
   const AOnException: TMARSClientExecptionProc;
@@ -474,6 +479,7 @@ begin
     raise;
   end;
 end;
+{$endif}
 
 procedure TMARSClientCustomResource.POST(
   const ABeforeExecute: TProc<TMemoryStream>;
@@ -516,6 +522,7 @@ begin
   end;
 end;
 
+{$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.POSTAsync(
   const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
@@ -599,6 +606,7 @@ begin
     raise;
   end;
 end;
+{$endif}
 
 procedure TMARSClientCustomResource.PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
   const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};

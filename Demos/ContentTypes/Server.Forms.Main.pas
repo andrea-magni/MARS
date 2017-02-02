@@ -5,10 +5,16 @@
 *)
 unit Server.Forms.Main;
 
+{$I MARS.inc}
+
 interface
 
 uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
-  , System.Actions, Diagnostics
+
+{$ifdef DelphiXE7_UP}
+  , System.Actions
+{$endif}
+  , Diagnostics
 
   , MARS.Core.Engine
   , MARS.http.Server.Indy
@@ -48,10 +54,15 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.URL
+  StrUtils
+  , MARS.Core.URL
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Data.MessageBodyWriters
-  , MARS.Data.FireDAC.MessageBodyWriters
+
+{$ifdef DelphiXE3_UP}
+  , MARS.Data.FireDAC.MessageBodyWriters // remove this line if you do not have FireDAC installed
+{$endif}
+
   , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyReaders
   , MARS.Utils.Parameters.IniFile
   ;
@@ -68,14 +79,18 @@ begin
   try
     FEngine.Parameters.LoadFromIniFile;
     FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
-    PortNumberEdit.Text := FEngine.Port.ToString;
+    PortNumberEdit.Text := IntToStr(FEngine.Port);
 
     // skip favicon requests (browser)
     FEngine.OnBeforeHandleRequest :=
       function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
       begin
         Result := True;
+{$ifdef DelphiXE7_UP}
         if AURL.Resource.EndsWith('favicon.ico', true) then
+{$else}
+        if EndsText('favicon.ico', AURL.Resource) then
+{$endif}
           Result := False;
       end;
 

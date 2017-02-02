@@ -201,7 +201,7 @@ begin
   if FData.TryGetValue<TJSONObject>('Claims', LClaims) then
 {$ELSE}
   if FData.TryGetValue('Claims', LClaims) then
-{$IFEND}
+{$endif}
   begin
     FClaims.LoadFromJSON(LClaims);
 

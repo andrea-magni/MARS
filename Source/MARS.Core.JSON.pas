@@ -10,12 +10,18 @@ unit MARS.Core.JSON;
 interface
 
 uses
-{$ifdef DelphiXE6_UP} // XE6 and higher
-  JSON,
+{$ifdef DelphiXE6_UP}
+  JSON
 {$else}
-  DBXJSON,
+  DBXJSON
 {$endif}
-  SysUtils, System.Rtti;
+  , SysUtils
+{$ifdef DelphiXE2_UP}
+  , System.Rtti
+{$else}
+  , Rtti
+{$endif}
+;
 
 type
   TJSONAncestor = {$ifdef DelphiXE6_UP}JSON.TJSONAncestor{$else}DBXJSON.TJSONAncestor{$endif};
@@ -67,7 +73,9 @@ type
   public
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
+{$ifdef DelphiXE6_UP}
     function ReadInt64Value(const AName: string; const ADefault: Int64 = 0): Int64;
+{$endif}
     function ReadDoubleValue(const AName: string; const ADefault: Double = 0.0): Double;
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
@@ -280,6 +288,7 @@ begin
     Result := LValue.AsDouble;
 end;
 
+{$ifdef DelphiXE6_UP}
 function TJSONObjectHelper.ReadInt64Value(const AName: string;
   const ADefault: Int64): Int64;
 var
@@ -289,6 +298,7 @@ begin
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsInt64;
 end;
+{$endif}
 
 function TJSONObjectHelper.ReadIntegerValue(const AName: string;
   const ADefault: Integer): Integer;
@@ -324,7 +334,11 @@ var
   LValue: Int64;
 begin
   Result := ADefault;
+{$ifdef DelphiXE6_UP}
   LValue := ReadInt64Value(AName);
+{$else}
+  LValue := ReadIntegerValue(AName);
+{$endif}
   if LValue <> 0 then
     Result := UnixToDateTime(LValue)
 end;

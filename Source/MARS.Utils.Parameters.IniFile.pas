@@ -27,8 +27,9 @@ implementation
 uses
   StrUtils
   , IOUtils
-  , Rtti
+  , Rtti, TypInfo
   , MARS.Core.Utils
+
   ;
 
 { TMARSParametersIniFileReaderWriter }

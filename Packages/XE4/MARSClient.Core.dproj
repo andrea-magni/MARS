@@ -1,0 +1,196 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{48E75129-EE24-48D4-AE54-2F549C909CC8}</ProjectGuid>
+        <MainSource>MARSClient.Core.dpk</MainSource>
+        <ProjectVersion>18.2</ProjectVersion>
+        <FrameworkType>None</FrameworkType>
+        <Base>True</Base>
+        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <AppType>Package</AppType>
+        <Platform>Win32</Platform>
+        <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+        <TargetedPlatforms>1</TargetedPlatforms>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+        <Base>true</Base>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
+        <Cfg_1>true</Cfg_1>
+        <CfgParent>Base</CfgParent>
+        <Base>true</Base>
+    </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win32)'!=''">
+        <Cfg_1_Win32>true</Cfg_1_Win32>
+        <CfgParent>Cfg_1</CfgParent>
+        <Cfg_1>true</Cfg_1>
+        <Base>true</Base>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_2)'!=''">
+        <Cfg_2>true</Cfg_2>
+        <CfgParent>Base</CfgParent>
+        <Base>true</Base>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Base)'!=''">
+        <DllSuffix>150</DllSuffix>
+        <DCC_ImageBase>00400000</DCC_ImageBase>
+        <DesignOnlyPackage>true</DesignOnlyPackage>
+        <DCC_UnitSearchPath>../../Source/Core;../../Source/Data/FireDAC;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_Description>MARS-Curiosity Client Core</DCC_Description>
+        <DCC_AdditionalSwitches>-LUDesignIDE</DCC_AdditionalSwitches>
+        <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Winapi;Vcl;$(DCC_Namespace)</DCC_Namespace>
+        <GenPackage>true</GenPackage>
+        <SanitizedProjectName>MARSClient_Core</SanitizedProjectName>
+        <GenDll>true</GenDll>
+        <DCC_DcuOutput>..\..\Lib\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
+        <DCC_E>false</DCC_E>
+        <DCC_N>false</DCC_N>
+        <DCC_S>false</DCC_S>
+        <DCC_F>false</DCC_F>
+        <DCC_K>false</DCC_K>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_1)'!=''">
+        <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+        <DCC_DebugDCUs>true</DCC_DebugDCUs>
+        <DCC_Optimize>false</DCC_Optimize>
+        <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
+        <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
+        <DCC_RemoteDebug>true</DCC_RemoteDebug>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+        <VerInfo_Locale>1040</VerInfo_Locale>
+        <DllSuffix>180</DllSuffix>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_2)'!=''">
+        <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
+        <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+        <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
+        <DCC_DebugInformation>0</DCC_DebugInformation>
+    </PropertyGroup>
+    <ItemGroup>
+        <DelphiCompile Include="$(MainSource)">
+            <MainSource>MainSource</MainSource>
+        </DelphiCompile>
+        <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="dbrtl.dcp"/>
+        <DCCReference Include="inet.dcp"/>
+        <DCCReference Include="IndySystem.dcp"/>
+        <DCCReference Include="IndyProtocols.dcp"/>
+        <DCCReference Include="IndyCore.dcp"/>
+        <DCCReference Include="MARS.Utils.dcp"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.Editor.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Messaging.Resource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.Stream.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.SubResource.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.SubResource.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.SubResource.Stream.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
+        <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientResource.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTRESOURCE</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientResourceJSON.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTRESOURCEJSON</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientResourceStream.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTRESOURCESTREAM</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientSubResource.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTSUBRESOURCE</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientSubResourceJSON.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTSUBRESOURCEJSON</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientSubResourceStream.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTSUBRESOURCESTREAM</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientToken.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTTOKEN</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClient.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENT</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientApplication.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTAPPLICATION</ResourceId>
+        </RcItem>
+        <BuildConfiguration Include="Release">
+            <Key>Cfg_2</Key>
+            <CfgParent>Base</CfgParent>
+        </BuildConfiguration>
+        <BuildConfiguration Include="Base">
+            <Key>Base</Key>
+        </BuildConfiguration>
+        <BuildConfiguration Include="Debug">
+            <Key>Cfg_1</Key>
+            <CfgParent>Base</CfgParent>
+        </BuildConfiguration>
+    </ItemGroup>
+    <Import Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')" Project="$(BDS)\Bin\CodeGear.Delphi.Targets"/>
+    <Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
+    <ProjectExtensions>
+        <Borland.Personality>Delphi.Personality.12</Borland.Personality>
+        <Borland.ProjectType>Package</Borland.ProjectType>
+        <BorlandProject>
+            <Delphi.Personality>
+                <Source>
+                    <Source Name="MainSource">MARSClient.Core.dpk</Source>
+                </Source>
+                <Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k180.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp180.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                </Excluded_Packages>
+                <VersionInfo>
+                    <VersionInfo Name="IncludeVerInfo">True</VersionInfo>
+                    <VersionInfo Name="AutoIncBuild">False</VersionInfo>
+                    <VersionInfo Name="MajorVer">1</VersionInfo>
+                    <VersionInfo Name="MinorVer">0</VersionInfo>
+                    <VersionInfo Name="Release">0</VersionInfo>
+                    <VersionInfo Name="Build">0</VersionInfo>
+                    <VersionInfo Name="Debug">False</VersionInfo>
+                    <VersionInfo Name="PreRelease">False</VersionInfo>
+                    <VersionInfo Name="Special">False</VersionInfo>
+                    <VersionInfo Name="Private">False</VersionInfo>
+                    <VersionInfo Name="DLL">False</VersionInfo>
+                    <VersionInfo Name="Locale">1033</VersionInfo>
+                    <VersionInfo Name="CodePage">1252</VersionInfo>
+                </VersionInfo>
+                <VersionInfoKeys>
+                    <VersionInfoKeys Name="CompanyName"/>
+                    <VersionInfoKeys Name="FileDescription">MARSClient.Core</VersionInfoKeys>
+                    <VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys>
+                    <VersionInfoKeys Name="InternalName"/>
+                    <VersionInfoKeys Name="LegalCopyright"/>
+                    <VersionInfoKeys Name="LegalTrademarks"/>
+                    <VersionInfoKeys Name="OriginalFilename"/>
+                    <VersionInfoKeys Name="ProductName">MARSClient.Core</VersionInfoKeys>
+                    <VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
+                    <VersionInfoKeys Name="Comments"/>
+                    <VersionInfoKeys Name="ProgramID">com.embarcadero.MARSClient.Core</VersionInfoKeys>
+                </VersionInfoKeys>
+            </Delphi.Personality>
+            <Platforms>
+                <Platform value="Win32">True</Platform>
+            </Platforms>
+        </BorlandProject>
+        <ProjectFileVersion>12</ProjectFileVersion>
+    </ProjectExtensions>
+</Project>

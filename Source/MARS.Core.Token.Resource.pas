@@ -5,11 +5,19 @@
 *)
 unit MARS.Core.Token.Resource;
 
+{$I MARS.inc}
+
 interface
 
 uses
   Classes, SysUtils
+
+{$ifdef DelphiXE7_UP}
   , Web.HttpApp
+{$else}
+  , HttpApp
+{$endif}
+
 
   , MARS.Core.JSON
   , MARS.Core.Registry

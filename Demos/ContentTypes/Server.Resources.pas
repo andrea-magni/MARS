@@ -5,12 +5,16 @@
 *)
 unit Server.Resources;
 
+{$I MARS.inc}
+
 interface
 
 uses
   SysUtils, Classes, DB, HttpApp
 
-  , FireDAC.Comp.Client
+{$ifdef DelphiXE3_UP}
+  , FireDAC.Comp.Client // remove this line if you do not have FireDAC installed
+{$endif}
 
   , MARS.Core.Attributes
   , MARS.Core.MediaType
@@ -55,6 +59,7 @@ type
     , Produces(TMediaType.APPLICATION_JSON)]
     function DataSet1: TDataSet;
 
+{$ifdef DelphiXE3_UP}
     [GET, Path('/dataset2')
     , Produces(TMediaType.APPLICATION_XML)
     , Produces(TMediaType.APPLICATION_JSON)]
@@ -63,7 +68,7 @@ type
     [GET, Path('/dataset3')
     , Produces(TMediaType.APPLICATION_JSON)]
     function DataSet3: TDataset;
-
+{$endif}
 
   end;
 
@@ -94,6 +99,7 @@ begin
   Result.AppendRecord(['Luca', 'Viola']);
 end;
 
+{$ifdef DelphiXE3_UP}
 function THelloWorldResource.DataSet2: TFDMemTable;
 begin
   Result := TFDMemTable.Create(nil);
@@ -110,6 +116,7 @@ function THelloWorldResource.DataSet3: TDataset;
 begin
   Result := DataSet2;
 end;
+{$endif}
 
 function THelloWorldResource.GetStream(Response: TWebResponse): TStream;
 begin

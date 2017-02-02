@@ -5,6 +5,7 @@
 *)
 unit Server.Forms.Main;
 
+{$I MARS.inc}
 
 interface
 
@@ -20,7 +21,10 @@ uses
 
   , MARS.Core.Application
 
+{$ifdef DelphiXE7_UP}
   , System.Actions
+{$endif}
+
 ;
 
 type
@@ -73,7 +77,7 @@ begin
   try
     FEngine.Parameters.LoadFromIniFile;
     FEngine.AddApplication('DefaultApp', '/default', ['Server.Resources.*']);
-    PortNumberEdit.Text := FEngine.Port.ToString;
+    PortNumberEdit.Text := IntToStr(FEngine.Port);
 
     StartServerAction.Execute;
   except

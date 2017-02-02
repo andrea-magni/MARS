@@ -1,7 +1,8 @@
-package MARSClientXE;
+package MARSClient.Core;
 
 {$R *.res}
-{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$R '*.dres'}
+{$R *.dres}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -12,30 +13,30 @@ package MARSClientXE;
 {$LOCALSYMBOLS ON}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
-{$OPTIMIZATION OFF}
+{$OPTIMIZATION ON}
 {$OVERFLOWCHECKS OFF}
 {$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
-{$STACKFRAMES ON}
+{$STACKFRAMES OFF}
 {$TYPEDADDRESS OFF}
 {$VARSTRINGCHECKS ON}
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE DEBUG}
-{$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS Client Library'}
+{$DESCRIPTION 'MARS-Curiosity Client Core'}
+{$LIBSUFFIX '150'}
 {$DESIGNONLY}
-{$IMPLICITBUILD OFF}
+{$IMPLICITBUILD ON}
 
 requires
   rtl,
-  soaprtl,
-  DbxCommonDriver,
+  dbrtl,
+  inet,
   IndySystem,
   IndyProtocols,
-  IndyCore;
+  IndyCore,
+  MARS.Utils;
 
 contains
   MARS.Client.Application in '..\..\Source\MARS.Client.Application.pas',
@@ -50,10 +51,9 @@ contains
   MARS.Client.SubResource in '..\..\Source\MARS.Client.SubResource.pas',
   MARS.Client.SubResource.Stream in '..\..\Source\MARS.Client.SubResource.Stream.pas',
   MARS.Client.Token in '..\..\Source\MARS.Client.Token.pas',
-  MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas',
-  MARS.Core.JSON in '..\..\Source\MARS.Core.JSON.pas',
-  MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
-  MARS.Core.Utils in '..\..\Source\MARS.Core.Utils.pas',
-  MARS.Rtti.Utils in '..\..\Source\MARS.Rtti.Utils.pas';
+  MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas';
 
 end.
+
+
+

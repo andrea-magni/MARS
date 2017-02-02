@@ -5,6 +5,8 @@
 *)
 unit MARS.http.Server.Indy;
 
+{$I MARS.inc}
+
 interface
 
 uses
@@ -45,7 +47,11 @@ implementation
 
 uses
   StrUtils
+{$ifdef DelphiXE7_UP}
   , Web.HttpApp
+{$else}
+  , HttpApp
+{$endif}
   , IdCookie
   , MARS.Core.Utils
   ;
@@ -117,7 +123,11 @@ procedure TMARShttpServerIndy.SetCookies(
   const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse);
 var
   LCookie: TCookie;
+{$ifdef DelphiXE7_UP}
   LIdCookie: TIdCookie;
+{$else}
+  LIdCookie: TIdCookieRFC2109;
+{$endif}
   LIndex: Integer;
 begin
   for LIndex := 0 to AResponse.Cookies.Count-1 do

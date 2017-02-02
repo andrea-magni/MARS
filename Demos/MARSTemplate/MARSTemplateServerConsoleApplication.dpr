@@ -6,7 +6,10 @@
 program MARSTemplateServerConsoleApplication;
 {$APPTYPE CONSOLE}
 
+{$I MARS.inc}
+
 uses
+{$ifdef DelphiXE3_UP}
   System.SysUtils,
   System.Types,
   IPPeerServer,
@@ -15,6 +18,14 @@ uses
   IdSchedulerOfThreadPool,
   Web.WebReq,
   Web.WebBroker,
+{$else}
+  SysUtils, StrUtils,
+  Types,
+  IdHTTPWebBrokerBridge,
+  IdSchedulerOfThreadPool,
+  WebReq,
+  WebBroker,
+{$endif}
   ServerConst in 'ServerConst.pas',
   Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
   Server.Ignition in 'Server.Ignition.pas';
@@ -65,7 +76,7 @@ begin
   TServerEngine.Default.Port := LPort;
   if LWasActive then
     StartServer(AServer);
-  Writeln(Format(sPortSet, [TServerEngine.Default.Port.ToString]));
+  Writeln(Format(sPortSet, [IntToStr(TServerEngine.Default.Port)]));
   Write(cArrow);
 end;
 
@@ -78,8 +89,8 @@ end;
 procedure  WriteStatus(const AServer: TIdHTTPWebBrokerBridge);
 begin
   Writeln(sIndyVersion + AServer.SessionList.Version);
-  Writeln(sActive + AServer.Active.ToString(TUseBoolStrs.True));
-  Writeln(sPort + TServerEngine.Default.Port.ToString);
+  Writeln(sActive + BoolToStr(AServer.Active, True));
+  Writeln(sPort + IntToStr(TServerEngine.Default.Port));
   Write(cArrow);
 end;
 
@@ -117,8 +128,14 @@ begin
         WriteStatus(LServer)
       else if sametext(LResponse, cCommandStop) then
         StopServer(LServer)
+{$ifdef DelphiXE3_UP}
       else if LResponse.StartsWith(cCommandSetPort, True) then
         SetPort(LServer, LResponse.Split([' '])[2])
+{$else}
+      else if AnsiStartsText(cCommandSetPort, LResponse) then
+        SetPort(LServer, Copy(LResponse, Length(cCommandSetPort)+1, MAXINT))
+{$endif}
+
       else if sametext(LResponse, cCommandHelp) then
         WriteCommands
       else if sametext(LResponse, cCommandExit) then

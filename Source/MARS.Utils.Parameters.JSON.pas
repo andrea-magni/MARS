@@ -1,5 +1,7 @@
 unit MARS.Utils.Parameters.JSON;
 
+{$I MARS.inc}
+
 interface
 
 uses
@@ -41,11 +43,21 @@ var
   LPair: TJSONPair;
   LValue: TValue;
   LName: string;
+{$ifndef DelphiXE6_UP}
+  LIndex: Integer;
+{$endif}
 begin
   if Assigned(ASource) then
   begin
+{$ifdef DelphiXE6_UP}
     for LPair in ASource do
     begin
+{$else}
+    for LIndex := 0 to ASource.Size - 1 do
+    begin
+      LPair := ASource.Get(LIndex);
+{$endif}
+
       LName := AParameters.CombineSliceAndParamName(ASliceName, LPair.JsonString.Value);
 
       if LPair.JsonValue is TJSONNumber then

@@ -205,8 +205,11 @@ begin
 
     tkFloat: Result := StrToFloat(AString);
 
+{$ifdef DelphiXE7_UP}
     tkChar: Result := TValue.From(AnsiChar(AString.Chars[0]));
-
+{$else}
+    tkChar: Result := TValue.From(Copy(AString, 1, 1));
+{$endif}
     else
       Result := AString;
   end;
@@ -247,8 +250,21 @@ end;
 { RolesAllowedAttribute }
 
 constructor RolesAllowedAttribute.Create(const ARoleNames: string);
+{$ifdef DelphiXE7_UP}
 begin
   Create(ARoleNames.Split([',', ' ', ';'], TStringSplitOptions.ExcludeEmpty));
+{$else}
+var
+  LTokens: TStringList;
+begin
+  LTokens := TStringList.Create;
+  try
+    ExtractStrings([',', ' ', ';'], [], PChar(ARoleNames), LTokens);
+    Create(LTokens.ToStringArray);
+  finally
+    LTokens.Free;
+  end;
+{$endif}
 end;
 
 constructor RolesAllowedAttribute.Create(const ARoleNames: TArray<string>);
@@ -318,7 +334,11 @@ end;
 
 function HttpMethodAttribute.GetHttpMethodName: string;
 begin
+{$ifdef DelphiXE7_UP}
   Result := ClassName.Replace('Attribute', '');
+{$else}
+  Result := StringReplace(ClassName, 'Attribute', '', [rfIgnoreCase]);
+{$endif}
 end;
 
 function HttpMethodAttribute.Matches(const ARequest: TWebRequest): Boolean;
@@ -397,7 +417,7 @@ function NamedRequestParamAttribute.GetActualName(
   const AParam: TRttiParameter): string;
 begin
   Result := Name;
-  if Name.IsEmpty and Assigned(AParam) then
+  if (Name = '') and Assigned(AParam) then
     Result := AParam.Name;
 end;
 
@@ -405,7 +425,11 @@ end;
 
 function RequestParamAttribute.GetKind: string;
 begin
+{$ifdef DelphiXE7_UP}
   Result := ClassName.Replace('Attribute', '');
+{$else}
+  Result := StringReplace(ClassName, 'Attribute', '', [rfIgnoreCase]);
+{$endif}
 end;
 
 function RequestParamAttribute.GetValue(const ARequest: TWebRequest;

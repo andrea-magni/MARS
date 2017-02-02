@@ -5,9 +5,17 @@
 *)
 unit Server.WebModule;
 
+{$I MARS.inc}
+
 interface
 
-uses System.SysUtils, System.Classes, Web.HTTPApp;
+uses
+{$ifdef DelphiXE3_UP}
+  System.SysUtils, System.Classes, Web.HTTPApp;
+{$else}
+  SysUtils, Classes, HTTPApp;
+{$endif}
+
 
 type
   TServerWebModule = class(TWebModule)

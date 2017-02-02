@@ -75,12 +75,14 @@ type
       const AToken: string = '';
       const AIgnoreResult: Boolean = False): T; overload;
 
+{$ifdef DelphiXE7_UP}
     class procedure GetJSONAsync<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const ACompletionHandler: TProc<T>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AToken: string = '';
       const ASynchronize: Boolean = True); overload;
+{$endif}
 
     class function GetAsString(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
@@ -93,6 +95,7 @@ type
       const AToken: string = ''
     ): Boolean;
 
+{$ifdef DelphiXE7_UP}
     class procedure PostJSONAsync(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const AContent: TJSONValue;
@@ -100,7 +103,7 @@ type
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AToken: string = '';
       const ASynchronize: Boolean = True);
-
+{$endif}
 
     class function GetStream(const AEngineURL, AAppName, AResourceName: string;
       const AToken: string = ''): TStream; overload;
@@ -129,7 +132,7 @@ procedure Register;
 implementation
 
 uses
-    Rtti
+    Rtti, TypInfo
   , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
@@ -144,7 +147,11 @@ end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
 begin
+{$ifdef DelphiXE7_UP}
   Result := TRttiEnumerationType.GetName<TMARSHttpVerb>(AVerb);
+{$else}
+  Result := GetEnumName(TypeInfo(TMARSHttpVerb), Integer(AVerb));
+{$endif}
 end;
 
 { TMARSClient }
@@ -211,7 +218,7 @@ end;
 
 procedure TMARSClient.EndorseAuthorization(const AAuthToken: string);
 begin
-  if not AAuthToken.IsEmpty then
+  if not (AAuthToken = '') then
   begin
     FHttpClient.Request.CustomHeaders.FoldLines := False;
     FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
@@ -360,7 +367,7 @@ begin
 
         LFinalURL := LResource.URL;
         LResource.SpecificToken := AToken;
-        LResource.GET();
+        LResource.GET(nil, nil, nil);
 
         Result := nil;
         if not AIgnoreResult then
@@ -376,6 +383,7 @@ begin
   end;
 end;
 
+{$ifdef DelphiXE7_UP}
 class procedure TMARSClient.GetJSONAsync<T>(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const ACompletionHandler: TProc<T>;
@@ -437,6 +445,7 @@ begin
       raise;
     end;
 end;
+{$endif}
 
 function TMARSClient.GetProtocolVersion: TIdHTTPProtocolVersion;
 begin
@@ -484,7 +493,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LResource.SpecificToken := AToken;
-        LResource.GET();
+        LResource.GET(nil, nil, nil);
 
         Result := TMemoryStream.Create;
         try
@@ -554,6 +563,7 @@ begin
             if Assigned(ACompletionHandler) then
               ACompletionHandler(LResource.Response);
           end
+        , nil
         );
         Result := LClient.Response.ResponseCode = 200;
       finally
@@ -567,6 +577,8 @@ begin
   end;
 end;
 
+
+{$ifdef DelphiXE7_UP}
 class procedure TMARSClient.PostJSONAsync(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const AContent: TJSONValue;
@@ -642,6 +654,7 @@ begin
     raise;
   end;
 end;
+{$endif}
 
 class function TMARSClient.PostStream(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
@@ -683,6 +696,7 @@ begin
               AStream.CopyFrom(AContent, AContent.Size);
             end;
           end
+        , nil, nil
         );
         Result := LClient.Response.ResponseCode = 200;
       finally
