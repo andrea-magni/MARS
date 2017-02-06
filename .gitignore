@@ -56,3 +56,4 @@ __history/
 # Castalia statistics file
 *.stat
 Android
+*.lnk
