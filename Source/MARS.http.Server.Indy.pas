@@ -173,6 +173,7 @@ begin
   DefaultPort := FEngine.Port;
   AutoStartSession := False;
   SessionState := False;
+  SetupThreadPooling(FEngine.ThreadPoolSize);
 
   inherited;
 end;
