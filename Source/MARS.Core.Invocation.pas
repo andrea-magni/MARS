@@ -56,8 +56,7 @@ type
     procedure SetCustomHeaders;
   public
     constructor Create(const AApplication: TMARSApplication;
-      ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL;
-      const AToken: TMARSToken); virtual;
+      ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL); virtual;
     destructor Destroy; override;
 
     procedure CheckResource; virtual;
@@ -506,15 +505,14 @@ end;
 
 
 constructor TMARSActivationRecord.Create(const AApplication: TMARSApplication;
-  ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL;
-  const AToken: TMARSToken);
+  ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL);
 begin
   inherited Create;
   FApplication := AApplication;
   FRequest := ARequest;
   FResponse := AResponse;
   FURL := AURL;
-  FToken := AToken;
+  FToken := TMARSToken.Create(FRequest, FResponse, FApplication.Parameters, FURL);
   FRttiContext := TRttiContext.Create;
   FMethodArgumentsToCollect := TList<TValue>.Create;
 end;
@@ -522,6 +520,7 @@ end;
 destructor TMARSActivationRecord.Destroy;
 begin
   FMethodArgumentsToCollect.Free;
+  FToken.Free;
   inherited;
 end;
 

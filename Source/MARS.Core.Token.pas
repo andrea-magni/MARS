@@ -13,10 +13,8 @@ uses
     SysUtils, Classes, Generics.Collections, SyncObjs, Rtti
   , HTTPApp, IdGlobal
 
-  , MARS.Core.JSON
   , MARS.Core.URL
   , MARS.Utils.Parameters
-  , MARS.Utils.Parameters.JSON
 
   , JOSE.Types.Bytes, JOSE.Core.Builder
   , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA
@@ -46,8 +44,6 @@ type
     FDuration: TDateTime;
     FIsVerified: Boolean;
     FClaims: TMARSParameters;
-    FIssuedAt: TDateTime;
-    FExpiration: TDateTime;
     FCookieEnabled: Boolean;
     FCookieName: string;
     FCookieDomain: string;
@@ -57,6 +53,10 @@ type
     FResponse: TWebResponse;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
+    function GetExpiration: TDateTime;
+    procedure SetExpiration(const AValue: TDateTime);
+    function GetIssuedAt: TDateTime;
+    procedure SetIssuedAt(const AValue: TDateTime);
     function GetRoles: TArray<string>;
     procedure SetRoles(const AValue: TArray<string>);
   protected
@@ -82,16 +82,13 @@ type
     procedure SetUserNameAndRoles(const AUserName: string; const ARoles: TArray<string>); virtual;
     procedure UpdateCookie; virtual;
 
-    function ToJSON: TJSONObject; virtual;
-    function ToJSONString: string;
-
     property Token: string read FToken;
     property UserName: string read GetUserName write SetUserName;
     property Roles: TArray<string> read GetRoles write SetRoles;
     property IsVerified: Boolean read FIsVerified;
     property Claims: TMARSParameters read FClaims;
-    property Expiration: TDateTime read FExpiration;
-    property IssuedAt: TDateTime read FIssuedAt;
+    property Expiration: TDateTime read GetExpiration;
+    property IssuedAt: TDateTime read GetIssuedAt;
     property Duration: TDateTime read FDuration;
     property CookieEnabled: Boolean read FCookieEnabled;
     property CookieName: string read FCookieName;
@@ -113,6 +110,7 @@ uses
   , System.NetEncoding
   {$endif}
   , MARS.Core.Utils
+  , MARS.Utils.Parameters.JSON
   ;
 
 {
@@ -154,8 +152,6 @@ procedure TMARSToken.Clear;
 begin
   FToken := '';
   FIsVerified := False;
-  FExpiration := 0.0;
-  FIssuedAt := 0.0;
   FClaims.Clear;
 end;
 
@@ -177,6 +173,28 @@ destructor TMARSToken.Destroy;
 begin
   FClaims.Free;
   inherited;
+end;
+
+function TMARSToken.GetExpiration: TDateTime;
+var
+  LUnixValue: Int64;
+begin
+  LUnixValue := FClaims.ByName(TReservedClaimNames.EXPIRATION, 0).AsInt64;
+  if LUnixValue > 0 then
+    Result := UnixToDateTime(LUnixValue, False)
+  else
+    Result := 0.0;
+end;
+
+function TMARSToken.GetIssuedAt: TDateTime;
+var
+  LUnixValue: Int64;
+begin
+  LUnixValue := FClaims.ByName(TReservedClaimNames.ISSUED_AT, 0).AsInt64;
+  if LUnixValue > 0 then
+    Result := UnixToDateTime(LUnixValue, False)
+  else
+    Result := 0.0;
 end;
 
 function TMARSToken.GetRoles: TArray<string>;
@@ -282,17 +300,15 @@ var
   LJWT: TJWT;
   LSigner: TJWS;
   LKey: TJWK;
-  LClaims: TJWTClaims;
+  LIssuedAt: TDateTime;
 begin
   LJWT := TJWT.Create(TJWTClaims);
   try
-    LClaims := LJWT.Claims;
-    LClaims.Issuer := JWT_ISSUER;
-    LClaims.IssuedAt := Now;
-    LClaims.Expiration := LClaims.IssuedAt + Duration;
-    FExpiration := LClaims.Expiration;
-
-    FClaims.SaveToJSON(LClaims.JSON);
+    LIssuedAt := Now;
+    FClaims[TReservedClaimNames.ISSUER] := JWT_ISSUER;
+    FClaims[TReservedClaimNames.ISSUED_AT] := DateTimeToUnix(LIssuedAt, False);
+    FClaims[TReservedClaimNames.EXPIRATION] := DateTimeToUnix(LIssuedAt + Duration, False);
+    FClaims.SaveToJSON(LJWT.Claims.JSON);
 
     LSigner := TJWS.Create(LJWT);
     try
@@ -330,11 +346,9 @@ begin
         try
           FIsVerified := LJWT.Verified;
           if FIsVerified then
-          begin
-            FExpiration := LJWT.Claims.Expiration;
-            FIssuedAt := LJWT.Claims.IssuedAt;
-            FClaims.LoadFromJSON(LJWT.Claims.JSON);
-          end;
+            FClaims.LoadFromJSON(LJWT.Claims.JSON)
+          else
+            Clear;
         finally
           LJWT.Free;
         end;
@@ -343,6 +357,16 @@ begin
       LKey.Free;
     end;
   end;
+end;
+
+procedure TMARSToken.SetExpiration(const AValue: TDateTime);
+begin
+  FClaims[TReservedClaimNames.EXPIRATION] := AValue;
+end;
+
+procedure TMARSToken.SetIssuedAt(const AValue: TDateTime);
+begin
+  FClaims[TReservedClaimNames.ISSUED_AT] := AValue;
 end;
 
 procedure TMARSToken.SetRoles(const AValue: TArray<string>);
@@ -360,33 +384,6 @@ procedure TMARSToken.SetUserNameAndRoles(const AUserName: string;
 begin
   UserName := AUserName;
   Roles := ARoles;
-end;
-
-function TMARSToken.ToJSON: TJSONObject;
-begin
-  Result := TJSONObject.Create;
-  try
-    Result.AddPair('Token', Token);
-    Result.AddPair('IsVerified', BooleanToTJSON(IsVerified));
-    Result.AddPair('UserName', UserName);
-    Result.AddPair('Roles', StringArrayToString(Roles));
-    Result.AddPair('Claims', FClaims.SaveToJSON);
-  except
-    Result.Free;
-    raise;
-  end;
-end;
-
-function TMARSToken.ToJSONString: string;
-var
-  LObj: TJSONObject;
-begin
-  LObj := ToJSON;
-  try
-    Result := LObj.ToJSON;
-  finally
-    LObj.Free;
-  end;
 end;
 
 procedure TMARSToken.UpdateCookie;

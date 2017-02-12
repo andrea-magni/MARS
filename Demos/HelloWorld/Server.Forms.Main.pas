@@ -19,11 +19,7 @@ uses
   , MARS.Core.Engine
   , MARS.http.Server.Indy
 
-  , MARS.Core.Application
-
-{$ifdef DelphiXE7_UP}
-  , System.Actions
-{$endif}
+  , MARS.Core.Application, System.Actions
 
 ;
 

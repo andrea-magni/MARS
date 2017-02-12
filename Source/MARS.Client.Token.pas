@@ -54,6 +54,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    procedure Clear; virtual;
     procedure SaveToStream(const AStream: TStream); virtual;
     procedure LoadFromStream(const AStream: TStream); virtual;
     procedure SaveToFile(const AFilename: string); virtual;
@@ -141,6 +142,14 @@ begin
   end;
 end;
 
+procedure TMARSClientToken.Clear;
+begin
+  if Assigned(FData) then
+    FreeAndNil(FData);
+  FData := TJSONObject.Create;
+  ParseData;
+end;
+
 constructor TMARSClientToken.Create(AOwner: TComponent);
 begin
   inherited;
@@ -205,10 +214,16 @@ begin
   begin
     FClaims.LoadFromJSON(LClaims);
 
-    FIssuedAt := UnixToDateTime(FClaims['iat'].AsInt64);
-    FExpiration := UnixToDateTime(FClaims['exp'].AsInt64);
+    FIssuedAt := UnixToDateTime(FClaims['iat'].AsInt64, False);
+    FExpiration := UnixToDateTime(FClaims['exp'].AsInt64, False);
     FUserName := FClaims['UserName'].AsString;
     FUserRoles.CommaText := FClaims['Roles'].AsString;
+  end
+  else
+  begin
+    FIssuedAt := 0.0;
+    FExpiration := 0.0;
+    FUserRoles.Clear;
   end;
 end;
 

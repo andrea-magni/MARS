@@ -10,11 +10,7 @@ unit Server.Forms.Main;
 interface
 
 uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
-{$ifdef DelphiXE7_UP}
-  , System.Actions
-{$endif}
-
-  , MARS.http.Server.Indy
+  , MARS.http.Server.Indy, System.Actions
   ;
 
 type

@@ -44,12 +44,10 @@ type
     function GetRequest: TWebRequest; virtual;
     function GetResponse: TWebResponse; virtual;
     function GetURL: TMARSURL; virtual;
-    function GetToken: TMARSToken; virtual;
 
     property Request: TWebRequest read GetRequest;
     property Response: TWebResponse read GetResponse;
     property URL: TMARSURL read GetURL;
-    property Token: TMARSToken read GetToken;
   public
     constructor Create(const AEngine: TObject; const AName: string); virtual;
     destructor Destroy; override;
@@ -175,11 +173,6 @@ begin
   Result := TMARSEngine(Engine).CurrentResponse;
 end;
 
-function TMARSApplication.GetToken: TMARSToken;
-begin
-  Result := TMARSEngine(Engine).CurrentToken;
-end;
-
 function TMARSApplication.GetURL: TMARSURL;
 begin
   Result := TMARSEngine(Engine).CurrentURL;
@@ -191,7 +184,7 @@ var
 begin
   Result := False;
   try
-    LActivationRecord := TMARSActivationRecord.Create(Self, Request, Response, AURL, Token);
+    LActivationRecord := TMARSActivationRecord.Create(Self, Request, Response, AURL);
     try
       LActivationRecord.CheckResource;
       LActivationRecord.CheckMethod;

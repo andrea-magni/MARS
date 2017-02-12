@@ -16,7 +16,6 @@ uses
   , MARS.Core.Registry
   , MARS.Core.Application
   , MARS.Core.URL
-  , MARS.Core.Token
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
 ;
@@ -42,7 +41,6 @@ type
     class threadvar FWebRequest: TWebRequest;
     class threadvar FWebResponse: TWebResponse;
     class threadvar FURL: TMARSURL;
-    class threadvar FToken: TMARSToken;
   private
     FApplications: TMARSApplicationDictionary;
     FSubscribers: TList<IMARSHandleRequestEventListener>;
@@ -54,7 +52,6 @@ type
     function GetCurrentRequest: TWebRequest;
     function GetCurrentResponse: TWebResponse;
     function GetCurrentURL: TMARSURL;
-    function GetCurrentToken: TMARSToken;
     function GetBasePath: string;
     function GetPort: Integer;
     function GetThreadPoolSize: Integer;
@@ -87,7 +84,6 @@ type
 
     // Transient properties
     property CurrentURL: TMARSURL read GetCurrentURL;
-    property CurrentToken: TMARSToken read GetCurrentToken;
     property CurrentRequest: TWebRequest read GetCurrentRequest;
     property CurrentResponse: TWebResponse read GetCurrentResponse;
 
@@ -259,18 +255,12 @@ begin
       FWebRequest := ARequest;
       FWebResponse := AResponse;
       FURL := LURL;
-      FToken := TMARSToken.Create(FWebRequest, FWebResponse, LApplication.Parameters, FURL);
-      try
-        if DoBeforeHandleRequest(LApplication) then begin
-          LStopWatch := TStopwatch.StartNew;
-          LApplication.HandleRequest(ARequest, AResponse, LURL);
-          LStopWatch.Stop;
-          DoAfterHandleRequest(LApplication, LStopWatch);
-        end;
-      finally
-        FToken.Free;
+      if DoBeforeHandleRequest(LApplication) then begin
+        LStopWatch := TStopwatch.StartNew;
+        LApplication.HandleRequest(ARequest, AResponse, LURL);
+        LStopWatch.Stop;
+        DoAfterHandleRequest(LApplication, LStopWatch);
       end;
-
       Result := True;
     end
     else
@@ -317,11 +307,6 @@ end;
 function TMARSEngine.GetCurrentResponse: TWebResponse;
 begin
   Result := FWebResponse;
-end;
-
-function TMARSEngine.GetCurrentToken: TMARSToken;
-begin
-  Result := FToken;
 end;
 
 function TMARSEngine.GetCurrentURL: TMARSURL;

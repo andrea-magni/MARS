@@ -68,14 +68,24 @@ procedure TMainForm.LoginButtonClick(Sender: TObject);
 begin
   Token.UserName := UsernameEdit.Text;
   Token.Password := PasswordEdit.Text;
-  Token.POST();
-  if Token.IsVerified then
-    ShowMessage('OK, success!' + sLineBreak
-      + 'Data:' + sLineBreak
-      + Token.Data.ToString
-    )
-  else
-    ShowMessage('Authentication failed');
+  Token.POST(
+    nil
+  , procedure (AStream: TStream)
+    begin
+      if Token.IsVerified then
+        ShowMessage('OK, success!' + sLineBreak
+          + 'Data:' + sLineBreak
+          + Token.Data.ToString
+        )
+      else
+        ShowMessage('Username or password invalid');
+    end
+  , procedure (AError: Exception)
+    begin
+      ShowMessage('Authentication error. Token expired? Try again.');
+      Token.Clear;
+    end
+  );
 end;
 
 end.
