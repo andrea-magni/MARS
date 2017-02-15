@@ -44,7 +44,7 @@ type
     FWriterMediaType: TMediaType;
 
     procedure CleanupMethodArguments; virtual;
-    procedure CollectGarbage(const AValue: TValue); virtual;
+    procedure CleanupGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
     function ContextInjectionByType(const AType: TRttiType; out AValue: TValue): Boolean; virtual;
     function GetEngine: TMARSEngine; virtual;
@@ -63,6 +63,8 @@ type
     procedure CheckMethod; virtual;
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
+
+    procedure CollectGarbage(AValue: TValue); virtual;
 
     procedure Invoke; virtual;
 
@@ -110,7 +112,7 @@ begin
     begin
       LParamValue := ARequestParamAttr.GetValue(Request, AParam, Engine.BasePath, Application.BasePath);
       if not (LParamValue.IsEmpty or AParam.HasAttribute<IsReference>) then
-        FMethodArgumentsToCollect.Add(LParamValue);
+        CollectGarbage(LParamValue);
     end
   );
 
@@ -196,7 +198,7 @@ begin
   Result := TMARSEngine(Application.Engine);
 end;
 
-procedure TMARSActivationRecord.CollectGarbage(const AValue: TValue);
+procedure TMARSActivationRecord.CleanupGarbage(const AValue: TValue);
 var
   LIndex: Integer;
   LValue: TValue;
@@ -214,7 +216,7 @@ begin
         case LValue.Kind of
           tkClass: LValue.AsObject.Free;
           tkInterface: TObject(LValue.AsInterface).Free;
-          tkArray, tkDynArray: CollectGarbage(LValue); //recursion
+          tkArray, tkDynArray: CleanupGarbage(LValue); //recursion
         end;
       end;
     end;
@@ -225,7 +227,7 @@ procedure TMARSActivationRecord.CleanupMethodArguments;
 begin
   while FMethodArgumentsToCollect.Count > 0 do
   begin
-    CollectGarbage(FMethodArgumentsToCollect[0]);
+    CleanupGarbage(FMethodArgumentsToCollect[0]);
     FMethodArgumentsToCollect.Delete(0);
   end;
 end;
@@ -303,7 +305,7 @@ begin
       CleanupMethodArguments;
 
       if not FMethod.HasAttribute<IsReference>(nil) then
-        CollectGarbage(LMethodResult);
+        CleanupGarbage(LMethodResult);
     end;
   finally
     FWriter := nil;
@@ -450,6 +452,11 @@ procedure TMARSActivationRecord.CheckResource;
 begin
   if not Application.Resources.TryGetValue(URL.Resource, FConstructorInfo) then
     raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
+end;
+
+procedure TMARSActivationRecord.CollectGarbage(AValue: TValue);
+begin
+  FMethodArgumentsToCollect.Add(AValue);
 end;
 
 procedure TMARSActivationRecord.ContextInjection();
