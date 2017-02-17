@@ -43,7 +43,8 @@ type
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
 
-    procedure CleanupMethodArguments; virtual;
+    procedure CleanupContext; virtual;
+    procedure CollectContext(AValue: TValue); virtual;
     procedure CleanupGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject;
@@ -64,8 +65,6 @@ type
     procedure CheckMethod; virtual;
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
-
-    procedure CollectGarbage(AValue: TValue); virtual;
 
     procedure Invoke; virtual;
 
@@ -105,7 +104,7 @@ begin
     procedure (AContextAttr: ContextAttribute)
     begin
       if GetContextValue(AParam, LParamValue) then
-        CollectGarbage(LParamValue)
+        CollectContext(LParamValue)
     end
   );
 
@@ -115,7 +114,7 @@ begin
     begin
       LParamValue := ARequestParamAttr.GetValue(Request, AParam, Engine.BasePath, Application.BasePath);
       if not (LParamValue.IsEmpty or AParam.HasAttribute<IsReference>) then
-        CollectGarbage(LParamValue);
+        CollectContext(LParamValue);
     end
   );
 
@@ -226,7 +225,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.CleanupMethodArguments;
+procedure TMARSActivationRecord.CleanupContext;
 begin
   while FMethodArgumentsToCollect.Count > 0 do
   begin
@@ -305,7 +304,7 @@ begin
         end;
       end;
     finally
-      CleanupMethodArguments;
+      CleanupContext;
 
       if not FMethod.HasAttribute<IsReference>(nil) then
         CleanupGarbage(LMethodResult);
@@ -457,7 +456,7 @@ begin
     raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 end;
 
-procedure TMARSActivationRecord.CollectGarbage(AValue: TValue);
+procedure TMARSActivationRecord.CollectContext(AValue: TValue);
 begin
   FMethodArgumentsToCollect.Add(AValue);
 end;
@@ -477,8 +476,8 @@ begin
       Result := True; // enumerate all
       if GetContextValue(AField, LValue) then
       begin
+        CollectContext(LValue);
         AField.SetValue(FResourceInstance, LValue);
-        CollectGarbage(LValue);
       end;
     end
   );
@@ -492,8 +491,8 @@ begin
       Result := True;
       if GetContextValue(AProperty, LValue) then
       begin
+        CollectContext(LValue);
         AProperty.SetValue(FResourceInstance, LValue);
-        CollectGarbage(LValue);
       end;
     end
   );
