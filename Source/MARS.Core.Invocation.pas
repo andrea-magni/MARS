@@ -46,7 +46,8 @@ type
     procedure CleanupMethodArguments; virtual;
     procedure CleanupGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
-    function ContextInjectionByType(const AType: TRttiType; out AValue: TValue): Boolean; virtual;
+    function GetContextValue(const ADestination: TRttiObject;
+      out AValue: TValue): Boolean; virtual;
     function GetEngine: TMARSEngine; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
     procedure FillResourceMethodParameters; virtual;
@@ -85,6 +86,7 @@ uses
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
+  , MARS.Core.Injection
 {$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}
@@ -102,7 +104,8 @@ begin
   AParam.HasAttribute<ContextAttribute>(
     procedure (AContextAttr: ContextAttribute)
     begin
-      ContextInjectionByType(AParam.ParamType, LParamValue);
+      if GetContextValue(AParam, LParamValue) then
+        CollectGarbage(LParamValue)
     end
   );
 
@@ -472,8 +475,11 @@ begin
       LValue: TValue;
     begin
       Result := True; // enumerate all
-      if ContextInjectionByType(AField.FieldType, LValue) then
+      if GetContextValue(AField, LValue) then
+      begin
         AField.SetValue(FResourceInstance, LValue);
+        CollectGarbage(LValue);
+      end;
     end
   );
 
@@ -484,30 +490,38 @@ begin
       LValue: TValue;
     begin
       Result := True;
-      if ContextInjectionByType(AProperty.PropertyType, LValue) then
+      if GetContextValue(AProperty, LValue) then
+      begin
         AProperty.SetValue(FResourceInstance, LValue);
+        CollectGarbage(LValue);
+      end;
     end
   );
 end;
 
-function TMARSActivationRecord.ContextInjectionByType(const AType: TRttiType;
+function TMARSActivationRecord.GetContextValue(const ADestination: TRttiObject;
   out AValue: TValue): Boolean;
+var
+  LType: TRttiType;
 begin
   Result := True;
-  if (AType.IsObjectOfType(TMARSToken)) then
+  LType := ADestination.GetRttiType;
+  Assert(Assigned(LType));
+
+  if (LType.IsObjectOfType(TMARSToken)) then
     AValue := Token
-  else if (AType.IsObjectOfType(TWebRequest)) then
+  else if (LType.IsObjectOfType(TWebRequest)) then
     AValue := Request
-  else if (AType.IsObjectOfType(TWebResponse)) then
+  else if (LType.IsObjectOfType(TWebResponse)) then
     AValue := Response
-  else if (AType.IsObjectOfType(TMARSURL)) then
+  else if (LType.IsObjectOfType(TMARSURL)) then
     AValue := URL
-  else if (AType.IsObjectOfType(TMARSEngine)) then
+  else if (LType.IsObjectOfType(TMARSEngine)) then
     AValue := Engine
-  else if (AType.IsObjectOfType(TMARSApplication)) then
+  else if (LType.IsObjectOfType(TMARSApplication)) then
     AValue := Application
   else
-    Result := False;
+    Result := TMARSInjectionServiceRegistry.Instance.GetValue(ADestination, Self, AValue);
 end;
 
 

@@ -25,14 +25,17 @@
 /// </summary>
 unit JOSE.Core.Base;
 
+{$I MARS.inc}
+
 interface
 
 uses
   SysUtils,
   Generics.Collections,
-  JOSE.Types.Bytes,
+  JOSE.Types.Bytes
   // JOSE.Types.JSON;
-  MARS.Core.JSON;
+  , MARS.Core.JSON
+  ;
 
 const
   PART_SEPARATOR: Char = '.';
@@ -63,7 +66,11 @@ type
 implementation
 
 uses
-  JOSE.Encoding.Base64;
+  JOSE.Encoding.Base64
+{$ifdef DelphiXE6_UP}
+  , System.JSON
+{$endif}
+;
 
 { TJOSEBase }
 
