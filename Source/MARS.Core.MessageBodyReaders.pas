@@ -54,6 +54,9 @@ uses
     MARS.Core.JSON
   , MARS.Core.Utils
   , MARS.Rtti.Utils
+{$ifdef DelphiXE6_UP}
+  , System.JSON
+{$endif}
   ;
 
 { TJSONValueReader }

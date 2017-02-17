@@ -43,10 +43,12 @@ type
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
 
-    procedure CleanupMethodArguments; virtual;
+    procedure CleanupContext; virtual;
+    procedure CollectContext(AValue: TValue); virtual;
     procedure CleanupGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
-    function ContextInjectionByType(const AType: TRttiType; out AValue: TValue): Boolean; virtual;
+    function GetContextValue(const ADestination: TRttiObject;
+      out AValue: TValue): Boolean; virtual;
     function GetEngine: TMARSEngine; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
     procedure FillResourceMethodParameters; virtual;
@@ -63,8 +65,6 @@ type
     procedure CheckMethod; virtual;
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
-
-    procedure CollectGarbage(AValue: TValue); virtual;
 
     procedure Invoke; virtual;
 
@@ -85,6 +85,7 @@ uses
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
+  , MARS.Core.Injection
 {$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}
@@ -102,7 +103,8 @@ begin
   AParam.HasAttribute<ContextAttribute>(
     procedure (AContextAttr: ContextAttribute)
     begin
-      ContextInjectionByType(AParam.ParamType, LParamValue);
+      if GetContextValue(AParam, LParamValue) then
+        CollectContext(LParamValue)
     end
   );
 
@@ -112,7 +114,7 @@ begin
     begin
       LParamValue := ARequestParamAttr.GetValue(Request, AParam, Engine.BasePath, Application.BasePath);
       if not (LParamValue.IsEmpty or AParam.HasAttribute<IsReference>) then
-        CollectGarbage(LParamValue);
+        CollectContext(LParamValue);
     end
   );
 
@@ -223,7 +225,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.CleanupMethodArguments;
+procedure TMARSActivationRecord.CleanupContext;
 begin
   while FMethodArgumentsToCollect.Count > 0 do
   begin
@@ -302,7 +304,7 @@ begin
         end;
       end;
     finally
-      CleanupMethodArguments;
+      CleanupContext;
 
       if not FMethod.HasAttribute<IsReference>(nil) then
         CleanupGarbage(LMethodResult);
@@ -454,7 +456,7 @@ begin
     raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 end;
 
-procedure TMARSActivationRecord.CollectGarbage(AValue: TValue);
+procedure TMARSActivationRecord.CollectContext(AValue: TValue);
 begin
   FMethodArgumentsToCollect.Add(AValue);
 end;
@@ -472,8 +474,11 @@ begin
       LValue: TValue;
     begin
       Result := True; // enumerate all
-      if ContextInjectionByType(AField.FieldType, LValue) then
+      if GetContextValue(AField, LValue) then
+      begin
+        CollectContext(LValue);
         AField.SetValue(FResourceInstance, LValue);
+      end;
     end
   );
 
@@ -484,30 +489,38 @@ begin
       LValue: TValue;
     begin
       Result := True;
-      if ContextInjectionByType(AProperty.PropertyType, LValue) then
+      if GetContextValue(AProperty, LValue) then
+      begin
+        CollectContext(LValue);
         AProperty.SetValue(FResourceInstance, LValue);
+      end;
     end
   );
 end;
 
-function TMARSActivationRecord.ContextInjectionByType(const AType: TRttiType;
+function TMARSActivationRecord.GetContextValue(const ADestination: TRttiObject;
   out AValue: TValue): Boolean;
+var
+  LType: TRttiType;
 begin
   Result := True;
-  if (AType.IsObjectOfType(TMARSToken)) then
+  LType := ADestination.GetRttiType;
+  Assert(Assigned(LType));
+
+  if (LType.IsObjectOfType(TMARSToken)) then
     AValue := Token
-  else if (AType.IsObjectOfType(TWebRequest)) then
+  else if (LType.IsObjectOfType(TWebRequest)) then
     AValue := Request
-  else if (AType.IsObjectOfType(TWebResponse)) then
+  else if (LType.IsObjectOfType(TWebResponse)) then
     AValue := Response
-  else if (AType.IsObjectOfType(TMARSURL)) then
+  else if (LType.IsObjectOfType(TMARSURL)) then
     AValue := URL
-  else if (AType.IsObjectOfType(TMARSEngine)) then
+  else if (LType.IsObjectOfType(TMARSEngine)) then
     AValue := Engine
-  else if (AType.IsObjectOfType(TMARSApplication)) then
+  else if (LType.IsObjectOfType(TMARSApplication)) then
     AValue := Application
   else
-    Result := False;
+    Result := TMARSInjectionServiceRegistry.Instance.GetValue(ADestination, Self, AValue);
 end;
 
 

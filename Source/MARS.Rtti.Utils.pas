@@ -17,6 +17,9 @@ uses
 type
   TRttiObjectHelper = class helper for TRttiObject
   public
+    function GetRttiType: TRttiType;
+    procedure SetValue(AInstance: Pointer; const AValue: TValue);
+
     function HasAttribute<T: TCustomAttribute>: Boolean; overload;
     function HasAttribute<T: TCustomAttribute>(
       const ADoSomething: TProc<T>): Boolean; overload;
@@ -176,6 +179,17 @@ begin
   Result := HasAttribute<T>(nil);
 end;
 
+function TRttiObjectHelper.GetRttiType: TRttiType;
+begin
+  Result := nil;
+  if Self is TRttiField then
+    Result := TRttiField(Self).FieldType
+  else if Self is TRttiProperty then
+    Result := TRttiProperty(Self).PropertyType
+  else if Self is TRttiParameter then
+    Result := TRttiParameter(Self).ParamType;
+end;
+
 function TRttiObjectHelper.HasAttribute<T>(
   const ADoSomething: TProc<T>): Boolean;
 var
@@ -194,6 +208,16 @@ begin
       Break;
     end;
   end;
+end;
+
+procedure TRttiObjectHelper.SetValue(AInstance: Pointer; const AValue: TValue);
+begin
+  if Self is TRttiField then
+    TRttiField(Self).SetValue(AInstance, AValue)
+  else if Self is TRttiProperty then
+    TRttiProperty(Self).SetValue(AInstance, AValue)
+  else if Self is TRttiParameter then
+    TRttiParameter(Self).SetValue(AInstance, AValue);
 end;
 
 { TRttiTypeHelper }
@@ -383,5 +407,6 @@ begin
   if Assigned(LType) then
     Result := LType.HasAttribute<T>(ADoSomething);
 end;
+
 
 end.
