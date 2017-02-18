@@ -56,9 +56,7 @@ type
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetExpiration: TDateTime;
-    procedure SetExpiration(const AValue: TDateTime);
     function GetIssuedAt: TDateTime;
-    procedure SetIssuedAt(const AValue: TDateTime);
     function GetRoles: TArray<string>;
     procedure SetRoles(const AValue: TArray<string>);
   protected
@@ -363,15 +361,6 @@ begin
   end;
 end;
 
-procedure TMARSToken.SetExpiration(const AValue: TDateTime);
-begin
-  FClaims[TReservedClaimNames.EXPIRATION] := AValue;
-end;
-
-procedure TMARSToken.SetIssuedAt(const AValue: TDateTime);
-begin
-  FClaims[TReservedClaimNames.ISSUED_AT] := AValue;
-end;
 
 procedure TMARSToken.SetRoles(const AValue: TArray<string>);
 begin
