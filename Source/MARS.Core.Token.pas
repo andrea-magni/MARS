@@ -23,10 +23,11 @@ uses
 type
   TMARSToken = class
   public
-    const JWT_ISSUER = 'MARS-Curiosity';
     const JWT_USERNAME = 'UserName';
     const JWT_ROLES = 'Roles';
 
+    const JWT_ISSUER_PARAM = 'JWT.Issuer';
+    const JWT_ISSUER_PARAM_DEFAULT = 'MARS-Curiosity';
     const JWT_SECRET_PARAM = 'JWT.Secret';
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
     const JWT_COOKIEENABLED_PARAM = 'JWT.CookieEnabled';
@@ -51,6 +52,7 @@ type
     FCookieSecure: Boolean;
     FRequest: TWebRequest;
     FResponse: TWebResponse;
+    FIssuer: string;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetExpiration: TDateTime;
@@ -88,6 +90,7 @@ type
     property IsVerified: Boolean read FIsVerified;
     property Claims: TMARSParameters read FClaims;
     property Expiration: TDateTime read GetExpiration;
+    property Issuer: string read FIssuer;
     property IssuedAt: TDateTime read GetIssuedAt;
     property Duration: TDateTime read FDuration;
     property CookieEnabled: Boolean read FCookieEnabled;
@@ -161,6 +164,7 @@ begin
   FRequest := ARequest;
   FResponse := AResponse;
 
+  FIssuer := AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
   FCookieEnabled := AParameters.ByName(JWT_COOKIEENABLED_PARAM, JWT_COOKIEENABLED_PARAM_DEFAULT).AsBoolean;
   FCookieName := AParameters.ByName(JWT_COOKIENAME_PARAM, JWT_COOKIENAME_PARAM_DEFAULT).AsString;
   FCookieDomain := AParameters.ByName(JWT_COOKIEDOMAIN_PARAM, AURL.Hostname).AsString;
@@ -305,7 +309,7 @@ begin
   LJWT := TJWT.Create(TJWTClaims);
   try
     LIssuedAt := Now;
-    FClaims[TReservedClaimNames.ISSUER] := JWT_ISSUER;
+    FClaims[TReservedClaimNames.ISSUER] := FIssuer;
     FClaims[TReservedClaimNames.ISSUED_AT] := DateTimeToUnix(LIssuedAt, False);
     FClaims[TReservedClaimNames.EXPIRATION] := DateTimeToUnix(LIssuedAt + Duration, False);
     FClaims.SaveToJSON(LJWT.Claims.JSON);
