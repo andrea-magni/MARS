@@ -103,60 +103,63 @@ begin
   inherited;
 
   LJSONObj := TJSONObject.ParseJSONValue(StreamToString(Client.Response.ContentStream)) as TJSONObject;
-
-  LDataSets := TFDJSONDataSets.Create;
   try
-    if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONObj, LDataSets) then
-      raise EMARSClientException.Create('Error deserializing data');
+    LDataSets := TFDJSONDataSets.Create;
+    try
+      if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONObj, LDataSets) then
+        raise EMARSClientException.Create('Error deserializing data');
 
-    LCount := TFDJSONDataSetsReader.GetListCount(LDataSets);
-    for LIndex := 0 to LCount-1 do
-    begin
-      LName := TFDJSONDataSetsReader.GetListKey(LDataSets, LIndex);
-      LData := TFDJSONDataSetsReader.GetListValue(LDataSets, LIndex);
-
-      LItem := FResourceDataSets.FindItemByDataSetName(LName);
-      if Assigned(LItem) then
+      LCount := TFDJSONDataSetsReader.GetListCount(LDataSets);
+      for LIndex := 0 to LCount-1 do
       begin
-        if Assigned(LItem.DataSet) then
+        LName := TFDJSONDataSetsReader.GetListKey(LDataSets, LIndex);
+        LData := TFDJSONDataSetsReader.GetListValue(LDataSets, LIndex);
+
+        LItem := FResourceDataSets.FindItemByDataSetName(LName);
+        if Assigned(LItem) then
         begin
-          if LItem.Synchronize then
-            TThread.Synchronize(nil,
-              procedure
-              begin
-                LItem.DataSet.DisableControls;
-                try
-                  LItem.DataSet.Close;
-//                  LItem.DataSet.CopyDataSet(LData, [coStructure, coRestart, coAppend]);
-                  LItem.DataSet.Data := LData;
-                  LItem.DataSet.ApplyUpdates;
-                finally
-                  LItem.DataSet.EnableControls;
-                end;
-              end
-            )
-          else
+          if Assigned(LItem.DataSet) then
           begin
-            LItem.DataSet.DisableControls;
-            try
-              LItem.DataSet.Close;
-//              LItem.DataSet.CopyDataSet(LData, [coStructure, coRestart, coAppend]);
-              LItem.DataSet.Data := LData;
-              LItem.DataSet.ApplyUpdates;
-            finally
-              LItem.DataSet.EnableControls;
+            if LItem.Synchronize then
+              TThread.Synchronize(nil,
+                procedure
+                begin
+                  LItem.DataSet.DisableControls;
+                  try
+                    LItem.DataSet.Close;
+  //                  LItem.DataSet.CopyDataSet(LData, [coStructure, coRestart, coAppend]);
+                    LItem.DataSet.Data := LData;
+                    LItem.DataSet.ApplyUpdates;
+                  finally
+                    LItem.DataSet.EnableControls;
+                  end;
+                end
+              )
+            else
+            begin
+              LItem.DataSet.DisableControls;
+              try
+                LItem.DataSet.Close;
+  //              LItem.DataSet.CopyDataSet(LData, [coStructure, coRestart, coAppend]);
+                LItem.DataSet.Data := LData;
+                LItem.DataSet.ApplyUpdates;
+              finally
+                LItem.DataSet.EnableControls;
+              end;
             end;
           end;
+        end
+        else
+        begin
+          LItem := FResourceDataSets.Add;
+          LItem.DataSetName := LName;
         end;
-      end
-      else
-      begin
-        LItem := FResourceDataSets.Add;
-        LItem.DataSetName := LName;
       end;
+    finally
+      LDataSets.Free;
     end;
   finally
-    LDataSets.Free;
+    LJSONObj.Free;
   end;
 end;
 
