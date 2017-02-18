@@ -51,6 +51,7 @@ type
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetEngine: TMARSEngine; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
+    function GetToken: TMARSToken;
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
@@ -73,7 +74,8 @@ type
     property Request: TWebRequest read FRequest;
     property Response: TWebResponse read FResponse;
     property URL: TMARSURL read FURL;
-    property Token: TMARSToken read FToken;
+    property Token: TMARSToken read GetToken;
+    function HasToken: Boolean;
   end;
 
 implementation
@@ -123,6 +125,30 @@ begin
   );
 
   Result := LParamValue;
+end;
+
+function TMARSActivationRecord.GetToken: TMARSToken;
+var
+  LInjection: TInjectionValue;
+begin
+  if not Assigned(FToken) then
+  begin
+    LInjection := TMARSInjectionServiceRegistry.Instance.GetValue(
+      FRttiContext.GetType(Self.ClassType).GetField('FToken')
+      , Self
+    );
+    if LInjection.HasValue then begin
+      if not LInjection.IsReference then
+        CollectContext(LInjection.Value);
+      FToken := LInjection.Value.AsType<TMARSToken>;
+    end;
+  end;
+  Result := FToken;
+end;
+
+function TMARSActivationRecord.HasToken: Boolean;
+begin
+  Result := Assigned(FToken);
 end;
 
 procedure TMARSActivationRecord.FillResourceMethodParameters;
@@ -514,7 +540,7 @@ begin
   FRequest := ARequest;
   FResponse := AResponse;
   FURL := AURL;
-  FToken := TMARSToken.Create(FRequest, FResponse, FApplication.Parameters, FURL);
+  FToken := nil;
   FRttiContext := TRttiContext.Create;
   FMethodArgumentsToCollect := TList<TValue>.Create;
 end;
@@ -522,7 +548,6 @@ end;
 destructor TMARSActivationRecord.Destroy;
 begin
   FMethodArgumentsToCollect.Free;
-  FToken.Free;
   inherited;
 end;
 
