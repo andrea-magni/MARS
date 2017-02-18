@@ -5,18 +5,21 @@
 *)
 unit MARS.Core.Injection.Interfaces;
 
+{$I MARS.inc}
+
 interface
 
 uses
   Classes, SysUtils, Rtti, TypInfo
 , MARS.Core.Declarations
 , MARS.Core.Invocation
+, MARS.Core.Injection.Types
 ;
 
 type
-  IInjectionService = interface ['{C2EB93E0-5D0B-4F29-AEAF-CAB74DC72C3C}']
-    function GetValue(const AContext: TMARSActivationRecord;
-      const ADesiredType: TRttiType; const AAttributes: TAttributeArray): TValue;
+  IMARSInjectionService = interface ['{C2EB93E0-5D0B-4F29-AEAF-CAB74DC72C3C}']
+    function GetValue(const ADestination: TRttiObject;
+      const AActivationRecord: TMARSActivationRecord): TInjectionValue;
   end;
 
 

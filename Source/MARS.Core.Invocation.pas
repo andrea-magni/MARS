@@ -22,6 +22,7 @@ uses
   , MARS.Core.Registry
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MediaType
+  , MARS.Core.Injection.Types
   ;
 
 type
@@ -47,8 +48,7 @@ type
     procedure CollectContext(AValue: TValue); virtual;
     procedure CleanupGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
-    function GetContextValue(const ADestination: TRttiObject;
-      out AValue: TValue): Boolean; virtual;
+    function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetEngine: TMARSEngine; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
     procedure FillResourceMethodParameters; virtual;
@@ -86,6 +86,7 @@ uses
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
   , MARS.Core.Injection
+  , MARS.Core.Injection.ActivationRecordService
 {$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}
@@ -102,9 +103,12 @@ begin
   // context injection
   AParam.HasAttribute<ContextAttribute>(
     procedure (AContextAttr: ContextAttribute)
+    var
+      LInjection: TInjectionValue;
     begin
-      if GetContextValue(AParam, LParamValue) then
-        CollectContext(LParamValue)
+      LInjection := GetContextValue(AParam);
+      if LInjection.HasValue then
+        LParamValue := LInjection.Value;
     end
   );
 
@@ -471,14 +475,12 @@ begin
   LType.ForEachFieldWithAttribute<ContextAttribute>(
     function (AField: TRttiField; AAttrib: ContextAttribute): Boolean
     var
-      LValue: TValue;
+      LInjection: TInjectionValue;
     begin
       Result := True; // enumerate all
-      if GetContextValue(AField, LValue) then
-      begin
-        CollectContext(LValue);
-        AField.SetValue(FResourceInstance, LValue);
-      end;
+      LInjection := GetContextValue(AField);
+      if LInjection.HasValue then
+        AField.SetValue(FResourceInstance, LInjection.Value);
     end
   );
 
@@ -486,41 +488,21 @@ begin
   LType.ForEachPropertyWithAttribute<ContextAttribute>(
     function (AProperty: TRttiProperty; AAttrib: ContextAttribute): Boolean
     var
-      LValue: TValue;
+      LInjection: TInjectionValue;
     begin
       Result := True;
-      if GetContextValue(AProperty, LValue) then
-      begin
-        CollectContext(LValue);
-        AProperty.SetValue(FResourceInstance, LValue);
-      end;
+      LInjection := GetContextValue(AProperty);
+      if LInjection.HasValue then
+        AProperty.SetValue(FResourceInstance, LInjection.Value);
     end
   );
 end;
 
-function TMARSActivationRecord.GetContextValue(const ADestination: TRttiObject;
-  out AValue: TValue): Boolean;
-var
-  LType: TRttiType;
+function TMARSActivationRecord.GetContextValue(const ADestination: TRttiObject): TInjectionValue;
 begin
-  Result := True;
-  LType := ADestination.GetRttiType;
-  Assert(Assigned(LType));
-
-  if (LType.IsObjectOfType(TMARSToken)) then
-    AValue := Token
-  else if (LType.IsObjectOfType(TWebRequest)) then
-    AValue := Request
-  else if (LType.IsObjectOfType(TWebResponse)) then
-    AValue := Response
-  else if (LType.IsObjectOfType(TMARSURL)) then
-    AValue := URL
-  else if (LType.IsObjectOfType(TMARSEngine)) then
-    AValue := Engine
-  else if (LType.IsObjectOfType(TMARSApplication)) then
-    AValue := Application
-  else
-    Result := TMARSInjectionServiceRegistry.Instance.GetValue(ADestination, Self, AValue);
+  Result := TMARSInjectionServiceRegistry.Instance.GetValue(ADestination, Self);
+  if Result.HasValue and not Result.IsReference then
+    CollectContext(Result.Value);
 end;
 
 

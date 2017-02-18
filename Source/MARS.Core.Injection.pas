@@ -5,23 +5,25 @@
 *)
 unit MARS.Core.Injection;
 
+{$I MARS.inc}
+
 interface
 
 uses
     Classes, SysUtils, Generics.Collections, Rtti, TypInfo
   , MARS.Core.Declarations
   , MARS.Core.Injection.Interfaces
+  , MARS.Core.Injection.Types
+  , MARS.Core.Invocation
 ;
 
 type
-  TCanProvideValueFunction = reference to function(AType: TRttiType;
-    const AAttributes: TAttributeArray): Boolean;
+  TCanProvideValueFunction = reference to function (const ADestination: TRttiObject): Boolean;
 
   TEntryInfo = record
-    CreateInstance: TFunc<IInjectionService>;
+    CreateInstance: TFunc<IMARSInjectionService>;
     CanProvideValue: TCanProvideValueFunction;
   end;
-
 
   TMARSInjectionServiceRegistry = class
   private
@@ -35,9 +37,19 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure RegisterService<T>(
-      const ACreationFunc: TFunc<IInjectionService>
+    procedure RegisterService(
+      const ACreationFunc: TFunc<IMARSInjectionService>;
+      const ACanProvideValueFunc: TCanProvideValueFunction
     ); overload;
+
+    procedure RegisterService(
+      const AClass: TClass;
+      const ACanProvideValueFunc: TCanProvideValueFunction
+    ); overload;
+
+
+    function GetValue(const ADestination: TRttiObject;
+      const AActivationRecord: TMARSActivationRecord): TInjectionValue;
 
     procedure Enumerate(const AProc: TProc<TEntryInfo>);
 
@@ -88,19 +100,57 @@ begin
   Result := _Instance;
 end;
 
-procedure TMARSInjectionServiceRegistry.RegisterService<T>(
-  const ACreationFunc: TFunc<IInjectionService>);
+function TMARSInjectionServiceRegistry.GetValue(const ADestination: TRttiObject;
+  const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+var
+  LEntry: TEntryInfo;
+  LService: IMARSInjectionService;
+begin
+  Result.Clear;
+  for LEntry in FRegistry do
+  begin
+    if LEntry.CanProvideValue(ADestination) then
+    begin
+      LService := LEntry.CreateInstance();
+      Result := LService.GetValue(ADestination, AActivationRecord);
+      if Result.HasValue then
+        Break;
+    end;
+  end;
+end;
+
+procedure TMARSInjectionServiceRegistry.RegisterService(const AClass: TClass;
+  const ACanProvideValueFunc: TCanProvideValueFunction);
+begin
+  RegisterService(
+    function: IMARSInjectionService
+    var
+      LIntf: IMARSInjectionService;
+      LInstance: TObject;
+    begin
+      Result := nil;
+      LInstance := AClass.Create;
+      try
+        if Supports(LInstance, IMARSInjectionService, LIntf) then
+          Result := LIntf
+        else
+          LInstance.Free;
+      except
+        LInstance.Free;
+      end;
+    end
+   , ACanProvideValueFunc
+  );
+end;
+
+procedure TMARSInjectionServiceRegistry.RegisterService(
+  const ACreationFunc: TFunc<IMARSInjectionService>;
+  const ACanProvideValueFunc: TCanProvideValueFunction);
 var
   LEntryInfo: TEntryInfo;
 begin
   LEntryInfo.CreateInstance := ACreationFunc;
-  LEntryInfo.CanProvideValue :=
-    function (AType: TRttiType; const AAttributes: TAttributeArray): Boolean
-    begin
-      if FRttiContext.GetType(TypeInfo(T)).IsInstance then
-        Result := Assigned(AType) and AType.IsObjectOfType<T>;
-    end
-  ;
+  LEntryInfo.CanProvideValue := ACanProvideValueFunc;
 
   FRegistry.Add(LEntryInfo)
 end;
