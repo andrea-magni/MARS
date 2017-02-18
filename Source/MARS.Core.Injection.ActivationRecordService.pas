@@ -27,7 +27,7 @@ uses
 , Web.HttpApp
 ;
 
-{ TMyService }
+{ TMARSActivationRecordInjectionService }
 
 function TMARSActivationRecordInjectionService.GetValue(const ADestination: TRttiObject;
   const AActivationRecord: TMARSActivationRecord): TInjectionValue;
@@ -37,9 +37,7 @@ begin
   Result.Clear;
   LType := ADestination.GetRttiType;
 
-  if (LType.IsObjectOfType(TMARSToken)) then
-    Result.SetValue(AActivationRecord.Token, True)
-  else if (LType.IsObjectOfType(TWebRequest)) then
+  if (LType.IsObjectOfType(TWebRequest)) then
     Result.SetValue(AActivationRecord.Request, True)
   else if (LType.IsObjectOfType(TWebResponse)) then
     Result.SetValue(AActivationRecord.Response, True)
@@ -64,17 +62,16 @@ begin
       LType: TRttiType;
     begin
       Result := ((ADestination is TRttiParameter) or (ADestination is TRttiField) or (ADestination is TRttiProperty));
-      if not Result then
-        Exit;
-
-      LType := ADestination.GetRttiType;
-      Result :=
-        LType.IsObjectOfType(TMARSToken)
-        or LType.IsObjectOfType(TWebRequest)
-        or LType.IsObjectOfType(TWebResponse)
-        or LType.IsObjectOfType(TMARSURL)
-        or LType.IsObjectOfType(TMARSEngine)
-        or LType.IsObjectOfType(TMARSApplication);
+      if Result then
+      begin
+        LType := ADestination.GetRttiType;
+        Result :=
+          LType.IsObjectOfType(TWebRequest)
+          or LType.IsObjectOfType(TWebResponse)
+          or LType.IsObjectOfType(TMARSURL)
+          or LType.IsObjectOfType(TMARSEngine)
+          or LType.IsObjectOfType(TMARSApplication);
+      end;
     end
   );
 end;
