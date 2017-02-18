@@ -37,12 +37,25 @@ function TMARSTokenInjectionService.GetValue(const ADestination: TRttiObject;
   const AActivationRecord: TMARSActivationRecord): TInjectionValue;
 var
   LType: TRttiType;
+  LToken: TMARSToken;
 begin
   Result.Clear;
   LType := ADestination.GetRttiType;
 
   if (LType.IsObjectOfType(TMARSToken)) then
-    Result.SetValue(AActivationRecord.Token, True);
+  begin
+    if AActivationRecord.HasToken then
+      Result.SetValue(AActivationRecord.Token, True)
+    else begin
+      LToken := TMARSToken.Create(AActivationRecord.Request
+        , AActivationRecord.Response
+        , AActivationRecord.Application.Parameters
+        , AActivationRecord.URL
+      );
+
+      Result.SetValue(LToken);
+    end;
+  end;
 end;
 
 
