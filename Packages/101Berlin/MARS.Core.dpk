@@ -60,8 +60,10 @@ contains
   MARS.Core.Token in '..\..\Source\MARS.Core.Token.pas',
   MARS.http.Core in '..\..\Source\MARS.http.Core.pas',
   MARS.Core.Invocation in '..\..\Source\MARS.Core.Invocation.pas',
+  MARS.Core.Injection.ActivationRecordService in '..\..\Source\MARS.Core.Injection.ActivationRecordService.pas',
   MARS.Core.Injection.Interfaces in '..\..\Source\MARS.Core.Injection.Interfaces.pas',
-  MARS.Core.Injection in '..\..\Source\MARS.Core.Injection.pas';
+  MARS.Core.Injection in '..\..\Source\MARS.Core.Injection.pas',
+  MARS.Core.Injection.Types in '..\..\Source\MARS.Core.Injection.Types.pas';
 
 end.
 
