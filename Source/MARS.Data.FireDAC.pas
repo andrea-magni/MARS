@@ -120,8 +120,7 @@ uses
   , MARS.Data.Utils
   , MARS.Rtti.Utils
   , MARS.Data.FireDAC.InjectionService
-//  , MARS.Data.FireDAC.ReadersAndWriters
-  , MARS.Data.FireDAC.MessageBodyWriters
+  , MARS.Data.FireDAC.ReadersAndWriters
 ;
 
 function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;

@@ -37,7 +37,7 @@ implementation
 
 uses
     MARS.Core.Registry
-    , MARS.Data.FireDAC.MessageBodyWriters
+    , MARS.Data.FireDAC.ReadersAndWriters
   ;
 
 {%CLASSGROUP 'Vcl.Controls.TControl'}

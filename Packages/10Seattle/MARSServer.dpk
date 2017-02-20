@@ -68,7 +68,7 @@ contains
   MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
   MARS.Core.Utils in '..\..\Source\MARS.Core.Utils.pas',
   MARS.Data.FireDAC.DataModule in '..\..\Source\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule},
-  MARS.Data.FireDAC.MessageBodyWriters in '..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas',
+  MARS.Data.FireDAC.ReadersAndWriters in '..\..\Source\MARS.Data.FireDAC.ReadersAndWriters.pas',
   MARS.Data.FireDAC in '..\..\Source\MARS.Data.FireDAC.pas',
   MARS.Data.MessageBodyWriters in '..\..\Source\MARS.Data.MessageBodyWriters.pas',
   MARS.Data.Utils in '..\..\Source\MARS.Data.Utils.pas',

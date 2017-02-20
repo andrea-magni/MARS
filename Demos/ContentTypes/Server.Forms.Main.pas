@@ -60,7 +60,7 @@ uses
   , MARS.Data.MessageBodyWriters
 
 {$ifdef DelphiXE3_UP}
-  , MARS.Data.FireDAC.MessageBodyWriters // remove this line if you do not have FireDAC installed
+  , MARS.Data.FireDAC.ReadersAndWriters // remove this line if you do not have FireDAC installed
 {$endif}
 
   , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyReaders

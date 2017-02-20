@@ -61,7 +61,7 @@ uses
     MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Data.MessageBodyWriters
-  , MARS.Data.FireDAC.MessageBodyWriters
+  , MARS.Data.FireDAC.ReadersAndWriters
   , MARS.Utils.Parameters.IniFile
   ;
 

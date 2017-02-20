@@ -50,7 +50,7 @@ requires
 
 contains
   MARS.Data.FireDAC.DataModule in '..\..\Source\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule},
-  MARS.Data.FireDAC.MessageBodyWriters in '..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas',
+  MARS.Data.FireDAC.ReadersAndWriters in '..\..\Source\MARS.Data.FireDAC.ReadersAndWriters.pas',
   MARS.Data.FireDAC in '..\..\Source\MARS.Data.FireDAC.pas';
 
 end.

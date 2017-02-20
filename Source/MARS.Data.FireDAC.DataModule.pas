@@ -19,7 +19,7 @@ uses
 
   , MARS.Data.FireDAC
   , MARS.Data.MessageBodyWriters
-  , MARS.Data.FireDAC.MessageBodyWriters
+  , MARS.Data.FireDAC.ReadersAndWriters
 
   , FireDAC.Comp.Client
   ;
