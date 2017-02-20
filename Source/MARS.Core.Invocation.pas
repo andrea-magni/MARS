@@ -88,7 +88,7 @@ uses
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
   , MARS.Core.Injection
-  , MARS.Core.Injection.ActivationRecordService
+  , MARS.Core.Invocation.InjectionService
 {$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}

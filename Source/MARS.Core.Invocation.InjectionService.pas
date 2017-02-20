@@ -1,4 +1,4 @@
-unit MARS.Core.Injection.ActivationRecordService;
+unit MARS.Core.Invocation.InjectionService;
 
 {$I MARS.inc}
 
