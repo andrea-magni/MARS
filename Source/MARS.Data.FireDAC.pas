@@ -5,6 +5,8 @@
 *)
 unit MARS.Data.FireDAC;
 
+{$I MARS.inc}
+
 interface
 
 uses
@@ -89,6 +91,23 @@ type
     function Update: string; virtual;
   end;
 
+  TMARSFireDACHelper = class
+  private
+    FConnectionDefName: string;
+    FConnection: TFDConnection;
+  protected
+    procedure SetConnectionDefName(const Value: string);
+    function GetConnection: TFDConnection;
+  public
+    constructor Create(const AConnectionDefName: string); virtual;
+    destructor Destroy; override;
+
+    function CreateCommand(const ASQL: string = ''): TFDCommand;
+    function CreateQuery(const ASQL: string = ''): TFDQuery;
+
+    property Connection: TFDConnection read GetConnection;
+    property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
+  end;
 
   function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 
@@ -99,7 +118,11 @@ uses
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , MARS.Data.Utils
-  , MARS.Rtti.Utils;
+  , MARS.Rtti.Utils
+  , MARS.Data.FireDAC.InjectionService
+//  , MARS.Data.FireDAC.ReadersAndWriters
+  , MARS.Data.FireDAC.MessageBodyWriters
+;
 
 function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 begin
@@ -330,6 +353,60 @@ begin
   inherited Create;
   FName := AName;
   FSQLStatement := ASQLStatement;
+end;
+
+{ TMARSFireDACHelper }
+
+constructor TMARSFireDACHelper.Create(const AConnectionDefName: string);
+begin
+  inherited Create();
+  ConnectionDefName := AConnectionDefName;
+end;
+
+function TMARSFireDACHelper.CreateCommand(const ASQL: string): TFDCommand;
+begin
+  Result := TFDCommand.Create(nil);
+  try
+    Result.Connection := Connection;
+    Result.CommandText.Text := ASQL;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSFireDACHelper.CreateQuery(const ASQL: string): TFDQuery;
+begin
+  Result := TFDQuery.Create(nil);
+  try
+    Result.Connection := Connection;
+    Result.SQL.Text := ASQL;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+destructor TMARSFireDACHelper.Destroy;
+begin
+  FreeAndNil(FConnection);
+  inherited;
+end;
+
+function TMARSFireDACHelper.GetConnection: TFDConnection;
+begin
+  if not Assigned(FConnection) then
+    FConnection := CreateConnectionByDefName(ConnectionDefName);
+  Result := FConnection;
+end;
+
+procedure TMARSFireDACHelper.SetConnectionDefName(const Value: string);
+begin
+  if FConnectionDefName <> Value then
+  begin
+    FreeAndNil(FConnection);
+    FConnectionDefName := Value;
+  end;
 end;
 
 end.
