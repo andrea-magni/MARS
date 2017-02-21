@@ -64,8 +64,14 @@ type
     constructor Create(const AConnectionDefName: string); virtual;
     destructor Destroy; override;
 
-    function CreateCommand(const ASQL: string = ''): TFDCommand;
-    function CreateQuery(const ASQL: string = ''): TFDQuery;
+    function CreateCommand(const ASQL: string = ''; const AExecuteImmediate: Boolean = False): TFDCommand;
+    function CreateQuery(const ASQL: string = ''; const AOpen: Boolean = False): TFDQuery;
+
+    procedure ExecuteSQL(const ASQL: string; const ABeforeExecute: TProc<TFDCommand> = nil;
+      const AAfterExecute: TProc<TFDCommand> = nil); overload;
+    procedure ExecuteSQL(const ASQL: String; const AParams: array of Variant); overload;
+    procedure ExecuteSQL(const ASQL: String; const AParams: array of Variant;
+      const ATypes: array of TFieldType); overload;
 
     property Connection: TFDConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
@@ -121,24 +127,28 @@ begin
   ConnectionDefName := AConnectionDefName;
 end;
 
-function TMARSFireDAC.CreateCommand(const ASQL: string): TFDCommand;
+function TMARSFireDAC.CreateCommand(const ASQL: string; const AExecuteImmediate: Boolean): TFDCommand;
 begin
   Result := TFDCommand.Create(nil);
   try
     Result.Connection := Connection;
     Result.CommandText.Text := ASQL;
+    if AExecuteImmediate then
+      Result.Execute();
   except
     Result.Free;
     raise;
   end;
 end;
 
-function TMARSFireDAC.CreateQuery(const ASQL: string): TFDQuery;
+function TMARSFireDAC.CreateQuery(const ASQL: string; const AOpen: Boolean): TFDQuery;
 begin
   Result := TFDQuery.Create(nil);
   try
     Result.Connection := Connection;
     Result.SQL.Text := ASQL;
+    if AOpen then
+      Result.Open;
   except
     Result.Free;
     raise;
@@ -149,6 +159,42 @@ destructor TMARSFireDAC.Destroy;
 begin
   FreeAndNil(FConnection);
   inherited;
+end;
+
+procedure TMARSFireDAC.ExecuteSQL(const ASQL: String;
+  const AParams: array of Variant);
+begin
+  ExecuteSQL(ASQL, AParams, []);
+end;
+
+procedure TMARSFireDAC.ExecuteSQL(const ASQL: String;
+  const AParams: array of Variant; const ATypes: array of TFieldType);
+var
+  LCommand: TFDCommand;
+begin
+  LCommand := CreateCommand();
+  try
+    LCommand.Execute(ASQL, AParams, ATypes);
+  finally
+    LCommand.Free;
+  end;
+end;
+
+procedure TMARSFireDAC.ExecuteSQL(const ASQL: string; const ABeforeExecute,
+  AAfterExecute: TProc<TFDCommand>);
+var
+  LCommand: TFDCommand;
+begin
+  LCommand := CreateCommand(ASQL, False);
+  try
+    if Assigned(ABeforeExecute) then
+      ABeforeExecute(LCommand);
+    LCommand.Execute();
+    if Assigned(AAfterExecute) then
+      AAfterExecute(LCommand);
+  finally
+    LCommand.Free;
+  end;
 end;
 
 function TMARSFireDAC.GetConnection: TFDConnection;
