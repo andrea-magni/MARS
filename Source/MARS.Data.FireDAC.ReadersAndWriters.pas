@@ -19,10 +19,21 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.Classes
   , MARS.Core.MessageBodyWriter
+  , MARS.Core.MessageBodyReader
   , MARS.Core.Utils
   , MARS.Data.Utils;
 
 type
+  // --- READERS ---
+  [Consumes(TMediaType.APPLICATION_JSON)]
+  TFDDeltasReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(const AInputData: TBytes;
+      const AAttributes: TAttributeArray;
+      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue; virtual;
+  end;
+
+  // --- WRITERS ---
   [Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON)]
   TFDAdaptedDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
@@ -48,6 +59,9 @@ uses
   , FireDAC.Stan.StorageXML
 
   , MARS.Core.JSON
+  // to avoid [dcc32 Hint] H2443 Inline function 'TJSONObject.ParseJSONValue'
+  // has not been expanded because unit 'System.JSON' is not specified in USES list
+  , System.JSON
   , MARS.Core.Exceptions
   , MARS.Rtti.Utils
   ;
@@ -115,8 +129,10 @@ begin
   LDataSet.SaveToStream(AOutputStream, LStorageFormat);
 end;
 
-procedure RegisterWriters;
+procedure RegisterReadersAndWriters;
 begin
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TFDJSONDeltas>(TFDDeltasReader);
+
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
     TFDAdaptedDataSetWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
@@ -142,7 +158,35 @@ begin
   );
 end;
 
+{ TFDJSONDeltasReader }
+
+function TFDDeltasReader.ReadFrom(const AInputData: TBytes;
+  const AAttributes: TAttributeArray; AMediaType: TMediaType;
+  ARequestHeaders: TStrings): TValue;
+var
+  LJSON: TJSONObject;
+  LDeltas: TFDJSONDeltas;
+begin
+  Result := TValue.Empty;
+
+  LJSON := TJSONObject.ParseJSONValue(AInputData, 0) as TJSONObject;
+  if Assigned(LJSON) then
+    try
+      LDeltas := TFDJSONDeltas.Create;
+      try
+        if not TFDJSONInterceptor.JSONObjectToDataSets(LJSON, LDeltas) then
+          raise EMARSException.Create('Error de-serializing deltas');
+        Result := LDeltas;
+      except
+        LDeltas.Free;
+        raise;
+      end;
+    finally
+      LJSON.Free;
+    end;
+end;
+
 initialization
-  RegisterWriters;
+  RegisterReadersAndWriters;
 
 end.

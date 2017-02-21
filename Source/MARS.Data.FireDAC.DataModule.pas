@@ -39,7 +39,6 @@ type
   [Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
   TMARSFDDataModuleResource = class(TDataModule)
   private
-    function GetResourceName: string;
   protected
     [Context] URL: TMARSURL;
 
@@ -53,10 +52,7 @@ type
     function Retrieve: TArray<TFDCustomQuery>; virtual;
 
     [POST]
-    function Update([BodyParam] const AJSONDeltas: TJSONObject): TJSONArray; virtual;
-
-  published
-    property ResourceName: string read GetResourceName;
+    function Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TJSONArray; virtual;
   end;
 
 implementation
@@ -106,20 +102,6 @@ begin
 
 end;
 
-function TMARSFDDataModuleResource.GetResourceName: string;
-var
-  LResult: string;
-begin
-  LResult := '';
-  TRttiHelper.IfHasAttribute<PathAttribute>(Self,
-    procedure (AAttrib: PathAttribute)
-    begin
-      LResult := AAttrib.Value;
-    end
-  );
-  Result := LResult;
-end;
-
 function TMARSFDDataModuleResource.Retrieve: TArray<TFDCustomQuery>;
 var
   LIncludeDefault: Boolean;
@@ -154,48 +136,38 @@ begin
   Result := LDataSets;
 end;
 
-function TMARSFDDataModuleResource.Update([BodyParam] const AJSONDeltas: TJSONObject): TJSONArray;
+function TMARSFDDataModuleResource.Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TJSONArray;
 var
-  LDeltas: TFDJSONDeltas;
   LResult: TJSONArray;
 begin
   Result := nil;
 
-  LDeltas := TFDJSONDeltas.Create;
+  // apply updates
+  LResult := TJSONArray.Create;
   try
-    // build FireDAC delta objects
-    if not TFDJSONInterceptor.JSONObjectToDataSets(AJSONDeltas, LDeltas) then
-      raise EMARSException.Create('Error de-serializing deltas');
+    ApplyUpdates(AJSONDeltas,
+      procedure(ADatasetName: string; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
+      var
+        LResultObj: TJSONObject;
+      begin
+        LResultObj := TJSONObject.Create;
+        try
+          LResultObj.AddPair('dataset', ADatasetName);
+          LResultObj.AddPair('result', TJSONNumber.Create(AApplyResult));
+          LResultObj.AddPair('errors', TJSONNumber.Create(AApplyUpdates.Errors.Count));
+          LResultObj.AddPair('errorText', AApplyUpdates.Errors.Strings.Text);
+          LResult.AddElement(LResultObj);
+        except
+          LResultObj.Free;
+          raise;
+        end;
+      end
+    );
 
-    // apply updates
-    LResult := TJSONArray.Create;
-    try
-      ApplyUpdates(LDeltas,
-        procedure(ADatasetName: string; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
-        var
-          LResultObj: TJSONObject;
-        begin
-          LResultObj := TJSONObject.Create;
-          try
-            LResultObj.AddPair('dataset', ADatasetName);
-            LResultObj.AddPair('result', TJSONNumber.Create(AApplyResult));
-            LResultObj.AddPair('errors', TJSONNumber.Create(AApplyUpdates.Errors.Count));
-            LResultObj.AddPair('errorText', AApplyUpdates.Errors.Strings.Text);
-            LResult.AddElement(LResultObj);
-          except
-            LResultObj.Free;
-            raise;
-          end;
-        end
-      );
-
-      Result := LResult;
-    except
-      LResult.Free;
-      raise;
-    end;
-  finally
-    LDeltas.Free;
+    Result := LResult;
+  except
+    LResult.Free;
+    raise;
   end;
 end;
 
