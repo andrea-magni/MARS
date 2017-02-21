@@ -28,10 +28,7 @@ type
   THelloWorldResource = class
   protected
     [Context, Connection('Firebird_Employee_Pooled')]
-    FConnection: TFDConnection;
-
-    [Context, Connection('Firebird_Employee_Pooled')]
-    FFireDACHelper: TMARSFireDACHelper;
+    FD: TMARSFireDAC;
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
@@ -54,20 +51,8 @@ uses
 { THelloWorldResource }
 
 function THelloWorldResource.GetDataset: TDataSet;
-//var
-//  LQuery: TFDQuery;
-//begin
-//  LQuery := TFDQuery.Create(nil);
-//  try
-//    LQuery.Connection := FConnection;
-//    LQuery.Open('select * from EMPLOYEE');
-//    Result := LQuery;
-//  except
-//    LQuery.Free;
-//    raise;
-//  end;
 begin
-  Result := FFireDACHelper.CreateQuery('select * from EMPLOYEE');
+  Result := FD.CreateQuery('select * from EMPLOYEE');
 end;
 
 function THelloWorldResource.SayHelloWorld: string;

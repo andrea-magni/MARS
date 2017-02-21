@@ -42,7 +42,7 @@ type
   TSimpleResource = class
   protected
     [Context]
-    FD: TMARSFireDACHelper;
+    FD: TMARSFireDAC;
   public
     [GET]
     function GetData: TDataSet;

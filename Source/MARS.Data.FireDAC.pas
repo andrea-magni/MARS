@@ -53,7 +53,7 @@ type
     property SQLStatement: string read FSQLStatement;
   end;
 
-  TMARSFireDACHelper = class
+  TMARSFireDAC = class
   private
     FConnectionDefName: string;
     FConnection: TFDConnection;
@@ -113,15 +113,15 @@ begin
   FSQLStatement := ASQLStatement;
 end;
 
-{ TMARSFireDACHelper }
+{ TMARSFireDAC }
 
-constructor TMARSFireDACHelper.Create(const AConnectionDefName: string);
+constructor TMARSFireDAC.Create(const AConnectionDefName: string);
 begin
   inherited Create();
   ConnectionDefName := AConnectionDefName;
 end;
 
-function TMARSFireDACHelper.CreateCommand(const ASQL: string): TFDCommand;
+function TMARSFireDAC.CreateCommand(const ASQL: string): TFDCommand;
 begin
   Result := TFDCommand.Create(nil);
   try
@@ -133,7 +133,7 @@ begin
   end;
 end;
 
-function TMARSFireDACHelper.CreateQuery(const ASQL: string): TFDQuery;
+function TMARSFireDAC.CreateQuery(const ASQL: string): TFDQuery;
 begin
   Result := TFDQuery.Create(nil);
   try
@@ -145,20 +145,20 @@ begin
   end;
 end;
 
-destructor TMARSFireDACHelper.Destroy;
+destructor TMARSFireDAC.Destroy;
 begin
   FreeAndNil(FConnection);
   inherited;
 end;
 
-function TMARSFireDACHelper.GetConnection: TFDConnection;
+function TMARSFireDAC.GetConnection: TFDConnection;
 begin
   if not Assigned(FConnection) then
     FConnection := CreateConnectionByDefName(ConnectionDefName);
   Result := FConnection;
 end;
 
-procedure TMARSFireDACHelper.SetConnectionDefName(const Value: string);
+procedure TMARSFireDAC.SetConnectionDefName(const Value: string);
 begin
   if FConnectionDefName <> Value then
   begin

@@ -93,9 +93,9 @@ begin
     Result.SetValue(
       CreateConnectionByDefName(GetConnectionDefName(ADestination, AActivationRecord))
     )
-  else if ADestination.GetRttiType.IsObjectOfType(TMARSFireDACHelper) then
+  else if ADestination.GetRttiType.IsObjectOfType(TMARSFireDAC) then
     Result.SetValue(
-      TMARSFireDACHelper.Create(GetConnectionDefName(ADestination, AActivationRecord))
+      TMARSFireDAC.Create(GetConnectionDefName(ADestination, AActivationRecord))
     );
 end;
 
@@ -115,7 +115,7 @@ begin
       begin
         LType := ADestination.GetRttiType;
         Result := LType.IsObjectOfType(TFDConnection)
-          or LType.IsObjectOfType(TMARSFireDACHelper);
+          or LType.IsObjectOfType(TMARSFireDAC);
       end;
     end
   );
