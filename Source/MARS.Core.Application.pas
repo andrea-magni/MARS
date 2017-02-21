@@ -196,14 +196,23 @@ begin
     finally
       LActivationRecord.Free;
     end;
-  except
-    on E: EMARSHttpException do
+  except on E: Exception do
+    if E is EMARSHttpException then
     begin
-      Response.StatusCode := E.Status;
+      Response.StatusCode := EMARSHttpException(E).Status;
       Response.Content := E.Message;
       Response.ContentType := TMediaType.TEXT_HTML;
     end
-    else raise;
+    else begin
+      Response.StatusCode := 500;
+      Response.Content := 'Internal server error'
+      {$IFDEF DEBUG}
+        + ': ' + E.Message
+      {$ENDIF}
+      ;
+      Response.ContentType := TMediaType.TEXT_PLAIN;
+  //    raise;
+    end;
   end;
 end;
 

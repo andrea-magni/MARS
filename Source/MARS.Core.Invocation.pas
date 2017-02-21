@@ -71,7 +71,10 @@ type
 
     property Application: TMARSApplication read FApplication;
     property Engine: TMARSEngine read GetEngine;
+    property Method: TRttiMethod read FMethod;
     property Request: TWebRequest read FRequest;
+    property Resource: TRttiType read FResource;
+//    property ResourceInstance: TObject read FResourceInstance;
     property Response: TWebResponse read FResponse;
     property URL: TMARSURL read FURL;
     property Token: TMARSToken read GetToken;

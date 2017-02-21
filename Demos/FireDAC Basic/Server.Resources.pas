@@ -32,18 +32,16 @@ type
   [  Connection('Firebird_Employee_Pooled')
    , Path('fdresource')
    , SQLStatement('employee', 'select * from EMPLOYEE order by EMP_NO')
-   , Produces(TMediaType.APPLICATION_JSON)
-  ]
+   , Produces(TMediaType.APPLICATION_JSON)]
   THelloWorldResource = class(TMARSFDDatasetResource)
   protected
   public
   end;
 
-  [Path('fdsimple'), Produces(TMediaType.APPLICATION_JSON)
-  ]
-  TSimpleResource = class(TMARSFDDatasetResource)
+  [Path('fdsimple'), Produces(TMediaType.APPLICATION_JSON)]
+  TSimpleResource = class
   protected
-    [Context, Connection('Firebird_Employee_Pooled')]
+    [Context]
     FD: TMARSFireDACHelper;
   public
     [GET]

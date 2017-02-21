@@ -50,73 +50,77 @@ begin
 
 
   Result := TJSONObject.Create;
-
-  for LField in ADataSet.Fields do
-  begin
-    if (ARootPath = '') or StartsStr(ARootPath + '.', LField.FieldName) then
+  try
+    for LField in ADataSet.Fields do
     begin
-      LPairName := LField.FieldName;
-      if ARootPath <> '' then
-        LPairName := LeftStr(LPairName, Length(ARootPath) + 1);
+      if (ARootPath = '') or StartsStr(ARootPath + '.', LField.FieldName) then
+      begin
+        LPairName := LField.FieldName;
+        if ARootPath <> '' then
+          LPairName := LeftStr(LPairName, Length(ARootPath) + 1);
 
-      if ContainsStr(LPairName, '.') then
-        Continue;
+        if ContainsStr(LPairName, '.') then
+          Continue;
 
-      case LField.DataType of
-//        ftUnknown: ;
-        ftString: Result.AddPair(LPairName, LField.AsString);
-        ftSmallint: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
-        ftInteger: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
-        ftWord: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
-        ftBoolean: Result.AddPair(LPairName, BooleanToTJSON(LField.AsBoolean));
-        ftFloat: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
-        ftCurrency: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsCurrency));
-        ftBCD: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
-        ftDate: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
-        ftTime: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
-        ftDateTime: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
-//        ftBytes: ;
-//        ftVarBytes: ;
-        ftAutoInc: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
-//        ftBlob: ;
-        ftMemo: Result.AddPair(LPairName, LField.AsString);
-//        ftGraphic: ;
-//        ftFmtMemo: ;
-//        ftParadoxOle: ;
-//        ftDBaseOle: ;
-//        ftTypedBinary: ;
-//        ftCursor: ;
-        ftFixedChar: Result.AddPair(LPairName, LField.AsString);
-        ftWideString: Result.AddPair(LPairName, LField.AsWideString);
-        ftLargeint: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsLargeInt));
-//        ftADT: ;
-//        ftArray: ;
-//        ftReference: ;
-//        ftDataSet: ;
-//        ftOraBlob: ;
-//        ftOraClob: ;
-        ftVariant: Result.AddPair(LPairName, LField.AsString);
-//        ftInterface: ;
-//        ftIDispatch: ;
-        ftGuid: Result.AddPair(LPairName, LField.AsString);
-        ftTimeStamp: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
-        ftFMTBcd: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
-        ftFixedWideChar: Result.AddPair(LPairName, LField.AsString);
-        ftWideMemo: Result.AddPair(LPairName, LField.AsString);
-//        ftOraTimeStamp: ;
-//        ftOraInterval: ;
-        ftLongWord: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
-        ftShortint: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
-        ftByte: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
-        ftExtended: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
-//        ftConnection: ;
-//        ftParams: ;
-//        ftStream: ;
-//        ftTimeStampOffset: ;
-//        ftObject: ;
-        ftSingle: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
+        case LField.DataType of
+  //        ftUnknown: ;
+          ftString: Result.AddPair(LPairName, LField.AsString);
+          ftSmallint: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
+          ftInteger: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
+          ftWord: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
+          ftBoolean: Result.AddPair(LPairName, BooleanToTJSON(LField.AsBoolean));
+          ftFloat: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
+          ftCurrency: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsCurrency));
+          ftBCD: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
+          ftDate: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
+          ftTime: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
+          ftDateTime: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
+  //        ftBytes: ;
+  //        ftVarBytes: ;
+          ftAutoInc: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
+  //        ftBlob: ;
+          ftMemo: Result.AddPair(LPairName, LField.AsString);
+  //        ftGraphic: ;
+  //        ftFmtMemo: ;
+  //        ftParadoxOle: ;
+  //        ftDBaseOle: ;
+  //        ftTypedBinary: ;
+  //        ftCursor: ;
+          ftFixedChar: Result.AddPair(LPairName, LField.AsString);
+          ftWideString: Result.AddPair(LPairName, LField.AsWideString);
+          ftLargeint: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsLargeInt));
+  //        ftADT: ;
+  //        ftArray: ;
+  //        ftReference: ;
+  //        ftDataSet: ;
+  //        ftOraBlob: ;
+  //        ftOraClob: ;
+          ftVariant: Result.AddPair(LPairName, LField.AsString);
+  //        ftInterface: ;
+  //        ftIDispatch: ;
+          ftGuid: Result.AddPair(LPairName, LField.AsString);
+          ftTimeStamp: Result.AddPair(LPairName, DateToJSON(LField.AsDateTime));
+          ftFMTBcd: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
+          ftFixedWideChar: Result.AddPair(LPairName, LField.AsString);
+          ftWideMemo: Result.AddPair(LPairName, LField.AsString);
+  //        ftOraTimeStamp: ;
+  //        ftOraInterval: ;
+          ftLongWord: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
+          ftShortint: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
+          ftByte: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsInteger));
+          ftExtended: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
+  //        ftConnection: ;
+  //        ftParams: ;
+  //        ftStream: ;
+  //        ftTimeStampOffset: ;
+  //        ftObject: ;
+          ftSingle: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsFloat));
+        end;
       end;
     end;
+  except
+    Result.Free;
+    raise;
   end;
 end;
 
@@ -151,27 +155,31 @@ begin
   Result := TJSONArray.Create;
   if not Assigned(ADataSet) then
     Exit;
-
-  if not ADataSet.Active then
-    ADataSet.Open;
-
-  ADataSet.DisableControls;
   try
-    LBookmark := ADataSet.Bookmark;
+    if not ADataSet.Active then
+      ADataSet.Open;
+
+    ADataSet.DisableControls;
     try
-      ADataSet.First;
-      while not ADataSet.Eof do
+      LBookmark := ADataSet.Bookmark;
       try
-        if (not Assigned(AAcceptFunc)) or (AAcceptFunc()) then
-          Result.AddElement(RecordToJSONObject(ADataSet));
+        ADataSet.First;
+        while not ADataSet.Eof do
+        try
+          if (not Assigned(AAcceptFunc)) or (AAcceptFunc()) then
+            Result.AddElement(RecordToJSONObject(ADataSet));
+        finally
+          ADataSet.Next;
+        end;
       finally
-        ADataSet.Next;
+        ADataSet.GotoBookmark(LBookmark);
       end;
     finally
-      ADataSet.GotoBookmark(LBookmark);
+      ADataSet.EnableControls;
     end;
-  finally
-    ADataSet.EnableControls;
+  except
+    Result.Free;
+    raise;
   end;
 end;
 

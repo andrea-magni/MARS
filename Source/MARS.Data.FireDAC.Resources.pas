@@ -11,25 +11,18 @@ interface
 
 uses
   Classes, SysUtils, Generics.Collections
-  , Web.HttpApp
   , FireDAC.Comp.Client, FireDACJSONReflect
-  , MARS.Core.MediaType, MARS.Core.Attributes, MARS.Data.FireDAC
+  , MARS.Core.JSON , MARS.Core.MediaType, MARS.Core.Attributes, MARS.Data.FireDAC
 ;
 
 type
 
+  [Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
   TMARSFDDatasetResource = class
   private
-    FConnection: TFDConnection;
     FStatements: TDictionary<string, string>;
-    FOwnsConnection: Boolean;
   protected
-    [Context] Request: TWebRequest;
-
-    procedure SetupConnection; virtual;
-    procedure TeardownConnection; virtual;
-    procedure CheckConnection; virtual;
-
+    [Context] FConnection: TFDConnection;
     procedure SetupStatements; virtual;
 
     procedure AfterOpenDataSet(ADataSet: TFDCustomQuery); virtual;
@@ -40,18 +33,16 @@ type
       AOnApplyUpdates: TProc<string, Integer, IFDJSONDeltasApplyUpdates> = nil); virtual;
 
     property Connection: TFDConnection read FConnection write FConnection;
-    property OwnsConnection: Boolean read FOwnsConnection write FOwnsConnection;
     property Statements: TDictionary<string, string> read FStatements;
   public
     procedure AfterConstruction; override;
     destructor Destroy; override;
 
-    [GET][Produces(TMediaType.APPLICATION_JSON)]
+    [GET]
     function Retrieve: TArray<TFDCustomQuery>; virtual;
 
-    [POST][Produces(TMediaType.APPLICATION_JSON)]
-    [Consumes(TMediaType.APPLICATION_JSON)]
-    function Update: string; virtual;
+    [POST]
+    function Update([BodyParam] const AJSONDeltas: TJSONObject): string; virtual;
   end;
 
 
@@ -59,7 +50,6 @@ implementation
 
 uses
     MARS.Core.Exceptions
-  , MARS.Core.JSON
   , MARS.Rtti.Utils
 ;
 
@@ -69,9 +59,6 @@ procedure TMARSFDDatasetResource.AfterConstruction;
 begin
   inherited;
   FStatements := TDictionary<string, string>.Create;
-  FOwnsConnection := False;
-
-  SetupConnection;
 end;
 
 procedure TMARSFDDatasetResource.AfterOpenDataSet(ADataSet: TFDCustomQuery);
@@ -120,15 +107,8 @@ begin
 
 end;
 
-procedure TMARSFDDatasetResource.CheckConnection;
-begin
-  if not Assigned(Connection) then
-    raise EMARSException.Create('No data connection available');
-end;
-
 destructor TMARSFDDatasetResource.Destroy;
 begin
-  TeardownConnection;
   FStatements.Free;
   inherited;
 end;
@@ -158,8 +138,6 @@ var
   LData: TArray<TFDCustomQuery>;
   LCurrent: TFDCustomQuery;
 begin
-  CheckConnection;
-
   LData := [];
   try
     // load dataset(s)
@@ -177,18 +155,6 @@ begin
   end;
 end;
 
-procedure TMARSFDDatasetResource.SetupConnection;
-begin
-  TRTTIHelper.IfHasAttribute<ConnectionAttribute>(
-    Self,
-    procedure (AAttrib: ConnectionAttribute)
-    begin
-      Connection := CreateConnectionByDefName(AAttrib.ConnectionDefName);
-      OwnsConnection := True;
-    end
-  );
-end;
-
 procedure TMARSFDDatasetResource.SetupStatements;
 begin
   TRTTIHelper.ForEachAttribute<SQLStatementAttribute>(
@@ -197,72 +163,50 @@ begin
     begin
       Statements.Add(AAttrib.Name, AAttrib.SQLStatement);
     end);
-
 end;
 
-procedure TMARSFDDatasetResource.TeardownConnection;
-begin
-  if OwnsConnection and Assigned(Connection) then
-  begin
-    Connection.Free;
-    Connection := nil;
-  end;
-end;
-
-function TMARSFDDatasetResource.Update: string;
+function TMARSFDDatasetResource.Update([BodyParam] const AJSONDeltas: TJSONObject): string;
 var
-  LJSONDeltas: TJSONObject;
   LDeltas: TFDJSONDeltas;
   LResult: TJSONArray;
 begin
-  SetupConnection;
+  // setup
+  SetupStatements;
+
+  LDeltas := TFDJSONDeltas.Create;
   try
-    CheckConnection;
+    // build FireDAC delta objects
+    if not TFDJSONInterceptor.JSONObjectToDataSets(AJSONDeltas, LDeltas) then
+      raise EMARSException.Create('Error de-serializing deltas');
 
-    // setup
-    SetupStatements;
-
-    // parse JSON content
-    LJSONDeltas := TJSONObject.ParseJSONValue(Request.Content) as TJSONObject;
-
-    LDeltas := TFDJSONDeltas.Create;
+    // apply updates
+    LResult := TJSONArray.Create;
     try
-      // build FireDAC delta objects
-      if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONDeltas, LDeltas) then
-        raise EMARSException.Create('Error de-serializing deltas');
+      ApplyUpdates(LDeltas,
+        procedure(ADatasetName: string; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
+        var
+          LResultObj: TJSONObject;
+        begin
+          LResultObj := TJSONObject.Create;
+          try
+            LResultObj.AddPair('dataset', ADatasetName);
+            LResultObj.AddPair('result', TJSONNumber.Create(AApplyResult));
+            LResultObj.AddPair('errors', TJSONNumber.Create(AApplyUpdates.Errors.Count));
+            LResultObj.AddPair('errorText', AApplyUpdates.Errors.Strings.Text);
+            LResult.AddElement(LResultObj);
+          except
+            LResultObj.Free;
+            raise;
+          end;
+        end
+      );
 
-      // apply updates
-      LResult := TJSONArray.Create;
-      try
-        ApplyUpdates(LDeltas,
-          procedure(ADatasetName: string; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
-          var
-            LResultObj: TJSONObject;
-          begin
-            LResultObj := TJSONObject.Create;
-            try
-              LResultObj.AddPair('dataset', ADatasetName);
-              LResultObj.AddPair('result', TJSONNumber.Create(AApplyResult));
-              LResultObj.AddPair('errors', TJSONNumber.Create(AApplyUpdates.Errors.Count));
-              LResultObj.AddPair('errorText', AApplyUpdates.Errors.Strings.Text);
-              LResult.AddElement(LResultObj);
-            except
-              LResultObj.Free;
-              raise;
-            end;
-          end
-        );
-
-        Result := LResult.ToJSON;
-      finally
-        LResult.Free;
-      end;
+      Result := LResult.ToJSON;
     finally
-      LDeltas.Free;
+      LResult.Free;
     end;
-
   finally
-    TeardownConnection;
+    LDeltas.Free;
   end;
 end;
 
