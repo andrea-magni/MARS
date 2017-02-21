@@ -9,7 +9,6 @@ interface
 
 uses
   System.SysUtils, System.Classes
-  , Web.HTTPApp
   , Data.FireDACJSONReflect
 
   , MARS.Core.JSON
@@ -37,11 +36,11 @@ type
   RESTInclude = class(RESTExposeAttribute);
   RESTExclude = class(RESTExposeAttribute);
 
+  [Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
   TMARSFDDataModuleResource = class(TDataModule)
   private
     function GetResourceName: string;
   protected
-    [Context] Request: TWebRequest;
     [Context] URL: TMARSURL;
 
     procedure BeforeApplyUpdates(ADeltas: TFDJSONDeltas; ADelta: TFDMemTable;
@@ -50,11 +49,11 @@ type
     procedure ApplyUpdates(ADeltas: TFDJSONDeltas;
       AOnApplyUpdates: TProc<string, Integer, IFDJSONDeltasApplyUpdates> = nil); virtual;
   public
-    [GET][Produces(TMediaType.APPLICATION_JSON)]
+    [GET]
     function Retrieve: TArray<TFDCustomQuery>; virtual;
 
-    [POST, Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
-    function Update: TJSONArray; virtual;
+    [POST]
+    function Update([BodyParam] const AJSONDeltas: TJSONObject): TJSONArray; virtual;
 
   published
     property ResourceName: string read GetResourceName;
@@ -155,20 +154,17 @@ begin
   Result := LDataSets;
 end;
 
-function TMARSFDDataModuleResource.Update: TJSONArray;
+function TMARSFDDataModuleResource.Update([BodyParam] const AJSONDeltas: TJSONObject): TJSONArray;
 var
-  LJSONDeltas: TJSONObject;
   LDeltas: TFDJSONDeltas;
   LResult: TJSONArray;
 begin
   Result := nil;
-  // parse JSON content
-  LJSONDeltas := TJSONObject.ParseJSONValue(Request.Content) as TJSONObject;
 
   LDeltas := TFDJSONDeltas.Create;
   try
     // build FireDAC delta objects
-    if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONDeltas, LDeltas) then
+    if not TFDJSONInterceptor.JSONObjectToDataSets(AJSONDeltas, LDeltas) then
       raise EMARSException.Create('Error de-serializing deltas');
 
     // apply updates
