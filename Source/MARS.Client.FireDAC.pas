@@ -9,13 +9,12 @@ interface
 
 uses
   Classes, SysUtils
-  , MARS.Core.JSON
+  , MARS.Core.JSON, System.JSON
 
   , FireDAC.Comp.Client
 
   , MARS.Client.Resource
   , MARS.Client.Client
-
   ;
 
 type
@@ -47,12 +46,16 @@ type
     property Item[Index: Integer]: TMARSFDResourceDatasetsItem read GetItem;
   end;
 
+  TOnApplyUpdatesErrorEvent = procedure (const ASender: TObject;
+      const AItem: TMARSFDResourceDatasetsItem; const AErrors: Integer;
+      const AError: string; var AHandled: Boolean) of object;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or pidOSX32 or pidiOSSimulator or pidiOSDevice or pidAndroid)]
   TMARSFDResource = class(TMARSClientResource)
   private
     FResourceDataSets: TMARSFDResourceDatasets;
     FPOSTResponse: TJSONValue;
+    FOnApplyUpdatesError: TOnApplyUpdatesErrorEvent;
   protected
     procedure AfterGET(); override;
     procedure BeforePOST(AContent: TMemoryStream); override;
@@ -61,12 +64,15 @@ type
       override;
     procedure AssignTo(Dest: TPersistent); override;
 
+    function ApplyUpdatesHadErrors(const ADataSetName: string; var AErrorCount: Integer;
+      var AErrorText: string): Boolean; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
   published
     property POSTResponse: TJSONValue read FPOSTResponse write FPOSTResponse;
     property ResourceDataSets: TMARSFDResourceDatasets read FResourceDataSets write FResourceDataSets;
+    property OnApplyUpdatesError: TOnApplyUpdatesErrorEvent read FOnApplyUpdatesError write FOnApplyUpdatesError;
   end;
 
 procedure Register;
@@ -81,6 +87,7 @@ uses
   , FireDAC.Stan.StorageXML
   , MARS.Core.Utils
   , MARS.Client.Utils
+  , MARS.Core.Exceptions
   ;
 
 procedure Register;
@@ -167,17 +174,58 @@ procedure TMARSFDResource.AfterPOST();
 begin
   inherited;
   if Client.LastCmdSuccess then
+  begin
+    if Assigned(FPOSTResponse) then
+      FPOSTResponse.Free;
+    FPOSTResponse := StreamToJSONValue(Client.Response.ContentStream);
+
     FResourceDataSets.ForEach(
       procedure (AItem: TMARSFDResourceDatasetsItem)
+      var
+        LErrorCount: Integer;
+        LErrorText: string;
+        LHandled: Boolean;
       begin
         if AItem.SendDelta and Assigned(AItem.DataSet) and (AItem.DataSet.Active) then
+        begin
+          if ApplyUpdatesHadErrors(AItem.DataSetName, LErrorCount, LErrorText) then
+          begin
+            LHandled := False;
+            if Assigned(OnApplyUpdatesError) then
+              OnApplyUpdatesError(Self, AItem, LErrorCount, LErrorText, LHandled);
+            if not LHandled then
+              raise EMARSException.CreateFmt('Error applying updates to dataset %s. Error: %s. Error count: %d', [AItem.DataSetName, LErrorText, LErrorCount]);
+          end;
           AItem.DataSet.ApplyUpdates;
+        end;
       end
     );
+  end;
+end;
 
-  if Assigned(FPOSTResponse) then
-    FPOSTResponse.Free;
-  FPOSTResponse := StreamToJSONValue(Client.Response.ContentStream);
+function TMARSFDResource.ApplyUpdatesHadErrors(const ADataSetName: string;
+  var AErrorCount: Integer; var AErrorText: string): Boolean;
+var
+  LArray: TJSONArray;
+  LElement: TJSONValue;
+  LObj: TJSONObject;
+begin
+  Result := False;
+  LArray := FPOSTResponse as TJSONArray;
+  if Assigned(LArray) and (LArray.Count > 0) then
+  begin
+    for LElement in LArray do
+    begin
+      LObj := LElement as TJSONObject;
+      if SameText(LObj.ReadStringValue('dataset'), ADataSetName) then
+      begin
+        AErrorCount := LObj.ReadIntegerValue('errors');
+        AErrorText := LObj.ReadStringValue('errorText');
+        Result := AErrorCount > 0;
+        Break;
+      end;
+    end;
+  end;
 end;
 
 procedure TMARSFDResource.AssignTo(Dest: TPersistent);
