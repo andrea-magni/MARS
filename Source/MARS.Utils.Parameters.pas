@@ -23,6 +23,7 @@ type
     procedure Assign(const ASource: TMARSParametersSlice);
     function GetCount: Integer;
     function GetParamNames: TArray<string>;
+    function GetSliceNames: TArray<string>;
     function GetValue(AName: string): TValue;
     procedure SetValue(AName: string; const Value: TValue);
   public
@@ -43,6 +44,7 @@ type
     property Name: string read FName;
     property ParamNames: TArray<string> read GetParamNames;
     property Values[AName: string]: TValue read GetValue write SetValue; default;
+    property SliceNames: TArray<string> read GetSliceNames;
 
     class function CombineSliceAndParamName(const ASlice, AParam: string): string;
     class procedure GetSliceAndParamName(const AName: string; out ASliceName, AParamName: string);
@@ -112,21 +114,9 @@ end;
 
 function TMARSParametersSlice.ContainsSlice(const ASliceName: string): Boolean;
 var
-  LKey: string;
+  LIndex: Integer;
 begin
-  Result := False;
-  for LKey in FItems.Keys.ToArray do
-  begin
-    {$ifdef DelphiXE2_UP}
-    if LKey.StartsWith(ASliceName + SLICE_SEPARATOR, True) then
-    {$else}
-    if StartsText(ASliceName + SLICE_SEPARATOR, LKey) then
-    {$endif}
-    begin
-      Result := True;
-      Break;
-    end;
-  end;
+  Result := TArray.BinarySearch<string>(GetSliceNames, ASliceName, LIndex);
 end;
 
 function TMARSParametersSlice.CopyFrom(const ASource: TMARSParametersSlice;
@@ -176,6 +166,45 @@ begin
     ASliceName := LTokens[0];
     AParamName := Copy(AName, Length(ASliceName) + 1 + Length(SLICE_SEPARATOR), MAXINT);
   end;
+end;
+
+function UniqueArray(const AArray: TArray<string>): TArray<string>;
+var
+  LSortedArray: TArray<string>;
+  LIndex: Integer;
+  LCurrValue: string;
+  LPrevValue: string;
+begin
+  LSortedArray := AArray;
+  TArray.Sort<string>(LSortedArray);
+
+  Result := [];
+  LPrevValue := '';
+  for LIndex := Low(LSortedArray) to High(LSortedArray) do
+  begin
+    LCurrValue := LSortedArray[LIndex];
+    if LCurrValue <> LPrevValue then
+    begin
+      Result := Result + [LCurrValue];
+      LPrevValue := LCurrValue;
+    end;
+  end;
+end;
+
+
+function TMARSParametersSlice.GetSliceNames: TArray<string>;
+var
+  LKey: string;
+  LSlice, LParamName: string;
+begin
+  Result := [];
+  for LKey in FItems.Keys.ToArray do
+  begin
+    GetSliceAndParamName(LKey, LSlice, LParamName);
+    if LSlice <> '' then
+      Result := Result + [LSlice];
+  end;
+  Result := UniqueArray(Result);
 end;
 
 constructor TMARSParametersSlice.Create(const AName: string);

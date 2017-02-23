@@ -140,8 +140,6 @@ function TMARSFDDataModuleResource.Update([BodyParam] const AJSONDeltas: TFDJSON
 var
   LResult: TJSONArray;
 begin
-  Result := nil;
-
   // apply updates
   LResult := TJSONArray.Create;
   try

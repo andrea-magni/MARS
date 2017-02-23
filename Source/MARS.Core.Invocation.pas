@@ -240,8 +240,6 @@ var
 begin
   case AValue.Kind of
     tkClass: AValue.AsObject.Free;
-//    tkInterface: TObject(AValue.AsInterface).Free;
-
     tkArray,
     tkDynArray:
     begin

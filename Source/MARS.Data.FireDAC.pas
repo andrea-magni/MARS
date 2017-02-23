@@ -11,7 +11,6 @@ interface
 
 uses
     System.Classes, System.SysUtils, Generics.Collections
-  , Web.HTTPApp
 
   , Data.DB
   , FireDAC.DApt
@@ -24,15 +23,17 @@ uses
 
   , FireDACJSONReflect
 
-  , MARS.Core.JSON
-  , MARS.Core.Registry
-  , MARS.Core.Classes
   , MARS.Core.Application
-  , MARS.Core.Declarations
   , MARS.Core.Attributes
+  , MARS.Core.Classes
+  , MARS.Core.Declarations
+  , MARS.Core.JSON
   , MARS.Core.MediaType
+  , MARS.Core.Registry
   , MARS.Core.Token
-  , MARS.Core.URL;
+  , MARS.Core.URL
+  , MARS.Utils.Parameters
+;
 
 type
   ConnectionAttribute = class(TCustomAttribute)
@@ -75,14 +76,19 @@ type
 
     property Connection: TFDConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
+
+    class function LoadConnectionDefs(const AParameters: TMARSParameters;
+      const ASliceName: string = ''): TArray<string>;
+    class procedure CloseConnectionDefs(const AConnectionDefNames: TArray<string>);
   end;
 
   function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 
+
 implementation
 
 uses
-  System.Rtti
+  StrUtils, System.Rtti
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , MARS.Data.Utils
@@ -90,6 +96,55 @@ uses
   , MARS.Data.FireDAC.InjectionService
   , MARS.Data.FireDAC.ReadersAndWriters
 ;
+
+function GetAsTStrings(const AParameters: TMARSParameters): TStrings;
+var
+  LParam: TPair<string, TValue>;
+begin
+  Result := TStringList.Create;
+  try
+    for LParam in AParameters do
+      Result.Values[LParam.Key] := LParam.Value.ToString;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+class function TMARSFireDAC.LoadConnectionDefs(const AParameters: TMARSParameters;
+  const ASliceName: string = ''): TArray<string>;
+var
+  LData, LConnectionParams: TMARSParameters;
+  LConnectionDefNames: TArray<string>;
+  LConnectionDefName: string;
+  LParams: TStrings;
+begin
+  Result := [];
+  LData := TMARSParameters.Create('');
+  try
+    LData.CopyFrom(AParameters, ASliceName);
+    LConnectionDefNames := LData.SliceNames;
+
+    for LConnectionDefName in LConnectionDefNames do
+    begin
+      LConnectionParams := TMARSParameters.Create(LConnectionDefName);
+      try
+        LConnectionParams.CopyFrom(LData, LConnectionDefName);
+        LParams := GetAsTStrings(LConnectionParams);
+        try
+          FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
+          Result := Result + [LConnectionDefName];
+        finally
+          LParams.Free;
+        end;
+      finally
+        LConnectionParams.Free;
+      end;
+    end;
+  finally
+    LData.Free;
+  end;
+end;
 
 function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 begin
@@ -120,6 +175,15 @@ begin
 end;
 
 { TMARSFireDAC }
+
+class procedure TMARSFireDAC.CloseConnectionDefs(
+  const AConnectionDefNames: TArray<string>);
+var
+  LConnectionDefName: string;
+begin
+  for LConnectionDefName in AConnectionDefNames do
+    FDManager.CloseConnectionDef(LConnectionDefName);
+end;
 
 constructor TMARSFireDAC.Create(const AConnectionDefName: string);
 begin

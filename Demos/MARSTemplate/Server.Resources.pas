@@ -27,7 +27,7 @@ type
   [Path('helloworld')]
   THelloWorldResource = class
   protected
-    [Context, Connection('Firebird_Employee_Pooled')]
+    [Context]
     FD: TMARSFireDAC;
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
