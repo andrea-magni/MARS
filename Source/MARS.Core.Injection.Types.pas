@@ -15,11 +15,10 @@ uses
 
 type
   TInjectionValue = record
-    HasValue: Boolean;
     IsReference: Boolean;
     Value: TValue;
+    constructor Create(const AValue: TValue; const AIsReference: Boolean = False);
     procedure Clear;
-    procedure SetValue(const AValue: TValue; const AIsReference: Boolean = False);
   end;
 
 
@@ -29,19 +28,16 @@ implementation
 
 procedure TInjectionValue.Clear;
 begin
-  HasValue := False;
   IsReference := False;
   Value := TValue.Empty;
 end;
 
 
-procedure TInjectionValue.SetValue(const AValue: TValue;
+constructor TInjectionValue.Create(const AValue: TValue;
   const AIsReference: Boolean);
 begin
-  HasValue := True;
   Value := AValue;
   IsReference := AIsReference;
 end;
-
 
 end.

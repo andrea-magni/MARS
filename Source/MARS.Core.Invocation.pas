@@ -108,12 +108,8 @@ begin
   // context injection
   AParam.HasAttribute<ContextAttribute>(
     procedure (AContextAttr: ContextAttribute)
-    var
-      LInjection: TInjectionValue;
     begin
-      LInjection := GetContextValue(AParam);
-      if LInjection.HasValue then
-        LParamValue := LInjection.Value;
+      LParamValue := GetContextValue(AParam).Value;
     end
   );
 
@@ -131,21 +127,9 @@ begin
 end;
 
 function TMARSActivationRecord.GetToken: TMARSToken;
-var
-  LInjection: TInjectionValue;
 begin
   if not Assigned(FToken) then
-  begin
-    LInjection := TMARSInjectionServiceRegistry.Instance.GetValue(
-      FRttiContext.GetType(Self.ClassType).GetField('FToken')
-      , Self
-    );
-    if LInjection.HasValue then begin
-      if not LInjection.IsReference then
-        CollectContext(LInjection.Value);
-      FToken := LInjection.Value.AsType<TMARSToken>;
-    end;
-  end;
+    FToken := GetContextValue(FRttiContext.GetType(Self.ClassType).GetField('FToken')).Value.AsType<TMARSToken>;
   Result := FToken;
 end;
 
@@ -501,26 +485,18 @@ begin
   // fields
   LType.ForEachFieldWithAttribute<ContextAttribute>(
     function (AField: TRttiField; AAttrib: ContextAttribute): Boolean
-    var
-      LInjection: TInjectionValue;
     begin
       Result := True; // enumerate all
-      LInjection := GetContextValue(AField);
-      if LInjection.HasValue then
-        AField.SetValue(FResourceInstance, LInjection.Value);
+      AField.SetValue(FResourceInstance, GetContextValue(AField).Value);
     end
   );
 
   // properties
   LType.ForEachPropertyWithAttribute<ContextAttribute>(
     function (AProperty: TRttiProperty; AAttrib: ContextAttribute): Boolean
-    var
-      LInjection: TInjectionValue;
     begin
       Result := True;
-      LInjection := GetContextValue(AProperty);
-      if LInjection.HasValue then
-        AProperty.SetValue(FResourceInstance, LInjection.Value);
+        AProperty.SetValue(FResourceInstance, GetContextValue(AProperty).Value);
     end
   );
 end;
@@ -528,7 +504,7 @@ end;
 function TMARSActivationRecord.GetContextValue(const ADestination: TRttiObject): TInjectionValue;
 begin
   Result := TMARSInjectionServiceRegistry.Instance.GetValue(ADestination, Self);
-  if Result.HasValue and not Result.IsReference then
+  if not Result.IsReference then
     CollectContext(Result.Value);
 end;
 

@@ -112,8 +112,10 @@ begin
     if LEntry.CanProvideValue(ADestination) then
     begin
       LService := LEntry.CreateInstance();
-      Result := LService.GetValue(ADestination, AActivationRecord);
-      if Result.HasValue then
+      LService.GetValue(ADestination, AActivationRecord, Result);
+
+      // first match wins
+      if not Result.Value.IsEmpty then
         Break;
     end;
   end;

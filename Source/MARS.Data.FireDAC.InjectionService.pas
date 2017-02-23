@@ -23,8 +23,8 @@ type
     function GetConnectionDefName(const ADestination: TRttiObject;
       const AActivationRecord: TMARSActivationRecord): string;
   public
-    function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+    procedure GetValue(const ADestination: TRttiObject;
+      const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
 
     const FireDAC_ConnectionDefName_PARAM = 'FireDAC.ConnectionDefName';
     const FireDAC_ConnectionDefName_PARAM_DEFAULT = 'MAIN_DB';
@@ -85,16 +85,15 @@ begin
   Result := LConnectionDefName;
 end;
 
-function TMARSFireDACInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+procedure TMARSFireDACInjectionService.GetValue(const ADestination: TRttiObject;
+  const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
 begin
-  Result.Clear;
   if ADestination.GetRttiType.IsObjectOfType(TFDConnection) then
-    Result.SetValue(
+    AValue := TInjectionValue.Create(
       CreateConnectionByDefName(GetConnectionDefName(ADestination, AActivationRecord))
     )
   else if ADestination.GetRttiType.IsObjectOfType(TMARSFireDAC) then
-    Result.SetValue(
+    AValue := TInjectionValue.Create(
       TMARSFireDAC.Create(GetConnectionDefName(ADestination, AActivationRecord))
     );
 end;

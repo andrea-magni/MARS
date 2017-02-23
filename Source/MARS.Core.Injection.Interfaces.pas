@@ -18,8 +18,8 @@ uses
 
 type
   IMARSInjectionService = interface ['{C2EB93E0-5D0B-4F29-AEAF-CAB74DC72C3C}']
-    function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+    procedure GetValue(const ADestination: TRttiObject; const AActivationRecord: TMARSActivationRecord;
+      out AValue: TInjectionValue);
   end;
 
 

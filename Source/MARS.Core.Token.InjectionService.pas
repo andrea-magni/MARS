@@ -20,8 +20,8 @@ uses
 type
   TMARSTokenInjectionService = class(TInterfacedObject, IMARSInjectionService)
   public
-    function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+    procedure GetValue(const ADestination: TRttiObject; const AActivationRecord: TMARSActivationRecord;
+      out AValue: TInjectionValue);
   end;
 
 implementation
@@ -33,19 +33,18 @@ uses
 
 { TMARSTokenInjectionService }
 
-function TMARSTokenInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+procedure TMARSTokenInjectionService.GetValue(const ADestination: TRttiObject;
+  const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
 var
   LType: TRttiType;
   LToken: TMARSToken;
 begin
-  Result.Clear;
   LType := ADestination.GetRttiType;
 
   if (LType.IsObjectOfType(TMARSToken)) then
   begin
     if AActivationRecord.HasToken then
-      Result.SetValue(AActivationRecord.Token, True)
+      AValue := TInjectionValue.Create(AActivationRecord.Token, True)
     else begin
       LToken := TMARSToken.Create(AActivationRecord.Request
         , AActivationRecord.Response
@@ -53,7 +52,7 @@ begin
         , AActivationRecord.URL
       );
 
-      Result.SetValue(LToken);
+      AValue := TInjectionValue.Create(LToken);
     end;
   end;
 end;

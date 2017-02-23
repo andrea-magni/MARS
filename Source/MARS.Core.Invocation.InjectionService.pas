@@ -15,8 +15,8 @@ uses
 type
   TMARSActivationRecordInjectionService = class(TInterfacedObject, IMARSInjectionService)
   public
-    function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+    procedure GetValue(const ADestination: TRttiObject; const AActivationRecord: TMARSActivationRecord;
+      out AValue: TInjectionValue);
   end;
 
 implementation
@@ -29,24 +29,23 @@ uses
 
 { TMARSActivationRecordInjectionService }
 
-function TMARSActivationRecordInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+procedure TMARSActivationRecordInjectionService.GetValue(const ADestination: TRttiObject;
+  const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
 var
   LType: TRttiType;
 begin
-  Result.Clear;
   LType := ADestination.GetRttiType;
 
   if (LType.IsObjectOfType(TWebRequest)) then
-    Result.SetValue(AActivationRecord.Request, True)
+    AValue := TInjectionValue.Create(AActivationRecord.Request, True)
   else if (LType.IsObjectOfType(TWebResponse)) then
-    Result.SetValue(AActivationRecord.Response, True)
+    AValue := TInjectionValue.Create(AActivationRecord.Response, True)
   else if (LType.IsObjectOfType(TMARSURL)) then
-    Result.SetValue(AActivationRecord.URL, True)
+    AValue := TInjectionValue.Create(AActivationRecord.URL, True)
   else if (LType.IsObjectOfType(TMARSEngine)) then
-    Result.SetValue(AActivationRecord.Engine, True)
+    AValue := TInjectionValue.Create(AActivationRecord.Engine, True)
   else if (LType.IsObjectOfType(TMARSApplication)) then
-    Result.SetValue(AActivationRecord.Application, True);
+    AValue := TInjectionValue.Create(AActivationRecord.Application, True);
 end;
 
 
