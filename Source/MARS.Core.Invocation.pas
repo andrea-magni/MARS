@@ -56,7 +56,6 @@ type
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
-    function ParamNameToParamIndex(const AParamName: string): Integer; virtual;
     procedure SetCustomHeaders;
   public
     constructor Create(const AApplication: TMARSApplication;
@@ -320,49 +319,6 @@ begin
     FWriter := nil;
     FreeAndNil(FWriterMediaType);
   end;
-end;
-
-
-function TMARSActivationRecord.ParamNameToParamIndex(const AParamName: string): Integer;
-var
-  LParamIndex: Integer;
-  LSubResourcePath: string;
-begin
-  LParamIndex := -1;
-
-  LSubResourcePath := '';
-  FMethod.HasAttribute<PathAttribute>(
-    procedure (ASubResourcePathAttrib: PathAttribute)
-    begin
-      LSubResourcePath := ASubResourcePathAttrib.Value;
-    end
-  );
-
-  FRttiContext.GetType(FResourceInstance.ClassType).HasAttribute<PathAttribute>(
-    procedure (AResourcePathAttrib: PathAttribute)
-    var
-      LResURL: TMARSURL;
-      LPair: TPair<Integer, string>;
-    begin
-      LResURL := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath
-        , AResourcePathAttrib.Value, LSubResourcePath]);
-      try
-        LParamIndex := -1;
-        for LPair in LResURL.PathParams do
-        begin
-          if SameText(AParamName, LPair.Value) then
-          begin
-            LParamIndex := LPair.Key;
-            Break;
-          end;
-        end;
-      finally
-        LResURL.Free;
-      end;
-    end
-  );
-
-  Result := LParamIndex;
 end;
 
 procedure TMARSActivationRecord.SetCustomHeaders;
