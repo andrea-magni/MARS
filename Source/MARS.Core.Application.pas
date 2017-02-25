@@ -10,15 +10,10 @@ unit MARS.Core.Application;
 interface
 
 uses
-  SysUtils
-  , Classes
+    SysUtils, Classes, Rtti, Generics.Collections
   , HTTPApp
-  , Rtti
-  , Generics.Collections
   , MARS.Core.Classes
   , MARS.Core.URL
-  , MARS.Core.MessageBodyReader
-  , MARS.Core.MessageBodyWriter
   , MARS.Core.Registry
   , MARS.Core.MediaType
   , MARS.Core.Token

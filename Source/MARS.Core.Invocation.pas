@@ -17,7 +17,7 @@ uses
   , MARS.Core.URL
   , MARS.Core.Application
   , MARS.Core.Engine
-  , MARS.Core.Attributes
+//  , MARS.Core.Attributes
   , MARS.Core.Token
   , MARS.Core.Registry
   , MARS.Core.MessageBodyWriter
@@ -32,6 +32,7 @@ type
     FRequest: TWebRequest;
     FResponse: TWebResponse;
     FURL: TMARSURL;
+    FURLPrototype: TMARSURL;
     FToken: TMARSToken;
     FMethodArgumentsToCollect: TList<TValue>;
   protected
@@ -77,6 +78,7 @@ type
 //    property ResourceInstance: TObject read FResourceInstance;
     property Response: TWebResponse read FResponse;
     property URL: TMARSURL read FURL;
+    property URLPrototype: TMARSURL read FURLPrototype;
     property Token: TMARSToken read GetToken;
     function HasToken: Boolean;
   end;
@@ -84,7 +86,8 @@ type
 implementation
 
 uses
-    MARS.Core.Response
+    MARS.Core.Attributes
+  , MARS.Core.Response
   , MARS.Core.Classes
   , MARS.Core.MessageBodyReader
   , MARS.Core.Exceptions
@@ -105,21 +108,10 @@ var
 begin
   LParamValue := TValue.Empty;
 
-  // context injection
   AParam.HasAttribute<ContextAttribute>(
     procedure (AContextAttr: ContextAttribute)
     begin
       LParamValue := GetContextValue(AParam).Value;
-    end
-  );
-
-  // fill parameter with content from request (params, body, ...)
-  AParam.HasAttribute<RequestParamAttribute>(
-    procedure (ARequestParamAttr: RequestParamAttribute)
-    begin
-      LParamValue := ARequestParamAttr.GetValue(Request, AParam, Engine.BasePath, Application.BasePath);
-      if not (LParamValue.IsEmpty or AParam.HasAttribute<IsReference>) then
-        CollectContext(LParamValue);
     end
   );
 
@@ -160,13 +152,13 @@ var
   LMethod: TRttiMethod;
   LResourcePath: string;
   LAttribute: TCustomAttribute;
-  LPrototypeURL: TMARSURL;
   LPathMatches: Boolean;
   LHttpMethodMatches: Boolean;
   LMethodPath: string;
 begin
   FResource := FRttiContext.GetType(FConstructorInfo.TypeTClass);
   FMethod := nil;
+  FreeAndNil(FURLPrototype);
 
   LResourcePath := '';
   FResource.HasAttribute<PathAttribute>(
@@ -194,17 +186,17 @@ begin
 
     if LHttpMethodMatches then
     begin
-      LPrototypeURL := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, LResourcePath, LMethodPath]);
+      FURLPrototype := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, LResourcePath, LMethodPath]);
       try
-        LPathMatches := LPrototypeURL.MatchPath(URL);
+        LPathMatches := FURLPrototype.MatchPath(URL);
+        if LPathMatches and LHttpMethodMatches then
+        begin
+          FMethod := LMethod;
+          Break;
+        end;
       finally
-        LPrototypeURL.Free;
-      end;
-
-      if LPathMatches and LHttpMethodMatches then
-      begin
-        FMethod := LMethod;
-        Break;
+        if not Assigned(FMethod) then
+          FreeAndNil(FURLPrototype);
       end;
     end;
   end;
@@ -473,7 +465,8 @@ end;
 
 procedure TMARSActivationRecord.CollectContext(AValue: TValue);
 begin
-  FMethodArgumentsToCollect.Add(AValue);
+  if not AValue.IsEmpty then
+    FMethodArgumentsToCollect.Add(AValue);
 end;
 
 procedure TMARSActivationRecord.ContextInjection();
@@ -495,8 +488,8 @@ begin
   LType.ForEachPropertyWithAttribute<ContextAttribute>(
     function (AProperty: TRttiProperty; AAttrib: ContextAttribute): Boolean
     begin
-      Result := True;
-        AProperty.SetValue(FResourceInstance, GetContextValue(AProperty).Value);
+      Result := True; // enumerate all
+      AProperty.SetValue(FResourceInstance, GetContextValue(AProperty).Value);
     end
   );
 end;
@@ -517,6 +510,7 @@ begin
   FRequest := ARequest;
   FResponse := AResponse;
   FURL := AURL;
+  FURLPrototype := nil;
   FToken := nil;
   FRttiContext := TRttiContext.Create;
   FMethodArgumentsToCollect := TList<TValue>.Create;
@@ -524,6 +518,7 @@ end;
 
 destructor TMARSActivationRecord.Destroy;
 begin
+  FreeAndNil(FURLPrototype);
   FMethodArgumentsToCollect.Free;
   inherited;
 end;

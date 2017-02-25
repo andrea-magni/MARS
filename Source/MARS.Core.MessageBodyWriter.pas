@@ -8,15 +8,10 @@ unit MARS.Core.MessageBodyWriter;
 interface
 
 uses
-    Classes
-  , SysUtils
-  , Rtti
-  , Generics.Defaults
-  , Generics.Collections
+    Classes, SysUtils, Rtti, Generics.Defaults, Generics.Collections
   , MARS.Core.MediaType
   , MARS.Core.Declarations
   , MARS.Core.Classes
-  , MARS.Core.Attributes
   ;
 
 type
@@ -89,6 +84,7 @@ uses
     MARS.Core.Utils
   , MARS.Rtti.Utils
   , MARS.Core.Exceptions
+  , MARS.Core.Attributes
   ;
 
 { TMARSMessageBodyRegistry }

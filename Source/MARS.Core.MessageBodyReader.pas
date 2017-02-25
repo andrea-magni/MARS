@@ -18,21 +18,18 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.Declarations
   , MARS.Core.Classes
-  , MARS.Core.Attributes
+  , MARS.Core.Invocation
   ;
 
 type
   IMessageBodyReader = interface
   ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
-{$ifdef Delphi10Berlin_UP}
-    function ReadFrom(const AInputData: TBytes;
-      const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue;
-{$else}
-    function ReadFrom(const AInputData: AnsiString;
-      const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue;
-{$endif}
+
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AContext: TMARSActivationRecord
+    ): TValue;
   end;
 
   TIsReadableFunction = reference to function(AType: TRttiType;
@@ -77,7 +74,7 @@ type
 
     procedure RegisterReader<T: class>(const AReaderClass: TClass); overload;
 
-    procedure FindReader(const AParam: TRttiParameter;
+    procedure FindReader(const ADestination: TRttiObject;
       out AReader: IMessageBodyReader; out AMediaType: TMediaType);
 
     procedure Enumerate(const AProc: TProc<TReaderEntryInfo>);
@@ -98,6 +95,7 @@ uses
     MARS.Core.Utils
   , MARS.Rtti.Utils
   , MARS.Core.Exceptions
+  , MARS.Core.Attributes
   ;
 
 { TMARSMessageBodyReaderRegistry }
@@ -130,7 +128,7 @@ begin
     AProc(LEntry);
 end;
 
-procedure TMARSMessageBodyReaderRegistry.FindReader(const AParam: TRttiParameter;
+procedure TMARSMessageBodyReaderRegistry.FindReader(const ADestination: TRttiObject;
   out AReader: IMessageBodyReader; out AMediaType: TMediaType);
 var
   LMethod: TRttiMethod;
@@ -148,8 +146,8 @@ var
   LCandidateMediaType: string;
 //  LCandidateQualityFactor: Double;
 begin
-  Assert(Assigned(AParam));
-  LMethod := AParam.Parent as TRttiMethod;
+  Assert(Assigned(ADestination));
+  LMethod := ADestination.Parent as TRttiMethod;
   Assert(Assigned(LMethod));
 
   AMediaType := nil;
@@ -196,17 +194,17 @@ begin
           else
             LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LReaderMediaTypes);
           for LMediaType in LMediaTypes do
-            if LReaderEntry.IsReadable(AParam.ParamType, LMethod.GetAttributes, LMediaType) then
+            if LReaderEntry.IsReadable(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType) then
             begin
               if not LFound
                  or (
-                   (LCandidateAffinity < LReaderEntry.GetAffinity(AParam.ParamType, LMethod.GetAttributes, LMediaType))
+                   (LCandidateAffinity < LReaderEntry.GetAffinity(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType))
 //                   or (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
                  )
               then
               begin
                 LCandidate := LReaderEntry;
-                LCandidateAffinity := LCandidate.GetAffinity(AParam.ParamType, LMethod.GetAttributes, LMediaType);
+                LCandidateAffinity := LCandidate.GetAffinity(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType);
                 LCandidateMediaType := LMediaType;
 //                LCandidateQualityFactor := 1;
                 LFound := True;

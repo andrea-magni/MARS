@@ -22,9 +22,9 @@ type
 implementation
 
 uses
-  MARS.Rtti.Utils
-, MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application
-, Web.HttpApp
+    MARS.Rtti.Utils
+  , MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Attributes
+  , Web.HttpApp
 ;
 
 { TMARSActivationRecordInjectionService }
@@ -33,9 +33,22 @@ procedure TMARSActivationRecordInjectionService.GetValue(const ADestination: TRt
   const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
 var
   LType: TRttiType;
+  LValue: TInjectionValue;
 begin
   LType := ADestination.GetRttiType;
 
+  LValue.Clear;
+  if ADestination.HasAttribute<RequestParamAttribute>(
+    procedure (AParam: RequestParamAttribute)
+    begin
+      LValue := TInjectionValue.Create(
+          AParam.GetValue(ADestination, AActivationRecord)
+        , ADestination.HasAttribute<IsReference>
+      );
+    end
+  ) then
+    AValue := LValue
+  else
   if (LType.IsObjectOfType(TWebRequest)) then
     AValue := TInjectionValue.Create(AActivationRecord.Request, True)
   else if (LType.IsObjectOfType(TWebResponse)) then
@@ -65,7 +78,8 @@ begin
       begin
         LType := ADestination.GetRttiType;
         Result :=
-          LType.IsObjectOfType(TWebRequest)
+          ADestination.HasAttribute<RequestParamAttribute>
+          or LType.IsObjectOfType(TWebRequest)
           or LType.IsObjectOfType(TWebResponse)
           or LType.IsObjectOfType(TMARSURL)
           or LType.IsObjectOfType(TMARSEngine)

@@ -15,6 +15,7 @@ uses
   , DB
 
   , MARS.Core.Attributes
+  , MARS.Core.Invocation
   , MARS.Core.Declarations
   , MARS.Core.MediaType
   , MARS.Core.Classes
@@ -28,9 +29,11 @@ type
   [Consumes(TMediaType.APPLICATION_JSON)]
   TFDDeltasReader = class(TInterfacedObject, IMessageBodyReader)
   public
-    function ReadFrom(const AInputData: TBytes;
-      const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue; virtual;
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AContext: TMARSActivationRecord
+    ): TValue; virtual;
   end;
 
   // --- WRITERS ---
@@ -160,9 +163,11 @@ end;
 
 { TFDJSONDeltasReader }
 
-function TFDDeltasReader.ReadFrom(const AInputData: TBytes;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  ARequestHeaders: TStrings): TValue;
+function TFDDeltasReader.ReadFrom(
+  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const ADestination: TRttiObject; const AMediaType: TMediaType;
+    const AContext: TMARSActivationRecord
+): TValue;
 var
   LJSON: TJSONObject;
   LDeltas: TFDJSONDeltas;
