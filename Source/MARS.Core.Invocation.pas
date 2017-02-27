@@ -10,14 +10,12 @@ unit MARS.Core.Invocation;
 interface
 
 uses
-  SysUtils, Classes
+  SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
   , HTTPApp
-  , Generics.Collections
-  , Rtti
+
   , MARS.Core.URL
   , MARS.Core.Application
   , MARS.Core.Engine
-//  , MARS.Core.Attributes
   , MARS.Core.Token
   , MARS.Core.Registry
   , MARS.Core.MessageBodyWriter
@@ -45,6 +43,7 @@ type
     FMethodArguments: TArray<TValue>;
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
+    FInvocationTime: TStopWatch;
 
     procedure CleanupContext; virtual;
     procedure CollectContext(AValue: TValue); virtual;
@@ -57,6 +56,9 @@ type
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
     procedure SetCustomHeaders;
+
+    function DoBeforeInvoke: Boolean;
+    procedure DoAfterInvoke;
   public
     constructor Create(const AEngine: TMARSEngine; const AApplication: TMARSApplication;
       const ARequest: TWebRequest; const AResponse: TWebResponse; const AURL: TMARSURL); virtual;
@@ -98,6 +100,7 @@ uses
 {$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}
+  , MARS.Core.Engine.Interfaces
 ;
 
 { TMARSActivationRecord }
@@ -342,12 +345,18 @@ begin
   Assert(Assigned(FConstructorInfo));
   Assert(Assigned(FMethod));
 
-  FResourceInstance := FConstructorInfo.ConstructorFunc();
-  try
-    ContextInjection;
-    InvokeResourceMethod;
-  finally
-    FResourceInstance.Free;
+  if DoBeforeInvoke then
+  begin
+    FInvocationTime := TStopwatch.StartNew;
+    FResourceInstance := FConstructorInfo.ConstructorFunc();
+    try
+      ContextInjection;
+      InvokeResourceMethod;
+    finally
+      FResourceInstance.Free;
+    end;
+    FInvocationTime.Stop;
+    DoAfterInvoke;
   end;
 end;
 
@@ -475,6 +484,7 @@ begin
   FToken := nil;
   FRttiContext := TRttiContext.Create;
   FMethodArgumentsToCollect := TList<TValue>.Create;
+  FInvocationTime.Reset;
   Prepare;
 end;
 
@@ -483,6 +493,23 @@ begin
   FreeAndNil(FURLPrototype);
   FMethodArgumentsToCollect.Free;
   inherited;
+end;
+
+procedure TMARSActivationRecord.DoAfterInvoke;
+var
+  LSubscriber: IMARSHandleRequestEventListener;
+begin
+  for LSubscriber in FEngine.Subscribers do
+    LSubscriber.AfterHandleRequest(Self);
+end;
+
+function TMARSActivationRecord.DoBeforeInvoke: Boolean;
+var
+  LSubscriber: IMARSHandleRequestEventListener;
+begin
+  Result := True;
+  for LSubscriber in FEngine.Subscribers do
+    LSubscriber.BeforeHandleRequest(Self, Result);
 end;
 
 end.

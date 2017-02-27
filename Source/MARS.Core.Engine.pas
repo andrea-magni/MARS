@@ -5,12 +5,13 @@
 *)
 unit MARS.Core.Engine;
 
+{$I MARS.inc}
+
 interface
 
 uses
   SysUtils, HTTPApp, Classes, Generics.Collections
   , SyncObjs
-  , Diagnostics
 
   , MARS.Core.Classes
   , MARS.Core.Registry
@@ -18,6 +19,7 @@ uses
   , MARS.Core.URL
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
+  , MARS.Core.Engine.Interfaces
 ;
 
 {$M+}
@@ -28,11 +30,6 @@ const
 type
   EMARSEngineException = class(EMARSHttpException);
   TMARSEngine = class;
-
-  IMARSHandleRequestEventListener = interface
-    procedure BeforeHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; var AIsAllowed: Boolean);
-    procedure AfterHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; const AStopWatch: TStopWatch);
-  end;
 
   TMARSEngineBeforeHandleRequestEvent = TFunc<TMARSEngine, TMARSURL, Boolean>;
 
@@ -52,8 +49,6 @@ type
     procedure SetPort(const Value: Integer);
     procedure SetThreadPoolSize(const Value: Integer);
   protected
-    function DoBeforeHandleRequest(const AApplication: TMARSApplication): Boolean; virtual;
-    procedure DoAfterHandleRequest(const AApplication: TMARSApplication; const AStopWatch: TStopWatch); virtual;
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
     destructor Destroy; override;
@@ -73,6 +68,7 @@ type
     property BasePath: string read GetBasePath write SetBasePath;
     property Name: string read FName;
     property Port: Integer read GetPort write SetPort;
+    property Subscribers: TList<IMARSHandleRequestEventListener> read FSubscribers;
     property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
 
     property OnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent read FOnBeforeHandleRequest write FOnBeforeHandleRequest;
@@ -175,24 +171,6 @@ begin
   inherited;
 end;
 
-procedure TMARSEngine.DoAfterHandleRequest(const AApplication: TMARSApplication;
-  const AStopWatch: TStopWatch);
-var
-  LSubscriber: IMARSHandleRequestEventListener;
-begin
-  for LSubscriber in FSubscribers do
-    LSubscriber.AfterHandleRequest(Self, AApplication, AStopWatch);
-end;
-
-function TMARSEngine.DoBeforeHandleRequest(const AApplication: TMARSApplication): Boolean;
-var
-  LSubscriber: IMARSHandleRequestEventListener;
-begin
-  Result := True;
-  for LSubscriber in FSubscribers do
-    LSubscriber.BeforeHandleRequest(Self, AApplication, Result);
-end;
-
 procedure TMARSEngine.EnumerateApplications(
   const ADoSomething: TProc<string, TMARSApplication>);
 var
@@ -215,7 +193,6 @@ var
   LApplication: TMARSApplication;
   LURL: TMARSURL;
   LApplicationPath: string;
-  LStopWatch: TStopWatch;
   LActivationRecord: TMARSActivationRecord;
 begin
   Result := False;
@@ -247,12 +224,7 @@ begin
     try
       LActivationRecord := TMARSActivationRecord.Create(Self, LApplication, ARequest, AResponse, LURL);
       try
-        if DoBeforeHandleRequest(LApplication) then begin
-          LStopWatch := TStopwatch.StartNew;
-          LActivationRecord.Invoke;
-          LStopWatch.Stop;
-          DoAfterHandleRequest(LApplication, LStopWatch);
-        end;
+        LActivationRecord.Invoke;
 
         Result := True;
       finally
