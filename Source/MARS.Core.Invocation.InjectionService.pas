@@ -58,7 +58,9 @@ begin
   else if (LType.IsObjectOfType(TMARSEngine)) then
     AValue := TInjectionValue.Create(AActivationRecord.Engine, True)
   else if (LType.IsObjectOfType(TMARSApplication)) then
-    AValue := TInjectionValue.Create(AActivationRecord.Application, True);
+    AValue := TInjectionValue.Create(AActivationRecord.Application, True)
+  else if (LType.IsObjectOfType(TMARSActivationRecord)) then
+    AValue := TInjectionValue.Create(AActivationRecord, True);
 end;
 
 
@@ -83,7 +85,8 @@ begin
           or LType.IsObjectOfType(TWebResponse)
           or LType.IsObjectOfType(TMARSURL)
           or LType.IsObjectOfType(TMARSEngine)
-          or LType.IsObjectOfType(TMARSApplication);
+          or LType.IsObjectOfType(TMARSApplication)
+          or LType.IsObjectOfType(TMARSActivationRecord);
       end;
     end
   );
