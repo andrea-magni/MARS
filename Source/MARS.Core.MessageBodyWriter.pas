@@ -61,7 +61,7 @@ type
     procedure RegisterWriter(const AWriterClass: TClass; const ASubjectClass: TClass;
       const AGetAffinity: TGetAffinityFunction); overload;
 
-    procedure RegisterWriter<T: class>(const AWriterClass: TClass); overload;
+    procedure RegisterWriter<T>(const AWriterClass: TClass); overload;
 
     procedure FindWriter(const AMethod: TRttiMethod; const AAccept: string;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
@@ -69,7 +69,7 @@ type
     procedure Enumerate(const AProc: TProc<TEntryInfo>);
 
     class property Instance: TMARSMessageBodyRegistry read GetInstance;
-    class function GetDefaultClassAffinityFunc<T: class>: TGetAffinityFunction;
+    class function GetDefaultClassAffinityFunc<T>: TGetAffinityFunction;
     class destructor ClassDestructor;
 
     const AFFINITY_HIGH = 30;
@@ -223,13 +223,20 @@ class function TMARSMessageBodyRegistry.GetDefaultClassAffinityFunc<T>: TGetAffi
 begin
   Result :=
     function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    var
+      LType: TRttiType;
     begin
-      if Assigned(AType) and AType.IsObjectOfType<T>(False) then
+      Result := 0;
+      if not Assigned(AType) then
+        Exit;
+
+      LType := TRttiContext.Create.GetType(TypeInfo(T));
+      if (AType = LType) then
         Result := 100
-      else if Assigned(AType) and AType.IsObjectOfType<T> then
-        Result := 99
-      else
-        Result := 0;
+      else if AType.IsObjectOfType<T>(False) then
+        Result := 95
+      else if AType.IsObjectOfType<T> then
+        Result := 90;
     end
 end;
 
@@ -304,8 +311,11 @@ begin
   RegisterWriter(
     AWriterClass
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      var
+        LType: TRttiType;
       begin
-        Result := Assigned(AType) and AType.IsObjectOfType<T>;
+        LType := TRttiContext.Create.GetType(TypeInfo(T));
+        Result := Assigned(AType) and (AType = LType);
       end
     , Self.GetDefaultClassAffinityFunc<T>()
   );

@@ -41,7 +41,7 @@ type
     function IsDynamicArrayOf<T: class>(const AAllowInherithance: Boolean = True): Boolean; overload;
     function IsDynamicArrayOf(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
 
-    function IsObjectOfType<T: class>(const AAllowInherithance: Boolean = True): Boolean; overload;
+    function IsObjectOfType<T>(const AAllowInherithance: Boolean = True): Boolean; overload;
     function IsObjectOfType(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
   end;
 
@@ -334,8 +334,13 @@ end;
 
 function TRttiTypeHelper.IsObjectOfType<T>(
   const AAllowInherithance: Boolean): Boolean;
+var
+  LType: TRttiType;
 begin
-  Result := IsObjectOfType(TClass(T), AAllowInherithance);
+  Result := False;
+  LType := TRttiContext.Create.GetType(TypeInfo(T));
+  if LType.IsInstance then
+    Result := IsObjectOfType((LType as TRttiInstanceType).MetaclassType, AAllowInherithance);
 end;
 
 { TRttiHelper }
