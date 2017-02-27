@@ -29,6 +29,7 @@ type
   TMARSActivationRecord = class
   private
     FApplication: TMARSApplication;
+    FEngine: TMARSEngine;
     FRequest: TWebRequest;
     FResponse: TWebResponse;
     FURL: TMARSURL;
@@ -50,7 +51,6 @@ type
     procedure CleanupGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
-    function GetEngine: TMARSEngine; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
     function GetToken: TMARSToken;
     procedure FillResourceMethodParameters; virtual;
@@ -58,8 +58,8 @@ type
     procedure InvokeResourceMethod; virtual;
     procedure SetCustomHeaders;
   public
-    constructor Create(const AApplication: TMARSApplication;
-      ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL); virtual;
+    constructor Create(const AEngine: TMARSEngine; const AApplication: TMARSApplication;
+      const ARequest: TWebRequest; const AResponse: TWebResponse; const AURL: TMARSURL); virtual;
     destructor Destroy; override;
 
     procedure CheckResource; virtual;
@@ -67,10 +67,11 @@ type
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
 
+    procedure Prepare; virtual;
     procedure Invoke; virtual;
 
     property Application: TMARSApplication read FApplication;
-    property Engine: TMARSEngine read GetEngine;
+    property Engine: TMARSEngine read FEngine;
     property Method: TRttiMethod read FMethod;
     property Request: TWebRequest read FRequest;
     property Resource: TRttiType read FResource;
@@ -201,13 +202,6 @@ begin
   end;
 end;
 
-
-function TMARSActivationRecord.GetEngine: TMARSEngine;
-begin
-  Assert(Assigned(Application));
-  Result := TMARSEngine(Application.Engine);
-end;
-
 procedure TMARSActivationRecord.CleanupGarbage(const AValue: TValue);
 var
   LIndex: Integer;
@@ -319,6 +313,14 @@ begin
     FWriter := nil;
     FreeAndNil(FWriterMediaType);
   end;
+end;
+
+procedure TMARSActivationRecord.Prepare;
+begin
+  CheckResource;
+  CheckMethod;
+  CheckAuthentication;
+  CheckAuthorization;
 end;
 
 procedure TMARSActivationRecord.SetCustomHeaders;
@@ -458,10 +460,13 @@ begin
 end;
 
 
-constructor TMARSActivationRecord.Create(const AApplication: TMARSApplication;
-  ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL);
+constructor TMARSActivationRecord.Create(const AEngine: TMARSEngine;
+  const AApplication: TMARSApplication;
+  const ARequest: TWebRequest; const AResponse: TWebResponse;
+  const AURL: TMARSURL);
 begin
   inherited Create;
+  FEngine := AEngine;
   FApplication := AApplication;
   FRequest := ARequest;
   FResponse := AResponse;
@@ -470,6 +475,7 @@ begin
   FToken := nil;
   FRttiContext := TRttiContext.Create;
   FMethodArgumentsToCollect := TList<TValue>.Create;
+  Prepare;
 end;
 
 destructor TMARSActivationRecord.Destroy;

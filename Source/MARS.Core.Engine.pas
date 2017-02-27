@@ -38,10 +38,6 @@ type
 
   TMARSEngine = class
   private
-    class threadvar FWebRequest: TWebRequest;
-    class threadvar FWebResponse: TWebResponse;
-    class threadvar FURL: TMARSURL;
-  private
     FApplications: TMARSApplicationDictionary;
     FSubscribers: TList<IMARSHandleRequestEventListener>;
     FCriticalSection: TCriticalSection;
@@ -49,9 +45,6 @@ type
     FName: string;
     FOnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent;
 
-    function GetCurrentRequest: TWebRequest;
-    function GetCurrentResponse: TWebResponse;
-    function GetCurrentURL: TMARSURL;
     function GetBasePath: string;
     function GetPort: Integer;
     function GetThreadPoolSize: Integer;
@@ -81,11 +74,6 @@ type
     property Name: string read FName;
     property Port: Integer read GetPort write SetPort;
     property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
-
-    // Transient properties
-    property CurrentURL: TMARSURL read GetCurrentURL;
-    property CurrentRequest: TWebRequest read GetCurrentRequest;
-    property CurrentResponse: TWebResponse read GetCurrentResponse;
 
     property OnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent read FOnBeforeHandleRequest write FOnBeforeHandleRequest;
   end;
@@ -119,7 +107,9 @@ type
 implementation
 
 uses
-  MARS.Core.Utils
+    MARS.Core.Utils
+  , MARS.Core.Invocation
+  , MARS.Core.MediaType
   ;
 
 function TMARSEngine.AddApplication(const AName, ABasePath: string;
@@ -128,7 +118,7 @@ var
   LResource: string;
   LParametersSliceName: string;
 begin
-  Result := TMARSApplication.Create(Self, AName);
+  Result := TMARSApplication.Create(AName);
   try
     Result.BasePath := ABasePath;
     for LResource in AResources do
@@ -226,6 +216,7 @@ var
   LURL: TMARSURL;
   LApplicationPath: string;
   LStopWatch: TStopWatch;
+  LActivationRecord: TMARSActivationRecord;
 begin
   Result := False;
 
@@ -249,25 +240,43 @@ begin
         LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
     end;
 
-    if FApplications.TryGetValue(LApplicationPath, LApplication) then
-    begin
-      LURL.BasePath := LApplicationPath;
-      FWebRequest := ARequest;
-      FWebResponse := AResponse;
-      FURL := LURL;
-      if DoBeforeHandleRequest(LApplication) then begin
-        LStopWatch := TStopwatch.StartNew;
-        LApplication.HandleRequest(ARequest, AResponse, LURL);
-        LStopWatch.Stop;
-        DoAfterHandleRequest(LApplication, LStopWatch);
+    if not FApplications.TryGetValue(LApplicationPath, LApplication) then
+      raise EMARSEngineException.Create(Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath]), 404);
+
+    LURL.BasePath := LApplicationPath;
+    try
+      LActivationRecord := TMARSActivationRecord.Create(Self, LApplication, ARequest, AResponse, LURL);
+      try
+        if DoBeforeHandleRequest(LApplication) then begin
+          LStopWatch := TStopwatch.StartNew;
+          LActivationRecord.Invoke;
+          LStopWatch.Stop;
+          DoAfterHandleRequest(LApplication, LStopWatch);
+        end;
+
+        Result := True;
+      finally
+        LActivationRecord.Free;
       end;
-      Result := True;
-    end
-    else
-      raise EMARSEngineException.Create(
-        Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath])
-        , 404
-      );
+    except on E: Exception do
+      if E is EMARSHttpException then
+      begin
+        AResponse.StatusCode := EMARSHttpException(E).Status;
+        AResponse.Content := E.Message;
+        AResponse.ContentType := TMediaType.TEXT_HTML;
+      end
+      else begin
+        AResponse.StatusCode := 500;
+        AResponse.Content := 'Internal server error'
+        {$IFDEF DEBUG}
+          + ': ' + E.Message
+        {$ENDIF}
+        ;
+        AResponse.ContentType := TMediaType.TEXT_PLAIN;
+    //    raise;
+      end;
+    end;
+    Result := True;
   finally
     LURL.Free;
   end;
@@ -297,21 +306,6 @@ end;
 procedure TMARSEngine.SetThreadPoolSize(const Value: Integer);
 begin
   Parameters['ThreadPoolSize'] := Value;
-end;
-
-function TMARSEngine.GetCurrentRequest: TWebRequest;
-begin
-  Result := FWebRequest;
-end;
-
-function TMARSEngine.GetCurrentResponse: TWebResponse;
-begin
-  Result := FWebResponse;
-end;
-
-function TMARSEngine.GetCurrentURL: TMARSURL;
-begin
-  Result := FURL;
 end;
 
 function TMARSEngine.GetPort: Integer;

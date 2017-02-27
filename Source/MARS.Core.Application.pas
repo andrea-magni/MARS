@@ -11,12 +11,9 @@ interface
 
 uses
     SysUtils, Classes, Rtti, Generics.Collections
-  , HTTPApp
   , MARS.Core.Classes
   , MARS.Core.URL
   , MARS.Core.Registry
-  , MARS.Core.MediaType
-  , MARS.Core.Token
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
   ;
@@ -32,28 +29,16 @@ type
     FResourceRegistry: TObjectDictionary<string, TMARSConstructorInfo>;
     FBasePath: string;
     FName: string;
-    FEngine: TObject;
     FSystem: Boolean;
     FParameters: TMARSParameters;
   protected
-    function GetRequest: TWebRequest; virtual;
-    function GetResponse: TWebResponse; virtual;
-    function GetURL: TMARSURL; virtual;
-
-    property Request: TWebRequest read GetRequest;
-    property Response: TWebResponse read GetResponse;
-    property URL: TMARSURL read GetURL;
   public
-    constructor Create(const AEngine: TObject; const AName: string); virtual;
+    constructor Create(const AName: string); virtual;
     destructor Destroy; override;
 
     function AddResource(AResource: string): Boolean;
     procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
 
-    function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse;
-      const AURL: TMARSURL): Boolean; virtual;
-
-    property Engine: TObject read FEngine;
     property Name: string read FName;
     property BasePath: string read FBasePath write FBasePath;
     property System: Boolean read FSystem write FSystem;
@@ -67,14 +52,10 @@ type
 implementation
 
 uses
-  StrUtils
-  , TypInfo
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils
-  , MARS.Core.Response
+    StrUtils
+  , MARS.Core.Utils, MARS.Rtti.Utils
   , MARS.Core.Attributes
-  , MARS.Core.Engine
-  , MARS.Core.Invocation;
+;
 
 { TMARSApplication }
 
@@ -131,11 +112,10 @@ begin
       Result := AddResourceToApplicationRegistry(LInfo);
 end;
 
-constructor TMARSApplication.Create(const AEngine: TObject; const AName: string);
+constructor TMARSApplication.Create(const AName: string);
 begin
   inherited Create;
   FName := AName;
-  FEngine := AEngine;
   FRttiContext := TRttiContext.Create;
   FResourceRegistry := TObjectDictionary<string, TMARSConstructorInfo>.Create([doOwnsValues]);
   FParameters := TMARSParameters.Create(AName);
@@ -157,59 +137,5 @@ begin
     for LPair in FResourceRegistry do
       ADoSomething(LPair.Key, LPair.Value);
 end;
-
-function TMARSApplication.GetRequest: TWebRequest;
-begin
-  Result := TMARSEngine(Engine).CurrentRequest;
-end;
-
-function TMARSApplication.GetResponse: TWebResponse;
-begin
-  Result := TMARSEngine(Engine).CurrentResponse;
-end;
-
-function TMARSApplication.GetURL: TMARSURL;
-begin
-  Result := TMARSEngine(Engine).CurrentURL;
-end;
-
-function TMARSApplication.HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse; const AURL: TMARSURL): Boolean;
-var
-  LActivationRecord: TMARSActivationRecord;
-begin
-  Result := False;
-  try
-    LActivationRecord := TMARSActivationRecord.Create(Self, Request, Response, AURL);
-    try
-      LActivationRecord.CheckResource;
-      LActivationRecord.CheckMethod;
-      LActivationRecord.CheckAuthentication;
-      LActivationRecord.CheckAuthorization;
-
-      LActivationRecord.Invoke;
-      Result := True;
-    finally
-      LActivationRecord.Free;
-    end;
-  except on E: Exception do
-    if E is EMARSHttpException then
-    begin
-      Response.StatusCode := EMARSHttpException(E).Status;
-      Response.Content := E.Message;
-      Response.ContentType := TMediaType.TEXT_HTML;
-    end
-    else begin
-      Response.StatusCode := 500;
-      Response.Content := 'Internal server error'
-      {$IFDEF DEBUG}
-        + ': ' + E.Message
-      {$ENDIF}
-      ;
-      Response.ContentType := TMediaType.TEXT_PLAIN;
-  //    raise;
-    end;
-  end;
-end;
-
 
 end.
