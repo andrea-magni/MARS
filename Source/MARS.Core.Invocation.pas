@@ -24,6 +24,11 @@ uses
   ;
 
 type
+  TMARSActivationRecord = class;
+
+  TMARSBeforeInvokeProc = reference to procedure(const AActivationRecord: TMARSActivationRecord; out AIsAllowed: Boolean);
+  TMARSAfterInvokeProc = reference to procedure(const AActivationRecord: TMARSActivationRecord);
+
   TMARSActivationRecord = class
   private
     FApplication: TMARSApplication;
@@ -34,6 +39,8 @@ type
     FURLPrototype: TMARSURL;
     FToken: TMARSToken;
     FMethodArgumentsToCollect: TList<TValue>;
+    class var FBeforeInvokeProcs: TArray<TMARSBeforeInvokeProc>;
+    class var FAfterInvokeProcs: TArray<TMARSAfterInvokeProc>;
   protected
     FRttiContext: TRttiContext;
     FConstructorInfo: TMARSConstructorInfo;
@@ -74,6 +81,7 @@ type
 
     property Application: TMARSApplication read FApplication;
     property Engine: TMARSEngine read FEngine;
+    property InvocationTime: TStopwatch read FInvocationTime;
     property Method: TRttiMethod read FMethod;
     property Request: TWebRequest read FRequest;
     property Resource: TRttiType read FResource;
@@ -82,7 +90,13 @@ type
     property URL: TMARSURL read FURL;
     property URLPrototype: TMARSURL read FURLPrototype;
     property Token: TMARSToken read GetToken;
+
     function HasToken: Boolean;
+
+    class procedure RegisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
+//    class procedure UnregisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
+    class procedure RegisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
+//    class procedure UnregisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
   end;
 
 implementation
@@ -100,7 +114,6 @@ uses
 {$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}
-  , MARS.Core.Engine.Interfaces
 ;
 
 { TMARSActivationRecord }
@@ -326,6 +339,18 @@ begin
   CheckAuthorization;
 end;
 
+class procedure TMARSActivationRecord.RegisterAfterInvoke(
+  const AAfterInvoke: TMARSAfterInvokeProc);
+begin
+  FAfterInvokeProcs := FAfterInvokeProcs + [TMARSAfterInvokeProc(AAfterInvoke)];
+end;
+
+class procedure TMARSActivationRecord.RegisterBeforeInvoke(
+  const ABeforeInvoke: TMARSBeforeInvokeProc);
+begin
+  FBeforeInvokeProcs := FBeforeInvokeProcs + [TMARSBeforeInvokeProc(ABeforeInvoke)];
+end;
+
 procedure TMARSActivationRecord.SetCustomHeaders;
 var
   LCustomAtributeProcessor: TProc<CustomHeaderAttribute>;
@@ -339,6 +364,18 @@ begin
   FResource.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
   FMethod.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
 end;
+
+//class procedure TMARSActivationRecord.UnregisterAfterInvoke(
+//  const AAfterInvoke: TMARSAfterInvokeProc);
+//begin
+//  FAfterInvokeProcs := FAfterInvokeProcs - [TMARSAfterInvokeProc(AAfterInvoke)];
+//end;
+//
+//class procedure TMARSActivationRecord.UnregisterBeforeInvoke(
+//  const ABeforeInvoke: TMARSBeforeInvokeProc);
+//begin
+//  FBeforeInvokeProcs := FBeforeInvokeProcs - [TMARSBeforeInvokeProc(ABeforeInvoke)];
+//end;
 
 procedure TMARSActivationRecord.Invoke;
 begin
@@ -497,19 +534,19 @@ end;
 
 procedure TMARSActivationRecord.DoAfterInvoke;
 var
-  LSubscriber: IMARSHandleRequestEventListener;
+  LSubscriber: TMARSAfterInvokeProc;
 begin
-  for LSubscriber in FEngine.Subscribers do
-    LSubscriber.AfterHandleRequest(Self);
+  for LSubscriber in FAfterInvokeProcs do
+    LSubscriber(Self);
 end;
 
 function TMARSActivationRecord.DoBeforeInvoke: Boolean;
 var
-  LSubscriber: IMARSHandleRequestEventListener;
+  LSubscriber: TMARSBeforeInvokeProc;
 begin
   Result := True;
-  for LSubscriber in FEngine.Subscribers do
-    LSubscriber.BeforeHandleRequest(Self, Result);
+  for LSubscriber in FBeforeInvokeProcs do
+    LSubscriber(Self, Result);
 end;
 
 end.

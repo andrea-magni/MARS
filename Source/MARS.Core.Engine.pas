@@ -19,7 +19,6 @@ uses
   , MARS.Core.URL
   , MARS.Core.Exceptions
   , MARS.Utils.Parameters
-  , MARS.Core.Engine.Interfaces
 ;
 
 {$M+}
@@ -36,7 +35,6 @@ type
   TMARSEngine = class
   private
     FApplications: TMARSApplicationDictionary;
-    FSubscribers: TList<IMARSHandleRequestEventListener>;
     FCriticalSection: TCriticalSection;
     FParameters: TMARSParameters;
     FName: string;
@@ -57,8 +55,6 @@ type
 
     function AddApplication(const AName, ABasePath: string;
       const AResources: array of string; const AParametersSliceName: string = ''): TMARSApplication; virtual;
-    procedure AddSubscriber(const ASubscriber: IMARSHandleRequestEventListener);
-    procedure RemoveSubscriber(const ASubscriber: IMARSHandleRequestEventListener);
 
     procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>);
 
@@ -68,7 +64,6 @@ type
     property BasePath: string read GetBasePath write SetBasePath;
     property Name: string read FName;
     property Port: Integer read GetPort write SetPort;
-    property Subscribers: TList<IMARSHandleRequestEventListener> read FSubscribers;
     property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
 
     property OnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent read FOnBeforeHandleRequest write FOnBeforeHandleRequest;
@@ -135,12 +130,6 @@ begin
   end;
 end;
 
-procedure TMARSEngine.AddSubscriber(
-  const ASubscriber: IMARSHandleRequestEventListener);
-begin
-  FSubscribers.Add(ASubscriber);
-end;
-
 constructor TMARSEngine.Create(const AName: string);
 begin
   inherited Create;
@@ -149,7 +138,6 @@ begin
 
   FApplications := TMARSApplicationDictionary.Create([doOwnsValues]);
   FCriticalSection := TCriticalSection.Create;
-  FSubscribers := TList<IMARSHandleRequestEventListener>.Create;
   FParameters := TMARSParameters.Create(FName);
 
   // default parameters
@@ -167,7 +155,6 @@ begin
   FParameters.Free;
   FCriticalSection.Free;
   FApplications.Free;
-  FSubscribers.Free;
   inherited;
 end;
 
@@ -252,12 +239,6 @@ begin
   finally
     LURL.Free;
   end;
-end;
-
-procedure TMARSEngine.RemoveSubscriber(
-  const ASubscriber: IMARSHandleRequestEventListener);
-begin
-  FSubscribers.Remove(ASubscriber);
 end;
 
 function TMARSEngine.GetBasePath: string;

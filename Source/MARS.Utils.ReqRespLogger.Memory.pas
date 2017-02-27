@@ -10,33 +10,35 @@ interface
 uses
   Classes, SysUtils, Diagnostics
   , Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param, FireDAC.Comp.DataSet
-  , MARS.Core.Engine, MARS.Core.Application, MARS.Utils.ReqRespLogger.Interfaces
+//  , MARS.Core.Engine, MARS.Core.Application
+  , MARS.Utils.ReqRespLogger.Interfaces
   , Web.HttpApp, SyncObjs, Rtti
+  , MARS.Core.Invocation
 ;
 
 type
-  TMARSReqRespLoggerMemory=class(TInterfacedObject
-    , IMARSHandleRequestEventListener, IMARSReqRespLogger)
+  TMARSReqRespLoggerMemory=class(TInterfacedObject, IMARSReqRespLogger)
   private
     FMemory: TFDMemTable;
     FCriticalSection: TCriticalSection;
+    class var _Instance: TMARSReqRespLoggerMemory;
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
-    // IMARSHandleRequestEventListener
-    procedure AfterHandleRequest(const ASender: TMARSEngine;
-      const AApplication: TMARSApplication; const AStopWatch: TStopwatch);
-    procedure BeforeHandleRequest(const ASender: TMARSEngine;
-      const AApplication: TMARSApplication; var AIsAllowed: Boolean);
-
     // IMARSReqRespLogger
     procedure Clear;
     function GetLogBuffer: TValue;
+    procedure LogIncoming(const AR: TMARSActivationRecord);
+    procedure LogOutgoing(const AR: TMARSActivationRecord);
 
     // protected access to FMemory from outside
     procedure ReadMemory(const AProc: TProc<TDataset>);
     function GetMemorySnapshot: TDataset;
+
+    class function Instance: TMARSReqRespLoggerMemory;
+    class constructor ClassCreate;
+    class destructor ClassDestroy;
   end;
 
   TWebRequestHelper = class helper for TWebRequest
@@ -54,50 +56,26 @@ implementation
 
 { TMARSReqRespLoggerMemory }
 
-procedure TMARSReqRespLoggerMemory.AfterHandleRequest(const ASender: TMARSEngine;
-  const AApplication: TMARSApplication; const AStopWatch: TStopwatch);
+class constructor TMARSReqRespLoggerMemory.ClassCreate;
 begin
-  FCriticalSection.Enter;
-  try
-    FMemory.Append;
-    try
-      FMemory.FieldByName('TimeStamp').AsDateTime := Now;
-      FMemory.FieldByName('Engine').AsString := ASender.Name;
-      FMemory.FieldByName('Application').AsString := AApplication.Name;
-      FMemory.FieldByName('Kind').AsString := 'Outgoing';
-      FMemory.FieldByName('ExecutionTime').AsInteger := AStopWatch.ElapsedMilliseconds;
+  TMARSActivationRecord.RegisterBeforeInvoke(
+    procedure (const AR: TMARSActivationRecord; out AIsAllowed: Boolean)
+    begin
+      TMARSReqRespLoggerMemory.Instance.LogIncoming(AR);
+    end
+  );
 
-      ASender.CurrentResponse.ToDataSet(FMemory);
-      FMemory.Post;
-    except
-      FMemory.Cancel;
-      raise;
-    end;
-  finally
-    FCriticalSection.Leave;
-  end;
+  TMARSActivationRecord.RegisterAfterInvoke(
+    procedure (const AR: TMARSActivationRecord)
+    begin
+      TMARSReqRespLoggerMemory.Instance.LogOutgoing(AR);
+    end
+  );
 end;
 
-procedure TMARSReqRespLoggerMemory.BeforeHandleRequest(const ASender: TMARSEngine;
-  const AApplication: TMARSApplication; var AIsAllowed: Boolean);
+class destructor TMARSReqRespLoggerMemory.ClassDestroy;
 begin
-  FCriticalSection.Enter;
-  try
-    FMemory.Append;
-    try
-      FMemory.FieldByName('TimeStamp').AsDateTime := Now;
-      FMemory.FieldByName('Engine').AsString := ASender.Name;
-      FMemory.FieldByName('Application').AsString := AApplication.Name;
-      FMemory.FieldByName('Kind').AsString := 'Incoming';
-      ASender.CurrentRequest.ToDataSet(FMemory);
-      FMemory.Post;
-    except
-      FMemory.Cancel;
-      raise;
-    end;
-  finally
-    FCriticalSection.Leave;
-  end;
+  _Instance := nil;
 end;
 
 procedure TMARSReqRespLoggerMemory.Clear;
@@ -180,6 +158,57 @@ begin
   except
     LSnapshot.Free;
     raise;
+  end;
+end;
+
+class function TMARSReqRespLoggerMemory.Instance: TMARSReqRespLoggerMemory;
+begin
+  if not Assigned(_Instance) then
+    _Instance := TMARSReqRespLoggerMemory.Create;
+  Result := _Instance;
+end;
+
+procedure TMARSReqRespLoggerMemory.LogIncoming(const AR: TMARSActivationRecord);
+begin
+  FCriticalSection.Enter;
+  try
+    FMemory.Append;
+    try
+      FMemory.FieldByName('TimeStamp').AsDateTime := Now;
+      FMemory.FieldByName('Engine').AsString := AR.Engine.Name;
+      FMemory.FieldByName('Application').AsString := AR.Application.Name;
+      FMemory.FieldByName('Kind').AsString := 'Incoming';
+      AR.Request.ToDataSet(FMemory);
+      FMemory.Post;
+    except
+      FMemory.Cancel;
+      raise;
+    end;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TMARSReqRespLoggerMemory.LogOutgoing(const AR: TMARSActivationRecord);
+begin
+  FCriticalSection.Enter;
+  try
+    FMemory.Append;
+    try
+      FMemory.FieldByName('TimeStamp').AsDateTime := Now;
+      FMemory.FieldByName('Engine').AsString := AR.Engine.Name;
+      FMemory.FieldByName('Application').AsString := AR.Application.Name;
+      FMemory.FieldByName('Kind').AsString := 'Outgoing';
+      FMemory.FieldByName('ExecutionTime').AsInteger := AR.InvocationTime.ElapsedMilliseconds;
+
+      AR.Response.ToDataSet(FMemory);
+      FMemory.Post;
+    except
+      FMemory.Cancel;
+      raise;
+    end;
+  finally
+    FCriticalSection.Leave;
   end;
 end;
 
