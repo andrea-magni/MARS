@@ -511,11 +511,15 @@ end;
 
 function PathParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivationRecord: TMARSActivationRecord): TValue;
+var
+  LTokenIndex: Integer;
 begin
-  Result := StringToTValue(
-      AActivationRecord.URL.PathTokens[GetParamIndex(ADestination, AActivationRecord.URL, AActivationRecord.URLPrototype)]
-    , ADestination.GetRttiType
-  );
+  Result := TValue.Empty;
+  LTokenIndex := GetParamIndex(ADestination, AActivationRecord.URL, AActivationRecord.URLPrototype);
+  if LTokenIndex > -1 then
+    Result := StringToTValue(AActivationRecord.URL.PathTokens[LTokenIndex]
+      , ADestination.GetRttiType
+    );
 end;
 
 end.
