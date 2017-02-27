@@ -17,7 +17,6 @@ uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
   , MARS.http.Server.Indy
 
   , MARS.Core.Application
-  , MARS.Diagnostics.Manager
   , MARS.Diagnostics.Resources, System.Actions
   ;
 

@@ -258,10 +258,6 @@ var
 begin
   Assert(Assigned(FMethod));
 
-  TMARSMessageBodyRegistry.Instance.FindWriter(FMethod, string(Request.Accept)
-    , FWriter, FWriterMediaType);
-  try
-
     // cache initial ContentType value to check later if it has been changed
     LContentType := Response.ContentType;
 
@@ -276,47 +272,56 @@ begin
       if LMethodResult.IsInstanceOf(TMARSResponse) then
         TMARSResponse(LMethodResult.AsObject).CopyTo(Response)
       // 2 - MessageBodyWriter mechanism (standard)
-      else if Assigned(FWriter) then
-      begin
-        if Response.ContentType = LContentType then
-          Response.ContentType := FWriterMediaType.ToString;
-
-        LStream := TBytesStream.Create();
+      else begin
+        TMARSMessageBodyRegistry.Instance.FindWriter(FMethod, string(Request.Accept)
+          , FWriter, FWriterMediaType);
         try
-          FWriter.WriteTo(LMethodResult, FMethod.GetAttributes, FWriterMediaType
-            , Response.CustomHeaders, LStream);
-          LStream.Position := 0;
-          Response.ContentStream := LStream;
-        except
-          LStream.Free;
-          raise;
-        end;
-      end
-      // 3 - fallback (raw)
-      else
-      begin
-        case LMethodResult.Kind of
-
-          tkString, tkLString, tkUString, tkWString
-{$ifdef DelphiXE8_UP}
-          , tkWideChar, tkAnsiChar
-{$endif}
-          , tkInteger, tkInt64, tkFloat, tkVariant:
+          if Assigned(FWriter) then
           begin
-            Response.Content := LMethodResult.AsString;
-            if (Response.ContentType = LContentType) then
-              Response.ContentType := TMediaType.TEXT_PLAIN; // or check Produces of method!
-            Response.StatusCode := 200;
-          end;
+            if Response.ContentType = LContentType then
+              Response.ContentType := FWriterMediaType.ToString;
 
-          // a procedure has Kind = tkUnknown
-          tkUnknown : Response.StatusCode := 200;
-
-          //tkRecord: ;
-          //tkInterface: ;
-          //tkDynArray: ;
+            LStream := TBytesStream.Create();
+            try
+              FWriter.WriteTo(LMethodResult, FMethod.GetAttributes, FWriterMediaType
+                , Response.CustomHeaders, LStream);
+              LStream.Position := 0;
+              Response.ContentStream := LStream;
+            except
+              LStream.Free;
+              raise;
+            end;
+          end
+          // 3 - fallback (raw)
           else
-            Response.StatusCode := 400;
+          begin
+            case LMethodResult.Kind of
+
+              tkString, tkLString, tkUString, tkWString
+    {$ifdef DelphiXE8_UP}
+              , tkWideChar, tkAnsiChar
+    {$endif}
+              , tkInteger, tkInt64, tkFloat, tkVariant:
+              begin
+                Response.Content := LMethodResult.AsString;
+                if (Response.ContentType = LContentType) then
+                  Response.ContentType := TMediaType.TEXT_PLAIN; // or check Produces of method!
+                Response.StatusCode := 200;
+              end;
+
+              // a procedure has Kind = tkUnknown
+              tkUnknown : Response.StatusCode := 200;
+
+              //tkRecord: ;
+              //tkInterface: ;
+              //tkDynArray: ;
+              else
+                Response.StatusCode := 400;
+            end;
+          end;
+        finally
+          FWriter := nil;
+          FreeAndNil(FWriterMediaType);
         end;
       end;
     finally
@@ -325,10 +330,6 @@ begin
       if not FMethod.HasAttribute<IsReference>(nil) then
         CleanupGarbage(LMethodResult);
     end;
-  finally
-    FWriter := nil;
-    FreeAndNil(FWriterMediaType);
-  end;
 end;
 
 procedure TMARSActivationRecord.Prepare;
