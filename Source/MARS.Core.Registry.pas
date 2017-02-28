@@ -153,7 +153,6 @@ end;
 function TMARSConstructorInfo.FindConstructor(AClass: TClass): TRttiMethod;
 var
   LType: TRttiType;
-  LConstructor: TRttiMethod;
   LMethod: TRttiMethod;
 begin
   Result := nil;
