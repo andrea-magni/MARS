@@ -72,7 +72,7 @@ type
     procedure RegisterReader(const AReaderClass: TClass; const ASubjectClass: TClass;
       const AGetAffinity: TGetAffinityFunction); overload;
 
-    procedure RegisterReader<T: class>(const AReaderClass: TClass); overload;
+    procedure RegisterReader<T>(const AReaderClass: TClass); overload;
 
     procedure FindReader(const ADestination: TRttiObject;
       out AReader: IMessageBodyReader; out AMediaType: TMediaType);
@@ -80,7 +80,7 @@ type
     procedure Enumerate(const AProc: TProc<TReaderEntryInfo>);
 
     class property Instance: TMARSMessageBodyReaderRegistry read GetInstance;
-    class function GetDefaultClassAffinityFunc<T: class>: TGetAffinityFunction;
+    class function GetDefaultClassAffinityFunc<T>: TGetAffinityFunction;
     class destructor ClassDestructor;
 
     const AFFINITY_HIGH = 30;
@@ -229,13 +229,20 @@ class function TMARSMessageBodyReaderRegistry.GetDefaultClassAffinityFunc<T>: TG
 begin
   Result :=
     function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    var
+      LType: TRttiType;
     begin
-      if Assigned(AType) and AType.IsObjectOfType<T>(False) then
+      Result := 0;
+      if not Assigned(AType) then
+        Exit;
+
+      LType := TRttiContext.Create.GetType(TypeInfo(T));
+      if (AType = LType) then
         Result := 100
-      else if Assigned(AType) and AType.IsObjectOfType<T> then
-        Result := 99
-      else
-        Result := 0;
+      else if AType.IsObjectOfType<T>(False) then
+        Result := 95
+      else if AType.IsObjectOfType<T> then
+        Result := 90;
     end
 end;
 
@@ -310,8 +317,17 @@ begin
   RegisterReader(
     AReaderClass
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      var
+        LType: TRttiType;
       begin
-        Result := Assigned(AType) and AType.IsObjectOfType<T>;
+        LType := TRttiContext.Create.GetType(TypeInfo(T));
+        Result := False;
+        if Assigned(AType) then
+        begin
+          Result := (AType = LType);
+          if not Result then
+            Result := AType.IsObjectOfType<T>();
+        end;
       end
     , Self.GetDefaultClassAffinityFunc<T>()
   );
