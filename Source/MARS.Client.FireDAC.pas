@@ -5,11 +5,14 @@
 *)
 unit MARS.Client.FireDAC;
 
+{$I MARS.inc}
+
 interface
 
 uses
   Classes, SysUtils
-  , MARS.Core.JSON, System.JSON
+  , MARS.Core.JSON
+  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
 
   , FireDAC.Comp.Client
 

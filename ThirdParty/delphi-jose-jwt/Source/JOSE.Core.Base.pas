@@ -67,9 +67,7 @@ implementation
 
 uses
   JOSE.Encoding.Base64
-{$ifdef DelphiXE6_UP}
-  , System.JSON
-{$endif}
+  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
 ;
 
 { TJOSEBase }

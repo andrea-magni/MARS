@@ -62,9 +62,7 @@ uses
   , FireDAC.Stan.StorageXML
 
   , MARS.Core.JSON
-  // to avoid [dcc32 Hint] H2443 Inline function 'TJSONObject.ParseJSONValue'
-  // has not been expanded because unit 'System.JSON' is not specified in USES list
-  , System.JSON
+  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
   , MARS.Core.Exceptions
   , MARS.Rtti.Utils
   ;
