@@ -45,6 +45,7 @@ uses
 
   function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
   function JSONToDate(const ADate: string; AReturnUTC: Boolean = True): TDateTime;
+  function GuessIsISO8601Date(const AString: string): Boolean;
 
   function IsMask(const AString: string): Boolean;
   function MatchesMask(const AString, AMask: string): Boolean;
@@ -107,6 +108,17 @@ function MatchesMask(const AString, AMask: string): Boolean;
 begin
   Result := Masks.MatchesMask(AString, AMask);
 end;
+
+function GuessIsISO8601Date(const AString: string): Boolean;
+// "1982-05-24T00:00:00.000Z"
+var
+  LYear, LCode: Integer;
+begin
+  // starts with a year and has at least a dash
+  Val(AString.Substring(0, 4), LYear, LCode);
+  Result := (LYear >= 0) and (LCode = 0) and AString.Contains('-');
+end;
+
 
 function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
 begin

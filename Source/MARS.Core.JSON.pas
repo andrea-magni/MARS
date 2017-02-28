@@ -100,9 +100,9 @@ function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
 implementation
 
 uses
-  DateUtils,
-  Variants,
-  MARS.Core.Utils;
+    DateUtils, Variants, StrUtils
+  , MARS.Core.Utils
+;
 
 function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
 var
@@ -347,6 +347,7 @@ function TJSONObjectHelper.ReadValue(const AName: string;
   const ADefault: TValue): TValue;
 var
   LValue: TJSONValue;
+  LString: string;
 begin
   Result := ADefault;
   if TryGetValue<TJSONValue>(AName, LValue) then
@@ -356,7 +357,17 @@ begin
     else if LValue is TJSONFalse then
       Result := False
     else if LValue is TJSONString then
-      Result := TJSONString(LValue).Value
+    begin
+      LString := TJSONString(LValue).Value;
+      Result := LString;
+      if GuessIsISO8601Date(LString) then
+        try
+          Result := JSONToDate(LString, False); // TODO: maybe add a parameter for AReturnUTC?
+        except
+          Result := LString;
+          // I'm guessing if it is a date time value so I will not raise a conversion error here.
+        end;
+    end
     else if LValue is TJSONNumber then
       Result := TJSONNumber(LValue).AsDouble
     else if LValue is TJSONNull then

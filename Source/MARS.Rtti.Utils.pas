@@ -79,14 +79,8 @@ function TValueToJSONObject(AObject: TJSONObject; const AName: string; const AVa
 begin
   Result := AObject;
 
-  if (AValue.Kind in [tkString])  then
+  if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString])  then
     Result.AddPair(AName, AValue.AsString)
-
-  else if (AValue.Kind in [tkInteger, tkInt64]) then
-    Result.AddPair(AName, TJSONNumber.Create(AValue.AsOrdinal))
-
-  else if (AValue.Kind in [tkFloat]) then
-    Result.AddPair(AName, TJSONNumber.Create(AValue.AsExtended))
 
   else if (AValue.IsType<Boolean>) then
     Result.AddPair(AName, BooleanToTJSON(AValue.AsType<Boolean>))
@@ -97,6 +91,12 @@ begin
     Result.AddPair(AName, DateToJSON(AValue.AsType<TDate>))
   else if (AValue.IsType<TTime>) then
     Result.AddPair(AName, DateToJSON(AValue.AsType<TTime>))
+
+  else if (AValue.Kind in [tkInteger, tkInt64]) then
+    Result.AddPair(AName, TJSONNumber.Create(AValue.AsOrdinal))
+
+  else if (AValue.Kind in [tkFloat]) then
+    Result.AddPair(AName, TJSONNumber.Create(AValue.AsExtended))
 
   else
     Result.AddPair(AName, AValue.ToString);
