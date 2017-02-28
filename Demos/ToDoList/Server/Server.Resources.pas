@@ -63,7 +63,7 @@ uses
   , MARS.Core.Exceptions
 
   {$if CompilerVersion > 24} //XE3
-  , FireDAC.Comp.Client
+  , FireDAC.Comp.Client , FireDAC.Stan.Param
   , Model.Persistence.FDAC
   {$else}
   , SQLExpr

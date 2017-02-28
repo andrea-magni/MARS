@@ -10,7 +10,7 @@ interface
 uses
    Classes, SysUtils
    , DB
-   , FireDAC.Comp.Client
+   , FireDAC.Comp.Client, FireDAC.Stan.Param
 
    , MARS.Core.Classes
 

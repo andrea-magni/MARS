@@ -17,7 +17,7 @@ uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
   , MARS.http.Server.Indy
 
   , MARS.Core.Application
-  , MARS.Diagnostics.Resources, System.Actions
+  , System.Actions
   ;
 
 type
@@ -55,6 +55,8 @@ uses
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyWriters
   , MARS.Utils.Parameters.IniFile
+  , MARS.Data.FireDAC
+  , MARS.Core.URL
   ;
 
 
@@ -75,7 +77,15 @@ begin
   try
     FEngine.Parameters.LoadFromIniFile;
     FEngine.AddApplication('ToDoList', '/todo', ['Server.Resources*']);
-    FEngine.AddApplication('diagnostics', '/diagnostics', ['*']);
+    TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+    FEngine.OnBeforeHandleRequest :=
+      function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
+      begin
+        Result := True;
+        if AURL.Path.EndsWith('favicon.ico', True) then
+          Result := False;
+      end
+    ;
 
     // http server implementation
     FServer := TMARShttpServerIndy.Create(FEngine);

@@ -16,7 +16,7 @@ type
   TServerEngine=class
   private
     class var FEngine: TMARSEngine;
-    class var FAvailableConnectionDefs: TArray<string>;
+//    class var FAvailableConnectionDefs: TArray<string>;
   public
     class constructor CreateEngine;
     class destructor DestroyEngine;
@@ -35,7 +35,7 @@ uses
   , MARS.Utils.Parameters.IniFile
 
   , Server.Resources
-  , MARS.Data.FireDAC
+//  , MARS.Data.FireDAC
   ;
 
 { TServerEngine }
@@ -49,7 +49,7 @@ begin
 
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
-    FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+//    FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
   except
     FreeAndNil(FEngine);
     raise;
@@ -58,7 +58,7 @@ end;
 
 class destructor TServerEngine.DestroyEngine;
 begin
-  TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
+//  TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
   FreeAndNil(FEngine);
 end;
 
