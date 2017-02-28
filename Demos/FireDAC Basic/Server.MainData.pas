@@ -57,11 +57,6 @@ uses
 //end;
 
 initialization
-  TMARSResourceRegistry.Instance.RegisterResource<TMainDataResource>(
-    function: TObject
-    begin
-      Result := TMainDataResource.Create(nil);
-    end
-  );
+  TMARSResourceRegistry.Instance.RegisterResource<TMainDataResource>;
 
 end.

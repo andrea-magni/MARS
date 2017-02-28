@@ -20,7 +20,6 @@ uses
 
 
   , MARS.Core.Application
-  , MARS.Diagnostics.Resources
   ;
 
 type
