@@ -15,11 +15,11 @@ uses
   , Data.DB
   , FireDAC.DApt
   , FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def
-  , FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Stan.StorageXML
+  , FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Stan.StorageXML, FireDAC.Stan.Param
   , FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin
   , FireDAC.UI.Intf
   , FireDAC.Phys.Intf, FireDAC.Phys
-  , FireDAC.Comp.Client, FireDAC.Comp.UI
+  , FireDAC.Comp.Client, FireDAC.Comp.UI, FireDAC.Comp.DataSet
 
   , FireDACJSONReflect
 
@@ -33,6 +33,7 @@ uses
   , MARS.Core.Token
   , MARS.Core.URL
   , MARS.Utils.Parameters
+  , MARS.Core.Invocation
 ;
 
 type
@@ -58,24 +59,27 @@ type
   private
     FConnectionDefName: string;
     FConnection: TFDConnection;
+    FActivationRecord: TMARSActivationRecord;
   protected
     procedure SetConnectionDefName(const Value: string);
     function GetConnection: TFDConnection;
+    procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
   public
-    constructor Create(const AConnectionDefName: string); virtual;
+    constructor Create(const AConnectionDefName: string;
+      const AActivationRecord: TMARSActivationRecord = nil); virtual;
     destructor Destroy; override;
 
-    function CreateCommand(const ASQL: string = ''; const AExecuteImmediate: Boolean = False): TFDCommand;
-    function CreateQuery(const ASQL: string = ''; const AOpen: Boolean = False): TFDQuery;
+    function CreateCommand(const ASQL: string = ''; const AExecuteImmediate: Boolean = False; const AOwned: Boolean = True): TFDCommand;
+    function CreateQuery(const ASQL: string = ''; const AOpen: Boolean = False; const AOwned: Boolean = True): TFDQuery;
 
     procedure ExecuteSQL(const ASQL: string; const ABeforeExecute: TProc<TFDCommand> = nil;
       const AAfterExecute: TProc<TFDCommand> = nil); overload;
-    procedure ExecuteSQL(const ASQL: String; const AParams: array of Variant); overload;
-    procedure ExecuteSQL(const ASQL: String; const AParams: array of Variant;
-      const ATypes: array of TFieldType); overload;
+    procedure Query(const ASQL: string; const AOnBeforeOpen: TProc<TFDQuery>;
+      const AOnDataSetReady: TProc<TFDQuery>);
 
     property Connection: TFDConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
+    property ActivationRecord: TMARSActivationRecord read FActivationRecord;
 
     class function LoadConnectionDefs(const AParameters: TMARSParameters;
       const ASliceName: string = ''): TArray<string>;
@@ -146,6 +150,23 @@ begin
   end;
 end;
 
+procedure TMARSFireDAC.Query(const ASQL: string; const AOnBeforeOpen,
+  AOnDataSetReady: TProc<TFDQuery>);
+var
+  LQuery: TFDQuery;
+begin
+  LQuery := CreateQuery(ASQL, False, False);
+  try
+    if Assigned(AOnBeforeOpen) then
+      AOnBeforeOpen(LQuery);
+    LQuery.Active := True;
+    if Assigned(AOnDataSetReady) then
+      AOnDataSetReady(LQuery);
+  finally
+    LQuery.Free;
+  end;
+end;
+
 function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 begin
   Result := TFDConnection.Create(nil);
@@ -185,34 +206,42 @@ begin
     FDManager.CloseConnectionDef(LConnectionDefName);
 end;
 
-constructor TMARSFireDAC.Create(const AConnectionDefName: string);
+constructor TMARSFireDAC.Create(const AConnectionDefName: string;
+  const AActivationRecord: TMARSActivationRecord);
 begin
   inherited Create();
   ConnectionDefName := AConnectionDefName;
+  FActivationRecord := AActivationRecord;
 end;
 
-function TMARSFireDAC.CreateCommand(const ASQL: string; const AExecuteImmediate: Boolean): TFDCommand;
+function TMARSFireDAC.CreateCommand(const ASQL: string;
+  const AExecuteImmediate: Boolean; const AOwned: Boolean): TFDCommand;
 begin
   Result := TFDCommand.Create(nil);
   try
     Result.Connection := Connection;
     Result.CommandText.Text := ASQL;
+    InjectParamAndMacroValues(Result);
     if AExecuteImmediate then
       Result.Execute();
+    ActivationRecord.AddToContext(Result);
   except
     Result.Free;
     raise;
   end;
 end;
 
-function TMARSFireDAC.CreateQuery(const ASQL: string; const AOpen: Boolean): TFDQuery;
+function TMARSFireDAC.CreateQuery(const ASQL: string; const AOpen: Boolean;
+  const AOwned: Boolean): TFDQuery;
 begin
   Result := TFDQuery.Create(nil);
   try
     Result.Connection := Connection;
     Result.SQL.Text := ASQL;
+    InjectParamAndMacroValues(Result.Command);
     if AOpen then
       Result.Open;
+    ActivationRecord.AddToContext(Result);
   except
     Result.Free;
     raise;
@@ -225,31 +254,12 @@ begin
   inherited;
 end;
 
-procedure TMARSFireDAC.ExecuteSQL(const ASQL: String;
-  const AParams: array of Variant);
-begin
-  ExecuteSQL(ASQL, AParams, []);
-end;
-
-procedure TMARSFireDAC.ExecuteSQL(const ASQL: String;
-  const AParams: array of Variant; const ATypes: array of TFieldType);
-var
-  LCommand: TFDCommand;
-begin
-  LCommand := CreateCommand();
-  try
-    LCommand.Execute(ASQL, AParams, ATypes);
-  finally
-    LCommand.Free;
-  end;
-end;
-
 procedure TMARSFireDAC.ExecuteSQL(const ASQL: string; const ABeforeExecute,
   AAfterExecute: TProc<TFDCommand>);
 var
   LCommand: TFDCommand;
 begin
-  LCommand := CreateCommand(ASQL, False);
+  LCommand := CreateCommand(ASQL, False, False);
   try
     if Assigned(ABeforeExecute) then
       ABeforeExecute(LCommand);
@@ -266,6 +276,28 @@ begin
   if not Assigned(FConnection) then
     FConnection := CreateConnectionByDefName(ConnectionDefName);
   Result := FConnection;
+end;
+
+procedure TMARSFireDAC.InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
+var
+  LIndex: Integer;
+  LParam: TFDParam;
+  LMacro: TFDMacro;
+begin
+  for LIndex := 0 to ACommand.Params.Count-1 do
+  begin
+    LParam := ACommand.Params[LIndex];
+    if SameText(LParam.Name, 'Token_UserName') then
+      LParam.AsString := ActivationRecord.Token.UserName;
+  end;
+
+  for LIndex := 0 to ACommand.Macros.Count-1 do
+  begin
+    LMacro := ACommand.Macros[LIndex];
+    if SameText(LMacro.Name, 'Token_UserName') then
+      LMacro.AsString := ActivationRecord.Token.UserName;
+  end;
+
 end;
 
 procedure TMARSFireDAC.SetConnectionDefName(const Value: string);

@@ -222,7 +222,7 @@ end;
 function DatasetMetadataToJSONObject(const ADataSet: TDataSet): TJSONObject;
   procedure AddPropertyValue(APropertyName: string);
   begin
-    TValueToJSONObject(Result, APropertyName, ReadPropertyValue(ADataSet, APropertyName));
+    Result.WriteTValue(APropertyName, ReadPropertyValue(ADataSet, APropertyName));
   end;
 begin
   Result := TJSONObject.Create;

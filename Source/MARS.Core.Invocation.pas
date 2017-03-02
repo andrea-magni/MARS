@@ -38,7 +38,7 @@ type
     FURL: TMARSURL;
     FURLPrototype: TMARSURL;
     FToken: TMARSToken;
-    FMethodArgumentsToCollect: TList<TValue>;
+    FContext: TList<TValue>;
     class var FBeforeInvokeProcs: TArray<TMARSBeforeInvokeProc>;
     class var FAfterInvokeProcs: TArray<TMARSAfterInvokeProc>;
   protected
@@ -52,8 +52,7 @@ type
     FWriterMediaType: TMediaType;
     FInvocationTime: TStopWatch;
 
-    procedure CleanupContext; virtual;
-    procedure CollectContext(AValue: TValue); virtual;
+    procedure FreeContext; virtual;
     procedure CleanupGarbage(const AValue: TValue); virtual;
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
@@ -66,15 +65,18 @@ type
 
     function DoBeforeInvoke: Boolean;
     procedure DoAfterInvoke;
-  public
-    constructor Create(const AEngine: TMARSEngine; const AApplication: TMARSApplication;
-      const ARequest: TWebRequest; const AResponse: TWebResponse; const AURL: TMARSURL); virtual;
-    destructor Destroy; override;
 
     procedure CheckResource; virtual;
     procedure CheckMethod; virtual;
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
+  public
+    constructor Create(const AEngine: TMARSEngine; const AApplication: TMARSApplication;
+      const ARequest: TWebRequest; const AResponse: TWebResponse; const AURL: TMARSURL); virtual;
+    destructor Destroy; override;
+
+    procedure AddToContext(AValue: TValue); virtual;
+
 
     procedure Prepare; virtual;
     procedure Invoke; virtual;
@@ -241,12 +243,12 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.CleanupContext;
+procedure TMARSActivationRecord.FreeContext;
 begin
-  while FMethodArgumentsToCollect.Count > 0 do
+  while FContext.Count > 0 do
   begin
-    CleanupGarbage(FMethodArgumentsToCollect[0]);
-    FMethodArgumentsToCollect.Delete(0);
+    CleanupGarbage(FContext[0]);
+    FContext.Delete(0);
   end;
 end;
 
@@ -326,7 +328,7 @@ begin
       end;
     end;
   finally
-    CleanupContext;
+    FreeContext;
 
     if not FMethod.HasAttribute<IsReference>(nil) then
       CleanupGarbage(LMethodResult);
@@ -469,10 +471,10 @@ begin
     raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 end;
 
-procedure TMARSActivationRecord.CollectContext(AValue: TValue);
+procedure TMARSActivationRecord.AddToContext(AValue: TValue);
 begin
   if not AValue.IsEmpty then
-    FMethodArgumentsToCollect.Add(AValue);
+    FContext.Add(AValue);
 end;
 
 procedure TMARSActivationRecord.ContextInjection();
@@ -504,7 +506,7 @@ function TMARSActivationRecord.GetContextValue(const ADestination: TRttiObject):
 begin
   Result := TMARSInjectionServiceRegistry.Instance.GetValue(ADestination, Self);
   if not Result.IsReference then
-    CollectContext(Result.Value);
+    AddToContext(Result.Value);
 end;
 
 
@@ -522,7 +524,7 @@ begin
   FURLPrototype := nil;
   FToken := nil;
   FRttiContext := TRttiContext.Create;
-  FMethodArgumentsToCollect := TList<TValue>.Create;
+  FContext := TList<TValue>.Create;
   FInvocationTime.Reset;
   Prepare;
 end;
@@ -530,7 +532,7 @@ end;
 destructor TMARSActivationRecord.Destroy;
 begin
   FreeAndNil(FURLPrototype);
-  FMethodArgumentsToCollect.Free;
+  FContext.Free;
   inherited;
 end;
 

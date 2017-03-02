@@ -89,13 +89,21 @@ type
     procedure WriteBoolValue(const AName: string; const AValue: Boolean);
     procedure WriteDateTimeValue(const AName: string; const AValue: TDateTime; const AInputIsUTC: Boolean = True);
     procedure WriteUnixTimeValue(const AName: string; const AValue: TDateTime);
-
+    procedure WriteTValue(const AName: string; const AValue: TValue);
 
     property Values[const name: string]: Variant read GetValue; default;
+
+    procedure FromRecord<T: record>(ARecord: T);
+    function ToRecord<T: record>: T;
+
+    class function RecordToJSON<T: record>(ARecord: T): TJSONObject;
+    class function JSONToRecord<T: record>(AJSON: TJSONObject): T;
+    class function TValueToJSON(const AName: string; const AValue: TValue): TJSONObject;
   end;
 
-function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
-function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
+  function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
+  function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
+
 
 implementation
 
@@ -103,6 +111,18 @@ uses
     DateUtils, Variants, StrUtils
   , MARS.Core.Utils
 ;
+
+class function TJSONObjectHelper.TValueToJSON(const AName: string; const AValue: TValue): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  try
+    Result.WriteTValue(AName, AValue);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 
 function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
 var
@@ -245,6 +265,12 @@ begin
   Result := LValue.Value;
 end;
 
+class function TJSONObjectHelper.JSONToRecord<T>(AJSON: TJSONObject): T;
+begin
+  Assert(Assigned(AJSON));
+  Result := AJSON.ToRecord<T>;
+end;
+
 function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
 {$ifdef Delphi10Seattle_UP}
 var
@@ -286,6 +312,20 @@ begin
   Result := ADefault;
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsDouble;
+end;
+
+procedure TJSONObjectHelper.FromRecord<T>(ARecord: T);
+var
+  LType: TRttiType;
+  LField: TRttiField;
+//  LProperty: TRttiProperty;
+begin
+  LType := TRttiContext.Create.GetType(TypeInfo(T));
+  for LField in LType.GetFields do
+    WriteTValue(LField.Name, LField.GetValue(@ARecord));
+
+//  for LProperty in LType.GetProperties do
+//    WriteTValue(LProperty.Name, LProperty.GetValue(@ARecord));
 end;
 
 {$ifdef DelphiXE6_UP}
@@ -379,6 +419,32 @@ begin
   end;
 end;
 
+class function TJSONObjectHelper.RecordToJSON<T>(ARecord: T): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  try
+    Result.FromRecord<T>(ARecord);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJSONObjectHelper.ToRecord<T>: T;
+var
+  LType: TRttiType;
+  LField: TRttiField;
+//  LProperty: TRttiProperty;
+begin
+  LType := TRttiContext.Create.GetType(TypeInfo(T));
+
+  for LField in LType.GetFields do
+    LField.SetValue(@Result, ReadValue(LField.Name, TValue.Empty));
+
+//    for LProperty in LType.GetProperties do
+//    LProperty.SetValue(@Result, ReadValue(LProperty.Name, TValue.Empty));
+end;
+
 procedure TJSONObjectHelper.WriteBoolValue(const AName: string;
   const AValue: Boolean);
 var
@@ -438,6 +504,34 @@ begin
 
   if AValue <> '' then
     AddPair(AName, TJSONString.Create(AValue));
+end;
+
+procedure TJSONObjectHelper.WriteTValue(const AName: string;
+  const AValue: TValue);
+begin
+  if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString])  then
+    WriteStringValue(AName, AValue.AsString)
+
+  else if (AValue.IsType<Boolean>) then
+    WriteBoolValue(AName, AValue.AsType<Boolean>)
+
+  else if (AValue.IsType<TDateTime>) then
+    WriteDateTimeValue(AName, AValue.AsType<TDateTime>)
+  else if (AValue.IsType<TDate>) then
+    WriteDateTimeValue(AName, AValue.AsType<TDate>)
+  else if (AValue.IsType<TTime>) then
+    WriteDateTimeValue(AName, AValue.AsType<TTime>)
+
+  else if (AValue.Kind in [tkInt64]) then
+    WriteInt64Value(AName, AValue.AsType<Int64>)
+  else if (AValue.Kind in [tkInteger]) then
+    WriteIntegerValue(AName, AValue.AsType<Integer>)
+
+  else if (AValue.Kind in [tkFloat]) then
+    WriteDoubleValue(AName, AValue.AsType<Double>)
+
+  else
+    WriteStringValue(AName, AValue.ToString);
 end;
 
 procedure TJSONObjectHelper.WriteUnixTimeValue(const AName: string;

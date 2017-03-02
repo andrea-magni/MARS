@@ -94,7 +94,7 @@ begin
     )
   else if ADestination.GetRttiType.IsObjectOfType(TMARSFireDAC) then
     AValue := TInjectionValue.Create(
-      TMARSFireDAC.Create(GetConnectionDefName(ADestination, AActivationRecord))
+      TMARSFireDAC.Create(GetConnectionDefName(ADestination, AActivationRecord), AActivationRecord)
     );
 end;
 

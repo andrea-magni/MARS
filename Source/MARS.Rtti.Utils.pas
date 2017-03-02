@@ -64,8 +64,6 @@ function ExecuteMethod(const AInstance: TValue; AMethod: TRttiMethod; const AArg
 
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
 
-function TValueToJSONObject(const AName: string; const AValue: TValue): TJSONObject; overload;
-function TValueToJSONObject(AObject: TJSONObject; const AName: string; const AValue: TValue): TJSONObject; overload;
 
 implementation
 
@@ -74,38 +72,6 @@ uses
   , MARS.Core.Utils
   , DateUtils
 ;
-
-function TValueToJSONObject(AObject: TJSONObject; const AName: string; const AValue: TValue): TJSONObject;
-begin
-  Result := AObject;
-
-  if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString])  then
-    Result.AddPair(AName, AValue.AsString)
-
-  else if (AValue.IsType<Boolean>) then
-    Result.AddPair(AName, BooleanToTJSON(AValue.AsType<Boolean>))
-
-  else if (AValue.IsType<TDateTime>) then
-    Result.AddPair(AName, DateToJSON(AValue.AsType<TDateTime>))
-  else if (AValue.IsType<TDate>) then
-    Result.AddPair(AName, DateToJSON(AValue.AsType<TDate>))
-  else if (AValue.IsType<TTime>) then
-    Result.AddPair(AName, DateToJSON(AValue.AsType<TTime>))
-
-  else if (AValue.Kind in [tkInteger, tkInt64]) then
-    Result.AddPair(AName, TJSONNumber.Create(AValue.AsOrdinal))
-
-  else if (AValue.Kind in [tkFloat]) then
-    Result.AddPair(AName, TJSONNumber.Create(AValue.AsExtended))
-
-  else
-    Result.AddPair(AName, AValue.ToString);
-end;
-
-function TValueToJSONObject(const AName: string; const AValue: TValue): TJSONObject;
-begin
-  Result := TValueToJSONObject(TJSONObject.Create(), AName, AValue);
-end;
 
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
 var
