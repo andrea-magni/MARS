@@ -64,7 +64,10 @@ type
     procedure SetConnectionDefName(const Value: string);
     function GetConnection: TFDConnection;
     procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
+    function GetContextValue(const AName: TArray<string>): Variant;
   public
+    const PARAM_AND_MACRO_DELIMITER = '_';
+
     constructor Create(const AConnectionDefName: string;
       const AActivationRecord: TMARSActivationRecord = nil); virtual;
     destructor Destroy; override;
@@ -97,7 +100,7 @@ type
 implementation
 
 uses
-  StrUtils, System.Rtti
+  StrUtils, System.Rtti, Variants
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , MARS.Data.Utils
@@ -296,6 +299,49 @@ begin
   Result := FConnection;
 end;
 
+function TMARSFireDAC.GetContextValue(const AName: TArray<string>): Variant;
+var
+  LSubject: string;
+  LIdentifier: string;
+  LHasArgument: Boolean;
+  LArgument: string;
+begin
+  Result := Null;
+  if Length(AName) < 2 then
+    Exit;
+
+  LSubject := AName[0];
+  LIdentifier := AName[1];
+  LHasArgument := Length(AName) > 2;
+  if LHasArgument then
+    LArgument := AName[2];
+
+  if SameText(LSubject, 'Token') then
+  begin
+    if SameText(LIdentifier, 'Token') then
+      Result := ActivationRecord.Token.Token
+    else if SameText(LIdentifier, 'UserName') then
+      Result := ActivationRecord.Token.UserName
+    else if SameText(LIdentifier, 'IsVerified') then
+      Result := ActivationRecord.Token.IsVerified
+    else if SameText(LIdentifier, 'IsExpired') then
+      Result := ActivationRecord.Token.IsExpired
+    else if SameText(LIdentifier, 'Expiration') then
+      Result := ActivationRecord.Token.Expiration
+    else if SameText(LIdentifier, 'Issuer') then
+      Result := ActivationRecord.Token.Issuer
+    else if SameText(LIdentifier, 'IssuedAt') then
+      Result := ActivationRecord.Token.IssuedAt
+
+    else if SameText(LIdentifier, 'HasRole') and LHasArgument then
+      Result := ActivationRecord.Token.HasRole(LArgument)
+    else if SameText(LIdentifier, 'Claim') and LHasArgument then
+      Result := ActivationRecord.Token.Claims.ByNameText(LArgument).AsVariant;
+  end;
+
+  { TODO -oAndrea : URL, URLPrototype, Request, Application, Engine, ...}
+end;
+
 procedure TMARSFireDAC.InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
 var
   LIndex: Integer;
@@ -305,15 +351,13 @@ begin
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
-    if SameText(LParam.Name, 'Token_UserName') then
-      LParam.AsString := ActivationRecord.Token.UserName;
+    LParam.Value := GetContextValue(LParam.Name.Split([PARAM_AND_MACRO_DELIMITER]));
   end;
 
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
-    if SameText(LMacro.Name, 'Token_UserName') then
-      LMacro.AsString := ActivationRecord.Token.UserName;
+    LMacro.Value := GetContextValue(LMacro.Name.Split([PARAM_AND_MACRO_DELIMITER]));
   end;
 
 end;

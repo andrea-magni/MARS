@@ -31,6 +31,8 @@ type
     destructor Destroy; override;
 
     function GetQualifiedParamName(const AParamName: string): string;
+    function ByNameText(const AName: string): TValue; overload;
+    function ByNameText(const AName: string; const ADefault: TValue): TValue; overload;
     function ByName(const AName: string): TValue; overload;
     function ByName(const AName: string; const ADefault: TValue): TValue; overload;
     procedure Clear;
@@ -92,6 +94,30 @@ begin
     Result := LValue
   else
     Result := ADefault;
+end;
+
+function TMARSParametersSlice.ByNameText(const AName: string): TValue;
+begin
+  Result := ByNameText(AName, TValue.Empty);
+end;
+
+function TMARSParametersSlice.ByNameText(const AName: string;
+  const ADefault: TValue): TValue;
+var
+  LName: string;
+  LParamName: string;
+begin
+  LName := AName;
+  for LParamName in ParamNames do
+  begin
+    if SameText(LParamName, LName) then
+    begin
+      LName := LParamName;
+      Break;
+    end;
+  end;
+
+  Result := ByName(LName, ADefault);
 end;
 
 procedure TMARSParametersSlice.Clear;
