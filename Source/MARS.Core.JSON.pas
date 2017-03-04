@@ -80,7 +80,7 @@ type
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
     function ReadUnixTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
-    function ReadValue(const AName: string; const ADefault: TValue): TValue;
+    function ReadValue(const AName: string; const ADefault: TValue; const ADesiredType: TRttiType): TValue;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -292,16 +292,10 @@ end;
 
 
 function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault: TDateTime): TDateTime;
-var
-  LString: string;
 begin
   Result := ADefault;
   if Assigned(Self) then
-  begin
-    LString := ReadStringValue(AName);
-    if LString <> '' then
-      Result := ISO8601ToDate(LString);
-  end;
+    Result := JSONToDate(ReadStringValue(AName), False);
 end;
 
 function TJSONObjectHelper.ReadDoubleValue(const AName: string;
@@ -384,10 +378,9 @@ begin
 end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
-  const ADefault: TValue): TValue;
+  const ADefault: TValue; const ADesiredType: TRttiType): TValue;
 var
   LValue: TJSONValue;
-  LString: string;
 begin
   Result := ADefault;
   if TryGetValue<TJSONValue>(AName, LValue) then
@@ -396,20 +389,25 @@ begin
       Result := True
     else if LValue is TJSONFalse then
       Result := False
+    else if LValue is TJSONNumber then
+    begin
+      if ADesiredType.TypeKind in [tkInt64] then
+        Result := TJSONNumber(LValue).AsInt64
+      else if ADesiredType.TypeKind in [tkInteger] then
+        Result := TJSONNumber(LValue).AsInt
+      else
+        Result := TJSONNumber(LValue).AsDouble;
+    end
     else if LValue is TJSONString then
     begin
-      LString := TJSONString(LValue).Value;
-      Result := LString;
-      if GuessIsISO8601Date(LString) then
-        try
-          Result := JSONToDate(LString, False); // TODO: maybe add a parameter for AReturnUTC?
-        except
-          Result := LString;
-          // I'm guessing if it is a date time value so I will not raise a conversion error here.
-        end;
+      if (ADesiredType.Handle = TypeInfo(TDateTime))
+        or (ADesiredType.Handle = TypeInfo(TDate))
+        or (ADesiredType.Handle = TypeInfo(TTime))
+      then
+        Result := JSONToDate(TJSONString(LValue).Value, False) // TODO: maybe add a parameter for AReturnUTC?
+      else
+        Result := TJSONString(LValue).Value;
     end
-    else if LValue is TJSONNumber then
-      Result := TJSONNumber(LValue).AsDouble
     else if LValue is TJSONNull then
       Result := TValue.Empty
     else
@@ -439,7 +437,7 @@ begin
   LType := TRttiContext.Create.GetType(TypeInfo(T));
 
   for LField in LType.GetFields do
-    LField.SetValue(@Result, ReadValue(LField.Name, TValue.Empty));
+    LField.SetValue(@Result, ReadValue(LField.Name, TValue.Empty, LField.FieldType));
 
 //    for LProperty in LType.GetProperties do
 //    LProperty.SetValue(@Result, ReadValue(LProperty.Name, TValue.Empty));
@@ -515,12 +513,12 @@ begin
   else if (AValue.IsType<Boolean>) then
     WriteBoolValue(AName, AValue.AsType<Boolean>)
 
-  else if (AValue.IsType<TDateTime>) then
-    WriteDateTimeValue(AName, AValue.AsType<TDateTime>)
-  else if (AValue.IsType<TDate>) then
-    WriteDateTimeValue(AName, AValue.AsType<TDate>)
-  else if (AValue.IsType<TTime>) then
-    WriteDateTimeValue(AName, AValue.AsType<TTime>)
+  else if AValue.TypeInfo = TypeInfo(TDateTime) then
+    WriteDateTimeValue(AName, AValue.AsType<TDateTime>, False)
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    WriteDateTimeValue(AName, AValue.AsType<TDate>, False)
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    WriteDateTimeValue(AName, AValue.AsType<TTime>, False)
 
   else if (AValue.Kind in [tkInt64]) then
     WriteInt64Value(AName, AValue.AsType<Int64>)
