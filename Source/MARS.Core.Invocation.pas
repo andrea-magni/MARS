@@ -77,7 +77,6 @@ type
 
     procedure AddToContext(AValue: TValue); virtual;
 
-
     procedure Prepare; virtual;
     procedure Invoke; virtual;
 
@@ -244,11 +243,29 @@ begin
 end;
 
 procedure TMARSActivationRecord.FreeContext;
+var
+  LDestroyed: TList<TObject>;
+  LValue: TValue;
 begin
-  while FContext.Count > 0 do
-  begin
-    CleanupGarbage(FContext[0]);
-    FContext.Delete(0);
+  LDestroyed := TList<TObject>.Create;
+  try
+    while FContext.Count > 0 do
+    begin
+      LValue := FContext[0];
+      if LValue.IsObject then
+      begin
+        if not LDestroyed.Contains(LValue.AsObject) then
+        begin
+          LDestroyed.Add(LValue.AsObject);
+          CleanupGarbage(LValue);
+        end;
+      end
+      else
+        CleanupGarbage(LValue);
+      FContext.Delete(0);
+    end;
+  finally
+    LDestroyed.Free;
   end;
 end;
 
@@ -328,10 +345,10 @@ begin
       end;
     end;
   finally
-    FreeContext;
-
     if not FMethod.HasAttribute<IsReference>(nil) then
-      CleanupGarbage(LMethodResult);
+      AddToContext(LMethodResult);
+
+    FreeContext;
   end;
 end;
 
