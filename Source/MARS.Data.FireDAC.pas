@@ -69,13 +69,18 @@ type
       const AActivationRecord: TMARSActivationRecord = nil); virtual;
     destructor Destroy; override;
 
-    function CreateCommand(const ASQL: string = ''; const AExecuteImmediate: Boolean = False; const AOwned: Boolean = True): TFDCommand;
-    function CreateQuery(const ASQL: string = ''; const AOpen: Boolean = False; const AOwned: Boolean = True): TFDQuery;
+    function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
+      const AOwned: Boolean = True): TFDCommand; virtual;
+    function CreateQuery(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
+      const AOwned: Boolean = True): TFDQuery; virtual;
+    function CreateTransaction(const AOwned: Boolean = True): TFDTransaction; virtual;
 
-    procedure ExecuteSQL(const ASQL: string; const ABeforeExecute: TProc<TFDCommand> = nil;
-      const AAfterExecute: TProc<TFDCommand> = nil); overload;
-    procedure Query(const ASQL: string; const AOnBeforeOpen: TProc<TFDQuery>;
-      const AOnDataSetReady: TProc<TFDQuery>);
+    procedure ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
+      const ABeforeExecute: TProc<TFDCommand> = nil;
+      const AAfterExecute: TProc<TFDCommand> = nil); virtual;
+    procedure Query(const ASQL: string; const ATransaction: TFDTransaction = nil;
+      const AOnBeforeOpen: TProc<TFDQuery> = nil;
+      const AOnDataSetReady: TProc<TFDQuery> = nil); virtual;
 
     property Connection: TFDConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
@@ -84,9 +89,9 @@ type
     class function LoadConnectionDefs(const AParameters: TMARSParameters;
       const ASliceName: string = ''): TArray<string>;
     class procedure CloseConnectionDefs(const AConnectionDefNames: TArray<string>);
+    class function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
   end;
 
-  function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 
 
 implementation
@@ -150,12 +155,12 @@ begin
   end;
 end;
 
-procedure TMARSFireDAC.Query(const ASQL: string; const AOnBeforeOpen,
-  AOnDataSetReady: TProc<TFDQuery>);
+procedure TMARSFireDAC.Query(const ASQL: string; const ATransaction: TFDTransaction;
+  const AOnBeforeOpen, AOnDataSetReady: TProc<TFDQuery>);
 var
   LQuery: TFDQuery;
 begin
-  LQuery := CreateQuery(ASQL, False, False);
+  LQuery := CreateQuery(ASQL, ATransaction, False);
   try
     if Assigned(AOnBeforeOpen) then
       AOnBeforeOpen(LQuery);
@@ -167,7 +172,7 @@ begin
   end;
 end;
 
-function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
+class function TMARSFireDAC.CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 begin
   Result := TFDConnection.Create(nil);
   try
@@ -215,33 +220,46 @@ begin
 end;
 
 function TMARSFireDAC.CreateCommand(const ASQL: string;
-  const AExecuteImmediate: Boolean; const AOwned: Boolean): TFDCommand;
+  const ATransaction: TFDTransaction; const AOwned: Boolean): TFDCommand;
 begin
   Result := TFDCommand.Create(nil);
   try
     Result.Connection := Connection;
+    Result.Transaction := ATransaction;
     Result.CommandText.Text := ASQL;
     InjectParamAndMacroValues(Result);
-    if AExecuteImmediate then
-      Result.Execute();
-    ActivationRecord.AddToContext(Result);
+    if AOwned then
+      ActivationRecord.AddToContext(Result);
   except
     Result.Free;
     raise;
   end;
 end;
 
-function TMARSFireDAC.CreateQuery(const ASQL: string; const AOpen: Boolean;
+function TMARSFireDAC.CreateQuery(const ASQL: string; const ATransaction: TFDTransaction;
   const AOwned: Boolean): TFDQuery;
 begin
   Result := TFDQuery.Create(nil);
   try
     Result.Connection := Connection;
+    Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
     InjectParamAndMacroValues(Result.Command);
-    if AOpen then
-      Result.Open;
-    ActivationRecord.AddToContext(Result);
+    if AOwned then
+      ActivationRecord.AddToContext(Result);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSFireDAC.CreateTransaction(const AOwned: Boolean): TFDTransaction;
+begin
+  Result := TFDTransaction.Create(nil);
+  try
+    Result.Connection := Connection;
+    if AOwned then
+      ActivationRecord.AddToContext(Result);
   except
     Result.Free;
     raise;
@@ -254,12 +272,12 @@ begin
   inherited;
 end;
 
-procedure TMARSFireDAC.ExecuteSQL(const ASQL: string; const ABeforeExecute,
-  AAfterExecute: TProc<TFDCommand>);
+procedure TMARSFireDAC.ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction;
+  const ABeforeExecute, AAfterExecute: TProc<TFDCommand>);
 var
   LCommand: TFDCommand;
 begin
-  LCommand := CreateCommand(ASQL, False, False);
+  LCommand := CreateCommand(ASQL, ATransaction, False);
   try
     if Assigned(ABeforeExecute) then
       ABeforeExecute(LCommand);
