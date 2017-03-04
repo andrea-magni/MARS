@@ -17,7 +17,8 @@ type
   private
     FStatus: Integer;
   public
-    constructor Create(const AMessage: string; AStatus: Integer = 500); virtual;
+    constructor Create(const AMessage: string; AStatus: Integer = 500); reintroduce; virtual;
+    constructor CreateFmt(const AMessage: string; const Args: array of const; AStatus: Integer = 500); reintroduce; virtual;
 
     property Status: Integer read FStatus write FStatus;
   end;
@@ -29,6 +30,13 @@ implementation
 constructor EMARSHttpException.Create(const AMessage: string; AStatus: Integer);
 begin
   inherited Create(AMessage);
+  FStatus := AStatus;
+end;
+
+constructor EMARSHttpException.CreateFmt(const AMessage: string;
+  const Args: array of const; AStatus: Integer);
+begin
+  inherited CreateFmt(AMessage, Args);
   FStatus := AStatus;
 end;
 
