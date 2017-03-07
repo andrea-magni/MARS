@@ -70,6 +70,7 @@ type
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
   private
     function GetValue(const name: string): Variant;
+    function GetExactPairName(const ACaseInsensitiveName: string): string;
   public
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
@@ -80,7 +81,8 @@ type
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
     function ReadUnixTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
-    function ReadValue(const AName: string; const ADefault: TValue; const ADesiredType: TRttiType): TValue;
+    function ReadValue(const AName: string; const ADefault: TValue;
+      const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -243,6 +245,24 @@ end;
 
 { TJSONObjectHelper }
 
+function TJSONObjectHelper.GetExactPairName(
+  const ACaseInsensitiveName: string): string;
+var
+  LIndex: Integer;
+  LPair: TJSONPair;
+begin
+  Result := ACaseInsensitiveName;
+  for LIndex := 0 to Count -1 do
+  begin
+    LPair := Pairs[LIndex];
+    if SameText(LPair.JsonString.Value, ACaseInsensitiveName) then
+    begin
+      Result := LPair.JsonString.Value;
+      Exit;
+    end;
+  end;
+end;
+
 function TJSONObjectHelper.GetValue(const name: string): Variant;
 var
   LPair: TJSONPair;
@@ -378,12 +398,18 @@ begin
 end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
-  const ADefault: TValue; const ADesiredType: TRttiType): TValue;
+  const ADefault: TValue; const ADesiredType: TRttiType;
+  const ANameCaseSensitive: Boolean): TValue;
 var
   LValue: TJSONValue;
+  LName: string;
 begin
+  LName := AName;
+  if not ANameCaseSensitive then
+    LName := GetExactPairName(LName);
+
   Result := ADefault;
-  if TryGetValue<TJSONValue>(AName, LValue) then
+  if TryGetValue<TJSONValue>(LName, LValue) then
   begin
     if LValue is TJSONTrue then
       Result := True
@@ -437,7 +463,7 @@ begin
   LType := TRttiContext.Create.GetType(TypeInfo(T));
 
   for LField in LType.GetFields do
-    LField.SetValue(@Result, ReadValue(LField.Name, TValue.Empty, LField.FieldType));
+    LField.SetValue(@Result, ReadValue(LField.Name, TValue.Empty, LField.FieldType, False));
 
 //    for LProperty in LType.GetProperties do
 //    LProperty.SetValue(@Result, ReadValue(LProperty.Name, TValue.Empty));

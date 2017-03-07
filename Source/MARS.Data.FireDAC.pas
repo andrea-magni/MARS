@@ -73,10 +73,10 @@ type
     destructor Destroy; override;
 
     function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
-      const AOwned: Boolean = True): TFDCommand; virtual;
+      const AContextOwned: Boolean = True): TFDCommand; virtual;
     function CreateQuery(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
-      const AOwned: Boolean = True): TFDQuery; virtual;
-    function CreateTransaction(const AOwned: Boolean = True): TFDTransaction; virtual;
+      const AContextOwned: Boolean = True): TFDQuery; virtual;
+    function CreateTransaction(const AContextOwned: Boolean = True): TFDTransaction; virtual;
 
     procedure ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
       const ABeforeExecute: TProc<TFDCommand> = nil;
@@ -84,6 +84,8 @@ type
     procedure Query(const ASQL: string; const ATransaction: TFDTransaction = nil;
       const AOnBeforeOpen: TProc<TFDQuery> = nil;
       const AOnDataSetReady: TProc<TFDQuery> = nil); virtual;
+    procedure InTransaction(const ADoSomething: TProc<TFDTransaction>);
+
 
     property Connection: TFDConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
@@ -223,7 +225,7 @@ begin
 end;
 
 function TMARSFireDAC.CreateCommand(const ASQL: string;
-  const ATransaction: TFDTransaction; const AOwned: Boolean): TFDCommand;
+  const ATransaction: TFDTransaction; const AContextOwned: Boolean): TFDCommand;
 begin
   Result := TFDCommand.Create(nil);
   try
@@ -231,7 +233,7 @@ begin
     Result.Transaction := ATransaction;
     Result.CommandText.Text := ASQL;
     InjectParamAndMacroValues(Result);
-    if AOwned then
+    if AContextOwned then
       ActivationRecord.AddToContext(Result);
   except
     Result.Free;
@@ -240,7 +242,7 @@ begin
 end;
 
 function TMARSFireDAC.CreateQuery(const ASQL: string; const ATransaction: TFDTransaction;
-  const AOwned: Boolean): TFDQuery;
+  const AContextOwned: Boolean): TFDQuery;
 begin
   Result := TFDQuery.Create(nil);
   try
@@ -248,7 +250,7 @@ begin
     Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
     InjectParamAndMacroValues(Result.Command);
-    if AOwned then
+    if AContextOwned then
       ActivationRecord.AddToContext(Result);
   except
     Result.Free;
@@ -256,12 +258,12 @@ begin
   end;
 end;
 
-function TMARSFireDAC.CreateTransaction(const AOwned: Boolean): TFDTransaction;
+function TMARSFireDAC.CreateTransaction(const AContextOwned: Boolean): TFDTransaction;
 begin
   Result := TFDTransaction.Create(nil);
   try
     Result.Connection := Connection;
-    if AOwned then
+    if AContextOwned then
       ActivationRecord.AddToContext(Result);
   except
     Result.Free;
@@ -360,6 +362,28 @@ begin
     LMacro.Value := GetContextValue(LMacro.Name.Split([PARAM_AND_MACRO_DELIMITER]));
   end;
 
+end;
+
+procedure TMARSFireDAC.InTransaction(const ADoSomething: TProc<TFDTransaction>);
+var
+  LTransaction: TFDTransaction;
+begin
+  if Assigned(ADoSomething) then
+  begin
+    LTransaction := CreateTransaction(False);
+    try
+      LTransaction.StartTransaction;
+      try
+        ADoSomething(LTransaction);
+        LTransaction.Commit;
+      except
+        LTransaction.Rollback;
+        raise;
+      end;
+    finally
+      LTransaction.Free;
+    end;
+  end;
 end;
 
 procedure TMARSFireDAC.SetConnectionDefName(const Value: string);
