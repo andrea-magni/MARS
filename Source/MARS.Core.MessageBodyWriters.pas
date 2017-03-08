@@ -179,36 +179,19 @@ end;
 procedure RegisterWriters;
 begin
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TJSONValue>(TJSONValueWriter);
-
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TStreamValueWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsObjectOfType<TStream>(True);
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_HIGH;
-      end
-  );
-
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TObjectWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsInstance;
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
-      end
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TStream>(TStreamValueWriter);
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TObject>(TObjectWriter,
+    function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    begin
+      Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
+    end
   );
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
     TWildCardMediaTypeWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := True;
+        Result := True; { TODO -oAndrea : Consider checking AMediaType to be */* }
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin

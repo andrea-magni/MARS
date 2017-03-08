@@ -130,35 +130,6 @@ begin
   LDataSet.SaveToStream(AOutputStream, LStorageFormat);
 end;
 
-procedure RegisterReadersAndWriters;
-begin
-  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TFDJSONDeltas>(TFDDeltasReader);
-
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TFDAdaptedDataSetWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsObjectOfType<TFDAdaptedDataSet>; // and AMediaType = application/json;dialect=FireDAC
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_HIGH;
-      end
-  );
-
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TArrayFDCustomQueryWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsDynamicArrayOf<TFDCustomQuery>; // and AMediaType = application/json;dialect=FireDAC
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_HIGH
-      end
-  );
-end;
-
 { TFDJSONDeltasReader }
 
 function TFDDeltasReader.ReadFrom(
@@ -187,6 +158,25 @@ begin
     finally
       LJSON.Free;
     end;
+end;
+
+procedure RegisterReadersAndWriters;
+begin
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TFDJSONDeltas>(TFDDeltasReader);
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TFDAdaptedDataSet>(TFDAdaptedDataSetWriter);
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TArrayFDCustomQueryWriter
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+    begin
+      Result := Assigned(AType) and AType.IsDynamicArrayOf<TFDCustomQuery>;
+    end
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    begin
+      Result := TMARSMessageBodyRegistry.AFFINITY_HIGH
+    end
+  );
 end;
 
 initialization

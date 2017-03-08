@@ -61,7 +61,8 @@ type
     procedure RegisterWriter(const AWriterClass: TClass; const ASubjectClass: TClass;
       const AGetAffinity: TGetAffinityFunction); overload;
 
-    procedure RegisterWriter<T>(const AWriterClass: TClass); overload;
+    procedure RegisterWriter<T>(const AWriterClass: TClass;
+      const AGetAffinity: TGetAffinityFunction = nil); overload;
 
     procedure FindWriter(const AMethod: TRttiMethod; const AAccept: string;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
@@ -72,7 +73,8 @@ type
     class function GetDefaultClassAffinityFunc<T>: TGetAffinityFunction;
     class destructor ClassDestructor;
 
-    const AFFINITY_HIGH = 30;
+    const AFFINITY_HIGH = 100;
+    const AFFINITY_MEDIUM = 50;
     const AFFINITY_LOW = 10;
     const AFFINITY_VERY_LOW = 1;
     const AFFINITY_ZERO = 0;
@@ -226,17 +228,15 @@ begin
     var
       LType: TRttiType;
     begin
-      Result := 0;
+      Result := AFFINITY_ZERO;
       if not Assigned(AType) then
         Exit;
 
       LType := TRttiContext.Create.GetType(TypeInfo(T));
-      if (AType = LType) then
-        Result := 100
-      else if AType.IsObjectOfType<T>(False) then
-        Result := 95
+      if (AType = LType) or (AType.IsObjectOfType<T>(False)) then
+        Result := AFFINITY_HIGH
       else if AType.IsObjectOfType<T> then
-        Result := 90;
+        Result := AFFINITY_MEDIUM;
     end
 end;
 
@@ -285,11 +285,11 @@ begin
     begin
       LInstance := AWriterClass.Create;
       if not Supports(LInstance, IMessageBodyWriter, Result) then
-        raise EMARSException.Create('Interface IMessageBodyWriter not implemented');
+        raise EMARSException.Create('Interface IMessageBodyWriter not implemented: ' + AWriterClass.ClassName);
     end
-    , AIsWritable
-    , AGetAffinity
-    , TRttiContext.Create.GetType(AWriterClass)
+  , AIsWritable
+  , AGetAffinity
+  , TRttiContext.Create.GetType(AWriterClass)
   );
 end;
 
@@ -297,27 +297,37 @@ procedure TMARSMessageBodyRegistry.RegisterWriter(const AWriterClass,
   ASubjectClass: TClass; const AGetAffinity: TGetAffinityFunction);
 begin
   RegisterWriter(
-    AWriterClass,
-    function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+    AWriterClass
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
     begin
       Result := Assigned(AType) and AType.IsObjectOfType(ASubjectClass);
-    end,
-    AGetAffinity
+    end
+  , AGetAffinity
   );
 end;
 
-procedure TMARSMessageBodyRegistry.RegisterWriter<T>(const AWriterClass: TClass);
+procedure TMARSMessageBodyRegistry.RegisterWriter<T>(const AWriterClass: TClass;
+  const AGetAffinity: TGetAffinityFunction);
+var
+  LGetAffinityFunc: TGetAffinityFunction;
 begin
+  LGetAffinityFunc := AGetAffinity;
+  if not Assigned(LGetAffinityFunc) then
+    LGetAffinityFunc := GetDefaultClassAffinityFunc<T>();
+
   RegisterWriter(
     AWriterClass
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      var
-        LType: TRttiType;
-      begin
-        LType := TRttiContext.Create.GetType(TypeInfo(T));
-        Result := Assigned(AType) and (AType = LType);
-      end
-    , Self.GetDefaultClassAffinityFunc<T>()
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+    var
+      LType: TRttiType;
+    begin
+      LType := TRttiContext.Create.GetType(TypeInfo(T));
+      Result := Assigned(AType) and (
+        (AType = LType) // non class types (records, primitives, Interfaces)
+        or (AType.IsInstance and AType.IsObjectOfType<T>) // class types
+      );
+    end
+  , LGetAffinityFunc
   );
 end;
 

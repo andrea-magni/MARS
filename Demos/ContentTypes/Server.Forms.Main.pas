@@ -11,15 +11,12 @@ interface
 
 uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
 
-{$ifdef DelphiXE7_UP}
-  , System.Actions
-{$endif}
   , Diagnostics
 
   , MARS.Core.Engine
   , MARS.http.Server.Indy
 
-  , MARS.Core.Application
+  , MARS.Core.Application, System.Actions
   ;
 
 type

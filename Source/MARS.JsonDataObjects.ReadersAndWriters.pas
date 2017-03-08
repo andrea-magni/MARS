@@ -86,18 +86,7 @@ procedure RegisterReadersAndWriters;
 begin
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TJsonBaseObject>(TJsonDataObjectsReader);
 
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TJsonDataObjectsWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsObjectOfType<TJsonBaseObject>(True);
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_HIGH;
-      end
-  );
-
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TJsonBaseObject>(TJsonDataObjectsWriter);
 end;
 
 

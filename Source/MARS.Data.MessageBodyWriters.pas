@@ -115,40 +115,33 @@ end;
 
 procedure RegisterWriters;
 begin
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TDataSetWriterJSON
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and  AType.IsObjectOfType<TDataSet>; // and AMediaType = application/json
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_LOW;
-      end
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TDataSet>(TDataSetWriterJSON
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    begin
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+    end
   );
 
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TArrayDataSetWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsDynamicArrayOf<TDataSet>; // and AMediaType = application/json
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_LOW
-      end
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(TArrayDataSetWriter
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+    begin
+      Result := Assigned(AType) and AType.IsDynamicArrayOf<TDataSet>;
+    end
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    begin
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM
+    end
   );
 
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TDataSetWriterXML
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsObjectOfType<TDataSet>; // and AMediaType = application/xml
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_LOW;
-      end
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(TDataSetWriterXML
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+    begin
+      Result := Assigned(AType) and AType.IsObjectOfType<TDataSet>;
+    end
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    begin
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+    end
   );
 end;
 
