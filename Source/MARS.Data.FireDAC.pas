@@ -64,7 +64,7 @@ type
     procedure SetConnectionDefName(const Value: string);
     function GetConnection: TFDConnection;
     procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
-    function GetContextValue(const AName: TArray<string>): Variant;
+    function GetContextValue(const AName: string): Variant;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
 
@@ -301,22 +301,29 @@ begin
   Result := FConnection;
 end;
 
-function TMARSFireDAC.GetContextValue(const AName: TArray<string>): Variant;
+function TMARSFireDAC.GetContextValue(const AName: string): Variant;
 var
   LSubject: string;
   LIdentifier: string;
   LHasArgument: Boolean;
   LArgument: string;
+  LNameTokens: TArray<string>;
+  LFirstDelim, LSecondDelim: Integer;
 begin
   Result := Null;
-  if Length(AName) < 2 then
+  LNameTokens := AName.Split([PARAM_AND_MACRO_DELIMITER]);
+  if Length(LNameTokens) < 2 then
     Exit;
 
-  LSubject := AName[0];
-  LIdentifier := AName[1];
-  LHasArgument := Length(AName) > 2;
+  LSubject := LNameTokens[0];
+  LIdentifier := LNameTokens[1];
+  LHasArgument := Length(LNameTokens) > 2;
   if LHasArgument then
-    LArgument := AName[2];
+  begin
+    LFirstDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER);
+    LSecondDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER, LFirstDelim + Length(PARAM_AND_MACRO_DELIMITER));
+    LArgument := AName.Substring(LSecondDelim + 1); //LNameTokens[2];
+  end;
 
   if SameText(LSubject, 'Token') then
   begin
@@ -353,13 +360,13 @@ begin
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
-    LParam.Value := GetContextValue(LParam.Name.Split([PARAM_AND_MACRO_DELIMITER]));
+    LParam.Value := GetContextValue(LParam.Name);
   end;
 
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
-    LMacro.Value := GetContextValue(LMacro.Name.Split([PARAM_AND_MACRO_DELIMITER]));
+    LMacro.Value := GetContextValue(LMacro.Name);
   end;
 
 end;
