@@ -19,8 +19,8 @@ uses
 //  , MARS.Core.Invocation
 
 
-//  , Data.DB, FireDAC.Comp.Client, FireDAC.Phys.FB
-//  , MARS.Data.MessageBodyWriters
+  , Data.DB, FireDAC.Comp.Client, FireDAC.Phys.FB
+  , MARS.Data.MessageBodyWriters
   , MARS.Data.FireDAC
 
   , SimpleRecord
@@ -31,6 +31,7 @@ type
   [Path('helloworld')]
   THelloWorldResource = class
   protected
+    [Context] FD: TMARSFireDAC;
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
@@ -40,6 +41,12 @@ type
 
     [POST, Path('Record'), Consumes(TMediaType.APPLICATION_JSON)]
     function TestInput([BodyParam] ASimpleRecord: TSimpleRecord): string;
+
+    [GET, Path('test'), Produces(TMediaType.APPLICATION_JSON)]
+    function Test: TDataSet;
+
+    [GET, Path('array'), Produces(TMediaType.APPLICATION_JSON)]
+    function TestArray: TJSONArray;
   end;
 
   [Path('token')]
@@ -80,6 +87,30 @@ end;
 //    end;
 //  end;
 //end;
+
+function THelloWorldResource.Test: TDataSet;
+begin
+  Result := FD.CreateQuery('select RD.*'
+    + ', ''!Token_UserName'' aaa '
+//    + ', ''&Token_Token'' TKN '
+//    + ', ''Ciao sono &Token_Issuer'' ISS '
+//    + ', ''&Token_IsVerified'' ISV '
+//    + ', ''&Token_IsExpired'' ISE '
+//    + ', ''&Token_Expiration'' EXP '
+//    + ', ''&Token_HasRole_admin'' IS_ADM '
+//    + ', ''&Token_Claim_iss'' CL_ISS '
+//    + ', ''&Token_Claim_roles'' CL_roles '
+    + 'from RDB$DATABASE RD'
+  );
+end;
+
+function THelloWorldResource.TestArray: TJSONArray;
+begin
+  Result := TJSONArray.Create;
+  Result.Add('Andrea');
+  Result.Add(123);
+  Result.Add(TJSONObject.Create(TJSONPair.Create('Cognome', 'Magni')));
+end;
 
 function THelloWorldResource.TestInput(ASimpleRecord: TSimpleRecord): string;
 begin
