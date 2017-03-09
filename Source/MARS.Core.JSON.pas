@@ -96,7 +96,7 @@ type
     property Values[const name: string]: Variant read GetValue; default;
 
     procedure FromRecord<T: record>(ARecord: T); overload;
-    procedure FromRecord(ARecord: TValue); overload;
+    procedure FromRecord(const ARecord: TValue); overload;
     function ToRecord<T: record>: T; overload;
     function ToRecord(const ARecordType: TRttiType): TValue; overload;
 
@@ -331,7 +331,7 @@ begin
     Result := LValue.AsDouble;
 end;
 
-procedure TJSONObjectHelper.FromRecord(ARecord: TValue);
+procedure TJSONObjectHelper.FromRecord(const ARecord: TValue);
 var
   LType: TRttiType;
   LField: TRttiField;
@@ -483,8 +483,22 @@ begin
 end;
 
 function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType): TValue;
+var
+  LField: TRttiField;
+//  LProperty: TRttiProperty;
 begin
-  raise Exception.Create('Not yet implemented');
+  TValue.Make(nil, ARecordType.Handle, Result);
+
+  for LField in ARecordType.GetFields do
+    LField.SetValue(Result.GetReferenceToRawData
+      , ReadValue(LField.Name, TValue.Empty, LField.FieldType, False)
+    );
+
+//    for LProperty in LType.GetProperties do
+//    LProperty.SetValue(Result.GetReferenceToRawData
+//      , ReadValue(LProperty.Name, TValue.Empty)
+//    );
+
 end;
 
 function TJSONObjectHelper.ToRecord<T>: T;
