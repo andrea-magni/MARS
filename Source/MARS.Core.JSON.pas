@@ -95,10 +95,13 @@ type
 
     property Values[const name: string]: Variant read GetValue; default;
 
-    procedure FromRecord<T: record>(ARecord: T);
-    function ToRecord<T: record>: T;
+    procedure FromRecord<T: record>(ARecord: T); overload;
+    procedure FromRecord(ARecord: TValue); overload;
+    function ToRecord<T: record>: T; overload;
+    function ToRecord(const ARecordType: TRttiType): TValue; overload;
 
-    class function RecordToJSON<T: record>(ARecord: T): TJSONObject;
+    class function RecordToJSON<T: record>(ARecord: T): TJSONObject; overload;
+    class function RecordToJSON(ARecord: TValue): TJSONObject; overload;
     class function JSONToRecord<T: record>(AJSON: TJSONObject): T;
     class function TValueToJSON(const AName: string; const AValue: TValue): TJSONObject;
   end;
@@ -328,6 +331,20 @@ begin
     Result := LValue.AsDouble;
 end;
 
+procedure TJSONObjectHelper.FromRecord(ARecord: TValue);
+var
+  LType: TRttiType;
+  LField: TRttiField;
+//  LProperty: TRttiProperty;
+begin
+  LType := TRttiContext.Create.GetType(ARecord.TypeInfo);
+  for LField in LType.GetFields do
+    WriteTValue(LField.Name, LField.GetValue(ARecord.GetReferenceToRawData));
+
+//  for LProperty in LType.GetProperties do
+//    WriteTValue(LProperty.Name, LProperty.GetValue(@ARecord));
+end;
+
 procedure TJSONObjectHelper.FromRecord<T>(ARecord: T);
 var
   LType: TRttiType;
@@ -443,6 +460,17 @@ begin
   end;
 end;
 
+class function TJSONObjectHelper.RecordToJSON(ARecord: TValue): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  try
+    Result.FromRecord(ARecord);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 class function TJSONObjectHelper.RecordToJSON<T>(ARecord: T): TJSONObject;
 begin
   Result := TJSONObject.Create;
@@ -452,6 +480,11 @@ begin
     Result.Free;
     raise;
   end;
+end;
+
+function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType): TValue;
+begin
+  raise Exception.Create('Not yet implemented');
 end;
 
 function TJSONObjectHelper.ToRecord<T>: T;

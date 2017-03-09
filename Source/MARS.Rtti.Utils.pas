@@ -38,8 +38,8 @@ type
     function ForEachPropertyWithAttribute<T: TCustomAttribute>(
       const ADoSomething: TFunc<TRttiProperty, T, Boolean>): Integer;
 
-    function IsDynamicArrayOf<T: class>(const AAllowInherithance: Boolean = True): Boolean; overload;
-    function IsDynamicArrayOf(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
+    function IsDynamicArrayOf<T>(const AAllowInherithance: Boolean = True): Boolean;
+    function IsDynamicArrayOfRecord: Boolean;
 
     function IsObjectOfType<T>(const AAllowInherithance: Boolean = True): Boolean; overload;
     function IsObjectOfType(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
@@ -277,25 +277,43 @@ begin
   end;
 end;
 
-function TRttiTypeHelper.IsDynamicArrayOf(const AClass: TClass;
+function TRttiTypeHelper.IsDynamicArrayOf<T>(
   const AAllowInherithance: Boolean): Boolean;
+var
+  LElementType: TRttiType;
+  LType: TRttiType;
 begin
   Result := False;
   if Self is TRttiDynamicArrayType then
-    Result := TRttiDynamicArrayType(Self).ElementType.IsObjectOfType(AClass, AAllowInherithance);
+  begin
+    LType := TRttiContext.Create.GetType(TypeInfo(T));
+    LElementType := TRttiDynamicArrayType(Self).ElementType;
+
+    Result := (LElementType = LType) // exact match
+      or ( // classes with inheritance check (wrt AAllowInheritance argument)
+        (LElementType.IsInstance and LType.IsInstance)
+        and LElementType.IsObjectOfType(TRttiInstanceType(LType).MetaclassType, AAllowInherithance)
+      );
+  end;
 end;
 
-function TRttiTypeHelper.IsDynamicArrayOf<T>(
-  const AAllowInherithance: Boolean): Boolean;
+function TRttiTypeHelper.IsDynamicArrayOfRecord: Boolean;
+var
+  LElementType: TRttiType;
 begin
-  Result := IsDynamicArrayOf(TClass(T), AAllowInherithance);
+  Result := False;
+  if Self is TRttiDynamicArrayType then
+  begin
+    LElementType := TRttiDynamicArrayType(Self).ElementType;
+    Result := LElementType.IsRecord;
+  end;
 end;
 
 function TRttiTypeHelper.IsObjectOfType(const AClass: TClass;
   const AAllowInherithance: Boolean): Boolean;
 begin
   Result := False;
-  if Self is TRttiInstanceType then
+  if IsInstance then
   begin
     if AAllowInherithance then
       Result := TRttiInstanceType(Self).MetaclassType.InheritsFrom(AClass)

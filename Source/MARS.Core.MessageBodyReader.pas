@@ -83,7 +83,8 @@ type
     class function GetDefaultClassAffinityFunc<T>: TGetAffinityFunction;
     class destructor ClassDestructor;
 
-    const AFFINITY_HIGH = 30;
+    const AFFINITY_HIGH = 100;
+    const AFFINITY_MEDIUM = 50;
     const AFFINITY_LOW = 10;
     const AFFINITY_VERY_LOW = 1;
     const AFFINITY_ZERO = 0;

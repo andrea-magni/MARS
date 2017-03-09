@@ -30,6 +30,17 @@ type
     ): TValue; virtual;
   end;
 
+  [Consumes(TMediaType.APPLICATION_JSON)]
+  TRecordReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AContext: TMARSActivationRecord
+    ): TValue; virtual;
+  end;
+
+
   [Consumes(TMediaType.APPLICATION_OCTET_STREAM), Consumes(TMediaType.WILDCARD)]
   TStreamReader = class(TInterfacedObject, IMessageBodyReader)
   public
@@ -96,10 +107,43 @@ begin
   end;
 end;
 
+{ TRecordReader }
+
+function TRecordReader.ReadFrom(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AContext: TMARSActivationRecord
+): TValue;
+var
+  LJSON: TJSONObject;
+begin
+  Result := TValue.Empty;
+
+  LJSON := TJSONObject.ParseJSONValue(AInputData, 0) as TJSONObject;
+  if Assigned(LJSON) then
+    try
+      Result := LJSON.ToRecord(ADestination.GetRttiType);
+    finally
+      LJSON.Free;
+    end;
+end;
+
 procedure RegisterReaders;
 begin
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TJSONValue>(TJSONValueReader);
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TStream>(TStreamReader);
+
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader(
+    TRecordReader
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := AType.IsRecord;
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyReaderRegistry.AFFINITY_MEDIUM;
+      end
+  );
 end;
 
 initialization
