@@ -24,7 +24,11 @@ implementation
 uses
     MARS.Rtti.Utils
   , MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Attributes
+{$ifdef DelphiXE6_UP}
   , Web.HttpApp
+{$else}
+  , HttpApp
+{$endif}
 ;
 
 { TMARSActivationRecordInjectionService }

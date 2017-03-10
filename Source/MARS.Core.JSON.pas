@@ -73,6 +73,10 @@ type
 
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
   private
+{$ifndef DelphiXE6_UP}
+    function GetCount: Integer; inline;
+    function GetPair(const Index: Integer): TJSONPair; inline;
+{$endif}
     function GetValue(const name: string): Variant;
     function GetExactPairName(const ACaseInsensitiveName: string): string;
   public
@@ -104,6 +108,12 @@ type
     function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToRecord(const ARecordType: TRttiType;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
+
+{$ifndef DelphiXE6_UP}
+    property Count: Integer read GetCount;
+    property Pairs[const Index: Integer]: TJSONPair read GetPair;
+{$endif}
+
 
     class function RecordToJSON<T: record>(ARecord: T): TJSONObject; overload;
     class function RecordToJSON(const ARecord: TValue): TJSONObject; overload;
@@ -253,6 +263,11 @@ end;
 
 { TJSONObjectHelper }
 
+function TJSONObjectHelper.GetCount: Integer;
+begin
+  Result := Size;
+end;
+
 function TJSONObjectHelper.GetExactPairName(
   const ACaseInsensitiveName: string): string;
 var
@@ -269,6 +284,11 @@ begin
       Exit;
     end;
   end;
+end;
+
+function TJSONObjectHelper.GetPair(const Index: Integer): TJSONPair;
+begin
+  Result := Get(Index);
 end;
 
 function TJSONObjectHelper.GetValue(const name: string): Variant;
@@ -440,9 +460,12 @@ begin
       Result := False
     else if LValue is TJSONNumber then
     begin
+{$ifdef DelphiXE6_UP}
       if ADesiredType.TypeKind in [tkInt64] then
         Result := TJSONNumber(LValue).AsInt64
-      else if ADesiredType.TypeKind in [tkInteger] then
+      else
+{$endif}
+      if ADesiredType.TypeKind in [tkInteger] then
         Result := TJSONNumber(LValue).AsInt
       else
         Result := TJSONNumber(LValue).AsDouble;
@@ -620,7 +643,7 @@ end;
 procedure TJSONObjectHelper.WriteTValue(const AName: string;
   const AValue: TValue);
 begin
-  if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString])  then
+  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
     WriteStringValue(AName, AValue.AsString)
 
   else if (AValue.IsType<Boolean>) then

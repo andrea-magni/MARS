@@ -204,14 +204,15 @@ begin
   LSortedArray := AArray;
   TArray.Sort<string>(LSortedArray);
 
-  Result := [];
+  SetLength(Result, 0);
   LPrevValue := '';
   for LIndex := Low(LSortedArray) to High(LSortedArray) do
   begin
     LCurrValue := LSortedArray[LIndex];
     if LCurrValue <> LPrevValue then
     begin
-      Result := Result + [LCurrValue];
+      SetLength(Result, Length(Result) + 1);
+      Result[Length(Result)-1] := LCurrValue;
       LPrevValue := LCurrValue;
     end;
   end;
@@ -223,12 +224,15 @@ var
   LKey: string;
   LSlice, LParamName: string;
 begin
-  Result := [];
+  SetLength(Result, 0);
   for LKey in FItems.Keys.ToArray do
   begin
     GetSliceAndParamName(LKey, LSlice, LParamName);
     if LSlice <> '' then
-      Result := Result + [LSlice];
+    begin
+      SetLength(Result, Length(Result) + 1);
+      Result[Length(Result)-1] := LSlice;
+    end;
   end;
   Result := UniqueArray(Result);
 end;

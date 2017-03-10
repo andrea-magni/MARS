@@ -315,7 +315,7 @@ begin
         // 3 - fallback (raw)
         else
         begin
-          if (LMethodResult.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString])  then
+          if (LMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE2_UP}tkWideChar,{$endif} tkLString, tkWString])  then
             Response.Content := LMethodResult.AsString
           else if (LMethodResult.IsType<Boolean>) then
             Response.Content := BoolToStr(LMethodResult.AsType<Boolean>, True)
@@ -362,13 +362,15 @@ end;
 class procedure TMARSActivationRecord.RegisterAfterInvoke(
   const AAfterInvoke: TMARSAfterInvokeProc);
 begin
-  FAfterInvokeProcs := FAfterInvokeProcs + [TMARSAfterInvokeProc(AAfterInvoke)];
+  SetLength(FAfterInvokeProcs, Length(FAfterInvokeProcs) + 1);
+  FAfterInvokeProcs[Length(FAfterInvokeProcs)-1] := TMARSAfterInvokeProc(AAfterInvoke);
 end;
 
 class procedure TMARSActivationRecord.RegisterBeforeInvoke(
   const ABeforeInvoke: TMARSBeforeInvokeProc);
 begin
-  FBeforeInvokeProcs := FBeforeInvokeProcs + [TMARSBeforeInvokeProc(ABeforeInvoke)];
+  SetLength(FBeforeInvokeProcs, Length(FBeforeInvokeProcs) + 1);
+  FBeforeInvokeProcs[Length(FBeforeInvokeProcs)-1] := TMARSBeforeInvokeProc(ABeforeInvoke);
 end;
 
 procedure TMARSActivationRecord.SetCustomHeaders;

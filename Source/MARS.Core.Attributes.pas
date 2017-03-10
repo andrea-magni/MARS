@@ -321,14 +321,14 @@ begin
         Result := TValue.From<TBytes>(AActivationRecord.Request.RawContent);
     end;
 {$else}
-    case AParam.ParamType.TypeKind of
+    case ADestination.GetRttiType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
-      , tkLString, tkWString, tkString: StringToTValue(ARequest.Content, AParam.ParamType);
+      , tkLString, tkWString, tkString: StringToTValue(AActivationRecord.Request.Content, ADestination.GetRttiType);
 
-      tkUString: Result := ARequest.RawContent;
+      tkUString: Result := AActivationRecord.Request.RawContent;
 
       else
-        Result := ARequest.RawContent;
+        Result := AActivationRecord.Request.RawContent;
     end;
 
 {$endif}
