@@ -11,7 +11,6 @@ uses
   Server.Resources in 'Server.Resources.pas',
   Server.Ignition in 'Server.Ignition.pas',
   Model in 'Model.pas',
-  ReadersAndWriters in 'ReadersAndWriters.pas',
   Model.Utilities in 'Model.Utilities.pas';
 
 {$R *.res}

@@ -84,19 +84,18 @@ procedure TItemResource.Delete(id: Integer);
 var
   LCommand: TFDCommand;
 begin
-  LCommand := FD.CreateCommand('delete from ITEMS where ID = :AID and OWNER = :Token_UserName');
+  LCommand := FD.CreateCommand('delete from ITEMS where ID = :AID and OWNER_ID = :Token_Claim_ACCOUNT_ID');
   LCommand.ParamByName('AID').AsInteger := id;
   LCommand.Execute;
   if LCommand.RowsAffected < 1 then
     raise EMARSHttpException.CreateFmt('Item %d not found or access denied', [id], 404);
-
 end;
 
 function TItemResource.RetrieveItem([PathParam] id: Integer): TTodoItem;
 var
   LQuery: TFDQuery;
 begin
-  LQuery := FD.CreateQuery('select * from ITEMS where ID = :AID and OWNER = :Token_UserName');
+  LQuery := FD.CreateQuery('select * from ITEMS where ID = :AID and OWNER_ID = :Token_Claim_ACCOUNT_ID');
   LQuery.ParamByName('AID').AsInteger := id;
   LQuery.Open;
 
@@ -149,7 +148,7 @@ function TItemResource.Update(AItem: TToDoItem): TToDoItem;
 var
   LQuery: TFDQuery;
 begin
-  LQuery := FD.CreateQuery('select * from ITEMS where ID=:AID and OWNER = :Token_UserName');
+  LQuery := FD.CreateQuery('select * from ITEMS where ID=:AID and OWNER_ID = :Token_Claim_ACCOUNT_ID');
   LQuery.ParamByName('AID').AsInteger := AItem.Id;
   LQuery.Open;
   if LQuery.RecordCount <> 1 then

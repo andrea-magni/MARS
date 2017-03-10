@@ -3,7 +3,8 @@ unit Model;
 interface
 
 uses
-  Classes, SysUtils, Data.DB
+   Classes, SysUtils, Data.DB, Rtti
+ , MARS.Core.JSON
 ;
 
 type
@@ -35,6 +36,7 @@ type
     Last_Login: TDateTime;
     Creation_Date: TDateTime;
     Last_Update: TDateTime;
+    function ToRecordFilter(const AField: TRttiField; const AObj: TJSONObject): Boolean;
   end;
 
 implementation
@@ -63,5 +65,14 @@ begin
   end;
 end;
 
+
+{ TAccount }
+
+function TAccount.ToRecordFilter(const AField: TRttiField; const AObj: TJSONObject): Boolean;
+begin
+  Result := True;
+  if SameText(AField.Name, 'Last_Name') then
+    Result := False;
+end;
 
 end.
