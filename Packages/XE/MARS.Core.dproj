@@ -26,6 +26,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DllSuffix>150</DllSuffix>
 			<DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
 			<DCC_UnitSearchPath>..\..\Source\Core;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
@@ -89,6 +90,11 @@
 			<DCCReference Include="..\..\Source\MARS.Core.Token.pas"/>
 			<DCCReference Include="..\..\Source\MARS.http.Core.pas"/>
 			<DCCReference Include="..\..\Source\MARS.Core.Invocation.pas"/>
+			<DCCReference Include="..\..\Source\MARS.Core.Injection.Interfaces.pas"/>
+			<DCCReference Include="..\..\Source\MARS.Core.Injection.pas"/>
+			<DCCReference Include="..\..\Source\MARS.Core.Injection.Types.pas"/>
+			<DCCReference Include="..\..\Source\MARS.Core.Invocation.InjectionService.pas"/>
+			<DCCReference Include="..\..\Source\MARS.Core.Token.InjectionService.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
@@ -530,13 +536,13 @@
 					<ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
 				</Deployment>
 				<Platforms>
-					<Platform value="iOSDevice32">False</Platform>
+					<Platform value="iOSSimulator">False</Platform>
 					<Platform value="Android">False</Platform>
 					<Platform value="Win32">True</Platform>
 					<Platform value="iOSDevice64">False</Platform>
 					<Platform value="Win64">False</Platform>
 					<Platform value="OSX32">False</Platform>
-					<Platform value="iOSSimulator">False</Platform>
+					<Platform value="iOSDevice32">False</Platform>
 				</Platforms>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>
