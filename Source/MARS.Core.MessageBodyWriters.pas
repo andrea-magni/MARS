@@ -42,13 +42,6 @@ type
       AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
   end;
 
-
-  [Produces(TMediaType.WILDCARD)]
-  TWildCardMediaTypeWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
-  end;
-
   [Produces(TMediaType.APPLICATION_OCTET_STREAM)
   , Produces(TMediaType.WILDCARD)]
   TStreamValueWriter = class(TInterfacedObject, IMessageBodyWriter)
@@ -108,68 +101,6 @@ begin
       LStreamWriter.Write(LJSONValue.ToJSON);
   finally
     LStreamWriter.Free;
-  end;
-end;
-
-{ TWildCardMediaTypeWriter }
-
-procedure TWildCardMediaTypeWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
-var
-  LWriter: IMessageBodyWriter;
-  LObj: TObject;
-  LWriterClass: TClass;
-  LStreamWriter: TStreamWriter;
-  LEncoding: TEncoding;
-begin
-  if AValue.IsObject then
-  begin
-    if AValue.AsObject is TJSONValue then
-      LWriterClass := TJSONValueWriter
-    else if AValue.AsObject is TStream then
-      LWriterClass := TStreamValueWriter
-    else
-      LWriterClass := TObjectWriter;
-
-    LObj := LWriterClass.Create;
-    if Supports(LObj, IMessageBodyWriter, LWriter) then
-    begin
-      try
-        LWriter.WriteTo(AValue, AAttributes, AMediaType, AResponseHeaders, AOutPutStream)
-      finally
-        LWriter := nil;
-      end;
-    end
-    else
-      LObj.Free;
-  end
-  else
-  begin
-    LEncoding := TEncoding.Default;
-    if AMediaType.Charset = TMediaType.CHARSET_UTF8 then
-      LEncoding := TEncoding.UTF8
-    else if AMediaType.Charset = TMediaType.CHARSET_UTF16 then
-      LEncoding := TEncoding.Unicode;
-
-    if AValue.IsType<string> then
-    begin
-      LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
-      try
-        LStreamWriter.Write(AValue.AsType<string>);
-      finally
-        LStreamWriter.Free;
-      end;
-    end
-    else if AValue.IsType<Integer> then
-    begin
-      LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
-      try
-        LStreamWriter.Write(AValue.AsType<Integer>);
-      finally
-        LStreamWriter.Free;
-      end;
-    end;
   end;
 end;
 
@@ -281,18 +212,6 @@ begin
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
         Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
-      end
-  );
-
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TWildCardMediaTypeWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := True; { TODO -oAndrea : Consider checking AMediaType to be */* }
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
       end
   );
 end;

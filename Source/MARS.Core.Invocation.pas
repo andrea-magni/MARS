@@ -108,6 +108,7 @@ uses
   , MARS.Core.Classes
   , MARS.Core.MessageBodyReader
   , MARS.Core.Exceptions
+  , MARS.Core.Utils
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
   , MARS.Core.Injection
@@ -234,7 +235,6 @@ begin
         LValue := AValue.GetArrayElement(LIndex);
         case LValue.Kind of
           tkClass: LValue.AsObject.Free;
-          tkInterface: TObject(LValue.AsInterface).Free;
           tkArray, tkDynArray: CleanupGarbage(LValue); //recursion
         end;
       end;
@@ -315,29 +315,28 @@ begin
         // 3 - fallback (raw)
         else
         begin
-          case LMethodResult.Kind of
+          if (LMethodResult.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString])  then
+            Response.Content := LMethodResult.AsString
+          else if (LMethodResult.IsType<Boolean>) then
+            Response.Content := BoolToStr(LMethodResult.AsType<Boolean>, True)
+          else if LMethodResult.TypeInfo = TypeInfo(TDateTime) then
+            Response.Content := DateToJSON(LMethodResult.AsType<TDateTime>)
+          else if LMethodResult.TypeInfo = TypeInfo(TDate) then
+            Response.Content := DateToJSON(LMethodResult.AsType<TDate>)
+          else if LMethodResult.TypeInfo = TypeInfo(TTime) then
+            Response.Content := DateToJSON(LMethodResult.AsType<TTime>)
 
-            tkString, tkLString, tkUString, tkWString
-  {$ifdef DelphiXE8_UP}
-            , tkWideChar, tkAnsiChar
-  {$endif}
-            , tkInteger, tkInt64, tkFloat, tkVariant:
-            begin
-              Response.Content := LMethodResult.AsString;
-              if (Response.ContentType = LContentType) then
-                Response.ContentType := TMediaType.TEXT_PLAIN; // or check Produces of method!
-              Response.StatusCode := 200;
-            end;
+          else if (LMethodResult.Kind in [tkInt64]) then
+            Response.Content := IntToStr(LMethodResult.AsType<Int64>)
+          else if (LMethodResult.Kind in [tkInteger]) then
+            Response.Content := IntToStr(LMethodResult.AsType<Integer>)
 
-            // a procedure has Kind = tkUnknown
-            tkUnknown : Response.StatusCode := 200;
-
-            //tkRecord: ;
-            //tkInterface: ;
-            //tkDynArray: ;
-            else
-              Response.StatusCode := 400;
-          end;
+          else if (LMethodResult.Kind in [tkFloat]) then
+            Response.Content := FormatFloat('0.00000000', LMethodResult.AsType<Double>)
+          else
+            Response.Content := LMethodResult.ToString;
+          Response.StatusCode := 200;
+          Response.ContentType := TMediaType.WILDCARD;
         end;
       finally
         FWriter := nil;
