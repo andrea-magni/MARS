@@ -184,7 +184,7 @@ var
 begin
   LUnixValue := FClaims.ByName(TReservedClaimNames.EXPIRATION, 0).AsInt64;
   if LUnixValue > 0 then
-    Result := UnixToDateTime(LUnixValue, False)
+    Result := UnixToDateTime(LUnixValue {$ifdef DelphiXE2_UP}, False {$endif})
   else
     Result := 0.0;
 end;
@@ -195,7 +195,7 @@ var
 begin
   LUnixValue := FClaims.ByName(TReservedClaimNames.ISSUED_AT, 0).AsInt64;
   if LUnixValue > 0 then
-    Result := UnixToDateTime(LUnixValue, False)
+    Result := UnixToDateTime(LUnixValue {$ifdef DelphiXE2_UP}, False {$endif})
   else
     Result := 0.0;
 end;
@@ -309,8 +309,8 @@ begin
   try
     LIssuedAt := Now;
     FClaims[TReservedClaimNames.ISSUER] := FIssuer;
-    FClaims[TReservedClaimNames.ISSUED_AT] := DateTimeToUnix(LIssuedAt, False);
-    FClaims[TReservedClaimNames.EXPIRATION] := DateTimeToUnix(LIssuedAt + Duration, False);
+    FClaims[TReservedClaimNames.ISSUED_AT] := DateTimeToUnix(LIssuedAt {$ifdef DelphiXE2_UP}, False{$endif});
+    FClaims[TReservedClaimNames.EXPIRATION] := DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE2_UP}, False{$endif});
     FClaims.SaveToJSON(LJWT.Claims.JSON);
 
     LSigner := TJWS.Create(LJWT);
