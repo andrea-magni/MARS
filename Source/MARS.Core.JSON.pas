@@ -21,6 +21,7 @@ uses
 {$else}
   , Rtti
 {$endif}
+  , TypInfo
 ;
 
 type
@@ -67,6 +68,9 @@ type
   end;
 {$endif}
 
+  TToRecordFilterProc = reference to procedure (const AField: TRttiField;
+    const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
+
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
   private
     function GetValue(const name: string): Variant;
@@ -97,12 +101,13 @@ type
 
     procedure FromRecord<T: record>(ARecord: T); overload;
     procedure FromRecord(const ARecord: TValue); overload;
-    function ToRecord<T: record>: T; overload;
-    function ToRecord(const ARecordType: TRttiType): TValue; overload;
+    function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    function ToRecord(const ARecordType: TRttiType;
+      const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
     class function RecordToJSON<T: record>(ARecord: T): TJSONObject; overload;
-    class function RecordToJSON(ARecord: TValue): TJSONObject; overload;
-    class function JSONToRecord<T: record>(AJSON: TJSONObject): T;
+    class function RecordToJSON(const ARecord: TValue): TJSONObject; overload;
+    class function JSONToRecord<T: record>(const AJSON: TJSONObject; const AFilterProc: TToRecordFilterProc = nil): T;
     class function TValueToJSON(const AName: string; const AValue: TValue): TJSONObject;
   end;
 
@@ -288,10 +293,11 @@ begin
   Result := LValue.Value;
 end;
 
-class function TJSONObjectHelper.JSONToRecord<T>(AJSON: TJSONObject): T;
+class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
+  const AFilterProc: TToRecordFilterProc = nil): T;
 begin
   Assert(Assigned(AJSON));
-  Result := AJSON.ToRecord<T>;
+  Result := AJSON.ToRecord<T>(AFilterProc);
 end;
 
 function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
@@ -460,7 +466,7 @@ begin
   end;
 end;
 
-class function TJSONObjectHelper.RecordToJSON(ARecord: TValue): TJSONObject;
+class function TJSONObjectHelper.RecordToJSON(const ARecord: TValue): TJSONObject;
 begin
   Result := TJSONObject.Create;
   try
@@ -482,38 +488,72 @@ begin
   end;
 end;
 
-function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType): TValue;
+function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType;
+  const AFilterProc: TToRecordFilterProc = nil): TValue;
 var
   LField: TRttiField;
-//  LProperty: TRttiProperty;
+  LValue: TValue;
+  LRecordInstance: Pointer;
+  LFilterProc: TToRecordFilterProc;
+  LAccept: Boolean;
+
+
+  function GetRecordFilterProc: TToRecordFilterProc;
+  var
+    LMethod: TRttiMethod;
+    LParameters: TArray<TRttiParameter>;
+
+  begin
+    Result := nil;
+
+    // looking for TMyRecord.ToRecordFilter(const AField: TRttiField; const AObj: TJSONObject): Boolean;
+    LMethod := ARecordType.GetMethod('ToRecordFilter');
+    if Assigned(LMethod) then
+    begin
+      LParameters := LMethod.GetParameters;
+      if not (
+        (Length(LParameters) = 2) and (LMethod.ReturnType.Handle = TypeInfo(Boolean))
+        and (LParameters[0].ParamType.Handle = TypeInfo(TRttiField))
+        and (LParameters[1].ParamType.Handle = TypeInfo(TJSONObject))
+      )
+      then
+        LMethod := nil;
+    end;
+
+    if Assigned(LMethod) then
+      Result :=
+        procedure (const AField: TRttiField; const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean)
+        begin
+          AAccept := LMethod.Invoke(ARecord, [AField, AJSONObject]).AsBoolean;
+        end;
+  end;
+
+
 begin
   TValue.Make(nil, ARecordType.Handle, Result);
+  LRecordInstance := Result.GetReferenceToRawData;
+
+  LFilterProc := AFilterProc;
+  if not Assigned(LFilterProc) then
+    LFilterProc := GetRecordFilterProc();
 
   for LField in ARecordType.GetFields do
-    LField.SetValue(Result.GetReferenceToRawData
-      , ReadValue(LField.Name, TValue.Empty, LField.FieldType, False)
-    );
+  begin
+    LAccept := True;
+    if Assigned(LFilterProc) then
+      LFilterProc(LField, Result, Self, LAccept);
 
-//    for LProperty in LType.GetProperties do
-//    LProperty.SetValue(Result.GetReferenceToRawData
-//      , ReadValue(LProperty.Name, TValue.Empty)
-//    );
-
+    if LAccept then
+    begin
+      LValue := ReadValue(LField.Name, TValue.Empty, LField.FieldType, False);
+      LField.SetValue(LRecordInstance, LValue);
+    end;
+  end;
 end;
 
-function TJSONObjectHelper.ToRecord<T>: T;
-var
-  LType: TRttiType;
-  LField: TRttiField;
-//  LProperty: TRttiProperty;
+function TJSONObjectHelper.ToRecord<T>(const AFilterProc: TToRecordFilterProc = nil): T;
 begin
-  LType := TRttiContext.Create.GetType(TypeInfo(T));
-
-  for LField in LType.GetFields do
-    LField.SetValue(@Result, ReadValue(LField.Name, TValue.Empty, LField.FieldType, False));
-
-//    for LProperty in LType.GetProperties do
-//    LProperty.SetValue(@Result, ReadValue(LProperty.Name, TValue.Empty));
+  Result := ToRecord(TRttiContext.Create.GetType(TypeInfo(T)), AFilterProc).AsType<T>;
 end;
 
 procedure TJSONObjectHelper.WriteBoolValue(const AName: string;
