@@ -263,10 +263,17 @@ end;
 
 { TJSONObjectHelper }
 
+{$ifndef DelphiXE6_UP}
 function TJSONObjectHelper.GetCount: Integer;
 begin
   Result := Size;
 end;
+
+function TJSONObjectHelper.GetPair(const Index: Integer): TJSONPair;
+begin
+  Result := Get(Index);
+end;
+{$endif}
 
 function TJSONObjectHelper.GetExactPairName(
   const ACaseInsensitiveName: string): string;
@@ -284,11 +291,6 @@ begin
       Exit;
     end;
   end;
-end;
-
-function TJSONObjectHelper.GetPair(const Index: Integer): TJSONPair;
-begin
-  Result := Get(Index);
 end;
 
 function TJSONObjectHelper.GetValue(const name: string): Variant;
