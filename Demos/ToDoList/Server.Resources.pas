@@ -35,12 +35,16 @@ type
   public
     [GET]
     function RetrieveItems: TToDoItems;
+
     [GET, Path('/{id}')]
     function RetrieveItem([PathParam] id: Integer): TTodoItem;
+
     [PUT]
     function Update([BodyParam] AItem: TToDoItem): TToDoItem;
+
     [POST]
     function Store([BodyParam] AItem: TToDoItem): TToDoItem;
+
     [DELETE, Path('/{id}')]
     procedure Delete([PathParam] id: Integer);
   end;
@@ -53,10 +57,16 @@ type
   public
     [GET, Path('validate')]
     procedure Validate;
+
     [GET, Path('password-reset')]
     procedure PasswordReset;
+
+    [GET]
+    function RetrieveItem(): TAccount;
+
     [POST]
     function Store([BodyParam] ANewAccount: TAccount): TAccount;
+
     [DELETE, Path('/{id}')]
     procedure Delete([PathParam] id: Integer);
   end;
@@ -198,6 +208,21 @@ end;
 procedure TAccountResource.PasswordReset;
 begin
 
+end;
+
+function TAccountResource.RetrieveItem(): TAccount;
+var
+  LAccount: TAccount;
+begin
+  FD.Query('select * from ACCOUNT where ID = :Token_Claim_ACCOUNT_ID', nil, nil,
+    procedure (AQuery: TFDQuery)
+    begin
+      if AQuery.IsEmpty then
+        raise EMARSHttpException.Create('Account not found or access denied', 404);
+      TRecord<TAccount>.FromDataSet(LAccount, AQuery);
+    end
+  );
+  Result := LAccount;
 end;
 
 procedure TAccountResource.Validate;
