@@ -125,6 +125,7 @@ type
     class function JSONToRecord<T: record>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T;
     class function TValueToJSON(const AName: string; const AValue: TValue): TJSONObject;
+    class function TValueToJSONValue(const AValue: TValue): TJSONValue;
   end;
 
   function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
@@ -150,6 +151,54 @@ begin
   end;
 end;
 
+
+class function TJSONObjectHelper.TValueToJSONValue(
+  const AValue: TValue): TJSONValue;
+var
+  LArray: TJSONArray;
+  LIndex: Integer;
+begin
+  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
+    Result := TJSONString.Create(AValue.AsString)
+
+  else if AValue.IsArray then
+  begin
+    LArray := TJSONArray.Create;
+    try
+      for LIndex := 0 to AValue.GetArrayLength-1 do
+         LArray.AddElement(TValueToJSONValue(AValue.GetArrayElement(LIndex)));
+
+      Result := LArray;
+    except
+      LArray.Free;
+      raise;
+    end;
+  end
+
+  else if (AValue.Kind in [tkRecord]) then
+    Result := TJSONObject.RecordToJSON(AValue)
+
+  else if (AValue.IsType<Boolean>) then
+    Result := TJSONBool.Create(AValue.AsType<Boolean>)
+
+  else if AValue.TypeInfo = TypeInfo(TDateTime) then
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>, False) )
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDate>, False) )
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>, False) )
+
+  else if (AValue.Kind in [tkInt64]) then
+    Result := TJSONNumber.Create( AValue.AsType<Int64> )
+  else if (AValue.Kind in [tkInteger]) then
+    Result := TJSONNumber.Create( AValue.AsType<Integer> )
+
+  else if (AValue.Kind in [tkFloat]) then
+    Result := TJSONNumber.Create( AValue.AsType<Double> )
+
+  else
+    Result := TJSONString.Create(AValue.ToString);
+end;
 
 function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
 var
@@ -660,29 +709,7 @@ end;
 procedure TJSONObjectHelper.WriteTValue(const AName: string;
   const AValue: TValue);
 begin
-  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
-    WriteStringValue(AName, AValue.AsString)
-
-  else if (AValue.IsType<Boolean>) then
-    WriteBoolValue(AName, AValue.AsType<Boolean>)
-
-  else if AValue.TypeInfo = TypeInfo(TDateTime) then
-    WriteDateTimeValue(AName, AValue.AsType<TDateTime>, False)
-  else if AValue.TypeInfo = TypeInfo(TDate) then
-    WriteDateTimeValue(AName, AValue.AsType<TDate>, False)
-  else if AValue.TypeInfo = TypeInfo(TTime) then
-    WriteDateTimeValue(AName, AValue.AsType<TTime>, False)
-
-  else if (AValue.Kind in [tkInt64]) then
-    WriteInt64Value(AName, AValue.AsType<Int64>)
-  else if (AValue.Kind in [tkInteger]) then
-    WriteIntegerValue(AName, AValue.AsType<Integer>)
-
-  else if (AValue.Kind in [tkFloat]) then
-    WriteDoubleValue(AName, AValue.AsType<Double>)
-
-  else
-    WriteStringValue(AName, AValue.ToString);
+  AddPair(AName, TValueToJSONValue(AValue));
 end;
 
 procedure TJSONObjectHelper.WriteUnixTimeValue(const AName: string;
