@@ -208,11 +208,11 @@ begin
           end;
         end;
 
-        if LFound then
-        begin
-          AWriter := LCandidate.CreateInstance();
-          AMediaType := TMediaType.Create(LCandidateMediaType);
-        end;
+      if LFound then
+      begin
+        AWriter := LCandidate.CreateInstance();
+        AMediaType := TMediaType.Create(LCandidateMediaType);
+      end;
     finally
       LMethodProducesMediaTypes.Free;
     end;
@@ -253,25 +253,28 @@ var
   LList: TMediaTypeList;
 begin
   LList := TMediaTypeList.Create;
+  try
+    AObject.ForEachAttribute<ProducesAttribute>(
+      procedure (AProduces: ProducesAttribute)
+      begin
+        LList.Add( TMediaType.Create(AProduces.Value) );
+      end
+    );
 
-  AObject.ForEachAttribute<ProducesAttribute>(
-    procedure (AProduces: ProducesAttribute)
+    // if AObject is a method, fall back to its class
+    if (LList.Count = 0) and (AObject is TRttiMethod) then
     begin
-      LList.Add( TMediaType.Create(AProduces.Value) );
-    end
-  );
-
-  // if AObject is a method, fall back to its class
-  if (LList.Count = 0) and (AObject is TRttiMethod) then
-  begin
-     (TRttiMethod(AObject).Parent).ForEachAttribute<ProducesAttribute>(
-        procedure (AProduces: ProducesAttribute)
-        begin
-          LList.Add( TMediaType.Create(AProduces.Value) );
-        end
-     );
+       (TRttiMethod(AObject).Parent).ForEachAttribute<ProducesAttribute>(
+          procedure (AProduces: ProducesAttribute)
+          begin
+            LList.Add( TMediaType.Create(AProduces.Value) );
+          end
+       );
+    end;
+  except
+    LList.Free;
+    raise;
   end;
-
 
   Result := LList;
 end;

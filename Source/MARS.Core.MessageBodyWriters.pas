@@ -27,7 +27,6 @@ type
   TJSONValueWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
       AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
-    function AsObject: TObject;
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -81,11 +80,6 @@ begin
 end;
 
 { TJSONValueWriter }
-
-function TJSONValueWriter.AsObject: TObject;
-begin
-  Result := Self;
-end;
 
 procedure TJSONValueWriter.WriteTo(const AValue: TValue;
   const AAttributes: TAttributeArray; AMediaType: TMediaType;
