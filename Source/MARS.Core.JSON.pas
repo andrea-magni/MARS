@@ -602,7 +602,7 @@ begin
       SetArrayLength(LArray, ADesiredType, LJSONArray.Count);
       for LIndex := 0 to LJSONArray.Count-1 do
       begin
-        LJSONElement := LJSONArray.Get(LIndex);
+        LJSONElement := LJSONArray.Items[LIndex];
         LArray.SetArrayElement(LIndex, TJSONValueToTValue(LJSONElement, LElementType));
       end;
       Result := LArray;

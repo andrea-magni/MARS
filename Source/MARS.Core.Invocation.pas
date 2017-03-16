@@ -258,6 +258,9 @@ var
   LDestroyed: TList<TObject>;
   LValue: TValue;
 begin
+  if FContext.Count = 0 then
+    Exit;
+
   LDestroyed := TList<TObject>.Create;
   try
     while FContext.Count > 0 do
@@ -568,8 +571,9 @@ end;
 
 destructor TMARSActivationRecord.Destroy;
 begin
-  FreeAndNil(FURLPrototype);
+  FreeContext;
   FContext.Free;
+  FreeAndNil(FURLPrototype);
   inherited;
 end;
 
