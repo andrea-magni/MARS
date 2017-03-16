@@ -29,6 +29,15 @@ type
   TMARSBeforeInvokeProc = reference to procedure(const AActivationRecord: TMARSActivationRecord; out AIsAllowed: Boolean);
   TMARSAfterInvokeProc = reference to procedure(const AActivationRecord: TMARSActivationRecord);
 
+  TMARSAuthorizationInfo = record
+  public
+    DenyAll, PermitAll: Boolean;
+    AllowedRoles: TArray<string>;
+    function NeedsAuthentication: Boolean;
+    function NeedsAuthorization: Boolean;
+    constructor Create(const ADenyAll, APermitAll: Boolean; const AAllowedRoles: TArray<string>);
+  end;
+
   TMARSActivationRecord = class
   private
     FApplication: TMARSApplication;
@@ -51,6 +60,7 @@ type
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
     FInvocationTime: TStopWatch;
+    FAuthorizationInfo: TMARSAuthorizationInfo;
 
     procedure FreeContext; virtual;
     procedure CleanupGarbage(const AValue: TValue); virtual;
@@ -68,6 +78,7 @@ type
 
     procedure CheckResource; virtual;
     procedure CheckMethod; virtual;
+    procedure ReadAuthorizationInfo; virtual;
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
   public
@@ -355,8 +366,40 @@ procedure TMARSActivationRecord.Prepare;
 begin
   CheckResource;
   CheckMethod;
+  ReadAuthorizationInfo;
   CheckAuthentication;
   CheckAuthorization;
+end;
+
+procedure TMARSActivationRecord.ReadAuthorizationInfo;
+var
+  LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
+  LAllowedRoles: TStringList;
+begin
+  FAuthorizationInfo := TMARSAuthorizationInfo.Create(False, False, []);
+  LAllowedRoles := TStringList.Create;
+  try
+    LAllowedRoles.Sorted := True;
+    LAllowedRoles.Duplicates := TDuplicates.dupIgnore;
+
+    LProcessAuthorizationAttribute :=
+      procedure (AAttribute: AuthorizationAttribute)
+      begin
+        if AAttribute is DenyAllAttribute then
+          FAuthorizationInfo.DenyAll := True
+        else if AAttribute is PermitAllAttribute then
+          FAuthorizationInfo.PermitAll := True
+        else if AAttribute is RolesAllowedAttribute then
+          LAllowedRoles.AddStrings(RolesAllowedAttribute(AAttribute).Roles);
+      end;
+
+    FMethod.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
+    FResource.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
+
+    FAuthorizationInfo.AllowedRoles := LAllowedRoles.ToStringArray;
+  finally
+    LAllowedRoles.Free;
+  end;
 end;
 
 class procedure TMARSActivationRecord.RegisterAfterInvoke(
@@ -421,50 +464,26 @@ end;
 
 procedure TMARSActivationRecord.CheckAuthentication;
 begin
-  if Token.IsVerified and Token.IsExpired then
+  if FAuthorizationInfo.NeedsAuthentication then
   begin
-    Token.Clear;
-    Token.UpdateCookie;
-    raise EMARSAuthenticationException.Create('Token expired', 403);
+    if Token.IsVerified and Token.IsExpired then
+    begin
+      Token.Clear;
+      Token.UpdateCookie;
+      raise EMARSAuthenticationException.Create('Token expired', 403);
+    end;
   end;
 end;
 
 procedure TMARSActivationRecord.CheckAuthorization;
-var
-  LDenyAll, LPermitAll: Boolean;
-  LAllowedRoles: TStringList;
-  LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
 begin
-  LDenyAll := False;
-  LPermitAll := False;
-  LAllowedRoles := TStringList.Create;
-  try
-    LAllowedRoles.Sorted := True;
-    LAllowedRoles.Duplicates := TDuplicates.dupIgnore;
-
-    LProcessAuthorizationAttribute :=
-      procedure (AAttribute: AuthorizationAttribute)
-      begin
-        if AAttribute is DenyAllAttribute then
-          LDenyAll := True
-        else if AAttribute is PermitAllAttribute then
-          LPermitAll := True
-        else if AAttribute is RolesAllowedAttribute then
-          LAllowedRoles.AddStrings(RolesAllowedAttribute(AAttribute).Roles);
-      end;
-
-    FMethod.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
-    FResource.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
-
-    if LDenyAll // DenyAll (stronger than PermitAll and Roles-based authorization)
+  if FAuthorizationInfo.NeedsAuthorization then
+    if FAuthorizationInfo.DenyAll // DenyAll (stronger than PermitAll and Roles-based authorization)
        or (
-         not LPermitAll  // PermitAll (stronger than Role-based authorization)
-         and ((LAllowedRoles.Count > 0) and (not Token.HasRole(LAllowedRoles)))
+         not FAuthorizationInfo.PermitAll  // PermitAll (stronger than Role-based authorization)
+         and ((Length(FAuthorizationInfo.AllowedRoles) > 0) and (not Token.HasRole(FAuthorizationInfo.AllowedRoles)))
        ) then
       raise EMARSAuthorizationException.Create('Forbidden', 403);
-  finally
-    LAllowedRoles.Free;
-  end;
 end;
 
 procedure TMARSActivationRecord.CheckMethod;
@@ -569,6 +588,25 @@ begin
   Result := True;
   for LSubscriber in FBeforeInvokeProcs do
     LSubscriber(Self, Result);
+end;
+
+{ TMARSAuthorizationInfo }
+
+constructor TMARSAuthorizationInfo.Create(const ADenyAll, APermitAll: Boolean; const AAllowedRoles: TArray<string>);
+begin
+  DenyAll := ADenyAll;
+  PermitAll := APermitAll;
+  AllowedRoles := AAllowedRoles;
+end;
+
+function TMARSAuthorizationInfo.NeedsAuthentication: Boolean;
+begin
+  Result := Length(AllowedRoles) > 0;
+end;
+
+function TMARSAuthorizationInfo.NeedsAuthorization: Boolean;
+begin
+  Result := (Length(AllowedRoles) > 0) or DenyAll;
 end;
 
 end.
