@@ -10,7 +10,6 @@ uses
   Server.Forms.Main in 'Server.Forms.Main.pas' {MainForm},
   Server.Resources in 'Server.Resources.pas',
   Server.Ignition in 'Server.Ignition.pas',
-  Records.ReadersAndWriters in 'Records.ReadersAndWriters.pas',
   SimpleRecord in 'SimpleRecord.pas';
 
 {$R *.res}
