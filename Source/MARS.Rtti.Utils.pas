@@ -46,6 +46,8 @@ type
 
     function IsDynamicArrayOf<T>(const AAllowInherithance: Boolean = True): Boolean;
     function IsDynamicArrayOfRecord: Boolean;
+    function IsArray: Boolean; overload;
+    function IsArray(out AElementType: TRttiType): Boolean; overload;
 
     function IsObjectOfType<T>(const AAllowInherithance: Boolean = True): Boolean; overload;
     function IsObjectOfType(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
@@ -82,6 +84,7 @@ function ExecuteMethod(const AInstance: TValue; AMethod: TRttiMethod; const AArg
   const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
 
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
+procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: Integer);
 
 
 implementation
@@ -91,6 +94,17 @@ uses
   , MARS.Core.Utils
   , DateUtils
 ;
+
+procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: Integer);
+begin
+  if AArrayType is TRttiArrayType then
+  begin
+    raise Exception.Create('Not yet implemented: SetArrayLength TRttiArrayType');
+    { TODO -oAndrea : probably not needed }
+  end
+  else if AArrayType is TRttiDynamicArrayType then
+    DynArraySetLength(PPointer(AArray.GetReferenceToRawData)^, AArrayType.Handle, 1, @ANewSize);
+end;
 
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
 var
@@ -377,6 +391,26 @@ begin
 
     if LBreak then
       Break;
+  end;
+end;
+
+function TRttiTypeHelper.IsArray: Boolean;
+begin
+  Result := (Self is TRttiArrayType) or (Self is TRttiDynamicArrayType);
+end;
+
+function TRttiTypeHelper.IsArray(out AElementType: TRttiType): Boolean;
+begin
+  Result := False;
+  if (Self is TRttiDynamicArrayType) then
+  begin
+    AElementType := TRttiDynamicArrayType(Self).ElementType;
+    Result := True;
+  end
+  else if (Self is TRttiArrayType) then
+  begin
+    AElementType := TRttiArrayType(Self).ElementType;
+    Result := True;
   end;
 end;
 

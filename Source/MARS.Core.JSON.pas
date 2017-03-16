@@ -123,9 +123,11 @@ type
     class function RecordToJSON(const ARecord: TValue;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
     class function JSONToRecord<T: record>(const AJSON: TJSONObject;
-      const AFilterProc: TToRecordFilterProc = nil): T;
-    class function TValueToJSON(const AName: string; const AValue: TValue): TJSONObject;
+      const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    class function JSONToRecord(const AJSON: TJSONObject;
+      const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
     class function TValueToJSONValue(const AValue: TValue): TJSONValue;
+    class function TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType): TValue;
   end;
 
   function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
@@ -139,18 +141,6 @@ uses
   , MARS.Core.Utils
   , MARS.Rtti.Utils
 ;
-
-class function TJSONObjectHelper.TValueToJSON(const AName: string; const AValue: TValue): TJSONObject;
-begin
-  Result := TJSONObject.Create;
-  try
-    Result.WriteTValue(AName, AValue);
-  except
-    Result.Free;
-    raise;
-  end;
-end;
-
 
 class function TJSONObjectHelper.TValueToJSONValue(
   const AValue: TValue): TJSONValue;
@@ -371,6 +361,12 @@ begin
   Result := LValue.Value;
 end;
 
+class function TJSONObjectHelper.JSONToRecord(const AJSON: TJSONObject;
+  const AFilterProc: TToRecordFilterProc): TValue;
+begin
+
+end;
+
 class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
   const AFilterProc: TToRecordFilterProc = nil): T;
 begin
@@ -533,40 +529,7 @@ begin
 
   Result := ADefault;
   if TryGetValue<TJSONValue>(LName, LValue) then
-  begin
-    if LValue is TJSONTrue then
-      Result := True
-    else if LValue is TJSONFalse then
-      Result := False
-    else if LValue is TJSONNumber then
-    begin
-{$ifdef DelphiXE6_UP}
-      if ADesiredType.TypeKind in [tkInt64] then
-        Result := TJSONNumber(LValue).AsInt64
-      else
-{$endif}
-      if ADesiredType.TypeKind in [tkInteger] then
-        Result := TJSONNumber(LValue).AsInt
-      else
-        Result := TJSONNumber(LValue).AsDouble;
-    end
-    else if LValue is TJSONString then
-    begin
-      if (ADesiredType.Handle = TypeInfo(TDateTime))
-        or (ADesiredType.Handle = TypeInfo(TDate))
-        or (ADesiredType.Handle = TypeInfo(TTime))
-      then
-        Result := JSONToDate(TJSONString(LValue).Value, False) // TODO: maybe add a parameter for AReturnUTC?
-      else
-        Result := TJSONString(LValue).Value;
-    end
-    else if LValue is TJSONNull then
-      Result := TValue.Empty
-    else
-      raise Exception.CreateFmt('Unable to put JSON Value [%s] in TValue', [LValue.ClassName]);
-    //  TJSONObject
-    //  TJSONArray
-  end;
+    Result := TJSONValueToTValue(LValue, ADesiredType);
 end;
 
 class function TJSONObjectHelper.RecordToJSON(const ARecord: TValue;
@@ -591,6 +554,62 @@ begin
     Result.Free;
     raise;
   end;
+end;
+
+class function TJSONObjectHelper.TJSONValueToTValue(
+  const AValue: TJSONValue; const ADesiredType: TRttiType): TValue;
+var
+  LArray: TValue;
+  LElementType: TRttiType;
+  LJSONArray: TJSONArray;
+  LJSONElement: TJSONValue;
+  LIndex: Integer;
+begin
+  if AValue is TJSONBool then // Boolean
+    Result := TJSONBool(AValue).AsBoolean
+  else if AValue is TJSONNumber then // Numbers (Integer and Float)
+  begin
+{$ifdef DelphiXE6_UP}
+    if ADesiredType.TypeKind in [tkInt64] then
+      Result := TJSONNumber(AValue).AsInt64
+    else
+{$endif}
+    if ADesiredType.TypeKind in [tkInteger] then
+      Result := TJSONNumber(AValue).AsInt
+    else
+      Result := TJSONNumber(AValue).AsDouble;
+  end
+  else if AValue is TJSONString then // Date and string
+  begin
+    if (ADesiredType.Handle = TypeInfo(TDateTime))
+      or (ADesiredType.Handle = TypeInfo(TDate))
+      or (ADesiredType.Handle = TypeInfo(TTime))
+    then
+      Result := JSONToDate(TJSONString(AValue).Value, False) // TODO: maybe add a parameter for AReturnUTC?
+    else
+      Result := TJSONString(AValue).Value;
+  end
+  else if AValue is TJSONNull then // null values
+    Result := TValue.Empty
+  else if AValue is TJSONObject then
+    Result := TJSONObject(AValue).ToRecord(ADesiredType)
+  else if (AValue is TJSONArray) then
+  begin
+    LJSONArray := TJSONArray(AValue);
+    if ADesiredType.IsArray(LElementType) then
+    begin
+      TValue.Make(nil, ADesiredType.Handle, LArray);
+      SetArrayLength(LArray, ADesiredType, LJSONArray.Count);
+      for LIndex := 0 to LJSONArray.Count-1 do
+      begin
+        LJSONElement := LJSONArray.Get(LIndex);
+        LArray.SetArrayElement(LIndex, TJSONValueToTValue(LJSONElement, LElementType));
+      end;
+      Result := LArray;
+    end;
+  end
+  else
+    raise Exception.CreateFmt('Unable to put JSON Value [%s] in TValue', [AValue.ClassName]);
 end;
 
 function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType;
