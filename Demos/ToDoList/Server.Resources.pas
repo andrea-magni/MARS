@@ -8,7 +8,7 @@ unit Server.Resources;
 interface
 
 uses
-  SysUtils, Classes
+  SysUtils, Classes, Rtti
 
   , MARS.Core.Attributes
   , MARS.Core.MediaType
@@ -17,24 +17,26 @@ uses
 
   , MARS.Core.Token
   , MARS.Core.Token.Resource
-//  , MARS.Core.Invocation
-
 
   , Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param, FireDAC.Phys.FB
-//  , MARS.Data.MessageBodyWriters
   , MARS.Data.FireDAC
   , Model, Model.Utilities
-  ;
+;
 
 type
-  [Path('item'), Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
+
+  [
+      Path('item')
+    , Produces(TMediaType.APPLICATION_JSON)
+    , Consumes(TMediaType.APPLICATION_JSON)
+  ]
   TItemResource = class
   private
   protected
     [Context] FD: TMARSFireDAC;
   public
     [GET]
-    function RetrieveItems: TToDoItems;
+    function RetrieveItems: TArray<TToDoItem>;
 
     [GET, Path('/{id}')]
     function RetrieveItem([PathParam] id: Integer): TTodoItem;
@@ -49,7 +51,11 @@ type
     procedure Delete([PathParam] id: Integer);
   end;
 
-  [Path('account')]
+  [
+     Path('account')
+   , Produces(TMediaType.APPLICATION_JSON)
+   , Consumes(TMediaType.APPLICATION_JSON)
+  ]
   TAccountResource = class
   private
   protected
@@ -57,6 +63,9 @@ type
   public
     [GET, Path('validate')]
     procedure Validate;
+
+    [GET, Path('available/{username}')]
+    function IsAvailable([PathParam] const username: string): Boolean;
 
     [GET, Path('password-reset')]
     procedure PasswordReset;
@@ -66,24 +75,21 @@ type
 
     [POST]
     function Store([BodyParam] ANewAccount: TAccount): TAccount;
-
-    [DELETE, Path('/{id}')]
-    procedure Delete([PathParam] id: Integer);
   end;
 
   [Path('token')]
   TTokenResource = class(TMARSTokenResource)
   protected
     [Context] FD: TMARSFireDAC;
-    function Authenticate(const AUserName: string;
-      const APassword: string): Boolean; override;
-
+    function Authenticate(const AUserName: string; const APassword: string): Boolean; override;
   end;
+
 
 implementation
 
 uses
-    MARS.Core.Registry, MARS.Rtti.Utils
+    StrUtils
+  , MARS.Core.Registry, MARS.Rtti.Utils
   , MARS.Core.Exceptions
 //    , Web.ReqMulti, Web.ReqFiles
   ;
@@ -94,8 +100,7 @@ procedure TItemResource.Delete(id: Integer);
 var
   LCommand: TFDCommand;
 begin
-  LCommand := FD.CreateCommand('delete from ITEMS where ID = :AID and OWNER_ID = :Token_Claim_ACCOUNT_ID');
-  LCommand.ParamByName('AID').AsInteger := id;
+  LCommand := FD.CreateCommand('delete from ITEMS where ID = :PathParam_id and OWNER_ID = :Token_Claim_ACCOUNT_ID');
   LCommand.Execute;
   if LCommand.RowsAffected < 1 then
     raise EMARSHttpException.CreateFmt('Item %d not found or access denied', [id], 404);
@@ -105,18 +110,19 @@ function TItemResource.RetrieveItem([PathParam] id: Integer): TTodoItem;
 var
   LQuery: TFDQuery;
 begin
-  LQuery := FD.CreateQuery('select * from ITEMS where ID = :AID and OWNER_ID = :Token_Claim_ACCOUNT_ID');
-  LQuery.ParamByName('AID').AsInteger := id;
+  LQuery := FD.CreateQuery('select * from ITEMS where ID = :PathParam_id and OWNER_ID = :Token_Claim_ACCOUNT_ID');
   LQuery.Open;
+  if LQuery.IsEmpty then
+    raise EMARSHttpException.CreateFmt('Item %d not found or access denied', [id], 404);
 
   TRecord<TToDoItem>.FromDataSet(Result, LQuery);
-  if Result.Id <= 0 then
-    raise EMARSHttpException.CreateFmt('Item %d not found or access denied', [id], 404);
 end;
 
-function TItemResource.RetrieveItems: TToDoItems;
+function TItemResource.RetrieveItems: TArray<TToDoItem>;
 begin
-  Result := FD.CreateQuery('select * from ITEMS where OWNER_ID = :Token_Claim_ACCOUNT_ID').ToToDoItems;
+  Result := TRecord<TTodoItem>.DataSetToArray(
+    FD.CreateQuery('select * from ITEMS where OWNER_ID = :Token_Claim_ACCOUNT_ID')
+  );
 end;
 
 //function THelloWorldResource.Test2: string;
@@ -150,6 +156,7 @@ begin
 
   AItem.Creation_Date := Now;
   AItem.Last_Update := AItem.Creation_Date;
+
   TRecord<TToDoItem>.ToDataSet(AItem, LQuery, True);
   TRecord<TToDoItem>.FromDataSet(Result, LQuery);
 end;
@@ -158,11 +165,11 @@ function TItemResource.Update(AItem: TToDoItem): TToDoItem;
 var
   LQuery: TFDQuery;
 begin
-  LQuery := FD.CreateQuery('select * from ITEMS where ID=:AID and OWNER_ID = :Token_Claim_ACCOUNT_ID');
-  LQuery.ParamByName('AID').AsInteger := AItem.Id;
+  LQuery := FD.CreateQuery('select * from ITEMS where ID=:PathParam_id and OWNER_ID = :Token_Claim_ACCOUNT_ID');
   LQuery.Open;
-  if LQuery.RecordCount <> 1 then
+  if LQuery.IsEmpty then
     raise EMARSHttpException.CreateFmt('Item %d not found or access denied', [AItem.Id], 404);
+
   TRecord<TToDoItem>.FromDataSet(Result, LQuery);
 
   Result.Text := AItem.Text;
@@ -190,8 +197,11 @@ begin
       LQuery.Open;
 
       ANewAccount.Creation_Date := Now;
+      ANewAccount.Activated := False;
       ANewAccount.Last_Update := ANewAccount.Creation_Date;
       ANewAccount.Pwd_Hash := TModelUtilities.GetPasswordHash(ANewAccount.Pwd_Hash);
+      ANewAccount.Reset_Code := TModelUtilities.GenerateUniqueCode;
+
       TRecord<TAccount>.ToDataSet(ANewAccount, LQuery, True);
       TRecord<TAccount>.FromDataSet(LResult, LQuery);
     end
@@ -200,9 +210,9 @@ begin
   Result := LResult;
 end;
 
-procedure TAccountResource.Delete;
+function TAccountResource.IsAvailable(const username: string): Boolean;
 begin
-
+  Result := FD.Query('select ID from ACCOUNT where USERNAME = :PathParam_username').IsEmpty;
 end;
 
 procedure TAccountResource.PasswordReset;
@@ -241,8 +251,7 @@ begin
      'select ID, USERNAME, FIRST_NAME, LAST_NAME, ROLES from ACCOUNT '
    + 'where '
    + ' (COALESCE(ACTIVATED, 0) <> 0) '
-   + ' and (USERNAME = :pUSERNAME) '
-   + ' and (PWD_HASH = :pPWD_HASH)'
+   + ' and (USERNAME = :pUSERNAME) and (PWD_HASH = :pPWD_HASH)'
   , nil
   , procedure (AQuery: TFDQuery)
     begin
