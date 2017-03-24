@@ -117,7 +117,6 @@ type
     property Pairs[const Index: Integer]: TJSONPair read GetPair;
 {$endif}
 
-
     class function RecordToJSON<T: record>(ARecord: T;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
     class function RecordToJSON(const ARecord: TValue;
@@ -132,7 +131,6 @@ type
 
   function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
   function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
-
 
 implementation
 

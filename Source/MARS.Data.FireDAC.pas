@@ -10,7 +10,7 @@ unit MARS.Data.FireDAC;
 interface
 
 uses
-    System.Classes, System.SysUtils, Generics.Collections
+    System.Classes, System.SysUtils, Generics.Collections, Rtti
 
   , Data.DB
   , FireDAC.DApt
@@ -37,6 +37,8 @@ uses
 ;
 
 type
+  EMARSFireDACException = class(EMARSApplicationException);
+
   ConnectionAttribute = class(TCustomAttribute)
   private
     FConnectionDefName: string;
@@ -64,7 +66,7 @@ type
     procedure SetConnectionDefName(const Value: string);
     function GetConnection: TFDConnection;
     procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
-    function GetContextValue(const AName: string): Variant;
+    function GetContextValue(const AName: string; const ADesiredType: TFieldType = ftUnknown): TValue;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
 
@@ -97,12 +99,12 @@ type
     class function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
   end;
 
-
+  function MacroDataTypeToFieldType(const AMacroDataType: TFDMacroDataType): TFieldType;
 
 implementation
 
 uses
-  StrUtils, System.Rtti, Variants
+  StrUtils, Variants
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , MARS.Data.Utils
@@ -110,6 +112,26 @@ uses
   , MARS.Data.FireDAC.InjectionService
   , MARS.Data.FireDAC.ReadersAndWriters
 ;
+
+
+function MacroDataTypeToFieldType(const AMacroDataType: TFDMacroDataType): TFieldType;
+begin
+  case AMacroDataType of
+    mdUnknown: Result := ftUnknown;
+    mdString: Result := ftString;
+    mdIdentifier: Result := ftString; // !!!
+    mdInteger: Result := ftInteger;
+    mdBoolean: Result := ftBoolean;
+    mdFloat: Result := ftFloat;
+    mdDate: Result := ftDate;
+    mdTime: Result := ftTime;
+    mdDateTime: Result := ftDateTime;
+    mdRaw: Result := ftUnknown;   // ???
+    else
+      Result := ftUnknown;
+  end;
+end;
+
 
 function GetAsTStrings(const AParameters: TMARSParameters): TStrings;
 var
@@ -301,7 +323,7 @@ begin
   Result := FConnection;
 end;
 
-function TMARSFireDAC.GetContextValue(const AName: string): Variant;
+function TMARSFireDAC.GetContextValue(const AName: string; const ADesiredType: TFieldType): TValue;
 var
   LSubject: string;
   LIdentifier: string;
@@ -309,8 +331,11 @@ var
   LArgument: string;
   LNameTokens: TArray<string>;
   LFirstDelim, LSecondDelim: Integer;
+
+  LIndex: Integer;
+  LValue: string;
 begin
-  Result := Null;
+  Result := TValue.Empty;
   LNameTokens := AName.Split([PARAM_AND_MACRO_DELIMITER]);
   if Length(LNameTokens) < 2 then
     Exit;
@@ -322,33 +347,44 @@ begin
   begin
     LFirstDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER);
     LSecondDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER, LFirstDelim + Length(PARAM_AND_MACRO_DELIMITER));
-    LArgument := AName.Substring(LSecondDelim + 1); //LNameTokens[2];
+    LArgument := AName.Substring(LSecondDelim + 1);
   end;
 
   if SameText(LSubject, 'Token') then
   begin
-    if SameText(LIdentifier, 'Token') then
-      Result := ActivationRecord.Token.Token
-    else if SameText(LIdentifier, 'UserName') then
-      Result := ActivationRecord.Token.UserName
-    else if SameText(LIdentifier, 'IsVerified') then
-      Result := ActivationRecord.Token.IsVerified
-    else if SameText(LIdentifier, 'IsExpired') then
-      Result := ActivationRecord.Token.IsExpired
-    else if SameText(LIdentifier, 'Expiration') then
-      Result := ActivationRecord.Token.Expiration
-    else if SameText(LIdentifier, 'Issuer') then
-      Result := ActivationRecord.Token.Issuer
-    else if SameText(LIdentifier, 'IssuedAt') then
-      Result := ActivationRecord.Token.IssuedAt
+    Result := ReadPropertyValue(ActivationRecord.Token, LIdentifier);
 
-    else if SameText(LIdentifier, 'HasRole') and LHasArgument then
+    if SameText(LIdentifier, 'HasRole') and LHasArgument then
       Result := ActivationRecord.Token.HasRole(LArgument)
     else if SameText(LIdentifier, 'Claim') and LHasArgument then
-      Result := ActivationRecord.Token.Claims.ByNameText(LArgument).AsVariant;
-  end;
+      Result := ActivationRecord.Token.Claims.ByNameText(LArgument);
+  end
+  else if SameText(LSubject, 'PathParam') then
+  begin
+    LIndex := ActivationRecord.URLPrototype.GetPathParamIndex(LIdentifier);
+    if (LIndex > -1) and (LIndex < Length(ActivationRecord.URL.PathTokens)) then
+      Result := ActivationRecord.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
+    else
+      raise EMARSFireDACException.CreateFmt('PathParam not found: %s', [LIdentifier]);
+  end
+  else if SameText(LSubject, 'QueryParam') then
+  begin
+    if ActivationRecord.URL.QueryTokens.TryGetValue(LIdentifier, LValue) then
+      Result := LValue
+    else
+      raise EMARSFireDACException.CreateFmt('QueryParam not found: %s', [LIdentifier]);
+  end
+  else if SameText(LSubject, 'Request') then
+    Result := ReadPropertyValue(ActivationRecord.Request, LIdentifier)
+//  else if SameText(LSubject, 'Response') then
+//    Result := ReadPropertyValue(ActivationRecord.Response, LIdentifier)
+  else if SameText(LSubject, 'URL') then
+    Result := ReadPropertyValue(ActivationRecord.URL, LIdentifier)
+  else if SameText(LSubject, 'URLPrototype') then
+    Result := ReadPropertyValue(ActivationRecord.URLPrototype, LIdentifier);
 
-  { TODO -oAndrea : URL, URLPrototype, Request, Application, Engine, ...}
+
+  { TODO -oAndrea : Custom }
 end;
 
 procedure TMARSFireDAC.InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
@@ -360,15 +396,15 @@ begin
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
-    LParam.Value := GetContextValue(LParam.Name);
+
+    LParam.Value := GetContextValue(LParam.Name, LParam.DataType).AsVariant;
   end;
 
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
-    LMacro.Value := GetContextValue(LMacro.Name);
+    LMacro.Value := GetContextValue(LMacro.Name, MacroDataTypeToFieldType(LMacro.DataType)).AsVariant;
   end;
-
 end;
 
 procedure TMARSFireDAC.InTransaction(const ADoSomething: TProc<TFDTransaction>);

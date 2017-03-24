@@ -114,7 +114,7 @@ type
     FParamIndex: Integer;
   protected
     function GetParamIndex(const ADestination: TRttiObject;
-      const AResURL: TMARSURL; const APrototypeURL: TMARSURL): Integer;
+      const APrototypeURL: TMARSURL): Integer;
   public
     property ParamIndex: Integer read FParamIndex write FParamIndex;
     function GetValue(const ADestination: TRttiObject;
@@ -490,23 +490,11 @@ end;
 { PathParamAttribute }
 
 function PathParamAttribute.GetParamIndex(
-  const ADestination: TRttiObject; const AResURL: TMARSURL; const APrototypeURL: TMARSURL): Integer;
-var
-  LParamName: string;
-  LPair: TPair<Integer, string>;
+  const ADestination: TRttiObject; const APrototypeURL: TMARSURL): Integer;
 begin
-  Assert(Assigned(ADestination));
-
-  LParamName := GetActualName(ADestination);
-  Result := -1;
-  for LPair in APrototypeURL.PathParams do
-  begin
-    if SameText(LParamName, LPair.Value) then
-    begin
-      Result := LPair.Key;
-      Break;
-    end;
-  end;
+  Result := APrototypeURL.GetPathParamIndex(
+    GetActualName(ADestination)
+  );
 end;
 
 function PathParamAttribute.GetValue(const ADestination: TRttiObject;
@@ -515,7 +503,7 @@ var
   LTokenIndex: Integer;
 begin
   Result := TValue.Empty;
-  LTokenIndex := GetParamIndex(ADestination, AActivationRecord.URL, AActivationRecord.URLPrototype);
+  LTokenIndex := GetParamIndex(ADestination, AActivationRecord.URLPrototype);
   if LTokenIndex > -1 then
     Result := StringToTValue(AActivationRecord.URL.PathTokens[LTokenIndex]
       , ADestination.GetRttiType

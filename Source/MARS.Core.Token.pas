@@ -63,6 +63,7 @@ type
     function GetTokenFromBearer(const ARequest: TWebRequest): string; virtual;
     function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
     function GetToken(const ARequest: TWebRequest): string; virtual;
+    function GetIsExpired: Boolean; virtual;
     property Request: TWebRequest read FRequest;
     property Response: TWebResponse read FResponse;
   public
@@ -78,7 +79,6 @@ type
     function HasRole(const ARole: string): Boolean; overload; virtual;
     function HasRole(const ARoles: TArray<string>): Boolean; overload; virtual;
     function HasRole(const ARoles: TStrings): Boolean; overload; virtual;
-    function IsExpired: Boolean; virtual;
     procedure SetUserNameAndRoles(const AUserName: string; const ARoles: TArray<string>); virtual;
     procedure UpdateCookie; virtual;
 
@@ -86,6 +86,7 @@ type
     property UserName: string read GetUserName write SetUserName;
     property Roles: TArray<string> read GetRoles write SetRoles;
     property IsVerified: Boolean read FIsVerified;
+    property IsExpired: Boolean read GetIsExpired;
     property Claims: TMARSParameters read FClaims;
     property Expiration: TDateTime read GetExpiration;
     property Issuer: string read FIssuer;
@@ -280,7 +281,7 @@ begin
   Result := HasRole(ARoles.ToStringArray);
 end;
 
-function TMARSToken.IsExpired: Boolean;
+function TMARSToken.GetIsExpired: Boolean;
 begin
   Result := Expiration < Now;
 end;

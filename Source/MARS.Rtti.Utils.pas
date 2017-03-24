@@ -598,35 +598,35 @@ end;
 class procedure TRecord<R>.FromDataSet(var ARecord: R;
   const ADataSet: TDataSet);
 var
-  LType: TRttiType;
-  LField: TRttiField;
-  LDBField: TField;
+  LRecordType: TRttiType;
+  LRecordField: TRttiField;
+  LDataSetField: TField;
   LValue: TValue;
 begin
-  LType := TRttiContext.Create.GetType(TypeInfo(R));
-  for LField in LType.GetFields do
+  LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
+  for LRecordField in LRecordType.GetFields do
   begin
-    LDBField := ADataSet.FindField(LField.Name);
-    if Assigned(LDBField) then
+    LDataSetField := ADataSet.FindField(LRecordField.Name);
+    if Assigned(LDataSetField) then
     begin
-      if LDBField.IsNull then
-        LField.SetValue(@ARecord, TValue.Empty)
-      else if LField.FieldType.Handle = TypeInfo(Boolean) then
+      if LDataSetField.IsNull then
+        LRecordField.SetValue(@ARecord, TValue.Empty)
+      else if LRecordField.FieldType.Handle = TypeInfo(Boolean) then
       begin
-        if LDBField.DataType = ftBoolean then
-          LField.SetValue(@ARecord, LDBField.AsBoolean)
+        if LDataSetField.DataType = ftBoolean then
+          LRecordField.SetValue(@ARecord, LDataSetField.AsBoolean)
         else
-          LField.SetValue(@ARecord, LDBField.AsInteger <> 0);
+          LRecordField.SetValue(@ARecord, LDataSetField.AsInteger <> 0);
       end
-      else if LField.FieldType.Handle = TypeInfo(TDateTime) then
+      else if LRecordField.FieldType.Handle = TypeInfo(TDateTime) then
       begin
-        if (LDBField.DataType in [ftDate, ftDateTime, ftTime, ftTimeStamp]) then
-          LField.SetValue(@ARecord, LDBField.AsDateTime)
+        if (LDataSetField.DataType in [ftDate, ftDateTime, ftTime, ftTimeStamp]) then
+          LRecordField.SetValue(@ARecord, LDataSetField.AsDateTime)
         else
-          LField.SetValue(@ARecord, StrToDateTimeDef(LDBField.AsString, 0));
+          LRecordField.SetValue(@ARecord, StrToDateTimeDef(LDataSetField.AsString, 0));
       end
       else
-        LField.SetValue(@ARecord, TValue.FromVariant(LDBField.Value));
+        LRecordField.SetValue(@ARecord, TValue.FromVariant(LDataSetField.Value));
     end;
   end;
 end;
@@ -634,32 +634,32 @@ end;
 class procedure TRecord<R>.ToDataSet(const ARecord: R; const ADataSet: TDataSet;
   const AAppend: Boolean);
 var
-  LType: TRttiType;
-  LField: TRttiField;
-  LDBField: TField;
+  LRecordType: TRttiType;
+  LRecordField: TRttiField;
+  LDataSetField: TField;
   LValue: TValue;
 begin
-  LType := TRttiContext.Create.GetType(TypeInfo(R));
+  LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
 
   if AAppend then
     ADataSet.Append
   else
     ADataSet.Edit;
   try
-    for LField in LType.GetFields do
+    for LRecordField in LRecordType.GetFields do
     begin
-      LDBField := ADataSet.FindField(LField.Name);
-      if Assigned(LDBField) and not (AAppend and (LDBField.DataType = ftAutoInc)) then
+      LDataSetField := ADataSet.FindField(LRecordField.Name);
+      if Assigned(LDataSetField) and not (AAppend and (LDataSetField.DataType = ftAutoInc)) then
       begin
-        LValue := LField.GetValue(@ARecord);
+        LValue := LRecordField.GetValue(@ARecord);
         if LValue.IsEmpty then
-          LDBField.Clear
+          LDataSetField.Clear
         else
-          LDBField.Value := LValue.AsVariant;
+          LDataSetField.Value := LValue.AsVariant;
 
         // set NULL for 0.0 DateTime values
-        if (LDBField.DataType in [ftDate, ftDateTime, ftTime, ftTimeStamp]) and (LDBField.Value = 0.0) then
-          LDBField.Clear;
+        if (LDataSetField.DataType in [ftDate, ftDateTime, ftTime, ftTimeStamp]) and (LDataSetField.Value = 0.0) then
+          LDataSetField.Clear;
       end;
     end;
     ADataSet.Post;
