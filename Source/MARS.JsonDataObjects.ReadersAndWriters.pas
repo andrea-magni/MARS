@@ -17,7 +17,7 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyReader
-  , MARS.Core.Invocation
+  , MARS.Core.Activation
   ;
 
 type
@@ -33,7 +33,7 @@ type
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
-      const AContext: TMARSActivationRecord
+      const AContext: TMARSActivation
     ): TValue;
   end;
 
@@ -70,7 +70,7 @@ end;
 function TJsonDataObjectsReader.ReadFrom(
   {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
     const ADestination: TRttiObject; const AMediaType: TMediaType;
-    const AContext: TMARSActivationRecord
+    const AContext: TMARSActivation
   ): TValue;
 var
   LJson: TJsonBaseObject;

@@ -14,7 +14,7 @@ uses
   , MARS.Core.Declarations
   , MARS.Core.Injection.Interfaces
   , MARS.Core.Injection.Types
-  , MARS.Core.Invocation
+  , MARS.Core.Activation
 ;
 
 type
@@ -49,7 +49,7 @@ type
 
 
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+      const AActivation: TMARSActivation): TInjectionValue;
 
     procedure Enumerate(const AProc: TProc<TEntryInfo>);
 
@@ -101,7 +101,7 @@ begin
 end;
 
 function TMARSInjectionServiceRegistry.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TInjectionValue;
+  const AActivation: TMARSActivation): TInjectionValue;
 var
   LEntry: TEntryInfo;
   LService: IMARSInjectionService;
@@ -112,7 +112,7 @@ begin
     if LEntry.CanProvideValue(ADestination) then
     begin
       LService := LEntry.CreateInstance();
-      LService.GetValue(ADestination, AActivationRecord, Result);
+      LService.GetValue(ADestination, AActivation, Result);
 
       // first match wins
       if not Result.Value.IsEmpty then

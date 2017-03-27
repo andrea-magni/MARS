@@ -12,13 +12,14 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.Declarations
   , MARS.Core.Classes
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   IMessageBodyWriter = interface
   ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   TIsWritableFunction = reference to function(AType: TRttiType;

@@ -8,25 +8,22 @@ uses
   , MARS.Core.Attributes
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MediaType
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   [Produces(TMediaType.TEXT_HTML)]
   THTMLCategoryListWriter=class(TInterfacedObject, IMessageBodyWriter)
   public
-    procedure WriteTo(const AValue: TValue;
-      const AAttributes: TArray<TCustomAttribute>;
-      AMediaType: TMediaType; AResponseHeaders: TStrings;
-      AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.TEXT_HTML)]
   THTMLItemListWriter=class(TInterfacedObject, IMessageBodyWriter)
   public
-    procedure WriteTo(const AValue: TValue;
-      const AAttributes: TArray<TCustomAttribute>;
-      AMediaType: TMediaType; AResponseHeaders: TStrings;
-      AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
 implementation
@@ -59,9 +56,8 @@ const
 
 { TCategoryWriter }
 
-procedure THTMLCategoryListWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TArray<TCustomAttribute>; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure THTMLCategoryListWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LWriter: TStreamWriter;
   LCategoryList: TCategoryList;
@@ -86,9 +82,8 @@ end;
 
 { THTMLItemListWriter }
 
-procedure THTMLItemListWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TArray<TCustomAttribute>; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure THTMLItemListWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LWriter: TStreamWriter;
   LItemList: TItemList;

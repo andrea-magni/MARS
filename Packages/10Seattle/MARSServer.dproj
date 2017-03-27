@@ -175,7 +175,7 @@
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Invocation.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Activation.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReaders.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>

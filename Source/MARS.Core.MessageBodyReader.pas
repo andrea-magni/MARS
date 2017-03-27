@@ -18,7 +18,7 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.Declarations
   , MARS.Core.Classes
-  , MARS.Core.Invocation
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
@@ -28,7 +28,7 @@ type
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
-      const AContext: TMARSActivationRecord
+      const AActivation: IMARSActivation
     ): TValue;
   end;
 

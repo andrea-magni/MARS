@@ -14,25 +14,26 @@ uses
   , MARS.Core.Declarations
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
   TDataSetWriterJSON = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TArrayDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_XML)]
   TDataSetWriterXML = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
 implementation
@@ -46,9 +47,8 @@ uses
 
 { TDataSetWriterJSON }
 
-procedure TDataSetWriterJSON.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TDataSetWriterJSON.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LResult: TJSONArray;
@@ -68,9 +68,8 @@ end;
 
 { TDataSetWriterXML }
 
-procedure TDataSetWriterXML.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TDataSetWriterXML.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
 begin
@@ -87,9 +86,8 @@ end;
 
 { TArrayDataSetWriter }
 
-procedure TArrayDataSetWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TArrayDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LResult: TJSONObject;

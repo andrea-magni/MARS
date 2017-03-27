@@ -14,13 +14,13 @@ uses
   , MARS.Core.Injection
   , MARS.Core.Injection.Interfaces
   , MARS.Core.Injection.Types
-  , MARS.Core.Invocation
+  , MARS.Core.Activation
 ;
 
 type
   TMARSTokenInjectionService = class(TInterfacedObject, IMARSInjectionService)
   public
-    procedure GetValue(const ADestination: TRttiObject; const AActivationRecord: TMARSActivationRecord;
+    procedure GetValue(const ADestination: TRttiObject; const AActivation: TMARSActivation;
       out AValue: TInjectionValue);
   end;
 
@@ -34,7 +34,7 @@ uses
 { TMARSTokenInjectionService }
 
 procedure TMARSTokenInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
+  const AActivation: TMARSActivation; out AValue: TInjectionValue);
 var
   LType: TRttiType;
   LToken: TMARSToken;
@@ -43,13 +43,13 @@ begin
 
   if (LType.IsObjectOfType(TMARSToken)) then
   begin
-    if AActivationRecord.HasToken then
-      AValue := TInjectionValue.Create(AActivationRecord.Token, True)
+    if AActivation.HasToken then
+      AValue := TInjectionValue.Create(AActivation.Token, True)
     else begin
-      LToken := TMARSToken.Create(AActivationRecord.Request
-        , AActivationRecord.Response
-        , AActivationRecord.Application.Parameters
-        , AActivationRecord.URL
+      LToken := TMARSToken.Create(AActivation.Request
+        , AActivation.Response
+        , AActivation.Application.Parameters
+        , AActivation.URL
       );
 
       AValue := TInjectionValue.Create(LToken);

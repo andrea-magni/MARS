@@ -14,17 +14,17 @@ uses
   , MARS.Core.Injection
   , MARS.Core.Injection.Interfaces
   , MARS.Core.Injection.Types
-  , MARS.Core.Invocation
+  , MARS.Core.Activation
 ;
 
 type
   TMARSFireDACInjectionService = class(TInterfacedObject, IMARSInjectionService)
   protected
     function GetConnectionDefName(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): string;
+      const AActivation: TMARSActivation): string;
   public
     procedure GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
+      const AActivation: TMARSActivation; out AValue: TInjectionValue);
 
     const FireDAC_ConnectionDefName_PARAM = 'FireDAC.ConnectionDefName';
     const FireDAC_ConnectionDefName_PARAM_DEFAULT = 'MAIN_DB';
@@ -44,7 +44,7 @@ uses
 
 function TMARSFireDACInjectionService.GetConnectionDefName(
   const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): string;
+  const AActivation: TMARSActivation): string;
 var
   LConnectionDefName: string;
 begin
@@ -60,7 +60,7 @@ begin
 
   // second chance: method annotation
   if (LConnectionDefName = '') then
-    AActivationRecord.Method.HasAttribute<ConnectionAttribute>(
+    AActivation.Method.HasAttribute<ConnectionAttribute>(
       procedure (AAttrib: ConnectionAttribute)
       begin
         LConnectionDefName := AAttrib.ConnectionDefName;
@@ -69,7 +69,7 @@ begin
 
   // third chance: resource annotation
   if (LConnectionDefName = '') then
-    AActivationRecord.Resource.HasAttribute<ConnectionAttribute>(
+    AActivation.Resource.HasAttribute<ConnectionAttribute>(
       procedure (AAttrib: ConnectionAttribute)
       begin
         LConnectionDefName := AAttrib.ConnectionDefName;
@@ -78,7 +78,7 @@ begin
 
   // last chance: application parameters
   if (LConnectionDefName = '') then
-    LConnectionDefName := AActivationRecord.Application.Parameters.ByName(
+    LConnectionDefName := AActivation.Application.Parameters.ByName(
       FireDAC_ConnectionDefName_PARAM, FireDAC_ConnectionDefName_PARAM_DEFAULT
     ).AsString;
 
@@ -86,15 +86,15 @@ begin
 end;
 
 procedure TMARSFireDACInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
+  const AActivation: TMARSActivation; out AValue: TInjectionValue);
 begin
   if ADestination.GetRttiType.IsObjectOfType(TFDConnection) then
     AValue := TInjectionValue.Create(
-      TMARSFireDAC.CreateConnectionByDefName(GetConnectionDefName(ADestination, AActivationRecord))
+      TMARSFireDAC.CreateConnectionByDefName(GetConnectionDefName(ADestination, AActivation))
     )
   else if ADestination.GetRttiType.IsObjectOfType(TMARSFireDAC) then
     AValue := TInjectionValue.Create(
-      TMARSFireDAC.Create(GetConnectionDefName(ADestination, AActivationRecord), AActivationRecord)
+      TMARSFireDAC.Create(GetConnectionDefName(ADestination, AActivation), AActivation)
     );
 end;
 

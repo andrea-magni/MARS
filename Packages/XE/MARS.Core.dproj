@@ -89,11 +89,11 @@
 			<DCCReference Include="..\..\Source\MARS.Core.Response.pas"/>
 			<DCCReference Include="..\..\Source\MARS.Core.Token.pas"/>
 			<DCCReference Include="..\..\Source\MARS.http.Core.pas"/>
-			<DCCReference Include="..\..\Source\MARS.Core.Invocation.pas"/>
+			<DCCReference Include="..\..\Source\MARS.Core.Activation.pas"/>
 			<DCCReference Include="..\..\Source\MARS.Core.Injection.Interfaces.pas"/>
 			<DCCReference Include="..\..\Source\MARS.Core.Injection.pas"/>
 			<DCCReference Include="..\..\Source\MARS.Core.Injection.Types.pas"/>
-			<DCCReference Include="..\..\Source\MARS.Core.Invocation.InjectionService.pas"/>
+			<DCCReference Include="..\..\Source\MARS.Core.Activation.InjectionService.pas"/>
 			<DCCReference Include="..\..\Source\MARS.Core.Token.InjectionService.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>

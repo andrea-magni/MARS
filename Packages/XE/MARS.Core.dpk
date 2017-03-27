@@ -55,11 +55,11 @@ contains
   MARS.Core.Response in '..\..\Source\MARS.Core.Response.pas',
   MARS.Core.Token in '..\..\Source\MARS.Core.Token.pas',
   MARS.http.Core in '..\..\Source\MARS.http.Core.pas',
-  MARS.Core.Invocation in '..\..\Source\MARS.Core.Invocation.pas',
+  MARS.Core.Activation in '..\..\Source\MARS.Core.Activation.pas',
   MARS.Core.Injection.Interfaces in '..\..\Source\MARS.Core.Injection.Interfaces.pas',
   MARS.Core.Injection in '..\..\Source\MARS.Core.Injection.pas',
   MARS.Core.Injection.Types in '..\..\Source\MARS.Core.Injection.Types.pas',
-  MARS.Core.Invocation.InjectionService in '..\..\Source\MARS.Core.Invocation.InjectionService.pas',
+  MARS.Core.Activation.InjectionService in '..\..\Source\MARS.Core.Activation.InjectionService.pas',
   MARS.Core.Token.InjectionService in '..\..\Source\MARS.Core.Token.InjectionService.pas';
 
 end.

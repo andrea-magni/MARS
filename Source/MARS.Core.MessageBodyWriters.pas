@@ -14,38 +14,39 @@ uses
   , MARS.Core.Declarations
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
   TObjectWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TJSONValueWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TRecordWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TArrayOfRecordWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_OCTET_STREAM)
   , Produces(TMediaType.WILDCARD)]
   TStreamValueWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
 implementation
@@ -58,9 +59,8 @@ uses
 
 { TObjectWriter }
 
-procedure TObjectWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TObjectWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LObj: TJSONObject;
@@ -81,9 +81,8 @@ end;
 
 { TJSONValueWriter }
 
-procedure TJSONValueWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TJSONValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LJSONValue: TJSONValue;
@@ -100,9 +99,8 @@ end;
 
 { TStreamValueWriter }
 
-procedure TStreamValueWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TStreamValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStream: TStream;
 begin
@@ -116,9 +114,8 @@ end;
 
 { TRecordWriter }
 
-procedure TRecordWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TRecordWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LJSONObj: TJSONObject;
   LJSONWriter: TJSONValueWriter;
@@ -129,7 +126,7 @@ begin
     try
       LJSONWriter := TJSONValueWriter.Create;
       try
-        LJSONWriter.WriteTo(LJSONObj, AAttributes, AMediaType, AResponseHeaders, AOutputStream);
+        LJSONWriter.WriteTo(LJSONObj, AMediaType, AOutputStream, AActivation);
       finally
         LJSONWriter.Free;
       end;
@@ -141,9 +138,8 @@ end;
 
 { TArrayOfRecordWriter }
 
-procedure TArrayOfRecordWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TArrayOfRecordWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LJSONArray: TJSONArray;
   LJSONWriter: TJSONValueWriter;
@@ -163,7 +159,7 @@ begin
           LJSONArray.AddElement(TJSONObject.RecordToJSON(LElement));
         end;
 
-        LJSONWriter.WriteTo(LJSONArray, AAttributes, AMediaType, AResponseHeaders, AOutputStream);
+        LJSONWriter.WriteTo(LJSONArray, AMediaType, AOutputStream, AActivation);
       finally
         LJSONWriter.Free;
       end;

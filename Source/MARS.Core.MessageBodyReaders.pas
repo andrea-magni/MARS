@@ -13,7 +13,7 @@ uses
   Classes, SysUtils, Rtti
 
   , MARS.Core.Attributes
-  , MARS.Core.Invocation
+  , MARS.Core.Activation.Interfaces
   , MARS.Core.Declarations
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyReader
@@ -26,7 +26,7 @@ type
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
-      const AContext: TMARSActivationRecord
+      const AActivation: IMARSActivation
     ): TValue; virtual;
   end;
 
@@ -36,7 +36,7 @@ type
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
-      const AContext: TMARSActivationRecord
+      const AActivation: IMARSActivation
     ): TValue; virtual;
   end;
 
@@ -47,7 +47,7 @@ type
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
-      const AContext: TMARSActivationRecord
+      const AActivation: IMARSActivation
     ): TValue; virtual;
   end;
 
@@ -67,7 +67,7 @@ uses
 function TJSONValueReader.ReadFrom(
 {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
   const ADestination: TRttiObject; const AMediaType: TMediaType;
-  const AContext: TMARSActivationRecord
+  const AActivation: IMARSActivation
 ): TValue;
 var
   LJSONValue: TJSONValue;
@@ -88,7 +88,7 @@ end;
 function TStreamReader.ReadFrom(
 {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
   const ADestination: TRttiObject; const AMediaType: TMediaType;
-  const AContext: TMARSActivationRecord
+  const AActivation: IMARSActivation
 ): TValue;
 var
   LStream: TStream;
@@ -112,7 +112,7 @@ end;
 function TRecordReader.ReadFrom(
 {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
   const ADestination: TRttiObject; const AMediaType: TMediaType;
-  const AContext: TMARSActivationRecord
+  const AActivation: IMARSActivation
 ): TValue;
 var
   LJSON: TJSONObject;

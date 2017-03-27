@@ -35,6 +35,7 @@ uses
 
   , Server.Resources
   , MARS.Data.FireDAC
+  , MARS.Core.Activation, DB, Rtti
   ;
 
 { TServerEngine }
@@ -49,6 +50,14 @@ begin
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
     TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+
+//    TMARSFireDAC.AddContextValueProvider(
+//      procedure (const AContext: TMARSActivation; const AName: string;
+//        const ADesiredType: TFieldType; out AValue: TValue)
+//      begin
+//        AValue := 123;
+//      end
+//    );
   except
     FreeAndNil(FEngine);
     raise;

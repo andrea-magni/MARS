@@ -16,7 +16,7 @@ uses
   , MARS.Core.Utils
   , MARS.Core.URL  
   , MARS.Core.JSON
-  , MARS.Core.Invocation
+  , MARS.Core.Activation.Interfaces
 ;
 
 type
@@ -95,7 +95,7 @@ type
     function GetKind: string; virtual;
   public
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TValue; virtual;
+      const AActivation: IMARSActivation): TValue; virtual;
     property Kind: string read GetKind;
   end;
 
@@ -118,37 +118,37 @@ type
   public
     property ParamIndex: Integer read FParamIndex write FParamIndex;
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TValue; override;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   QueryParamAttribute = class(NamedRequestParamAttribute)
   public
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TValue; override;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   FormParamAttribute = class(NamedRequestParamAttribute)
   public
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TValue; override;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   HeaderParamAttribute = class(NamedRequestParamAttribute)
   public
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TValue; override;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   CookieParamAttribute = class(NamedRequestParamAttribute)
   public
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TValue; override;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   BodyParamAttribute = class(RequestParamAttribute)
   public
     function GetValue(const ADestination: TRttiObject;
-      const AActivationRecord: TMARSActivationRecord): TValue; override;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   AuthorizationAttribute = class(MARSAttribute);
@@ -295,7 +295,7 @@ end;
 { BodyParamAttribute }
 
 function BodyParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TValue;
+  const AActivation: IMARSActivation): TValue;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
@@ -304,7 +304,7 @@ begin
   TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
   if Assigned(LReader) then
     try
-      Result := LReader.ReadFrom(AActivationRecord.Request.RawContent, ADestination, LMediaType, nil);
+      Result := LReader.ReadFrom(AActivation.Request.RawContent, ADestination, LMediaType, AActivation);
     finally
       FreeAndNil(LMediaType);
     end
@@ -313,22 +313,22 @@ begin
 {$ifdef Delphi10Berlin_UP}
     case ADestination.GetRttiType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
-      , tkLString, tkWString, tkString: StringToTValue(AActivationRecord.Request.Content, ADestination.GetRttiType);
+      , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
 
-      tkUString: Result := TEncoding.UTF8.GetString(AActivationRecord.Request.RawContent);
+      tkUString: Result := TEncoding.UTF8.GetString(AActivation.Request.RawContent);
 
       else
-        Result := TValue.From<TBytes>(AActivationRecord.Request.RawContent);
+        Result := TValue.From<TBytes>(AActivation.Request.RawContent);
     end;
 {$else}
     case ADestination.GetRttiType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
-      , tkLString, tkWString, tkString: StringToTValue(AActivationRecord.Request.Content, ADestination.GetRttiType);
+      , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
 
-      tkUString: Result := AActivationRecord.Request.RawContent;
+      tkUString: Result := AActivation.Request.RawContent;
 
       else
-        Result := AActivationRecord.Request.RawContent;
+        Result := AActivation.Request.RawContent;
     end;
 
 {$endif}
@@ -438,7 +438,7 @@ begin
 end;
 
 function RequestParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TValue;
+  const AActivation: IMARSActivation): TValue;
 begin
   Result := TValue.Empty;
 end;
@@ -446,10 +446,10 @@ end;
 { QueryParamAttribute }
 
 function QueryParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TValue;
+  const AActivation: IMARSActivation): TValue;
 begin
   Result := StringToTValue(
-      AActivationRecord.Request.QueryFields.Values[GetActualName(ADestination)]
+      AActivation.Request.QueryFields.Values[GetActualName(ADestination)]
     , ADestination.GetRttiType
   );
 end;
@@ -457,10 +457,10 @@ end;
 { FormParamAttribute }
 
 function FormParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TValue;
+  const AActivation: IMARSActivation): TValue;
 begin
   Result := StringToTValue(
-      AActivationRecord.Request.ContentFields.Values[GetActualName(ADestination)]
+      AActivation.Request.ContentFields.Values[GetActualName(ADestination)]
     , ADestination.GetRttiType
   );
 end;
@@ -468,10 +468,10 @@ end;
 { HeaderParamAttribute }
 
 function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TValue;
+  const AActivation: IMARSActivation): TValue;
 begin
   Result := StringToTValue(
-      AActivationRecord.Request.GetFieldByName(GetActualName(ADestination))
+      AActivation.Request.GetFieldByName(GetActualName(ADestination))
     , ADestination.GetRttiType
   );
 end;
@@ -479,10 +479,10 @@ end;
 { CookieParamAttribute }
 
 function CookieParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TValue;
+  const AActivation: IMARSActivation): TValue;
 begin
   Result := StringToTValue(
-      AActivationRecord.Request.CookieFields.Values[GetActualName(ADestination)]
+      AActivation.Request.CookieFields.Values[GetActualName(ADestination)]
     , ADestination.GetRttiType
   );
 end;
@@ -498,14 +498,14 @@ begin
 end;
 
 function PathParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord): TValue;
+  const AActivation: IMARSActivation): TValue;
 var
   LTokenIndex: Integer;
 begin
   Result := TValue.Empty;
-  LTokenIndex := GetParamIndex(ADestination, AActivationRecord.URLPrototype);
+  LTokenIndex := GetParamIndex(ADestination, AActivation.URLPrototype);
   if LTokenIndex > -1 then
-    Result := StringToTValue(AActivationRecord.URL.PathTokens[LTokenIndex]
+    Result := StringToTValue(AActivation.URL.PathTokens[LTokenIndex]
       , ADestination.GetRttiType
     );
 end;

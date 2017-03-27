@@ -33,7 +33,7 @@ uses
   , MARS.Core.Token
   , MARS.Core.URL
   , MARS.Utils.Parameters
-  , MARS.Core.Invocation
+  , MARS.Core.Activation
 ;
 
 type
@@ -57,14 +57,14 @@ type
     property SQLStatement: string read FSQLStatement;
   end;
 
-  TContextValueProviderProc = reference to procedure (const AContext: TMARSActivationRecord;
+  TContextValueProviderProc = reference to procedure (const AContext: TMARSActivation;
     const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
 
   TMARSFireDAC = class
   private
     FConnectionDefName: string;
     FConnection: TFDConnection;
-    FActivationRecord: TMARSActivationRecord;
+    FActivation: TMARSActivation;
   protected
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TFDConnection; virtual;
@@ -75,7 +75,7 @@ type
     const PARAM_AND_MACRO_DELIMITER = '_';
 
     constructor Create(const AConnectionDefName: string;
-      const AActivationRecord: TMARSActivationRecord = nil); virtual;
+      const AActivation: TMARSActivation = nil); virtual;
     destructor Destroy; override;
 
     function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
@@ -108,7 +108,7 @@ type
 
     property Connection: TFDConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
-    property ActivationRecord: TMARSActivationRecord read FActivationRecord;
+    property Activation: TMARSActivation read FActivation;
 
     class function LoadConnectionDefs(const AParameters: TMARSParameters;
       const ASliceName: string = ''): TArray<string>;
@@ -296,11 +296,11 @@ begin
 end;
 
 constructor TMARSFireDAC.Create(const AConnectionDefName: string;
-  const AActivationRecord: TMARSActivationRecord);
+  const AActivation: TMARSActivation);
 begin
   inherited Create();
   ConnectionDefName := AConnectionDefName;
-  FActivationRecord := AActivationRecord;
+  FActivation := AActivation;
 end;
 
 class constructor TMARSFireDAC.CreateClass;
@@ -319,7 +319,7 @@ begin
     Result.Prepare;
     InjectParamAndMacroValues(Result);
     if AContextOwned then
-      ActivationRecord.AddToContext(Result);
+      Activation.AddToContext(Result);
   except
     Result.Free;
     raise;
@@ -337,7 +337,7 @@ begin
     Result.Prepare;
     InjectParamAndMacroValues(Result.Command);
     if AContextOwned then
-      ActivationRecord.AddToContext(Result);
+      Activation.AddToContext(Result);
   except
     Result.Free;
     raise;
@@ -350,7 +350,7 @@ begin
   try
     Result.Connection := Connection;
     if AContextOwned then
-      ActivationRecord.AddToContext(Result);
+      Activation.AddToContext(Result);
   except
     Result.Free;
     raise;
@@ -418,39 +418,39 @@ begin
 
   if SameText(LSubject, 'Token') then
   begin
-    Result := ReadPropertyValue(ActivationRecord.Token, LIdentifier);
+    Result := ReadPropertyValue(Activation.Token, LIdentifier);
 
     if SameText(LIdentifier, 'HasRole') and LHasArgument then
-      Result := ActivationRecord.Token.HasRole(LArgument)
+      Result := Activation.Token.HasRole(LArgument)
     else if SameText(LIdentifier, 'Claim') and LHasArgument then
-      Result := ActivationRecord.Token.Claims.ByNameText(LArgument);
+      Result := Activation.Token.Claims.ByNameText(LArgument);
   end
   else if SameText(LSubject, 'PathParam') then
   begin
-    LIndex := ActivationRecord.URLPrototype.GetPathParamIndex(LIdentifier);
-    if (LIndex > -1) and (LIndex < Length(ActivationRecord.URL.PathTokens)) then
-      Result := ActivationRecord.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
+    LIndex := Activation.URLPrototype.GetPathParamIndex(LIdentifier);
+    if (LIndex > -1) and (LIndex < Length(Activation.URL.PathTokens)) then
+      Result := Activation.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
     else
       raise EMARSFireDACException.CreateFmt('PathParam not found: %s', [LIdentifier]);
   end
   else if SameText(LSubject, 'QueryParam') then
   begin
-    if ActivationRecord.URL.QueryTokens.TryGetValue(LIdentifier, LValue) then
+    if Activation.URL.QueryTokens.TryGetValue(LIdentifier, LValue) then
       Result := LValue
     else
       raise EMARSFireDACException.CreateFmt('QueryParam not found: %s', [LIdentifier]);
   end
   else if SameText(LSubject, 'Request') then
-    Result := ReadPropertyValue(ActivationRecord.Request, LIdentifier)
+    Result := ReadPropertyValue(Activation.Request, LIdentifier)
 //  else if SameText(LSubject, 'Response') then
-//    Result := ReadPropertyValue(ActivationRecord.Response, LIdentifier)
+//    Result := ReadPropertyValue(Activation.Response, LIdentifier)
   else if SameText(LSubject, 'URL') then
-    Result := ReadPropertyValue(ActivationRecord.URL, LIdentifier)
+    Result := ReadPropertyValue(Activation.URL, LIdentifier)
   else if SameText(LSubject, 'URLPrototype') then
-    Result := ReadPropertyValue(ActivationRecord.URLPrototype, LIdentifier)
+    Result := ReadPropertyValue(Activation.URLPrototype, LIdentifier)
   else // last chance, custom injection
     for LCustomProvider in FContextValueProviders do
-      LCustomProvider(ActivationRecord, AName, ADesiredType, Result);
+      LCustomProvider(Activation, AName, ADesiredType, Result);
 end;
 
 procedure TMARSFireDAC.InjectParamAndMacroValues(const ACommand: TFDCustomCommand);

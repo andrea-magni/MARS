@@ -89,7 +89,7 @@ contains
   JOSE.Encoding.Base64 in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas',
   JOSE.Hashing.HMAC in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas',
   JOSE.Types.Bytes in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas',
-  MARS.Core.Invocation in '..\..\Source\MARS.Core.Invocation.pas',
+  MARS.Core.Activation in '..\..\Source\MARS.Core.Activation.pas',
   MARS.Core.MessageBodyReaders in '..\..\Source\MARS.Core.MessageBodyReaders.pas';
 
 end.

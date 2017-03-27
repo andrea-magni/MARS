@@ -1,4 +1,4 @@
-unit MARS.Core.Invocation.InjectionService;
+unit MARS.Core.Activation.InjectionService;
 
 {$I MARS.inc}
 
@@ -9,13 +9,13 @@ uses
   , MARS.Core.Injection
   , MARS.Core.Injection.Interfaces
   , MARS.Core.Injection.Types
-  , MARS.Core.Invocation
+  , MARS.Core.Activation
 ;
 
 type
-  TMARSActivationRecordInjectionService = class(TInterfacedObject, IMARSInjectionService)
+  TMARSActivationInjectionService = class(TInterfacedObject, IMARSInjectionService)
   public
-    procedure GetValue(const ADestination: TRttiObject; const AActivationRecord: TMARSActivationRecord;
+    procedure GetValue(const ADestination: TRttiObject; const AActivation: TMARSActivation;
       out AValue: TInjectionValue);
   end;
 
@@ -31,10 +31,10 @@ uses
 {$endif}
 ;
 
-{ TMARSActivationRecordInjectionService }
+{ TMARSActivationInjectionService }
 
-procedure TMARSActivationRecordInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivationRecord: TMARSActivationRecord; out AValue: TInjectionValue);
+procedure TMARSActivationInjectionService.GetValue(const ADestination: TRttiObject;
+  const AActivation: TMARSActivation; out AValue: TInjectionValue);
 var
   LType: TRttiType;
   LValue: TInjectionValue;
@@ -46,7 +46,7 @@ begin
     procedure (AParam: RequestParamAttribute)
     begin
       LValue := TInjectionValue.Create(
-          AParam.GetValue(ADestination, AActivationRecord)
+          AParam.GetValue(ADestination, AActivation)
         , ADestination.HasAttribute<IsReference>
       );
     end
@@ -54,17 +54,17 @@ begin
     AValue := LValue
   else
   if (LType.IsObjectOfType(TWebRequest)) then
-    AValue := TInjectionValue.Create(AActivationRecord.Request, True)
+    AValue := TInjectionValue.Create(AActivation.Request, True)
   else if (LType.IsObjectOfType(TWebResponse)) then
-    AValue := TInjectionValue.Create(AActivationRecord.Response, True)
+    AValue := TInjectionValue.Create(AActivation.Response, True)
   else if (LType.IsObjectOfType(TMARSURL)) then
-    AValue := TInjectionValue.Create(AActivationRecord.URL, True)
+    AValue := TInjectionValue.Create(AActivation.URL, True)
   else if (LType.IsObjectOfType(TMARSEngine)) then
-    AValue := TInjectionValue.Create(AActivationRecord.Engine, True)
+    AValue := TInjectionValue.Create(AActivation.Engine, True)
   else if (LType.IsObjectOfType(TMARSApplication)) then
-    AValue := TInjectionValue.Create(AActivationRecord.Application, True)
-  else if (LType.IsObjectOfType(TMARSActivationRecord)) then
-    AValue := TInjectionValue.Create(AActivationRecord, True);
+    AValue := TInjectionValue.Create(AActivation.Application, True)
+  else if (LType.IsObjectOfType(TMARSActivation)) then
+    AValue := TInjectionValue.Create(AActivation, True);
 end;
 
 
@@ -73,7 +73,7 @@ begin
   TMARSInjectionServiceRegistry.Instance.RegisterService(
     function :IMARSInjectionService
     begin
-      Result := TMARSActivationRecordInjectionService.Create;
+      Result := TMARSActivationInjectionService.Create;
     end
   , function (const ADestination: TRttiObject): Boolean
     var
@@ -90,7 +90,7 @@ begin
           or LType.IsObjectOfType(TMARSURL)
           or LType.IsObjectOfType(TMARSEngine)
           or LType.IsObjectOfType(TMARSApplication)
-          or LType.IsObjectOfType(TMARSActivationRecord);
+          or LType.IsObjectOfType(TMARSActivation);
       end;
     end
   );

@@ -3,7 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit MARS.Core.Invocation;
+unit MARS.Core.Activation;
 
 {$I MARS.inc}
 
@@ -13,6 +13,7 @@ uses
   SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
   , HTTPApp
 
+  , MARS.Core.Classes
   , MARS.Core.URL
   , MARS.Core.Application
   , MARS.Core.Engine
@@ -21,13 +22,14 @@ uses
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MediaType
   , MARS.Core.Injection.Types
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
-  TMARSActivationRecord = class;
+  TMARSActivation = class;
 
-  TMARSBeforeInvokeProc = reference to procedure(const AActivationRecord: TMARSActivationRecord; out AIsAllowed: Boolean);
-  TMARSAfterInvokeProc = reference to procedure(const AActivationRecord: TMARSActivationRecord);
+  TMARSBeforeInvokeProc = reference to procedure(const AActivation: TMARSActivation; out AIsAllowed: Boolean);
+  TMARSAfterInvokeProc = reference to procedure(const AActivation: TMARSActivation);
 
   TMARSAuthorizationInfo = record
   public
@@ -38,7 +40,7 @@ type
     constructor Create(const ADenyAll, APermitAll: Boolean; const AAllowedRoles: TArray<string>);
   end;
 
-  TMARSActivationRecord = class
+  TMARSActivation = class(TNonInterfacedObject, IMARSActivation)
   private
     FApplication: TMARSApplication;
     FEngine: TMARSEngine;
@@ -67,7 +69,6 @@ type
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
-    function GetToken: TMARSToken;
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
@@ -90,6 +91,20 @@ type
 
     procedure Prepare; virtual;
     procedure Invoke; virtual;
+
+    // --- IMARSActivation implementation --------------
+    function GetApplication: TMARSApplication;
+    function GetEngine: TMARSEngine;
+    function GetInvocationTime: TStopwatch;
+    function GetMethod: TRttiMethod;
+    function GetRequest: TWebRequest;
+    function GetResource: TRttiType;
+//    function GetResourceInstance: TObject;
+    function GetResponse: TWebResponse;
+    function GetURL: TMARSURL;
+    function GetURLPrototype: TMARSURL;
+    function GetToken: TMARSToken;
+    // ---
 
     property Application: TMARSApplication read FApplication;
     property Engine: TMARSEngine read FEngine;
@@ -116,22 +131,26 @@ implementation
 uses
     MARS.Core.Attributes
   , MARS.Core.Response
-  , MARS.Core.Classes
   , MARS.Core.MessageBodyReader
   , MARS.Core.Exceptions
   , MARS.Core.Utils
   , MARS.Utils.Parameters
   , MARS.Rtti.Utils
   , MARS.Core.Injection
-  , MARS.Core.Invocation.InjectionService
+  , MARS.Core.Activation.InjectionService
 {$ifndef Delphi10Seattle_UP}
   , TypInfo
 {$endif}
 ;
 
-{ TMARSActivationRecord }
+{ TMARSActivation }
 
-function TMARSActivationRecord.GetMethodArgument(const AParam: TRttiParameter): TValue;
+function TMARSActivation.GetMethod: TRttiMethod;
+begin
+  Result := FMethod;
+end;
+
+function TMARSActivation.GetMethodArgument(const AParam: TRttiParameter): TValue;
 var
   LParamValue: TValue;
 begin
@@ -147,19 +166,44 @@ begin
   Result := LParamValue;
 end;
 
-function TMARSActivationRecord.GetToken: TMARSToken;
+function TMARSActivation.GetRequest: TWebRequest;
+begin
+  Result := FRequest;
+end;
+
+function TMARSActivation.GetResource: TRttiType;
+begin
+  Result := FResource;
+end;
+
+function TMARSActivation.GetResponse: TWebResponse;
+begin
+  Result := FResponse;
+end;
+
+function TMARSActivation.GetToken: TMARSToken;
 begin
   if not Assigned(FToken) then
     FToken := GetContextValue(FRttiContext.GetType(Self.ClassType).GetField('FToken')).Value.AsType<TMARSToken>;
   Result := FToken;
 end;
 
-function TMARSActivationRecord.HasToken: Boolean;
+function TMARSActivation.GetURL: TMARSURL;
+begin
+  Result := FURL;
+end;
+
+function TMARSActivation.GetURLPrototype: TMARSURL;
+begin
+  Result := FURLPrototype;
+end;
+
+function TMARSActivation.HasToken: Boolean;
 begin
   Result := Assigned(FToken);
 end;
 
-procedure TMARSActivationRecord.FillResourceMethodParameters;
+procedure TMARSActivation.FillResourceMethodParameters;
 var
   LParameters: TArray<TRttiParameter>;
   LIndex: Integer;
@@ -176,7 +220,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.FindMethodToInvoke;
+procedure TMARSActivation.FindMethodToInvoke;
 var
   LMethod: TRttiMethod;
   LResourcePath: string;
@@ -231,7 +275,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.CleanupGarbage(const AValue: TValue);
+procedure TMARSActivation.CleanupGarbage(const AValue: TValue);
 var
   LIndex: Integer;
   LValue: TValue;
@@ -253,7 +297,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.FreeContext;
+procedure TMARSActivation.FreeContext;
 var
   LDestroyed: TList<TObject>;
   LValue: TValue;
@@ -283,7 +327,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.InvokeResourceMethod();
+procedure TMARSActivation.InvokeResourceMethod();
 var
   LMethodResult: TValue;
   LStream: TBytesStream;
@@ -317,8 +361,7 @@ begin
 
           LStream := TBytesStream.Create();
           try
-            FWriter.WriteTo(LMethodResult, FMethod.GetAttributes, FWriterMediaType
-              , Response.CustomHeaders, LStream);
+            FWriter.WriteTo(LMethodResult, FWriterMediaType, LStream, Self);
             LStream.Position := 0;
             Response.ContentStream := LStream;
           except
@@ -365,7 +408,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.Prepare;
+procedure TMARSActivation.Prepare;
 begin
   CheckResource;
   CheckMethod;
@@ -374,7 +417,7 @@ begin
   CheckAuthorization;
 end;
 
-procedure TMARSActivationRecord.ReadAuthorizationInfo;
+procedure TMARSActivation.ReadAuthorizationInfo;
 var
   LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
   LAllowedRoles: TStringList;
@@ -405,21 +448,21 @@ begin
   end;
 end;
 
-class procedure TMARSActivationRecord.RegisterAfterInvoke(
+class procedure TMARSActivation.RegisterAfterInvoke(
   const AAfterInvoke: TMARSAfterInvokeProc);
 begin
   SetLength(FAfterInvokeProcs, Length(FAfterInvokeProcs) + 1);
   FAfterInvokeProcs[Length(FAfterInvokeProcs)-1] := TMARSAfterInvokeProc(AAfterInvoke);
 end;
 
-class procedure TMARSActivationRecord.RegisterBeforeInvoke(
+class procedure TMARSActivation.RegisterBeforeInvoke(
   const ABeforeInvoke: TMARSBeforeInvokeProc);
 begin
   SetLength(FBeforeInvokeProcs, Length(FBeforeInvokeProcs) + 1);
   FBeforeInvokeProcs[Length(FBeforeInvokeProcs)-1] := TMARSBeforeInvokeProc(ABeforeInvoke);
 end;
 
-procedure TMARSActivationRecord.SetCustomHeaders;
+procedure TMARSActivation.SetCustomHeaders;
 var
   LCustomAtributeProcessor: TProc<CustomHeaderAttribute>;
 
@@ -433,19 +476,19 @@ begin
   FMethod.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
 end;
 
-//class procedure TMARSActivationRecord.UnregisterAfterInvoke(
+//class procedure TMARSActivation.UnregisterAfterInvoke(
 //  const AAfterInvoke: TMARSAfterInvokeProc);
 //begin
 //  FAfterInvokeProcs := FAfterInvokeProcs - [TMARSAfterInvokeProc(AAfterInvoke)];
 //end;
 //
-//class procedure TMARSActivationRecord.UnregisterBeforeInvoke(
+//class procedure TMARSActivation.UnregisterBeforeInvoke(
 //  const ABeforeInvoke: TMARSBeforeInvokeProc);
 //begin
 //  FBeforeInvokeProcs := FBeforeInvokeProcs - [TMARSBeforeInvokeProc(ABeforeInvoke)];
 //end;
 
-procedure TMARSActivationRecord.Invoke;
+procedure TMARSActivation.Invoke;
 begin
   Assert(Assigned(FConstructorInfo));
   Assert(Assigned(FMethod));
@@ -465,7 +508,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.CheckAuthentication;
+procedure TMARSActivation.CheckAuthentication;
 begin
   if FAuthorizationInfo.NeedsAuthentication then
   begin
@@ -478,7 +521,7 @@ begin
   end;
 end;
 
-procedure TMARSActivationRecord.CheckAuthorization;
+procedure TMARSActivation.CheckAuthorization;
 begin
   if FAuthorizationInfo.NeedsAuthorization then
     if FAuthorizationInfo.DenyAll // DenyAll (stronger than PermitAll and Roles-based authorization)
@@ -489,7 +532,7 @@ begin
       raise EMARSAuthorizationException.Create('Forbidden', 403);
 end;
 
-procedure TMARSActivationRecord.CheckMethod;
+procedure TMARSActivation.CheckMethod;
 begin
   FindMethodToInvoke;
 
@@ -505,19 +548,19 @@ begin
       ]), 404);
 end;
 
-procedure TMARSActivationRecord.CheckResource;
+procedure TMARSActivation.CheckResource;
 begin
   if not Application.Resources.TryGetValue(URL.Resource, FConstructorInfo) then
     raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 end;
 
-procedure TMARSActivationRecord.AddToContext(AValue: TValue);
+procedure TMARSActivation.AddToContext(AValue: TValue);
 begin
   if not AValue.IsEmpty then
     FContext.Add(AValue);
 end;
 
-procedure TMARSActivationRecord.ContextInjection();
+procedure TMARSActivation.ContextInjection();
 var
   LType: TRttiType;
 begin
@@ -542,7 +585,12 @@ begin
   );
 end;
 
-function TMARSActivationRecord.GetContextValue(const ADestination: TRttiObject): TInjectionValue;
+function TMARSActivation.GetApplication: TMARSApplication;
+begin
+  Result := FApplication;
+end;
+
+function TMARSActivation.GetContextValue(const ADestination: TRttiObject): TInjectionValue;
 begin
   Result := TMARSInjectionServiceRegistry.Instance.GetValue(ADestination, Self);
   if not Result.IsReference then
@@ -550,7 +598,17 @@ begin
 end;
 
 
-constructor TMARSActivationRecord.Create(const AEngine: TMARSEngine;
+function TMARSActivation.GetEngine: TMARSEngine;
+begin
+  Result := FEngine;
+end;
+
+function TMARSActivation.GetInvocationTime: TStopwatch;
+begin
+  Result := FInvocationTime;
+end;
+
+constructor TMARSActivation.Create(const AEngine: TMARSEngine;
   const AApplication: TMARSApplication;
   const ARequest: TWebRequest; const AResponse: TWebResponse;
   const AURL: TMARSURL);
@@ -569,7 +627,7 @@ begin
   Prepare;
 end;
 
-destructor TMARSActivationRecord.Destroy;
+destructor TMARSActivation.Destroy;
 begin
   FreeContext;
   FContext.Free;
@@ -577,7 +635,7 @@ begin
   inherited;
 end;
 
-procedure TMARSActivationRecord.DoAfterInvoke;
+procedure TMARSActivation.DoAfterInvoke;
 var
   LSubscriber: TMARSAfterInvokeProc;
 begin
@@ -585,7 +643,7 @@ begin
     LSubscriber(Self);
 end;
 
-function TMARSActivationRecord.DoBeforeInvoke: Boolean;
+function TMARSActivation.DoBeforeInvoke: Boolean;
 var
   LSubscriber: TMARSBeforeInvokeProc;
 begin

@@ -10,7 +10,7 @@ interface
 uses
   Classes, SysUtils, Diagnostics, Rtti
   , MARS.Core.Classes
-  , MARS.Core.Invocation, MARS.Utils.ReqRespLogger.Interfaces
+  , MARS.Core.Activation, MARS.Utils.ReqRespLogger.Interfaces
   , Web.HttpApp
 ;
 
@@ -55,8 +55,8 @@ const
 
 class constructor TMARSReqRespLoggerCodeSite.ClassCreate;
 begin
-  TMARSActivationRecord.RegisterBeforeInvoke(
-    procedure (const AR: TMARSActivationRecord; out AIsAllowed: Boolean)
+  TMARSActivation.RegisterBeforeInvoke(
+    procedure (const AR: TMARSActivation; out AIsAllowed: Boolean)
     begin
       TMARSReqRespLoggerCodeSite.Instance.Log(
         string.Join(LOGFIELD_SEPARATOR
@@ -71,8 +71,8 @@ begin
     end
   );
 
-  TMARSActivationRecord.RegisterAfterInvoke(
-    procedure (const AR: TMARSActivationRecord)
+  TMARSActivation.RegisterAfterInvoke(
+    procedure (const AR: TMARSActivation)
     begin
       TMARSReqRespLoggerCodeSite.Instance.Log(
         string.Join(LOGFIELD_SEPARATOR

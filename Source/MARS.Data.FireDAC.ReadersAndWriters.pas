@@ -15,7 +15,7 @@ uses
   , DB
 
   , MARS.Core.Attributes
-  , MARS.Core.Invocation
+  , MARS.Core.Activation.Interfaces
   , MARS.Core.Declarations
   , MARS.Core.MediaType
   , MARS.Core.Classes
@@ -32,21 +32,21 @@ type
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
-      const AContext: TMARSActivationRecord
+      const AActivation: IMARSActivation
     ): TValue; virtual;
   end;
 
   // --- WRITERS ---
   [Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON)]
   TFDAdaptedDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TArrayFDCustomQueryWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
 
@@ -69,9 +69,8 @@ uses
 
 { TArrayFDCustomQueryWriter }
 
-procedure TArrayFDCustomQueryWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TArrayFDCustomQueryWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LDatasetList: TFDJSONDataSets;
@@ -110,9 +109,8 @@ end;
 
 { TFDAdaptedDataSetWriter }
 
-procedure TFDAdaptedDataSetWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TFDAdaptedDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LDataset: TFDAdaptedDataSet;
   LStorageFormat: TFDStorageFormat;
@@ -135,7 +133,7 @@ end;
 function TFDDeltasReader.ReadFrom(
   {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
     const ADestination: TRttiObject; const AMediaType: TMediaType;
-    const AContext: TMARSActivationRecord
+    const AActivation: IMARSActivation
 ): TValue;
 var
   LJSON: TJSONObject;
