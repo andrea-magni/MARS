@@ -57,16 +57,20 @@ type
     property SQLStatement: string read FSQLStatement;
   end;
 
+  TContextValueProviderProc = reference to procedure (const AContext: TMARSActivationRecord;
+    const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
+
   TMARSFireDAC = class
   private
     FConnectionDefName: string;
     FConnection: TFDConnection;
     FActivationRecord: TMARSActivationRecord;
   protected
-    procedure SetConnectionDefName(const Value: string);
-    function GetConnection: TFDConnection;
-    procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
-    function GetContextValue(const AName: string; const ADesiredType: TFieldType = ftUnknown): TValue;
+    procedure SetConnectionDefName(const Value: string); virtual;
+    function GetConnection: TFDConnection; virtual;
+    procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand); virtual;
+    function GetContextValue(const AName: string; const ADesiredType: TFieldType = ftUnknown): TValue; virtual;
+    class var FContextValueProviders: TArray<TContextValueProviderProc>;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
 
@@ -110,6 +114,9 @@ type
       const ASliceName: string = ''): TArray<string>;
     class procedure CloseConnectionDefs(const AConnectionDefNames: TArray<string>);
     class function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
+
+    class constructor CreateClass;
+    class procedure AddContextValueProvider(const AContextValueProviderProc: TContextValueProviderProc);
   end;
 
   function MacroDataTypeToFieldType(const AMacroDataType: TFDMacroDataType): TFieldType;
@@ -273,6 +280,12 @@ end;
 
 { TMARSFireDAC }
 
+class procedure TMARSFireDAC.AddContextValueProvider(
+  const AContextValueProviderProc: TContextValueProviderProc);
+begin
+  FContextValueProviders := FContextValueProviders + [TContextValueProviderProc(AContextValueProviderProc)];
+end;
+
 class procedure TMARSFireDAC.CloseConnectionDefs(
   const AConnectionDefNames: TArray<string>);
 var
@@ -288,6 +301,11 @@ begin
   inherited Create();
   ConnectionDefName := AConnectionDefName;
   FActivationRecord := AActivationRecord;
+end;
+
+class constructor TMARSFireDAC.CreateClass;
+begin
+  FContextValueProviders := [];
 end;
 
 function TMARSFireDAC.CreateCommand(const ASQL: string;
@@ -380,6 +398,8 @@ var
 
   LIndex: Integer;
   LValue: string;
+
+  LCustomProvider: TContextValueProviderProc;
 begin
   Result := TValue.Empty;
   LNameTokens := AName.Split([PARAM_AND_MACRO_DELIMITER]);
@@ -427,10 +447,10 @@ begin
   else if SameText(LSubject, 'URL') then
     Result := ReadPropertyValue(ActivationRecord.URL, LIdentifier)
   else if SameText(LSubject, 'URLPrototype') then
-    Result := ReadPropertyValue(ActivationRecord.URLPrototype, LIdentifier);
-
-
-  { TODO -oAndrea : Custom }
+    Result := ReadPropertyValue(ActivationRecord.URLPrototype, LIdentifier)
+  else // last chance, custom injection
+    for LCustomProvider in FContextValueProviders do
+      LCustomProvider(ActivationRecord, AName, ADesiredType, Result);
 end;
 
 procedure TMARSFireDAC.InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
@@ -442,7 +462,6 @@ begin
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
-
     LParam.Value := GetContextValue(LParam.Name, LParam.DataType).AsVariant;
   end;
 
