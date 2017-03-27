@@ -75,6 +75,7 @@ type
   public
     class procedure ToDataSet(const ARecord: R; const ADataSet: TDataSet; const AAppend: Boolean = False);
     class procedure FromDataSet(var ARecord: R; const ADataSet: TDataSet);
+    class function DataSetToArray(const ADataSet: TDataSet): TArray<R>;
   end;
 
 function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
@@ -595,6 +596,25 @@ end;
 
 { TRecord }
 
+class function TRecord<R>.DataSetToArray(const ADataSet: TDataSet): TArray<R>;
+var
+  LItem: R;
+begin
+  if not ADataSet.Active then
+    ADataSet.Active := True
+  else
+    ADataSet.First;
+
+  Result := [];
+
+  while not ADataSet.Eof do
+  begin
+    TRecord<R>.FromDataSet(LItem, ADataSet);
+    Result := Result + [LItem];
+    ADataSet.Next;
+  end;
+end;
+
 class procedure TRecord<R>.FromDataSet(var ARecord: R;
   const ADataSet: TDataSet);
 var
@@ -603,6 +623,9 @@ var
   LDataSetField: TField;
   LValue: TValue;
 begin
+  if not ADataSet.Active then
+    ADataSet.Active := True;
+
   LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
   for LRecordField in LRecordType.GetFields do
   begin
