@@ -12,13 +12,13 @@ interface
 uses
   Classes, SysUtils, Rtti, TypInfo
 , MARS.Core.Declarations
-, MARS.Core.Activation
+, MARS.Core.Activation.Interfaces
 , MARS.Core.Injection.Types
 ;
 
 type
   IMARSInjectionService = interface ['{C2EB93E0-5D0B-4F29-AEAF-CAB74DC72C3C}']
-    procedure GetValue(const ADestination: TRttiObject; const AActivation: TMARSActivation;
+    procedure GetValue(const ADestination: TRttiObject; const AActivation: IMARSActivation;
       out AValue: TInjectionValue);
   end;
 

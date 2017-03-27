@@ -14,13 +14,13 @@ uses
   , MARS.Core.Injection
   , MARS.Core.Injection.Interfaces
   , MARS.Core.Injection.Types
-  , MARS.Core.Activation
+  , MARS.Core.Activation.Interfaces
 ;
 
 type
   TMARSTokenInjectionService = class(TInterfacedObject, IMARSInjectionService)
   public
-    procedure GetValue(const ADestination: TRttiObject; const AActivation: TMARSActivation;
+    procedure GetValue(const ADestination: TRttiObject; const AActivation: IMARSActivation;
       out AValue: TInjectionValue);
   end;
 
@@ -34,7 +34,7 @@ uses
 { TMARSTokenInjectionService }
 
 procedure TMARSTokenInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivation: TMARSActivation; out AValue: TInjectionValue);
+  const AActivation: IMARSActivation; out AValue: TInjectionValue);
 var
   LType: TRttiType;
   LToken: TMARSToken;

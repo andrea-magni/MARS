@@ -28,8 +28,8 @@ uses
 type
   TMARSActivation = class;
 
-  TMARSBeforeInvokeProc = reference to procedure(const AActivation: TMARSActivation; out AIsAllowed: Boolean);
-  TMARSAfterInvokeProc = reference to procedure(const AActivation: TMARSActivation);
+  TMARSBeforeInvokeProc = reference to procedure(const AActivation: IMARSActivation; out AIsAllowed: Boolean);
+  TMARSAfterInvokeProc = reference to procedure(const AActivation: IMARSActivation);
 
   TMARSAuthorizationInfo = record
   public
@@ -87,12 +87,12 @@ type
       const ARequest: TWebRequest; const AResponse: TWebResponse; const AURL: TMARSURL); virtual;
     destructor Destroy; override;
 
-    procedure AddToContext(AValue: TValue); virtual;
-
     procedure Prepare; virtual;
     procedure Invoke; virtual;
 
     // --- IMARSActivation implementation --------------
+    procedure AddToContext(AValue: TValue);
+    function HasToken: Boolean;
     function GetApplication: TMARSApplication;
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
@@ -117,8 +117,6 @@ type
     property URL: TMARSURL read FURL;
     property URLPrototype: TMARSURL read FURLPrototype;
     property Token: TMARSToken read GetToken;
-
-    function HasToken: Boolean;
 
     class procedure RegisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
 //    class procedure UnregisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);

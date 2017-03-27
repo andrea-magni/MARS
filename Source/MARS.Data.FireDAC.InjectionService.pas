@@ -14,17 +14,17 @@ uses
   , MARS.Core.Injection
   , MARS.Core.Injection.Interfaces
   , MARS.Core.Injection.Types
-  , MARS.Core.Activation
+  , MARS.Core.Activation.Interfaces
 ;
 
 type
   TMARSFireDACInjectionService = class(TInterfacedObject, IMARSInjectionService)
   protected
     function GetConnectionDefName(const ADestination: TRttiObject;
-      const AActivation: TMARSActivation): string;
+      const AActivation: IMARSActivation): string;
   public
     procedure GetValue(const ADestination: TRttiObject;
-      const AActivation: TMARSActivation; out AValue: TInjectionValue);
+      const AActivation: IMARSActivation; out AValue: TInjectionValue);
 
     const FireDAC_ConnectionDefName_PARAM = 'FireDAC.ConnectionDefName';
     const FireDAC_ConnectionDefName_PARAM_DEFAULT = 'MAIN_DB';
@@ -44,7 +44,7 @@ uses
 
 function TMARSFireDACInjectionService.GetConnectionDefName(
   const ADestination: TRttiObject;
-  const AActivation: TMARSActivation): string;
+  const AActivation: IMARSActivation): string;
 var
   LConnectionDefName: string;
 begin
@@ -86,7 +86,7 @@ begin
 end;
 
 procedure TMARSFireDACInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivation: TMARSActivation; out AValue: TInjectionValue);
+  const AActivation: IMARSActivation; out AValue: TInjectionValue);
 begin
   if ADestination.GetRttiType.IsObjectOfType(TFDConnection) then
     AValue := TInjectionValue.Create(

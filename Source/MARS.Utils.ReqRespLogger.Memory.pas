@@ -14,6 +14,7 @@ uses
   , MARS.Utils.ReqRespLogger.Interfaces
   , Web.HttpApp, SyncObjs, Rtti
   , MARS.Core.Activation
+  , MARS.Core.Activation.Interfaces
 ;
 
 type
@@ -29,8 +30,8 @@ type
     // IMARSReqRespLogger
     procedure Clear;
     function GetLogBuffer: TValue;
-    procedure LogIncoming(const AR: TMARSActivation);
-    procedure LogOutgoing(const AR: TMARSActivation);
+    procedure LogIncoming(const AR: IMARSActivation);
+    procedure LogOutgoing(const AR: IMARSActivation);
 
     // protected access to FMemory from outside
     procedure ReadMemory(const AProc: TProc<TDataset>);
@@ -59,14 +60,14 @@ implementation
 class constructor TMARSReqRespLoggerMemory.ClassCreate;
 begin
   TMARSActivation.RegisterBeforeInvoke(
-    procedure (const AR: TMARSActivation; out AIsAllowed: Boolean)
+    procedure (const AR: IMARSActivation; out AIsAllowed: Boolean)
     begin
       TMARSReqRespLoggerMemory.Instance.LogIncoming(AR);
     end
   );
 
   TMARSActivation.RegisterAfterInvoke(
-    procedure (const AR: TMARSActivation)
+    procedure (const AR: IMARSActivation)
     begin
       TMARSReqRespLoggerMemory.Instance.LogOutgoing(AR);
     end
@@ -168,7 +169,7 @@ begin
   Result := _Instance;
 end;
 
-procedure TMARSReqRespLoggerMemory.LogIncoming(const AR: TMARSActivation);
+procedure TMARSReqRespLoggerMemory.LogIncoming(const AR: IMARSActivation);
 begin
   FCriticalSection.Enter;
   try
@@ -189,7 +190,7 @@ begin
   end;
 end;
 
-procedure TMARSReqRespLoggerMemory.LogOutgoing(const AR: TMARSActivation);
+procedure TMARSReqRespLoggerMemory.LogOutgoing(const AR: IMARSActivation);
 begin
   FCriticalSection.Enter;
   try

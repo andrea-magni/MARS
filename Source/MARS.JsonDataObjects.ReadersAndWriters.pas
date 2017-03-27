@@ -23,8 +23,8 @@ uses
 type
   [Produces(TMediaType.APPLICATION_JSON)]
   TJsonDataObjectsWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Consumes(TMediaType.APPLICATION_JSON)]
@@ -33,7 +33,7 @@ type
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
-      const AContext: TMARSActivation
+      const AActivation: IMARSActivation
     ): TValue;
   end;
 
@@ -48,9 +48,8 @@ uses
 
 { TJsonDataObjectsWriter }
 
-procedure TJsonDataObjectsWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TJsonDataObjectsWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LJsonBO: TJsonBaseObject;
@@ -70,7 +69,7 @@ end;
 function TJsonDataObjectsReader.ReadFrom(
   {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
     const ADestination: TRttiObject; const AMediaType: TMediaType;
-    const AContext: TMARSActivation
+    const AActivation: IMARSActivation
   ): TValue;
 var
   LJson: TJsonBaseObject;

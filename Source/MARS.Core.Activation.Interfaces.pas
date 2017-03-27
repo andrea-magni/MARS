@@ -25,6 +25,9 @@ uses
 type
 
   IMARSActivation = interface
+    procedure AddToContext(AValue: TValue);
+    function HasToken: Boolean;
+
     function GetApplication: TMARSApplication;
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;

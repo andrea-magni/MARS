@@ -9,13 +9,13 @@ uses
   , MARS.Core.Injection
   , MARS.Core.Injection.Interfaces
   , MARS.Core.Injection.Types
-  , MARS.Core.Activation
+  , MARS.Core.Activation.Interfaces
 ;
 
 type
   TMARSActivationInjectionService = class(TInterfacedObject, IMARSInjectionService)
   public
-    procedure GetValue(const ADestination: TRttiObject; const AActivation: TMARSActivation;
+    procedure GetValue(const ADestination: TRttiObject; const AActivation: IMARSActivation;
       out AValue: TInjectionValue);
   end;
 
@@ -34,7 +34,7 @@ uses
 { TMARSActivationInjectionService }
 
 procedure TMARSActivationInjectionService.GetValue(const ADestination: TRttiObject;
-  const AActivation: TMARSActivation; out AValue: TInjectionValue);
+  const AActivation: IMARSActivation; out AValue: TInjectionValue);
 var
   LType: TRttiType;
   LValue: TInjectionValue;
@@ -63,8 +63,8 @@ begin
     AValue := TInjectionValue.Create(AActivation.Engine, True)
   else if (LType.IsObjectOfType(TMARSApplication)) then
     AValue := TInjectionValue.Create(AActivation.Application, True)
-  else if (LType.IsObjectOfType(TMARSActivation)) then
-    AValue := TInjectionValue.Create(AActivation, True);
+  else if (LType is TRttiInterfaceType) and (LType.Handle = TypeInfo(IMARSActivation)) then
+    AValue := TInjectionValue.Create(TValue.From<IMARSActivation>(AActivation), True);
 end;
 
 
@@ -90,7 +90,7 @@ begin
           or LType.IsObjectOfType(TMARSURL)
           or LType.IsObjectOfType(TMARSEngine)
           or LType.IsObjectOfType(TMARSApplication)
-          or LType.IsObjectOfType(TMARSActivation);
+          or (LType.Handle = TypeInfo(IMARSActivation));
       end;
     end
   );

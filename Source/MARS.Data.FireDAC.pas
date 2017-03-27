@@ -33,7 +33,7 @@ uses
   , MARS.Core.Token
   , MARS.Core.URL
   , MARS.Utils.Parameters
-  , MARS.Core.Activation
+  , MARS.Core.Activation.Interfaces
 ;
 
 type
@@ -57,14 +57,14 @@ type
     property SQLStatement: string read FSQLStatement;
   end;
 
-  TContextValueProviderProc = reference to procedure (const AContext: TMARSActivation;
+  TContextValueProviderProc = reference to procedure (const AActivation: IMARSActivation;
     const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
 
   TMARSFireDAC = class
   private
     FConnectionDefName: string;
     FConnection: TFDConnection;
-    FActivation: TMARSActivation;
+    FActivation: IMARSActivation;
   protected
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TFDConnection; virtual;
@@ -75,7 +75,7 @@ type
     const PARAM_AND_MACRO_DELIMITER = '_';
 
     constructor Create(const AConnectionDefName: string;
-      const AActivation: TMARSActivation = nil); virtual;
+      const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
     function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
@@ -108,7 +108,7 @@ type
 
     property Connection: TFDConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
-    property Activation: TMARSActivation read FActivation;
+    property Activation: IMARSActivation read FActivation;
 
     class function LoadConnectionDefs(const AParameters: TMARSParameters;
       const ASliceName: string = ''): TArray<string>;
@@ -296,7 +296,7 @@ begin
 end;
 
 constructor TMARSFireDAC.Create(const AConnectionDefName: string;
-  const AActivation: TMARSActivation);
+  const AActivation: IMARSActivation);
 begin
   inherited Create();
   ConnectionDefName := AConnectionDefName;

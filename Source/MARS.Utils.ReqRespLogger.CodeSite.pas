@@ -56,7 +56,7 @@ const
 class constructor TMARSReqRespLoggerCodeSite.ClassCreate;
 begin
   TMARSActivation.RegisterBeforeInvoke(
-    procedure (const AR: TMARSActivation; out AIsAllowed: Boolean)
+    procedure (const AR: IMARSActivation; out AIsAllowed: Boolean)
     begin
       TMARSReqRespLoggerCodeSite.Instance.Log(
         string.Join(LOGFIELD_SEPARATOR
@@ -72,7 +72,7 @@ begin
   );
 
   TMARSActivation.RegisterAfterInvoke(
-    procedure (const AR: TMARSActivation)
+    procedure (const AR: IMARSActivation)
     begin
       TMARSReqRespLoggerCodeSite.Instance.Log(
         string.Join(LOGFIELD_SEPARATOR
