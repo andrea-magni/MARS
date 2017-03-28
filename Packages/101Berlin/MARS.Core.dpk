@@ -25,7 +25,7 @@ package MARS.Core;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity Core'}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
 {$LIBSUFFIX '240'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
@@ -55,7 +55,6 @@ contains
   MARS.Core.MessageBodyReader in '..\..\Source\MARS.Core.MessageBodyReader.pas',
   MARS.Core.MessageBodyWriter in '..\..\Source\MARS.Core.MessageBodyWriter.pas',
   MARS.Core.Registry in '..\..\Source\MARS.Core.Registry.pas',
-  MARS.Core.Request in '..\..\Source\MARS.Core.Request.pas',
   MARS.Core.Response in '..\..\Source\MARS.Core.Response.pas',
   MARS.Core.Token in '..\..\Source\MARS.Core.Token.pas',
   MARS.http.Core in '..\..\Source\MARS.http.Core.pas',

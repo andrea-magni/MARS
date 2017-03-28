@@ -15,8 +15,7 @@ uses
   , MARS.Core.URL
   , MARS.Core.Response
 
-  , Web.HttpApp
-  ;
+;
 
 type
   TFileSystemResource = class; // FWD

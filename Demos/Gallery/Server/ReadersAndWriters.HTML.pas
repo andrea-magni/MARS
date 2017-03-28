@@ -30,7 +30,6 @@ implementation
 
 uses
     MARS.Rtti.Utils
-  , Web.HttpApp
   , Gallery.Model
 ;
 

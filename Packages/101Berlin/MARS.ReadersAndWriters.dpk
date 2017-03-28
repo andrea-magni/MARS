@@ -25,7 +25,7 @@ package MARS.ReadersAndWriters;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity Readers and Writers'}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
 {$LIBSUFFIX '240'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}

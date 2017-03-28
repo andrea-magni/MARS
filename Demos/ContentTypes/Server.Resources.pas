@@ -10,7 +10,7 @@
 interface
 
 uses
-  SysUtils, Classes, DB, HttpApp
+  SysUtils, Classes, DB
 
 {$ifdef DelphiXE3_UP}
   , FireDAC.Comp.Client // remove this line if you do not have FireDAC installed

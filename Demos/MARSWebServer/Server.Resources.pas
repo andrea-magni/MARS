@@ -14,7 +14,6 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.Response
 
-  , Web.HttpApp
   , MARS.WebServer.Resources
   , MARS.Core.URL
 
