@@ -1,0 +1,84 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{79526BDC-090B-468F-A29A-B97CAFE42EA6}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MARS.Utils.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARS.JOSE.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARS.Core.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARS.ReadersAndWriters.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARS.FireDAC.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MARS_Utils">
+        <MSBuild Projects="MARS.Utils.dproj"/>
+    </Target>
+    <Target Name="MARS_Utils:Clean">
+        <MSBuild Projects="MARS.Utils.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_Utils:Make">
+        <MSBuild Projects="MARS.Utils.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARS_JOSE">
+        <MSBuild Projects="MARS.JOSE.dproj"/>
+    </Target>
+    <Target Name="MARS_JOSE:Clean">
+        <MSBuild Projects="MARS.JOSE.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_JOSE:Make">
+        <MSBuild Projects="MARS.JOSE.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARS_Core">
+        <MSBuild Projects="MARS.Core.dproj"/>
+    </Target>
+    <Target Name="MARS_Core:Clean">
+        <MSBuild Projects="MARS.Core.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_Core:Make">
+        <MSBuild Projects="MARS.Core.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARS_ReadersAndWriters">
+        <MSBuild Projects="MARS.ReadersAndWriters.dproj"/>
+    </Target>
+    <Target Name="MARS_ReadersAndWriters:Clean">
+        <MSBuild Projects="MARS.ReadersAndWriters.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_ReadersAndWriters:Make">
+        <MSBuild Projects="MARS.ReadersAndWriters.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARS_FireDAC">
+        <MSBuild Projects="MARS.FireDAC.dproj"/>
+    </Target>
+    <Target Name="MARS_FireDAC:Clean">
+        <MSBuild Projects="MARS.FireDAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_FireDAC:Make">
+        <MSBuild Projects="MARS.FireDAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MARS_Utils;MARS_JOSE;MARS_Core;MARS_ReadersAndWriters;MARS_FireDAC"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MARS_Utils:Clean;MARS_JOSE:Clean;MARS_Core:Clean;MARS_ReadersAndWriters:Clean;MARS_FireDAC:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MARS_Utils:Make;MARS_JOSE:Make;MARS_Core:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

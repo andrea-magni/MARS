@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{8B31503E-A2F0-4933-8CB5-13BB39CA0F69}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MARSClient.Core.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSClient.FireDAC.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MARSClient_Core">
+        <MSBuild Projects="MARSClient.Core.dproj"/>
+    </Target>
+    <Target Name="MARSClient_Core:Clean">
+        <MSBuild Projects="MARSClient.Core.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_Core:Make">
+        <MSBuild Projects="MARSClient.Core.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSClient_FireDAC">
+        <MSBuild Projects="MARSClient.FireDAC.dproj"/>
+    </Target>
+    <Target Name="MARSClient_FireDAC:Clean">
+        <MSBuild Projects="MARSClient.FireDAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_FireDAC:Make">
+        <MSBuild Projects="MARSClient.FireDAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MARSClient_Core;MARSClient_FireDAC"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MARSClient_Core:Clean;MARSClient_FireDAC:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MARSClient_Core:Make;MARSClient_FireDAC:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

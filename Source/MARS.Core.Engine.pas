@@ -212,8 +212,6 @@ begin
       LActivation := TMARSActivation.Create(Self, LApplication, ARequest, AResponse, LURL);
       try
         LActivation.Invoke;
-
-        Result := True;
       finally
         LActivation.Free;
       end;
