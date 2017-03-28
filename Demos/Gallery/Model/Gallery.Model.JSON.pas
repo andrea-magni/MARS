@@ -21,6 +21,10 @@ type
 
 implementation
 
+uses
+  System.JSON
+;
+
 { TGalleryMarshal }
 
 class procedure TGalleryMarshal.JSONArrayToList(const AArray: TJSONArray;

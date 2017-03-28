@@ -29,7 +29,8 @@ type
 implementation
 
 uses
-    MARS.Rtti.Utils
+    HttpApp, NetEncoding
+  , MARS.Rtti.Utils
   , Gallery.Model
 ;
 
@@ -69,7 +70,7 @@ begin
     for LCategory in LCategoryList do
       LWriter.Write(
         '<div class="category">'
-      + '  <span class="name">' + HTMLEncode(LCategory.Name) + '</span>'
+      + '  <span class="name">' + TNetEncoding.HTML.Encode(LCategory.Name) + '</span>'
       + ' <a href="./' + LCategory.Name + '/">See items</a>'
       + '</div>'
       );
@@ -96,8 +97,8 @@ begin
     for LItem in LItemList do
       LWriter.Write(
         '<div class="item">'
-      + '  <span class="name">' + HTMLEncode(LItem.Name) + '</span>'
-      + '  <span class="size">' + HTMLEncode(LItem.SizeHumanReadable) + '</span>'
+      + '  <span class="name">' + TNetEncoding.HTML.Encode(LItem.Name) + '</span>'
+      + '  <span class="size">' + TNetEncoding.HTML.Encode(LItem.SizeHumanReadable) + '</span>'
       + '  <a href="' + LItem.Name+ '"><img class="picture" src="' + LItem.Name+ '" /></a>'
       + '</div>'
       );

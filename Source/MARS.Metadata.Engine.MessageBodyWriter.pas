@@ -16,6 +16,7 @@ uses
   , MARS.Core.MessageBodyWriter
   , MARS.Core.Engine
   , MARS.Core.JSON
+  , MARS.Core.Activation.Interfaces
 ;
 
 type

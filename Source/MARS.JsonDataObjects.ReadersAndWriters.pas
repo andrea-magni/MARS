@@ -17,7 +17,7 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyReader
-  , MARS.Core.Activation
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
