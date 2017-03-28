@@ -91,8 +91,7 @@ uses
     StrUtils
   , MARS.Core.Registry, MARS.Rtti.Utils
   , MARS.Core.Exceptions
-//    , Web.ReqMulti, Web.ReqFiles
-  ;
+;
 
 { TItemResource }
 
@@ -124,27 +123,6 @@ begin
     FD.CreateQuery('select * from ITEMS where OWNER_ID = :Token_Claim_ACCOUNT_ID')
   );
 end;
-
-//function THelloWorldResource.Test2: string;
-//var
-//  LFile: TWebRequestFile;
-//  LFS: TFileStream;
-//  LIndex: Integer;
-//begin
-//
-//  Result := AR.Request.Files.Count.ToString;
-//  for LIndex := 0 to AR.Request.Files.Count-1 do
-//  begin
-//    LFile := AR.Request.Files.Items[LIndex] as TWebRequestFile;
-//
-//    LFS := TFileStream.Create('C:\temp\test_upload\' + LFile.FileName, fmCreate or fmOpenWrite or fmShareDenyWrite);
-//    try
-//      LFS.CopyFrom(LFile.Stream, 0);
-//    finally
-//      LFS.Free;
-//    end;
-//  end;
-//end;
 
 function TItemResource.Store(AItem: TToDoItem): TToDoItem;
 var
