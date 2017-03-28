@@ -12,7 +12,6 @@ uses
 
   , MARS.Core.JSON
   , Rtti
-  , HTTPApp
 
   , MARS.Core.Registry
   , MARS.Core.Attributes

@@ -9,28 +9,27 @@ interface
 
 uses
   Classes, SysUtils, Diagnostics, Rtti
-  , MARS.Core.Engine
-  , MARS.Core.Application, MARS.Utils.ReqRespLogger.Interfaces
+  , MARS.Core.Classes
+  , MARS.Core.Activation, MARS.Utils.ReqRespLogger.Interfaces
   , Web.HttpApp
 ;
 
 type
-  TMARSReqRespLoggerCodeSite=class(TInterfacedObject
-    , IMARSHandleRequestEventListener, IMARSReqRespLogger)
+  TMARSReqRespLoggerCodeSite=class(TInterfacedObject, IMARSReqRespLogger)
   private
+    class var _Instance: TMARSReqRespLoggerCodeSite;
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
-    // IMARSHandleRequestEventListener
-    procedure AfterHandleRequest(const ASender: TMARSEngine;
-      const AApplication: TMARSApplication; const AStopWatch: TStopwatch);
-    procedure BeforeHandleRequest(const ASender: TMARSEngine;
-      const AApplication: TMARSApplication; var AIsAllowed: Boolean);
-
     // IMARSReqRespLogger
     procedure Clear;
     function GetLogBuffer: TValue;
+    procedure Log(const AMessage: string);
+
+    class function Instance: TMARSReqRespLoggerCodeSite;
+    class constructor ClassCreate;
+    class destructor ClassDestroy;
   end;
 
   TWebRequestHelper = class helper for TWebRequest
@@ -43,7 +42,6 @@ type
     function ToLogString: string;
   end;
 
-
 implementation
 
 uses
@@ -55,35 +53,45 @@ const
 
 { TMARSReqRespLoggerCodeSite }
 
-procedure TMARSReqRespLoggerCodeSite.AfterHandleRequest(const ASender: TMARSEngine;
-  const AApplication: TMARSApplication; const AStopWatch: TStopwatch);
+class constructor TMARSReqRespLoggerCodeSite.ClassCreate;
 begin
-  CodeSite.SendMsg(
-    string.Join(LOGFIELD_SEPARATOR
-    , [
-        'Outgoing'
-      , ASender.CurrentResponse.ToLogString
-      , 'Time: ' + AStopWatch.ElapsedMilliseconds.ToString + ' ms'
-      , 'Engine: ' + ASender.Name
-      , 'Application: ' + AApplication.Name
-      ]
-    )
+  TMARSActivation.RegisterBeforeInvoke(
+    procedure (const AR: IMARSActivation; out AIsAllowed: Boolean)
+    begin
+      TMARSReqRespLoggerCodeSite.Instance.Log(
+        string.Join(LOGFIELD_SEPARATOR
+        , [
+           'Incoming'
+          , AR.Request.ToLogString
+          , 'Engine: ' + AR.Engine.Name
+          , 'Application: ' + AR.Application.Name
+          ]
+        )
+      );
+    end
+  );
+
+  TMARSActivation.RegisterAfterInvoke(
+    procedure (const AR: IMARSActivation)
+    begin
+      TMARSReqRespLoggerCodeSite.Instance.Log(
+        string.Join(LOGFIELD_SEPARATOR
+        , [
+            'Outgoing'
+          , AR.Response.ToLogString
+          , 'Time: ' + AR.InvocationTime.ElapsedMilliseconds.ToString + ' ms'
+          , 'Engine: ' + AR.Engine.Name
+          , 'Application: ' + AR.Application.Name
+          ]
+        )
+      );
+    end
   );
 end;
 
-procedure TMARSReqRespLoggerCodeSite.BeforeHandleRequest(const ASender: TMARSEngine;
-  const AApplication: TMARSApplication; var AIsAllowed: Boolean);
+class destructor TMARSReqRespLoggerCodeSite.ClassDestroy;
 begin
-  CodeSite.SendMsg(
-    string.Join(LOGFIELD_SEPARATOR
-    , [
-       'Incoming'
-      , ASender.CurrentRequest.ToLogString
-      , 'Engine: ' + ASender.Name
-      , 'Application: ' + AApplication.Name
-      ]
-    )
-  );
+  _Instance := nil;
 end;
 
 procedure TMARSReqRespLoggerCodeSite.Clear;
@@ -106,6 +114,18 @@ end;
 function TMARSReqRespLoggerCodeSite.GetLogBuffer: TValue;
 begin
   Result := TValue.Empty;
+end;
+
+class function TMARSReqRespLoggerCodeSite.Instance: TMARSReqRespLoggerCodeSite;
+begin
+  if not Assigned(_Instance) then
+    _Instance := TMARSReqRespLoggerCodeSite.Create;
+  Result := _Instance;
+end;
+
+procedure TMARSReqRespLoggerCodeSite.Log(const AMessage: string);
+begin
+  CodeSite.SendMsg(AMessage);
 end;
 
 { TWebRequestHelper }

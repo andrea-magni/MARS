@@ -12,6 +12,8 @@ inherited MainDataResource: TMainDataResource
   end
   object employee: TFDQuery
     Connection = FDConnection1
+    UpdateOptions.AssignedValues = [uvUpdateMode]
+    UpdateOptions.UpdateMode = upWhereChanged
     SQL.Strings = (
       'select * from EMPLOYEE ')
     Left = 48

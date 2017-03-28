@@ -38,6 +38,10 @@
   {$define Delphi10Berlin}
 {$ifend}
 
+{$if compilerversion = 32}
+  {$define Delphi10Tokyo}
+{$ifend}
+
 {$if compilerversion >= 22}
   {$define DelphiXE_UP}
 {$ifend}
@@ -121,4 +125,18 @@
   {$define DelphiXE8_UP}
   {$define Delphi10Seattle_UP}
   {$define Delphi10Berlin_UP}
+{$ifend}
+
+{$if compilerversion >= 32}
+  {$define DelphiXE_UP}
+  {$define DelphiXE2_UP}
+  {$define DelphiXE3_UP}
+  {$define DelphiXE4_UP}
+  {$define DelphiXE5_UP}
+  {$define DelphiXE6_UP}
+  {$define DelphiXE7_UP}
+  {$define DelphiXE8_UP}
+  {$define Delphi10Seattle_UP}
+  {$define Delphi10Berlin_UP}
+  {$define Delphi10Tokyo_UP}  
 {$ifend}

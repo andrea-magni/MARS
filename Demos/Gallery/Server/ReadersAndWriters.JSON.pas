@@ -8,25 +8,22 @@ uses
   , MARS.Core.Attributes
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MediaType
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
   TCategoryListWriter=class(TInterfacedObject, IMessageBodyWriter)
   public
-    procedure WriteTo(const AValue: TValue;
-      const AAttributes: TArray<TCustomAttribute>;
-      AMediaType: TMediaType; AResponseHeaders: TStrings;
-      AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TItemListWriter=class(TInterfacedObject, IMessageBodyWriter)
   public
-    procedure WriteTo(const AValue: TValue;
-      const AAttributes: TArray<TCustomAttribute>;
-      AMediaType: TMediaType; AResponseHeaders: TStrings;
-      AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
 implementation
@@ -41,9 +38,8 @@ uses
 
 { TCategoryWriter }
 
-procedure TCategoryListWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TArray<TCustomAttribute>; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TCategoryListWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LWriter: TStreamWriter;
   LJSONArray: TJSONArray;
@@ -63,9 +59,8 @@ end;
 
 { TItemListWriter }
 
-procedure TItemListWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TArray<TCustomAttribute>; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TItemListWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LWriter: TStreamWriter;
   LJSONArray: TJSONArray;

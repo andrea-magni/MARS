@@ -25,7 +25,7 @@ package MARS.FireDAC;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity FireDAC'}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
 {$LIBSUFFIX '240'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
@@ -49,8 +49,10 @@ requires
 
 contains
   MARS.Data.FireDAC.DataModule in '..\..\Source\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule},
-  MARS.Data.FireDAC.MessageBodyWriters in '..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas',
-  MARS.Data.FireDAC in '..\..\Source\MARS.Data.FireDAC.pas';
+  MARS.Data.FireDAC.ReadersAndWriters in '..\..\Source\MARS.Data.FireDAC.ReadersAndWriters.pas',
+  MARS.Data.FireDAC in '..\..\Source\MARS.Data.FireDAC.pas',
+  MARS.Data.FireDAC.InjectionService in '..\..\Source\MARS.Data.FireDAC.InjectionService.pas',
+  MARS.Data.FireDAC.Resources in '..\..\Source\MARS.Data.FireDAC.Resources.pas';
 
 end.
 

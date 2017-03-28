@@ -17,21 +17,24 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyReader
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
   TJsonDataObjectsWriter = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Consumes(TMediaType.APPLICATION_JSON)]
   TJsonDataObjectsReader = class(TInterfacedObject, IMessageBodyReader)
   public
-    function ReadFrom(const AInputData: TBytes;
-      const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue; virtual;
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue;
   end;
 
 
@@ -45,9 +48,8 @@ uses
 
 { TJsonDataObjectsWriter }
 
-procedure TJsonDataObjectsWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TJsonDataObjectsWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LJsonBO: TJsonBaseObject;
@@ -64,9 +66,11 @@ end;
 
 { TJsonDataObjectsReader }
 
-function TJsonDataObjectsReader.ReadFrom(const AInputData: TBytes;
-  const AAttributes: TAttributeArray;
-  AMediaType: TMediaType; ARequestHeaders: TStrings): TValue;
+function TJsonDataObjectsReader.ReadFrom(
+  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const ADestination: TRttiObject; const AMediaType: TMediaType;
+    const AActivation: IMARSActivation
+  ): TValue;
 var
   LJson: TJsonBaseObject;
 begin
@@ -81,18 +85,7 @@ procedure RegisterReadersAndWriters;
 begin
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TJsonBaseObject>(TJsonDataObjectsReader);
 
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TJsonDataObjectsWriter
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-      begin
-        Result := Assigned(AType) and AType.IsObjectOfType<TJsonBaseObject>(True);
-      end
-    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-      begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_HIGH;
-      end
-  );
-
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TJsonBaseObject>(TJsonDataObjectsWriter);
 end;
 
 

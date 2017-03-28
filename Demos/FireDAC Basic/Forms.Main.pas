@@ -34,8 +34,10 @@ type
     employee1: TFDMemTable;
     BindSourceDB2: TBindSourceDB;
     LinkGridToDataSourceBindSourceDB2: TLinkGridToDataSource;
+    ButtonGET: TButton;
     procedure FormCreate(Sender: TObject);
     procedure ButtonPOSTClick(Sender: TObject);
+    procedure ButtonGETClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -49,6 +51,11 @@ implementation
 
 {$R *.fmx}
 
+procedure TForm1.ButtonGETClick(Sender: TObject);
+begin
+  MARSFDResource1.GET();
+end;
+
 procedure TForm1.ButtonPOSTClick(Sender: TObject);
 begin
   MARSFDResource1.POST();
@@ -56,7 +63,7 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  MARSFDResource1.GET();
+  ButtonGETClick(ButtonGET);
 end;
 
 end.

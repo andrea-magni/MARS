@@ -70,6 +70,7 @@ type
     function ToString: string; override;
     function ToJSON: string; virtual;
     function ToJSONObject: TJSONObject; virtual;
+    function GetPathParamIndex(const AParam: string): Integer; virtual;
     property URL: string read FURL write SetURL;
 
     // protocollo://<username:password@>nomehost<:porta></percorso><?querystring>
@@ -242,6 +243,21 @@ end;
 function TMARSURL.GetHasSubResources: Boolean;
 begin
   Result := FSubResources.Count > 0;
+end;
+
+function TMARSURL.GetPathParamIndex(const AParam: string): Integer;
+var
+  LPair: TPair<Integer, string>;
+begin
+  Result := -1;
+  for LPair in PathParams do
+  begin
+    if SameText(AParam, LPair.Value) then
+    begin
+      Result := LPair.Key;
+      Break;
+    end;
+  end;
 end;
 
 function TMARSURL.HasPathTokens(const AtLeast: Integer): Boolean;

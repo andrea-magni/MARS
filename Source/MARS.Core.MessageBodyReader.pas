@@ -18,21 +18,18 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.Declarations
   , MARS.Core.Classes
-  , MARS.Core.Attributes
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   IMessageBodyReader = interface
   ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
-{$ifdef Delphi10Berlin_UP}
-    function ReadFrom(const AInputData: TBytes;
-      const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue;
-{$else}
-    function ReadFrom(const AInputData: AnsiString;
-      const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; ARequestHeaders: TStrings): TValue;
-{$endif}
+
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue;
   end;
 
   TIsReadableFunction = reference to function(AType: TRttiType;
@@ -75,18 +72,19 @@ type
     procedure RegisterReader(const AReaderClass: TClass; const ASubjectClass: TClass;
       const AGetAffinity: TGetAffinityFunction); overload;
 
-    procedure RegisterReader<T: class>(const AReaderClass: TClass); overload;
+    procedure RegisterReader<T>(const AReaderClass: TClass); overload;
 
-    procedure FindReader(const AParam: TRttiParameter;
+    procedure FindReader(const ADestination: TRttiObject;
       out AReader: IMessageBodyReader; out AMediaType: TMediaType);
 
     procedure Enumerate(const AProc: TProc<TReaderEntryInfo>);
 
     class property Instance: TMARSMessageBodyReaderRegistry read GetInstance;
-    class function GetDefaultClassAffinityFunc<T: class>: TGetAffinityFunction;
+    class function GetDefaultClassAffinityFunc<T>: TGetAffinityFunction;
     class destructor ClassDestructor;
 
-    const AFFINITY_HIGH = 30;
+    const AFFINITY_HIGH = 100;
+    const AFFINITY_MEDIUM = 50;
     const AFFINITY_LOW = 10;
     const AFFINITY_VERY_LOW = 1;
     const AFFINITY_ZERO = 0;
@@ -98,6 +96,7 @@ uses
     MARS.Core.Utils
   , MARS.Rtti.Utils
   , MARS.Core.Exceptions
+  , MARS.Core.Attributes
   ;
 
 { TMARSMessageBodyReaderRegistry }
@@ -130,7 +129,7 @@ begin
     AProc(LEntry);
 end;
 
-procedure TMARSMessageBodyReaderRegistry.FindReader(const AParam: TRttiParameter;
+procedure TMARSMessageBodyReaderRegistry.FindReader(const ADestination: TRttiObject;
   out AReader: IMessageBodyReader; out AMediaType: TMediaType);
 var
   LMethod: TRttiMethod;
@@ -148,8 +147,8 @@ var
   LCandidateMediaType: string;
 //  LCandidateQualityFactor: Double;
 begin
-  Assert(Assigned(AParam));
-  LMethod := AParam.Parent as TRttiMethod;
+  Assert(Assigned(ADestination));
+  LMethod := ADestination.Parent as TRttiMethod;
   Assert(Assigned(LMethod));
 
   AMediaType := nil;
@@ -196,17 +195,17 @@ begin
           else
             LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LReaderMediaTypes);
           for LMediaType in LMediaTypes do
-            if LReaderEntry.IsReadable(AParam.ParamType, LMethod.GetAttributes, LMediaType) then
+            if LReaderEntry.IsReadable(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType) then
             begin
               if not LFound
                  or (
-                   (LCandidateAffinity < LReaderEntry.GetAffinity(AParam.ParamType, LMethod.GetAttributes, LMediaType))
+                   (LCandidateAffinity < LReaderEntry.GetAffinity(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType))
 //                   or (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
                  )
               then
               begin
                 LCandidate := LReaderEntry;
-                LCandidateAffinity := LCandidate.GetAffinity(AParam.ParamType, LMethod.GetAttributes, LMediaType);
+                LCandidateAffinity := LCandidate.GetAffinity(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType);
                 LCandidateMediaType := LMediaType;
 //                LCandidateQualityFactor := 1;
                 LFound := True;
@@ -231,13 +230,20 @@ class function TMARSMessageBodyReaderRegistry.GetDefaultClassAffinityFunc<T>: TG
 begin
   Result :=
     function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    var
+      LType: TRttiType;
     begin
-      if Assigned(AType) and AType.IsObjectOfType<T>(False) then
+      Result := 0;
+      if not Assigned(AType) then
+        Exit;
+
+      LType := TRttiContext.Create.GetType(TypeInfo(T));
+      if (AType = LType) then
         Result := 100
-      else if Assigned(AType) and AType.IsObjectOfType<T> then
-        Result := 99
-      else
-        Result := 0;
+      else if AType.IsObjectOfType<T>(False) then
+        Result := 95
+      else if AType.IsObjectOfType<T> then
+        Result := 90;
     end
 end;
 
@@ -312,8 +318,17 @@ begin
   RegisterReader(
     AReaderClass
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      var
+        LType: TRttiType;
       begin
-        Result := Assigned(AType) and AType.IsObjectOfType<T>;
+        LType := TRttiContext.Create.GetType(TypeInfo(T));
+        Result := False;
+        if Assigned(AType) then
+        begin
+          Result := (AType = LType);
+          if not Result then
+            Result := AType.IsObjectOfType<T>();
+        end;
       end
     , Self.GetDefaultClassAffinityFunc<T>()
   );

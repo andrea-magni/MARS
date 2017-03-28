@@ -5,12 +5,13 @@
 *)
 unit MARS.Core.Engine;
 
+{$I MARS.inc}
+
 interface
 
 uses
   SysUtils, HTTPApp, Classes, Generics.Collections
   , SyncObjs
-  , Diagnostics
 
   , MARS.Core.Classes
   , MARS.Core.Registry
@@ -29,29 +30,16 @@ type
   EMARSEngineException = class(EMARSHttpException);
   TMARSEngine = class;
 
-  IMARSHandleRequestEventListener = interface
-    procedure BeforeHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; var AIsAllowed: Boolean);
-    procedure AfterHandleRequest(const ASender: TMARSEngine; const AApplication: TMARSApplication; const AStopWatch: TStopWatch);
-  end;
-
   TMARSEngineBeforeHandleRequestEvent = TFunc<TMARSEngine, TMARSURL, Boolean>;
 
   TMARSEngine = class
   private
-    class threadvar FWebRequest: TWebRequest;
-    class threadvar FWebResponse: TWebResponse;
-    class threadvar FURL: TMARSURL;
-  private
     FApplications: TMARSApplicationDictionary;
-    FSubscribers: TList<IMARSHandleRequestEventListener>;
     FCriticalSection: TCriticalSection;
     FParameters: TMARSParameters;
     FName: string;
     FOnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent;
 
-    function GetCurrentRequest: TWebRequest;
-    function GetCurrentResponse: TWebResponse;
-    function GetCurrentURL: TMARSURL;
     function GetBasePath: string;
     function GetPort: Integer;
     function GetThreadPoolSize: Integer;
@@ -59,8 +47,6 @@ type
     procedure SetPort(const Value: Integer);
     procedure SetThreadPoolSize(const Value: Integer);
   protected
-    function DoBeforeHandleRequest(const AApplication: TMARSApplication): Boolean; virtual;
-    procedure DoAfterHandleRequest(const AApplication: TMARSApplication; const AStopWatch: TStopWatch); virtual;
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
     destructor Destroy; override;
@@ -69,8 +55,6 @@ type
 
     function AddApplication(const AName, ABasePath: string;
       const AResources: array of string; const AParametersSliceName: string = ''): TMARSApplication; virtual;
-    procedure AddSubscriber(const ASubscriber: IMARSHandleRequestEventListener);
-    procedure RemoveSubscriber(const ASubscriber: IMARSHandleRequestEventListener);
 
     procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>);
 
@@ -81,11 +65,6 @@ type
     property Name: string read FName;
     property Port: Integer read GetPort write SetPort;
     property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
-
-    // Transient properties
-    property CurrentURL: TMARSURL read GetCurrentURL;
-    property CurrentRequest: TWebRequest read GetCurrentRequest;
-    property CurrentResponse: TWebResponse read GetCurrentResponse;
 
     property OnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent read FOnBeforeHandleRequest write FOnBeforeHandleRequest;
   end;
@@ -119,7 +98,9 @@ type
 implementation
 
 uses
-  MARS.Core.Utils
+    MARS.Core.Utils
+  , MARS.Core.Activation
+  , MARS.Core.MediaType
   ;
 
 function TMARSEngine.AddApplication(const AName, ABasePath: string;
@@ -128,7 +109,7 @@ var
   LResource: string;
   LParametersSliceName: string;
 begin
-  Result := TMARSApplication.Create(Self, AName);
+  Result := TMARSApplication.Create(AName);
   try
     Result.BasePath := ABasePath;
     for LResource in AResources do
@@ -149,12 +130,6 @@ begin
   end;
 end;
 
-procedure TMARSEngine.AddSubscriber(
-  const ASubscriber: IMARSHandleRequestEventListener);
-begin
-  FSubscribers.Add(ASubscriber);
-end;
-
 constructor TMARSEngine.Create(const AName: string);
 begin
   inherited Create;
@@ -163,7 +138,6 @@ begin
 
   FApplications := TMARSApplicationDictionary.Create([doOwnsValues]);
   FCriticalSection := TCriticalSection.Create;
-  FSubscribers := TList<IMARSHandleRequestEventListener>.Create;
   FParameters := TMARSParameters.Create(FName);
 
   // default parameters
@@ -181,26 +155,7 @@ begin
   FParameters.Free;
   FCriticalSection.Free;
   FApplications.Free;
-  FSubscribers.Free;
   inherited;
-end;
-
-procedure TMARSEngine.DoAfterHandleRequest(const AApplication: TMARSApplication;
-  const AStopWatch: TStopWatch);
-var
-  LSubscriber: IMARSHandleRequestEventListener;
-begin
-  for LSubscriber in FSubscribers do
-    LSubscriber.AfterHandleRequest(Self, AApplication, AStopWatch);
-end;
-
-function TMARSEngine.DoBeforeHandleRequest(const AApplication: TMARSApplication): Boolean;
-var
-  LSubscriber: IMARSHandleRequestEventListener;
-begin
-  Result := True;
-  for LSubscriber in FSubscribers do
-    LSubscriber.BeforeHandleRequest(Self, AApplication, Result);
 end;
 
 procedure TMARSEngine.EnumerateApplications(
@@ -225,7 +180,7 @@ var
   LApplication: TMARSApplication;
   LURL: TMARSURL;
   LApplicationPath: string;
-  LStopWatch: TStopWatch;
+  LActivation: TMARSActivation;
 begin
   Result := False;
 
@@ -249,34 +204,41 @@ begin
         LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
     end;
 
-    if FApplications.TryGetValue(LApplicationPath, LApplication) then
-    begin
-      LURL.BasePath := LApplicationPath;
-      FWebRequest := ARequest;
-      FWebResponse := AResponse;
-      FURL := LURL;
-      if DoBeforeHandleRequest(LApplication) then begin
-        LStopWatch := TStopwatch.StartNew;
-        LApplication.HandleRequest(ARequest, AResponse, LURL);
-        LStopWatch.Stop;
-        DoAfterHandleRequest(LApplication, LStopWatch);
+    if not FApplications.TryGetValue(LApplicationPath, LApplication) then
+      raise EMARSEngineException.Create(Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath]), 404);
+
+    LURL.BasePath := LApplicationPath;
+    try
+      LActivation := TMARSActivation.Create(Self, LApplication, ARequest, AResponse, LURL);
+      try
+        LActivation.Invoke;
+
+        Result := True;
+      finally
+        LActivation.Free;
       end;
-      Result := True;
-    end
-    else
-      raise EMARSEngineException.Create(
-        Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath])
-        , 404
-      );
+    except on E: Exception do
+      if E is EMARSHttpException then
+      begin
+        AResponse.StatusCode := EMARSHttpException(E).Status;
+        AResponse.Content := E.Message;
+        AResponse.ContentType := TMediaType.TEXT_HTML;
+      end
+      else begin
+        AResponse.StatusCode := 500;
+        AResponse.Content := 'Internal server error'
+        {$IFDEF DEBUG}
+          + ': ' + E.Message
+        {$ENDIF}
+        ;
+        AResponse.ContentType := TMediaType.TEXT_PLAIN;
+    //    raise;
+      end;
+    end;
+    Result := True;
   finally
     LURL.Free;
   end;
-end;
-
-procedure TMARSEngine.RemoveSubscriber(
-  const ASubscriber: IMARSHandleRequestEventListener);
-begin
-  FSubscribers.Remove(ASubscriber);
 end;
 
 function TMARSEngine.GetBasePath: string;
@@ -297,21 +259,6 @@ end;
 procedure TMARSEngine.SetThreadPoolSize(const Value: Integer);
 begin
   Parameters['ThreadPoolSize'] := Value;
-end;
-
-function TMARSEngine.GetCurrentRequest: TWebRequest;
-begin
-  Result := FWebRequest;
-end;
-
-function TMARSEngine.GetCurrentResponse: TWebResponse;
-begin
-  Result := FWebResponse;
-end;
-
-function TMARSEngine.GetCurrentURL: TMARSURL;
-begin
-  Result := FURL;
 end;
 
 function TMARSEngine.GetPort: Integer;

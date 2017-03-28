@@ -8,32 +8,29 @@ uses
   , MARS.Core.Attributes
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MediaType
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   [Produces(TMediaType.TEXT_HTML)]
   THTMLCategoryListWriter=class(TInterfacedObject, IMessageBodyWriter)
   public
-    procedure WriteTo(const AValue: TValue;
-      const AAttributes: TArray<TCustomAttribute>;
-      AMediaType: TMediaType; AResponseHeaders: TStrings;
-      AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.TEXT_HTML)]
   THTMLItemListWriter=class(TInterfacedObject, IMessageBodyWriter)
   public
-    procedure WriteTo(const AValue: TValue;
-      const AAttributes: TArray<TCustomAttribute>;
-      AMediaType: TMediaType; AResponseHeaders: TStrings;
-      AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
 implementation
 
 uses
-    MARS.Rtti.Utils
-  , Web.HttpApp
+    HttpApp, NetEncoding
+  , MARS.Rtti.Utils
   , Gallery.Model
 ;
 
@@ -59,9 +56,8 @@ const
 
 { TCategoryWriter }
 
-procedure THTMLCategoryListWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TArray<TCustomAttribute>; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure THTMLCategoryListWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LWriter: TStreamWriter;
   LCategoryList: TCategoryList;
@@ -74,7 +70,7 @@ begin
     for LCategory in LCategoryList do
       LWriter.Write(
         '<div class="category">'
-      + '  <span class="name">' + HTMLEncode(LCategory.Name) + '</span>'
+      + '  <span class="name">' + TNetEncoding.HTML.Encode(LCategory.Name) + '</span>'
       + ' <a href="./' + LCategory.Name + '/">See items</a>'
       + '</div>'
       );
@@ -86,9 +82,8 @@ end;
 
 { THTMLItemListWriter }
 
-procedure THTMLItemListWriter.WriteTo(const AValue: TValue;
-  const AAttributes: TArray<TCustomAttribute>; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure THTMLItemListWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LWriter: TStreamWriter;
   LItemList: TItemList;
@@ -102,8 +97,8 @@ begin
     for LItem in LItemList do
       LWriter.Write(
         '<div class="item">'
-      + '  <span class="name">' + HTMLEncode(LItem.Name) + '</span>'
-      + '  <span class="size">' + HTMLEncode(LItem.SizeHumanReadable) + '</span>'
+      + '  <span class="name">' + TNetEncoding.HTML.Encode(LItem.Name) + '</span>'
+      + '  <span class="size">' + TNetEncoding.HTML.Encode(LItem.SizeHumanReadable) + '</span>'
       + '  <a href="' + LItem.Name+ '"><img class="picture" src="' + LItem.Name+ '" /></a>'
       + '</div>'
       );

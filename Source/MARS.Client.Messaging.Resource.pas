@@ -15,6 +15,7 @@ uses
 
 {$ifdef DelphiXE7_UP}
   , System.Threading
+  , System.JSON
 {$endif}
 
   , MARS.Client.Resource.JSON

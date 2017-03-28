@@ -13,8 +13,7 @@ uses
 ;
 
 type
-  IMARSReqRespLogger = interface(IMARSHandleRequestEventListener)
-    ['{E59B8A55-5BFA-4DF4-853D-49D5CFF0E680}']
+  IMARSReqRespLogger = interface['{E59B8A55-5BFA-4DF4-853D-49D5CFF0E680}']
 
     function GetLogBuffer: TValue;
     procedure Clear;

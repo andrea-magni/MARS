@@ -33,6 +33,7 @@ uses
   , Rtti, TypInfo
   , Generics.Collections
   , MARS.Core.Utils
+  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
   ;
 
 { TMARSParametersJSONReaderWriter }

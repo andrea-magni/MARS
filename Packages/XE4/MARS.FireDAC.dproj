@@ -159,7 +159,7 @@
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
-        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.MessageBodyWriters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.ReadersAndWriters.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>

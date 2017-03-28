@@ -8,7 +8,7 @@ unit Server.Resources;
 interface
 
 uses
-  SysUtils, Classes
+  SysUtils, Classes, HttpApp
 
   , MARS.Core.Attributes
   , MARS.Core.MediaType
@@ -42,10 +42,21 @@ type
     function GetFullName([FormParam] name: string; [FormParam] surname: string): string;
   end;
 
+  [Path('multifiles')]
+  TMultiFilesResource = class
+  protected
+    [Context] Request: TWebRequest;
+  public
+    [POST]
+    function HashFiles(): string;
+  end;
+
+
 implementation
 
 uses
     StrUtils, IniFiles
+  , Web.ReqMulti, Web.ReqFiles
   , MARS.Core.Registry
 ;
 
@@ -113,8 +124,25 @@ begin
   Result := 'Host header of the request: ' + Host;
 end;
 
+{ TMultiFilesResource }
+
+function TMultiFilesResource.HashFiles: string;
+var
+  LFile: TWebRequestFile;
+  LIndex: Integer;
+begin
+
+  Result := 'Files: ' + Request.Files.Count.ToString;
+  for LIndex := 0 to Request.Files.Count-1 do
+  begin
+    LFile := Request.Files.Items[LIndex] as TWebRequestFile;
+    Result := string.Join(sLineBreak, [Result, LFile.FileName + ' (' + LFile.Stream.Size.ToString + ')']);
+  end;
+end;
+
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
   TMARSResourceRegistry.Instance.RegisterResource<TSimpleFormResource>;
+  TMARSResourceRegistry.Instance.RegisterResource<TMultiFilesResource>;
 
 end.

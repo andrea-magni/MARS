@@ -14,8 +14,9 @@ uses
   , HttpApp
   , MARS.Core.Declarations
   , MARS.Core.Utils
+  , MARS.Core.URL  
   , MARS.Core.JSON
-//  , MARS.Core.Invocation
+  , MARS.Core.Activation.Interfaces
 ;
 
 type
@@ -86,13 +87,15 @@ type
     property Value: string read FValue write FValue;
   end;
 
-  RequestParamAttribute = class(MARSAttribute)
+  ContextAttribute = class(MARSAttribute);
+
+  RequestParamAttribute = class(ContextAttribute)
   private
   protected
     function GetKind: string; virtual;
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter;
-      const AEnginePath: string; const AApplicationPath: string): TValue; virtual;
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; virtual;
     property Kind: string read GetKind;
   end;
 
@@ -100,7 +103,7 @@ type
   private
     FName: string;
   protected
-    function GetActualName(const AParam: TRttiParameter): string; virtual;
+    function GetActualName(const ADestination: TRttiObject): string; virtual;
   public
     constructor Create(const AName: string = ''); virtual;
     property Name: string read FName write FName;
@@ -110,38 +113,43 @@ type
   private
     FParamIndex: Integer;
   protected
-    function GetParamIndex(const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): Integer;
+    function GetParamIndex(const ADestination: TRttiObject;
+      const APrototypeURL: TMARSURL): Integer;
   public
     property ParamIndex: Integer read FParamIndex write FParamIndex;
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   QueryParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   FormParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   HeaderParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   CookieParamAttribute = class(NamedRequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
   end;
 
   BodyParamAttribute = class(RequestParamAttribute)
   public
-    function GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue; override;
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
   end;
-
-  ContextAttribute = class(MARSAttribute);
 
   AuthorizationAttribute = class(MARSAttribute);
 
@@ -189,7 +197,6 @@ implementation
 
 uses
     MARS.Rtti.Utils
-  , MARS.Core.URL
   , MARS.Core.MessageBodyReader
   , MARS.Core.MediaType
 {$ifndef DelphiXE7_UP}
@@ -287,43 +294,41 @@ end;
 
 { BodyParamAttribute }
 
-function BodyParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
+function BodyParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
-  LMethod: TRttiMethod;
 begin
   // 1 - MessageBodyReader mechanism (standard)
-  TMARSMessageBodyReaderRegistry.Instance.FindReader(AParam, LReader, LMediaType);
+  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
   if Assigned(LReader) then
     try
-      LMethod := AParam.Parent as TRttiMethod;
-      Result := LReader.ReadFrom(ARequest.RawContent, LMethod.GetAttributes, LMediaType, nil);
+      Result := LReader.ReadFrom(AActivation.Request.RawContent, ADestination, LMediaType, AActivation);
     finally
       FreeAndNil(LMediaType);
     end
   else // 2 - fallback (raw)
   begin
 {$ifdef Delphi10Berlin_UP}
-    case AParam.ParamType.TypeKind of
+    case ADestination.GetRttiType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
-      , tkLString, tkWString, tkString: StringToTValue(ARequest.Content, AParam.ParamType);
+      , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
 
-      tkUString: Result := TEncoding.UTF8.GetString(ARequest.RawContent);
+      tkUString: Result := TEncoding.UTF8.GetString(AActivation.Request.RawContent);
 
       else
-        Result := TValue.From<TBytes>(ARequest.RawContent);
+        Result := TValue.From<TBytes>(AActivation.Request.RawContent);
     end;
 {$else}
-    case AParam.ParamType.TypeKind of
+    case ADestination.GetRttiType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
-      , tkLString, tkWString, tkString: StringToTValue(ARequest.Content, AParam.ParamType);
+      , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
 
-      tkUString: Result := ARequest.RawContent;
+      tkUString: Result := AActivation.Request.RawContent;
 
       else
-        Result := ARequest.RawContent;
+        Result := AActivation.Request.RawContent;
     end;
 
 {$endif}
@@ -414,11 +419,11 @@ begin
 end;
 
 function NamedRequestParamAttribute.GetActualName(
-  const AParam: TRttiParameter): string;
+  const ADestination: TRttiObject): string;
 begin
   Result := Name;
-  if (Name = '') and Assigned(AParam) then
-    Result := AParam.Name;
+  if (Name = '') and Assigned(ADestination) and (ADestination is TRttiNamedObject) then
+    Result := TRttiNamedObject(ADestination).Name;
 end;
 
 { RequestParamAttribute }
@@ -432,112 +437,77 @@ begin
 {$endif}
 end;
 
-function RequestParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
+function RequestParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
 begin
   Result := TValue.Empty;
 end;
 
 { QueryParamAttribute }
 
-function QueryParamAttribute.GetValue(const ARequest: TWebRequest; const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
+function QueryParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
 begin
-  Result := StringToTValue(ARequest.QueryFields.Values[GetActualName(AParam)], AParam.ParamType);
+  Result := StringToTValue(
+      AActivation.Request.QueryFields.Values[GetActualName(ADestination)]
+    , ADestination.GetRttiType
+  );
 end;
 
 { FormParamAttribute }
 
-function FormParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
+function FormParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
 begin
-  Result := StringToTValue(ARequest.ContentFields.Values[GetActualName(AParam)], AParam.ParamType);
+  Result := StringToTValue(
+      AActivation.Request.ContentFields.Values[GetActualName(ADestination)]
+    , ADestination.GetRttiType
+  );
 end;
 
 { HeaderParamAttribute }
 
-function HeaderParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
+function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
 begin
-  Result := StringToTValue(ARequest.GetFieldByName(GetActualName(AParam)), AParam.ParamType);
+  Result := StringToTValue(
+      AActivation.Request.GetFieldByName(GetActualName(ADestination))
+    , ADestination.GetRttiType
+  );
 end;
 
 { CookieParamAttribute }
 
-function CookieParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
+function CookieParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
 begin
-  Result := StringToTValue(ARequest.CookieFields.Values[GetActualName(AParam)], AParam.ParamType);
+  Result := StringToTValue(
+      AActivation.Request.CookieFields.Values[GetActualName(ADestination)]
+    , ADestination.GetRttiType
+  );
 end;
 
 { PathParamAttribute }
 
 function PathParamAttribute.GetParamIndex(
-  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): Integer;
-var
-  LParamIndex: Integer;
-  LSubResourcePath: string;
-  LMethod: TRttiMethod;
-  LResource: TRttiType;
+  const ADestination: TRttiObject; const APrototypeURL: TMARSURL): Integer;
 begin
-  Assert(Assigned(AParam));
-
-  LMethod := AParam.Parent as TRttiMethod;
-  Assert(Assigned(LMethod));
-
-  LResource := LMethod.Parent;
-  Assert(Assigned(LResource));
-
-  LParamIndex := -1;
-
-  LSubResourcePath := '';
-  LMethod.HasAttribute<PathAttribute>(
-    procedure (ASubResourcePathAttrib: PathAttribute)
-    begin
-      LSubResourcePath := ASubResourcePathAttrib.Value;
-    end
+  Result := APrototypeURL.GetPathParamIndex(
+    GetActualName(ADestination)
   );
-
-  LResource.HasAttribute<PathAttribute>(
-    procedure (AResourcePathAttrib: PathAttribute)
-    var
-      LResURL: TMARSURL;
-      LPair: TPair<Integer, string>;
-      LParamName: string;
-    begin
-
-      LResURL := TMARSURL.CreateDummy([AEnginePath, AApplicationPath
-        , AResourcePathAttrib.Value, LSubResourcePath]);
-      try
-        LParamName := GetActualName(AParam);
-        LParamIndex := -1;
-        for LPair in LResURL.PathParams do
-        begin
-          if SameText(LParamName, LPair.Value) then
-          begin
-            LParamIndex := LPair.Key;
-            Break;
-          end;
-        end;
-      finally
-        LResURL.Free;
-      end;
-    end
-  );
-
-  Result := LParamIndex;
 end;
 
-function PathParamAttribute.GetValue(const ARequest: TWebRequest;
-  const AParam: TRttiParameter; const AEnginePath: string; const AApplicationPath: string): TValue;
+function PathParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
 var
-  LURL: TMARSURL;
+  LTokenIndex: Integer;
 begin
-  LURL := TMARSURL.Create(ARequest);
-  try
-    Result := StringToTValue(LURL.PathTokens[GetParamIndex(AParam, AEnginePath, AApplicationPath)], AParam.ParamType);
-  finally
-    LURL.Free;
-  end;
+  Result := TValue.Empty;
+  LTokenIndex := GetParamIndex(ADestination, AActivation.URLPrototype);
+  if LTokenIndex > -1 then
+    Result := StringToTValue(AActivation.URL.PathTokens[LTokenIndex]
+      , ADestination.GetRttiType
+    );
 end;
 
 end.

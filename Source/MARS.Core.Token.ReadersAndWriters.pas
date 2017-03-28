@@ -17,13 +17,14 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyReader
+  , MARS.Core.Activation.Interfaces
   ;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
   TMARSTokenWriterJSON = class(TInterfacedObject, IMessageBodyWriter)
-    procedure WriteTo(const AValue: TValue; const AAttributes: TAttributeArray;
-      AMediaType: TMediaType; AResponseHeaders: TStrings; AOutputStream: TStream);
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
 //  [Consumes(TMediaType.APPLICATION_JSON)]
@@ -49,9 +50,8 @@ uses
 
 { TMARSTokenWriterJSON }
 
-procedure TMARSTokenWriterJSON.WriteTo(const AValue: TValue;
-  const AAttributes: TAttributeArray; AMediaType: TMediaType;
-  AResponseHeaders: TStrings; AOutputStream: TStream);
+procedure TMARSTokenWriterJSON.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
   LToken: TMARSToken;

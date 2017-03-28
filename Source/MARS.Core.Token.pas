@@ -56,15 +56,14 @@ type
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetExpiration: TDateTime;
-    procedure SetExpiration(const AValue: TDateTime);
     function GetIssuedAt: TDateTime;
-    procedure SetIssuedAt(const AValue: TDateTime);
     function GetRoles: TArray<string>;
     procedure SetRoles(const AValue: TArray<string>);
   protected
     function GetTokenFromBearer(const ARequest: TWebRequest): string; virtual;
     function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
     function GetToken(const ARequest: TWebRequest): string; virtual;
+    function GetIsExpired: Boolean; virtual;
     property Request: TWebRequest read FRequest;
     property Response: TWebResponse read FResponse;
   public
@@ -80,7 +79,6 @@ type
     function HasRole(const ARole: string): Boolean; overload; virtual;
     function HasRole(const ARoles: TArray<string>): Boolean; overload; virtual;
     function HasRole(const ARoles: TStrings): Boolean; overload; virtual;
-    function IsExpired: Boolean; virtual;
     procedure SetUserNameAndRoles(const AUserName: string; const ARoles: TArray<string>); virtual;
     procedure UpdateCookie; virtual;
 
@@ -88,6 +86,7 @@ type
     property UserName: string read GetUserName write SetUserName;
     property Roles: TArray<string> read GetRoles write SetRoles;
     property IsVerified: Boolean read FIsVerified;
+    property IsExpired: Boolean read GetIsExpired;
     property Claims: TMARSParameters read FClaims;
     property Expiration: TDateTime read GetExpiration;
     property Issuer: string read FIssuer;
@@ -114,6 +113,7 @@ uses
   {$endif}
   , MARS.Core.Utils
   , MARS.Utils.Parameters.JSON
+  , MARS.Core.Token.InjectionService
   ;
 
 {
@@ -281,7 +281,7 @@ begin
   Result := HasRole(ARoles.ToStringArray);
 end;
 
-function TMARSToken.IsExpired: Boolean;
+function TMARSToken.GetIsExpired: Boolean;
 begin
   Result := Expiration < Now;
 end;
@@ -363,15 +363,6 @@ begin
   end;
 end;
 
-procedure TMARSToken.SetExpiration(const AValue: TDateTime);
-begin
-  FClaims[TReservedClaimNames.EXPIRATION] := AValue;
-end;
-
-procedure TMARSToken.SetIssuedAt(const AValue: TDateTime);
-begin
-  FClaims[TReservedClaimNames.ISSUED_AT] := AValue;
-end;
 
 procedure TMARSToken.SetRoles(const AValue: TArray<string>);
 begin

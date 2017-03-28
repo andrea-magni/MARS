@@ -30,7 +30,7 @@ type
 implementation
 
 uses
-    System.TypInfo, Generics.Collections
+    System.TypInfo, Generics.Collections, System.JSON
   , MARS.Rtti.Utils
 ;
 
@@ -128,7 +128,7 @@ begin
         end;
       end
       else
-        TValueToJSONObject(Result, LField.Name, LField.GetValue(Self));
+        Result.WriteTValue(LField.Name, LField.GetValue(Self));
     end;
   end;
 
@@ -158,7 +158,7 @@ begin
         end;
       end
       else
-        TValueToJSONObject(Result, LProperty.Name, LProperty.GetValue(Self));
+        Result.WriteTValue(LProperty.Name, LProperty.GetValue(Self));
     end;
   end;
 end;
@@ -193,7 +193,7 @@ begin
           ReadFieldList(LField, LFieldArray);
       end
       else
-        LField.SetValue(Self, AJSONObject.ReadValue(LField.Name, TValue.Empty));
+        LField.SetValue(Self, AJSONObject.ReadValue(LField.Name, TValue.Empty, LField.FieldType));
     end;
   end;
 
@@ -214,7 +214,7 @@ begin
           ReadPropertyList(LProperty, LFieldArray);
       end
       else if (LProperty.IsWritable) then
-        LProperty.SetValue(Self, AJSONObject.ReadValue(LProperty.Name, TValue.Empty));
+        LProperty.SetValue(Self, AJSONObject.ReadValue(LProperty.Name, TValue.Empty, LProperty.PropertyType));
     end;
   end;
 end;

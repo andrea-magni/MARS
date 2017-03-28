@@ -30,7 +30,7 @@ uses
   function EnsurePrefix(const AString, APrefix: string; const AIgnoreCase: Boolean = True): string;
   function EnsureSuffix(const AString, ASuffix: string; const AIgnoreCase: Boolean = True): string;
 
-  function StringArrayToString(const AArray: TArray<string>): string;
+  function StringArrayToString(const AArray: TArray<string>; const ADelimiter: string = ','): string;
 
   function StreamToJSONValue(const AStream: TStream; const AEncoding: TEncoding = nil): TJSONValue;
   procedure JSONValueToStream(const AValue: TJSONValue; const ADestStream: TStream; const AEncoding: TEncoding = nil);
@@ -108,6 +108,7 @@ begin
   Result := Masks.MatchesMask(AString, AMask);
 end;
 
+
 function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
 begin
   Result := '';
@@ -180,9 +181,9 @@ begin
   end;
 end;
 
-function StringArrayToString(const AArray: TArray<string>): string;
+function StringArrayToString(const AArray: TArray<string>; const ADelimiter: string = ','): string;
 begin
-  Result := SmartConcat(AArray);
+  Result := SmartConcat(AArray, ADelimiter);
 end;
 
 function EnsurePrefix(const AString, APrefix: string; const AIgnoreCase: Boolean = True): string;

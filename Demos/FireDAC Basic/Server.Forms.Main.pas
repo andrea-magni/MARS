@@ -19,11 +19,7 @@ uses
   , MARS.http.Server.Indy
 
 
-//  , MARS.Core.Utils
   , MARS.Core.Application
-  , MARS.Diagnostics.Manager
-  , MARS.Diagnostics.Resources
-//  , MARS.Core.Token
   ;
 
 type
@@ -58,10 +54,10 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.MessageBodyWriter
-  , MARS.Core.MessageBodyWriters
+    MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
   , MARS.Data.MessageBodyWriters
-  , MARS.Data.FireDAC.MessageBodyWriters
+  , MARS.Data.FireDAC, MARS.Data.FireDAC.ReadersAndWriters
+  , MARS.Utils.Parameters
   , MARS.Utils.Parameters.IniFile
   ;
 
@@ -78,6 +74,7 @@ begin
     FEngine.Parameters.LoadFromIniFile;
     FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
     PortNumberEdit.Text := FEngine.Port.ToString;
+    TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 
     StartServerAction.Execute;
   except

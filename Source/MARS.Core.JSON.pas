@@ -21,6 +21,7 @@ uses
 {$else}
   , Rtti
 {$endif}
+  , TypInfo
 ;
 
 type
@@ -67,9 +68,20 @@ type
   end;
 {$endif}
 
+  TToRecordFilterProc = reference to procedure (const AField: TRttiField;
+    const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
+
+  TToJSONFilterProc = reference to procedure (const AField: TRttiField;
+    const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
+
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
   private
+{$ifndef DelphiXE6_UP}
+    function GetCount: Integer; inline;
+    function GetPair(const Index: Integer): TJSONPair; inline;
+{$endif}
     function GetValue(const name: string): Variant;
+    function GetExactPairName(const ACaseInsensitiveName: string): string;
   public
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
@@ -80,7 +92,8 @@ type
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
     function ReadUnixTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
-    function ReadValue(const AName: string; const ADefault: TValue): TValue;
+    function ReadValue(const AName: string; const ADefault: TValue;
+      const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -89,20 +102,91 @@ type
     procedure WriteBoolValue(const AName: string; const AValue: Boolean);
     procedure WriteDateTimeValue(const AName: string; const AValue: TDateTime; const AInputIsUTC: Boolean = True);
     procedure WriteUnixTimeValue(const AName: string; const AValue: TDateTime);
-
+    procedure WriteTValue(const AName: string; const AValue: TValue);
 
     property Values[const name: string]: Variant read GetValue; default;
+
+    procedure FromRecord<T: record>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil); overload;
+    procedure FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil); overload;
+    function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    function ToRecord(const ARecordType: TRttiType;
+      const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
+
+{$ifndef DelphiXE6_UP}
+    property Count: Integer read GetCount;
+    property Pairs[const Index: Integer]: TJSONPair read GetPair;
+{$endif}
+
+    class function RecordToJSON<T: record>(ARecord: T;
+      const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
+    class function RecordToJSON(const ARecord: TValue;
+      const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
+    class function JSONToRecord<T: record>(const AJSON: TJSONObject;
+      const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    class function JSONToRecord(const AJSON: TJSONObject;
+      const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
+    class function TValueToJSONValue(const AValue: TValue): TJSONValue;
+    class function TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType): TValue;
   end;
 
-function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
-function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
+  function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
+  function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
 
 implementation
 
 uses
-  DateUtils,
-  Variants,
-  MARS.Core.Utils;
+    DateUtils, Variants, StrUtils
+  , MARS.Core.Utils
+  , MARS.Rtti.Utils
+;
+
+class function TJSONObjectHelper.TValueToJSONValue(
+  const AValue: TValue): TJSONValue;
+var
+  LArray: TJSONArray;
+  LIndex: Integer;
+begin
+  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
+    Result := TJSONString.Create(AValue.AsString)
+
+  else if AValue.IsArray then
+  begin
+    LArray := TJSONArray.Create;
+    try
+      for LIndex := 0 to AValue.GetArrayLength-1 do
+         LArray.AddElement(TValueToJSONValue(AValue.GetArrayElement(LIndex)));
+
+      Result := LArray;
+    except
+      LArray.Free;
+      raise;
+    end;
+  end
+
+  else if (AValue.Kind in [tkRecord]) then
+    Result := TJSONObject.RecordToJSON(AValue)
+
+  else if (AValue.IsType<Boolean>) then
+    Result := TJSONBool.Create(AValue.AsType<Boolean>)
+
+  else if AValue.TypeInfo = TypeInfo(TDateTime) then
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>, False) )
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDate>, False) )
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>, False) )
+
+  else if (AValue.Kind in [tkInt64]) then
+    Result := TJSONNumber.Create( AValue.AsType<Int64> )
+  else if (AValue.Kind in [tkInteger]) then
+    Result := TJSONNumber.Create( AValue.AsType<Integer> )
+
+  else if (AValue.Kind in [tkFloat]) then
+    Result := TJSONNumber.Create( AValue.AsType<Double> )
+
+  else
+    Result := TJSONString.Create(AValue.ToString);
+end;
 
 function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
 var
@@ -223,6 +307,36 @@ end;
 
 { TJSONObjectHelper }
 
+{$ifndef DelphiXE6_UP}
+function TJSONObjectHelper.GetCount: Integer;
+begin
+  Result := Size;
+end;
+
+function TJSONObjectHelper.GetPair(const Index: Integer): TJSONPair;
+begin
+  Result := Get(Index);
+end;
+{$endif}
+
+function TJSONObjectHelper.GetExactPairName(
+  const ACaseInsensitiveName: string): string;
+var
+  LIndex: Integer;
+  LPair: TJSONPair;
+begin
+  Result := ACaseInsensitiveName;
+  for LIndex := 0 to Count -1 do
+  begin
+    LPair := Pairs[LIndex];
+    if SameText(LPair.JsonString.Value, ACaseInsensitiveName) then
+    begin
+      Result := LPair.JsonString.Value;
+      Exit;
+    end;
+  end;
+end;
+
 function TJSONObjectHelper.GetValue(const name: string): Variant;
 var
   LPair: TJSONPair;
@@ -243,6 +357,19 @@ begin
   if LValue is TJSONNumber then
     Exit(TJSONNumber(LValue).AsDouble);
   Result := LValue.Value;
+end;
+
+class function TJSONObjectHelper.JSONToRecord(const AJSON: TJSONObject;
+  const AFilterProc: TToRecordFilterProc): TValue;
+begin
+
+end;
+
+class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
+  const AFilterProc: TToRecordFilterProc = nil): T;
+begin
+  Assert(Assigned(AJSON));
+  Result := AJSON.ToRecord<T>(AFilterProc);
 end;
 
 function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
@@ -266,16 +393,10 @@ end;
 
 
 function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault: TDateTime): TDateTime;
-var
-  LString: string;
 begin
   Result := ADefault;
   if Assigned(Self) then
-  begin
-    LString := ReadStringValue(AName);
-    if LString <> '' then
-      Result := ISO8601ToDate(LString);
-  end;
+    Result := JSONToDate(ReadStringValue(AName), False);
 end;
 
 function TJSONObjectHelper.ReadDoubleValue(const AName: string;
@@ -286,6 +407,56 @@ begin
   Result := ADefault;
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsDouble;
+end;
+
+procedure TJSONObjectHelper.FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil);
+
+  function GetRecordFilterProc(const ARecordType: TRttiType): TToJSONFilterProc;
+  var
+    LMethod: TRttiMethod;
+  begin
+    Result := nil;
+    // looking for TMyRecord.ToJSONFilter(const AField: TRttiField; const AObj: TJSONObject): Boolean;
+
+    LMethod := ARecordType.FindMethodFunc<TRttiField, TJSONObject, Boolean>('ToJSONFilter');
+    if Assigned(LMethod) then
+      Result :=
+        procedure (const AField: TRttiField; const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean)
+        begin
+          AAccept := LMethod.Invoke(ARecord, [AField, AJSONObject]).AsBoolean;
+        end;
+  end;
+
+var
+  LType: TRttiType;
+  LField: TRttiField;
+  LFilterProc: TToJSONFilterProc;
+  LAccept: Boolean;
+  LValue: TValue;
+begin
+  LType := TRttiContext.Create.GetType(ARecord.TypeInfo);
+
+  LFilterProc := AFilterProc;
+  if not Assigned(LFilterProc) then
+    LFilterProc := GetRecordFilterProc(LType);
+
+  for LField in LType.GetFields do
+  begin
+    LAccept := True;
+    if Assigned(LFilterProc) then
+      LFilterProc(LField, ARecord, Self, LAccept);
+
+    if LAccept then
+    begin
+      LValue := LField.GetValue(ARecord.GetReferenceToRawData);
+      WriteTValue(LField.Name, LValue);
+    end;
+  end;
+end;
+
+procedure TJSONObjectHelper.FromRecord<T>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil);
+begin
+  FromRecord(TValue.From<T>(ARecord), AFilterProc);
 end;
 
 {$ifdef DelphiXE6_UP}
@@ -344,28 +515,151 @@ begin
 end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
-  const ADefault: TValue): TValue;
+  const ADefault: TValue; const ADesiredType: TRttiType;
+  const ANameCaseSensitive: Boolean): TValue;
 var
   LValue: TJSONValue;
+  LName: string;
 begin
+  LName := AName;
+  if not ANameCaseSensitive then
+    LName := GetExactPairName(LName);
+
   Result := ADefault;
-  if TryGetValue<TJSONValue>(AName, LValue) then
-  begin
-    if LValue is TJSONTrue then
-      Result := True
-    else if LValue is TJSONFalse then
-      Result := False
-    else if LValue is TJSONString then
-      Result := TJSONString(LValue).Value
-    else if LValue is TJSONNumber then
-      Result := TJSONNumber(LValue).AsDouble
-    else if LValue is TJSONNull then
-      Result := TValue.Empty
-    else
-      raise Exception.CreateFmt('Unable to put JSON Value [%s] in TValue', [LValue.ClassName]);
-    //  TJSONObject
-    //  TJSONArray
+  if TryGetValue<TJSONValue>(LName, LValue) then
+    Result := TJSONValueToTValue(LValue, ADesiredType);
+end;
+
+class function TJSONObjectHelper.RecordToJSON(const ARecord: TValue;
+  const AFilterProc: TToJSONFilterProc): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  try
+    Result.FromRecord(ARecord, AFilterProc);
+  except
+    Result.Free;
+    raise;
   end;
+end;
+
+class function TJSONObjectHelper.RecordToJSON<T>(ARecord: T;
+  const AFilterProc: TToJSONFilterProc): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  try
+    Result.FromRecord<T>(ARecord, AFilterProc);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+class function TJSONObjectHelper.TJSONValueToTValue(
+  const AValue: TJSONValue; const ADesiredType: TRttiType): TValue;
+var
+  LArray: TValue;
+  LElementType: TRttiType;
+  LJSONArray: TJSONArray;
+  LJSONElement: TJSONValue;
+  LIndex: Integer;
+begin
+  if AValue is TJSONBool then // Boolean
+    Result := TJSONBool(AValue).AsBoolean
+  else if AValue is TJSONNumber then // Numbers (Integer and Float)
+  begin
+{$ifdef DelphiXE6_UP}
+    if ADesiredType.TypeKind in [tkInt64] then
+      Result := TJSONNumber(AValue).AsInt64
+    else
+{$endif}
+    if ADesiredType.TypeKind in [tkInteger] then
+      Result := TJSONNumber(AValue).AsInt
+    else
+      Result := TJSONNumber(AValue).AsDouble;
+  end
+  else if AValue is TJSONString then // Date and string
+  begin
+    if (ADesiredType.Handle = TypeInfo(TDateTime))
+      or (ADesiredType.Handle = TypeInfo(TDate))
+      or (ADesiredType.Handle = TypeInfo(TTime))
+    then
+      Result := JSONToDate(TJSONString(AValue).Value, False) // TODO: maybe add a parameter for AReturnUTC?
+    else
+      Result := TJSONString(AValue).Value;
+  end
+  else if AValue is TJSONNull then // null values
+    Result := TValue.Empty
+  else if AValue is TJSONObject then
+    Result := TJSONObject(AValue).ToRecord(ADesiredType)
+  else if (AValue is TJSONArray) then
+  begin
+    LJSONArray := TJSONArray(AValue);
+    if ADesiredType.IsArray(LElementType) then
+    begin
+      TValue.Make(nil, ADesiredType.Handle, LArray);
+      SetArrayLength(LArray, ADesiredType, LJSONArray.Count);
+      for LIndex := 0 to LJSONArray.Count-1 do
+      begin
+        LJSONElement := LJSONArray.Items[LIndex];
+        LArray.SetArrayElement(LIndex, TJSONValueToTValue(LJSONElement, LElementType));
+      end;
+      Result := LArray;
+    end;
+  end
+  else
+    raise Exception.CreateFmt('Unable to put JSON Value [%s] in TValue', [AValue.ClassName]);
+end;
+
+function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType;
+  const AFilterProc: TToRecordFilterProc = nil): TValue;
+var
+  LField: TRttiField;
+  LValue: TValue;
+  LRecordInstance: Pointer;
+  LFilterProc: TToRecordFilterProc;
+  LAccept: Boolean;
+
+  function GetRecordFilterProc: TToRecordFilterProc;
+  var
+    LMethod: TRttiMethod;
+  begin
+    Result := nil;
+    // looking for TMyRecord.ToRecordFilter(const AField: TRttiField; const AObj: TJSONObject): Boolean;
+
+    LMethod := ARecordType.FindMethodFunc<TRttiField, TJSONObject, Boolean>('ToRecordFilter');
+    if Assigned(LMethod) then
+      Result :=
+        procedure (const AField: TRttiField; const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean)
+        begin
+          AAccept := LMethod.Invoke(ARecord, [AField, AJSONObject]).AsBoolean;
+        end;
+  end;
+
+begin
+  TValue.Make(nil, ARecordType.Handle, Result);
+  LRecordInstance := Result.GetReferenceToRawData;
+
+  LFilterProc := AFilterProc;
+  if not Assigned(LFilterProc) then
+    LFilterProc := GetRecordFilterProc();
+
+  for LField in ARecordType.GetFields do
+  begin
+    LAccept := True;
+    if Assigned(LFilterProc) then
+      LFilterProc(LField, Result, Self, LAccept);
+
+    if LAccept then
+    begin
+      LValue := ReadValue(LField.Name, TValue.Empty, LField.FieldType, False);
+      LField.SetValue(LRecordInstance, LValue);
+    end;
+  end;
+end;
+
+function TJSONObjectHelper.ToRecord<T>(const AFilterProc: TToRecordFilterProc = nil): T;
+begin
+  Result := ToRecord(TRttiContext.Create.GetType(TypeInfo(T)), AFilterProc).AsType<T>;
 end;
 
 procedure TJSONObjectHelper.WriteBoolValue(const AName: string;
@@ -427,6 +721,12 @@ begin
 
   if AValue <> '' then
     AddPair(AName, TJSONString.Create(AValue));
+end;
+
+procedure TJSONObjectHelper.WriteTValue(const AName: string;
+  const AValue: TValue);
+begin
+  AddPair(AName, TValueToJSONValue(AValue));
 end;
 
 procedure TJSONObjectHelper.WriteUnixTimeValue(const AName: string;
