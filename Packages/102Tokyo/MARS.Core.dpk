@@ -39,7 +39,6 @@ requires
   IndyCore,
   xmlrtl,
   DbxCommonDriver,
-  fmx,
   dsnap,
   MARS.Utils,
   MARS.JOSE;

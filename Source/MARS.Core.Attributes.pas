@@ -213,7 +213,12 @@ begin
     tkFloat: Result := StrToFloat(AString);
 
 {$ifdef DelphiXE7_UP}
-    tkChar: Result := TValue.From(AnsiChar(AString.Chars[0]));
+    tkChar: begin
+              if AString.IsEmpty then
+                Result := ''
+              else
+                Result := TValue.From(AString.Chars[0]);
+            end;
 {$else}
     tkChar: Result := TValue.From(Copy(AString, 1, 1));
 {$endif}

@@ -36,13 +36,10 @@ requires
   FireDAC,
   FireDACCommonDriver,
   FireDACCommon,
-  DataSnapFireDAC,
-  fmx,
   inet,
   IndySystem,
   IndyProtocols,
   IndyCore,
-  fmxFireDAC,
   dsnap,
   MARS.Core,
   MARS.ReadersAndWriters;

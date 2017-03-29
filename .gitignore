@@ -57,3 +57,4 @@ __history/
 *.stat
 Android
 *.lnk
+/Lib
