@@ -52,8 +52,6 @@ class function THMAC.Sign(const AInput, AKey: TBytes; AAlg: THMACAlgorithm): TBy
 var
   LSigner: TIdHMAC;
 begin
-  LSigner := nil;
-
   if not IdSSLOpenSSL.LoadOpenSSLLibrary then
     raise Exception.Create('Cannot load OpenSSL library');
 
@@ -61,6 +59,8 @@ begin
     SHA256: LSigner := TIdHMACSHA256.Create;
     SHA384: LSigner := TIdHMACSHA384.Create;
     SHA512: LSigner := TIdHMACSHA512.Create;
+    else
+      raise Exception.Create('Unknown algorithm');
   end;
 
   try
