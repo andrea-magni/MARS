@@ -3,7 +3,7 @@ inherited MainDataResource: TMainDataResource
   Width = 412
   object FDConnection1: TFDConnection
     Params.Strings = (
-      'ConnectionDef=Firebird_Employee_Pooled')
+      'ConnectionDef=MAIN_DB')
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll
     LoginPrompt = False
