@@ -398,8 +398,6 @@ var
   LFirstDelim, LSecondDelim: Integer;
 
   LIndex: Integer;
-  LValue: string;
-
   LCustomProvider: TContextValueProviderProc;
 begin
   Result := TValue.Empty;
@@ -435,10 +433,7 @@ begin
       raise EMARSFireDACException.CreateFmt('PathParam not found: %s', [LIdentifier]);
   end
   else if SameText(LSubject, 'QueryParam') then
-  begin
-    Result := TMARSURL.URLDecode(Activation.URL.QueryTokenByName(LIdentifier));
-//  raise EMARSFireDACException.CreateFmt('QueryParam not found: %s', [LIdentifier]);
-  end
+    Result := Activation.URL.QueryTokenByName(LIdentifier)
   else if SameText(LSubject, 'Request') then
     Result := ReadPropertyValue(Activation.Request, LIdentifier)
 //  else if SameText(LSubject, 'Response') then

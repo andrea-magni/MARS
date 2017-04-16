@@ -83,7 +83,8 @@ type
     property PathTokens: TArray<string> read FPathTokens;
     property Query: string read FQuery;
     property QueryTokens: TDictionary<string, string> read FQueryTokens;
-    function QueryTokenByName(const AName: string; const ACaseInsensitive: Boolean = True): string; virtual;
+    function QueryTokenByName(const AName: string; const ACaseInsensitive: Boolean = True;
+      const AExceptionIfNotFound: Boolean = True): string; virtual;
 
     property BasePath: string read FBasePath write SetBasePath;
     property Resource: string read FResource write FResource;
@@ -108,7 +109,7 @@ implementation
 uses
     StrUtils
 
-  , MARS.Core.Utils
+  , MARS.Core.Utils, MARS.Core.Application
   , IdURI
   ;
 
@@ -347,7 +348,7 @@ begin
 
   if FQuery <> '' then
   begin
-    LQuery := FQuery;
+    LQuery := URLDecode(FQuery);
     while StartsStr(LQuery, '?') do
       LQuery := RightStr(LQuery, Length(LQuery) - 1);
 
@@ -364,12 +365,14 @@ begin
 end;
 
 function TMARSURL.QueryTokenByName(const AName: string;
-  const ACaseInsensitive: Boolean): string;
+  const ACaseInsensitive: Boolean; const AExceptionIfNotFound: Boolean): string;
 var
   LCurrentKey: string;
   LKeys: TArray<string>;
   LIndex: Integer;
+  LFound: Boolean;
 begin
+  LFound := False;
   Result := '';
 
   LKeys := QueryTokens.Keys.ToArray;
@@ -380,9 +383,13 @@ begin
     if (AName = LCurrentKey) or (ACaseInsensitive and SameText(AName, LCurrentKey)) then
     begin
       QueryTokens.TryGetValue(LCurrentKey, Result);
+      LFound := True;
       Exit;
     end;
   end;
+
+  if (not LFound) and AExceptionIfNotFound then
+    raise EMARSApplicationException.CreateFmt('QueryParam not found: %s', [AName]);
 end;
 
 procedure TMARSURL.SetBasePath(const Value: string);
