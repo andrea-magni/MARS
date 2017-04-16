@@ -68,11 +68,12 @@ type
   protected
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TFDConnection; virtual;
-    procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand); virtual;
     function GetContextValue(const AName: string; const ADesiredType: TFieldType = ftUnknown): TValue; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
+
+    procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand); virtual;
 
     constructor Create(const AConnectionDefName: string;
       const AActivation: IMARSActivation = nil); virtual;
@@ -435,10 +436,8 @@ begin
   end
   else if SameText(LSubject, 'QueryParam') then
   begin
-    if Activation.URL.QueryTokens.TryGetValue(LIdentifier, LValue) then
-      Result := LValue
-    else
-      raise EMARSFireDACException.CreateFmt('QueryParam not found: %s', [LIdentifier]);
+    Result := TMARSURL.URLDecode(Activation.URL.QueryTokenByName(LIdentifier));
+//  raise EMARSFireDACException.CreateFmt('QueryParam not found: %s', [LIdentifier]);
   end
   else if SameText(LSubject, 'Request') then
     Result := ReadPropertyValue(Activation.Request, LIdentifier)

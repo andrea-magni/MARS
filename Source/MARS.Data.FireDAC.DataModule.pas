@@ -40,6 +40,7 @@ type
   TMARSFDDataModuleResource = class(TDataModule)
   private
   protected
+    [Context] FD: TMARSFireDAC;
     [Context] URL: TMARSURL;
 
     procedure BeforeApplyUpdates(ADeltas: TFDJSONDeltas; ADelta: TFDMemTable;
@@ -99,12 +100,13 @@ end;
 procedure TMARSFDDataModuleResource.BeforeApplyUpdates(ADeltas: TFDJSONDeltas;
   ADelta: TFDMemTable; ADataSet: TFDCustomQuery);
 begin
-
+  FD.InjectParamAndMacroValues(ADataSet.Command);
 end;
 
 function TMARSFDDataModuleResource.Retrieve: TArray<TFDCustomQuery>;
 var
   LIncludeDefault: Boolean;
+  LDataSet: TFDCustomQuery;
   LDataSets: TArray<TFDCustomQuery>;
 begin
   // determine default behavior
@@ -132,6 +134,9 @@ begin
         Result := True;
       end
   );
+
+  for LDataSet in LDataSets do
+    FD.InjectParamAndMacroValues(LDataSet.Command);
 
   Result := LDataSets;
 end;

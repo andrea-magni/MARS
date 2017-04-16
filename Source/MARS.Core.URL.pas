@@ -83,6 +83,7 @@ type
     property PathTokens: TArray<string> read FPathTokens;
     property Query: string read FQuery;
     property QueryTokens: TDictionary<string, string> read FQueryTokens;
+    function QueryTokenByName(const AName: string; const ACaseInsensitive: Boolean = True): string; virtual;
 
     property BasePath: string read FBasePath write SetBasePath;
     property Resource: string read FResource write FResource;
@@ -358,6 +359,28 @@ begin
         FQueryTokens.Add(LStrings.Names[LIndex], LStrings.ValueFromIndex[LIndex]);
     finally
       LStrings.Free;
+    end;
+  end;
+end;
+
+function TMARSURL.QueryTokenByName(const AName: string;
+  const ACaseInsensitive: Boolean): string;
+var
+  LCurrentKey: string;
+  LKeys: TArray<string>;
+  LIndex: Integer;
+begin
+  Result := '';
+
+  LKeys := QueryTokens.Keys.ToArray;
+  for LIndex := Low(LKeys) to High(LKeys) do
+  begin
+    LCurrentKey := LKeys[LIndex];
+
+    if (AName = LCurrentKey) or (ACaseInsensitive and SameText(AName, LCurrentKey)) then
+    begin
+      QueryTokens.TryGetValue(LCurrentKey, Result);
+      Exit;
     end;
   end;
 end;
