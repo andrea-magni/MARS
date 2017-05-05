@@ -109,7 +109,7 @@ implementation
 uses
     StrUtils
 
-  , MARS.Core.Utils, MARS.Core.Application
+  , MARS.Core.Utils
   , IdURI
   ;
 
@@ -389,7 +389,7 @@ begin
   end;
 
   if (not LFound) and AExceptionIfNotFound then
-    raise EMARSApplicationException.CreateFmt('QueryParam not found: %s', [AName]);
+    raise Exception.CreateFmt('QueryParam not found: %s', [AName]);
 end;
 
 procedure TMARSURL.SetBasePath(const Value: string);
