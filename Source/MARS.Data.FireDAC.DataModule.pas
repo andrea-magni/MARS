@@ -100,7 +100,8 @@ end;
 procedure TMARSFDDataModuleResource.BeforeApplyUpdates(ADeltas: TFDJSONDeltas;
   ADelta: TFDMemTable; ADataSet: TFDCustomQuery);
 begin
-  FD.InjectParamAndMacroValues(ADataSet.Command);
+  FD.InjectMacroValues(ADataSet.Command);
+  FD.InjectParamValues(ADataSet.Command);
 end;
 
 function TMARSFDDataModuleResource.Retrieve: TArray<TFDCustomQuery>;
@@ -136,7 +137,10 @@ begin
   );
 
   for LDataSet in LDataSets do
-    FD.InjectParamAndMacroValues(LDataSet.Command);
+  begin
+    FD.InjectMacroValues(LDataSet.Command);
+    FD.InjectParamValues(LDataSet.Command);
+  end;
 
   Result := LDataSets;
 end;

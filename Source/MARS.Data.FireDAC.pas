@@ -73,7 +73,8 @@ type
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
 
-    procedure InjectParamAndMacroValues(const ACommand: TFDCustomCommand); virtual;
+    procedure InjectParamValues(const ACommand: TFDCustomCommand); virtual;
+    procedure InjectMacroValues(const ACommand: TFDCustomCommand); virtual;
 
     constructor Create(const AConnectionDefName: string;
       const AActivation: IMARSActivation = nil); virtual;
@@ -317,8 +318,8 @@ begin
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
     Result.CommandText.Text := ASQL;
-    Result.Prepare;
-    InjectParamAndMacroValues(Result);
+    InjectMacroValues(Result);
+    InjectParamValues(Result);
     if AContextOwned then
       Activation.AddToContext(Result);
   except
@@ -335,8 +336,8 @@ begin
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
-    Result.Prepare;
-    InjectParamAndMacroValues(Result.Command);
+    InjectMacroValues(Result.Command);
+    InjectParamValues(Result.Command);
     if AContextOwned then
       Activation.AddToContext(Result);
   except
@@ -447,24 +448,33 @@ begin
       LCustomProvider(Activation, AName, ADesiredType, Result);
 end;
 
-procedure TMARSFireDAC.InjectParamAndMacroValues(const ACommand: TFDCustomCommand);
+procedure TMARSFireDAC.InjectMacroValues(const ACommand: TFDCustomCommand);
 var
   LIndex: Integer;
-  LParam: TFDParam;
   LMacro: TFDMacro;
 begin
-  for LIndex := 0 to ACommand.Params.Count-1 do
-  begin
-    LParam := ACommand.Params[LIndex];
-    LParam.Value := GetContextValue(LParam.Name, LParam.DataType).AsVariant;
-  end;
-
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
     LMacro.Value := GetContextValue(LMacro.Name, MacroDataTypeToFieldType(LMacro.DataType)).AsVariant;
   end;
 end;
+
+procedure TMARSFireDAC.InjectParamValues(const ACommand: TFDCustomCommand);
+var
+  LIndex: Integer;
+  LParam: TFDParam;
+begin
+  if not ACommand.Prepared then
+    ACommand.Prepare;
+
+  for LIndex := 0 to ACommand.Params.Count-1 do
+  begin
+    LParam := ACommand.Params[LIndex];
+    LParam.Value := GetContextValue(LParam.Name, LParam.DataType).AsVariant;
+  end;
+end;
+
 
 procedure TMARSFireDAC.InTransaction(const ADoSomething: TProc<TFDTransaction>);
 var
