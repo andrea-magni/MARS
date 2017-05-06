@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{D910EC17-6166-41C1-AECE-22D9F3443464}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MARSServer.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSClient.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MARSServer">
+        <MSBuild Projects="MARSServer.dproj"/>
+    </Target>
+    <Target Name="MARSServer:Clean">
+        <MSBuild Projects="MARSServer.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSServer:Make">
+        <MSBuild Projects="MARSServer.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSClient">
+        <MSBuild Projects="MARSClient.dproj"/>
+    </Target>
+    <Target Name="MARSClient:Clean">
+        <MSBuild Projects="MARSClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient:Make">
+        <MSBuild Projects="MARSClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MARSServer;MARSClient"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MARSServer:Clean;MARSClient:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MARSServer:Make;MARSClient:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
