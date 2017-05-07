@@ -141,7 +141,11 @@ var
 begin
   Result := TValue.Empty;
 
+{$ifdef Delphi10Berlin_UP}
   LJSON := TJSONObject.ParseJSONValue(AInputData, 0) as TJSONObject;
+{$else}
+  LJSON := TJSONObject.ParseJSONValue(string(AInputData)) as TJSONObject;
+{$endif}
   if Assigned(LJSON) then
     try
       LDeltas := TFDJSONDeltas.Create;

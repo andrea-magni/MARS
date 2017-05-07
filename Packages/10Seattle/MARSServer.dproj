@@ -3,7 +3,7 @@
         <ProjectGuid>{D44362A0-1BCF-45FD-80B4-281FB36C0E08}</ProjectGuid>
         <MainSource>MARSServer.dpk</MainSource>
         <ProjectVersion>18.1</ProjectVersion>
-        <FrameworkType>None</FrameworkType>
+        <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
@@ -101,6 +101,7 @@
         <DCC_RemoteDebug>true</DCC_RemoteDebug>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+        <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
@@ -130,6 +131,9 @@
         <DCCReference Include="fmxFireDAC.dcp"/>
         <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="DataSnapFireDAC.dcp"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Activation.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Activation.InjectionService.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Activation.Interfaces.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Application.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Attributes.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Cache.pas"/>
@@ -137,32 +141,37 @@
         <DCCReference Include="..\..\Source\MARS.Core.Declarations.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Engine.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Exceptions.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Injection.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Injection.Interfaces.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Injection.Types.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.JSON.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MediaType.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReader.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReaders.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriter.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriters.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Registry.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Request.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Response.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Token.InjectionService.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Token.ReadersAndWriters.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Token.Resource.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.URL.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.DataModule.pas">
             <Form>MARSFDDataModuleResource</Form>
-            <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.ReadersAndWriters.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.MessageBodyWriters.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.Utils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.http.Core.pas"/>
         <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.IniFile.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.IniFile.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.http.Core.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas"/>
@@ -175,8 +184,6 @@
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Activation.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReaders.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -218,13 +225,22 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\17.0\Bpl\MARSServer230.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\..\..\..\..\..\delphi\Bpl\MARSServer230.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARSServer.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
+                <DeployClass Name="DependencyModule">
+                    <Platform Name="Win32">
+                        <Operation>0</Operation>
+                        <Extensions>.dll;.bpl</Extensions>
+                    </Platform>
+                    <Platform Name="OSX32">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                </DeployClass>
                 <DeployClass Name="ProjectOSXResource">
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\Resources</RemoteDir>
@@ -538,16 +554,7 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <DeployClass Name="DependencyModule">
-                    <Platform Name="Win32">
-                        <Operation>0</Operation>
-                        <Extensions>.dll;.bpl</Extensions>
-                    </Platform>
-                    <Platform Name="OSX32">
-                        <Operation>1</Operation>
-                        <Extensions>.dylib</Extensions>
-                    </Platform>
-                </DeployClass>
+                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>

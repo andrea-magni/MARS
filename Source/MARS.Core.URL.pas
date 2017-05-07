@@ -384,7 +384,7 @@ begin
     begin
       QueryTokens.TryGetValue(LCurrentKey, Result);
       LFound := True;
-      Exit;
+      Break;
     end;
   end;
 
