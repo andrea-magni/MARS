@@ -26,17 +26,13 @@ type
     FDConnection1: TFDConnection;
     employee: TFDQuery;
     FDGUIxWaitCursor1: TFDGUIxWaitCursor;
-    country: TFDQuery;
-    procedure employeeBeforeOpen(DataSet: TDataSet);
   private
   public
-(*
-    [GET, Path('/standard')]
-    function StandardDataSet: TArray<TDataset>;
+//    [GET, Path('/standard')]
+//    function StandardDataSet: TArray<TDataset>;
 
-    [GET, Path('/employee')]
-    function EmployeeDataSet: TDataSet;
-*)
+//    [GET, Path('/employee')]
+//    function EmployeeDataSet: TDataSet;
   end;
 
 implementation
@@ -50,14 +46,6 @@ uses
 
 { TMainDataResource }
 
-procedure TMainDataResource.employeeBeforeOpen(DataSet: TDataSet);
-begin
-  inherited;
-
-  employee.ParamByName('PARAM1').AsString := URL.QueryTokenByName('param1');
-end;
-
-
 //function TMainDataResource.EmployeeDataSet: TDataSet;
 //begin
 //  Result := Employee;
@@ -67,7 +55,6 @@ end;
 //begin
 //  Result := [employee];
 //end;
-
 
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<TMainDataResource>;

@@ -35,10 +35,6 @@ type
     BindSourceDB2: TBindSourceDB;
     LinkGridToDataSourceBindSourceDB2: TLinkGridToDataSource;
     ButtonGET: TButton;
-    country1: TFDMemTable;
-    StringGrid2: TStringGrid;
-    BindSourceDB1: TBindSourceDB;
-    LinkGridToDataSourceBindSourceDB1: TLinkGridToDataSource;
     procedure FormCreate(Sender: TObject);
     procedure ButtonPOSTClick(Sender: TObject);
     procedure ButtonGETClick(Sender: TObject);

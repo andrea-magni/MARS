@@ -10,23 +10,21 @@ object Form1: TForm1
   OnCreate = FormCreate
   DesignerMasterStyle = 0
   object StringGrid1: TStringGrid
-    Align = Top
+    Align = Client
     CanFocus = True
     ClipChildren = True
     Margins.Left = 10.000000000000000000
     Margins.Top = 10.000000000000000000
     Margins.Right = 100.000000000000000000
     Margins.Bottom = 10.000000000000000000
-    Position.X = 10.000000000000000000
-    Position.Y = 60.000000000000000000
     Size.Width = 641.000000000000000000
-    Size.Height = 229.000000000000000000
+    Size.Height = 435.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 4
     RowHeight = 21.000000000000000000
-    RowCount = 1
+    RowCount = 42
     Viewport.Width = 637.000000000000000000
-    Viewport.Height = 188.000000000000000000
+    Viewport.Height = 410.000000000000000000
   end
   object Layout1: TLayout
     Align = Top
@@ -67,19 +65,6 @@ object Form1: TForm1
       OnClick = ButtonGETClick
     end
   end
-  object StringGrid2: TStringGrid
-    CanFocus = True
-    ClipChildren = True
-    Position.X = 8.000000000000000000
-    Position.Y = 296.000000000000000000
-    Size.Width = 417.000000000000000000
-    Size.Height = 201.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 27
-    RowCount = 14
-    Viewport.Width = 397.000000000000000000
-    Viewport.Height = 176.000000000000000000
-  end
   object MARSClient1: TMARSClient
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 0
@@ -92,9 +77,8 @@ object Form1: TForm1
     HttpClient.Request.ContentRangeEnd = -1
     HttpClient.Request.ContentRangeStart = -1
     HttpClient.Request.ContentRangeInstanceLength = -1
-    HttpClient.Request.Accept = 'application/json'
+    HttpClient.Request.Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
     HttpClient.Request.BasicAuthentication = False
-    HttpClient.Request.Host = 'localhost:8080'
     HttpClient.Request.UserAgent = 'Mozilla/3.0 (compatible; Indy Library)'
     HttpClient.Request.Ranges.Units = 'bytes'
     HttpClient.Request.Ranges = <>
@@ -112,18 +96,10 @@ object Form1: TForm1
   object MARSFDResource1: TMARSFDResource
     Application = MARSClientApplication1
     Resource = 'maindata'
-    QueryParams.Strings = (
-      'param1=isho')
     ResourceDataSets = <
       item
         DataSetName = 'employee'
         DataSet = employee1
-        SendDelta = True
-        Synchronize = True
-      end
-      item
-        DataSetName = 'country'
-        DataSet = country1
         SendDelta = True
         Synchronize = True
       end>
@@ -141,16 +117,9 @@ object Form1: TForm1
       GridControl = StringGrid1
       Columns = <>
     end
-    object LinkGridToDataSourceBindSourceDB1: TLinkGridToDataSource
-      Category = 'Quick Bindings'
-      DataSource = BindSourceDB1
-      GridControl = StringGrid2
-      Columns = <>
-    end
   end
   object employee1: TFDMemTable
     ActiveStoredUsage = []
-    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll
@@ -166,25 +135,5 @@ object Form1: TForm1
     ScopeMappings = <>
     Left = 688
     Top = 320
-  end
-  object country1: TFDMemTable
-    ActiveStoredUsage = []
-    Active = True
-    CachedUpdates = True
-    FetchOptions.AssignedValues = [evMode]
-    FetchOptions.Mode = fmAll
-    ResourceOptions.AssignedValues = [rvSilentMode]
-    ResourceOptions.SilentMode = True
-    UpdateOptions.AssignedValues = [uvCheckRequired, uvAutoCommitUpdates]
-    UpdateOptions.CheckRequired = False
-    UpdateOptions.AutoCommitUpdates = True
-    Left = 584
-    Top = 296
-  end
-  object BindSourceDB1: TBindSourceDB
-    DataSet = country1
-    ScopeMappings = <>
-    Left = 360
-    Top = 240
   end
 end
