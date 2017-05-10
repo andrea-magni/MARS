@@ -10,7 +10,8 @@ interface
 uses
   Classes, SysUtils, Diagnostics, Rtti
   , MARS.Core.Classes
-  , MARS.Core.Activation, MARS.Utils.ReqRespLogger.Interfaces
+  , MARS.Core.Activation
+  , MARS.Core.Activation.Interfaces, MARS.Utils.ReqRespLogger.Interfaces
   , Web.HttpApp
 ;
 
@@ -91,7 +92,8 @@ end;
 
 class destructor TMARSReqRespLoggerCodeSite.ClassDestroy;
 begin
-  _Instance := nil;
+  if Assigned(_Instance) then
+    FreeAndNil(_Instance);
 end;
 
 procedure TMARSReqRespLoggerCodeSite.Clear;
