@@ -3,7 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-library ToDoListApacheMod;
+library mod_todolist;
 
 uses
   {$IFDEF MSWINDOWS}
@@ -22,10 +22,10 @@ uses
 // httpd.conf entries:
 //
 (*
- LoadModule marstemplate_module modules/mod_marstemplate.dll
+ LoadModule todolist_module modules/mod_todolist.dll
 
  <Location /xyz>
-    SetHandler mod_marstemplate-handler
+    SetHandler mod_todolist-handler
  </Location>
 *)
 //
@@ -33,7 +33,7 @@ uses
 //
 // httpd.conf entries should be different if the project is changed in these ways:
 //   1. The TApacheModuleData variable name is changed
-//   2. The project is renamed. //AM mod_marstemplate
+//   2. The project is renamed. // mod_todolist
 //   3. The output directory is not the apache/modules directory
 //
 
@@ -41,7 +41,7 @@ uses
 var
   GModuleData: TApacheModuleData;
 exports
-  GModuleData name 'marstemplate_module';
+  GModuleData name 'todolist_module';
 
 begin
 {$IFDEF MSWINDOWS}
