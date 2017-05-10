@@ -1,36 +1,46 @@
 ﻿[MARSClientApplication1]
-Coordinates=216,1,131,33
+Coordinates=216,1,155,36
 
 [MARSFDResource1]
-Coordinates=216,56,107,33
+Coordinates=216,56,130,36
 
 [StringGrid1]
-Coordinates=196,21,70,51
+Coordinates=207,128,80,58
 Visible=True
 
 [MARSClient1]
-Coordinates=117,133,74,33
+Coordinates=117,133,92,36
 
 []
 Coordinates=10,10,106,58
 Visible=False
 
 [BindingsList1]
-Coordinates=135,87,82,33
+Coordinates=135,87,91,36
 
 [ButtonPOST]
-Coordinates=139,116,75,51
+Coordinates=219,212,86,58
 
 [Layout1]
-Coordinates=251,116,53,33
+Coordinates=10,340,60,36
 
 [employee1]
-Coordinates=404,1,67,33
+Coordinates=404,1,77,36
 Visible=False
 
 [BindSourceDB2]
-Coordinates=10,10,92,267
+Coordinates=10,51,106,336
 
-[BindNavigator1]
-Coordinates=10,116,90,51
+[ButtonGET]
+Coordinates=331,212,78,58
+
+[StringGrid2]
+Coordinates=113,212,80,58
+
+[country1]
+Coordinates=10,212,64,36
+Visible=True
+
+[BindSourceDB1]
+Coordinates=97,212,106,124
 

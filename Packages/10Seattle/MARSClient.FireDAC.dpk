@@ -1,4 +1,4 @@
-package MARS.DelphiRazor;
+package MARSClient.FireDAC;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -25,18 +25,24 @@ package MARS.DelphiRazor;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity Core'}
-{$LIBSUFFIX '250'}
-{$RUNONLY}
-{$IMPLICITBUILD OFF}
+{$DESCRIPTION 'MARS-Curiosity Client FireDAC'}
+{$LIBSUFFIX '230'}
+{$DESIGNONLY}
+{$IMPLICITBUILD ON}
 
 requires
   rtl,
-  MARS.Core,
-  RazorPackage;
+  MARSClient.Core,
+  DbxCommonDriver,
+  FireDAC,
+  FireDACCommonDriver,
+  FireDACCommon,
+  DataSnapFireDAC,
+  designide;
 
 contains
-  MARS.DelphiRazor.Resources in '..\..\Source\MARS.DelphiRazor.Resources.pas';
+  MARS.Client.FireDAC in '..\..\Source\MARS.Client.FireDAC.pas',
+  MARS.Data.FireDAC.Editor in '..\..\Source\MARS.Data.FireDAC.Editor.pas';
 
 end.
 

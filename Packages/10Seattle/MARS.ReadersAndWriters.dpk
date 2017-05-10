@@ -1,4 +1,4 @@
-package MARS.DelphiRazor;
+package MARS.ReadersAndWriters;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -25,18 +25,25 @@ package MARS.DelphiRazor;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity Core'}
-{$LIBSUFFIX '250'}
+{$DESCRIPTION 'MARS-Curiosity Readers and Writers'}
+{$LIBSUFFIX '230'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   rtl,
-  MARS.Core,
-  RazorPackage;
+  dbrtl,
+  inet,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  dsnap,
+  MARS.Utils,
+  MARS.Core;
 
 contains
-  MARS.DelphiRazor.Resources in '..\..\Source\MARS.DelphiRazor.Resources.pas';
+  MARS.Core.MessageBodyWriters in '..\..\Source\MARS.Core.MessageBodyWriters.pas',
+  MARS.Data.MessageBodyWriters in '..\..\Source\MARS.Data.MessageBodyWriters.pas';
 
 end.
 

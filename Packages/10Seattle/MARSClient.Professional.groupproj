@@ -1,6 +1,6 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{8B31503E-A2F0-4933-8CB5-13BB39CA0F69}</ProjectGuid>
+        <ProjectGuid>{251E9127-6B1C-4CDB-9BFC-D699192B299C}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
         <Projects Include="MARS.Utils.dproj">
