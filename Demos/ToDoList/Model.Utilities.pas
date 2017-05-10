@@ -3,7 +3,7 @@ unit Model.Utilities;
 interface
 
 uses
-  Classes, SysUtils, System.Hash, Data.DB
+  Classes, SysUtils, Data.DB
 ;
 
 type
@@ -16,14 +16,12 @@ type
 implementation
 
 uses
-  Rtti, TypInfo
+  Rtti, TypInfo, System.Hash
 ;
 
 class function TModelUtilities.GetPasswordHash(const APassword: string): string;
 begin
-  //TODO: add salt
-//  Result := THashMD5.GetHashString(APassword);
-  Result := '_' + APassword + '_';
+  Result := THashMD5.GetHashString(APassword + '$'); // TODO: improve salting
 end;
 
 class function TModelUtilities.GenerateUniqueCode(): string;

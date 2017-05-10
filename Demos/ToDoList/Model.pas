@@ -23,7 +23,7 @@ type
     Username: string;
     First_Name: string;
     Last_Name: string;
-    Activated: Boolean;
+    Active: Boolean;
     Roles: string;
     Pwd_Hash: string;
     Reset_Code: string;

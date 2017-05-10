@@ -175,7 +175,7 @@ begin
       LQuery.Open;
 
       ANewAccount.Creation_Date := Now;
-      ANewAccount.Activated := False;
+      ANewAccount.Active := False;
       ANewAccount.Last_Update := ANewAccount.Creation_Date;
       ANewAccount.Pwd_Hash := TModelUtilities.GetPasswordHash(ANewAccount.Pwd_Hash);
       ANewAccount.Reset_Code := TModelUtilities.GenerateUniqueCode;
@@ -228,7 +228,7 @@ begin
   FD.Query(
      'select ID, USERNAME, FIRST_NAME, LAST_NAME, ROLES from ACCOUNT '
    + 'where '
-   + ' (COALESCE(ACTIVATED, 0) <> 0) '
+   + ' (COALESCE(ACTIVE, 0) <> 0) '
    + ' and (USERNAME = :pUSERNAME) and (PWD_HASH = :pPWD_HASH)'
   , nil
   , procedure (AQuery: TFDQuery)

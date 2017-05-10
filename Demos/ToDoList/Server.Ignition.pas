@@ -36,6 +36,7 @@ uses
   , Server.Resources
   , MARS.Data.FireDAC
   , MARS.Core.Activation, DB, Rtti
+//  , MARS.Utils.ReqRespLogger.CodeSite
   ;
 
 { TServerEngine }
@@ -50,6 +51,7 @@ begin
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
     TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+//    TMARSReqRespLoggerCodeSite.Instance;
 
 //    TMARSFireDAC.AddContextValueProvider(
 //      procedure (const AContext: TMARSActivation; const AName: string;
