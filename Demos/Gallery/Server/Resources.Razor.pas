@@ -40,6 +40,7 @@ uses
   , MARS.Core.Utils
   , MARS.Rtti.Utils
   , Gallery.Model
+  , Generics.Collections
 ;
 
 { TGalleryRazorResource }
@@ -53,7 +54,7 @@ end;
 function TGalleryRazorResource.DoProvideContext(const APathInfo,
   APathParam: string): TArray<TContextEntry>;
 var
-  LObjectList: TObjectList;
+  LListObject: TList<TObject>;
   LCategoryList: TCategoryList;
   LItemsList: TItemList;
 begin
@@ -63,8 +64,8 @@ begin
   begin
     LCategoryList := TCategoryList.CreateFromFolder(GetRootFolder);
     try
-      LObjectList := LCategoryList.ToObjectList;
-      Result := Result + [TContextEntry.Create('categories', LObjectList)];
+      LListObject := LCategoryList.ToTListObject;
+      Result := Result + [TContextEntry.Create('categories', LListObject)];
     finally
       LCategoryList.Free;
     end;
@@ -73,8 +74,8 @@ begin
   begin
     LItemsList := TItemList.CreateFromFolder(CategoryFolder(APathParam));
     try
-      LObjectList := LItemsList.ToObjectList;
-      Result := Result + [TContextEntry.Create('items', LObjectList)];
+      LListObject := LItemsList.ToTListObject;
+      Result := Result + [TContextEntry.Create('items', LListObject)];
     finally
       LItemsList.Free;
     end;

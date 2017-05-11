@@ -24,6 +24,7 @@ type
   public
     constructor CreateFromFolder(const AFolder: string); virtual;
     function ToObjectList(): TObjectList; overload; virtual;
+    function ToTListObject: TList<TObject>; virtual;
     procedure ToObjectList(const AObjectList: TObjectList); overload; virtual;
   end;
 
@@ -101,6 +102,16 @@ var
 begin
   for Item in Self do
     AObjectList.Add(Item.Clone);
+end;
+
+function TGalleryItemList<T>.ToTListObject: TList<TObject>;
+var
+  Item: T;
+begin
+  Result := TList<TObject>.Create;
+
+  for Item in Self do
+    Result.Add(Item.Clone);
 end;
 
 function TGalleryItemList<T>.ToObjectList: TObjectList;
