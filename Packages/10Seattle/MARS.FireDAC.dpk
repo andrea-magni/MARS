@@ -36,7 +36,6 @@ requires
   FireDAC,
   FireDACCommonDriver,
   FireDACCommon,
-  DataSnapFireDAC,
   fmx,
   inet,
   IndySystem,

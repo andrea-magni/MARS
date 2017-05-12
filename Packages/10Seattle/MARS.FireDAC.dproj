@@ -96,7 +96,6 @@
         <DCCReference Include="FireDAC.dcp"/>
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="FireDACCommon.dcp"/>
-        <DCCReference Include="DataSnapFireDAC.dcp"/>
         <DCCReference Include="fmx.dcp"/>
         <DCCReference Include="inet.dcp"/>
         <DCCReference Include="IndySystem.dcp"/>
