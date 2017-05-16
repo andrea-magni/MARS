@@ -532,7 +532,7 @@ begin
       InvokeResourceMethod;
     finally
   { TODO -oAndrea : Avoid TObject cast. }
-      if FResourceInstance.IsObjectInstance then
+      if FResourceInstance.IsObject then
         FResourceInstance.AsObject.Free;
     end;
     FInvocationTime.Stop;

@@ -101,6 +101,7 @@ uses
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , MARS.Rtti.Utils
+  , MARS.DelphiRazor.InjectionService
 ;
 
   { TMARSDelphiRazor }
