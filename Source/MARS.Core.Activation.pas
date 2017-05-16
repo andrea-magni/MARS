@@ -57,7 +57,7 @@ type
     FConstructorInfo: TMARSConstructorInfo;
     FMethod: TRttiMethod;
     FResource: TRttiType;
-    FResourceInstance: TValue;
+    FResourceInstance: TObject;
     FMethodArguments: TArray<TValue>;
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
@@ -100,7 +100,7 @@ type
     function GetMethod: TRttiMethod;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
-    function GetResourceInstance: TValue;
+    function GetResourceInstance: TObject;
     function GetResponse: TWebResponse;
     function GetURL: TMARSURL;
     function GetURLPrototype: TMARSURL;
@@ -113,7 +113,7 @@ type
     property Method: TRttiMethod read FMethod;
     property Request: TWebRequest read FRequest;
     property Resource: TRttiType read FResource;
-    property ResourceInstance: TValue read FResourceInstance;
+    property ResourceInstance: TObject read FResourceInstance;
     property Response: TWebResponse read FResponse;
     property URL: TMARSURL read FURL;
     property URLPrototype: TMARSURL read FURLPrototype;
@@ -199,7 +199,7 @@ begin
   Result := FResource;
 end;
 
-function TMARSActivation.GetResourceInstance: TValue;
+function TMARSActivation.GetResourceInstance: TObject;
 begin
   Result := FResourceInstance;
 end;
@@ -531,9 +531,7 @@ begin
       ContextInjection;
       InvokeResourceMethod;
     finally
-  { TODO -oAndrea : Avoid TObject cast. }
-      if FResourceInstance.IsObject then
-        FResourceInstance.AsObject.Free;
+      FResourceInstance.Free;
     end;
     FInvocationTime.Stop;
     DoAfterInvoke;
@@ -595,22 +593,15 @@ end;
 procedure TMARSActivation.ContextInjection();
 var
   LType: TRttiType;
-  LResourceRef: TObject;
 begin
-  LType := FRttiContext.GetType(FResourceInstance.TypeInfo);
-
-  { TODO -oAndrea : Avoid TObject cast. Find a way to call AField.SetValue(FResourceInstance).
-    This will fix failure of context injection on non-object resource types
-  }
-  LResourceRef := FResourceInstance.AsObject;
-  Assert(LResourceRef <> nil);
+  LType := FRttiContext.GetType(FResourceInstance.ClassType);
 
   // fields
   LType.ForEachFieldWithAttribute<ContextAttribute>(
     function (AField: TRttiField; AAttrib: ContextAttribute): Boolean
     begin
       Result := True; // enumerate all
-      AField.SetValue(LResourceRef, GetContextValue(AField).Value);
+      AField.SetValue(FResourceInstance, GetContextValue(AField).Value);
     end
   );
 
@@ -619,7 +610,7 @@ begin
     function (AProperty: TRttiProperty; AAttrib: ContextAttribute): Boolean
     begin
       Result := True; // enumerate all
-      AProperty.SetValue(LResourceRef, GetContextValue(AProperty).Value);
+      AProperty.SetValue(FResourceInstance, GetContextValue(AProperty).Value);
     end
   );
 end;

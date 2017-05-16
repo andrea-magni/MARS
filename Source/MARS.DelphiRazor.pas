@@ -52,6 +52,8 @@ type
   RazorTemplatesFolderAttribute = class(RazorSingleValueAttribute);
 
   TOnLangProc = reference to procedure (const AFieldName: string; var AReplaceText: string);
+  TOnValueProc = reference to procedure (const ObjectName: string; const FieldName: string; var ReplaceText: string);
+  TOnObjectForPathProc = reference to procedure (ExecData: TRazorExecData);
 
   TMARSDelphiRazor = class
   private
@@ -63,6 +65,8 @@ type
     FURL: TMARSURL;
     FToken: TMARSToken;
     FOnLangProc: TOnLangProc;
+    FOnValueProc: TOnValueProc;
+    FOnObjectForPath: TOnObjectForPathProc;
   protected
     function GetRazorAttributeValue<T: RazorSingleValueAttribute>(
       const AType: TRttiType; const ADefault: string = ''): string;
@@ -78,6 +82,8 @@ type
     procedure OnObjectForPathHandler(Sender: TObject; ExecData: TRazorExecData); virtual;
     procedure OnPageErrorHandler(Sender: TObject; pageInfo: TPageInfo); virtual;
     procedure OnLangHandler(Sender: TObject; const FieldName: string; var ReplaceText: string); virtual;
+    procedure OnValueHandler(Sender: TObject; const ObjectName: string;
+      const FieldName: string; var ReplaceText: string); virtual;
   public
     constructor Create(const AName: string; const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
@@ -91,7 +97,10 @@ type
     property Parameters: TMARSParameters read FParameters;
     property RazorEngine: TRlxRazorEngine read GetRazorEngine;
     property Name: string read FName;
+
+    property OnObjectForPath: TOnObjectForPathProc read FOnObjectForPath write FOnObjectForPath;
     property OnLang: TOnLangProc read FOnLangProc write FOnLangProc;
+    property OnValue: TOnValueProc read FOnValueProc write FOnValueProc;
   end;
 
 implementation
@@ -215,15 +224,10 @@ begin
       FRazorEngine.OnPageError := OnPageErrorHandler;
 
       FRazorEngine.AddToDictionary('token', Token, False);
-      FRazorEngine.AddToDictionary('resource', Activation.ResourceInstance.AsObject, False);
+      FRazorEngine.AddToDictionary('resource', Activation.ResourceInstance, False);
 
       FRazorEngine.OnLang := OnLangHandler;
-
-      { TODO -oandrea : Implementare OnLang e OnValue }
-      {
-          FRazorEngine.OnValue
-          FRazorEngine.OnLang
-      }
+      FRazorEngine.OnValue := OnValueHandler;
     end;
   end;
   Result := FRazorEngine;
@@ -265,13 +269,21 @@ end;
 procedure TMARSDelphiRazor.OnObjectForPathHandler(Sender: TObject;
   ExecData: TRazorExecData);
 begin
-
+  if Assigned(FOnObjectForPath) then
+    FOnObjectForPath(ExecData);
 end;
 
 procedure TMARSDelphiRazor.OnPageErrorHandler(Sender: TObject;
   pageInfo: TPageInfo);
 begin
 
+end;
+
+procedure TMARSDelphiRazor.OnValueHandler(Sender: TObject; const ObjectName: string;
+    const FieldName: string; var ReplaceText: string);
+begin
+  if Assigned(FOnValueProc) then
+    FOnValueProc(ObjectName, FieldName, ReplaceText);
 end;
 
 function TMARSDelphiRazor.ProcessRequest(const AErrorIfNotFound: Boolean = True): string;

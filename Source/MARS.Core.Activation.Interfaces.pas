@@ -34,7 +34,7 @@ type
     function GetMethod: TRttiMethod;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
-    function GetResourceInstance: TValue;
+    function GetResourceInstance: TObject;
     function GetResponse: TWebResponse;
     function GetURL: TMARSURL;
     function GetURLPrototype: TMARSURL;
@@ -46,7 +46,7 @@ type
     property Method: TRttiMethod read GetMethod;
     property Request: TWebRequest read GetRequest;
     property Resource: TRttiType read GetResource;
-    property ResourceInstance: TValue read GetResourceInstance;
+    property ResourceInstance: TObject read GetResourceInstance;
     property Response: TWebResponse read GetResponse;
     property URL: TMARSURL read GetURL;
     property URLPrototype: TMARSURL read GetURLPrototype;

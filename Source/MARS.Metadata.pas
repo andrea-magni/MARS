@@ -100,6 +100,8 @@ type
 
     property Resources: TMARSMetadataList read FResources;
     function ForEachResource(const ADoSomething: TProc<TMARSResourceMetadata>): Integer;
+    function ForEachMethod(const ADoSomething: TProc<TMARSResourceMetadata, TMARSMethodMetadata>): Integer;
+    function FindResource(const AName: string): TMARSResourceMetadata;
   end;
 
   TMARSEngineMetadata=class(TMARSPathItemMetadata)
@@ -133,6 +135,40 @@ destructor TMARSApplicationMetadata.Destroy;
 begin
   FResources.Free;
   inherited;
+end;
+
+function TMARSApplicationMetadata.FindResource(
+  const AName: string): TMARSResourceMetadata;
+var
+  LResult: TMARSResourceMetadata;
+begin
+  LResult := nil;
+  ForEachResource(
+    procedure (ARes: TMARSResourceMetadata)
+    begin
+      if SameText(ARes.Name, AName) then
+        LResult := ARes;
+    end
+  );
+  Result := LResult;
+end;
+
+function TMARSApplicationMetadata.ForEachMethod(
+  const ADoSomething: TProc<TMARSResourceMetadata, TMARSMethodMetadata>): Integer;
+var
+  LCount: Integer;
+begin
+  Result := ForEachResource(
+    procedure (AResource: TMARSResourceMetadata)
+    begin
+      AResource.ForEachMethod(
+        procedure (AMethod: TMARSMethodMetadata)
+        begin
+          ADoSomething(AResource, AMethod);
+        end
+      );
+    end
+  );
 end;
 
 function TMARSApplicationMetadata.ForEachResource(
