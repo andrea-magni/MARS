@@ -57,7 +57,7 @@ type
     FConstructorInfo: TMARSConstructorInfo;
     FMethod: TRttiMethod;
     FResource: TRttiType;
-    FResourceInstance: TObject;
+    FResourceInstance: TValue;
     FMethodArguments: TArray<TValue>;
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
@@ -69,6 +69,7 @@ type
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
+    function GetProducesValue: string; virtual;
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
@@ -99,7 +100,7 @@ type
     function GetMethod: TRttiMethod;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
-//    function GetResourceInstance: TObject;
+    function GetResourceInstance: TValue;
     function GetResponse: TWebResponse;
     function GetURL: TMARSURL;
     function GetURLPrototype: TMARSURL;
@@ -112,7 +113,7 @@ type
     property Method: TRttiMethod read FMethod;
     property Request: TWebRequest read FRequest;
     property Resource: TRttiType read FResource;
-//    property ResourceInstance: TObject read FResourceInstance;
+    property ResourceInstance: TValue read FResourceInstance;
     property Response: TWebResponse read FResponse;
     property URL: TMARSURL read FURL;
     property URLPrototype: TMARSURL read FURLPrototype;
@@ -164,6 +165,30 @@ begin
   Result := LParamValue;
 end;
 
+function TMARSActivation.GetProducesValue: string;
+var
+  LProduces: string;
+begin
+  LProduces := '';
+
+  Method.HasAttribute<ProducesAttribute>(
+    procedure(AAttr: ProducesAttribute)
+    begin
+      LProduces := AAttr.Value;
+    end
+  );
+  if LProduces = '' then
+    Resource.HasAttribute<ProducesAttribute>(
+      procedure(AAttr: ProducesAttribute)
+      begin
+        LProduces := AAttr.Value;
+      end
+    );
+  { TODO -oAndrea : Fallback to Application default? }
+
+  Result := LProduces;
+end;
+
 function TMARSActivation.GetRequest: TWebRequest;
 begin
   Result := FRequest;
@@ -172,6 +197,11 @@ end;
 function TMARSActivation.GetResource: TRttiType;
 begin
   Result := FResource;
+end;
+
+function TMARSActivation.GetResourceInstance: TValue;
+begin
+  Result := FResourceInstance;
 end;
 
 function TMARSActivation.GetResponse: TWebResponse;
@@ -391,7 +421,9 @@ begin
           else
             Response.Content := LMethodResult.ToString;
           Response.StatusCode := 200;
-          Response.ContentType := TMediaType.WILDCARD;
+          Response.ContentType := GetProducesValue;
+          if Response.ContentType = '' then
+            Response.ContentType := TMediaType.WILDCARD;
         end;
       finally
         FWriter := nil;
@@ -499,7 +531,9 @@ begin
       ContextInjection;
       InvokeResourceMethod;
     finally
-      FResourceInstance.Free;
+  { TODO -oAndrea : Avoid TObject cast. }
+      if FResourceInstance.IsObjectInstance then
+        FResourceInstance.AsObject.Free;
     end;
     FInvocationTime.Stop;
     DoAfterInvoke;
@@ -561,15 +595,22 @@ end;
 procedure TMARSActivation.ContextInjection();
 var
   LType: TRttiType;
+  LResourceRef: TObject;
 begin
-  LType := FRttiContext.GetType(FResourceInstance.ClassType);
+  LType := FRttiContext.GetType(FResourceInstance.TypeInfo);
+
+  { TODO -oAndrea : Avoid TObject cast. Find a way to call AField.SetValue(FResourceInstance).
+    This will fix failure of context injection on non-object resource types
+  }
+  LResourceRef := FResourceInstance.AsObject;
+  Assert(LResourceRef <> nil);
 
   // fields
   LType.ForEachFieldWithAttribute<ContextAttribute>(
     function (AField: TRttiField; AAttrib: ContextAttribute): Boolean
     begin
       Result := True; // enumerate all
-      AField.SetValue(FResourceInstance, GetContextValue(AField).Value);
+      AField.SetValue(LResourceRef, GetContextValue(AField).Value);
     end
   );
 
@@ -578,7 +619,7 @@ begin
     function (AProperty: TRttiProperty; AAttrib: ContextAttribute): Boolean
     begin
       Result := True; // enumerate all
-      AProperty.SetValue(FResourceInstance, GetContextValue(AProperty).Value);
+      AProperty.SetValue(LResourceRef, GetContextValue(AProperty).Value);
     end
   );
 end;
