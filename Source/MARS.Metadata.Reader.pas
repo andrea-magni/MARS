@@ -147,6 +147,15 @@ begin
     if LMethodMetadata.Consumes.IsEmpty then
       LMethodMetadata.Consumes := AResourceMetadata.Consumes;
 
+     AMethod.ForEachAttribute<AuthorizationAttribute>(
+      procedure (Attribute: AuthorizationAttribute)
+      begin
+        LMethodMetadata.Authorization :=  SmartConcat([LMethodMetadata.Authorization, Attribute.ToString]);
+      end
+    );
+    if LMethodMetadata.Authorization.IsEmpty then
+      LMethodMetadata.Authorization := AResourceMetadata.Authorization;
+
     LParameters := AMethod.GetParameters;
     for LParameter in LParameters do
       ReadParameter(AResourceMetadata, LMethodMetadata, LParameter, AMethod);
@@ -208,6 +217,13 @@ begin
       procedure (Attribute: ConsumesAttribute)
       begin
         LResourceMetadata.Consumes := SmartConcat([LResourceMetadata.Consumes, Attribute.Value]);
+      end
+    );
+
+    LResourceType.ForEachAttribute<AuthorizationAttribute>(
+      procedure (Attribute: AuthorizationAttribute)
+      begin
+        LResourceMetadata.Authorization := SmartConcat([LResourceMetadata.Authorization, Attribute.ToString]);
       end
     );
 

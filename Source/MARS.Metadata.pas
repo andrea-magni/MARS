@@ -40,6 +40,8 @@ type
     Produces: string;
     Consumes: string;
 
+    Authorization: string;
+
     property FullPath: string read GetFullPath;
   end;
 
@@ -155,8 +157,6 @@ end;
 
 function TMARSApplicationMetadata.ForEachMethod(
   const ADoSomething: TProc<TMARSResourceMetadata, TMARSMethodMetadata>): Integer;
-var
-  LCount: Integer;
 begin
   Result := ForEachResource(
     procedure (AResource: TMARSResourceMetadata)

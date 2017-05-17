@@ -151,7 +151,10 @@ type
       const AActivation: IMARSActivation): TValue; override;
   end;
 
-  AuthorizationAttribute = class(MARSAttribute);
+  AuthorizationAttribute = class(MARSAttribute)
+  public
+    function ToString: string; override;
+  end;
 
   PermitAllAttribute = class(AuthorizationAttribute);
   DenyAllAttribute = class(AuthorizationAttribute);
@@ -162,8 +165,8 @@ type
     constructor Create(const ARoleNames: TArray<string>); overload; virtual;
   public
     constructor Create(const ARoleNames: string); overload; virtual;
-
     destructor Destroy; override;
+    function ToString: string; override;
 
     property Roles: TStringList read FRoles;
   end;
@@ -295,6 +298,13 @@ destructor RolesAllowedAttribute.Destroy;
 begin
   FRoles.Free;
   inherited;
+end;
+
+function RolesAllowedAttribute.ToString: string;
+begin
+  Result := inherited ToString;
+  if Roles.Count > 0 then
+    Result := Result + ': ' + Roles.CommaText;
 end;
 
 { BodyParamAttribute }
@@ -513,6 +523,15 @@ begin
     Result := StringToTValue(AActivation.URL.PathTokens[LTokenIndex]
       , ADestination.GetRttiType
     );
+end;
+
+{ AuthorizationAttribute }
+
+function AuthorizationAttribute.ToString: string;
+begin
+  Result := ClassName;
+  if Result.EndsWith('Attribute', True) then
+    Result := Result.Substring(0, Result.Length - 'Attribute'.Length);
 end;
 
 end.
