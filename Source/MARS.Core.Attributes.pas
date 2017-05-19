@@ -516,13 +516,30 @@ function PathParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 var
   LTokenIndex: Integer;
+  LTokenPrototype: string;
+  LValue: string;
+  LIndex: Integer;
 begin
   Result := TValue.Empty;
   LTokenIndex := GetParamIndex(ADestination, AActivation.URLPrototype);
   if LTokenIndex > -1 then
-    Result := StringToTValue(AActivation.URL.PathTokens[LTokenIndex]
-      , ADestination.GetRttiType
-    );
+  begin
+    LTokenPrototype := AActivation.URLPrototype.PathTokens[LTokenIndex];
+    if LTokenPrototype <> TMARSURL.PATH_PARAM_WILDCARD then
+      LValue := AActivation.URL.PathTokens[LTokenIndex]
+    else
+    begin
+      LValue := '';
+      for LIndex := LTokenIndex to High(AActivation.URL.PathTokens) do
+      begin
+        if LValue <> '' then
+          LValue := LValue + TMARSURL.URL_PATH_SEPARATOR;
+        LValue := LValue + AActivation.URL.PathTokens[LIndex];
+      end;
+    end;
+
+    Result := StringToTValue(LValue, ADestination.GetRttiType);
+  end;
 end;
 
 { AuthorizationAttribute }

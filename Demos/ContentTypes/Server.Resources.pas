@@ -53,6 +53,8 @@ type
      ]
     function GetStreamAsAttachment(): TStream;
 
+    [GET, Path('/echo/{*}')]
+    function Echo([PathParam('*')] AllStrings: string): TJSONObject;
 
     [GET, Path('/dataset1')
     , Produces(TMediaType.APPLICATION_XML)
@@ -117,6 +119,12 @@ begin
   Result := DataSet2;
 end;
 {$endif}
+
+function THelloWorldResource.Echo(AllStrings: string): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Result.WriteStringValue('echo', AllStrings);
+end;
 
 function THelloWorldResource.GetStream(Response: TWebResponse): TStream;
 begin

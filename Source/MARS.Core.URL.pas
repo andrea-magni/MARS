@@ -54,6 +54,7 @@ type
     const URL_PATH_SEPARATOR = '/';
     const URL_QUERY_SEPARATOR = '&';
     const DUMMY_URL = 'http://localhost:1234/';
+    const PATH_PARAM_WILDCARD = '{*}';
 
     constructor Create(const AURL: string); overload; virtual;
     constructor CreateDummy(const APath: string; const ABaseURL: string = DUMMY_URL); overload; virtual;
@@ -278,7 +279,7 @@ var
   LToken, LOtherToken: string;
 begin
   Result := (Length(PathTokens) = Length(AOtherURL.PathTokens))
-    or (PathTokens[Length(PathTokens)-1] = '{*}');
+    or (PathTokens[Length(PathTokens)-1] = PATH_PARAM_WILDCARD);
 
   if Result then
   begin
