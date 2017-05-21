@@ -67,6 +67,7 @@ type
     property Resource: TMARSResourceMetadata read GetResource;
   public
     HttpMethod: string;
+    DataType: string;
 
     constructor Create(const AParent: TMARSMetadata); override;
     destructor Destroy; override;

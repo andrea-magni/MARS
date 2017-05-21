@@ -8,7 +8,7 @@ unit MARS.Metadata.Reader;
 interface
 
 uses
-    Classes, SysUtils, System.Rtti
+    Classes, SysUtils, Rtti, TypInfo
   , MARS.Metadata
   , MARS.Core.Engine
   , MARS.Core.Application
@@ -120,6 +120,10 @@ begin
         LMethodMetadata.Path := Attribute.Value;
       end
     );
+
+    LMethodMetadata.DataType := '';
+    if (AMethod.MethodKind in [mkFunction, mkClassFunction]) then
+      LMethodMetadata.DataType := AMethod.ReturnType.QualifiedName;
 
     AMethod.ForEachAttribute<HttpMethodAttribute>(
       procedure (Attribute: HttpMethodAttribute)
