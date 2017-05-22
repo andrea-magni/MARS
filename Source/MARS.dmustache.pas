@@ -54,6 +54,7 @@ type
     destructor Destroy; override;
 
     function RenderTemplateWithJSON(const ATemplateFileName: string; const AJSON: TJSONValue): string;
+    function Render(const ATemplate: string; const AValue: variant): string;
 
     property Activation: IMARSActivation read FActivation;
     property Application: TMARSApplication read FApplication;
@@ -127,6 +128,15 @@ begin
   Result := Parameters.ByName('TemplatesFolder'
       , IncludeTrailingPathDelimiter(TPath.Combine(ExtractFilePath(ParamStr(0)), 'templates'))
       ).AsString;
+end;
+
+function TMARSdmustache.Render(const ATemplate: string;
+  const AValue: variant): string;
+var
+  LMustache: TSynMustache;
+begin
+  LMustache := TSynMustache.Parse(StringToUTF8(ATemplate));
+  Result := UTF8ToString(LMustache.Render(AValue));
 end;
 
 function TMARSdmustache.RenderTemplateWithJSON(const ATemplateFileName: string;
