@@ -47,6 +47,7 @@ uses
   , MARS.Rtti.Utils
   , MARS.Core.Attributes
   , MARS.Core.Exceptions
+  , MARS.Metadata.Attributes
 ;
 
 
@@ -121,6 +122,14 @@ begin
       end
     );
 
+    LMethodMetadata.Description := '';
+    AMethod.HasAttribute<MetaDescriptionAttribute>(
+      procedure (Attribute: MetaDescriptionAttribute)
+      begin
+        LMethodMetadata.Description := Attribute.Text;
+      end
+    );
+
     LMethodMetadata.DataType := '';
     if (AMethod.MethodKind in [mkFunction, mkClassFunction]) then
       LMethodMetadata.DataType := AMethod.ReturnType.QualifiedName;
@@ -181,6 +190,14 @@ begin
     begin
       LRequestParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
       try
+        LRequestParamMetadata.Description := '';
+        AParameter.HasAttribute<MetaDescriptionAttribute>(
+          procedure (Attribute: MetaDescriptionAttribute)
+          begin
+            LRequestParamMetadata.Description := Attribute.Text;
+          end
+        );
+
         LRequestParamMetadata.Kind := AAttribute.Kind;
         if AAttribute is NamedRequestParamAttribute then
           LRequestParamMetadata.Name := NamedRequestParamAttribute(AAttribute).Name;
@@ -209,6 +226,13 @@ begin
   try
     LResourceMetadata.Path := AResourcePath;
     LResourceMetadata.Name := LResourceType.Name;
+    LResourceMetadata.Description := '';
+    LResourceType.HasAttribute<MetaDescriptionAttribute>(
+      procedure (Attribute: MetaDescriptionAttribute)
+      begin
+        LResourceMetadata.Description := Attribute.Text;
+      end
+    );
 
     LResourceType.ForEachAttribute<ProducesAttribute>(
       procedure (Attribute: ProducesAttribute)

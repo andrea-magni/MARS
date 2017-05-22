@@ -22,6 +22,7 @@ type
     FParent: TMARSMetadata;
     property Parent: TMARSMetadata read FParent;
   public
+    Description: string;
     constructor Create(const AParent: TMARSMetadata); virtual;
   end;
   TMARSMetadataClass = class of TMARSMetadata;
