@@ -23,6 +23,7 @@ type
     property Parent: TMARSMetadata read FParent;
   public
     Description: string;
+    Visible: Boolean;
     constructor Create(const AParent: TMARSMetadata); virtual;
   end;
   TMARSMetadataClass = class of TMARSMetadata;
@@ -281,6 +282,8 @@ constructor TMARSMetadata.Create(const AParent: TMARSMetadata);
 begin
   inherited Create;
   FParent := AParent;
+  Description := '';
+  Visible := True;
 end;
 
 { TMARSRequestParamMetadata }

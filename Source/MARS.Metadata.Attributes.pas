@@ -25,6 +25,14 @@ type
     property Text: string read FText;
   end;
 
+  MetaVisibleAttribute = class(MetadataAttribute)
+  private
+    FValue: Boolean;
+  public
+    constructor Create(AValue: Boolean);
+    property Value: Boolean read FValue;
+  end;
+
 implementation
 
 uses
@@ -38,6 +46,14 @@ constructor MetaDescriptionAttribute.Create(AText: string);
 begin
   inherited Create;
   FText := AText;
+end;
+
+{ MetaVisibleAttribute }
+
+constructor MetaVisibleAttribute.Create(AValue: Boolean);
+begin
+  inherited Create;
+  FValue := AValue;
 end;
 
 end.

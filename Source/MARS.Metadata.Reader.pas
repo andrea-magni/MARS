@@ -130,6 +130,14 @@ begin
       end
     );
 
+    LMethodMetadata.Visible := True;
+    AMethod.HasAttribute<MetaVisibleAttribute>(
+      procedure (Attribute: MetaVisibleAttribute)
+      begin
+        LMethodMetadata.Visible := Attribute.Value;
+      end
+    );
+
     LMethodMetadata.DataType := '';
     if (AMethod.MethodKind in [mkFunction, mkClassFunction]) then
       LMethodMetadata.DataType := AMethod.ReturnType.QualifiedName;
@@ -226,11 +234,20 @@ begin
   try
     LResourceMetadata.Path := AResourcePath;
     LResourceMetadata.Name := LResourceType.Name;
+
     LResourceMetadata.Description := '';
     LResourceType.HasAttribute<MetaDescriptionAttribute>(
       procedure (Attribute: MetaDescriptionAttribute)
       begin
         LResourceMetadata.Description := Attribute.Text;
+      end
+    );
+
+    LResourceMetadata.Visible := True;
+    LResourceType.HasAttribute<MetaVisibleAttribute>(
+      procedure (Attribute: MetaVisibleAttribute)
+      begin
+        LResourceMetadata.Visible := Attribute.Value;
       end
     );
 
