@@ -124,6 +124,7 @@ implementation
 
 uses
     MARS.Core.URL
+  , MARS.Metadata.InjectionService
 ;
 
 { TMARSApplicationMetadata }

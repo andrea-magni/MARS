@@ -53,7 +53,8 @@ type
     constructor Create(const AName: string; const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
-    function RenderTemplateWithJSON(const ATemplateFileName: string; const AJSON: TJSONValue): string;
+    function RenderTemplateWithJSON(const ATemplateFileName: string; const AJSON: string): string; overload;
+    function RenderTemplateWithJSON(const ATemplateFileName: string; const AJSON: TJSONValue): string; overload;
     function Render(const ATemplate: string; const AValue: variant): string;
 
     property Activation: IMARSActivation read FActivation;
@@ -139,8 +140,8 @@ begin
   Result := UTF8ToString(LMustache.Render(AValue));
 end;
 
-function TMARSdmustache.RenderTemplateWithJSON(const ATemplateFileName: string;
-  const AJSON: TJSONValue): string;
+function TMARSdmustache.RenderTemplateWithJSON(const ATemplateFileName,
+  AJSON: string): string;
 var
   LTemplate: TStringList;
   LOutput: RawUTF8;
@@ -148,13 +149,19 @@ begin
   LTemplate := TStringList.Create;
   try
     LTemplate.LoadFromFile(GetTemplateFileName(ATemplateFileName));
-    if TSynMustache.TryRenderJson(StringToUTF8(LTemplate.Text), StringToUTF8(AJSON.ToJSON), LOutput) then
+    if TSynMustache.TryRenderJson(StringToUTF8(LTemplate.Text), StringToUTF8(AJSON), LOutput) then
       Result := UTF8ToString(LOutput)
     else
      raise EdmustacheError.Create('Error rendering JSON');
   finally
     LTemplate.Free;
   end;
+end;
+
+function TMARSdmustache.RenderTemplateWithJSON(const ATemplateFileName: string;
+  const AJSON: TJSONValue): string;
+begin
+  Result := RenderTemplateWithJSON(ATemplateFileName, AJSON.ToJSON);
 end;
 
 { dmustacheAttribute }

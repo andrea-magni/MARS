@@ -3,7 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit MARS.Metadata.Engine.MessageBodyWriter;
+unit MARS.Metadata.ReadersAndWriters;
 
 interface
 
@@ -21,12 +21,9 @@ uses
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
-  TMARSEngineJSONWriter = class(TInterfacedObject, IMessageBodyWriter)
+  TMARSMetadataJSONWriter = class(TInterfacedObject, IMessageBodyWriter)
   private
-    FEngine: TMARSEngine;
   protected
-    function GetEngineJSON: TJSONObject; virtual;
-    property Engine: TMARSEngine read FEngine;
   public
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -41,43 +38,33 @@ uses
   , MARS.Metadata.Reader
   ;
 
-{ TMARSEngineJSONWriter }
+{ TMARSMetadataJSONWriter }
 
-function TMARSEngineJSONWriter.GetEngineJSON: TJSONObject;
-var
-  LReader: TMARSMetadataReader;
-begin
-  LReader := TMARSMetadataReader.Create(Engine);
-  try
-    Result := LReader.Metadata.ToJSON;
-  finally
-    LReader.Free;
-  end;
-end;
-
-procedure TMARSEngineJSONWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+procedure TMARSMetadataJSONWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
-  LEngineJSON: TJSONObject;
+  LJSON: TJSONObject;
+  LMetadata: TMARSMetadata;
 begin
-  FEngine := AValue.AsType<TMARSEngine>;
-  Assert(Assigned(FEngine));
+  LMetadata := AValue.AsType<TMARSMetadata>;
+  if not Assigned(LMetadata) then
+    Exit;
 
-  LEngineJSON := GetEngineJSON;
+  LJSON := LMetadata.ToJSON;
   try
     LStreamWriter := TStreamWriter.Create(AOutputStream);
     try
-      LStreamWriter.Write(LEngineJSON.ToJSON);
+      LStreamWriter.Write(LJSON.ToJSON);
     finally
       LStreamWriter.Free;
     end;
   finally
-    LEngineJSON.Free;
+    LJSON.Free;
   end;
 end;
 
 initialization
-  TMARSMessageBodyRegistry.Instance.RegisterWriter<TMARSEngine>(TMARSEngineJSONWriter);
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TMARSMetadata>(TMARSMetadataJSONWriter);
 
 end.
