@@ -54,7 +54,8 @@ type
     destructor Destroy; override;
 
     function RenderTemplateWithJSON(const ATemplateFileName: string; const AJSON: string): string; overload;
-    function RenderTemplateWithJSON(const ATemplateFileName: string; const AJSON: TJSONValue): string; overload;
+    function RenderTemplateWithJSON(const ATemplateFileName: string; const AJSON: TJSONValue;
+      const AThenFreeJSON: Boolean = False): string; overload;
     function Render(const ATemplate: string; const AValue: variant): string;
 
     property Activation: IMARSActivation read FActivation;
@@ -159,9 +160,14 @@ begin
 end;
 
 function TMARSdmustache.RenderTemplateWithJSON(const ATemplateFileName: string;
-  const AJSON: TJSONValue): string;
+  const AJSON: TJSONValue; const AThenFreeJSON: Boolean): string;
 begin
-  Result := RenderTemplateWithJSON(ATemplateFileName, AJSON.ToJSON);
+  try
+    Result := RenderTemplateWithJSON(ATemplateFileName, AJSON.ToJSON);
+  finally
+    if AThenFreeJSON then
+      AJSON.Free;
+  end;
 end;
 
 { dmustacheAttribute }
