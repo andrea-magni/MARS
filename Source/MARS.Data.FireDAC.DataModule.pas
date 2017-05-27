@@ -45,9 +45,6 @@ type
 
     procedure BeforeApplyUpdates(ADeltas: TFDJSONDeltas; ADelta: TFDMemTable;
       ADataSet: TFDCustomQuery); virtual;
-
-    procedure ApplyUpdates(ADeltas: TFDJSONDeltas;
-      AOnApplyUpdates: TProc<string, Integer, IFDJSONDeltasApplyUpdates> = nil); virtual;
   public
     [GET]
     function Retrieve: TArray<TFDCustomQuery>; virtual;
@@ -71,37 +68,10 @@ uses
 
 { TDataModule1 }
 
-procedure TMARSFDDataModuleResource.ApplyUpdates(ADeltas: TFDJSONDeltas;
-  AOnApplyUpdates: TProc<string, Integer, IFDJSONDeltasApplyUpdates>);
-var
-  LApplyUpdates: IFDJSONDeltasApplyUpdates;
-  LIndex: Integer;
-  LDelta: TPair<string, TFDMemTable>;
-  LDataSet: TFDCustomQuery;
-  LApplyResult: Integer;
-begin
-  LApplyUpdates := TFDJSONDeltasApplyUpdates.Create(ADeltas);
-  try
-    for LIndex := 0 to TFDJSONDeltasReader.GetListCount(ADeltas) - 1 do
-    begin
-      LDelta := TFDJSONDeltasReader.GetListItem(ADeltas, LIndex);
-      LDataSet := Self.FindComponent(LDelta.Key) as TFDCustomQuery;
-
-      BeforeApplyUpdates(ADeltas, LDelta.Value, LDataSet);
-      LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
-      if Assigned(AOnApplyUpdates) then
-        AOnApplyUpdates(LDataSet.Name, LApplyResult, LApplyUpdates);
-    end;
-  finally
-    LApplyUpdates := nil; // it's an interface
-  end;
-end;
-
 procedure TMARSFDDataModuleResource.BeforeApplyUpdates(ADeltas: TFDJSONDeltas;
   ADelta: TFDMemTable; ADataSet: TFDCustomQuery);
 begin
-  FD.InjectMacroValues(ADataSet.Command);
-  FD.InjectParamValues(ADataSet.Command);
+
 end;
 
 function TMARSFDDataModuleResource.Retrieve: TArray<TFDCustomQuery>;
@@ -152,14 +122,16 @@ begin
   // apply updates
   LResult := TJSONArray.Create;
   try
-    ApplyUpdates(AJSONDeltas,
-      procedure(ADatasetName: string; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
+    FD.ApplyUpdates(
+      Retrieve
+    , AJSONDeltas
+    , procedure(ADataset: TFDCustomQuery; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
       var
         LResultObj: TJSONObject;
       begin
         LResultObj := TJSONObject.Create;
         try
-          LResultObj.AddPair('dataset', ADatasetName);
+          LResultObj.AddPair('dataset', ADataset.Name);
           LResultObj.AddPair('result', TJSONNumber.Create(AApplyResult));
           LResultObj.AddPair('errors', TJSONNumber.Create(AApplyUpdates.Errors.Count));
           LResultObj.AddPair('errorText', AApplyUpdates.Errors.Strings.Text);
@@ -168,6 +140,10 @@ begin
           LResultObj.Free;
           raise;
         end;
+      end
+    , procedure (ADataset: TFDCustomQuery; ADelta: TFDMemTable)
+      begin
+        BeforeApplyUpdates(AJSONDeltas, ADelta, ADataSet);
       end
     );
 

@@ -80,10 +80,14 @@ type
       const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
+    procedure ApplyUpdates(ADataSets: TArray<TFDCustomQuery>; ADeltas: TFDJSONDeltas;
+      AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates> = nil;
+      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil); virtual;
+
     function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
       const AContextOwned: Boolean = True): TFDCommand; virtual;
     function CreateQuery(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
-      const AContextOwned: Boolean = True): TFDQuery; virtual;
+      const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TFDQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TFDTransaction; virtual;
 
     procedure ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
@@ -288,6 +292,55 @@ begin
   FContextValueProviders := FContextValueProviders + [TContextValueProviderProc(AContextValueProviderProc)];
 end;
 
+procedure TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDCustomQuery>;
+  ADeltas: TFDJSONDeltas; AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates>;
+  AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable>);
+var
+  LApplyUpdates: IFDJSONDeltasApplyUpdates;
+  LIndex: Integer;
+  LDelta: TPair<string, TFDMemTable>;
+  LDataSet: TFDCustomQuery;
+  LApplyResult: Integer;
+
+  function DataSetByName(const AName: string): TFDCustomQuery;
+  var
+    LCurrent: TFDCustomQuery;
+  begin
+    Result := nil;
+    for LCurrent in ADataSets do
+      if SameText(LCurrent.Name, AName) then
+      begin
+        Result := LCurrent;
+        Break;
+      end;
+    if Result = nil then
+      raise EMARSFireDACException.CreateFmt('DataSet %s not found', [AName]);
+  end;
+
+
+begin
+  LApplyUpdates := TFDJSONDeltasApplyUpdates.Create(ADeltas);
+  try
+    for LIndex := 0 to TFDJSONDeltasReader.GetListCount(ADeltas) - 1 do
+    begin
+      LDelta := TFDJSONDeltasReader.GetListItem(ADeltas, LIndex);
+      LDataSet := DataSetByName(LDelta.Key);
+
+//      BeforeApplyUpdates(ADeltas, LDelta.Value, LDataSet);
+      InjectMacroValues(LDataSet.Command);
+      InjectParamValues(LDataSet.Command);
+
+      if Assigned(AOnBeforeApplyUpdates) then
+        AOnBeforeApplyUpdates(LDataSet, LDelta.Value);
+      LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
+      if Assigned(AOnApplyUpdates) then
+        AOnApplyUpdates(LDataSet, LApplyResult, LApplyUpdates);
+    end;
+  finally
+    LApplyUpdates := nil; // it's an interface
+  end;
+end;
+
 class procedure TMARSFireDAC.CloseConnectionDefs(
   const AConnectionDefNames: TArray<string>);
 var
@@ -329,10 +382,11 @@ begin
 end;
 
 function TMARSFireDAC.CreateQuery(const ASQL: string; const ATransaction: TFDTransaction;
-  const AContextOwned: Boolean): TFDQuery;
+  const AContextOwned: Boolean; const AName: string): TFDQuery;
 begin
   Result := TFDQuery.Create(nil);
   try
+    Result.Name := AName;
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
@@ -435,6 +489,9 @@ begin
   end
   else if SameText(LSubject, 'QueryParam') then
     Result := Activation.URL.QueryTokenByName(LIdentifier)
+
+  //TODO: implementare FormParam
+
   else if SameText(LSubject, 'Request') then
     Result := ReadPropertyValue(Activation.Request, LIdentifier)
 //  else if SameText(LSubject, 'Response') then

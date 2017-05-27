@@ -58,3 +58,4 @@ __history/
 Android
 *.lnk
 /Lib
+*.o
