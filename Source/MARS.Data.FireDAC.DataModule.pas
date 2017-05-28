@@ -50,7 +50,7 @@ type
     function Retrieve: TArray<TFDCustomQuery>; virtual;
 
     [POST]
-    function Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TJSONArray; virtual;
+    function Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TArray<TMARSFDApplyUpdatesRes>; virtual;
   end;
 
 implementation
@@ -115,43 +115,15 @@ begin
   Result := LDataSets;
 end;
 
-function TMARSFDDataModuleResource.Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TJSONArray;
-var
-  LResult: TJSONArray;
+function TMARSFDDataModuleResource.Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TArray<TMARSFDApplyUpdatesRes>;
 begin
-  // apply updates
-  LResult := TJSONArray.Create;
-  try
-    FD.ApplyUpdates(
-      Retrieve
-    , AJSONDeltas
-    , procedure(ADataset: TFDCustomQuery; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
-      var
-        LResultObj: TJSONObject;
-      begin
-        LResultObj := TJSONObject.Create;
-        try
-          LResultObj.AddPair('dataset', ADataset.Name);
-          LResultObj.AddPair('result', TJSONNumber.Create(AApplyResult));
-          LResultObj.AddPair('errors', TJSONNumber.Create(AApplyUpdates.Errors.Count));
-          LResultObj.AddPair('errorText', AApplyUpdates.Errors.Strings.Text);
-          LResult.AddElement(LResultObj);
-        except
-          LResultObj.Free;
-          raise;
-        end;
-      end
-    , procedure (ADataset: TFDCustomQuery; ADelta: TFDMemTable)
-      begin
-        BeforeApplyUpdates(AJSONDeltas, ADelta, ADataSet);
-      end
-    );
-
-    Result := LResult;
-  except
-    LResult.Free;
-    raise;
-  end;
+  Result := FD.ApplyUpdates(
+    Retrieve, AJSONDeltas, nil
+  , procedure (ADataset: TFDCustomQuery; ADelta: TFDMemTable)
+    begin
+      BeforeApplyUpdates(AJSONDeltas, ADelta, ADataSet);
+    end
+  );
 end;
 
 { RESTIncludeDefault }

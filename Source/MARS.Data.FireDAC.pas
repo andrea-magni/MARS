@@ -60,6 +60,14 @@ type
   TContextValueProviderProc = reference to procedure (const AActivation: IMARSActivation;
     const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
 
+  TMARSFDApplyUpdatesRes = record
+    dataset: string;
+    result: Integer;
+    errors: Integer;
+    errorText: string;
+    constructor Create(const ADataset: TFDCustomQuery; const AApplyResult: Integer; const AApplyUpdates: IFDJSONDeltasApplyUpdates);
+  end;
+
   TMARSFireDAC = class
   private
     FConnectionDefName: string;
@@ -80,9 +88,9 @@ type
       const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
-    procedure ApplyUpdates(ADataSets: TArray<TFDCustomQuery>; ADeltas: TFDJSONDeltas;
+    function ApplyUpdates(ADataSets: TArray<TFDCustomQuery>; ADeltas: TFDJSONDeltas;
       AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates> = nil;
-      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil); virtual;
+      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil): TArray<TMARSFDApplyUpdatesRes>; virtual;
 
     function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
       const AContextOwned: Boolean = True): TFDCommand; virtual;
@@ -292,9 +300,9 @@ begin
   FContextValueProviders := FContextValueProviders + [TContextValueProviderProc(AContextValueProviderProc)];
 end;
 
-procedure TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDCustomQuery>;
+function TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDCustomQuery>;
   ADeltas: TFDJSONDeltas; AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates>;
-  AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable>);
+  AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
 var
   LApplyUpdates: IFDJSONDeltasApplyUpdates;
   LIndex: Integer;
@@ -319,6 +327,7 @@ var
 
 
 begin
+  Result := [];
   LApplyUpdates := TFDJSONDeltasApplyUpdates.Create(ADeltas);
   try
     for LIndex := 0 to TFDJSONDeltasReader.GetListCount(ADeltas) - 1 do
@@ -333,6 +342,7 @@ begin
       if Assigned(AOnBeforeApplyUpdates) then
         AOnBeforeApplyUpdates(LDataSet, LDelta.Value);
       LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
+      Result := Result + [TMARSFDApplyUpdatesRes.Create(LDataSet, LApplyResult, LApplyUpdates)];
       if Assigned(AOnApplyUpdates) then
         AOnApplyUpdates(LDataSet, LApplyResult, LApplyUpdates);
     end;
@@ -562,6 +572,19 @@ begin
     FreeAndNil(FConnection);
     FConnectionDefName := Value;
   end;
+end;
+
+{ TMARSFDApplyUpdatesRes }
+
+constructor TMARSFDApplyUpdatesRes.Create(const ADataset: TFDCustomQuery;
+  const AApplyResult: Integer; const AApplyUpdates: IFDJSONDeltasApplyUpdates);
+begin
+  dataset := '';
+  if Assigned(ADataSet) then
+    dataset := ADataset.Name;
+  result := AApplyResult;
+  errors := AApplyUpdates.Errors.Count;
+  errorText := AApplyUpdates.Errors.Strings.Text;
 end;
 
 end.
