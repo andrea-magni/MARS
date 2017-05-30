@@ -111,6 +111,7 @@ uses
     StrUtils
 
   , MARS.Core.Utils
+  , MARS.Core.Exceptions
   , IdURI
   ;
 
@@ -124,7 +125,7 @@ begin
   FURL := '';
   FPath := '';
 
-  {$ifndef DelphiXE7_UP}  
+  {$ifndef DelphiXE7_UP}
   SetLength(FPathTokens, 0);
   {$else}
   FPathTokens := [];
@@ -390,7 +391,7 @@ begin
   end;
 
   if (not LFound) and AExceptionIfNotFound then
-    raise Exception.CreateFmt('QueryParam not found: %s', [AName]);
+    raise EMARSException.CreateFmt('QueryParam not found: %s', [AName]);
 end;
 
 procedure TMARSURL.SetBasePath(const Value: string);

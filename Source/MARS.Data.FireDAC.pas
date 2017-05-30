@@ -499,9 +499,8 @@ begin
   end
   else if SameText(LSubject, 'QueryParam') then
     Result := Activation.URL.QueryTokenByName(LIdentifier)
-
-  //TODO: implementare FormParam
-
+  else if SameText(LSubject, 'FormParam') then
+    Result := Activation.Request.ContentFields.Values[LIdentifier]
   else if SameText(LSubject, 'Request') then
     Result := ReadPropertyValue(Activation.Request, LIdentifier)
 //  else if SameText(LSubject, 'Response') then
