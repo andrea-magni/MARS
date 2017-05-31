@@ -30,6 +30,7 @@ type
     procedure SetDataSet(const Value: TFDMemTable);
   protected
     procedure AssignTo(Dest: TPersistent); override;
+    function GetDisplayName: string; override;
   public
     constructor Create(Collection: TCollection); override;
   published
@@ -371,6 +372,13 @@ begin
   inherited;
   FSendDelta := True;
   FSynchronize := True;
+end;
+
+function TMARSFDResourceDatasetsItem.GetDisplayName: string;
+begin
+  Result := DataSetName;
+  if Assigned(DataSet) then
+    Result := Result + ' -> ' + DataSet.Name;
 end;
 
 procedure TMARSFDResourceDatasetsItem.SetDataSet(const Value: TFDMemTable);
