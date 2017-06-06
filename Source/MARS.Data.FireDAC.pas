@@ -13,7 +13,7 @@ uses
     System.Classes, System.SysUtils, Generics.Collections, Rtti
 
   , Data.DB
-  , FireDAC.DApt
+  , FireDAC.DApt, FireDAC.DApt.Intf, FireDAC.DatS
   , FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def
   , FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Stan.StorageXML, FireDAC.Stan.Param
   , FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin
@@ -65,7 +65,8 @@ type
     result: Integer;
     errors: Integer;
     errorText: string;
-    constructor Create(const ADataset: TFDCustomQuery; const AApplyResult: Integer; const AApplyUpdates: IFDJSONDeltasApplyUpdates);
+    constructor Create(const ADataset: TFDCustomQuery; const AApplyResult: Integer; const AErrors: Integer; const AErrorText: string);
+    procedure Clear;
   end;
 
   TMARSFireDAC = class
@@ -74,6 +75,8 @@ type
     FConnection: TFDConnection;
     FActivation: IMARSActivation;
   protected
+    procedure DoUpdateError(ASender: TDataSet; AException: EFDException;
+      ARow: TFDDatSRow; ARequest: TFDUpdateRequest; var AAction: TFDErrorAction);
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TFDConnection; virtual;
     function GetContextValue(const AName: string; const ADesiredType: TFieldType = ftUnknown): TValue; virtual;
@@ -88,9 +91,17 @@ type
       const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
+    function ApplyUpdates(const ADelta: TFDMemTable; const ATableAdapter: TFDTableAdapter;
+      const AMaxErrors: Integer = -1): TMARSFDApplyUpdatesRes; overload; virtual;
+
+    function ApplyUpdates(ADataSets: TArray<TFDCustomQuery>; ADeltas: TArray<TFDMemTable>;
+//      AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates> = nil;
+      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil
+      ): TArray<TMARSFDApplyUpdatesRes>; overload; virtual;
+
     function ApplyUpdates(ADataSets: TArray<TFDCustomQuery>; ADeltas: TFDJSONDeltas;
       AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates> = nil;
-      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil): TArray<TMARSFDApplyUpdatesRes>; virtual;
+      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil): TArray<TMARSFDApplyUpdatesRes>; overload; virtual;
 
     function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
       const AContextOwned: Boolean = True): TFDCommand; virtual;
@@ -300,6 +311,22 @@ begin
   FContextValueProviders := FContextValueProviders + [TContextValueProviderProc(AContextValueProviderProc)];
 end;
 
+function DataSetByName(const ADataSets: TArray<TFDCustomQuery>; const AName: string): TFDCustomQuery;
+var
+  LCurrent: TFDCustomQuery;
+begin
+  Result := nil;
+  for LCurrent in ADataSets do
+    if SameText(LCurrent.Name, AName) then
+    begin
+      Result := LCurrent;
+      Break;
+    end;
+  if Result = nil then
+    raise EMARSFireDACException.CreateFmt('DataSet %s not found', [AName]);
+end;
+
+
 function TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDCustomQuery>;
   ADeltas: TFDJSONDeltas; AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates>;
   AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
@@ -310,22 +337,6 @@ var
   LDataSet: TFDCustomQuery;
   LApplyResult: Integer;
 
-  function DataSetByName(const AName: string): TFDCustomQuery;
-  var
-    LCurrent: TFDCustomQuery;
-  begin
-    Result := nil;
-    for LCurrent in ADataSets do
-      if SameText(LCurrent.Name, AName) then
-      begin
-        Result := LCurrent;
-        Break;
-      end;
-    if Result = nil then
-      raise EMARSFireDACException.CreateFmt('DataSet %s not found', [AName]);
-  end;
-
-
 begin
   Result := [];
   LApplyUpdates := TFDJSONDeltasApplyUpdates.Create(ADeltas);
@@ -333,7 +344,7 @@ begin
     for LIndex := 0 to TFDJSONDeltasReader.GetListCount(ADeltas) - 1 do
     begin
       LDelta := TFDJSONDeltasReader.GetListItem(ADeltas, LIndex);
-      LDataSet := DataSetByName(LDelta.Key);
+      LDataSet := DataSetByName(ADataSets, LDelta.Key);
 
 //      BeforeApplyUpdates(ADeltas, LDelta.Value, LDataSet);
       InjectMacroValues(LDataSet.Command);
@@ -342,12 +353,96 @@ begin
       if Assigned(AOnBeforeApplyUpdates) then
         AOnBeforeApplyUpdates(LDataSet, LDelta.Value);
       LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
-      Result := Result + [TMARSFDApplyUpdatesRes.Create(LDataSet, LApplyResult, LApplyUpdates)];
+      Result := Result + [TMARSFDApplyUpdatesRes.Create(LDataSet, LApplyResult, LApplyUpdates.Errors.Count, LApplyUpdates.Errors.Strings.Text)];
       if Assigned(AOnApplyUpdates) then
         AOnApplyUpdates(LDataSet, LApplyResult, LApplyUpdates);
     end;
   finally
     LApplyUpdates := nil; // it's an interface
+  end;
+end;
+
+function TMARSFireDAC.ApplyUpdates(const ADelta: TFDMemTable;
+  const ATableAdapter: TFDTableAdapter;
+  const AMaxErrors: Integer): TMARSFDApplyUpdatesRes;
+var
+  LFDMemTable: TFDMemTable;
+  LFDAdapter: TFDTableAdapter;
+  LStoreItems: TFDStoreItems;
+begin
+  Assert(ATableAdapter <> nil);
+
+  Result.Clear;
+
+  LFDMemTable := TFDMemTable.Create(nil);
+  try
+    LFDAdapter := TFDTableAdapter.Create(nil);
+    try
+      if Assigned(ATableAdapter.SelectCommand) then
+        LFDAdapter.SelectCommand := ATableAdapter.SelectCommand;
+      if Assigned(ATableAdapter.InsertCommand) then
+        LFDAdapter.InsertCommand := ATableAdapter.InsertCommand;
+      if Assigned(ATableAdapter.UpdateCommand) then
+        LFDAdapter.UpdateCommand := ATableAdapter.UpdateCommand;
+      if Assigned(ATableAdapter.DeleteCommand) then
+        LFDAdapter.DeleteCommand := ATableAdapter.DeleteCommand;
+
+      LFDAdapter.UpdateTableName := ATableAdapter.UpdateTableName;
+      if LFDAdapter.UpdateTableName = '' then
+        LFDAdapter.UpdateTableName := LFDAdapter.SelectCommand.UpdateOptions.UpdateTableName;
+
+      LStoreItems := LFDMemTable.ResourceOptions.StoreItems;
+      LFDMemTable.ResourceOptions.StoreItems := [siMeta, siDelta];
+      LFDMemTable.CachedUpdates := True;
+      LFDMemTable.Adapter := LFDAdapter;
+      LFDMemTable.Data := ADelta.Data;
+//      CopyDataSet(ADelta, LFDMemTable);
+      LFDMemTable.OnUpdateError := DoUpdateError; //DoUpdateErrorHandler
+      Result.result := LFDMemTable.ApplyUpdates(AMaxErrors);
+      LFDMemTable.OnUpdateError := nil;
+      LFDMemTable.ResourceOptions.StoreItems := LStoreItems;
+    finally
+      LFDAdapter.Free;
+    end;
+  finally
+    LFDMemTable.Free;
+  end;
+end;
+
+function TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDCustomQuery>;
+  ADeltas: TArray<TFDMemTable>;
+  AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
+var
+  LDelta: TFDMemTable;
+  LDataSet: TFDCustomQuery;
+  LFDAdapter: TFDTableAdapter;
+
+begin
+  Result := [];
+  for LDelta in ADeltas do
+  begin
+    LDataSet := DataSetByName(ADataSets, LDelta.Name);
+    Assert(LDataSet.Command <> nil);
+
+//      BeforeApplyUpdates(ADeltas, LDelta.Value, LDataSet);
+    InjectMacroValues(LDataSet.Command);
+    InjectParamValues(LDataSet.Command);
+
+    if Assigned(AOnBeforeApplyUpdates) then
+      AOnBeforeApplyUpdates(LDataSet, LDelta);
+
+//    LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
+
+    LFDAdapter := TFDTableAdapter.Create(nil);
+    try
+      LFDAdapter.SelectCommand := LDataSet.Command;
+      Result := Result + [ApplyUpdates(LDelta, LFDAdapter, -1)];
+    finally
+      LFDAdapter.Free;
+    end;
+
+//    if Assigned(AOnApplyUpdates) then
+//      AOnApplyUpdates(LDataSet, LApplyResult, LApplyUpdates);
   end;
 end;
 
@@ -427,6 +522,13 @@ destructor TMARSFireDAC.Destroy;
 begin
   FreeAndNil(FConnection);
   inherited;
+end;
+
+procedure TMARSFireDAC.DoUpdateError(ASender: TDataSet;
+  AException: EFDException; ARow: TFDDatSRow; ARequest: TFDUpdateRequest;
+  var AAction: TFDErrorAction);
+begin
+
 end;
 
 procedure TMARSFireDAC.ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction;
@@ -572,15 +674,23 @@ end;
 
 { TMARSFDApplyUpdatesRes }
 
+procedure TMARSFDApplyUpdatesRes.Clear;
+begin
+  dataset := '';
+  result := 0;
+  errors := 0;
+  errorText := '';
+end;
+
 constructor TMARSFDApplyUpdatesRes.Create(const ADataset: TFDCustomQuery;
-  const AApplyResult: Integer; const AApplyUpdates: IFDJSONDeltasApplyUpdates);
+  const AApplyResult: Integer; const AErrors: Integer; const AErrorText: string);
 begin
   dataset := '';
   if Assigned(ADataSet) then
     dataset := ADataset.Name;
   result := AApplyResult;
-  errors := AApplyUpdates.Errors.Count;
-  errorText := AApplyUpdates.Errors.Strings.Text;
+  errors := AErrors;
+  errorText := AErrorText;
 end;
 
 end.

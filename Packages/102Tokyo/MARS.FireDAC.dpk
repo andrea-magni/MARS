@@ -42,7 +42,8 @@ requires
   IndyCore,
   dsnap,
   MARS.Core,
-  MARS.ReadersAndWriters;
+  MARS.ReadersAndWriters,
+  DataSnapFireDAC;
 
 contains
   MARS.Data.FireDAC.DataModule in '..\..\Source\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule},

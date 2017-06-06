@@ -177,6 +177,7 @@
         <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
+        <DCCReference Include="DataSnapFireDAC.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.DataModule.pas">
             <Form>MARSFDDataModuleResource</Form>
             <FormType>dfm</FormType>
