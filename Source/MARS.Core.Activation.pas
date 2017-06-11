@@ -400,7 +400,7 @@ begin
         // 3 - fallback (raw)
         else
         begin
-          if (LMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE2_UP}tkWideChar,{$endif} tkLString, tkWString])  then
+          if (LMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
             Response.Content := LMethodResult.AsString
           else if (LMethodResult.IsType<Boolean>) then
             Response.Content := BoolToStr(LMethodResult.AsType<Boolean>, True)
@@ -452,7 +452,12 @@ var
   LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
   LAllowedRoles: TStringList;
 begin
+{$ifdef DelphiXE7_UP}
   FAuthorizationInfo := TMARSAuthorizationInfo.Create(False, False, []);
+{$else}
+  FAuthorizationInfo := TMARSAuthorizationInfo.Create(False, False, nil);
+{$endif}
+
   LAllowedRoles := TStringList.Create;
   try
     LAllowedRoles.Sorted := True;

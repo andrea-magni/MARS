@@ -605,12 +605,23 @@ begin
   else
     ADataSet.First;
 
+{$ifdef DelphiXE7_UP}
   Result := [];
+{$else}
+  SetLength(Result, 0);
+{$endif}
 
   while not ADataSet.Eof do
   begin
     TRecord<R>.FromDataSet(LItem, ADataSet);
+
+{$ifdef DelphiXE7_UP}
     Result := Result + [LItem];
+{$else}
+    SetLength(Result, Length(Result) + 1);
+    Result[Length(Result)-1] := LItem;
+{$endif}
+
     ADataSet.Next;
   end;
 end;

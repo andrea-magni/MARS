@@ -166,8 +166,9 @@ begin
   else if (AValue.Kind in [tkRecord]) then
     Result := TJSONObject.RecordToJSON(AValue)
 
+
   else if (AValue.IsType<Boolean>) then
-    Result := TJSONBool.Create(AValue.AsType<Boolean>)
+    Result := BooleanToTJSON(AValue.AsType<Boolean>)
 
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
     Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>, False) )
@@ -563,8 +564,13 @@ var
   LJSONElement: TJSONValue;
   LIndex: Integer;
 begin
+{$ifdef Delphi10Berlin_UP}
   if AValue is TJSONBool then // Boolean
     Result := TJSONBool(AValue).AsBoolean
+{$else}
+  if (AValue is TJSONTrue) or (AValue is TJSONFalse) then
+    Result := AValue is TJSONTrue
+{$endif}
   else if AValue is TJSONNumber then // Numbers (Integer and Float)
   begin
 {$ifdef DelphiXE6_UP}

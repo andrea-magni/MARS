@@ -214,8 +214,8 @@ begin
   begin
     FClaims.LoadFromJSON(LClaims);
 
-    FIssuedAt := UnixToDateTime(FClaims['iat'].AsInt64, False);
-    FExpiration := UnixToDateTime(FClaims['exp'].AsInt64, False);
+    FIssuedAt := UnixToDateTime(FClaims['iat'].AsInt64{$IFDEF DelphiXE7_UP}, False {$ENDIF});
+    FExpiration := UnixToDateTime(FClaims['exp'].AsInt64{$IFDEF DelphiXE7_UP}, False {$ENDIF});
     FUserName := FClaims['UserName'].AsString;
     FUserRoles.CommaText := FClaims['Roles'].AsString;
   end
