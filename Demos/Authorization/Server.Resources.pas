@@ -67,6 +67,8 @@ type
   private
   protected
   public
+    [GET, Path('login'), Produces(TMediaType.TEXT_HTML)]
+    function GetHTMLForm: string;
   end;
 
 implementation
@@ -107,6 +109,24 @@ end;
 function TSecondResource.Two: string;
 begin
   Result := 'Two';
+end;
+
+{ TTokenResource }
+
+function TTokenResource.GetHTMLForm: string;
+begin
+  Result := '<html><body>'
+    + '<h1>Login form</h1>'
+    + '<form action="./" method="post">'
+    + '  Username:<br>'
+    + '  <input type="text" name="username" value="">'
+    + '  <br>'
+    + '  Password:<br>'
+    + '  <input type="password" name="password" value="">'
+    + '  <br><br>'
+    + '  <input type="submit" value="Login">'
+    + '</form>'
+    + '</body></html>';
 end;
 
 initialization
