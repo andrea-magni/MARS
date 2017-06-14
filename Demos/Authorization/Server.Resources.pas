@@ -21,6 +21,8 @@ uses
 
   , MARS.Core.Token
   , MARS.Core.Token.Resource
+
+  , MARS.Core.Application
   ;
 
 type
@@ -65,16 +67,19 @@ type
   [Path('token')]
   TTokenResource = class(TMARSTokenResource)
   private
+    [Context] App: TMARSApplication;
+    function GetLocalFile(const AName: string): string;
   protected
+
   public
-    [GET, Path('login'), Produces(TMediaType.TEXT_HTML)]
-    function GetHTMLForm: string;
+    [GET, Path('html'), Produces(TMediaType.TEXT_HTML)]
+    function GetTokenPage: TStream;
   end;
 
 implementation
 
 uses
-  StrUtils
+  StrUtils, IOUtils
 ;
 
 { TFirstResource }
@@ -113,20 +118,21 @@ end;
 
 { TTokenResource }
 
-function TTokenResource.GetHTMLForm: string;
+function TTokenResource.GetLocalFile(const AName: string): string;
 begin
-  Result := '<html><body>'
-    + '<h1>Login form</h1>'
-    + '<form action="./" method="post">'
-    + '  Username:<br>'
-    + '  <input type="text" name="username" value="">'
-    + '  <br>'
-    + '  Password:<br>'
-    + '  <input type="password" name="password" value="">'
-    + '  <br><br>'
-    + '  <input type="submit" value="Login">'
-    + '</form>'
-    + '</body></html>';
+  Result := TPath.Combine(
+     App.Parameters.ByName('LocalFileFolder'
+       , TPath.Combine(ExtractFilePath(ParamStr(0)), 'html')
+     ).AsString
+   , AName
+  );
+end;
+
+function TTokenResource.GetTokenPage: TStream;
+begin
+  Result := TFileStream.Create(
+    GetLocalFile('tokenPage.html'), fmOpenRead or fmShareDenyNone
+  );
 end;
 
 initialization
