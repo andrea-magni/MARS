@@ -357,6 +357,7 @@ begin
     LStrings := TStringList.Create;
     try
       LStrings.Delimiter := URL_QUERY_SEPARATOR;
+      LStrings.StrictDelimiter := True;
       LStrings.DelimitedText := LQuery;
       for LIndex := 0 to LStrings.Count - 1 do
         FQueryTokens.Add(LStrings.Names[LIndex], LStrings.ValueFromIndex[LIndex]);
