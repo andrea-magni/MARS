@@ -531,9 +531,6 @@ var
   LIndex: Integer;
   LParam: TFDParam;
 begin
-  if not ACommand.Prepared then
-    ACommand.Prepare;
-
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
