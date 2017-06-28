@@ -54,6 +54,7 @@ type
   TOnLangProc = reference to procedure (const AFieldName: string; var AReplaceText: string);
   TOnValueProc = reference to procedure (const ObjectName: string; const FieldName: string; var ReplaceText: string);
   TOnObjectForPathProc = reference to procedure (ExecData: TRazorExecData);
+  TOnScaffoldingProc = reference to procedure (AQualifClassName: string; var AReplaceText: string);
 
   TMARSDelphiRazor = class
   private
@@ -67,6 +68,7 @@ type
     FOnLangProc: TOnLangProc;
     FOnValueProc: TOnValueProc;
     FOnObjectForPath: TOnObjectForPathProc;
+    FOnScaffolding: TOnScaffoldingProc;
   protected
     function GetRazorAttributeValue<T: RazorSingleValueAttribute>(
       const AType: TRttiType; const ADefault: string = ''): string;
@@ -80,6 +82,8 @@ type
     function GetTemplatesFolder: string; virtual;
 
     procedure OnObjectForPathHandler(Sender: TObject; ExecData: TRazorExecData); virtual;
+    procedure OnScaffoldingHandler(Sender: TObject; const qualifClassName: string;
+      var ReplaceText: string); virtual;
     procedure OnPageErrorHandler(Sender: TObject; pageInfo: TPageInfo); virtual;
     procedure OnLangHandler(Sender: TObject; const FieldName: string; var ReplaceText: string); virtual;
     procedure OnValueHandler(Sender: TObject; const ObjectName: string;
@@ -101,6 +105,7 @@ type
     property OnObjectForPath: TOnObjectForPathProc read FOnObjectForPath write FOnObjectForPath;
     property OnLang: TOnLangProc read FOnLangProc write FOnLangProc;
     property OnValue: TOnValueProc read FOnValueProc write FOnValueProc;
+    property OnScaffolding: TOnScaffoldingProc read FOnScaffolding write FOnScaffolding;
   end;
 
 implementation
@@ -221,6 +226,7 @@ begin
     if Assigned(FRazorEngine) then
     begin
       FRazorEngine.OnObjectForPath := OnObjectForPathHandler;
+      FRazorEngine.OnScaffolding := OnScaffoldingHandler;
       FRazorEngine.OnPageError := OnPageErrorHandler;
 
       FRazorEngine.AddToDictionary('token', Token, False);
@@ -277,6 +283,13 @@ procedure TMARSDelphiRazor.OnPageErrorHandler(Sender: TObject;
   pageInfo: TPageInfo);
 begin
 
+end;
+
+procedure TMARSDelphiRazor.OnScaffoldingHandler(Sender: TObject;
+  const qualifClassName: string; var ReplaceText: string);
+begin
+  if Assigned(FOnScaffolding) then
+    FOnScaffolding(qualifClassName, ReplaceText);
 end;
 
 procedure TMARSDelphiRazor.OnValueHandler(Sender: TObject; const ObjectName: string;
