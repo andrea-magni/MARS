@@ -123,7 +123,7 @@ type
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
     class function JSONToRecord<T: record>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
-    class function JSONToRecord(const AJSON: TJSONObject;
+    class function JSONToRecord(const ARecordType: TRttiType; const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
     class function TValueToJSONValue(const AValue: TValue): TJSONValue;
     class function TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType): TValue;
@@ -360,10 +360,11 @@ begin
   Result := LValue.Value;
 end;
 
-class function TJSONObjectHelper.JSONToRecord(const AJSON: TJSONObject;
-  const AFilterProc: TToRecordFilterProc): TValue;
+class function TJSONObjectHelper.JSONToRecord(const ARecordType: TRttiType;
+  const AJSON: TJSONObject; const AFilterProc: TToRecordFilterProc): TValue;
 begin
-
+  Assert(Assigned(AJSON));
+  Result := AJSON.ToRecord(ARecordType, AFilterProc);
 end;
 
 class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
