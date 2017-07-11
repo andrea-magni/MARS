@@ -9,22 +9,22 @@ uses
 ;
 
 type
-  [TestFixture]
+  [TestFixture('URL')]
   TMARSCoreTest = class(TObject)
   private
   public
     [Test]
-    procedure URL_ParseBase();
+    procedure ParseBase();
 
     [Test]
-    procedure URL_QueryParams();
+    procedure QueryParams();
   end;
 
 implementation
 
 { TMARSCoreTest }
 
-procedure TMARSCoreTest.URL_ParseBase;
+procedure TMARSCoreTest.ParseBase;
 var
   LURL: TMARSURL;
 begin
@@ -53,7 +53,7 @@ begin
   end;
 end;
 
-procedure TMARSCoreTest.URL_QueryParams;
+procedure TMARSCoreTest.QueryParams;
 var
   LURL: TMARSURL;
 begin
@@ -147,7 +147,6 @@ begin
   finally
     LURL.Free;
   end;
-
 
 end;
 

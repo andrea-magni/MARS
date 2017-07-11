@@ -8,9 +8,9 @@ program MARSTestsProject;
 {$R *.res}
 
 uses
-  TestInsight.DUnitX
-, Tests.Core in 'Tests.Core.pas'
-;
+  TestInsight.DUnitX,
+  Tests.Core in 'Tests.Core.pas',
+  Tests.MessageBodyWriters in 'Tests.MessageBodyWriters.pas';
 
 begin
   TestInsight.DUnitX.RunRegisteredTests;
