@@ -148,7 +148,7 @@ var
 begin
   LJSONArray := TJSONArray.Create;
   try
-    if AValue.IsArray and (not AValue.IsEmpty) then
+    if AValue.IsArray then
     begin
       LJSONWriter := TJSONValueWriter.Create;
       try
