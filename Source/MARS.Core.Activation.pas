@@ -400,6 +400,10 @@ begin
         // 3 - fallback (raw)
         else
         begin
+          Response.ContentType := GetProducesValue;
+          if Response.ContentType = '' then
+            Response.ContentType := TMediaType.WILDCARD;
+
           if (LMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
             Response.Content := LMethodResult.AsString
           else if (LMethodResult.IsType<Boolean>) then
@@ -420,10 +424,8 @@ begin
             Response.Content := FormatFloat('0.00000000', LMethodResult.AsType<Double>)
           else
             Response.Content := LMethodResult.ToString;
+
           Response.StatusCode := 200;
-          Response.ContentType := GetProducesValue;
-          if Response.ContentType = '' then
-            Response.ContentType := TMediaType.WILDCARD;
         end;
       finally
         FWriter := nil;
