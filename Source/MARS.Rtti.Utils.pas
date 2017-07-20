@@ -48,6 +48,7 @@ type
     function IsDynamicArrayOfRecord: Boolean;
     function IsArray: Boolean; overload;
     function IsArray(out AElementType: TRttiType): Boolean; overload;
+    function GetArrayElementType: TRttiType;
 
     function IsObjectOfType<T>(const AAllowInherithance: Boolean = True): Boolean; overload;
     function IsObjectOfType(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
@@ -393,6 +394,13 @@ begin
     if LBreak then
       Break;
   end;
+end;
+
+function TRttiTypeHelper.GetArrayElementType: TRttiType;
+begin
+  Result := nil;
+  if Self is TRttiDynamicArrayType then
+    Result := TRttiDynamicArrayType(Self).ElementType;
 end;
 
 function TRttiTypeHelper.IsArray: Boolean;
