@@ -11,7 +11,7 @@ uses
 ;
 
 type
-  [TestFixture('MBW.Records')]
+  [TestFixture('MBW_Records')]
   TMARSRecordWriterTest = class(TObject)
   private
     FMBW: IMessageBodyWriter;
@@ -33,7 +33,7 @@ type
     procedure Nested;
   end;
 
-  [TestFixture('MBW.Records')]
+  [TestFixture('MBW_Records')]
   TMARSArrayOfRecordWriterTest = class(TObject)
   private
     FMBW: IMessageBodyWriter;
@@ -69,44 +69,8 @@ implementation
 uses
   DateUtils, Rtti
 , MARS.Core.JSON
+, Tests.Records.Types
 ;
-
-type
-  TNamedIntegerRecord=record
-    Name: string;
-    Value: Integer;
-    constructor Create(const AName: string; const AValue: Integer);
-  end;
-
-  TArrayNamedIntegerRecord=record
-    Name: string;
-    Data: TArray<TNamedIntegerRecord>;
-  end;
-
-  TOuterRecord=record
-    Name: string;
-    Inner: TNamedIntegerRecord;
-    constructor Create(const AName: string; const AInnerName: string; const AInnerValue: Integer);
-  end;
-
-  TPersonRecord=record
-    Name: string;
-    Surname: string;
-    DateOfBirth: TDate;
-    function Age: Integer;
-    constructor Create(const AName, ASurname: string; const ADateOfBirth: TDate);
-  end;
-
-  TPrimitiveTypesRecord=record
-    AString: string;
-    ABoolean: Boolean;
-    AInteger: Integer;
-    AFloat: Double;
-    ACurrency: Currency;
-    ADate: TDateTime;
-    AChar: Char;
-  end;
-
 
 function GetRecordMBW: IMessageBodyWriter;
 begin
@@ -222,21 +186,6 @@ begin
   finally
     LJSONObj.Free;
   end;
-end;
-
-{ TPersonRecord }
-
-function TPersonRecord.Age: Integer;
-begin
-  Result := YearsBetween(DateOfBirth, Now);
-end;
-
-constructor TPersonRecord.Create(const AName, ASurname: string;
-  const ADateOfBirth: TDate);
-begin
-  Name := AName;
-  Surname := ASurname;
-  DateOfBirth := ADateOfBirth;
 end;
 
 { TMARSArrayOfRecordWriterTest }
@@ -469,26 +418,9 @@ begin
   end;
 end;
 
-{ TNamedIntegerRecord }
-
-constructor TNamedIntegerRecord.Create(const AName: string;
-  const AValue: Integer);
-begin
-  Name := AName;
-  Value := AValue;
-end;
-
-{ TOuterRecord }
-
-constructor TOuterRecord.Create(const AName, AInnerName: string;
-  const AInnerValue: Integer);
-begin
-  Name := AName;
-  Inner.Name := AInnerName;
-  Inner.Value := AInnerValue;
-end;
-
 initialization
   TDUnitX.RegisterTestFixture(TMARSRecordWriterTest);
+  TDUnitX.RegisterTestFixture(TMARSArrayOfRecordWriterTest);
+
 
 end.
