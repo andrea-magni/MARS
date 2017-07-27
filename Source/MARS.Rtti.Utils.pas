@@ -653,6 +653,12 @@ begin
     begin
       if LDataSetField.IsNull then
         LRecordField.SetValue(@ARecord, TValue.Empty)
+
+      else if (LDataSetField.DataType = ftBCD) then // MF 20170726
+        LRecordField.SetValue(@ARecord, LDataSetField.AsFloat)
+      else if (LDataSetField.DataType = ftFMTBcd) then // MF 20170726
+        LRecordField.SetValue(@ARecord, LDataSetField.AsFloat)
+        
       else if LRecordField.FieldType.Handle = TypeInfo(Boolean) then
       begin
         if LDataSetField.DataType = ftBoolean then
