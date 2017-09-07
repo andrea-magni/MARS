@@ -20,6 +20,7 @@ uses
 //, IPPeerServer, IPPeerAPI
 , IdHTTPWebBrokerBridge, WebReq, WebBroker
 {$endif}
+, IdContext
 ;
 
 type
@@ -30,6 +31,11 @@ type
     procedure ServiceStop(Sender: TService; var Stopped: Boolean);
   private
     FServer: TIdHTTPWebBrokerBridge;
+
+    procedure ParseAuthenticationHandler(AContext: TIdContext;
+      const AAuthType, AAuthData: String; var VUsername, VPassword: String;
+      var VHandled: Boolean); virtual;
+
   public
     function GetServiceController: TServiceController; override;
 
@@ -59,6 +65,15 @@ begin
   Result := ServiceController;
 end;
 
+procedure TServerService.ParseAuthenticationHandler(AContext: TIdContext;
+  const AAuthType, AAuthData: String; var VUsername, VPassword: String;
+  var VHandled: Boolean);
+begin
+  // Allow JWT Bearer authentication's scheme
+  if SameText(AAuthType, 'Bearer') then
+    VHandled := True;
+end;
+
 procedure TServerService.ServiceCreate(Sender: TObject);
 var
   LScheduler: TIdSchedulerOfThreadPool;
@@ -75,6 +90,7 @@ begin
       LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
       FServer.Scheduler := LScheduler;
       FServer.MaxConnections := LScheduler.PoolSize;
+      FServer.OnParseAuthentication := ParseAuthenticationHandler;
     except
       FServer.Scheduler.Free;
       FServer.Scheduler := nil;

@@ -115,6 +115,7 @@ procedure TMARShttpServerIndy.ParseAuthenticationHandler(AContext: TIdContext;
   const AAuthType, AAuthData: String; var VUsername, VPassword: String;
   var VHandled: Boolean);
 begin
+  // Allow JWT Bearer authentication's scheme
   if SameText(AAuthType, 'Bearer') then
     VHandled := True;
 end;
