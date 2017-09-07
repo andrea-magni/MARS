@@ -9,20 +9,19 @@ uses
 type
   TMARSParametersIniFileReaderWriter=class
   private
-    function GetExistIniFileName: boolean;
   protected
     class function GetActualFileName(const AFileName: string): string;
   public
     class procedure Load(const AParameters: TMARSParameters; const AIniFileName: string = '');
     class procedure Save(const AParameters: TMARSParameters; const AIniFileName: string = '');
-    class function ExistIniFileName (const AIniFileName: string = '') : boolean;
+    class function IniFileExists(const AIniFileName: string = '') : boolean;
   end;
 
   TMARSParametersIniFileReaderWriterHelper=class helper for TMARSParameters
   public
     procedure LoadFromIniFile(const AIniFileName: string = '');
     procedure SaveToIniFile(const AIniFileName: string = '');
-    function ExistIniFileName (const AIniFileName: string = '') : boolean;
+    function IniFileExists(const AIniFileName: string = '') : boolean;
   end;
 
 implementation
@@ -37,7 +36,7 @@ uses
 
 { TMARSParametersIniFileReaderWriter }
 
-class function TMARSParametersIniFileReaderWriter.ExistIniFileName(const AIniFileName: string): boolean;
+class function TMARSParametersIniFileReaderWriter.IniFileExists(const AIniFileName: string): boolean;
 begin
   Result:= FileExists(GetActualFileName(AIniFileName));
 end;
@@ -55,11 +54,6 @@ begin
     else
       Result := ChangeFileExt(ParamStr(0), '.ini');
   end
-end;
-
-function TMARSParametersIniFileReaderWriter.GetExistIniFileName: boolean;
-begin
-  Result:= FileExists(GetActualFileName(''));
 end;
 
 class procedure TMARSParametersIniFileReaderWriter.Load(
@@ -146,9 +140,9 @@ end;
 
 { TMARSParametersIniFileReaderWriterHelper }
 
-function TMARSParametersIniFileReaderWriterHelper.ExistIniFileName(const AIniFileName: string): boolean;
+function TMARSParametersIniFileReaderWriterHelper.IniFileExists(const AIniFileName: string): boolean;
 begin
-  Result:= TMARSParametersIniFileReaderWriter.ExistIniFileName(AIniFileName);
+  Result:= TMARSParametersIniFileReaderWriter.IniFileExists(AIniFileName);
 end;
 
 procedure TMARSParametersIniFileReaderWriterHelper.LoadFromIniFile(
