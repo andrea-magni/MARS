@@ -1,0 +1,96 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MARSMustacheServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSMustacheServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSMustacheServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSMustacheServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSMustacheServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSMustacheServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MARSMustacheServerApplication">
+        <MSBuild Projects="MARSMustacheServerApplication.dproj"/>
+    </Target>
+    <Target Name="MARSMustacheServerApplication:Clean">
+        <MSBuild Projects="MARSMustacheServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSMustacheServerApplication:Make">
+        <MSBuild Projects="MARSMustacheServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSMustacheServerFMXApplication">
+        <MSBuild Projects="MARSMustacheServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="MARSMustacheServerFMXApplication:Clean">
+        <MSBuild Projects="MARSMustacheServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSMustacheServerFMXApplication:Make">
+        <MSBuild Projects="MARSMustacheServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSMustacheServerService">
+        <MSBuild Projects="MARSMustacheServerService.dproj"/>
+    </Target>
+    <Target Name="MARSMustacheServerService:Clean">
+        <MSBuild Projects="MARSMustacheServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSMustacheServerService:Make">
+        <MSBuild Projects="MARSMustacheServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSMustacheServerConsoleApplication">
+        <MSBuild Projects="MARSMustacheServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="MARSMustacheServerConsoleApplication:Clean">
+        <MSBuild Projects="MARSMustacheServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSMustacheServerConsoleApplication:Make">
+        <MSBuild Projects="MARSMustacheServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSMustacheServerApacheModule">
+        <MSBuild Projects="MARSMustacheServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="MARSMustacheServerApacheModule:Clean">
+        <MSBuild Projects="MARSMustacheServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSMustacheServerApacheModule:Make">
+        <MSBuild Projects="MARSMustacheServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSMustacheServerISAPI">
+        <MSBuild Projects="MARSMustacheServerISAPI.dproj"/>
+    </Target>
+    <Target Name="MARSMustacheServerISAPI:Clean">
+        <MSBuild Projects="MARSMustacheServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSMustacheServerISAPI:Make">
+        <MSBuild Projects="MARSMustacheServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MARSMustacheServerApplication;MARSMustacheServerFMXApplication;MARSMustacheServerService;MARSMustacheServerConsoleApplication;MARSMustacheServerApacheModule;MARSMustacheServerISAPI"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MARSMustacheServerApplication:Clean;MARSMustacheServerFMXApplication:Clean;MARSMustacheServerService:Clean;MARSMustacheServerConsoleApplication:Clean;MARSMustacheServerApacheModule:Clean;MARSMustacheServerISAPI:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MARSMustacheServerApplication:Make;MARSMustacheServerFMXApplication:Make;MARSMustacheServerService:Make;MARSMustacheServerConsoleApplication:Make;MARSMustacheServerApacheModule:Make;MARSMustacheServerISAPI:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

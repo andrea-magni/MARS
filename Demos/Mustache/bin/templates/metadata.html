@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MARS Application {{Name}}</title>
+    <style>
+    .path {
+      color: blue; 
+      font-style: italic;
+    }
+
+    .verb {
+      color: red; 
+      font-weight: bold;
+      font-family: Courier;
+    }
+
+    .name {
+      font-weight: bold;
+    }
+
+
+    </style>
+  </head>
+  <body>
+    <h1>Application: {{Name}}</h1>
+
+    <small>* links only works with simple GET URLs</small> 
+    {{#Resources}}
+      {{#-first}}
+        <h2>Resources</h2>  
+        <ul>
+      {{/-first}}
+
+        <li><span class="name">{{Path}}</span> ({{Name}}, <span class="path">{{FullPath}}</span>)</li>
+        
+        
+        {{#Methods}}
+          {{#-first}}
+          <ul>
+          {{/-first}}
+          
+          <li>
+            <span class="verb">{{HttpMethod}}</span> <a href="/{{FullPath}}">{{FullPath}}</a> <span class="produces">[{{Produces}}]</span>
+          </li>
+
+          {{#-last}}
+          </ul>
+          {{/-last}}
+        {{/Methods}}
+      {{#-last}}
+      </ul>
+      {{/-last}}
+    {{/Resources}}
+    
+  </body>
+</html>
