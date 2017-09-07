@@ -26,11 +26,21 @@ uses
   WebReq,
   WebBroker,
 {$endif}
+  IdContext,
   ServerConst in 'ServerConst.pas',
   Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
   Server.Ignition in 'Server.Ignition.pas';
 
 {$R *.res}
+
+type
+  TDummyIndyServer = class
+  public
+    procedure ParseAuthenticationHandler(AContext: TIdContext;
+      const AAuthType, AAuthData: String; var VUsername, VPassword: String;
+      var VHandled: Boolean); virtual;
+  end;
+
 
 procedure StartServer(const AServer: TIdHTTPWebBrokerBridge);
 begin
@@ -97,64 +107,82 @@ end;
 procedure RunServer();
 var
   LServer: TIdHTTPWebBrokerBridge;
+  LDummyIndy: TDummyIndyServer;
   LScheduler: TIdSchedulerOfThreadPool;
   LResponse: string;
 begin
   WriteCommands;
-  LServer := TIdHTTPWebBrokerBridge.Create(nil);
+  LDummyIndy := TDummyIndyServer.Create;
   try
-    LServer.DefaultPort := TServerEngine.Default.Port;
-
-    LScheduler := TIdSchedulerOfThreadPool.Create(LServer);
+    LServer := TIdHTTPWebBrokerBridge.Create(nil);
     try
-      LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
-      LServer.Scheduler := LScheduler;
-      LServer.MaxConnections := LScheduler.PoolSize;
-    except
-      LServer.Scheduler.Free;
-      LServer.Scheduler := nil;
-      raise;
-    end;
+      LServer.DefaultPort := TServerEngine.Default.Port;
 
-
-
-    while True do
-    begin
-      Readln(LResponse);
-      LResponse := LowerCase(LResponse);
-      if sametext(LResponse, cCommandStart) then
-        StartServer(LServer)
-      else if sametext(LResponse, cCommandStatus) then
-        WriteStatus(LServer)
-      else if sametext(LResponse, cCommandStop) then
-        StopServer(LServer)
-{$ifdef DelphiXE3_UP}
-      else if LResponse.StartsWith(cCommandSetPort, True) then
-        SetPort(LServer, LResponse.Split([' '])[2])
-{$else}
-      else if AnsiStartsText(cCommandSetPort, LResponse) then
-        SetPort(LServer, Copy(LResponse, Length(cCommandSetPort)+1, MAXINT))
-{$endif}
-
-      else if sametext(LResponse, cCommandHelp) then
-        WriteCommands
-      else if sametext(LResponse, cCommandExit) then
-        if LServer.Active then
-        begin
-          StopServer(LServer);
-          break
-        end
-        else
-          break
-      else
-      begin
-        Writeln(sInvalidCommand);
-        Write(cArrow);
+      LScheduler := TIdSchedulerOfThreadPool.Create(LServer);
+      try
+        LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
+        LServer.Scheduler := LScheduler;
+        LServer.MaxConnections := LScheduler.PoolSize;
+        LServer.OnParseAuthentication := LDummyIndy.ParseAuthenticationHandler;
+      except
+        LServer.Scheduler.Free;
+        LServer.Scheduler := nil;
+        raise;
       end;
+
+
+
+      while True do
+      begin
+        Readln(LResponse);
+        LResponse := LowerCase(LResponse);
+        if sametext(LResponse, cCommandStart) then
+          StartServer(LServer)
+        else if sametext(LResponse, cCommandStatus) then
+          WriteStatus(LServer)
+        else if sametext(LResponse, cCommandStop) then
+          StopServer(LServer)
+  {$ifdef DelphiXE3_UP}
+        else if LResponse.StartsWith(cCommandSetPort, True) then
+          SetPort(LServer, LResponse.Split([' '])[2])
+  {$else}
+        else if AnsiStartsText(cCommandSetPort, LResponse) then
+          SetPort(LServer, Copy(LResponse, Length(cCommandSetPort)+1, MAXINT))
+  {$endif}
+
+        else if sametext(LResponse, cCommandHelp) then
+          WriteCommands
+        else if sametext(LResponse, cCommandExit) then
+          if LServer.Active then
+          begin
+            StopServer(LServer);
+            break
+          end
+          else
+            break
+        else
+        begin
+          Writeln(sInvalidCommand);
+          Write(cArrow);
+        end;
+      end;
+    finally
+      LServer.Free;
     end;
   finally
-    LServer.Free;
+    LDummyIndy.Free;
   end;
+end;
+
+{ TDummyIndyServer }
+
+procedure TDummyIndyServer.ParseAuthenticationHandler(AContext: TIdContext;
+  const AAuthType, AAuthData: String; var VUsername, VPassword: String;
+  var VHandled: Boolean);
+begin
+  // Allow JWT Bearer authentication's scheme
+  if SameText(AAuthType, 'Bearer') then
+    VHandled := True;
 end;
 
 begin
