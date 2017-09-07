@@ -64,6 +64,7 @@ type
     property Token: TMARSToken read FToken;
     property Parameters: TMARSParameters read FParameters;
     property Name: string read FName;
+    property TemplatesFolder: string read GetTemplatesFolder;  // MF 170805
   end;
 
 implementation
