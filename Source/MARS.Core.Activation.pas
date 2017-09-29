@@ -375,7 +375,9 @@ begin
     SetCustomHeaders;
 
     // 1 - TMARSResponse (override)
-    if LMethodResult.IsInstanceOf(TMARSResponse) then
+    if (not LMethodResult.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
+       and LMethodResult.IsInstanceOf(TMARSResponse)
+    then
       TMARSResponse(LMethodResult.AsObject).CopyTo(Response)
     // 2 - MessageBodyWriter mechanism (standard)
     else begin
