@@ -218,7 +218,7 @@ begin
   else if Self is TRttiProperty then
     TRttiProperty(Self).SetValue(AInstance, AValue)
   else if Self is TRttiParameter then
-    TRttiParameter(Self).SetValue(AInstance, AValue);
+    raise ENotSupportedException.Create('Setting value of TRttiParameter not supported');
 end;
 
 { TRttiTypeHelper }

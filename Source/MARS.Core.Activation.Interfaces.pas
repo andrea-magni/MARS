@@ -32,6 +32,7 @@ type
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
     function GetMethod: TRttiMethod;
+    function GetMethodArguments: TArray<TValue>;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
     function GetResourceInstance: TObject;
@@ -44,6 +45,7 @@ type
     property Engine: TMARSEngine read GetEngine;
     property InvocationTime: TStopwatch read GetInvocationTime;
     property Method: TRttiMethod read GetMethod;
+    property MethodArguments: TArray<TValue> read GetMethodArguments;
     property Request: TWebRequest read GetRequest;
     property Resource: TRttiType read GetResource;
     property ResourceInstance: TObject read GetResourceInstance;

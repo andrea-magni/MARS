@@ -98,6 +98,7 @@ type
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
     function GetMethod: TRttiMethod;
+    function GetMethodArguments: TArray<TValue>;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
     function GetResourceInstance: TObject;
@@ -111,6 +112,7 @@ type
     property Engine: TMARSEngine read FEngine;
     property InvocationTime: TStopwatch read FInvocationTime;
     property Method: TRttiMethod read FMethod;
+    property MethodArguments: TArray<TValue> read FMethodArguments;
     property Request: TWebRequest read FRequest;
     property Resource: TRttiType read FResource;
     property ResourceInstance: TObject read FResourceInstance;
@@ -153,7 +155,7 @@ function TMARSActivation.GetMethodArgument(const AParam: TRttiParameter): TValue
 var
   LParamValue: TValue;
 begin
-  LParamValue := TValue.Empty;
+  TValue.Make(nil, AParam.ParamType.Handle, LParamValue);
 
   AParam.HasAttribute<ContextAttribute>(
     procedure (AContextAttr: ContextAttribute)
@@ -163,6 +165,11 @@ begin
   );
 
   Result := LParamValue;
+end;
+
+function TMARSActivation.GetMethodArguments: TArray<TValue>;
+begin
+  Result := FMethodArguments;
 end;
 
 function TMARSActivation.GetProducesValue: string;
@@ -235,13 +242,17 @@ procedure TMARSActivation.FillResourceMethodParameters;
 var
   LParameters: TArray<TRttiParameter>;
   LIndex: Integer;
+  LParameter: TRttiParameter;
 begin
   Assert(Assigned(FMethod));
   try
     LParameters := FMethod.GetParameters;
     SetLength(FMethodArguments, Length(LParameters));
     for LIndex := Low(LParameters) to High(LParameters) do
-      FMethodArguments[LIndex] := GetMethodArgument(LParameters[LIndex]);
+    begin
+      LParameter := LParameters[LIndex];
+      FMethodArguments[LIndex] := GetMethodArgument(LParameter);
+    end;
   except
     on E: Exception do
       raise EMARSApplicationException.Create('Bad parameter values for resource method ' + FMethod.Name);
@@ -375,9 +386,7 @@ begin
     SetCustomHeaders;
 
     // 1 - TMARSResponse (override)
-    if (not LMethodResult.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
-       and LMethodResult.IsInstanceOf(TMARSResponse)
-    then
+    if LMethodResult.IsInstanceOf(TMARSResponse) then
       TMARSResponse(LMethodResult.AsObject).CopyTo(Response)
     // 2 - MessageBodyWriter mechanism (standard)
     else begin
