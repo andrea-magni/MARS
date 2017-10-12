@@ -49,10 +49,23 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
+  [Produces(TMediaType.APPLICATION_JSON)]
+  TStandardMethodWriter = class(TInterfacedObject, IMessageBodyWriter)
+  private
+    procedure ForEachParameter(const AActivation: IMARSActivation;
+      const ADoSomething: TProc<TRttiParameter, TValue>;
+      const AFilterFunc: TFunc<TRttiParameter, Boolean> = nil);
+  public
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
+  end;
+
+
 implementation
 
 uses
-    MARS.Core.JSON
+    System.TypInfo
+  , MARS.Core.JSON
   , MARS.Core.Utils
   , MARS.Rtti.Utils
   ;
@@ -170,6 +183,80 @@ begin
 end;
 
 
+{ TStandardMethodWriter }
+
+procedure TStandardMethodWriter.ForEachParameter(const AActivation: IMARSActivation;
+  const ADoSomething: TProc<TRttiParameter, TValue>;
+  const AFilterFunc: TFunc<TRttiParameter, Boolean>);
+var
+  LParameter: TRttiParameter;
+  LParameters: TArray<TRttiParameter>;
+  LIndex: Integer;
+begin
+  LParameters := AActivation.Method.GetParameters;
+
+  for LIndex := 0 to High(LParameters) do
+  begin
+    LParameter := LParameters[LIndex];
+
+    if (not Assigned(AFilterFunc)) or AFilterFunc(LParameter) then
+    begin
+      if Assigned(ADoSomething) then
+        ADoSomething(LParameter, AActivation.MethodArguments[LIndex]);
+    end;
+  end;
+end;
+
+procedure TStandardMethodWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+  AOutputStream: TStream; const AActivation: IMARSActivation);
+var
+  LStreamWriter: TStreamWriter;
+  LResult: TJSONObject;
+  LOutputParams: TJSONArray;
+begin
+  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  try
+    LResult := TJSONObject.Create;
+    try
+      LResult.WriteTValue('result', AValue);
+
+      LOutputParams := nil;
+      ForEachParameter(AActivation
+        , procedure (AParameter: TRttiParameter; AParameterValue: TValue)
+          var
+            LOutputParamJSON: TJSONObject;
+          begin
+            LOutputParamJSON := TJSONObject.Create;
+            try
+              LOutputParamJSON.WriteTValue('name', AParameter.Name);
+              LOutputParamJSON.WriteTValue('value', AParameterValue);
+
+              if not Assigned(LOutputParams) then
+                LOutputParams := TJSONArray.Create;
+              LOutputParams.Add(LOutputParamJSON);
+            except
+              LOutputParamJSON.Free;
+              raise;
+            end;
+          end
+        , function (AParameter: TRttiParameter): Boolean
+          begin
+            Result := ([pfOut, pfVar] * AParameter.Flags) <> []; // is a var or out argument
+          end
+      );
+      if Assigned(LOutputParams) then
+        LResult.AddPair('outputParams', LOutputParams);
+
+      LStreamWriter.Write(LResult.ToJSON);
+    finally
+      LResult.Free;
+    end;
+  finally
+    LStreamWriter.Free;
+  end;
+end;
+
+
 procedure RegisterWriters;
 begin
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TJSONValue>(TJSONValueWriter);
@@ -203,6 +290,17 @@ begin
       begin
         Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
       end
+  );
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(TStandardMethodWriter
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+    begin
+      Result := (AMediaType = TMediaType.APPLICATION_JSON) or (AMediaType = TMediaType.WILDCARD);
+    end
+  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+    begin
+      Result := TMARSMessageBodyRegistry.AFFINITY_ZERO;
+    end
   );
 end;
 

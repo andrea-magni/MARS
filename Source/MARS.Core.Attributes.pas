@@ -39,6 +39,11 @@ type
     property HttpMethodName: string read GetHttpMethodName;
   end;
 
+  ANYAttribute     = class(HttpMethodAttribute)
+  public
+    function Matches(const ARequest: TWebRequest): Boolean; override;
+  end;
+
   GETAttribute     = class(HttpMethodAttribute)
   public
     function Matches(const ARequest: TWebRequest): Boolean; override;
@@ -69,7 +74,10 @@ type
     function Matches(const ARequest: TWebRequest): Boolean; override;
   end;
 
-  OPTIONSAttribute = class(HttpMethodAttribute);
+  OPTIONSAttribute = class(HttpMethodAttribute)
+  public
+    function Matches(const ARequest: TWebRequest): Boolean; override;
+  end;
 
   ConsumesAttribute = class(MARSAttribute)
   private
@@ -549,6 +557,20 @@ begin
   Result := ClassName;
   if Result.EndsWith('Attribute', True) then
     Result := Result.Substring(0, Result.Length - 'Attribute'.Length);
+end;
+
+{ ANYAttribute }
+
+function ANYAttribute.Matches(const ARequest: TWebRequest): Boolean;
+begin
+  Result := ARequest.MethodType = TMethodType.mtAny;
+end;
+
+{ OPTIONSAttribute }
+
+function OPTIONSAttribute.Matches(const ARequest: TWebRequest): Boolean;
+begin
+  Result := SameText(ARequest.Method, 'OPTIONS');
 end;
 
 end.
