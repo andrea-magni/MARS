@@ -36,6 +36,7 @@ uses
 
   , Server.Resources
   , MARS.Data.FireDAC
+  , MARS.Core.Activation, MARS.Core.Activation.Interfaces
   ;
 
 { TServerEngine }
@@ -50,6 +51,19 @@ begin
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+
+//    TMARSActivation.RegisterAfterInvoke(
+//      procedure(const AActivation: IMARSActivation)
+//      begin
+//        if AActivation.Application.Name = 'DefaultApp' then
+//        begin
+//          AActivation.Response.CustomHeaders.Values['Access-Control-Allow-Origin'] := '*';
+//          AActivation.Response.CustomHeaders.Values['Access-Control-Allow-Methods'] := 'HEAD,GET,PUT,POST,DELETE,OPTIONS';
+//          AActivation.Response.CustomHeaders.Values['Access-Control-Allow-Headers'] := 'X-Requested-With, Content-Type';
+//        end;
+//      end
+//    );
+
   except
     FreeAndNil(FEngine);
     raise;

@@ -58,11 +58,16 @@ begin
 
   // skip favicon requests (browser)
   TServerEngine.Default.OnBeforeHandleRequest :=
-    function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
+    function (AEngine: TMARSEngine; AURL: TMARSURL;
+      ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
+    ): Boolean
     begin
       Result := True;
-      if AURL.Resource.EndsWith('favicon.ico', true) then
+      if SameText(AURL.Document, 'favicon.ico') then
+      begin
         Result := False;
+        Handled := True;
+      end
     end;
 
   StartServerAction.Execute;

@@ -51,7 +51,7 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils
+  StrUtils, Web.HttpApp
   , MARS.Core.URL
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Data.MessageBodyWriters
@@ -80,15 +80,16 @@ begin
 
     // skip favicon requests (browser)
     FEngine.OnBeforeHandleRequest :=
-      function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
+      function (AEngine: TMARSEngine; AURL: TMARSURL;
+        ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
+      ): Boolean
       begin
         Result := True;
-{$ifdef DelphiXE7_UP}
-        if AURL.Resource.EndsWith('favicon.ico', true) then
-{$else}
-        if EndsText('favicon.ico', AURL.Resource) then
-{$endif}
+        if SameText(AURL.Document, 'favicon.ico') then
+        begin
           Result := False;
+          Handled := True;
+        end
       end;
 
     StartServerAction.Execute;
