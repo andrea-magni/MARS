@@ -12,7 +12,8 @@ uses
   Tests.Core in 'Tests.Core.pas',
   Tests.MessageBodyWriters in 'Tests.MessageBodyWriters.pas',
   Tests.MessageBodyReaders in 'Tests.MessageBodyReaders.pas',
-  Tests.Records.Types in 'Tests.Records.Types.pas';
+  Tests.Records.Types in 'Tests.Records.Types.pas',
+  Test.FireDAC in 'Test.FireDAC.pas';
 
 begin
   TestInsight.DUnitX.RunRegisteredTests;
