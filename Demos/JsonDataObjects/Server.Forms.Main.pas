@@ -43,7 +43,7 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils
+  StrUtils, Web.HttpApp
   , MARS.Core.URL, MARS.Core.Engine
   , Server.Ignition;
 
@@ -58,15 +58,16 @@ begin
 
   // skip favicon requests (browser)
   TServerEngine.Default.OnBeforeHandleRequest :=
-    function (AEngine: TMARSEngine; AURL: TMARSURL): Boolean
+    function (AEngine: TMARSEngine; AURL: TMARSURL;
+      ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
+    ): Boolean
     begin
       Result := True;
-{$ifdef DelphiXE7_UP}
-      if AURL.Resource.EndsWith('favicon.ico', true) then
-{$else}
-      if EndsText('favicon.ico', AURL.Resource) then
-{$endif}
+      if SameText(AURL.Document, 'favicon.ico') then
+      begin
         Result := False;
+        Handled := True;
+      end
     end;
 
   StartServerAction.Execute;

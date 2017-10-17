@@ -25,6 +25,7 @@ type
   private
     FURL: string;
     FPath: string;
+    FDocument: string;
     FPortNumber: Integer;
     FProtocol: string;
     FQuery: string;
@@ -81,6 +82,7 @@ type
     property HostName: string read FHostName;
     property PortNumber: Integer read FPortNumber;
     property Path: string read FPath;
+    property Document: string read FDocument;
     property PathTokens: TArray<string> read FPathTokens;
     property Query: string read FQuery;
     property QueryTokens: TDictionary<string, string> read FQueryTokens;
@@ -317,6 +319,7 @@ begin
     FPassword := LURI.Password;
     FHostName := LURI.Host;
     FPortNumber := StrToIntDef(LURI.Port, LDefaultPortNumber);
+    FDocument := LURI.Document;
     FPath := LURI.Path + LURI.Document;
     FPathTokens := ParsePathTokens(FPath);
     FQuery := LURI.Params;

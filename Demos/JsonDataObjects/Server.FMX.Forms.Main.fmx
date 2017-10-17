@@ -39,7 +39,6 @@ object MainForm: TMainForm
       Position.X = 16.000000000000000000
       Position.Y = 64.000000000000000000
       TabOrder = 2
-      Visible = True
     end
     object StopButton: TButton
       Action = StopServerAction
@@ -48,7 +47,6 @@ object MainForm: TMainForm
       Position.X = 104.000000000000000000
       Position.Y = 64.000000000000000000
       TabOrder = 3
-      Visible = True
     end
   end
   object MainActionList: TActionList

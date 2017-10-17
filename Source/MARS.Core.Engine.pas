@@ -30,7 +30,8 @@ type
   EMARSEngineException = class(EMARSHttpException);
   TMARSEngine = class;
 
-  TMARSEngineBeforeHandleRequestEvent = TFunc<TMARSEngine, TMARSURL, Boolean>;
+  TMARSEngineBeforeHandleRequestEvent = reference to function(AEngine: TMARSEngine;
+    AURL: TMARSURL; ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean): Boolean;
 
   TMARSEngine = class
   private
@@ -186,8 +187,10 @@ begin
 
   LURL := TMARSURL.Create(ARequest);
   try
-    if Assigned(FOnBeforeHandleRequest) and not FOnBeforeHandleRequest(Self, LURL) then
-      Exit;
+
+    if Assigned(FOnBeforeHandleRequest) then
+      if not FOnBeforeHandleRequest(Self, LURL, ARequest, AResponse, Result) then
+        Exit;
 
     LApplicationPath := '';
     if LURL.HasPathTokens then
