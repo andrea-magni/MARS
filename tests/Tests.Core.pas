@@ -38,6 +38,7 @@ begin
     Assert.AreEqual('localhost', LURL.HostName);
     Assert.AreEqual('http', LURL.Protocol);
     Assert.AreEqual('/rest/default/helloworld', LURL.Path);
+    Assert.AreEqual('helloworld', LURL.Document);
     Assert.IsEmpty(LURL.Query);
     Assert.IsTrue(LURL.QueryTokens.Count = 0);
     Assert.IsTrue(LURL.MatchPath('/'), 'MatchPath /');
