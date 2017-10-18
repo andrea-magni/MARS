@@ -219,9 +219,9 @@ function StringToTValue(const AString: string; const ADesiredType: TRttiType): T
 begin
   case ADesiredType.TypeKind of
     tkInt64,
-    tkInteger: Result := StrToInt(AString);
+    tkInteger: Result := StrToIntDef(AString, 0);
 
-    tkFloat: Result := StrToFloat(AString);
+    tkFloat: Result := StrToFloatDef(AString, 0.0);
 
 {$ifdef DelphiXE7_UP}
     tkChar: begin
