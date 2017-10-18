@@ -28,6 +28,12 @@ uses
 type
   TMARSActivation = class;
 
+  TMARSActivationFactoryFunc = reference to function (const AEngine: TMARSEngine;
+    const AApplication: TMARSApplication;
+    const ARequest: TWebRequest; const AResponse: TWebResponse;
+    const AURL: TMARSURL
+  ): IMARSActivation;
+
   TMARSBeforeInvokeProc = reference to procedure(const AActivation: IMARSActivation; out AIsAllowed: Boolean);
   TMARSAfterInvokeProc = reference to procedure(const AActivation: IMARSActivation);
 
@@ -40,21 +46,21 @@ type
     constructor Create(const ADenyAll, APermitAll: Boolean; const AAllowedRoles: TArray<string>);
   end;
 
-  TMARSActivation = class(TNonInterfacedObject, IMARSActivation)
+  TMARSActivation = class(TInterfacedObject, IMARSActivation)
   private
-    FApplication: TMARSApplication;
-    FEngine: TMARSEngine;
     FRequest: TWebRequest;
     FResponse: TWebResponse;
-    FURL: TMARSURL;
-    FURLPrototype: TMARSURL;
-    FToken: TMARSToken;
-    FContext: TList<TValue>;
     class var FBeforeInvokeProcs: TArray<TMARSBeforeInvokeProc>;
     class var FAfterInvokeProcs: TArray<TMARSAfterInvokeProc>;
   protected
     FRttiContext: TRttiContext;
     FConstructorInfo: TMARSConstructorInfo;
+    FApplication: TMARSApplication;
+    FEngine: TMARSEngine;
+    FURL: TMARSURL;
+    FURLPrototype: TMARSURL;
+    FToken: TMARSToken;
+    FContext: TList<TValue>;
     FMethod: TRttiMethod;
     FResource: TRttiType;
     FResourceInstance: TObject;
@@ -73,7 +79,7 @@ type
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
-    procedure SetCustomHeaders;
+    procedure SetCustomHeaders; virtual;
 
     function DoBeforeInvoke: Boolean;
     procedure DoAfterInvoke;
@@ -89,11 +95,12 @@ type
     destructor Destroy; override;
 
     procedure Prepare; virtual;
-    procedure Invoke; virtual;
 
     // --- IMARSActivation implementation --------------
-    procedure AddToContext(AValue: TValue);
-    function HasToken: Boolean;
+    procedure AddToContext(AValue: TValue); virtual;
+    function HasToken: Boolean; virtual;
+    procedure Invoke; virtual;
+
     function GetApplication: TMARSApplication;
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
@@ -125,6 +132,12 @@ type
 //    class procedure UnregisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
     class procedure RegisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
 //    class procedure UnregisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
+
+    class var CreateActivationFunc: TMARSActivationFactoryFunc;
+    class function CreateActivation(const AEngine: TMARSEngine;
+      const AApplication: TMARSApplication;
+      const ARequest: TWebRequest; const AResponse: TWebResponse;
+      const AURL: TMARSURL): IMARSActivation;
   end;
 
 implementation
@@ -139,9 +152,7 @@ uses
   , MARS.Rtti.Utils
   , MARS.Core.Injection
   , MARS.Core.Activation.InjectionService
-{$ifndef Delphi10Seattle_UP}
   , TypInfo
-{$endif}
 ;
 
 { TMARSActivation }
@@ -282,6 +293,11 @@ begin
 
   for LMethod in FResource.GetMethods do
   begin
+    if (LMethod.Visibility < TMemberVisibility.mvPublic)
+      or LMethod.IsConstructor or LMethod.IsDestructor
+    then
+      Continue;
+
     LMethodPath := '';
     LHttpMethodMatches := False;
 
@@ -375,7 +391,7 @@ begin
   Assert(Assigned(FMethod));
 
   // cache initial ContentType value to check later if it has been changed
-  LContentType := Response.ContentType;
+  LContentType := string(Response.ContentType);
 
   try
     FillResourceMethodParameters;
@@ -395,7 +411,7 @@ begin
       try
         if Assigned(FWriter) then
         begin
-          if Response.ContentType = LContentType then
+          if string(Response.ContentType) = LContentType then
             Response.ContentType := FWriterMediaType.ToString;
 
           LStream := TBytesStream.Create();
@@ -673,6 +689,16 @@ begin
   FContext := TList<TValue>.Create;
   FInvocationTime.Reset;
   Prepare;
+end;
+
+class function TMARSActivation.CreateActivation(const AEngine: TMARSEngine;
+  const AApplication: TMARSApplication; const ARequest: TWebRequest;
+  const AResponse: TWebResponse; const AURL: TMARSURL): IMARSActivation;
+begin
+  if Assigned(CreateActivationFunc) then
+    Result := CreateActivationFunc(AEngine, AApplication, ARequest, AResponse, AURL)
+  else
+    Result := TMARSActivation.Create(AEngine, AApplication, ARequest, AResponse, AURL);
 end;
 
 destructor TMARSActivation.Destroy;

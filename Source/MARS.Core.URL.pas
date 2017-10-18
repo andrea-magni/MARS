@@ -63,8 +63,8 @@ type
     constructor Create(AWebRequest: TWebRequest); overload; virtual;
     destructor Destroy; override;
 
-    function MatchPath(AOtherURL: TMARSURL): Boolean; overload; virtual;
-    function MatchPath(APath: string): Boolean; overload; virtual;
+    function MatchPath(AOtherURL: TMARSURL; const ACaseSensitive: Boolean = True): Boolean; overload; virtual;
+    function MatchPath(APath: string; const ACaseSensitive: Boolean = True): Boolean; overload; virtual;
 
     function HasPathTokens(const AtLeast: Integer = 1): Boolean;
 
@@ -271,15 +271,19 @@ begin
   Result := Length(FPathTokens) >= AtLeast ;
 end;
 
-function TMARSURL.MatchPath(APath: string): Boolean;
+function TMARSURL.MatchPath(APath: string; const ACaseSensitive: Boolean = True): Boolean;
 begin
-  Result := StartsText(APath, Path);
+  if ACaseSensitive then
+    Result := StartsStr(APath, Path)
+  else
+    Result := StartsText(APath, Path);
 end;
 
-function TMARSURL.MatchPath(AOtherURL: TMARSURL): Boolean;
+function TMARSURL.MatchPath(AOtherURL: TMARSURL; const ACaseSensitive: Boolean = True): Boolean;
 var
   LIndex: Integer;
   LToken, LOtherToken: string;
+  LMatches: Boolean;
 begin
   Result := (Length(PathTokens) = Length(AOtherURL.PathTokens))
     or (PathTokens[Length(PathTokens)-1] = PATH_PARAM_WILDCARD);
@@ -290,8 +294,14 @@ begin
     begin
       LToken := PathTokens[LIndex];
       LOtherToken := AOtherURL.PathTokens[LIndex];
+
+      if ACaseSensitive then
+        LMatches := LToken = LOtherToken
+      else
+        LMatches := SameText(LToken, LOtherToken);
+
       if not (
-        (LToken = LOtherToken) // exact match
+        LMatches
         or (StartsStr('{', LToken) and EndsStr('}', LToken)) // LToken is a param
         or (StartsStr('{', LOtherToken) and EndsStr('}', LOtherToken)) // LOtherToken is a param
       ) then

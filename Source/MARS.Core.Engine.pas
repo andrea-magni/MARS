@@ -100,7 +100,7 @@ implementation
 
 uses
     MARS.Core.Utils
-  , MARS.Core.Activation
+  , MARS.Core.Activation, MARS.Core.Activation.Interfaces
   , MARS.Core.MediaType
   ;
 
@@ -181,7 +181,7 @@ var
   LApplication: TMARSApplication;
   LURL: TMARSURL;
   LApplicationPath: string;
-  LActivation: TMARSActivation;
+  LActivation: IMARSActivation;
 begin
   Result := False;
 
@@ -212,11 +212,11 @@ begin
 
     LURL.BasePath := LApplicationPath;
     try
-      LActivation := TMARSActivation.Create(Self, LApplication, ARequest, AResponse, LURL);
+      LActivation := TMARSActivation.CreateActivation(Self, LApplication, ARequest, AResponse, LURL);
       try
         LActivation.Invoke;
       finally
-        LActivation.Free;
+        LActivation := nil;
       end;
     except on E: Exception do
       if E is EMARSHttpException then

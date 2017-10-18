@@ -28,6 +28,8 @@ type
     procedure AddToContext(AValue: TValue);
     function HasToken: Boolean;
 
+    procedure Invoke;
+
     function GetApplication: TMARSApplication;
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
