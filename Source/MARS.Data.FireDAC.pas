@@ -21,8 +21,6 @@ uses
   , FireDAC.Phys.Intf, FireDAC.Phys
   , FireDAC.Comp.Client, FireDAC.Comp.UI, FireDAC.Comp.DataSet
 
-  , FireDACJSONReflect
-
   , MARS.Core.Application
   , MARS.Core.Attributes
   , MARS.Core.Classes
@@ -94,14 +92,10 @@ type
     function ApplyUpdates(const ADelta: TFDMemTable; const ATableAdapter: TFDTableAdapter;
       const AMaxErrors: Integer = -1): TMARSFDApplyUpdatesRes; overload; virtual;
 
-    function ApplyUpdates(ADataSets: TArray<TFDCustomQuery>; ADeltas: TArray<TFDMemTable>;
+    function ApplyUpdates(ADataSets: TArray<TFDDataSet>; ADeltas: TArray<TFDMemTable>;
 //      AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates> = nil;
-      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil
+      AOnBeforeApplyUpdates: TProc<TFDDataSet, TFDMemTable> = nil
       ): TArray<TMARSFDApplyUpdatesRes>; overload; virtual;
-
-    function ApplyUpdates(ADataSets: TArray<TFDCustomQuery>; ADeltas: TFDJSONDeltas;
-      AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates> = nil;
-      AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable> = nil): TArray<TMARSFDApplyUpdatesRes>; overload; virtual;
 
     function CreateCommand(const ASQL: string = ''; const ATransaction: TFDTransaction = nil;
       const AContextOwned: Boolean = True): TFDCommand; virtual;
@@ -311,9 +305,9 @@ begin
   FContextValueProviders := FContextValueProviders + [TContextValueProviderProc(AContextValueProviderProc)];
 end;
 
-function DataSetByName(const ADataSets: TArray<TFDCustomQuery>; const AName: string): TFDCustomQuery;
+function DataSetByName(const ADataSets: TArray<TFDDataSet>; const AName: string): TFDDataSet;
 var
-  LCurrent: TFDCustomQuery;
+  LCurrent: TFDDataSet;
 begin
   Result := nil;
   for LCurrent in ADataSets do
@@ -324,42 +318,6 @@ begin
     end;
   if Result = nil then
     raise EMARSFireDACException.CreateFmt('DataSet %s not found', [AName]);
-end;
-
-
-function TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDCustomQuery>;
-  ADeltas: TFDJSONDeltas; AOnApplyUpdates: TProc<TFDCustomQuery, Integer, IFDJSONDeltasApplyUpdates>;
-  AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
-var
-  LApplyUpdates: IFDJSONDeltasApplyUpdates;
-  LIndex: Integer;
-  LDelta: TPair<string, TFDMemTable>;
-  LDataSet: TFDCustomQuery;
-  LApplyResult: Integer;
-
-begin
-  Result := [];
-  LApplyUpdates := TFDJSONDeltasApplyUpdates.Create(ADeltas);
-  try
-    for LIndex := 0 to TFDJSONDeltasReader.GetListCount(ADeltas) - 1 do
-    begin
-      LDelta := TFDJSONDeltasReader.GetListItem(ADeltas, LIndex);
-      LDataSet := DataSetByName(ADataSets, LDelta.Key);
-
-//      BeforeApplyUpdates(ADeltas, LDelta.Value, LDataSet);
-      InjectMacroValues(LDataSet.Command);
-      InjectParamValues(LDataSet.Command);
-
-      if Assigned(AOnBeforeApplyUpdates) then
-        AOnBeforeApplyUpdates(LDataSet, LDelta.Value);
-      LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
-      Result := Result + [TMARSFDApplyUpdatesRes.Create(LDataSet, LApplyResult, LApplyUpdates.Errors.Count, LApplyUpdates.Errors.Strings.Text)];
-      if Assigned(AOnApplyUpdates) then
-        AOnApplyUpdates(LDataSet, LApplyResult, LApplyUpdates);
-    end;
-  finally
-    LApplyUpdates := nil; // it's an interface
-  end;
 end;
 
 function TMARSFireDAC.ApplyUpdates(const ADelta: TFDMemTable;
@@ -409,19 +367,20 @@ begin
   end;
 end;
 
-function TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDCustomQuery>;
+function TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDDataSet>;
   ADeltas: TArray<TFDMemTable>;
-  AOnBeforeApplyUpdates: TProc<TFDCustomQuery, TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
+  AOnBeforeApplyUpdates: TProc<TFDDataSet, TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
 var
   LDelta: TFDMemTable;
-  LDataSet: TFDCustomQuery;
+  LDataSet: TFDAdaptedDataSet;
   LFDAdapter: TFDTableAdapter;
 
 begin
   Result := [];
   for LDelta in ADeltas do
   begin
-    LDataSet := DataSetByName(ADataSets, LDelta.Name);
+    LDataSet := DataSetByName(ADataSets, LDelta.Name) as TFDAdaptedDataSet;
+    Assert(LDataSet <> nil);
     Assert(LDataSet.Command <> nil);
 
 //      BeforeApplyUpdates(ADeltas, LDelta.Value, LDataSet);

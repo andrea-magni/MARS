@@ -9,7 +9,6 @@ interface
 
 uses
   System.SysUtils, System.Classes
-  , Data.FireDACJSONReflect
 
   , MARS.Core.JSON
   , MARS.Core.Attributes
@@ -20,7 +19,7 @@ uses
   , MARS.Data.MessageBodyWriters
   , MARS.Data.FireDAC.ReadersAndWriters
 
-  , FireDAC.Comp.Client
+  , FireDAC.Comp.Client, FireDAC.Comp.DataSet
   ;
 
 type
@@ -43,14 +42,14 @@ type
     [Context] FD: TMARSFireDAC;
     [Context] URL: TMARSURL;
 
-    procedure BeforeApplyUpdates(ADeltas: TFDJSONDeltas; ADelta: TFDMemTable;
-      ADataSet: TFDCustomQuery); virtual;
+    procedure BeforeApplyUpdates(ADeltas: TArray<TFDMemTable>; ADelta: TFDMemTable;
+      ADataSet: TFDDataSet); virtual;
   public
     [GET]
-    function Retrieve: TArray<TFDCustomQuery>; virtual;
+    function Retrieve: TArray<TFDDataSet>; virtual;
 
     [POST]
-    function Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TArray<TMARSFDApplyUpdatesRes>; virtual;
+    function Update([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>; virtual;
   end;
 
 implementation
@@ -68,17 +67,17 @@ uses
 
 { TDataModule1 }
 
-procedure TMARSFDDataModuleResource.BeforeApplyUpdates(ADeltas: TFDJSONDeltas;
-  ADelta: TFDMemTable; ADataSet: TFDCustomQuery);
+procedure TMARSFDDataModuleResource.BeforeApplyUpdates(ADeltas: TArray<TFDMemTable>;
+  ADelta: TFDMemTable; ADataSet: TFDDataSet);
 begin
 
 end;
 
-function TMARSFDDataModuleResource.Retrieve: TArray<TFDCustomQuery>;
+function TMARSFDDataModuleResource.Retrieve: TArray<TFDDataSet>;
 var
   LIncludeDefault: Boolean;
-  LDataSet: TFDCustomQuery;
-  LDataSets: TArray<TFDCustomQuery>;
+  LDataSet: TFDDataSet;
+  LDataSets: TArray<TFDDataSet>;
 begin
   // determine default behavior
   LIncludeDefault := True;
@@ -94,12 +93,12 @@ begin
     , function(AField: TRttiField): Boolean
       begin
         if (AField.Visibility >= TMemberVisibility.mvPublic)
-          and (AField.FieldType.IsObjectOfType(TFDCustomQuery)) then
+          and (AField.FieldType.IsObjectOfType(TFDDataSet)) then
         begin
           if (LIncludeDefault or AField.HasAttribute<RESTInclude>)
              and (not AField.HasAttribute<RESTExclude>)
           then
-            LDataSets := LDataSets + [AField.GetValue(Self).AsObject as TFDCustomQuery]
+            LDataSets := LDataSets + [AField.GetValue(Self).AsObject as TFDDataSet]
         end;
 
         Result := True;
@@ -108,20 +107,23 @@ begin
 
   for LDataSet in LDataSets do
   begin
-    FD.InjectMacroValues(LDataSet.Command);
-    FD.InjectParamValues(LDataSet.Command);
+    if LDataSet is TFDAdaptedDataSet then
+    begin
+      FD.InjectMacroValues(TFDAdaptedDataSet(LDataSet).Command);
+      FD.InjectParamValues(TFDAdaptedDataSet(LDataSet).Command);
+    end;
   end;
 
   Result := LDataSets;
 end;
 
-function TMARSFDDataModuleResource.Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): TArray<TMARSFDApplyUpdatesRes>;
+function TMARSFDDataModuleResource.Update([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
 begin
   Result := FD.ApplyUpdates(
-    Retrieve, AJSONDeltas, nil
-  , procedure (ADataset: TFDCustomQuery; ADelta: TFDMemTable)
+    Retrieve, ADeltas
+  , procedure (ADataset: TFDDataSet; ADelta: TFDMemTable)
     begin
-      BeforeApplyUpdates(AJSONDeltas, ADelta, ADataSet);
+      BeforeApplyUpdates(ADeltas, ADelta, ADataSet);
     end
   );
 end;

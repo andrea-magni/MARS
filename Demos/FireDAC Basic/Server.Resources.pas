@@ -23,7 +23,7 @@ uses
   , MARS.Data.MessageBodyWriters
 
   , MARS.Data.FireDAC, MARS.Data.FireDAC.Resources
-  , FireDAC.Phys.FB, FireDAC.Comp.Client
+  , FireDAC.Phys.FB, FireDAC.Comp.Client, FireDAC.Comp.DataSet
 
   , Data.DB
   ;
@@ -45,7 +45,7 @@ type
     FD: TMARSFireDAC;
   public
     [GET]
-    function GetData: TArray<TFDCustomQuery>;
+    function GetData: TArray<TFDDataSet>;
 
     [POST]
     function PostData([BodyParam] AData: TArray<TFDMemTable>): string;
@@ -60,7 +60,7 @@ implementation
 
 { TSimpleResource }
 
-function TSimpleResource.GetData: TArray<TFDCustomQuery>;
+function TSimpleResource.GetData: TArray<TFDDataSet>;
 begin
   Result := [
       FD.CreateQuery('select * from EMPLOYEE', nil, False, 'Employee')

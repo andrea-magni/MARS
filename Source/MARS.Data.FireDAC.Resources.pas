@@ -11,7 +11,7 @@ interface
 
 uses
   Classes, SysUtils, Generics.Collections
-  , FireDAC.Comp.Client, FireDACJSONReflect
+  , FireDAC.Comp.Client, FireDAC.Comp.DataSet
   , MARS.Core.MediaType, MARS.Core.Attributes, MARS.Data.FireDAC
 ;
 
@@ -23,14 +23,12 @@ type
     FStatements: TDictionary<string, string>;
   protected
     [Context] FConnection: TFDConnection;
+    [Context] FD: TMARSFireDAC;
     procedure SetupStatements; virtual;
 
     procedure AfterOpenDataSet(ADataSet: TFDCustomQuery); virtual;
     procedure BeforeOpenDataSet(ADataSet: TFDCustomQuery); virtual;
     function ReadDataSet(const ADataSetName, ASQLStatement: string; const AAutoOpen: Boolean = True): TFDCustomQuery; virtual;
-
-    procedure ApplyUpdates(ADeltas: TFDJSONDeltas;
-      AOnApplyUpdates: TProc<string, Integer, IFDJSONDeltasApplyUpdates> = nil); virtual;
 
     property Connection: TFDConnection read FConnection write FConnection;
     property Statements: TDictionary<string, string> read FStatements;
@@ -39,10 +37,10 @@ type
     destructor Destroy; override;
 
     [GET]
-    function Retrieve: TArray<TFDCustomQuery>; virtual;
+    function Retrieve: TArray<TFDDataSet>; virtual;
 
     [POST]
-    function Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): string; virtual;
+    function Update([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>; virtual;
   end;
 
 
@@ -65,42 +63,6 @@ end;
 procedure TMARSFDDatasetResource.AfterOpenDataSet(ADataSet: TFDCustomQuery);
 begin
 
-end;
-
-procedure TMARSFDDatasetResource.ApplyUpdates(
-  ADeltas: TFDJSONDeltas;
-  AOnApplyUpdates: TProc<string, Integer, IFDJSONDeltasApplyUpdates>);
-var
-  LApplyUpdates: IFDJSONDeltasApplyUpdates;
-  LIndex: Integer;
-  LDelta: TPair<string, TFDMemTable>;
-  LStatement: string;
-  LDataSet: TFDCustomQuery;
-  LApplyResult: Integer;
-begin
-  LApplyUpdates := TFDJSONDeltasApplyUpdates.Create(ADeltas);
-  try
-    for LIndex := 0 to TFDJSONDeltasReader.GetListCount(ADeltas) - 1 do
-    begin
-      LDelta := TFDJSONDeltasReader.GetListItem(ADeltas, LIndex);
-
-      if Statements.TryGetValue(LDelta.Key, LStatement) then
-      begin
-        LDataSet := ReadDataSet(LDelta.Key, LStatement, False);
-        try
-          LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
-          if Assigned(AOnApplyUpdates) then
-            AOnApplyUpdates(LDelta.Key, LApplyResult, LApplyUpdates);
-        finally
-          LDataSet.Free;
-        end;
-      end
-      else
-        raise EMARSException.CreateFmt('Unable to build update command for delta: %s', [LDelta.Key]);
-    end;
-  finally
-    LApplyUpdates := nil; // it's an interface
-  end;
 end;
 
 procedure TMARSFDDatasetResource.BeforeOpenDataSet(ADataSet: TFDCustomQuery);
@@ -133,11 +95,11 @@ begin
   end;
 end;
 
-function TMARSFDDatasetResource.Retrieve: TArray<TFDCustomQuery>;
+function TMARSFDDatasetResource.Retrieve: TArray<TFDDataSet>;
 var
   LStatement: TPair<string, string>;
-  LData: TArray<TFDCustomQuery>;
-  LCurrent: TFDCustomQuery;
+  LData: TArray<TFDDataSet>;
+  LCurrent: TFDDataSet;
 begin
   LData := [];
   try
@@ -166,39 +128,13 @@ begin
     end);
 end;
 
-function TMARSFDDatasetResource.Update([BodyParam] const AJSONDeltas: TFDJSONDeltas): string;
-var
-  LResult: TJSONArray;
+function TMARSFDDatasetResource.Update([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
 begin
   // setup
   SetupStatements;
 
   // apply updates
-  LResult := TJSONArray.Create;
-  try
-    ApplyUpdates(AJSONDeltas,
-      procedure(ADatasetName: string; AApplyResult: Integer; AApplyUpdates: IFDJSONDeltasApplyUpdates)
-      var
-        LResultObj: TJSONObject;
-      begin
-        LResultObj := TJSONObject.Create;
-        try
-          LResultObj.AddPair('dataset', ADatasetName);
-          LResultObj.AddPair('result', TJSONNumber.Create(AApplyResult));
-          LResultObj.AddPair('errors', TJSONNumber.Create(AApplyUpdates.Errors.Count));
-          LResultObj.AddPair('errorText', AApplyUpdates.Errors.Strings.Text);
-          LResult.AddElement(LResultObj);
-        except
-          LResultObj.Free;
-          raise;
-        end;
-      end
-    );
-
-    Result := LResult.ToJSON;
-  finally
-    LResult.Free;
-  end;
+  Result := FD.ApplyUpdates(Retrieve, ADeltas);
 end;
 
 

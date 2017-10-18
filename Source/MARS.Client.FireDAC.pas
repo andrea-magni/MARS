@@ -10,7 +10,7 @@ unit MARS.Client.FireDAC;
 interface
 
 uses
-  Classes, SysUtils
+  Classes, SysUtils, Rtti
   , MARS.Core.JSON
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
 
@@ -18,6 +18,7 @@ uses
 
   , MARS.Client.Resource
   , MARS.Client.Client
+  , MARS.Core.MediaType
   ;
 
 type
@@ -60,6 +61,9 @@ type
     FResourceDataSets: TMARSFDResourceDatasets;
     FPOSTResponse: TJSONValue;
     FOnApplyUpdatesError: TOnApplyUpdatesErrorEvent;
+    FArrayOfDataSets: TArray<TFDMemTable>;
+    FDataSetsRttiObject: TRttiObject;
+    FMediaTypeJSON: TMediaType;
   protected
     procedure AfterGET(); override;
     procedure BeforePOST(AContent: TMemoryStream); override;
@@ -84,14 +88,15 @@ procedure Register;
 implementation
 
 uses
-    Data.FireDACJSONReflect
-  , FireDAC.Comp.DataSet
+    FireDAC.Comp.DataSet
   , FireDAC.Stan.StorageBin
   , FireDAC.Stan.StorageJSON
   , FireDAC.Stan.StorageXML
   , MARS.Core.Utils
   , MARS.Client.Utils
   , MARS.Core.Exceptions
+  , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyWriter
+  , MARS.Data.FireDAC.ReadersAndWriters
   ;
 
 procedure Register;
@@ -103,74 +108,77 @@ end;
 
 procedure TMARSFDResource.AfterGET();
 var
-  LJSONObj: TJSONObject;
-  LDataSets: TFDJSONDataSets;
+  LMBR: IMessageBodyReader;
+  LDataSet: TFDMemTable;
+  LDataSets: TArray<TFDMemTable>;
   LName: string;
-  LData: TFDAdaptedDataSet;
-  LCount: Integer;
   LItem: TMARSFDResourceDatasetsItem;
-  LIndex: Integer;
+  LReader: TStreamReader;
 begin
   inherited;
 
-  LJSONObj := TJSONObject.ParseJSONValue(StreamToString(Client.Response.ContentStream)) as TJSONObject;
+  LMBR := TArrayFDMemTableReader.Create as IMessageBodyReader;
+  Assert(Assigned(LMBR));
   try
-    LDataSets := TFDJSONDataSets.Create;
+    Client.Response.ContentStream.Position := 0;
+    LReader := TStreamReader.Create(Client.Response.ContentStream, TEncoding.Default);
     try
-      if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONObj, LDataSets) then
-        raise EMARSClientException.Create('Error deserializing data');
-
-      LCount := TFDJSONDataSetsReader.GetListCount(LDataSets);
-      for LIndex := 0 to LCount-1 do
-      begin
-        LName := TFDJSONDataSetsReader.GetListKey(LDataSets, LIndex);
-        LData := TFDJSONDataSetsReader.GetListValue(LDataSets, LIndex);
-
-        LItem := FResourceDataSets.FindItemByDataSetName(LName);
-        if Assigned(LItem) then
+      LDataSets := LMBR.ReadFrom(TEncoding.Default.GetBytes( LReader.ReadToEnd )
+        , FDataSetsRttiObject, FMediaTypeJSON, nil
+      ).AsType<TArray<TFDMemTable>>;
+      try
+        for LDataSet in LDataSets do
         begin
-          if Assigned(LItem.DataSet) then
+          LName := LDataSet.Name;
+
+          LItem := FResourceDataSets.FindItemByDataSetName(LName);
+          if Assigned(LItem) then
           begin
-            if LItem.Synchronize then
-              TThread.Synchronize(nil,
-                procedure
-                begin
-                  LItem.DataSet.DisableControls;
-                  try
-                    LItem.DataSet.Close;
-  //                  LItem.DataSet.CopyDataSet(LData, [coStructure, coRestart, coAppend]);
-                    LItem.DataSet.Data := LData;
-                    LItem.DataSet.ApplyUpdates;
-                  finally
-                    LItem.DataSet.EnableControls;
-                  end;
-                end
-              )
-            else
+            if Assigned(LItem.DataSet) then
             begin
-              LItem.DataSet.DisableControls;
-              try
-                LItem.DataSet.Close;
-  //              LItem.DataSet.CopyDataSet(LData, [coStructure, coRestart, coAppend]);
-                LItem.DataSet.Data := LData;
-                LItem.DataSet.ApplyUpdates;
-              finally
-                LItem.DataSet.EnableControls;
+              if LItem.Synchronize then
+                TThread.Synchronize(nil,
+                  procedure
+                  begin
+                    LItem.DataSet.DisableControls;
+                    try
+                      LItem.DataSet.Close;
+                      LItem.DataSet.Data := LDataset;
+                      LItem.DataSet.ApplyUpdates;
+                    finally
+                      LItem.DataSet.EnableControls;
+                    end;
+                  end
+                )
+              else
+              begin
+                LItem.DataSet.DisableControls;
+                try
+                  LItem.DataSet.Close;
+                  LItem.DataSet.Data := LDataset;
+                  LItem.DataSet.ApplyUpdates;
+                finally
+                  LItem.DataSet.EnableControls;
+                end;
               end;
             end;
+          end
+          else
+          begin
+            LItem := FResourceDataSets.Add;
+            LItem.DataSetName := LName;
           end;
-        end
-        else
-        begin
-          LItem := FResourceDataSets.Add;
-          LItem.DataSetName := LName;
         end;
+      finally
+        for LDataSet in LDataSets do
+          LDataSet.Free;
+        LDataSets := [];
       end;
     finally
-      LDataSets.Free;
+      LReader.Free;
     end;
   finally
-    LJSONObj.Free;
+    LMBR := nil;
   end;
 end;
 
@@ -244,49 +252,59 @@ end;
 
 procedure TMARSFDResource.BeforePOST(AContent: TMemoryStream);
 var
-  LDeltas: TFDJSONDeltas;
-  LJSONObj: TJSONObject;
-  LWriter: TStreamWriter;
+  LDeltas: TArray<TFDDataSet>;
+  LDelta: TFDDataSet;
+  LMBW: IMessageBodyWriter;
 begin
   inherited;
 
-  LDeltas := TFDJSONDeltas.Create;
+  LDeltas := [];
   try
     FResourceDataSets.ForEach(
       procedure(AItem: TMARSFDResourceDatasetsItem)
       begin
         if AItem.SendDelta and Assigned(AItem.DataSet) and (AItem.DataSet.Active) then
-          TFDJSONDeltasWriter.ListAdd(LDeltas, AItem.DataSetName, AItem.DataSet);
+        begin
+          LDelta := TFDMemTable.Create(nil);
+          try
+            LDelta.Name := AItem.DataSetName;
+            LDelta.Data := AItem.DataSet.Delta;
+            LDeltas := LDeltas + [LDelta];
+          except
+            FreeAndNil(LDelta);
+            raise;
+          end;
+        end;
       end
     );
 
-    // serialize deltas to JSON (TJSONObject)
-    LJSONObj := TJSONObject.Create;
-    try
-      TFDJSONInterceptor.DataSetsToJSONObject(LDeltas, LJSONObj);
+    LMBW := TArrayFDCustomQueryWriter.Create as IMessageBodyWriter;
+    Assert(Assigned(LMBW));
 
-      LWriter := TStreamWriter.Create(AContent);
-      try
-        LWriter.Write(LJSONObj.ToJSON);
-      finally
-        LWriter.Free;
-      end;
-    finally
-      LJSONObj.Free;
-    end;
+    LMBW.WriteTo(TValue.From<TArray<TFDDataSet>>(LDeltas), FMediaTypeJSON, AContent, nil);
   finally
-    LDeltas.Free;
+    for LDelta in LDeltas do
+      LDelta.Free;
+    LDeltas := [];
   end;
 end;
 
 constructor TMARSFDResource.Create(AOwner: TComponent);
+var
+  LRttiContext: TRttiContext;
 begin
   inherited;
   FResourceDataSets := TMARSFDResourceDatasets.Create(TMARSFDResourceDatasetsItem);
+
+  LRttiContext := TRttiContext.Create;
+  FDataSetsRttiObject := LRttiContext.GetType(Self.ClassType).GetField('FArrayOfDataSets');
+
+  FMediaTypeJSON := TMediaType.Create(TMediaType.APPLICATION_JSON);
 end;
 
 destructor TMARSFDResource.Destroy;
 begin
+  FMediaTypeJSON.Free;
   FPOSTResponse.Free;
   FResourceDataSets.Free;
   inherited;

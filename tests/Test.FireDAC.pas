@@ -19,10 +19,14 @@ type
   TMARSFireDACWriterTest = class(TObject)
   private
     FMBW: IMessageBodyWriter;
+    FMBR: IMessageBodyReader;
     FJSONMediaType: TMediaType;
     FOutputStream: TStringStream;
     FDConnection: TFDConnection;
     FDQuery1, FDQuery2, FDQuery3: TFDCustomQuery;
+    FDataSets: TArray<TFDMemTable>;
+    FRttiContext: TRttiContext;
+    FDataSetsRttiObject: TRttiObject;
   protected
   public
     [Setup]
@@ -37,18 +41,24 @@ type
 
 
   function GetArrayOfDataSetsMBW: IMessageBodyWriter;
+  function GetArrayOfDataSetsMBR: IMessageBodyReader;
 
 implementation
 
 uses
-  IOUtils,
-  FireDACJSONReflect
+  IOUtils
 ;
 
 function GetArrayOfDataSetsMBW: IMessageBodyWriter;
 begin
   Result := TArrayFDCustomQueryWriter.Create as IMessageBodyWriter;
 end;
+
+function GetArrayOfDataSetsMBR: IMessageBodyReader;
+begin
+  Result := TArrayFDMemTableReader.Create as IMessageBodyReader;
+end;
+
 
 
 { TMARSFireDACWriterTest }
@@ -57,7 +67,8 @@ procedure TMARSFireDACWriterTest.ArrayOfDataSets;
 var
   LValue: TValue;
   LJSONObj: TJSONObject;
-  LDataSets: TFDJSONDataSets;
+  LDataSet: TFDMemTable;
+  LDataSets: TArray<TFDMemTable>;
   LIndex, LCount: Integer;
   LName: string;
   LData: TFDAdaptedDataSet;
@@ -71,16 +82,14 @@ begin
     Assert.IsNotNull(LJSONObj);
     Assert.AreEqual(3, LJSONObj.Count);
 
-    LDataSets := TFDJSONDataSets.Create;
+    LDataSets := FMBR.ReadFrom(TEncoding.Default.GetBytes(FOutputStream.DataString), FDataSetsRttiObject, FJSONMediaType, nil).AsType<TArray<TFDMemTable>>;
     try
-      if not TFDJSONInterceptor.JSONObjectToDataSets(LJSONObj, LDataSets) then
-        Assert.Fail('Error deserializing data');
+      Assert.AreEqual(3, Length(LDataSets));
 
-      LCount := TFDJSONDataSetsReader.GetListCount(LDataSets);
-      for LIndex := 0 to LCount-1 do
+      for LDataSet in LDataSets do
       begin
-        LName := TFDJSONDataSetsReader.GetListKey(LDataSets, LIndex);
-        LData := TFDJSONDataSetsReader.GetListValue(LDataSets, LIndex);
+        LName := LDataSet.Name;
+        LData := LDataSet;
 
         if SameText(LName, FDQuery1.Name) then
         begin
@@ -115,7 +124,9 @@ begin
 
       end;
     finally
-      LDataSets.Free;
+      for LDataSet in LDataSets do
+        LDataSet.Free;
+      LDataSets := [];
     end;
   finally
     LJSONObj.Free;
@@ -126,6 +137,14 @@ procedure TMARSFireDACWriterTest.Setup;
 begin
   FMBW := GetArrayOfDataSetsMBW;
   Assert.IsNotNull(FMBW);
+
+  FMBR := GetArrayOfDataSetsMBR;
+  Assert.IsNotNull(FMBR);
+
+  FRttiContext := TRttiContext.Create;
+
+  FDataSetsRttiObject := FRttiContext.GetType(Self.ClassType).GetField('FDataSets');
+  Assert.IsNotNull(FDataSetsRttiObject);
 
   FJSONMediaType := TMediaType.Create(TMediaType.APPLICATION_JSON);
   Assert.IsNotNull(FJSONMediaType);
