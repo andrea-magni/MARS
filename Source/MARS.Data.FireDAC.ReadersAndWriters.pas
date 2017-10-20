@@ -63,7 +63,7 @@ uses
   , FireDAC.Stan.StorageXML
 
   , MARS.Core.JSON
-  , MARS.Core.MessageBodyWriters
+  , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
   , MARS.Core.Exceptions
   , MARS.Rtti.Utils
@@ -140,7 +140,6 @@ end;
 procedure TArrayFDCustomQueryWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LCurrent: TFDDataSet;
   LResult: TJSONObject;
   LData: TArray<TFDDataSet>;
@@ -249,49 +248,47 @@ var
 begin
   Result := TValue.Empty;
 
-{$ifdef Delphi10Berlin_UP}
-  LJSON := TJSONObject.ParseJSONValue(AInputData, 0) as TJSONObject;
-{$else}
-  LJSON := TJSONObject.ParseJSONValue(string(AInputData)) as TJSONObject;
-{$endif}
-  if Assigned(LJSON) then
-    try
-      for LPair in LJSON do
-      begin
-        if not (LPair.JsonValue is TJSONString) then
-          raise EMARSException.Create('Invalid JSON format [TArrayFDCustomQueryReader]');
+  LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
+  if not Assigned(LJSON) then
+    Exit;
 
-        LZippedStream := TMemoryStream.Create;
+  try
+    for LPair in LJSON do
+    begin
+      if not (LPair.JsonValue is TJSONString) then
+        raise EMARSException.Create('Invalid JSON format [TArrayFDCustomQueryReader]');
+
+      LZippedStream := TMemoryStream.Create;
+      try
+        Base64ToStream((LPair.JsonValue as TJSONString).Value, LZippedStream);
+        LZippedStream.Position := 0;
+
+        LStream := TMemoryStream.Create;
         try
-          Base64ToStream((LPair.JsonValue as TJSONString).Value, LZippedStream);
-          LZippedStream.Position := 0;
+          UnzipStream(LZippedStream, LStream);
+          LStream.Position := 0;
 
-          LStream := TMemoryStream.Create;
+          LMemTable := TFDMemTable.Create(nil);
           try
-            UnzipStream(LZippedStream, LStream);
-            LStream.Position := 0;
-
-            LMemTable := TFDMemTable.Create(nil);
-            try
-              LMemTable.LoadFromStream(LStream, sfBinary);
-              LMemTable.Name := LPair.JsonString.Value;
-              LData := LData + [LMemTable];
-            except
-              LMemTable.Free;
-              raise;
-            end;
-          finally
-            LStream.Free;
+            LMemTable.LoadFromStream(LStream, sfBinary);
+            LMemTable.Name := LPair.JsonString.Value;
+            LData := LData + [LMemTable];
+          except
+            LMemTable.Free;
+            raise;
           end;
         finally
-          LZippedStream.Free;
+          LStream.Free;
         end;
+      finally
+        LZippedStream.Free;
       end;
-
-      Result := TValue.From<TArray<TFDMemTable>>(LData);
-    finally
-      LJSON.Free;
     end;
+
+    Result := TValue.From<TArray<TFDMemTable>>(LData);
+  finally
+    LJSON.Free;
+  end;
 end;
 
 initialization

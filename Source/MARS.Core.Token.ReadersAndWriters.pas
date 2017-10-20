@@ -44,6 +44,7 @@ uses
   , MARS.Rtti.Utils
   , MARS.Core.Token
   , MARS.Core.JSON
+  , MARS.Core.MessageBodyWriters
   , MARS.Utils.Parameters.JSON
   ;
 
@@ -53,35 +54,29 @@ uses
 procedure TMARSTokenWriterJSON.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LToken: TMARSToken;
   LJSONObj: TJSONObject;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
-  try
-    LToken := AValue.AsObject as TMARSToken;
-    if Assigned(LToken) then
-    begin
-      LJSONObj := TJSONObject.Create;
-      try
-        LJSONObj.WriteStringValue('Token', LToken.Token);
-        LJSONObj.WriteBoolValue('IsVerified', LToken.IsVerified);
-        LJSONObj.WriteStringValue('UserName', LToken.UserName);
-        LJSONObj.WriteStringValue('Roles', StringArrayToString(LToken.Roles));
-        if LToken.Expiration > 0 then
-          LJSONObj.WriteDateTimeValue('Expiration', LToken.Expiration);
-        if LToken.IssuedAt > 0 then
-          LJSONObj.WriteDateTimeValue('IssuedAt', LToken.IssuedAt);
-        if LToken.Claims.Count > 0  then
-          LJSONObj.AddPair('Claims', LToken.Claims.SaveToJSON);
+  LToken := AValue.AsObject as TMARSToken;
+  if Assigned(LToken) then
+  begin
+    LJSONObj := TJSONObject.Create;
+    try
+      LJSONObj.WriteStringValue('Token', LToken.Token);
+      LJSONObj.WriteBoolValue('IsVerified', LToken.IsVerified);
+      LJSONObj.WriteStringValue('UserName', LToken.UserName);
+      LJSONObj.WriteStringValue('Roles', StringArrayToString(LToken.Roles));
+      if LToken.Expiration > 0 then
+        LJSONObj.WriteDateTimeValue('Expiration', LToken.Expiration);
+      if LToken.IssuedAt > 0 then
+        LJSONObj.WriteDateTimeValue('IssuedAt', LToken.IssuedAt);
+      if LToken.Claims.Count > 0  then
+        LJSONObj.AddPair('Claims', LToken.Claims.SaveToJSON);
 
-        LStreamWriter.Write(LJSONObj);
-      finally
-        LJSONObj.Free;
-      end;
+      TJSONValueWriter.WriteJSONValue(LJSONObj, AMediaType, AOutputStream, AActivation);
+    finally
+      LJSONObj.Free;
     end;
-  finally
-    LStreamWriter.Free;
   end;
 end;
 

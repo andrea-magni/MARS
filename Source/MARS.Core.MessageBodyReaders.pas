@@ -28,6 +28,13 @@ type
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
+
+    class function ReadJSONValue(
+      {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue;
+
   end;
 
   [Consumes(TMediaType.APPLICATION_JSON)]
@@ -92,6 +99,21 @@ begin
     Result := LJSONValue;
 end;
 
+class function TJSONValueReader.ReadJSONValue(
+  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LJSONReader: TJSONValueReader;
+begin
+  LJSONReader := TJSONValueReader.Create;
+  try
+    Result := LJSONReader.ReadFrom(AInputData, ADestination, AMediaType, AActivation);
+  finally
+    LJSONReader.Free;
+  end;
+end;
+
 { TStreamReader }
 
 function TStreamReader.ReadFrom(
@@ -127,12 +149,8 @@ var
   LJSON: TJSONObject;
 begin
   Result := TValue.Empty;
-
-{$ifdef Delphi10Berlin_UP}
-  LJSON := TJSONObject.ParseJSONValue(AInputData, 0) as TJSONObject;
-{$else}
-  LJSON := TJSONObject.ParseJSONValue(string(AInputData)) as TJSONObject;
-{$endif}
+  LJSON := TJSONValueReader.ReadJSONValue(
+    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
   if Assigned(LJSON) then
     try
       Result := LJSON.ToRecord(ADestination.GetRttiType);
@@ -159,11 +177,8 @@ begin
   Result := TValue.Empty;
   LArrayType := ADestination.GetRttiType;
 
-{$ifdef Delphi10Berlin_UP}
-  LJSONArray := TJSONObject.ParseJSONValue(AInputData, 0) as TJSONArray;
-{$else}
-  LJSONArray := TJSONObject.ParseJSONValue(string(AInputData)) as TJSONArray;
-{$endif}
+  LJSONArray := TJSONValueReader.ReadJSONValue(
+    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONArray>;
 
   LRecordType := LArrayType.GetArrayElementType;
   if Assigned(LJSONArray) and Assigned(LRecordType) then

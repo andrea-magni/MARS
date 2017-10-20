@@ -78,20 +78,14 @@ uses
 procedure TObjectWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LObj: TJSONObject;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LObj := ObjectToJSON(AValue.AsObject);
   try
-    LObj := ObjectToJSON(AValue.AsObject);
-    try
 //      LObj.AddPair('Writer', ClassName);
-      LStreamWriter.Write(LObj.ToJSON);
-    finally
-      LObj.Free;
-    end;
+    TJSONValueWriter.WriteJSONValue(LObj, AMediaType, AOutputStream, AActivation);
   finally
-    LStreamWriter.Free;
+    LObj.Free;
   end;
 end;
 
@@ -119,6 +113,9 @@ var
   LJSONString: string;
   LCallbackName: string;
   LCallbackKey: string;
+  LJSONPEnabled: Boolean;
+  LJSONPProc: TProc<JSONPAttribute>;
+  LContentType: string;
 begin
   LStreamWriter := TStreamWriter.Create(AOutputStream);
   try
@@ -128,14 +125,29 @@ begin
 
     LJSONString := LJSONValue.ToJSON;
 
-    if AActivation.Application.Parameters.ByName('JSONP.Enabled', False).AsBoolean then
+    // JSONP
+    LJSONPProc :=
+      procedure (AAttr: JSONPAttribute)
+      begin
+        LJSONPEnabled := AAttr.Enabled;
+        LCallbackKey := AAttr.CallbackKey;
+        LContentType := AAttr.ContentType;
+      end;
+
+    LJSONPEnabled := False;
+    if not AActivation.Method.HasAttribute<JSONPAttribute>(LJSONPProc) then
+      AActivation.Resource.HasAttribute<JSONPAttribute>(LJSONPProc);
+    if LJSONPEnabled then
     begin
-      LCallbackKey := AActivation.Application.Parameters.ByName('JSONP.CallbackKey', 'callback').AsString;
       LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
       if LCallbackName = '' then
         LCallbackName := 'callback';
-      LJSONString := LCallbackName + '(' + LJSONString + ');';
-      AActivation.Response.ContentType := 'text/javascript';
+
+      if LJSONPEnabled then
+      begin
+        LJSONString := LCallbackName + '(' + LJSONString + ');';
+        AActivation.Response.ContentType := LContentType;
+      end;
     end;
 
     LStreamWriter.Write(LJSONString);

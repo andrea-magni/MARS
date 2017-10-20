@@ -204,6 +204,20 @@ type
     property Value: string read FValue;
   end;
 
+  JSONPAttribute = class(MARSAttribute)
+  private
+    FEnabled: Boolean;
+    FCallbackKey: string;
+    FContentType: string;
+  protected
+  public
+    constructor Create(const AEnabled: Boolean; const ACallbackKey: string = 'callback';
+      const AContentType: string = 'text/javascript');
+    property Enabled: Boolean read FEnabled;
+    property CallbackKey: string read FCallbackKey;
+    property ContentType: string read FContentType;
+  end;
+
 implementation
 
 uses
@@ -571,6 +585,17 @@ end;
 function OPTIONSAttribute.Matches(const ARequest: TWebRequest): Boolean;
 begin
   Result := SameText(ARequest.Method, 'OPTIONS');
+end;
+
+{ JSONPAttribute }
+
+constructor JSONPAttribute.Create(const AEnabled: Boolean; const ACallbackKey,
+  AContentType: string);
+begin
+  inherited Create;
+  FEnabled := AEnabled;
+  FCallbackKey := ACallbackKey;
+  FContentType := AContentType;
 end;
 
 end.
