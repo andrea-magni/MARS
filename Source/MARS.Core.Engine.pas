@@ -48,6 +48,7 @@ type
     procedure SetPort(const Value: Integer);
     procedure SetThreadPoolSize(const Value: Integer);
   protected
+    procedure PatchCORS(const ARequest: TWebRequest; const AResponse: TWebResponse);
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
     destructor Destroy; override;
@@ -185,9 +186,10 @@ var
 begin
   Result := False;
 
+  PatchCORS(ARequest, AResponse);
+
   LURL := TMARSURL.Create(ARequest);
   try
-
     if Assigned(FOnBeforeHandleRequest) then
       if not FOnBeforeHandleRequest(Self, LURL, ARequest, AResponse, Result) then
         Exit;
@@ -239,6 +241,24 @@ begin
     Result := True;
   finally
     LURL.Free;
+  end;
+end;
+
+procedure TMARSEngine.PatchCORS(const ARequest: TWebRequest;
+  const AResponse: TWebResponse);
+
+  procedure SetHeaderFromParameter(const AHeader, AParamName, ADefault: string);
+  begin
+    AResponse.CustomHeaders.Values[AHeader] :=
+      Parameters.ByName(AParamName, ADefault).AsString;
+  end;
+
+begin
+  if Parameters.ByName('CORS.Enabled').AsBoolean then
+  begin
+    SetHeaderFromParameter('Access-Control-Allow-Origin', 'CORS.Origin', '*');
+    SetHeaderFromParameter('Access-Control-Allow-Methods', 'CORS.Methods', 'HEAD,GET,PUT,POST,DELETE,OPTIONS');
+    SetHeaderFromParameter('Access-Control-Allow-Headers', 'CORS.Headers', 'X-Requested-With, Content-Type');
   end;
 end;
 
