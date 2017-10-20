@@ -63,6 +63,7 @@ uses
   , FireDAC.Stan.StorageXML
 
   , MARS.Core.JSON
+  , MARS.Core.MessageBodyWriters
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
   , MARS.Core.Exceptions
   , MARS.Rtti.Utils
@@ -146,44 +147,39 @@ var
 
   LBinStream, LZippedStream: TMemoryStream;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LResult := TJSONObject.Create;
   try
-    LResult := TJSONObject.Create;
-    try
-      LData := AValue.AsType<TArray<TFDDataSet>>;
-      if Length(LData) > 0 then
+    LData := AValue.AsType<TArray<TFDDataSet>>;
+    if Length(LData) > 0 then
+    begin
+      for LCurrent in LData do
       begin
-        for LCurrent in LData do
-        begin
-          if not LCurrent.Active then
-            LCurrent.Active := True;
+        if not LCurrent.Active then
+          LCurrent.Active := True;
 
-          // Get Binary representation
-          LBinStream := TMemoryStream.Create;
+        // Get Binary representation
+        LBinStream := TMemoryStream.Create;
+        try
+          LCurrent.SaveToStream(LBinStream, sfBinary);
+
+          // Zip
+          LZippedStream := TMemoryStream.Create;
           try
-            LCurrent.SaveToStream(LBinStream, sfBinary);
+            ZipStream(LBinStream, LZippedStream);
 
-            // Zip
-            LZippedStream := TMemoryStream.Create;
-            try
-              ZipStream(LBinStream, LZippedStream);
-
-              LResult.WriteStringValue(LCurrent.Name, StreamToBase64(LZippedStream));
-            finally
-              LZippedStream.Free;
-            end;
+            LResult.WriteStringValue(LCurrent.Name, StreamToBase64(LZippedStream));
           finally
-            LBinStream.Free;
+            LZippedStream.Free;
           end;
+        finally
+          LBinStream.Free;
         end;
       end;
-
-      LStreamWriter.Write(LResult.ToJSON);
-    finally
-      LResult.Free;
     end;
+
+    TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally
-    LStreamWriter.Free;
+    LResult.Free;
   end;
 end;
 

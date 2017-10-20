@@ -33,6 +33,7 @@ implementation
 
 uses
     MARS.Core.Utils
+  , MARS.Core.MessageBodyWriters
   , MARS.Metadata
   , MARS.Metadata.JSON
   , MARS.Metadata.Reader
@@ -53,12 +54,7 @@ begin
 
   LJSON := LMetadata.ToJSON;
   try
-    LStreamWriter := TStreamWriter.Create(AOutputStream);
-    try
-      LStreamWriter.Write(LJSON.ToJSON);
-    finally
-      LStreamWriter.Free;
-    end;
+    TJSONValueWriter.WriteJSONValue(LJSON, AMediaType, AOutputStream, AActivation);
   finally
     LJSON.Free;
   end;

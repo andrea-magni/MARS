@@ -41,6 +41,7 @@ implementation
 uses
   DB, DBClient
   , MARS.Core.JSON
+  , MARS.Core.MessageBodyWriters
   , MARS.Data.Utils
   , MARS.Rtti.Utils
   ;
@@ -50,19 +51,13 @@ uses
 procedure TDataSetWriterJSON.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LResult: TJSONArray;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LResult := DataSetToJSONArray(AValue.AsObject as TDataSet);
   try
-    LResult := DataSetToJSONArray(AValue.AsObject as TDataSet);
-    try
-      LStreamWriter.Write(LResult.ToJSON);
-    finally
-      LResult.Free;
-    end;
+    TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally
-    LStreamWriter.Free;
+    LResult.Free;
   end;
 end;
 
@@ -89,25 +84,19 @@ end;
 procedure TArrayDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LResult: TJSONObject;
   LData: TArray<TDataSet>;
   LCurrent: TDataSet;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LData := AValue.AsType<TArray<TDataSet>>;
+  LResult := TJSONObject.Create;
   try
-    LData := AValue.AsType<TArray<TDataSet>>;
-    LResult := TJSONObject.Create;
-    try
-      for LCurrent in LData do
-        LResult.AddPair(LCurrent.Name, DataSetToJSONArray(LCurrent));
+    for LCurrent in LData do
+      LResult.AddPair(LCurrent.Name, DataSetToJSONArray(LCurrent));
 
-      LStreamWriter.Write(LResult.ToJSON);
-    finally
-      LResult.Free;
-    end;
+    TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally
-    LStreamWriter.Free;
+    LResult.Free;
   end;
 end;
 

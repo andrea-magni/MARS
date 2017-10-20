@@ -28,6 +28,9 @@ type
   TJSONValueWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
+
+    class procedure WriteJSONValue(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -93,6 +96,20 @@ begin
 end;
 
 { TJSONValueWriter }
+
+class procedure TJSONValueWriter.WriteJSONValue(const AValue: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+var
+  LJSONWriter: TJSONValueWriter;
+begin
+  LJSONWriter := TJSONValueWriter.Create;
+  try
+    LJSONWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
+  finally
+    LJSONWriter.Free;
+  end;
+end;
 
 procedure TJSONValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -172,7 +189,6 @@ procedure TArrayOfRecordWriter.WriteTo(const AValue: TValue; const AMediaType: T
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LJSONArray: TJSONArray;
-  LJSONWriter: TJSONValueWriter;
   LIndex: Integer;
   LElement: TValue;
 begin
@@ -188,12 +204,7 @@ begin
       LJSONArray.AddElement(TJSONObject.RecordToJSON(LElement));
     end;
 
-    LJSONWriter := TJSONValueWriter.Create;
-    try
-      LJSONWriter.WriteTo(LJSONArray, AMediaType, AOutputStream, AActivation);
-    finally
-      LJSONWriter.Free;
-    end;
+    TJSONValueWriter.WriteJSONValue(LJSONArray, AMediaType, AOutputStream, AActivation);
   finally
     LJSONArray.Free;
   end;
@@ -229,7 +240,6 @@ procedure TStandardMethodWriter.WriteTo(const AValue: TValue; const AMediaType: 
 var
   LResult: TJSONObject;
   LOutputParams: TJSONArray;
-  LJSONWriter: TJSONValueWriter;
 begin
   LResult := TJSONObject.Create;
   try
@@ -262,12 +272,7 @@ begin
     if Assigned(LOutputParams) then
       LResult.AddPair('outputParams', LOutputParams);
 
-    LJSONWriter := TJSONValueWriter.Create;
-    try
-      LJSONWriter.WriteTo(LResult, AMediaType, AOutputStream, AActivation);
-    finally
-      LJSONWriter.Free;
-    end;
+    TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally
     LResult.Free;
   end;
