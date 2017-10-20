@@ -99,12 +99,29 @@ procedure TJSONValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMedi
 var
   LStreamWriter: TStreamWriter;
   LJSONValue: TJSONValue;
+  LJSONString: string;
+  LCallbackName: string;
+  LCallbackKey: string;
 begin
   LStreamWriter := TStreamWriter.Create(AOutputStream);
   try
     LJSONValue := AValue.AsObject as TJSONValue;
-    if Assigned(LJSONValue) then
-      LStreamWriter.Write(LJSONValue.ToJSON);
+    if not Assigned(LJSONValue) then
+      Exit;
+
+    LJSONString := LJSONValue.ToJSON;
+
+    if AActivation.Application.Parameters.ByName('JSONP.Enabled', False).AsBoolean then
+    begin
+      LCallbackKey := AActivation.Application.Parameters.ByName('JSONP.CallbackKey', 'callback').AsString;
+      LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
+      if LCallbackName = '' then
+        LCallbackName := 'callback';
+      LJSONString := LCallbackName + '(' + LJSONString + ');';
+      AActivation.Response.ContentType := 'text/javascript';
+    end;
+
+    LStreamWriter.Write(LJSONString);
   finally
     LStreamWriter.Free;
   end;
@@ -159,23 +176,23 @@ var
   LIndex: Integer;
   LElement: TValue;
 begin
+  if not AValue.IsArray then
+    Exit;
+
   LJSONArray := TJSONArray.Create;
   try
-    if AValue.IsArray then
+    for LIndex := 0 to AValue.GetArrayLength -1 do
     begin
-      LJSONWriter := TJSONValueWriter.Create;
-      try
-        for LIndex := 0 to AValue.GetArrayLength -1 do
-        begin
-          LElement := AValue.GetArrayElement(LIndex);
+      LElement := AValue.GetArrayElement(LIndex);
 
-          LJSONArray.AddElement(TJSONObject.RecordToJSON(LElement));
-        end;
+      LJSONArray.AddElement(TJSONObject.RecordToJSON(LElement));
+    end;
 
-        LJSONWriter.WriteTo(LJSONArray, AMediaType, AOutputStream, AActivation);
-      finally
-        LJSONWriter.Free;
-      end;
+    LJSONWriter := TJSONValueWriter.Create;
+    try
+      LJSONWriter.WriteTo(LJSONArray, AMediaType, AOutputStream, AActivation);
+    finally
+      LJSONWriter.Free;
     end;
   finally
     LJSONArray.Free;
@@ -210,49 +227,49 @@ end;
 procedure TStandardMethodWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LResult: TJSONObject;
   LOutputParams: TJSONArray;
+  LJSONWriter: TJSONValueWriter;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LResult := TJSONObject.Create;
   try
-    LResult := TJSONObject.Create;
+    LResult.WriteTValue('result', AValue);
+
+    LOutputParams := nil;
+    ForEachParameter(AActivation
+      , procedure (AParameter: TRttiParameter; AParameterValue: TValue)
+        var
+          LOutputParamJSON: TJSONObject;
+        begin
+          LOutputParamJSON := TJSONObject.Create;
+          try
+            LOutputParamJSON.WriteTValue('name', AParameter.Name);
+            LOutputParamJSON.WriteTValue('value', AParameterValue);
+
+            if not Assigned(LOutputParams) then
+              LOutputParams := TJSONArray.Create;
+            LOutputParams.Add(LOutputParamJSON);
+          except
+            LOutputParamJSON.Free;
+            raise;
+          end;
+        end
+      , function (AParameter: TRttiParameter): Boolean
+        begin
+          Result := ([pfOut, pfVar] * AParameter.Flags) <> []; // is a var or out argument
+        end
+    );
+    if Assigned(LOutputParams) then
+      LResult.AddPair('outputParams', LOutputParams);
+
+    LJSONWriter := TJSONValueWriter.Create;
     try
-      LResult.WriteTValue('result', AValue);
-
-      LOutputParams := nil;
-      ForEachParameter(AActivation
-        , procedure (AParameter: TRttiParameter; AParameterValue: TValue)
-          var
-            LOutputParamJSON: TJSONObject;
-          begin
-            LOutputParamJSON := TJSONObject.Create;
-            try
-              LOutputParamJSON.WriteTValue('name', AParameter.Name);
-              LOutputParamJSON.WriteTValue('value', AParameterValue);
-
-              if not Assigned(LOutputParams) then
-                LOutputParams := TJSONArray.Create;
-              LOutputParams.Add(LOutputParamJSON);
-            except
-              LOutputParamJSON.Free;
-              raise;
-            end;
-          end
-        , function (AParameter: TRttiParameter): Boolean
-          begin
-            Result := ([pfOut, pfVar] * AParameter.Flags) <> []; // is a var or out argument
-          end
-      );
-      if Assigned(LOutputParams) then
-        LResult.AddPair('outputParams', LOutputParams);
-
-      LStreamWriter.Write(LResult.ToJSON);
+      LJSONWriter.WriteTo(LResult, AMediaType, AOutputStream, AActivation);
     finally
-      LResult.Free;
+      LJSONWriter.Free;
     end;
   finally
-    LStreamWriter.Free;
+    LResult.Free;
   end;
 end;
 
