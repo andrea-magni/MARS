@@ -73,10 +73,6 @@ begin
         Result := False;
         Handled := True;
       end;
-
-      AResponse.CustomHeaders.Values['Access-Control-Allow-Origin'] := '*';
-      AResponse.CustomHeaders.Values['Access-Control-Allow-Methods'] := 'HEAD,GET,PUT,POST,DELETE,OPTIONS';
-      AResponse.CustomHeaders.Values['Access-Control-Allow-Headers'] := 'X-Requested-With, Content-Type';
     end;
 
   StartServerAction.Execute;

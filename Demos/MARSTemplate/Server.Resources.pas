@@ -39,18 +39,8 @@ type
   private
     [Context] URL: TMARSURL;
   public
-    [GET
-//    , CustomHeader('Access-Control-Allow-Origin', '*')
-//    , CustomHeader('Access-Control-Allow-Methods', 'HEAD,GET,PUT,POST,DELETE,OPTIONS')
-//    , CustomHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type')
-    ]
+    [GET]
     function GetItems: TArray<TItem>;
-//    [OPTIONS
-//    , CustomHeader('Access-Control-Allow-Origin', '*')
-//    , CustomHeader('Access-Control-Allow-Methods', 'HEAD,GET,PUT,POST,DELETE,OPTIONS')
-//    , CustomHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type')
-//    ]
-    function GetOptions: string;
   end;
 
   [Path('token')]
@@ -84,11 +74,6 @@ begin
     TItem.Create('1', 'Andrea')
   , TItem.Create('2', 'Guido')
   ];
-end;
-
-function TItemResource.GetOptions: string;
-begin
-  Result := '';
 end;
 
 { TItemResource.TItem }
