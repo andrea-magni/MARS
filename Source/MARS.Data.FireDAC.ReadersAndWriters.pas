@@ -92,7 +92,6 @@ procedure TFDAdaptedDataSetWriter.WriteTo(const AValue: TValue; const AMediaType
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LDataset: TFDAdaptedDataSet;
-  LStorageFormat: TFDStorageFormat;
 begin
   LDataset := AValue.AsType<TFDAdaptedDataSet>;
 
