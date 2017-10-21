@@ -17,7 +17,10 @@ uses
 
 type
 
-  [Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
+  [
+    Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON_FireDAC)
+  , Consumes(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON_FireDAC)
+  ]
   TMARSFDDatasetResource = class
   private
     FStatements: TDictionary<string, string>;

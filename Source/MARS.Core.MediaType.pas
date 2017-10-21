@@ -114,12 +114,14 @@ type
 
     function ToArrayOfString: TArray<string>;
 
+
     function Contains(const AMediaType: string): Boolean;
     function GetQualityFactor(const AMediaType: string): Double;
 
     class function Intersect(const AList1, AList2: TMediaTypeList): TArray<string>; overload;
     class function Intersect(const AList1: TArray<string>;
       const AList2: TMediaTypeList): TArray<string>; overload;
+    function ToString: string; override;
   end;
 
   TAcceptParser = class
@@ -424,6 +426,11 @@ begin
   SetLength(Result, Count);
   for LIndex := 0 to Count - 1 do
     Result[LIndex] := Items[LIndex].ToString;
+end;
+
+function TMediaTypeList.ToString: string;
+begin
+  Result := string.join(',', ToArrayOfString);
 end;
 
 end.

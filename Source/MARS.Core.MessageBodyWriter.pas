@@ -43,7 +43,8 @@ type
     class var _Instance: TMARSMessageBodyRegistry;
     class function GetInstance: TMARSMessageBodyRegistry; static;
   protected
-    function GetProducesMediaTypes(const AObject: TRttiObject): TMediaTypeList;
+    function GetProducesMediaTypes(const AObject: TRttiObject): TMediaTypeList; overload;
+    function GetProducesMediaTypes(const AActivation: IMARSActivation): TMediaTypeList; overload;
   public
     constructor Create;
     destructor Destroy; override;
@@ -65,7 +66,8 @@ type
     procedure RegisterWriter<T>(const AWriterClass: TClass;
       const AGetAffinity: TGetAffinityFunction = nil); overload;
 
-    procedure FindWriter(const AMethod: TRttiMethod; const AAccept: string;
+    procedure FindWriter(const AActivation: IMARSActivation;
+//      const AMethod: TRttiMethod; const AAccept: string;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 
     procedure Enumerate(const AProc: TProc<TEntryInfo>);
@@ -120,8 +122,8 @@ begin
     AProc(LEntry);
 end;
 
-procedure TMARSMessageBodyRegistry.FindWriter(const AMethod: TRttiMethod;
-  const AAccept: string;
+procedure TMARSMessageBodyRegistry.FindWriter(const AActivation: IMARSActivation;
+//  const AMethod: TRttiMethod; const AAccept: string;
   out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 var
   LWriterEntry: TEntryInfo;
@@ -138,25 +140,33 @@ var
   LMediaType: string;
   LCandidateMediaType: string;
   LCandidateQualityFactor: Double;
-
+  LMethod: TRttiMethod;
+  LAccept: string;
+  LMethodReturnType: TRttiType;
+  LMethodAttributes: TArray<TCustomAttribute>;
 begin
+  LMethod := AActivation.Method;
+  LAccept := AActivation.Request.Accept;
+  LMethodReturnType := LMethod.ReturnType;
+  LMethodAttributes := LMethod.GetAttributes;
+
   AMediaType := nil;
   AWriter := nil;
   LFound := False;
   LCandidateAffinity := -1;
   LCandidateMediaType := '';
   LCandidateQualityFactor := -1;
-  if not Assigned(AMethod.ReturnType) then
+
+  if not Assigned(LMethodReturnType) then
     Exit; // no serialization (it's a procedure!)
 
-
   // consider client's Accept
-  LAcceptParser := TAcceptParser.Create(AAccept);
+  LAcceptParser := TAcceptParser.Create(LAccept);
   try
     LAcceptMediaTypes := LAcceptParser.MediaTypeList;
 
-    // consider method's Produces
-    LMethodProducesMediaTypes := GetProducesMediaTypes(AMethod);
+    // consider Activation Produces list (method + super class + resource class)
+    LMethodProducesMediaTypes := GetProducesMediaTypes(AActivation);
     try
       if LMethodProducesMediaTypes.Count > 0 then
         LAllowedMediaTypes := TMediaTypeList.Intersect(LAcceptMediaTypes, LMethodProducesMediaTypes)
@@ -188,17 +198,17 @@ begin
             else
               LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LWriterMediaTypes);
             for LMediaType in LMediaTypes do
-              if LWriterEntry.IsWritable(AMethod.ReturnType, AMethod.GetAttributes, LMediaType) then
+              if LWriterEntry.IsWritable(LMethodReturnType, LMethodAttributes, LMediaType) then
               begin
                 if not LFound
                    or (
-                     (LCandidateAffinity < LWriterEntry.GetAffinity(AMethod.ReturnType, AMethod.GetAttributes, LMediaType))
+                     (LCandidateAffinity < LWriterEntry.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType))
                      or (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
                    )
                 then
                 begin
                   LCandidate := LWriterEntry;
-                  LCandidateAffinity := LCandidate.GetAffinity(AMethod.ReturnType, AMethod.GetAttributes, LMediaType);
+                  LCandidateAffinity := LCandidate.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType);
                   LCandidateMediaType := LMediaType;
                   LCandidateQualityFactor := LAcceptMediaTypes.GetQualityFactor(LMediaType);
                   LFound := True;
@@ -246,6 +256,55 @@ begin
   if not Assigned(_Instance) then
     _Instance := TMARSMessageBodyRegistry.Create;
   Result := _Instance;
+end;
+
+function TMARSMessageBodyRegistry.GetProducesMediaTypes(
+  const AActivation: IMARSActivation): TMediaTypeList;
+var
+  LList: TMediaTypeList;
+  LMethod: TRttiMethod;
+begin
+  LMethod := AActivation.Method;
+
+  LList := TMediaTypeList.Create;
+  try
+    LMethod.ForEachAttribute<ProducesAttribute>(
+      procedure (AProduces: ProducesAttribute)
+      begin
+        LList.Add( TMediaType.Create(AProduces.Value) );
+      end
+    );
+
+    // if AObject is a method, fall back to its class
+    if (LList.Count = 0) then
+    begin
+       (LMethod.Parent).ForEachAttribute<ProducesAttribute>(
+          procedure (AProduces: ProducesAttribute)
+          begin
+            LList.Add( TMediaType.Create(AProduces.Value) );
+          end
+       );
+    end;
+
+    // the Parent class for the method may not be our resource (Resource may be a
+    // subclass of LMethod.Parent). We are also looking to the actual Resource class
+    // to add Produces
+    if LMethod.Parent <> AActivation.Resource then
+    begin
+       AActivation.Resource.ForEachAttribute<ProducesAttribute>(
+          procedure (AProduces: ProducesAttribute)
+          begin
+            LList.Add( TMediaType.Create(AProduces.Value) );
+          end
+       );
+    end;
+
+  except
+    LList.Free;
+    raise;
+  end;
+
+  Result := LList;
 end;
 
 function TMARSMessageBodyRegistry.GetProducesMediaTypes(

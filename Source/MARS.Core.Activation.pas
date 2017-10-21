@@ -390,8 +390,7 @@ begin
       TMARSResponse(LMethodResult.AsObject).CopyTo(Response)
     // 2 - MessageBodyWriter mechanism (standard)
     else begin
-      TMARSMessageBodyRegistry.Instance.FindWriter(FMethod, string(Request.Accept)
-        , FWriter, FWriterMediaType);
+      TMARSMessageBodyRegistry.Instance.FindWriter(Self, FWriter, FWriterMediaType);
       try
         if Assigned(FWriter) then
         begin
