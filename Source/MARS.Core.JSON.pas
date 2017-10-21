@@ -44,6 +44,13 @@ type
 {$endif}
   end;
 
+  TToRecordFilterProc = reference to procedure (const AField: TRttiField;
+    const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
+
+  TToJSONFilterProc = reference to procedure (const AField: TRttiField;
+    const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
+
+
 {$ifndef DelphiXE6_UP}
   TJSONArrayEnumerator = class
   private
@@ -55,24 +62,24 @@ type
     function MoveNext: Boolean;
     property Current: TJSONValue read GetCurrent;
   end;
-
+{$endif}
   TJSONArrayHelper = class helper for TJSONArray
   private
+    {$ifndef DelphiXE6_UP}
     function GetCount: Integer; inline;
     function GetValue(const Index: Integer): TJSONValue; inline;
+    {$endif}
   public
+    function ToArrayOfRecord<T: record>(): TArray<T>;
+    procedure FromArrayOfRecord<T: record>(AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil);
+
+    {$ifndef DelphiXE6_UP}
     function GetEnumerator: TJSONArrayEnumerator;
 
     property Count: Integer read GetCount;
     property Items[const Index: Integer]: TJSONValue read GetValue;
+    {$endif}
   end;
-{$endif}
-
-  TToRecordFilterProc = reference to procedure (const AField: TRttiField;
-    const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
-
-  TToJSONFilterProc = reference to procedure (const AField: TRttiField;
-    const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
 
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
   private
@@ -289,7 +296,41 @@ end;
 
 { TJSONArrayHelper }
 
+function TJSONArrayHelper.ToArrayOfRecord<T>: TArray<T>;
+var
+  LElement: TJSONValue;
+begin
+  Result := [];
+  for LElement in Self do
+    Result := Result + [(LElement as TJSONObject).ToRecord<T>()]
+end;
+
+procedure TJSONArrayHelper.FromArrayOfRecord<T>(AArray: TArray<T>;
+  const AFilterProc: TToJSONFilterProc);
+var
+  LRecord: T;
+  LObj: TJSONObject;
+begin
+  // clear all
+  while Count > 0 do
+    Remove(0);
+
+  for LRecord in AArray do
+  begin
+    LObj := TJSONObject.Create;
+    try
+      LObj.FromRecord<T>(LRecord, AFilterProc);
+      AddElement(LObj);
+    except
+      LObj.Free;
+      raise;
+    end;
+  end;
+end;
+
+
 {$ifndef DelphiXE6_UP}
+
 function TJSONArrayHelper.GetCount: Integer;
 begin
   Result := Size;
