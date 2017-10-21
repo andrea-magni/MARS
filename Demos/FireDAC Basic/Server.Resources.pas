@@ -29,16 +29,13 @@ uses
   ;
 
 type
-  [  Connection('Firebird_Employee_Pooled')
-   , Path('fdresource')
+  [  Connection('MAIN_DB'), Path('fdresource')
    , SQLStatement('employee', 'select * from EMPLOYEE order by EMP_NO')
-   , Produces(TMediaType.APPLICATION_JSON)]
+  ]
   THelloWorldResource = class(TMARSFDDatasetResource)
-  protected
-  public
   end;
 
-  [Path('fdsimple'), Produces(TMediaType.APPLICATION_JSON)]
+  [Path('fdsimple')]
   TSimpleResource = class
   protected
     [Context]
@@ -47,7 +44,7 @@ type
     [GET]
     function GetData: TArray<TFDDataSet>;
 
-    [POST]
+    [POST, Consumes(TMediaType.APPLICATION_JSON_FIREDAC)]
     function PostData([BodyParam] AData: TArray<TFDMemTable>): string;
   end;
 

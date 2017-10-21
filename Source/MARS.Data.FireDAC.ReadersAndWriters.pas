@@ -26,7 +26,7 @@ uses
 
 type
   // --- READERS ---
-  [Consumes(TMediaType.APPLICATION_JSON_FIREDAC)]
+  [ Consumes(TMediaType.APPLICATION_JSON_FIREDAC) ]
   TArrayFDMemTableReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -37,13 +37,16 @@ type
   end;
 
   // --- WRITERS ---
-  [Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON_FIREDAC)]
+  [ Produces(TMediaType.APPLICATION_XML)
+  , Produces(TMediaType.APPLICATION_JSON_FIREDAC)
+  , Produces(TMediaType.APPLICATION_OCTET_STREAM)
+  ]
   TFDAdaptedDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
-  [Produces(TMediaType.APPLICATION_JSON_FIREDAC)]
+  [ Produces(TMediaType.APPLICATION_JSON_FIREDAC) ]
   TArrayFDCustomQueryWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
