@@ -19,15 +19,10 @@ type
   [TestFixture('MBW_FireDAC')]
   TMARSFireDACReaderWriterTest = class(TObject)
   private
-    FMBW: IMessageBodyWriter;
-    FMBR: IMessageBodyReader;
     FJSONMediaType: TMediaType;
     FOutputStream: TStringStream;
     FDConnection: TFDConnection;
     FDQuery1, FDQuery2, FDQuery3: TFDCustomQuery;
-    FDataSets: TArray<TFDMemTable>;
-    FRttiContext: TRttiContext;
-    FDataSetsRttiObject: TRttiObject;
   protected
   public
     [Setup]
@@ -40,35 +35,18 @@ type
 
   end;
 
-
-  function GetArrayOfDataSetsMBW: IMessageBodyWriter;
-  function GetArrayOfDataSetsMBR: IMessageBodyReader;
-
 implementation
 
 uses
-  IOUtils
+  IOUtils, Data.DB
 ;
-
-function GetArrayOfDataSetsMBW: IMessageBodyWriter;
-begin
-  Result := TArrayFDCustomQueryWriter.Create as IMessageBodyWriter;
-end;
-
-function GetArrayOfDataSetsMBR: IMessageBodyReader;
-begin
-  Result := TArrayFDMemTableReader.Create as IMessageBodyReader;
-end;
-
 
 { TMARSFireDACWriterTest }
 
 procedure TMARSFireDACReaderWriterTest.ArrayOfDataSets;
 var
-  LJSONObj: TJSONObject;
   LDataSet: TFDMemTable;
   LDataSets: TArray<TFDMemTable>;
-  LIndex, LCount: Integer;
   LName: string;
   LData: TFDAdaptedDataSet;
 begin
@@ -121,17 +99,6 @@ end;
 
 procedure TMARSFireDACReaderWriterTest.Setup;
 begin
-  FMBW := GetArrayOfDataSetsMBW;
-  Assert.IsNotNull(FMBW);
-
-  FMBR := GetArrayOfDataSetsMBR;
-  Assert.IsNotNull(FMBR);
-
-  FRttiContext := TRttiContext.Create;
-
-  FDataSetsRttiObject := FRttiContext.GetType(Self.ClassType).GetField('FDataSets');
-  Assert.IsNotNull(FDataSetsRttiObject);
-
   FJSONMediaType := TMediaType.Create(TMediaType.APPLICATION_JSON);
   Assert.IsNotNull(FJSONMediaType);
 
@@ -184,7 +151,6 @@ end;
 
 procedure TMARSFireDACReaderWriterTest.TearDown;
 begin
-  FMBW := nil;
   FJSONMediaType.Free;
   FOutputStream.Free;
 end;
