@@ -5,18 +5,19 @@ interface
 uses
   Classes, SysUtils, Rtti, Types
 , DUnitX.TestFramework
-, FireDAC.Comp.Client, FireDAC.VCLUI.Wait, FireDAC.Phys.SQLite
+, FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.VCLUI.Wait, FireDAC.Phys.SQLite
 , MARS.Core.MediaType
 , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyWriter
 , MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
 , MARS.Data.FireDAC
 , MARS.Data.FireDAC.ReadersAndWriters
+, MARS.Data.FireDAC.Utils
 , MARS.Core.JSON
 ;
 
 type
   [TestFixture('MBW_FireDAC')]
-  TMARSFireDACWriterTest = class(TObject)
+  TMARSFireDACReaderWriterTest = class(TObject)
   private
     FMBW: IMessageBodyWriter;
     FMBR: IMessageBodyReader;
@@ -60,12 +61,10 @@ begin
 end;
 
 
-
 { TMARSFireDACWriterTest }
 
-procedure TMARSFireDACWriterTest.ArrayOfDataSets;
+procedure TMARSFireDACReaderWriterTest.ArrayOfDataSets;
 var
-  LValue: TValue;
   LJSONObj: TJSONObject;
   LDataSet: TFDMemTable;
   LDataSets: TArray<TFDMemTable>;
@@ -73,67 +72,54 @@ var
   LName: string;
   LData: TFDAdaptedDataSet;
 begin
-  LValue := TValue.From<TArray<TFDCustomQuery>>([FDQuery1, FDQuery2, FDQuery3]);
+  TFDDataSets.ToJSON([FDQuery1, FDQuery2, FDQuery3], FOutputStream);
 
-  FMBW.WriteTo(LValue, FJSONMediaType, FOutputStream, nil);
-
-  LJSONObj := TJSONObject.ParseJSONValue(FOutputStream.DataString) as TJSONObject;
+  LDataSets := TFDDataSets.FromJSON(FOutputStream);
+  Assert.AreEqual(3, Length(LDataSets));
   try
-    Assert.IsNotNull(LJSONObj);
-    Assert.AreEqual(3, LJSONObj.Count);
+    for LDataSet in LDataSets do
+    begin
+      LName := LDataSet.Name;
+      LData := LDataSet;
 
-    LDataSets := FMBR.ReadFrom(TEncoding.Default.GetBytes(FOutputStream.DataString), FDataSetsRttiObject, FJSONMediaType, nil).AsType<TArray<TFDMemTable>>;
-    try
-      Assert.AreEqual(3, Length(LDataSets));
-
-      for LDataSet in LDataSets do
+      if SameText(LName, FDQuery1.Name) then
       begin
-        LName := LDataSet.Name;
-        LData := LDataSet;
+        Assert.AreEqual(FDQuery1.RecordCount, LData.RecordCount);
+        Assert.AreEqual(FDQuery1.Fields.Count, LData.Fields.Count);
+        Assert.AreEqual(FDQuery1.Fields[0].FieldName, LData.Fields[0].FieldName);
 
-        if SameText(LName, FDQuery1.Name) then
-        begin
-          Assert.AreEqual(FDQuery1.RecordCount, LData.RecordCount);
-          Assert.AreEqual(FDQuery1.Fields.Count, LData.Fields.Count);
-          Assert.AreEqual(FDQuery1.Fields[0].FieldName, LData.Fields[0].FieldName);
+        FDQuery1.First;
+        LData.First;
+        Assert.AreEqual(FDQuery1.Fields[0].Value, LData.Fields[0].Value);
+      end
+      else if SameText(LName, FDQuery2.Name) then
+      begin
+        Assert.AreEqual(FDQuery2.RecordCount, LData.RecordCount);
+        Assert.AreEqual(FDQuery2.Fields.Count, LData.Fields.Count);
+        Assert.AreEqual(FDQuery2.Fields[0].FieldName, LData.Fields[0].FieldName);
 
-          FDQuery1.First;
-          LData.First;
-          Assert.AreEqual(FDQuery1.Fields[0].Value, LData.Fields[0].Value);
-        end
-        else if SameText(LName, FDQuery2.Name) then
-        begin
-          Assert.AreEqual(FDQuery2.RecordCount, LData.RecordCount);
-          Assert.AreEqual(FDQuery2.Fields.Count, LData.Fields.Count);
-          Assert.AreEqual(FDQuery2.Fields[0].FieldName, LData.Fields[0].FieldName);
+        FDQuery2.First;
+        LData.First;
+        Assert.AreEqual(FDQuery2.Fields[0].Value, LData.Fields[0].Value);
+      end
+      else if SameText(LName, FDQuery3.Name) then
+      begin
+        Assert.AreEqual(FDQuery3.RecordCount, LData.RecordCount);
+        Assert.AreEqual(FDQuery3.Fields.Count, LData.Fields.Count);
+        Assert.AreEqual(FDQuery3.Fields[0].FieldName, LData.Fields[0].FieldName);
 
-          FDQuery2.First;
-          LData.First;
-          Assert.AreEqual(FDQuery2.Fields[0].Value, LData.Fields[0].Value);
-        end
-        else if SameText(LName, FDQuery3.Name) then
-        begin
-          Assert.AreEqual(FDQuery3.RecordCount, LData.RecordCount);
-          Assert.AreEqual(FDQuery3.Fields.Count, LData.Fields.Count);
-          Assert.AreEqual(FDQuery3.Fields[0].FieldName, LData.Fields[0].FieldName);
-
-          FDQuery3.First;
-          LData.First;
-          Assert.AreEqual(FDQuery3.Fields[0].Value, LData.Fields[0].Value);
-        end;
-
+        FDQuery3.First;
+        LData.First;
+        Assert.AreEqual(FDQuery3.Fields[0].Value, LData.Fields[0].Value);
       end;
-    finally
-      for LDataSet in LDataSets do
-        LDataSet.Free;
-      LDataSets := [];
     end;
+
   finally
-    LJSONObj.Free;
+    TFDDatasets.FreeAll(LDataSets);
   end;
 end;
 
-procedure TMARSFireDACWriterTest.Setup;
+procedure TMARSFireDACReaderWriterTest.Setup;
 begin
   FMBW := GetArrayOfDataSetsMBW;
   Assert.IsNotNull(FMBW);
@@ -196,7 +182,7 @@ begin
 
 end;
 
-procedure TMARSFireDACWriterTest.TearDown;
+procedure TMARSFireDACReaderWriterTest.TearDown;
 begin
   FMBW := nil;
   FJSONMediaType.Free;
@@ -204,6 +190,6 @@ begin
 end;
 
 initialization
-  TDUnitX.RegisterTestFixture(TMARSFireDACWriterTest);
+  TDUnitX.RegisterTestFixture(TMARSFireDACReaderWriterTest);
 
 end.

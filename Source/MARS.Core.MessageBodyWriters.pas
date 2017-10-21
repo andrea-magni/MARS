@@ -135,18 +135,21 @@ begin
       end;
 
     LJSONPEnabled := False;
-    if not AActivation.Method.HasAttribute<JSONPAttribute>(LJSONPProc) then
-      AActivation.Resource.HasAttribute<JSONPAttribute>(LJSONPProc);
-    if LJSONPEnabled then
+    if Assigned(AActivation) then
     begin
-      LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
-      if LCallbackName = '' then
-        LCallbackName := 'callback';
-
+      if not AActivation.Method.HasAttribute<JSONPAttribute>(LJSONPProc) then
+        AActivation.Resource.HasAttribute<JSONPAttribute>(LJSONPProc);
       if LJSONPEnabled then
       begin
-        LJSONString := LCallbackName + '(' + LJSONString + ');';
-        AActivation.Response.ContentType := LContentType;
+        LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
+        if LCallbackName = '' then
+          LCallbackName := 'callback';
+
+        if LJSONPEnabled then
+        begin
+          LJSONString := LCallbackName + '(' + LJSONString + ');';
+          AActivation.Response.ContentType := LContentType;
+        end;
       end;
     end;
 
