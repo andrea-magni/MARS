@@ -37,14 +37,16 @@ requires
   DbxCommonDriver,
   FireDAC,
   FireDACCommonDriver,
-  FireDACCommon,
-  DataSnapFireDAC;
+  FireDACCommon;
 
 contains
   MARS.Client.FireDAC in '..\..\Source\MARS.Client.FireDAC.pas',
-  MARS.Data.FireDAC.Editor in '..\..\Source\MARS.Data.FireDAC.Editor.pas';
+  MARS.Data.FireDAC.Editor in '..\..\Source\MARS.Data.FireDAC.Editor.pas',
+  MARS.Data.FireDAC.Utils in '..\..\Source\MARS.Data.FireDAC.Utils.pas';
 
 end.
+
+
 
 
 

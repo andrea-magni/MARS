@@ -162,6 +162,7 @@
         <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriters.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.MessageBodyWriters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReaders.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -208,7 +209,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\18.0\Bpl\MARS.ReadersAndWriters240.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\19.0\Bpl\MARS.ReadersAndWriters250.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARS_ReadersAndWriters.bpl</RemoteName>
                         <Overwrite>true</Overwrite>

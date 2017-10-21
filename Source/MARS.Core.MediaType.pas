@@ -71,7 +71,7 @@ type
     const TEXT_HTML = 'text/html';
     const APPLICATION_XML = 'application/xml';
     const APPLICATION_JSON = 'application/json';
-    const APPLICATION_JSON_FireDAC = 'application/json;dialect=FireDAC';
+    const APPLICATION_JSON_FireDAC = 'application/json-firedac';
     const APPLICATION_XHTML_XML = 'application/xhtml+xml';
     const APPLICATION_SVG_XML = 'application/svg+xml';
     const APPLICATION_ATOM_XML = 'application/atom+xml';

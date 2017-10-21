@@ -37,7 +37,6 @@ type
         constructor Create(AId: string; AName: string);
       end;
   private
-    [Context] URL: TMARSURL;
   public
     [GET]
     function GetItems: TArray<TItem>;
@@ -67,9 +66,6 @@ end;
 
 function TItemResource.GetItems: TArray<TItem>;
 begin
-{$IFDEF MSWINDOWS}
-  CodeSite.SendMsg(URL.ToString);
-{$ENDIF}
   Result := [
     TItem.Create('1', 'Andrea')
   , TItem.Create('2', 'Guido')

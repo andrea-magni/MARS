@@ -35,7 +35,12 @@ type
   RESTInclude = class(RESTExposeAttribute);
   RESTExclude = class(RESTExposeAttribute);
 
-  [Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
+ [
+   Produces(TMediaType.APPLICATION_JSON)
+ , Produces(TMediaType.APPLICATION_JSON_FireDAC)
+ , Consumes(TMediaType.APPLICATION_JSON)
+ , Consumes(TMediaType.APPLICATION_JSON_FireDAC)
+ ]
   TMARSFDDataModuleResource = class(TDataModule)
   private
   protected

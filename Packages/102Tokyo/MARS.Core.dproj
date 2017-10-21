@@ -167,9 +167,7 @@
         <DCCReference Include="..\..\Source\MARS.Core.Attributes.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Cache.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Classes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Declarations.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Engine.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.MediaType.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReader.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriter.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Registry.pas"/>
@@ -229,7 +227,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\18.0\Bpl\MARS.Core240.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\19.0\Bpl\MARS.Core250.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARS_Core.bpl</RemoteName>
                         <Overwrite>true</Overwrite>

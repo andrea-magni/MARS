@@ -51,6 +51,11 @@ uses
 
   function GuessTValueFromString(const AString: string): TValue;
 
+  procedure ZipStream(const ASource: TStream; const ADest: TStream);
+  procedure UnzipStream(const ASource: TStream; const ADest: TStream);
+  function StreamToBase64(const AStream: TStream): string;
+  procedure Base64ToStream(const ABase64: string; const ADestStream: TStream);
+
 implementation
 
 uses
@@ -58,9 +63,73 @@ uses
 {$ifndef DelphiXE6_UP}
   , XSBuiltIns
 {$endif}
-  , StrUtils, DateUtils
-  , Masks
+  , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
   ;
+
+procedure ZipStream(const ASource: TStream; const ADest: TStream);
+var
+  LZipStream: TZCompressionStream;
+begin
+  Assert(Assigned(ASource));
+  Assert(Assigned(ADest));
+
+  LZipStream := TZCompressionStream.Create(clDefault, ADest);
+  try
+    ASource.Position := 0;
+    LZipStream.CopyFrom(ASource, ASource.Size);
+  finally
+    LZipStream.Free;
+  end;
+end;
+
+procedure UnzipStream(const ASource: TStream; const ADest: TStream);
+var
+  LZipStream: TZDecompressionStream;
+begin
+  Assert(Assigned(ASource));
+  Assert(Assigned(ADest));
+
+  LZipStream := TZDecompressionStream.Create(ASource);
+  try
+    ASource.Position := 0;
+    ADest.CopyFrom(LZipStream, LZipStream.Size);
+  finally
+    LZipStream.Free;
+  end;
+end;
+
+
+function StreamToBase64(const AStream: TStream): string;
+var
+  LBase64Stream: TStringStream;
+begin
+  Assert(Assigned(AStream));
+
+  LBase64Stream := TStringStream.Create;
+  try
+    AStream.Position := 0;
+    TNetEncoding.Base64.Encode(AStream, LBase64Stream);
+    Result := LBase64Stream.DataString;
+  finally
+    LBase64Stream.Free;
+  end;
+end;
+
+procedure Base64ToStream(const ABase64: string; const ADestStream: TStream);
+var
+  LBase64Stream: TStringStream;
+begin
+  Assert(Assigned(ADestStream));
+
+  LBase64Stream := TStringStream.Create(ABase64);
+  try
+    LBase64Stream.Position := 0;
+    ADestStream.Size := 0;
+    TNetEncoding.Base64.Decode(LBase64Stream, ADestStream);
+  finally
+    LBase64Stream.Free;
+  end;
+end;
 
 function GuessTValueFromString(const AString: string): TValue;
 var

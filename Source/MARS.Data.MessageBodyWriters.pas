@@ -85,14 +85,16 @@ procedure TArrayDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TM
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LResult: TJSONObject;
-  LData: TArray<TDataSet>;
-  LCurrent: TDataSet;
+  LDataSet: TDataSet;
+  LIndex: Integer;
 begin
-  LData := AValue.AsType<TArray<TDataSet>>;
   LResult := TJSONObject.Create;
   try
-    for LCurrent in LData do
-      LResult.AddPair(LCurrent.Name, DataSetToJSONArray(LCurrent));
+    for LIndex := 0 to AValue.GetArrayLength - 1 do
+    begin
+      LDataSet := AValue.GetArrayElement(LIndex).AsObject as TDataSet;
+      LResult.AddPair(LDataSet.Name, DataSetToJSONArray(LDataSet));
+    end;
 
     TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally

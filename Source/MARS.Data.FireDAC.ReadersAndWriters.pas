@@ -26,7 +26,7 @@ uses
 
 type
   // --- READERS ---
-  [Consumes(TMediaType.APPLICATION_JSON)]
+  [Consumes(TMediaType.APPLICATION_JSON_FIREDAC)]
   TArrayFDMemTableReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -36,15 +36,14 @@ type
     ): TValue; virtual;
   end;
 
-
   // --- WRITERS ---
-  [Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON)]
+  [Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON_FIREDAC)]
   TFDAdaptedDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
-  [Produces(TMediaType.APPLICATION_JSON)]
+  [Produces(TMediaType.APPLICATION_JSON_FIREDAC)]
   TArrayFDCustomQueryWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -54,7 +53,7 @@ type
 implementation
 
 uses
-    NetEncoding, ZLib, Zip, Generics.Collections
+    Generics.Collections
   , FireDAC.Comp.Client, FireDAC.Comp.DataSet
   , FireDAC.Stan.Intf
 
@@ -66,116 +65,18 @@ uses
   , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
   , MARS.Core.Exceptions
-  , MARS.Rtti.Utils
+  , MARS.Rtti.Utils, MARS.Data.FireDAC.Utils
 ;
 
 { TArrayFDCustomQueryWriter }
 
-procedure ZipStream(const ASource: TStream; const ADest: TStream);
-var
-  LZipStream: TZCompressionStream;
-begin
-  Assert(Assigned(ASource));
-  Assert(Assigned(ADest));
-
-  LZipStream := TZCompressionStream.Create(clDefault, ADest);
-  try
-    ASource.Position := 0;
-    LZipStream.CopyFrom(ASource, ASource.Size);
-  finally
-    LZipStream.Free;
-  end;
-end;
-
-procedure UnzipStream(const ASource: TStream; const ADest: TStream);
-var
-  LZipStream: TZDecompressionStream;
-begin
-  Assert(Assigned(ASource));
-  Assert(Assigned(ADest));
-
-  LZipStream := TZDecompressionStream.Create(ASource);
-  try
-    ASource.Position := 0;
-    ADest.CopyFrom(LZipStream, LZipStream.Size);
-  finally
-    LZipStream.Free;
-  end;
-end;
-
-
-function StreamToBase64(const AStream: TStream): string;
-var
-  LBase64Stream: TStringStream;
-begin
-  Assert(Assigned(AStream));
-
-  LBase64Stream := TStringStream.Create;
-  try
-    AStream.Position := 0;
-    TNetEncoding.Base64.Encode(AStream, LBase64Stream);
-    Result := LBase64Stream.DataString;
-  finally
-    LBase64Stream.Free;
-  end;
-end;
-
-procedure Base64ToStream(const ABase64: string; const ADestStream: TStream);
-var
-  LBase64Stream: TStringStream;
-begin
-  Assert(Assigned(ADestStream));
-
-  LBase64Stream := TStringStream.Create(ABase64);
-  try
-    LBase64Stream.Position := 0;
-    ADestStream.Size := 0;
-    TNetEncoding.Base64.Decode(LBase64Stream, ADestStream);
-  finally
-    LBase64Stream.Free;
-  end;
-end;
-
-
 procedure TArrayFDCustomQueryWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LCurrent: TFDDataSet;
   LResult: TJSONObject;
-  LData: TArray<TFDDataSet>;
-
-  LBinStream, LZippedStream: TMemoryStream;
 begin
-  LResult := TJSONObject.Create;
+  LResult := TFDDataSets.ToJSON(AValue.AsType<TArray<TFDDataSet>>);
   try
-    LData := AValue.AsType<TArray<TFDDataSet>>;
-    if Length(LData) > 0 then
-    begin
-      for LCurrent in LData do
-      begin
-        if not LCurrent.Active then
-          LCurrent.Active := True;
-
-        // Get Binary representation
-        LBinStream := TMemoryStream.Create;
-        try
-          LCurrent.SaveToStream(LBinStream, sfBinary);
-
-          // Zip
-          LZippedStream := TMemoryStream.Create;
-          try
-            ZipStream(LBinStream, LZippedStream);
-
-            LResult.WriteStringValue(LCurrent.Name, StreamToBase64(LZippedStream));
-          finally
-            LZippedStream.Free;
-          end;
-        finally
-          LBinStream.Free;
-        end;
-      end;
-    end;
-
     TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally
     LResult.Free;
@@ -193,7 +94,7 @@ begin
   LDataset := AValue.AsType<TFDAdaptedDataSet>;
   if AMediaType.Matches(TMediaType.APPLICATION_XML) then
     LStorageFormat := sfXML
-  else if AMediaType.Matches(TMediaType.APPLICATION_JSON) then
+  else if AMediaType.Matches(TMediaType.APPLICATION_JSON_FireDAC) then
     LStorageFormat := sfJSON
   else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
     LStorageFormat := sfBinary
@@ -201,6 +102,28 @@ begin
     raise EMARSException.CreateFmt('Unsupported media type: %s', [AMediaType.ToString]);
 
   LDataSet.SaveToStream(AOutputStream, LStorageFormat);
+end;
+
+{ TArrayFDMemTableReader }
+
+function TArrayFDMemTableReader.ReadFrom(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation
+): TValue;
+var
+  LJSON: TJSONObject;
+begin
+  Result := TValue.Empty;
+
+  LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
+  if not Assigned(LJSON) then
+    Exit;
+  try
+    Result := TValue.From<TArray<TFDMemTable>>(TFDDataSets.FromJSON(LJSON));
+  finally
+    LJSON.Free;
+  end;
 end;
 
 procedure RegisterReadersAndWriters;
@@ -215,7 +138,7 @@ begin
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_HIGH
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
     end
   );
 
@@ -227,68 +150,9 @@ begin
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_HIGH
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM
     end
   );
-end;
-
-{ TArrayFDMemTableReader }
-
-function TArrayFDMemTableReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
-  const ADestination: TRttiObject; const AMediaType: TMediaType;
-  const AActivation: IMARSActivation
-): TValue;
-var
-  LJSON: TJSONObject;
-  LData: TArray<TFDMemTable>;
-  LPair: TJSONPair;
-  LZippedStream, LStream: TMemoryStream;
-  LMemTable: TFDMemTable;
-begin
-  Result := TValue.Empty;
-
-  LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
-  if not Assigned(LJSON) then
-    Exit;
-
-  try
-    for LPair in LJSON do
-    begin
-      if not (LPair.JsonValue is TJSONString) then
-        raise EMARSException.Create('Invalid JSON format [TArrayFDCustomQueryReader]');
-
-      LZippedStream := TMemoryStream.Create;
-      try
-        Base64ToStream((LPair.JsonValue as TJSONString).Value, LZippedStream);
-        LZippedStream.Position := 0;
-
-        LStream := TMemoryStream.Create;
-        try
-          UnzipStream(LZippedStream, LStream);
-          LStream.Position := 0;
-
-          LMemTable := TFDMemTable.Create(nil);
-          try
-            LMemTable.LoadFromStream(LStream, sfBinary);
-            LMemTable.Name := LPair.JsonString.Value;
-            LData := LData + [LMemTable];
-          except
-            LMemTable.Free;
-            raise;
-          end;
-        finally
-          LStream.Free;
-        end;
-      finally
-        LZippedStream.Free;
-      end;
-    end;
-
-    Result := TValue.From<TArray<TFDMemTable>>(LData);
-  finally
-    LJSON.Free;
-  end;
 end;
 
 initialization

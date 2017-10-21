@@ -47,7 +47,9 @@ contains
   MARS.Utils.Parameters.JSON in '..\..\Source\MARS.Utils.Parameters.JSON.pas',
   MARS.Core.JSON in '..\..\Source\MARS.Core.JSON.pas',
   MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
-  MARS.Core.Exceptions in '..\..\Source\MARS.Core.Exceptions.pas';
+  MARS.Core.Exceptions in '..\..\Source\MARS.Core.Exceptions.pas',
+  MARS.Core.Declarations in '..\..\Source\MARS.Core.Declarations.pas',
+  MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas';
 
 end.
 

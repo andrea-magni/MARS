@@ -39,7 +39,7 @@ object Form1: TForm1
       Size.Height = 25.000000000000000000
       Size.PlatformDefault = False
       TabOrder = 0
-      DataSource = BindSourceDB2
+      DataSource = BindSourceDB1
       VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast, nbInsert, nbDelete, nbEdit, nbPost, nbCancel]
       xRadius = 4.000000000000000000
       yRadius = 4.000000000000000000
@@ -77,7 +77,7 @@ object Form1: TForm1
     HttpClient.Request.ContentRangeEnd = -1
     HttpClient.Request.ContentRangeStart = -1
     HttpClient.Request.ContentRangeInstanceLength = -1
-    HttpClient.Request.Accept = 'application/json'
+    HttpClient.Request.Accept = 'application/json-firedac'
     HttpClient.Request.BasicAuthentication = False
     HttpClient.Request.Host = 'localhost:8080'
     HttpClient.Request.UserAgent = 'Mozilla/3.0 (compatible; Indy Library)'
@@ -96,6 +96,7 @@ object Form1: TForm1
   end
   object MARSFDResource1: TMARSFDResource
     Application = MARSClientApplication1
+    SpecificAccept = 'application/json-firedac'
     Resource = 'maindata'
     ResourceDataSets = <
       item
@@ -105,19 +106,7 @@ object Form1: TForm1
         Synchronize = True
       end>
     Left = 688
-    Top = 184
-  end
-  object BindingsList1: TBindingsList
-    Methods = <>
-    OutputConverters = <>
-    Left = 692
-    Top = 373
-    object LinkGridToDataSourceBindSourceDB2: TLinkGridToDataSource
-      Category = 'Quick Bindings'
-      DataSource = BindSourceDB2
-      GridControl = StringGrid1
-      Columns = <>
-    end
+    Top = 176
   end
   object employee1: TFDMemTable
     ActiveStoredUsage = []
@@ -127,15 +116,28 @@ object Form1: TForm1
     FetchOptions.Mode = fmAll
     ResourceOptions.AssignedValues = [rvSilentMode]
     ResourceOptions.SilentMode = True
-    UpdateOptions.AssignedValues = [uvCheckRequired]
+    UpdateOptions.AssignedValues = [uvCheckRequired, uvAutoCommitUpdates]
     UpdateOptions.CheckRequired = False
+    UpdateOptions.AutoCommitUpdates = True
     Left = 688
-    Top = 248
+    Top = 240
   end
-  object BindSourceDB2: TBindSourceDB
+  object BindSourceDB1: TBindSourceDB
     DataSet = employee1
     ScopeMappings = <>
-    Left = 688
-    Top = 320
+    Left = 360
+    Top = 240
+  end
+  object BindingsList1: TBindingsList
+    Methods = <>
+    OutputConverters = <>
+    Left = 20
+    Top = 5
+    object LinkGridToDataSourceBindSourceDB1: TLinkGridToDataSource
+      Category = 'Quick Bindings'
+      DataSource = BindSourceDB1
+      GridControl = StringGrid1
+      Columns = <>
+    end
   end
 end
