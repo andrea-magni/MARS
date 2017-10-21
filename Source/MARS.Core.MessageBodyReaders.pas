@@ -67,13 +67,23 @@ type
     ): TValue; virtual;
   end;
 
+  [Consumes(TMediaType.TEXT_PLAIN)]
+  TStringReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue; virtual;
+  end;
+
 
 implementation
 
 uses
-    MARS.Core.JSON
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils
+  StrUtils, NetEncoding
+  , MARS.Core.JSON
+  , MARS.Core.Utils, MARS.Rtti.Utils
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
   ;
 
@@ -197,6 +207,38 @@ begin
     end;
 end;
 
+{ TStringReader }
+
+function TStringReader.ReadFrom(
+  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LType: TRttiType;
+  LSL: TStringList;
+  LBytesStream: TBytesStream;
+begin
+  Result := TValue.Empty;
+  LType := ADestination.GetRttiType;
+
+  LBytesStream := TBytesStream.Create(AInputData);
+  try
+    LSL := TStringList.Create;
+    try
+      LSL.LoadFromStream(LBytesStream);
+      if LType.IsDynamicArrayOf<string> then
+        Result := TValue.From<TArray<string>>( LSL.ToStringArray )
+      else if LType.Handle = TypeInfo(string) then
+        Result := LSL.Text;
+    finally
+      LSL.Free;
+    end;
+  finally
+    LBytesStream.Free;
+  end;
+end;
+
+
 procedure RegisterReaders;
 begin
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TJSONValue>(TJSONValueReader);
@@ -219,6 +261,18 @@ begin
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
         Result := AType.IsDynamicArrayOfRecord;
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyReaderRegistry.AFFINITY_MEDIUM;
+      end
+  );
+
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader(
+    TStringReader
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := (AType.Handle = TypeInfo(string)) or AType.IsDynamicArrayOf<string>;
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin

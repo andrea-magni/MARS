@@ -13,6 +13,9 @@ type
   private
   protected
   public
+    // Base64(Zip(binary format))
+    class function DataSetToEncodedBinaryString(const ADataSet: TFDDataSet): string;
+    class procedure EncodedBinaryStringToDataSet(const AString: string; const ADataSet: TFDDataSet);
     class function ToJSON(const ADataSets: TArray<TFDDataSet>): TJSONObject; overload;
     class procedure ToJSON(const ADataSets: TArray<TFDDataSet>; const AStream: TStream;
       const AEncoding: TEncoding = nil); overload;
@@ -31,7 +34,6 @@ uses
 class function TFDDataSets.ToJSON(const ADataSets: TArray<TFDDataSet>): TJSONObject;
 var
   LCurrent: TFDDataSet;
-  LBinStream, LZippedStream: TMemoryStream;
 begin
   Result := TJSONObject.Create;
   try
@@ -42,23 +44,7 @@ begin
         if not LCurrent.Active then
           LCurrent.Active := True;
 
-        // Get Binary representation
-        LBinStream := TMemoryStream.Create;
-        try
-          LCurrent.SaveToStream(LBinStream, sfBinary);
-
-          // Zip
-          LZippedStream := TMemoryStream.Create;
-          try
-            ZipStream(LBinStream, LZippedStream);
-
-            Result.WriteStringValue(LCurrent.Name, StreamToBase64(LZippedStream));
-          finally
-            LZippedStream.Free;
-          end;
-        finally
-          LBinStream.Free;
-        end;
+        Result.WriteStringValue(LCurrent.Name, DataSetToEncodedBinaryString(LCurrent));
       end;
     end;
   except
@@ -74,6 +60,57 @@ begin
   for LDataSet in ADataSets do
     LDataSet.Free;
   ADataSets := [];
+end;
+
+class function TFDDataSets.DataSetToEncodedBinaryString(
+  const ADataSet: TFDDataSet): string;
+var
+  LBinStream, LZippedStream: TMemoryStream;
+begin
+  Result := '';
+  // Get Binary representation
+  LBinStream := TMemoryStream.Create;
+  try
+    ADataSet.SaveToStream(LBinStream, sfBinary);
+
+    // Zip
+    LZippedStream := TMemoryStream.Create;
+    try
+      ZipStream(LBinStream, LZippedStream);
+
+      Result := StreamToBase64(LZippedStream);
+    finally
+      LZippedStream.Free;
+    end;
+  finally
+    LBinStream.Free;
+  end;
+end;
+
+class procedure TFDDataSets.EncodedBinaryStringToDataSet(const AString: string;
+  const ADataSet: TFDDataSet);
+var
+  LZippedStream, LStream: TMemoryStream;
+begin
+  Assert(Assigned(ADataSet));
+
+  LZippedStream := TMemoryStream.Create;
+  try
+    Base64ToStream(AString, LZippedStream);
+    LZippedStream.Position := 0;
+
+    LStream := TMemoryStream.Create;
+    try
+      UnzipStream(LZippedStream, LStream);
+      LStream.Position := 0;
+
+      ADataSet.LoadFromStream(LStream, sfBinary);
+    finally
+      LStream.Free;
+    end;
+  finally
+    LZippedStream.Free;
+  end;
 end;
 
 class procedure TFDDataSets.FreeAll(var ADataSets: TArray<TFDMemTable>);
@@ -97,7 +134,6 @@ end;
 class function TFDDataSets.FromJSON(const AJSON: TJSONObject): TArray<TFDMemTable>;
 var
   LPair: TJSONPair;
-  LZippedStream, LStream: TMemoryStream;
   LMemTable: TFDMemTable;
 begin
   Result := [];
@@ -106,30 +142,14 @@ begin
     if not (LPair.JsonValue is TJSONString) then
       raise EMARSException.Create('Invalid JSON format [JSONToFDDataSets]');
 
-    LZippedStream := TMemoryStream.Create;
+    LMemTable := TFDMemTable.Create(nil);
     try
-      Base64ToStream((LPair.JsonValue as TJSONString).Value, LZippedStream);
-      LZippedStream.Position := 0;
-
-      LStream := TMemoryStream.Create;
-      try
-        UnzipStream(LZippedStream, LStream);
-        LStream.Position := 0;
-
-        LMemTable := TFDMemTable.Create(nil);
-        try
-          LMemTable.LoadFromStream(LStream, sfBinary);
-          LMemTable.Name := LPair.JsonString.Value;
-          Result := Result + [LMemTable];
-        except
-          LMemTable.Free;
-          raise;
-        end;
-      finally
-        LStream.Free;
-      end;
-    finally
-      LZippedStream.Free;
+      EncodedBinaryStringToDataSet((LPair.JsonValue as TJSONString).Value, LMemTable);
+      LMemTable.Name := LPair.JsonString.Value;
+      Result := Result + [LMemTable];
+    except
+      LMemTable.Free;
+      raise;
     end;
   end;
 end;

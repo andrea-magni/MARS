@@ -95,16 +95,15 @@ var
   LStorageFormat: TFDStorageFormat;
 begin
   LDataset := AValue.AsType<TFDAdaptedDataSet>;
+
   if AMediaType.Matches(TMediaType.APPLICATION_XML) then
-    LStorageFormat := sfXML
+    LDataSet.SaveToStream(AOutputStream, sfXML)
   else if AMediaType.Matches(TMediaType.APPLICATION_JSON_FireDAC) then
-    LStorageFormat := sfJSON
+    StringToStream(AOutputStream, TFDDataSets.DataSetToEncodedBinaryString(LDataSet), TEncoding.UTF8)
   else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
-    LStorageFormat := sfBinary
+    LDataSet.SaveToStream(AOutputStream, sfBinary)
   else
     raise EMARSException.CreateFmt('Unsupported media type: %s', [AMediaType.ToString]);
-
-  LDataSet.SaveToStream(AOutputStream, LStorageFormat);
 end;
 
 { TArrayFDMemTableReader }

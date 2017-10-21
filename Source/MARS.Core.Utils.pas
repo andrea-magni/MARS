@@ -34,7 +34,8 @@ uses
 
   function StreamToJSONValue(const AStream: TStream; const AEncoding: TEncoding = nil): TJSONValue;
   procedure JSONValueToStream(const AValue: TJSONValue; const ADestStream: TStream; const AEncoding: TEncoding = nil);
-  function StreamToString(AStream: TStream): string;
+  function StreamToString(const AStream: TStream; const AEncoding: TEncoding = nil): string;
+  procedure StringToStream(const AStream: TStream; const AString: string; const AEncoding: TEncoding = nil);
   procedure CopyStream(ASourceStream, ADestStream: TStream;
     AOverWriteDest: Boolean = True; AThenResetDestPosition: Boolean = True);
 
@@ -150,19 +151,45 @@ begin
 end;
 
 
-function StreamToString(AStream: TStream): string;
+function StreamToString(const AStream: TStream; const AEncoding: TEncoding = nil): string;
 var
-  LStream: TStringStream;
+  LStreamReader: TStreamReader;
+  LEncoding: TEncoding;
 begin
-  LStream := TStringStream.Create;
+  Result := '';
+  if not Assigned(AStream) then
+    Exit;
+  LEncoding := AEncoding;
+  if not Assigned(LEncoding) then
+    LEncoding := TEncoding.Default;
+
+  AStream.Position := 0;
+  LStreamReader := TStreamReader.Create(AStream, LEncoding);
   try
-    LStream.CopyFrom(AStream, 0);
-    Result := LStream.DataString;
+    Result := LStreamReader.ReadToEnd;
   finally
-    LStream.Free;
+    LStreamReader.Free;
   end;
 end;
 
+procedure StringToStream(const AStream: TStream; const AString: string; const AEncoding: TEncoding = nil);
+var
+  LStreamWriter: TStreamWriter;
+  LEncoding: TEncoding;
+begin
+  if not Assigned(AStream) then
+    Exit;
+  LEncoding := AEncoding;
+  if not Assigned(LEncoding) then
+    LEncoding := TEncoding.Default;
+  AStream.Position := 0;
+  LStreamWriter := TStreamWriter.Create(AStream, LEncoding);
+  try
+    LStreamWriter.Write(AString);
+  finally
+    LStreamWriter.Free;
+  end;
+end;
 
 function IsMask(const AString: string): Boolean;
 begin
