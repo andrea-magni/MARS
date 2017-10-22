@@ -119,11 +119,17 @@ var
 begin
   LStreamWriter := TStreamWriter.Create(AOutputStream);
   try
-    LJSONValue := AValue.AsObject as TJSONValue;
-    if not Assigned(LJSONValue) then
+    LJSONString := '';
+    if AValue.IsType<string> then
+      LJSONString := AValue.AsType<string>
+    else if AValue.IsType<TJSONValue> then
+    begin
+      LJSONValue := AValue.AsObject as TJSONValue;
+      LJSONString := LJSONValue.ToJSON;
+    end;
+    if LJSONString = '' then
       Exit;
 
-    LJSONString := LJSONValue.ToJSON;
 
     // JSONP
     LJSONPProc :=
@@ -297,6 +303,18 @@ end;
 procedure RegisterWriters;
 begin
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TJSONValue>(TJSONValueWriter);
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TJSONValueWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := (AType.Handle = TypeInfo(string)) and (AMediaType = TMediaType.APPLICATION_JSON);
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+      end
+  );
+
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TStream>(TStreamValueWriter);
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TObject>(TObjectWriter,
     function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer

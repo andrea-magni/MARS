@@ -33,8 +33,11 @@ type
     [GET, Path('/to/{Someone}'), Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloTo([PathParam] Someone: string): string;
 
-    [GET, Path('metadata'), Produces(TMediaType.TEXT_HTML)]
-    function Metadata([Context] Metadata: TMARSApplicationMetadata): string;
+    [GET, Path('metadata/simple'), Produces(TMediaType.TEXT_HTML)]
+    function MetadataSimple([Context] Metadata: TMARSApplicationMetadata): string;
+
+    [GET, Path('metadata/bootstrap'), Produces(TMediaType.TEXT_HTML)]
+    function MetadataBootstrap([Context] Metadata: TMARSApplicationMetadata): string;
 
     [GET, Path('metadata/json'), Produces(TMediaType.APPLICATION_JSON)]
     function MetadataJSON([Context] Metadata: TMARSApplicationMetadata): string;
@@ -53,9 +56,15 @@ uses
 
 { THelloWorldResource }
 
-function THelloWorldResource.Metadata(Metadata: TMARSApplicationMetadata): string;
+function THelloWorldResource.MetadataSimple(Metadata: TMARSApplicationMetadata): string;
 begin
-  Result := mustache.RenderTemplateWithJSON('metadata.html', Metadata.ToJSON, True);
+  Result := mustache.RenderTemplateWithJSON('metadata_simple.html', Metadata.ToJSON, True);
+end;
+
+function THelloWorldResource.MetadataBootstrap(
+  Metadata: TMARSApplicationMetadata): string;
+begin
+  Result := mustache.RenderTemplateWithJSON('metadata_bootstrap.html', Metadata.ToJSON, True);
 end;
 
 function THelloWorldResource.MetadataJSON(
