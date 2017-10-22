@@ -67,11 +67,6 @@ begin
       begin
         Result := False;
         Handled := True;
-      end
-      else if SameText(ARequest.Method, 'OPTIONS')  then
-      begin
-        Result := False;
-        Handled := True;
       end;
     end;
 
