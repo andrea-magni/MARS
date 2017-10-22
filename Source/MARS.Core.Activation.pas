@@ -402,7 +402,9 @@ begin
     SetCustomHeaders;
 
     // 1 - TMARSResponse (override)
-    if LMethodResult.IsInstanceOf(TMARSResponse) then
+    if (not LMethodResult.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
+       and LMethodResult.IsInstanceOf(TMARSResponse)
+    then
       TMARSResponse(LMethodResult.AsObject).CopyTo(Response)
     // 2 - MessageBodyWriter mechanism (standard)
     else begin
@@ -429,27 +431,29 @@ begin
           Response.ContentType := GetProducesValue;
           if Response.ContentType = '' then
             Response.ContentType := TMediaType.WILDCARD;
+          if Assigned(FMethod.ReturnType) then
+          begin
+            if (LMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
+              Response.Content := LMethodResult.AsString
+            else if (LMethodResult.IsType<Boolean>) then
+              Response.Content := BoolToStr(LMethodResult.AsType<Boolean>, True)
+            else if LMethodResult.TypeInfo = TypeInfo(TDateTime) then
+              Response.Content := DateToJSON(LMethodResult.AsType<TDateTime>)
+            else if LMethodResult.TypeInfo = TypeInfo(TDate) then
+              Response.Content := DateToJSON(LMethodResult.AsType<TDate>)
+            else if LMethodResult.TypeInfo = TypeInfo(TTime) then
+              Response.Content := DateToJSON(LMethodResult.AsType<TTime>)
 
-          if (LMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
-            Response.Content := LMethodResult.AsString
-          else if (LMethodResult.IsType<Boolean>) then
-            Response.Content := BoolToStr(LMethodResult.AsType<Boolean>, True)
-          else if LMethodResult.TypeInfo = TypeInfo(TDateTime) then
-            Response.Content := DateToJSON(LMethodResult.AsType<TDateTime>)
-          else if LMethodResult.TypeInfo = TypeInfo(TDate) then
-            Response.Content := DateToJSON(LMethodResult.AsType<TDate>)
-          else if LMethodResult.TypeInfo = TypeInfo(TTime) then
-            Response.Content := DateToJSON(LMethodResult.AsType<TTime>)
+            else if (LMethodResult.Kind in [tkInt64]) then
+              Response.Content := IntToStr(LMethodResult.AsType<Int64>)
+            else if (LMethodResult.Kind in [tkInteger]) then
+              Response.Content := IntToStr(LMethodResult.AsType<Integer>)
 
-          else if (LMethodResult.Kind in [tkInt64]) then
-            Response.Content := IntToStr(LMethodResult.AsType<Int64>)
-          else if (LMethodResult.Kind in [tkInteger]) then
-            Response.Content := IntToStr(LMethodResult.AsType<Integer>)
-
-          else if (LMethodResult.Kind in [tkFloat]) then
-            Response.Content := FormatFloat('0.00000000', LMethodResult.AsType<Double>)
-          else
-            Response.Content := LMethodResult.ToString;
+            else if (LMethodResult.Kind in [tkFloat]) then
+              Response.Content := FormatFloat('0.00000000', LMethodResult.AsType<Double>)
+            else
+              Response.Content := LMethodResult.ToString;
+          end;
 
           Response.StatusCode := 200;
         end;
