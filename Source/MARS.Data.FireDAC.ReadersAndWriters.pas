@@ -41,14 +41,16 @@ type
   , Produces(TMediaType.APPLICATION_JSON_FIREDAC)
   , Produces(TMediaType.APPLICATION_OCTET_STREAM)
   ]
-  TFDAdaptedDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
+  TFDDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [ Produces(TMediaType.APPLICATION_JSON_FIREDAC) ]
-  TArrayFDCustomQueryWriter = class(TInterfacedObject, IMessageBodyWriter)
+  TArrayFDDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
+    class procedure WriteDataSets(const ADataSets: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
@@ -71,9 +73,23 @@ uses
   , MARS.Rtti.Utils, MARS.Data.FireDAC.Utils
 ;
 
-{ TArrayFDCustomQueryWriter }
+{ TArrayFDDataSetWriter }
 
-procedure TArrayFDCustomQueryWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+class procedure TArrayFDDataSetWriter.WriteDataSets(const ADataSets: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+var
+  LWriter: TArrayFDDataSetWriter;
+begin
+  LWriter := TArrayFDDataSetWriter.Create;
+  try
+    LWriter.WriteTo(ADataSets, AMediaType, AOutputStream, AActivation);
+  finally
+    LWriter.Free;
+  end;
+end;
+
+procedure TArrayFDDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LResult: TJSONObject;
@@ -86,19 +102,20 @@ begin
   end;
 end;
 
-{ TFDAdaptedDataSetWriter }
+{ TFDDataSetWriter }
 
-procedure TFDAdaptedDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+procedure TFDDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LDataset: TFDAdaptedDataSet;
+  LDataset: TFDDataSet;
 begin
-  LDataset := AValue.AsType<TFDAdaptedDataSet>;
+  LDataset := AValue.AsType<TFDDataSet>;
 
   if AMediaType.Matches(TMediaType.APPLICATION_XML) then
     LDataSet.SaveToStream(AOutputStream, sfXML)
   else if AMediaType.Matches(TMediaType.APPLICATION_JSON_FireDAC) then
-    StringToStream(AOutputStream, TFDDataSets.DataSetToEncodedBinaryString(LDataSet), TEncoding.UTF8)
+    TArrayFDDataSetWriter.WriteDataSets(TValue.From<TArray<TFDDataSet>>([LDataSet]),
+      AMediaType, AOutputStream, AActivation)
   else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
     LDataSet.SaveToStream(AOutputStream, sfBinary)
   else
@@ -129,10 +146,10 @@ end;
 
 procedure RegisterReadersAndWriters;
 begin
-  TMARSMessageBodyRegistry.Instance.RegisterWriter<TFDAdaptedDataSet>(TFDAdaptedDataSetWriter);
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TFDDataSet>(TFDDataSetWriter);
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
-    TArrayFDCustomQueryWriter
+    TArrayFDDataSetWriter
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
     begin
       Result := Assigned(AType) and AType.IsDynamicArrayOf<TFDDataSet>;
