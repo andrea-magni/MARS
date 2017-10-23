@@ -178,11 +178,11 @@ begin
     Result := BooleanToTJSON(AValue.AsType<Boolean>)
 
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
-    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>, False) )
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>, True) )
   else if AValue.TypeInfo = TypeInfo(TDate) then
-    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDate>, False) )
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDate>, True) )
   else if AValue.TypeInfo = TypeInfo(TTime) then
-    Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>, False) )
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>, True) )
 
   else if (AValue.Kind in [tkInt64]) then
     Result := TJSONNumber.Create( AValue.AsType<Int64> )

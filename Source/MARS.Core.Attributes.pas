@@ -221,11 +221,12 @@ type
 implementation
 
 uses
-    MARS.Rtti.Utils
-  , MARS.Core.MessageBodyReader
-  , MARS.Core.MediaType
+  StrUtils, DateUtils
+, MARS.Rtti.Utils
+, MARS.Core.MessageBodyReader
+, MARS.Core.MediaType
 {$ifndef DelphiXE7_UP}
-  , TypInfo
+, TypInfo
 {$endif}
 ;
 
@@ -235,7 +236,18 @@ begin
     tkInt64,
     tkInteger: Result := StrToIntDef(AString, 0);
 
-    tkFloat: Result := StrToFloatDef(AString, 0.0);
+    tkFloat: begin
+      if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1  then
+      begin
+        try
+          Result := ISO8601ToDate(AString);
+        except
+          Result := StrToDateTime(AString)
+        end;
+      end
+      else
+        Result := StrToFloatDef(AString, 0.0);
+    end;
 
 {$ifdef DelphiXE7_UP}
     tkChar: begin
