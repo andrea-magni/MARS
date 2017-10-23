@@ -34,17 +34,23 @@ uses
 class function TFDDataSets.ToJSON(const ADataSets: TArray<TFDDataSet>): TJSONObject;
 var
   LCurrent: TFDDataSet;
+  LIndex: Integer;
+  LName: string;
 begin
   Result := TJSONObject.Create;
   try
     if Length(ADataSets) > 0 then
     begin
-      for LCurrent in ADataSets do
+      for LIndex := Low(ADataSets) to High(ADataSets) do
       begin
+        LCurrent := ADataSets[LIndex];
         if not LCurrent.Active then
           LCurrent.Active := True;
+        LName := LCurrent.Name;
+        if LName = '' then
+          LName := 'DataSet' + LIndex.ToString;
 
-        Result.WriteStringValue(LCurrent.Name, DataSetToEncodedBinaryString(LCurrent));
+        Result.WriteStringValue(LName, DataSetToEncodedBinaryString(LCurrent));
       end;
     end;
   except
