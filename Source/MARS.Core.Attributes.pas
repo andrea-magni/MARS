@@ -232,35 +232,40 @@ uses
 
 function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
 begin
-  case ADesiredType.TypeKind of
-    tkInt64,
-    tkInteger: Result := StrToIntDef(AString, 0);
+  if ADesiredType.IsObjectOfType<TJSONValue> then
+    Result := TJSONObject.ParseJSONValue(AString)
+  else
+  begin
+    case ADesiredType.TypeKind of
+      tkInt64,
+      tkInteger: Result := StrToIntDef(AString, 0);
 
-    tkFloat: begin
-      if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1  then
-      begin
-        try
-          Result := ISO8601ToDate(AString);
-        except
-          Result := StrToDateTime(AString)
-        end;
-      end
+      tkFloat: begin
+        if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1  then
+        begin
+          try
+            Result := ISO8601ToDate(AString);
+          except
+            Result := StrToDateTime(AString)
+          end;
+        end
+        else
+          Result := StrToFloatDef(AString, 0.0);
+      end;
+
+  {$ifdef DelphiXE7_UP}
+      tkChar: begin
+                if AString.IsEmpty then
+                  Result := ''
+                else
+                  Result := TValue.From(AString.Chars[0]);
+              end;
+  {$else}
+      tkChar: Result := TValue.From(Copy(AString, 1, 1));
+  {$endif}
       else
-        Result := StrToFloatDef(AString, 0.0);
+        Result := AString;
     end;
-
-{$ifdef DelphiXE7_UP}
-    tkChar: begin
-              if AString.IsEmpty then
-                Result := ''
-              else
-                Result := TValue.From(AString.Chars[0]);
-            end;
-{$else}
-    tkChar: Result := TValue.From(Copy(AString, 1, 1));
-{$endif}
-    else
-      Result := AString;
   end;
 end;
 

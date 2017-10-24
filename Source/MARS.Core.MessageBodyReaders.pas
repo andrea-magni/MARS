@@ -178,6 +178,7 @@ function TArrayOfRecordReader.ReadFrom(
 ): TValue;
 var
   LJSONArray: TJSONArray;
+  LJSONValue: TJSONValue;
   LJSONObject: TJSONObject;
   LRecordType: TRttiType;
   LArray: TValue;
@@ -186,24 +187,36 @@ var
 begin
   Result := TValue.Empty;
   LArrayType := ADestination.GetRttiType;
-
-  LJSONArray := TJSONValueReader.ReadJSONValue(
-    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONArray>;
-
   LRecordType := LArrayType.GetArrayElementType;
-  if Assigned(LJSONArray) and Assigned(LRecordType) then
+  if not Assigned(LRecordType) then
+    Exit;
+
+  LJSONValue := TJSONValueReader.ReadJSONValue(
+    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
+  if Assigned(LJSONValue) then
     try
       TValue.Make(nil, LArrayType.Handle, LArray);
-      SetArrayLength(LArray, LArrayType, LJSONArray.Count);
-      for LIndex := 0 to LJSONArray.Count-1 do
+      if LJSONValue is TJSONArray then
       begin
-        LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
-        if Assigned(LJSONObject) then
-          LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LRecordType));
+        LJSONArray := TJSONArray(LJSONValue);
+
+        SetArrayLength(LArray, LArrayType, LJSONArray.Count);
+        for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
+        begin
+          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
+          if Assigned(LJSONObject) then
+            LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LRecordType));
+        end;
+      end
+      else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
+      begin
+        SetArrayLength(LArray, LArrayType, 1);
+        LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LRecordType));
       end;
+
       Result := LArray;
     finally
-      LJSONArray.Free;
+      LJSONValue.Free;
     end;
 end;
 

@@ -192,7 +192,7 @@ begin
   LArray := FPOSTResponse as TJSONArray;
   if Assigned(LArray) and (LArray.Count > 0) then
   begin
-    for LElement in LArray do
+    for LElement in LArray do //AM Refactor using ForEach<TJSONObject>
     begin
       LObj := LElement as TJSONObject;
       if SameText(LObj.ReadStringValue('dataset'), ADataSetName) then

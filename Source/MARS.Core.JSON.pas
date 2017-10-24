@@ -72,6 +72,7 @@ type
   public
     function ToArrayOfRecord<T: record>(): TArray<T>;
     procedure FromArrayOfRecord<T: record>(AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil);
+    function ForEach<T: TJSONValue>(const AFunc: TFunc<T,Boolean>): Integer;
 
     {$ifndef DelphiXE6_UP}
     function GetEnumerator: TJSONArrayEnumerator;
@@ -303,6 +304,26 @@ begin
   Result := [];
   for LElement in Self do
     Result := Result + [(LElement as TJSONObject).ToRecord<T>()]
+end;
+
+function TJSONArrayHelper.ForEach<T>(const AFunc: TFunc<T, Boolean>): Integer;
+var
+  LIndex: Integer;
+  LItem: TJSONValue;
+begin
+  Result := 0;
+  if not Assigned(AFunc) then
+    Exit;
+  for LIndex := 0 to Count-1 do
+  begin
+    LItem := Items[Lindex];
+    if LItem is T then
+    begin
+      if not AFunc(T(LItem)) then
+        Break;
+      Inc(Result);
+    end;
+  end;
 end;
 
 procedure TJSONArrayHelper.FromArrayOfRecord<T>(AArray: TArray<T>;
