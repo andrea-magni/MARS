@@ -77,6 +77,7 @@ type
     class procedure ToDataSet(const ARecord: R; const ADataSet: TDataSet; const AAppend: Boolean = False);
     class procedure FromDataSet(var ARecord: R; const ADataSet: TDataSet);
     class function DataSetToArray(const ADataSet: TDataSet): TArray<R>;
+    class procedure SetFieldByName(var ARecord: R; const AFieldName: string; const AValue: TValue);
   end;
 
 function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
@@ -677,6 +678,18 @@ begin
         LRecordField.SetValue(@ARecord, TValue.FromVariant(LDataSetField.Value));
     end;
   end;
+end;
+
+class procedure TRecord<R>.SetFieldByName(var ARecord: R;
+  const AFieldName: string; const AValue: TValue);
+var
+  LRecordType: TRttiType;
+  LField: TRttiField;
+begin
+  LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
+
+  LField := LRecordType.GetField(AFieldName);
+  LField.SetValue(@ARecord, AValue);
 end;
 
 class procedure TRecord<R>.ToDataSet(const ARecord: R; const ADataSet: TDataSet;
