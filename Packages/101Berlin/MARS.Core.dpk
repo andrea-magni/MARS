@@ -25,7 +25,7 @@ package MARS.Core;
 {$IMAGEBASE $400000}
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity REST Library'}
+{$DESCRIPTION 'MARS-Curiosity Core'}
 {$LIBSUFFIX '240'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
@@ -39,7 +39,6 @@ requires
   IndyCore,
   xmlrtl,
   DbxCommonDriver,
-  fmx,
   dsnap,
   MARS.Utils,
   MARS.JOSE;
@@ -49,9 +48,7 @@ contains
   MARS.Core.Attributes in '..\..\Source\MARS.Core.Attributes.pas',
   MARS.Core.Cache in '..\..\Source\MARS.Core.Cache.pas',
   MARS.Core.Classes in '..\..\Source\MARS.Core.Classes.pas',
-  MARS.Core.Declarations in '..\..\Source\MARS.Core.Declarations.pas',
   MARS.Core.Engine in '..\..\Source\MARS.Core.Engine.pas',
-  MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas',
   MARS.Core.MessageBodyReader in '..\..\Source\MARS.Core.MessageBodyReader.pas',
   MARS.Core.MessageBodyWriter in '..\..\Source\MARS.Core.MessageBodyWriter.pas',
   MARS.Core.Registry in '..\..\Source\MARS.Core.Registry.pas',
