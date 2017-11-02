@@ -239,7 +239,10 @@ begin
     case ADesiredType.TypeKind of
       tkInt64,
       tkInteger: Result := StrToIntDef(AString, 0);
-
+      tkEnumeration: begin
+        if SameText(ADesiredType.Name, 'Boolean') then
+          Result := StrToBoolDef(AString, False);
+      end;
       tkFloat: begin
         if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1  then
         begin
