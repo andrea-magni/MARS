@@ -15,7 +15,7 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.URL
 
-  , MARS.Data.FireDAC
+  , MARS.Data.FireDAC, MARS.Data.FireDAC.Utils
   , MARS.Data.MessageBodyWriters
   , MARS.Data.FireDAC.ReadersAndWriters
 

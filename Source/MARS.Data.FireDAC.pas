@@ -32,6 +32,7 @@ uses
   , MARS.Core.URL
   , MARS.Utils.Parameters
   , MARS.Core.Activation.Interfaces
+  , MARS.Data.FireDAC.Utils
 ;
 
 type
@@ -58,13 +59,17 @@ type
   TContextValueProviderProc = reference to procedure (const AActivation: IMARSActivation;
     const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
 
-  TMARSFDApplyUpdatesRes = record
-    dataset: string;
-    result: Integer;
-    errors: Integer;
-    errorText: string;
-    constructor Create(const ADataset: TFDCustomQuery; const AApplyResult: Integer; const AErrors: Integer; const AErrorText: string);
-    procedure Clear;
+
+  TMARSFDMemTable = class(TFDMemTable)
+  private
+    FApplyUpdatesRes: TMARSFDApplyUpdatesRes;
+  protected
+    function DoApplyUpdates(ATable: TFDDatSTable; AMaxErrors: Integer): Integer; override;
+    procedure DoBeforeApplyUpdate; override;
+    procedure DoUpdateErrorHandler(ARow: TFDDatSRow; AException: Exception;
+      ARequest: TFDUpdateRequest; var AAction: TFDErrorAction); override;
+  public
+    property ApplyUpdatesRes: TMARSFDApplyUpdatesRes read FApplyUpdatesRes;
   end;
 
   TMARSFireDAC = class
@@ -324,16 +329,16 @@ function TMARSFireDAC.ApplyUpdates(const ADelta: TFDMemTable;
   const ATableAdapter: TFDTableAdapter;
   const AMaxErrors: Integer): TMARSFDApplyUpdatesRes;
 var
-  LFDMemTable: TFDMemTable;
+  LFDMemTable: TMARSFDMemTable;
   LFDAdapter: TFDTableAdapter;
-  LStoreItems: TFDStoreItems;
 begin
   Assert(ATableAdapter <> nil);
 
   Result.Clear;
 
-  LFDMemTable := TFDMemTable.Create(nil);
+  LFDMemTable := TMARSFDMemTable.Create(nil);
   try
+    LFDMemTable.Name := ATableAdapter.Name;
     LFDAdapter := TFDTableAdapter.Create(nil);
     try
       if Assigned(ATableAdapter.SelectCommand) then
@@ -349,16 +354,12 @@ begin
       if LFDAdapter.UpdateTableName = '' then
         LFDAdapter.UpdateTableName := LFDAdapter.SelectCommand.UpdateOptions.UpdateTableName;
 
-      LStoreItems := LFDMemTable.ResourceOptions.StoreItems;
       LFDMemTable.ResourceOptions.StoreItems := [siMeta, siDelta];
       LFDMemTable.CachedUpdates := True;
       LFDMemTable.Adapter := LFDAdapter;
       LFDMemTable.Data := ADelta.Data;
-//      CopyDataSet(ADelta, LFDMemTable);
-      LFDMemTable.OnUpdateError := DoUpdateError; //DoUpdateErrorHandler
-      Result.result := LFDMemTable.ApplyUpdates(AMaxErrors);
-      LFDMemTable.OnUpdateError := nil;
-      LFDMemTable.ResourceOptions.StoreItems := LStoreItems;
+      LFDMemTable.ApplyUpdates(AMaxErrors);
+      Result := LFDMemTable.ApplyUpdatesRes;
     finally
       LFDAdapter.Free;
     end;
@@ -383,25 +384,20 @@ begin
     Assert(LDataSet <> nil);
     Assert(LDataSet.Command <> nil);
 
-//      BeforeApplyUpdates(ADeltas, LDelta.Value, LDataSet);
     InjectMacroValues(LDataSet.Command);
     InjectParamValues(LDataSet.Command);
 
     if Assigned(AOnBeforeApplyUpdates) then
       AOnBeforeApplyUpdates(LDataSet, LDelta);
 
-//    LApplyResult := LApplyUpdates.ApplyUpdates(LDelta.Key, LDataSet.Command);
-
     LFDAdapter := TFDTableAdapter.Create(nil);
     try
+      LFDAdapter.Name := LDataSet.Name;
       LFDAdapter.SelectCommand := LDataSet.Command;
       Result := Result + [ApplyUpdates(LDelta, LFDAdapter, -1)];
     finally
       LFDAdapter.Free;
     end;
-
-//    if Assigned(AOnApplyUpdates) then
-//      AOnApplyUpdates(LDataSet, LApplyResult, LApplyUpdates);
   end;
 end;
 
@@ -631,25 +627,28 @@ begin
   end;
 end;
 
-{ TMARSFDApplyUpdatesRes }
 
-procedure TMARSFDApplyUpdatesRes.Clear;
+{ TMARSFDMemTable }
+
+function TMARSFDMemTable.DoApplyUpdates(ATable: TFDDatSTable;
+  AMaxErrors: Integer): Integer;
 begin
-  dataset := '';
-  result := 0;
-  errors := 0;
-  errorText := '';
+  Result := inherited DoApplyUpdates(ATable, AMaxErrors);
+  FApplyUpdatesRes.result := Result;
 end;
 
-constructor TMARSFDApplyUpdatesRes.Create(const ADataset: TFDCustomQuery;
-  const AApplyResult: Integer; const AErrors: Integer; const AErrorText: string);
+procedure TMARSFDMemTable.DoBeforeApplyUpdate;
 begin
-  dataset := '';
-  if Assigned(ADataSet) then
-    dataset := ADataset.Name;
-  result := AApplyResult;
-  errors := AErrors;
-  errorText := AErrorText;
+  inherited;
+  FApplyUpdatesRes := TMARSFDApplyUpdatesRes.Create(Self.Name);
+end;
+
+procedure TMARSFDMemTable.DoUpdateErrorHandler(ARow: TFDDatSRow;
+  AException: Exception; ARequest: TFDUpdateRequest;
+  var AAction: TFDErrorAction);
+begin
+  inherited;
+  FApplyUpdatesRes.AddError(ARow, AException, ARequest);
 end;
 
 end.

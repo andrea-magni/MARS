@@ -6,9 +6,22 @@ uses
   Classes, SysUtils, Generics.Collections
 , MARS.Core.JSON
 , FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Intf
+, FireDAC.DatS, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def
+
 ;
 
 type
+  TMARSFDApplyUpdatesRes = record
+    dataset: string;
+    result: Integer;
+    errorCount: Integer;
+    errors: TArray<string>;
+    constructor Create(const ADatasetName: string);
+    procedure AddError(ARow: TFDDatSRow; AException: Exception; ARequest: TFDUpdateRequest);
+    procedure Clear;
+  end;
+
+
   TFDDataSets = class
   private
   protected
@@ -173,5 +186,29 @@ begin
     LJSONObject.Free;
   end;
 end;
+
+{ TMARSFDApplyUpdatesRes }
+
+procedure TMARSFDApplyUpdatesRes.AddError(ARow: TFDDatSRow;
+  AException: Exception; ARequest: TFDUpdateRequest);
+begin
+  errorCount := errorCount + 1;
+  errors := errors + [AException.ClassName + ': ' + AException.Message];
+end;
+
+procedure TMARSFDApplyUpdatesRes.Clear;
+begin
+  dataset := '';
+  result := 0;
+  errorCount := 0;
+  errors := [];
+end;
+
+constructor TMARSFDApplyUpdatesRes.Create(const ADatasetName: string);
+begin
+  Clear;
+  dataset := ADatasetName;
+end;
+
 
 end.

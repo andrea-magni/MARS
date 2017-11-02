@@ -18,6 +18,7 @@ uses
 
   , MARS.Client.Resource
   , MARS.Client.Client
+  , MARS.Data.FireDAC.Utils
   ;
 
 type
@@ -51,8 +52,8 @@ type
   end;
 
   TOnApplyUpdatesErrorEvent = procedure (const ASender: TObject;
-      const AItem: TMARSFDResourceDatasetsItem; const AErrors: Integer;
-      const AError: string; var AHandled: Boolean) of object;
+      const AItem: TMARSFDResourceDatasetsItem; const AErrorCount: Integer;
+      const AErrors: TArray<string>; var AHandled: Boolean) of object;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or pidOSX32 or pidiOSSimulator or pidiOSDevice or pidAndroid)]
   TMARSFDResource = class(TMARSClientResource)
@@ -60,6 +61,7 @@ type
     FResourceDataSets: TMARSFDResourceDatasets;
     FPOSTResponse: TJSONValue;
     FOnApplyUpdatesError: TOnApplyUpdatesErrorEvent;
+    FApplyUpdatesResults: TArray<TMARSFDApplyUpdatesRes>;
   protected
     procedure AfterGET(); override;
     procedure BeforePOST(AContent: TMemoryStream); override;
@@ -69,7 +71,7 @@ type
     procedure AssignTo(Dest: TPersistent); override;
 
     function ApplyUpdatesHadErrors(const ADataSetName: string; var AErrorCount: Integer;
-      var AErrorText: string): Boolean; virtual;
+      var AErrorText: TArray<string>): Boolean; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -77,6 +79,7 @@ type
     property POSTResponse: TJSONValue read FPOSTResponse write FPOSTResponse;
     property ResourceDataSets: TMARSFDResourceDatasets read FResourceDataSets write FResourceDataSets;
     property OnApplyUpdatesError: TOnApplyUpdatesErrorEvent read FOnApplyUpdatesError write FOnApplyUpdatesError;
+    property ApplyUpdatesResults: TArray<TMARSFDApplyUpdatesRes> read FApplyUpdatesResults;
   end;
 
 procedure Register;
@@ -86,7 +89,7 @@ implementation
 uses
     FireDAC.Comp.DataSet
   , FireDAC.Stan.StorageBin, FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageXML
-  , MARS.Core.Utils, MARS.Client.Utils, MARS.Data.FireDAC.Utils
+  , MARS.Core.Utils, MARS.Client.Utils, MARS.Rtti.Utils
   , MARS.Core.Exceptions, MARS.Core.MediaType
   ;
 
@@ -157,11 +160,15 @@ begin
       FPOSTResponse.Free;
     FPOSTResponse := StreamToJSONValue(Client.Response.ContentStream);
 
+    FApplyUpdatesResults := [];
+    if FPOSTResponse is TJSONArray then
+      FApplyUpdatesResults := TJSONArray(FPOSTResponse).ToArrayOfRecord<TMARSFDApplyUpdatesRes>;
+
     FResourceDataSets.ForEach(
       procedure (AItem: TMARSFDResourceDatasetsItem)
       var
         LErrorCount: Integer;
-        LErrorText: string;
+        LErrorText: TArray<string>;
         LHandled: Boolean;
       begin
         if AItem.SendDelta and Assigned(AItem.DataSet) and (AItem.DataSet.Active) then
@@ -171,8 +178,10 @@ begin
             LHandled := False;
             if Assigned(OnApplyUpdatesError) then
               OnApplyUpdatesError(Self, AItem, LErrorCount, LErrorText, LHandled);
+
             if not LHandled then
-              raise EMARSException.CreateFmt('Error applying updates to dataset %s. Error: %s. Error count: %d', [AItem.DataSetName, LErrorText, LErrorCount]);
+              raise EMARSException.CreateFmt('Error applying updates to dataset %s. Error: %s. Error count: %d'
+                , [AItem.DataSetName, StringArrayToString(LErrorText, sLineBreak), LErrorCount]);
           end;
           AItem.DataSet.ApplyUpdates;
         end;
@@ -182,26 +191,21 @@ begin
 end;
 
 function TMARSFDResource.ApplyUpdatesHadErrors(const ADataSetName: string;
-  var AErrorCount: Integer; var AErrorText: string): Boolean;
+  var AErrorCount: Integer; var AErrorText: TArray<string>): Boolean;
 var
-  LArray: TJSONArray;
   LElement: TJSONValue;
-  LObj: TJSONObject;
+  LRes: TMARSFDApplyUpdatesRes;
 begin
   Result := False;
-  LArray := FPOSTResponse as TJSONArray;
-  if Assigned(LArray) and (LArray.Count > 0) then
+
+  for LRes in ApplyUpdatesResults do
   begin
-    for LElement in LArray do //AM Refactor using ForEach<TJSONObject>
+    if SameText(LRes.dataset, ADataSetName) then
     begin
-      LObj := LElement as TJSONObject;
-      if SameText(LObj.ReadStringValue('dataset'), ADataSetName) then
-      begin
-        AErrorCount := LObj.ReadIntegerValue('errors');
-        AErrorText := LObj.ReadStringValue('errorText');
-        Result := AErrorCount > 0;
-        Break;
-      end;
+      AErrorCount := LRes.errorCount;
+      AErrorText := LRes.errors;
+      Result := AErrorCount > 0;
+      Break;
     end;
   end;
 end;
@@ -223,6 +227,7 @@ var
 begin
   inherited;
 
+  FApplyUpdatesResults := [];
   LDeltas := [];
   try
     FResourceDataSets.ForEach(

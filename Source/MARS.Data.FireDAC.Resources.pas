@@ -12,7 +12,7 @@ interface
 uses
   Classes, SysUtils, Generics.Collections
   , FireDAC.Comp.Client, FireDAC.Comp.DataSet
-  , MARS.Core.MediaType, MARS.Core.Attributes, MARS.Data.FireDAC
+  , MARS.Core.MediaType, MARS.Core.Attributes, MARS.Data.FireDAC, MARS.Data.FireDAC.Utils
 ;
 
 type
