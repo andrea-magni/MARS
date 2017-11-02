@@ -149,7 +149,6 @@
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="xmlrtl.dcp"/>
         <DCCReference Include="DbxCommonDriver.dcp"/>
-        <DCCReference Include="fmx.dcp"/>
         <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
         <DCCReference Include="MARS.JOSE.dcp"/>
@@ -157,9 +156,7 @@
         <DCCReference Include="..\..\Source\MARS.Core.Attributes.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Cache.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Classes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Declarations.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Engine.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.MediaType.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyReader.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MessageBodyWriter.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Registry.pas"/>
@@ -196,7 +193,6 @@
                 <Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k240.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp240.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="C:\Librerie\TMS\TMSFMXCloudPack RS 10.1 Berlin\Win32\TMSFMXCloudPackPkgDEDXE10.bpl">TMS FMX Cloud Pack design time support</Excluded_Packages>
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="3">
