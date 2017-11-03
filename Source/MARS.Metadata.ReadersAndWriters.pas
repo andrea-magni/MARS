@@ -44,7 +44,6 @@ uses
 procedure TMARSMetadataJSONWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LJSON: TJSONObject;
   LMetadata: TMARSMetadata;
 begin

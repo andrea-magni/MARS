@@ -44,6 +44,16 @@ type
 {$endif}
   end;
 
+  JSONNameAttribute = class(TCustomAttribute)
+  private
+    FName: string;
+  public
+    constructor Create(const AName: string);
+    property Name: string read FName;
+  end;
+
+
+
   TToRecordFilterProc = reference to procedure (const AField: TRttiField;
     const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
 
@@ -497,6 +507,7 @@ var
   LFilterProc: TToJSONFilterProc;
   LAccept: Boolean;
   LValue: TValue;
+  LJSONName: string;
 begin
   LType := TRttiContext.Create.GetType(ARecord.TypeInfo);
 
@@ -512,8 +523,19 @@ begin
 
     if LAccept then
     begin
-      LValue := LField.GetValue(ARecord.GetReferenceToRawData);
-      WriteTValue(LField.Name, LValue);
+      LJSONName := LField.Name;
+      LField.HasAttribute<JSONNameAttribute>(
+        procedure (AAttr: JSONNameAttribute)
+        begin
+          LJSONName := AAttr.Name;
+        end
+      );
+      if LJSONName <> '' then
+      begin
+        LValue := LField.GetValue(ARecord.GetReferenceToRawData);
+
+        WriteTValue(LJSONName, LValue);
+      end;
     end;
   end;
 end;
@@ -687,6 +709,7 @@ var
   LRecordInstance: Pointer;
   LFilterProc: TToRecordFilterProc;
   LAccept: Boolean;
+  LJSONName: string;
 
   function GetRecordFilterProc: TToRecordFilterProc;
   var
@@ -720,8 +743,18 @@ begin
 
     if LAccept then
     begin
-      LValue := ReadValue(LField.Name, TValue.Empty, LField.FieldType, False);
-      LField.SetValue(LRecordInstance, LValue);
+      LJSONName := LField.Name;
+      LField.HasAttribute<JSONNameAttribute>(
+        procedure (AAttr: JSONNameAttribute)
+        begin
+          LJSONName := AAttr.Name;
+        end
+      );
+      if LJSONName <> '' then
+      begin
+        LValue := ReadValue(LJSONName, TValue.Empty, LField.FieldType, False);
+        LField.SetValue(LRecordInstance, LValue);
+      end;
     end;
   end;
 end;
@@ -802,6 +835,14 @@ procedure TJSONObjectHelper.WriteUnixTimeValue(const AName: string;
   const AValue: TDateTime);
 begin
   WriteInt64Value(AName, DateTimeToUnix(AValue));
+end;
+
+{ JSONNameAttribute }
+
+constructor JSONNameAttribute.Create(const AName: string);
+begin
+  inherited Create;
+  FName := AName;
 end;
 
 end.
