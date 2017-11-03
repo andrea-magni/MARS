@@ -123,7 +123,7 @@ begin
     Result.Parameters.CopyFrom(Parameters, LParametersSliceName);
 
     Applications.Add(
-      TMARSURL.CombinePath([BasePath, ABasePath])
+      TMARSURL.CombinePath([BasePath, ABasePath]).ToLower
       , Result
     );
   except
@@ -209,7 +209,7 @@ begin
         LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
     end;
 
-    if not FApplications.TryGetValue(LApplicationPath, LApplication) then
+    if not FApplications.TryGetValue(LApplicationPath.ToLower, LApplication) then
       raise EMARSEngineException.Create(Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath]), 404);
 
     LURL.BasePath := LApplicationPath;
