@@ -4,6 +4,7 @@ interface
 
 uses
   Classes, SysUtils, Generics.Collections
+, MARS.Core.JSON
 ;
 
 type
@@ -40,6 +41,23 @@ type
     ACurrency: Currency;
     ADate: TDateTime;
     AChar: Char;
+  end;
+
+  TSwingNamesRecord = record
+    [JSONName('Surname')]
+    Name: string;
+    [JSONName('Name')]
+    Surname: string;
+    constructor Create(const AName, ASurname: string);
+  end;
+
+  TKeepTrackOfValuesRecord = record
+    _AssignedValues: TArray<string>;
+    Name: string;
+    Surname: string;
+    Age: Integer;
+    PlaceOfBirth: string;
+    Mistery: TNamedIntegerRecord;
   end;
 
 
@@ -83,5 +101,13 @@ begin
   DateOfBirth := ADateOfBirth;
 end;
 
+
+{ TSwingNamesRecord }
+
+constructor TSwingNamesRecord.Create(const AName, ASurname: string);
+begin
+  Name := AName;
+  Surname := ASurname;
+end;
 
 end.

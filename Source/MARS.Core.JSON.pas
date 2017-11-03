@@ -111,7 +111,9 @@ type
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
     function ReadUnixTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
     function ReadValue(const AName: string; const ADefault: TValue;
-      const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue;
+      const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue; overload;
+    function ReadValue(const AName: string; const ADesiredType: TRttiType;
+      const ANameCaseSensitive: Boolean; out AValue: TValue): Boolean; overload;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -601,8 +603,8 @@ begin
 end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
-  const ADefault: TValue; const ADesiredType: TRttiType;
-  const ANameCaseSensitive: Boolean): TValue;
+  const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean;
+  out AValue: TValue): Boolean;
 var
   LValue: TJSONValue;
   LName: string;
@@ -611,9 +613,17 @@ begin
   if not ANameCaseSensitive then
     LName := GetExactPairName(LName);
 
+  Result := TryGetValue<TJSONValue>(LName, LValue);
+  if Result then
+    AValue := TJSONValueToTValue(LValue, ADesiredType);
+end;
+
+function TJSONObjectHelper.ReadValue(const AName: string;
+  const ADefault: TValue; const ADesiredType: TRttiType;
+  const ANameCaseSensitive: Boolean): TValue;
+begin
   Result := ADefault;
-  if TryGetValue<TJSONValue>(LName, LValue) then
-    Result := TJSONValueToTValue(LValue, ADesiredType);
+  ReadValue(AName, ADesiredType, ANameCaseSensitive, Result);
 end;
 
 class function TJSONObjectHelper.RecordToJSON(const ARecord: TValue;
@@ -710,6 +720,8 @@ var
   LFilterProc: TToRecordFilterProc;
   LAccept: Boolean;
   LJSONName: string;
+  LAssignedValuesField: TRttiField;
+  LAssignedValues: TArray<string>;
 
   function GetRecordFilterProc: TToRecordFilterProc;
   var
@@ -735,6 +747,13 @@ begin
   if not Assigned(LFilterProc) then
     LFilterProc := GetRecordFilterProc();
 
+  LAssignedValuesField := ARecordType.GetField('_AssignedValues');
+  if Assigned(LAssignedValuesField)
+     and not LAssignedValuesField.FieldType.IsDynamicArrayOf<string>
+  then
+    LAssignedValuesField := nil;
+  LAssignedValues := [];
+
   for LField in ARecordType.GetFields do
   begin
     LAccept := True;
@@ -752,11 +771,18 @@ begin
       );
       if LJSONName <> '' then
       begin
-        LValue := ReadValue(LJSONName, TValue.Empty, LField.FieldType, False);
-        LField.SetValue(LRecordInstance, LValue);
+        if ReadValue(LJSONName, LField.FieldType, True, LValue) then
+        begin
+          LField.SetValue(LRecordInstance, LValue);
+          LAssignedValues := LAssignedValues + [LField.Name];
+        end
+        else
+          LField.SetValue(LRecordInstance, TValue.Empty);
       end;
     end;
   end;
+  if Assigned(LAssignedValuesField) then
+    LAssignedValuesField.SetValue(LRecordInstance, TValue.From<TArray<string>>(LAssignedValues));
 end;
 
 function TJSONObjectHelper.ToRecord<T>(const AFilterProc: TToRecordFilterProc = nil): T;

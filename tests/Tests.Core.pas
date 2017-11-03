@@ -13,20 +13,31 @@ type
   TMARSCoreTest = class(TObject)
   private
   public
-    [Test]
-    procedure ParseBase();
+    [Test] procedure ParseBase();
 
-    [Test]
-    procedure QueryParams();
+    [Test] procedure QueryParams();
 
-    [Test]
-    procedure URLMatching();
-
+    [Test] procedure URLMatching();
   end;
+
+  [TestFixture('RecordToJSON')]
+  TMARSRecordToJSONTest = class(TObject)
+  private
+  public
+    [Test] procedure Basic;
+
+    [Test] procedure JSONNameAttribute;
+
+    [Test] procedure AssignedValues;
+  end;
+
 
 implementation
 
 { TMARSCoreTest }
+
+uses Tests.Records.Types,
+  MARS.Core.JSON;
 
 procedure TMARSCoreTest.ParseBase;
 var
@@ -169,6 +180,77 @@ begin
   finally
     LURL.Free;
   end;
+end;
+
+{ TMARSRecordToJSONTest }
+
+procedure TMARSRecordToJSONTest.AssignedValues;
+var
+  LRecord: TKeepTrackOfValuesRecord;
+  LJSONObj, LMisteryObj: TJSONObject;
+begin
+  LJSONObj := TJSONObject.Create;
+  try
+    LJSONObj.WriteStringValue('Name', 'Andrea');
+    LJSONObj.WriteStringValue('Surname', 'Magni');
+
+    LRecord := LJSONObj.ToRecord<TKeepTrackOfValuesRecord>();
+
+    Assert.AreEqual(string.Join(',', ['Name', 'Surname']), string.join(',', LRecord._AssignedValues));
+  finally
+    LJSONObj.Free;
+  end;
+
+  LJSONObj := TJSONObject.Create;
+  try
+    LJSONObj.WriteStringValue('Name', 'Andrea');
+    LJSONObj.WriteStringValue('Surname', 'Magni');
+    LMisteryObj := TJSONObject.Create;
+    try
+      LMisteryObj.WriteStringValue('Name', 'The Answer');
+      LMisteryObj.WriteIntegerValue('Value', 42);
+    except
+      LMisteryObj.Free;
+      raise;
+    end;
+    LJSONObj.AddPair('Mistery', LMisteryObj);
+
+    LRecord := LJSONObj.ToRecord<TKeepTrackOfValuesRecord>();
+
+    Assert.AreEqual(string.Join(',', ['Name', 'Surname', 'Mistery']), string.join(',', LRecord._AssignedValues));
+  finally
+    LJSONObj.Free;
+  end;
+
+
+end;
+
+procedure TMARSRecordToJSONTest.Basic;
+var
+  LJSONObj: TJSONObject;
+  LRecord: TNamedIntegerRecord;
+begin
+  LRecord := TNamedIntegerRecord.Create('The answer', 42);
+
+  LJSONObj := TJSONObject.RecordToJSON<TNamedIntegerRecord>(LRecord);
+
+  Assert.IsNotNull(LJSONObj);
+  Assert.AreEqual(LRecord.Value, LJSONObj.ReadIntegerValue('Value'));
+  Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Name'));
+end;
+
+procedure TMARSRecordToJSONTest.JSONNameAttribute;
+var
+  LJSONObj: TJSONObject;
+  LRecord: TSwingNamesRecord;
+begin
+  LRecord := TSwingNamesRecord.Create('Andrea', 'Magni');
+
+  LJSONObj := TJSONObject.RecordToJSON<TSwingNamesRecord>(LRecord);
+
+  Assert.IsNotNull(LJSONObj);
+  Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Surname'));
+  Assert.AreEqual(LRecord.Surname, LJSONObj.ReadStringValue('Name'));
 end;
 
 initialization

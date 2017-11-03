@@ -78,6 +78,8 @@ type
     class procedure FromDataSet(var ARecord: R; const ADataSet: TDataSet);
     class function DataSetToArray(const ADataSet: TDataSet): TArray<R>;
     class procedure SetFieldByName(var ARecord: R; const AFieldName: string; const AValue: TValue);
+    class function GetFieldByName(var ARecord: R; const AFieldName: string): TValue; overload;
+    class function GetFieldByName(var ARecord: R; const AFieldName: string; const ADefault: TValue): TValue; overload;
   end;
 
 function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
@@ -678,6 +680,25 @@ begin
         LRecordField.SetValue(@ARecord, TValue.FromVariant(LDataSetField.Value));
     end;
   end;
+end;
+
+class function TRecord<R>.GetFieldByName(var ARecord: R;
+  const AFieldName: string): TValue;
+begin
+  Result := GetFieldByName(ARecord, AFieldName, TValue.Empty);
+end;
+
+class function TRecord<R>.GetFieldByName(var ARecord: R;
+  const AFieldName: string; const ADefault: TValue): TValue;
+var
+  LRecordType: TRttiType;
+  LField: TRttiField;
+begin
+  Result := ADefault;
+  LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
+  LField := LRecordType.GetField(AFieldName);
+  if Assigned(LField) then
+    Result := LField.GetValue(@ARecord);
 end;
 
 class procedure TRecord<R>.SetFieldByName(var ARecord: R;
