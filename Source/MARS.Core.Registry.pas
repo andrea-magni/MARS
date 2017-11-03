@@ -92,7 +92,7 @@ function TMARSResourceRegistry.RegisterResource<T>(
   const AConstructorFunc: TFunc<TObject>): TMARSConstructorInfo;
 begin
   Result := TMARSConstructorInfo.Create(TClass(T), AConstructorFunc);
-  Self.Add(T.QualifiedClassName, Result);
+  Self.Add(T.QualifiedClassName.ToLower, Result);
 end;
 
 class destructor TMARSResourceRegistry.ClassDestroy;

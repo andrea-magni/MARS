@@ -63,8 +63,8 @@ type
     constructor Create(AWebRequest: TWebRequest); overload; virtual;
     destructor Destroy; override;
 
-    function MatchPath(AOtherURL: TMARSURL; const ACaseSensitive: Boolean = True): Boolean; overload; virtual;
-    function MatchPath(APath: string; const ACaseSensitive: Boolean = True): Boolean; overload; virtual;
+    function MatchPath(AOtherURL: TMARSURL; const ACaseSensitive: Boolean = False): Boolean; overload; virtual;
+    function MatchPath(APath: string; const ACaseSensitive: Boolean = False): Boolean; overload; virtual;
 
     function HasPathTokens(const AtLeast: Integer = 1): Boolean;
 
@@ -271,7 +271,7 @@ begin
   Result := Length(FPathTokens) >= AtLeast ;
 end;
 
-function TMARSURL.MatchPath(APath: string; const ACaseSensitive: Boolean = True): Boolean;
+function TMARSURL.MatchPath(APath: string; const ACaseSensitive: Boolean): Boolean;
 begin
   if ACaseSensitive then
     Result := StartsStr(APath, Path)
@@ -279,7 +279,7 @@ begin
     Result := StartsText(APath, Path);
 end;
 
-function TMARSURL.MatchPath(AOtherURL: TMARSURL; const ACaseSensitive: Boolean = True): Boolean;
+function TMARSURL.MatchPath(AOtherURL: TMARSURL; const ACaseSensitive: Boolean): Boolean;
 var
   LIndex: Integer;
   LToken, LOtherToken: string;

@@ -18,6 +18,10 @@ type
 
     [Test]
     procedure QueryParams();
+
+    [Test]
+    procedure URLMatching();
+
   end;
 
 implementation
@@ -149,6 +153,22 @@ begin
     LURL.Free;
   end;
 
+end;
+
+procedure TMARSCoreTest.URLMatching;
+var
+  LURL: TMARSURL;
+begin
+  LURL := TMARSURL.Create('http://localhost:8080/rest/default/helloworld');
+  try
+    Assert.IsTrue(LURL.MatchPath('/rest/default'), 'MatchPath /rest/default');
+    Assert.IsTrue(LURL.MatchPath('/rest/Default'), 'MatchPath /rest/Default');
+    Assert.IsTrue(LURL.MatchPath('/Rest/default'), 'MatchPath /rest/Default');
+    Assert.IsTrue(LURL.MatchPath('/Rest/Default'), 'MatchPath /rest/Default');
+    Assert.IsTrue(LURL.MatchPath('/REST/DEFAULT'), 'MatchPath /rest/default');
+  finally
+    LURL.Free;
+  end;
 end;
 
 initialization

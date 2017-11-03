@@ -72,12 +72,14 @@ function TMARSApplication.AddResource(AResource: string): Boolean;
       procedure (AAttribute: PathAttribute)
       var
         LURL: TMARSURL;
+        LResourceName: string;
       begin
         LURL := TMARSURL.CreateDummy(AAttribute.Value);
         try
-          if LURL.HasPathTokens and not FResourceRegistry.ContainsKey(LURL.PathTokens[0]) then
+          LResourceName := LURL.PathTokens[0].ToLower;
+          if LURL.HasPathTokens and not FResourceRegistry.ContainsKey(LResourceName) then
           begin
-            FResourceRegistry.Add(LURL.PathTokens[0], AInfo.Clone);
+            FResourceRegistry.Add(LResourceName, AInfo.Clone);
             LResult := True;
           end;
         finally
@@ -91,24 +93,27 @@ function TMARSApplication.AddResource(AResource: string): Boolean;
 var
   LRegistry: TMARSResourceRegistry;
   LInfo: TMARSConstructorInfo;
-  LKey: string;
+  LKey, LKeyToLower: string;
+  LResourceToLower: string;
 begin
   Result := False;
   LRegistry := TMARSResourceRegistry.Instance;
+  LResourceToLower := AResource.ToLower;
 
   if IsMask(AResource) then // has wildcards and so on...
   begin
     for LKey in LRegistry.Keys.ToArray do
     begin
-      if MatchesMask(LKey, AResource) then
+      LKeyToLower := LKey.ToLower;
+      if MatchesMask(LKeyToLower, LResourceToLower) then
       begin
-        if LRegistry.TryGetValue(LKey, LInfo) and AddResourceToApplicationRegistry(LInfo) then
+        if LRegistry.TryGetValue(LKeyToLower, LInfo) and AddResourceToApplicationRegistry(LInfo) then
           Result := True;
       end;
     end;
   end
   else // exact match
-    if LRegistry.TryGetValue(AResource, LInfo) then
+    if LRegistry.TryGetValue(LResourceToLower, LInfo) then
       Result := AddResourceToApplicationRegistry(LInfo);
 end;
 

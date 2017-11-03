@@ -617,7 +617,7 @@ end;
 
 procedure TMARSActivation.CheckResource;
 begin
-  if not Application.Resources.TryGetValue(URL.Resource, FConstructorInfo) then
+  if not Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo) then
     raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 end;
 
