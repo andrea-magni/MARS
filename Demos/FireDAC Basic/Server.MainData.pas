@@ -28,11 +28,6 @@ type
     FDGUIxWaitCursor1: TFDGUIxWaitCursor;
   private
   public
-//    [GET, Path('/standard')]
-//    function StandardDataSet: TArray<TDataset>;
-
-//    [GET, Path('/employee')]
-//    function EmployeeDataSet: TDataSet;
   end;
 
 implementation
@@ -45,16 +40,6 @@ uses
   MARS.Core.Registry;
 
 { TMainDataResource }
-
-//function TMainDataResource.EmployeeDataSet: TDataSet;
-//begin
-//  Result := Employee;
-//end;
-//
-//function TMainDataResource.StandardDataSet: TArray<TDataset>;
-//begin
-//  Result := [employee];
-//end;
 
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<TMainDataResource>;

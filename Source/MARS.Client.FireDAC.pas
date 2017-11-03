@@ -193,7 +193,6 @@ end;
 function TMARSFDResource.ApplyUpdatesHadErrors(const ADataSetName: string;
   var AErrorCount: Integer; var AErrorText: TArray<string>): Boolean;
 var
-  LElement: TJSONValue;
   LRes: TMARSFDApplyUpdatesRes;
 begin
   Result := False;
@@ -258,7 +257,7 @@ constructor TMARSFDResource.Create(AOwner: TComponent);
 begin
   inherited;
   FResourceDataSets := TMARSFDResourceDatasets.Create(TMARSFDResourceDatasetsItem);
-  SpecificAccept := TMediaType.APPLICATION_JSON_FireDAC;
+  SpecificAccept := TMediaType.APPLICATION_JSON_FireDAC + ',' + TMediaType.APPLICATION_JSON;
 end;
 
 destructor TMARSFDResource.Destroy;
