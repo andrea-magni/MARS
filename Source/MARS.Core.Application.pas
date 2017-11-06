@@ -76,12 +76,16 @@ function TMARSApplication.AddResource(AResource: string): Boolean;
       begin
         LURL := TMARSURL.CreateDummy(AAttribute.Value);
         try
-          LResourceName := LURL.PathTokens[0].ToLower;
-          if LURL.HasPathTokens and not FResourceRegistry.ContainsKey(LResourceName) then
+          LResourceName := '';
+          if LURL.HasPathTokens then
+            LResourceName := LURL.PathTokens[0].ToLower;
+
+          if not FResourceRegistry.ContainsKey(LResourceName) then
           begin
             FResourceRegistry.Add(LResourceName, AInfo.Clone);
             LResult := True;
           end;
+
         finally
           LURL.Free;
         end;
