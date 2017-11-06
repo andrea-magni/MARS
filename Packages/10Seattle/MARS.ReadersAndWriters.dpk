@@ -43,7 +43,8 @@ requires
 
 contains
   MARS.Core.MessageBodyWriters in '..\..\Source\MARS.Core.MessageBodyWriters.pas',
-  MARS.Data.MessageBodyWriters in '..\..\Source\MARS.Data.MessageBodyWriters.pas';
+  MARS.Data.MessageBodyWriters in '..\..\Source\MARS.Data.MessageBodyWriters.pas',
+  MARS.Core.MessageBodyReaders in '..\..\Source\MARS.Core.MessageBodyReaders.pas';
 
 end.
 

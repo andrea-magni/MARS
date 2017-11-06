@@ -229,11 +229,14 @@ function TStringReader.ReadFrom(
 var
   LType: TRttiType;
   LSL: TStringList;
+  {$ifdef Delphi10Berlin_UP}
   LBytesStream: TBytesStream;
+  {$endif}
 begin
   Result := TValue.Empty;
   LType := ADestination.GetRttiType;
 
+  {$ifdef Delphi10Berlin_UP}
   LBytesStream := TBytesStream.Create(AInputData);
   try
     LSL := TStringList.Create;
@@ -249,6 +252,18 @@ begin
   finally
     LBytesStream.Free;
   end;
+  {$else}
+  LSL := TStringList.Create;
+  try
+    LSL.Text := string(AInputData);
+    if LType.IsDynamicArrayOf<string> then
+      Result := TValue.From<TArray<string>>( LSL.ToStringArray )
+    else if LType.Handle = TypeInfo(string) then
+      Result := LSL.Text;
+  finally
+    LSL.Free;
+  end;
+ {$endif}
 end;
 
 
