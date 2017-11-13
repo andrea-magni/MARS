@@ -164,7 +164,8 @@
         <DCCReference Include="Tests.MessageBodyWriters.pas"/>
         <DCCReference Include="Tests.MessageBodyReaders.pas"/>
         <DCCReference Include="Tests.Records.Types.pas"/>
-        <DCCReference Include="Test.FireDAC.pas"/>
+        <DCCReference Include="Tests.FireDAC.pas"/>
+        <DCCReference Include="Tests.JWT_JOSE.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

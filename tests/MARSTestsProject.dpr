@@ -13,9 +13,9 @@ uses
   Tests.MessageBodyWriters in 'Tests.MessageBodyWriters.pas',
   Tests.MessageBodyReaders in 'Tests.MessageBodyReaders.pas',
   Tests.Records.Types in 'Tests.Records.Types.pas',
-  Test.FireDAC in 'Test.FireDAC.pas';
+  Tests.FireDAC in 'Tests.FireDAC.pas',
+  Tests.JWT_JOSE in 'Tests.JWT_JOSE.pas';
 
 begin
-  TestInsight.DUnitX.RunRegisteredTests;
-  exit;
+  RunRegisteredTests;
 end.
