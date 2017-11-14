@@ -168,6 +168,7 @@
         <DCCReference Include="..\..\Source\MARS.Core.Exceptions.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Declarations.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.MediaType.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.JWT.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

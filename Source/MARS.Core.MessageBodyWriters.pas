@@ -46,7 +46,8 @@ type
   end;
 
   [Produces(TMediaType.APPLICATION_OCTET_STREAM)
-  , Produces(TMediaType.WILDCARD)]
+  , Produces(TMediaType.WILDCARD)
+  , Produces('data:image/png;base64')]
   TStreamValueWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -175,7 +176,12 @@ begin
   if (not AValue.IsEmpty) and AValue.IsInstanceOf(TStream) then
   begin
     LStream := AValue.AsObject as TStream;
-    if Assigned(LStream) then
+    if not Assigned(LStream) then
+      Exit;
+
+    if AMediaType.Matches('data:image/png;base64') then
+      StringToStream(AOutputStream, StreamToBase64(LStream), TEncoding.ASCII)
+    else
       AOutputStream.CopyFrom(LStream, LStream.Size);
   end;
 end;

@@ -49,7 +49,8 @@ contains
   MARS.Core.URL in '..\..\Source\MARS.Core.URL.pas',
   MARS.Core.Exceptions in '..\..\Source\MARS.Core.Exceptions.pas',
   MARS.Core.Declarations in '..\..\Source\MARS.Core.Declarations.pas',
-  MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas';
+  MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas',
+  MARS.Utils.JWT in '..\..\Source\MARS.Utils.JWT.pas';
 
 end.
 

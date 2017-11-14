@@ -41,6 +41,7 @@ requires
   DbxCommonDriver,
   dsnap,
   MARS.Utils,
+  MARS.mORMot,
   MARS.JOSE;
 
 contains

@@ -49,8 +49,10 @@ contains
   JOSE.Cryptography.RSA in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Cryptography.RSA.pas',
   JOSE.Encoding.Base64 in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas',
   JOSE.Hashing.HMAC in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas',
-  JOSE.Types.Bytes in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas';
+  JOSE.Types.Bytes in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas',
+  MARS.Utils.JWT.JOSE in '..\..\Source\MARS.Utils.JWT.JOSE.pas';
 
 end.
+
 
 
