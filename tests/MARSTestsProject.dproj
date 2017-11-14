@@ -166,6 +166,9 @@
         <DCCReference Include="Tests.Records.Types.pas"/>
         <DCCReference Include="Tests.FireDAC.pas"/>
         <DCCReference Include="Tests.JWT_JOSE.pas"/>
+        <DCCReference Include="Tests.JWT_mORMot.pas"/>
+        <DCCReference Include="..\Source\MARS.Utils.JWT.JOSE.pas"/>
+        <DCCReference Include="..\Source\MARS.Utils.JWT.mORMot.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

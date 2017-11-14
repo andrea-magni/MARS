@@ -23,17 +23,17 @@ type
 //    [TearDown]
 //    procedure TearDown;
 
-    [Test]
+    [Testx]
     procedure BuildOne;
 
-    [Test]
+    [Testx]
     procedure VerifyOne;
   end;
 
 implementation
 
 uses
- MARS.Utils.Parameters, MARS.Core.Token
+ MARS.Utils.Parameters, MARS.Core.Token, MARS.Utils.JWT
 ;
 
 { TMARSJWTJOSETest }
@@ -45,9 +45,9 @@ var
 begin
   LParams := TMARSParameters.Create('');
   try
-    LParams.Values[TMARSToken.JWT_SECRET_PARAM] := DUMMY_SECRET;
-    LParams.Values[TMARSToken.JWT_ISSUER_PARAM] := 'MARS-Curiosity';
-    LParams.Values[TMARSToken.JWT_DURATION_PARAM] := 1;
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
+    LParams.Values[JWT_DURATION_PARAM] := 1;
 
     LToken := TMARSToken.Create('', LParams);
     try
@@ -78,9 +78,9 @@ begin
 
   LParams := TMARSParameters.Create('');
   try
-    LParams.Values[TMARSToken.JWT_SECRET_PARAM] := DUMMY_SECRET;
-    LParams.Values[TMARSToken.JWT_ISSUER_PARAM] := 'MARS-Curiosity';
-    LParams.Values[TMARSToken.JWT_DURATION_PARAM] := 1;
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
+    LParams.Values[JWT_DURATION_PARAM] := 1;
 
     LToken := TMARSToken.Create(LTokenString, LParams);
     try

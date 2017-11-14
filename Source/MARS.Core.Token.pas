@@ -10,39 +10,24 @@ unit MARS.Core.Token;
 interface
 
 uses
-    SysUtils, Classes, Generics.Collections, SyncObjs, Rtti
-  , HTTPApp, IdGlobal
+  SysUtils, Classes, Generics.Collections, SyncObjs, Rtti
+, HTTPApp, IdGlobal
 
-  , MARS.Core.URL
-  , MARS.Utils.Parameters
+, MARS.Core.URL
+, MARS.Utils.Parameters
 
-  , JOSE.Types.Bytes, JOSE.Core.Builder
-  , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA
-  ;
+{$IFDEF MSWINDOWSXXX}
+, MARS.Utils.JWT.mORMot
+{$ELSE}
+, MARS.Utils.JWT.JOSE
+{$ENDIF}
+;
 
 type
   TMARSToken = class
   public
-    const JWT_USERNAME = 'UserName';
-    const JWT_ROLES = 'Roles';
-
-    const JWT_ISSUER_PARAM = 'JWT.Issuer';
-    const JWT_ISSUER_PARAM_DEFAULT = 'MARS-Curiosity';
-    const JWT_SECRET_PARAM = 'JWT.Secret';
-    const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
-    const JWT_COOKIEENABLED_PARAM = 'JWT.CookieEnabled';
-    const JWT_COOKIEENABLED_PARAM_DEFAULT = true;
-    const JWT_COOKIENAME_PARAM = 'JWT.CookieName';
-    const JWT_COOKIENAME_PARAM_DEFAULT = 'access_token';
-    const JWT_COOKIEDOMAIN_PARAM = 'JWT.CookieDomain';
-    const JWT_COOKIEPATH_PARAM = 'JWT.CookiePath';
-    const JWT_DURATION_PARAM = 'JWT.Duration';
-    const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
-    const JWT_COOKIESECURE_PARAM = 'JWT.CookieSecure';
-    const JWT_COOKIESECURE_PARAM_DEFAULT = false;
   private
     FToken: string;
-    FDuration: TDateTime;
     FIsVerified: Boolean;
     FClaims: TMARSParameters;
     FCookieEnabled: Boolean;
@@ -52,13 +37,16 @@ type
     FCookieSecure: Boolean;
     FRequest: TWebRequest;
     FResponse: TWebResponse;
-    FIssuer: string;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetExpiration: TDateTime;
     function GetIssuedAt: TDateTime;
     function GetRoles: TArray<string>;
     procedure SetRoles(const AValue: TArray<string>);
+    function GetDuration: TDateTime;
+    function GetIssuer: string;
+    procedure SetIssuer(const AValue: string);
+    procedure SetDuration(const AValue: TDateTime);
   protected
     function GetTokenFromBearer(const ARequest: TWebRequest): string; virtual;
     function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
@@ -89,16 +77,14 @@ type
     property IsExpired: Boolean read GetIsExpired;
     property Claims: TMARSParameters read FClaims;
     property Expiration: TDateTime read GetExpiration;
-    property Issuer: string read FIssuer;
+    property Issuer: string read GetIssuer;
     property IssuedAt: TDateTime read GetIssuedAt;
-    property Duration: TDateTime read FDuration;
+    property Duration: TDateTime read GetDuration;
     property CookieEnabled: Boolean read FCookieEnabled;
     property CookieName: string read FCookieName;
     property CookieDomain: string read FCookieDomain;
     property CookiePath: string read FCookiePath;
     property CookieSecure: Boolean read FCookieSecure;
-
-    class procedure WarmUpJWT;
   end;
 
 implementation
@@ -113,42 +99,18 @@ uses
   {$endif}
   , MARS.Core.Utils
   , MARS.Utils.Parameters.JSON
+  , MARS.Utils.JWT
   , MARS.Core.Token.InjectionService
   ;
-
-{
-  Dummy procedure to warm up the JOSE JWT library.
-  Call this procedure once (for example at server startup) to avoid the
-  first real request to pay the penalty.
-  (At the moment, 2016 Feb. 15th, it amounts up to a couple of seconds).
-}
-class procedure TMARSToken.WarmUpJWT;
-var
-  LParams: TMARSParameters;
-  LToken: TMARSToken;
-begin
-  LParams := TMARSParameters.Create('');
-  try
-    LParams.Values[TMARSToken.JWT_SECRET_PARAM] := 'dummy_secret';
-    LToken := TMARSToken.Create('', LParams);
-    try
-      LToken.Build('dummy_secret');
-    finally
-      LToken.Free;
-    end;
-  finally
-    LParams.Free;
-  end;
-end;
 
 { TMARSToken }
 
 constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSParameters);
 begin
   inherited Create;
-  FIssuer := AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
-  FDuration := AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended;
   FClaims := TMARSParameters.Create('');
+  SetIssuer(AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString);
+  SetDuration(AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended);
   Load(AToken, AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString);
 end;
 
@@ -179,11 +141,22 @@ begin
   inherited;
 end;
 
+function TMARSToken.GetDuration: TDateTime;
+var
+  LDurationValue: TDateTime;
+begin
+  LDurationValue := FClaims.ByName(JWT_DURATION_CLAIM, 0).AsExtended;
+  if LDurationValue > 0 then
+    Result := LDurationValue
+  else
+    Result := 0.0;
+end;
+
 function TMARSToken.GetExpiration: TDateTime;
 var
   LUnixValue: Int64;
 begin
-  LUnixValue := FClaims.ByName(TReservedClaimNames.EXPIRATION, 0).AsInt64;
+  LUnixValue := FClaims.ByName(JWT_EXPIRATION_CLAIM, 0).AsInt64;
   if LUnixValue > 0 then
     Result := UnixToDateTime(LUnixValue {$ifdef DelphiXE7_UP}, False {$endif})
   else
@@ -194,11 +167,16 @@ function TMARSToken.GetIssuedAt: TDateTime;
 var
   LUnixValue: Int64;
 begin
-  LUnixValue := FClaims.ByName(TReservedClaimNames.ISSUED_AT, 0).AsInt64;
+  LUnixValue := FClaims.ByName(JWT_ISSUED_AT_CLAIM, 0).AsInt64;
   if LUnixValue > 0 then
     Result := UnixToDateTime(LUnixValue {$ifdef DelphiXE7_UP}, False {$endif})
   else
     Result := 0.0;
+end;
+
+function TMARSToken.GetIssuer: string;
+begin
+  Result := FClaims[JWT_ISSUER_CLAIM].AsString;
 end;
 
 function TMARSToken.GetRoles: TArray<string>;
@@ -301,68 +279,36 @@ end;
 
 procedure TMARSToken.Build(const ASecret: string);
 var
-  LJWT: TJWT;
-  LSigner: TJWS;
-  LKey: TJWK;
   LIssuedAt: TDateTime;
 begin
-  LJWT := TJWT.Create(TJWTClaims);
-  try
-    LIssuedAt := Now;
-    FClaims[TReservedClaimNames.ISSUER] := FIssuer;
-    FClaims[TReservedClaimNames.ISSUED_AT] := DateTimeToUnix(LIssuedAt {$ifdef DelphiXE7_UP}, False{$endif});
-    FClaims[TReservedClaimNames.EXPIRATION] := DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE7_UP}, False{$endif});
-    FClaims.SaveToJSON(LJWT.Claims.JSON);
+  LIssuedAt := Now;
 
-    LSigner := TJWS.Create(LJWT);
-    try
-      LKey := TJWK.Create(ASecret);
-      try
-        LSigner.Sign(LKey, HS256);
+  FClaims[JWT_ISSUED_AT_CLAIM] := DateTimeToUnix(LIssuedAt {$ifdef DelphiXE7_UP}, False{$endif});
+  FClaims[JWT_EXPIRATION_CLAIM] := DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE7_UP}, False{$endif});
 
-        FToken := LSigner.CompactToken;
-        FIsVerified := True;
-      finally
-        LKey.Free;
-      end;
-    finally
-      LSigner.Free;
-    end;
-  finally
-    LJWT.Free;
-  end;
+  FToken := BuildJWTToken(ASecret, FClaims);
+  FIsVerified := True;
 end;
 
 procedure TMARSToken.Load(const AToken, ASecret: string);
-var
-  LKey: TJWK;
-  LJWT: TJWT;
 begin
-  Clear;
+  FIsVerified := False;
+  FToken := AToken;
+
   if AToken <> '' then
-  begin
-    FToken := AToken;
-    LKey := TJWK.Create(ASecret);
-    try
-      LJWT := TJOSE.Verify(LKey, Token);
-      if Assigned(LJWT) then
-      begin
-        try
-          FIsVerified := LJWT.Verified;
-          if FIsVerified then
-            FClaims.LoadFromJSON(LJWT.Claims.JSON)
-          else
-            Clear;
-        finally
-          LJWT.Free;
-        end;
-      end;
-    finally
-      LKey.Free;
-    end;
-  end;
+    FIsVerified := LoadJWTToken(AToken, ASecret, FClaims);
 end;
 
+
+procedure TMARSToken.SetDuration(const AValue: TDateTime);
+begin
+  FClaims[JWT_DURATION_CLAIM] := AValue;
+end;
+
+procedure TMARSToken.SetIssuer(const AValue: string);
+begin
+  FClaims[JWT_ISSUER_CLAIM] := AValue;
+end;
 
 procedure TMARSToken.SetRoles(const AValue: TArray<string>);
 begin
@@ -395,21 +341,15 @@ begin
       begin
         LContent.Values[CookieName] := Token;
 
-        Response.SetCookieField(LContent
-          , CookieDomain, CookiePath
-          , Expiration
-          , CookieSecure
-        );
+        Response.SetCookieField(
+          LContent, CookieDomain, CookiePath, Expiration, CookieSecure);
       end
       else begin
         if Request.CookieFields.Values[CookieName] <> '' then
         begin
           LContent.Values[CookieName] := 'dummy';
-          Response.SetCookieField(LContent
-            , CookieDomain, CookiePath
-            , Now-1
-            , CookieSecure
-          );
+          Response.SetCookieField(
+            LContent, CookieDomain, CookiePath, Now-1, CookieSecure);
         end;
       end;
     finally

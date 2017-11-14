@@ -54,6 +54,7 @@ implementation
 
 uses
   DateUtils
+, MARS.Utils.JWT
 ;
 
 { TMARSTokenResource }
@@ -99,9 +100,7 @@ begin
     if Authenticate(AUserName, APassword) then
     begin
       Token.Build(
-        App.Parameters.ByName(
-          TMARSToken.JWT_SECRET_PARAM
-        , TMARSToken.JWT_SECRET_PARAM_DEFAULT).AsString
+        App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
       );
       Result := Token;
     end
