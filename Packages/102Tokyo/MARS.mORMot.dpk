@@ -1,5 +1,7 @@
 package MARS.mORMot;
 
+{$warn DUPLICATE_CTOR_DTOR OFF} // avoid W1029 unneeded hints
+
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}

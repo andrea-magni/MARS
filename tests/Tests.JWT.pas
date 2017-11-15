@@ -1,4 +1,4 @@
-unit Tests.JWT_mORMot;
+unit Tests.JWT;
 
 interface
 
@@ -9,17 +9,12 @@ uses
 ;
 
 type
-  [TestFixture('JWT_mORMot')]
-  TMARSJWTmORMotTest = class(TObject)
+  [TestFixture('JWT')]
+  TMARSJWT = class(TObject)
   private
   protected
   public
     const DUMMY_SECRET = 'dummy_secret';
-
-    [Setup]
-    procedure Setup;
-//    [TearDown]
-//    procedure TearDown;
 
     [Test]
     procedure BuildOne;
@@ -37,7 +32,9 @@ uses
 
 { TMARSJWTmORMotTest }
 
-procedure TMARSJWTmORMotTest.BuildOne;
+procedure TMARSJWT.BuildOne;
+const
+  DUMMY_DURATION = 1;
 var
   LParams: TMARSParameters;
   LToken: TMARSToken;
@@ -46,13 +43,15 @@ begin
   try
     LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
     LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
-    LParams.Values[JWT_DURATION_PARAM] := 1;
+    LParams.Values[JWT_DURATION_PARAM] := DUMMY_DURATION;
 
     LToken := TMARSToken.Create('', LParams);
     try
       LToken.UserName := 'Andrea1';
       LToken.Roles := ['standard'];
       LToken.Claims.Values['LANGUAGE_ID'] := 1;
+      LToken.Claims.Values['Claim1'] := 'Primo';
+      LToken.Claims.Values['Claim2'] := 123;
       LToken.Build(DUMMY_SECRET);
       Assert.IsNotEmpty(LToken.Token);
 
@@ -61,7 +60,7 @@ begin
       Assert.IsFalse(LToken.IsExpired, 'Token expired');
 
       if LToken.IssuedAt > 0 then
-        Assert.IsTrue(SameValue(LToken.IssuedAt + 1, LToken.Expiration), 'IssuedAt [' + DateTimeToStr(LToken.IssuedAt)
+        Assert.IsTrue(SameValue(LToken.IssuedAt + LToken.Duration, LToken.Expiration), 'IssuedAt [' + DateTimeToStr(LToken.IssuedAt)
           + '] + Duration [' + IntToStr(Round(LToken.Duration * 24 * 60 * 60))+ ' seconds] = Expiration [' + DateTimeToStr(LToken.Expiration)+ ']');
       Assert.IsTrue(1 = LToken.Claims.Values['LANGUAGE_ID'].AsInteger, 'Custom claims 1');
 
@@ -77,13 +76,22 @@ begin
   end;
 end;
 
-procedure TMARSJWTmORMotTest.VerifyOne;
+procedure TMARSJWT.VerifyOne;
 var
   LParams: TMARSParameters;
   LToken: TMARSToken;
   LTokenString: string;
 begin
-  LTokenString := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJDbGFpbTEiOiJQcmltbyIsIkNsYWltMiI6MTIzLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsImV4cCI6MTUxMDY1NTMzN30.5h-EQSNidnB64ODlwZwt059Pjkfkz7cJ8zfjOSLZVmc';
+  // beware: will expire one million days after Nov 15th, 2017 that is somewhere around Thu, 13 Oct 4755 :-D
+  LTokenString := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDc0MTM3MSwiZXhwIjoyMDExMzk1NDUxLCJDbGFpbTIiOjEyMywiVXNlck5hbWUiOiJBbmRyZWExIiwiTEFOR1VBR0VfSUQiOjEsImlzcyI6Ik1BUlMtQ3VyaW9zaXR5IiwiQ2xhaW0xIjoiUHJpbW8ifQ'
+    +'.k-p3NEEBWXYlf4ilaZn8fE3ufxN29ezMPg8k_HTQg9c';
+
+  {$IFDEF JOSE-JWT}
+  LTokenString := 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'
+    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0='
+    +'.OacKD-duGSLeQA21eEzPYlRaIKX7fCWs54GyVpbHC0E=';
+  {$IFEND}
 
   LParams := TMARSParameters.Create('');
   try
@@ -92,9 +100,10 @@ begin
     LToken := TMARSToken.Create(LTokenString, LParams);
     try
       Assert.IsTrue(LToken.Token <> '', 'Token is not empty');
+      Assert.IsFalse(LToken.IsExpired, 'Token expired');
+      Assert.IsTrue(LToken.IsVerified, 'Token verified');
       Assert.AreEqual('MARS-Curiosity', LToken.Issuer, 'Issuer');
-      if LToken.IssuedAt > 0 then
-        Assert.IsTrue(SameValue(LToken.IssuedAt + 1, LToken.Expiration), 'IssuedAt + Duration = Expiration');
+
       Assert.IsTrue('Primo' = LToken.Claims.Values['Claim1'].AsString, 'Custom claims 1');
       Assert.IsTrue(123 = LToken.Claims.Values['Claim2'].AsInteger, 'Custom claims 2');
     finally
@@ -105,17 +114,7 @@ begin
   end;
 end;
 
-procedure TMARSJWTmORMotTest.Setup;
-begin
-//  BuildOne;
-end;
-
-//procedure TMARSJWTmORMotTest.TearDown;
-//begin
-//
-//end;
-
 initialization
-  TDUnitX.RegisterTestFixture(TMARSJWTmORMotTest);
+  TDUnitX.RegisterTestFixture(TMARSJWT);
 
 end.

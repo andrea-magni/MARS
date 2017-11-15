@@ -16,9 +16,11 @@ uses
 , MARS.Core.URL
 , MARS.Utils.Parameters
 
-{$IFDEF MSWINDOWS}
+{$IFDEF mORMot-JWT}
 , MARS.Utils.JWT.mORMot
-{$ELSE}
+{$ENDIF}
+
+{$IFDEF JOSE-JWT}
 , MARS.Utils.JWT.JOSE
 {$ENDIF}
 ;

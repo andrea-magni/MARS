@@ -27,27 +27,9 @@ uses
 , MARS.Utils.JWT, MARS.Core.JSON
 ;
 
-function DateTimeToMinutes(const ADateTime: TDateTime): Integer;
+function DateTimeToMinutes(const ADateTime: TDateTime): Integer; inline;
 begin
   Result := Round(ADateTime * 24 * 60);
-end;
-
-function MARSParametersToArrayOfConsts(const AParameters: TMARSParameters): TTVarRecDynArray;
-var
-  LName: string;
-  LValue: TValue;
-  LIndex: Integer;
-  LValueVariant: Variant;
-begin
-  SetLength(Result, AParameters.Count * 2);
-  for LIndex := 0 to AParameters.Count - 1 do begin
-    LName :=  AParameters.ParamNames[LIndex];
-    LValue := AParameters.Values[LName];
-    LValueVariant := LValue.AsVariant;
-
-
-
-  end;
 end;
 
 function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string;
@@ -57,15 +39,12 @@ var
   LClaimsValues: TDocVariantData;
   LArray: TTVarRecDynArray;
   LClaim: TPair<string, TValue>;
-
 begin
   LJWT := TJWTHS256.Create(
     StringToUTF8(ASecret), 0, [jrcIssuer], []//, 60
   , DateTimeToMinutes(AClaims.ByName(JWT_DURATION_CLAIM, 0).AsExtended)
   );
   try
-
-    TDocVariant.New(Variant(LClaimsValues));
     LClaimsValues.Init([], dvArray);
     for LClaim in AClaims do
     begin
@@ -106,7 +85,7 @@ begin
     if jrcAudience in LContent.claims then
       AClaims.Values[JWT_AUDIENCE_CLAIM] := LContent.reg[TJWTClaim.jrcAudience];
     if jrcExpirationTime in LContent.claims then
-      AClaims.Values[JWT_EXPIRATION_CLAIM] := StrToIntDef(LContent.reg[TJWTClaim.jrcExpirationTime], 0);
+      AClaims.Values[JWT_EXPIRATION_CLAIM] := StrToInt64Def(LContent.reg[TJWTClaim.jrcExpirationTime], 0);
     if jrcIssuedAt in LContent.claims then
       AClaims.Values[JWT_ISSUED_AT_CLAIM] := StrToIntDef(LContent.reg[TJWTClaim.jrcIssuedAt], 0);
     if jrcIssuer in LContent.claims then
@@ -114,7 +93,7 @@ begin
     if jrcJwtID in LContent.claims then
       AClaims.Values[JWT_JWT_ID_CLAIM] := LContent.reg[TJWTClaim.jrcJwtID];
     if jrcNotBefore in LContent.claims then
-      AClaims.Values[JWT_NOT_BEFORE_CLAIM] := StrToIntDef(LContent.reg[TJWTClaim.jrcNotBefore], 0);
+      AClaims.Values[JWT_NOT_BEFORE_CLAIM] := StrToInt64Def(LContent.reg[TJWTClaim.jrcNotBefore], 0);
     if jrcSubject in LContent.claims then
       AClaims.Values[JWT_SUBJECT_CLAIM] := LContent.reg[TJWTClaim.jrcSubject];
 

@@ -138,10 +138,13 @@ var
   LErrorCode: Integer;
   LValueDouble: Double;
   LValueBool: Boolean;
+  LValueInt64: Int64;
 begin
   Val(AString, LValueInteger, LErrorCode);
   if LErrorCode = 0 then
     Result := LValueInteger
+  else if TryStrToInt64(AString, LValueInt64) then
+    Result := LValueInt64
   else if TryStrToFloat(AString, LValueDouble) then
     Result := LValueDouble
   else if TryStrToBool(AString, LValueBool) then
