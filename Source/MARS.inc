@@ -140,3 +140,9 @@
   {$define Delphi10Berlin_UP}
   {$define Delphi10Tokyo_UP}  
 {$ifend}
+
+{$ifdef MSWINDOWS}
+  {$define mORMot-JWT}
+{$else}
+  {$define JOSE-JWT}
+{$ifend}

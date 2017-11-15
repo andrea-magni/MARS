@@ -45,7 +45,7 @@ uses
   , MARS.Core.Token
   , MARS.Core.JSON
   , MARS.Core.MessageBodyWriters
-  , MARS.Utils.Parameters.JSON
+  , MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
   ;
 
 
@@ -70,7 +70,7 @@ begin
         LJSONObj.WriteDateTimeValue('Expiration', LToken.Expiration);
       if LToken.IssuedAt > 0 then
         LJSONObj.WriteDateTimeValue('IssuedAt', LToken.IssuedAt);
-      if LToken.Claims.Count > 0  then
+      if LToken.IsVerified and not LToken.Claims.IsEmpty  then
         LJSONObj.AddPair('Claims', LToken.Claims.SaveToJSON);
 
       TJSONValueWriter.WriteJSONValue(LJSONObj, AMediaType, AOutputStream, AActivation);

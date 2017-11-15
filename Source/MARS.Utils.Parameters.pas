@@ -21,8 +21,9 @@ type
     const SLICE_SEPARATOR = '.';
 
     procedure Assign(const ASource: TMARSParametersSlice);
-    function GetCount: Integer;
-    function GetParamNames: TArray<string>;
+    function GetCount: Integer; inline;
+    function GetIsEmpty: Boolean; inline;
+    function GetParamNames: TArray<string>; inline;
     function GetSliceNames: TArray<string>;
     function GetValue(AName: string): TValue;
     procedure SetValue(AName: string; const Value: TValue);
@@ -43,6 +44,7 @@ type
     function ToString: string; override;
 
     property Count: Integer read GetCount;
+    property IsEmpty: Boolean read GetIsEmpty;
     property Name: string read FName;
     property ParamNames: TArray<string> read GetParamNames;
     property Values[AName: string]: TValue read GetValue write SetValue; default;
@@ -258,6 +260,11 @@ end;
 function TMARSParametersSlice.GetEnumerator: TEnumerator;
 begin
   Result := FItems.GetEnumerator;
+end;
+
+function TMARSParametersSlice.GetIsEmpty: Boolean;
+begin
+  Result := Count = 0;
 end;
 
 function TMARSParametersSlice.GetParamNames: TArray<string>;
