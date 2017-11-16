@@ -35,6 +35,7 @@ type
     function GetInvocationTime: TStopwatch;
     function GetMethod: TRttiMethod;
     function GetMethodArguments: TArray<TValue>;
+    function GetMethodResult: TValue;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
     function GetResourceInstance: TObject;
@@ -48,6 +49,7 @@ type
     property InvocationTime: TStopwatch read GetInvocationTime;
     property Method: TRttiMethod read GetMethod;
     property MethodArguments: TArray<TValue> read GetMethodArguments;
+    property MethodResult: TValue read GetMethodResult;
     property Request: TWebRequest read GetRequest;
     property Resource: TRttiType read GetResource;
     property ResourceInstance: TObject read GetResourceInstance;

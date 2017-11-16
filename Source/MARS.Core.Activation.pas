@@ -65,6 +65,7 @@ type
     FResource: TRttiType;
     FResourceInstance: TObject;
     FMethodArguments: TArray<TValue>;
+    FMethodResult: TValue;
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
     FInvocationTime: TStopWatch;
@@ -106,6 +107,7 @@ type
     function GetInvocationTime: TStopwatch;
     function GetMethod: TRttiMethod;
     function GetMethodArguments: TArray<TValue>;
+    function GetMethodResult: TValue;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
     function GetResourceInstance: TObject;
@@ -181,6 +183,11 @@ end;
 function TMARSActivation.GetMethodArguments: TArray<TValue>;
 begin
   Result := FMethodArguments;
+end;
+
+function TMARSActivation.GetMethodResult: TValue;
+begin
+  Result := FMethodResult;
 end;
 
 function TMARSActivation.GetProducesValue: string;
@@ -384,7 +391,6 @@ end;
 
 procedure TMARSActivation.InvokeResourceMethod();
 var
-  LMethodResult: TValue;
   LStream: TBytesStream;
   LContentType: string;
 begin
@@ -394,16 +400,16 @@ begin
   LContentType := string(Response.ContentType);
 
   try
-    LMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
+    FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
 
     // handle response
     SetCustomHeaders;
 
     // 1 - TMARSResponse (override)
-    if (not LMethodResult.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
-       and LMethodResult.IsInstanceOf(TMARSResponse)
+    if (not FMethodResult.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
+       and FMethodResult.IsInstanceOf(TMARSResponse)
     then
-      TMARSResponse(LMethodResult.AsObject).CopyTo(Response)
+      TMARSResponse(FMethodResult.AsObject).CopyTo(Response)
     // 2 - MessageBodyWriter mechanism (standard)
     else begin
       TMARSMessageBodyRegistry.Instance.FindWriter(Self, FWriter, FWriterMediaType);
@@ -415,7 +421,7 @@ begin
 
           LStream := TBytesStream.Create();
           try
-            FWriter.WriteTo(LMethodResult, FWriterMediaType, LStream, Self);
+            FWriter.WriteTo(FMethodResult, FWriterMediaType, LStream, Self);
             LStream.Position := 0;
             Response.ContentStream := LStream;
           except
@@ -431,26 +437,26 @@ begin
             Response.ContentType := TMediaType.WILDCARD;
           if Assigned(FMethod.ReturnType) then
           begin
-            if (LMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
-              Response.Content := LMethodResult.AsString
-            else if (LMethodResult.IsType<Boolean>) then
-              Response.Content := BoolToStr(LMethodResult.AsType<Boolean>, True)
-            else if LMethodResult.TypeInfo = TypeInfo(TDateTime) then
-              Response.Content := DateToJSON(LMethodResult.AsType<TDateTime>)
-            else if LMethodResult.TypeInfo = TypeInfo(TDate) then
-              Response.Content := DateToJSON(LMethodResult.AsType<TDate>)
-            else if LMethodResult.TypeInfo = TypeInfo(TTime) then
-              Response.Content := DateToJSON(LMethodResult.AsType<TTime>)
+            if (FMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
+              Response.Content := FMethodResult.AsString
+            else if (FMethodResult.IsType<Boolean>) then
+              Response.Content := BoolToStr(FMethodResult.AsType<Boolean>, True)
+            else if FMethodResult.TypeInfo = TypeInfo(TDateTime) then
+              Response.Content := DateToJSON(FMethodResult.AsType<TDateTime>)
+            else if FMethodResult.TypeInfo = TypeInfo(TDate) then
+              Response.Content := DateToJSON(FMethodResult.AsType<TDate>)
+            else if FMethodResult.TypeInfo = TypeInfo(TTime) then
+              Response.Content := DateToJSON(FMethodResult.AsType<TTime>)
 
-            else if (LMethodResult.Kind in [tkInt64]) then
-              Response.Content := IntToStr(LMethodResult.AsType<Int64>)
-            else if (LMethodResult.Kind in [tkInteger]) then
-              Response.Content := IntToStr(LMethodResult.AsType<Integer>)
+            else if (FMethodResult.Kind in [tkInt64]) then
+              Response.Content := IntToStr(FMethodResult.AsType<Int64>)
+            else if (FMethodResult.Kind in [tkInteger]) then
+              Response.Content := IntToStr(FMethodResult.AsType<Integer>)
 
-            else if (LMethodResult.Kind in [tkFloat]) then
-              Response.Content := FormatFloat('0.00000000', LMethodResult.AsType<Double>)
+            else if (FMethodResult.Kind in [tkFloat]) then
+              Response.Content := FormatFloat('0.00000000', FMethodResult.AsType<Double>)
             else
-              Response.Content := LMethodResult.ToString;
+              Response.Content := FMethodResult.ToString;
           end;
 
           Response.StatusCode := 200;
@@ -462,9 +468,7 @@ begin
     end;
   finally
     if not FMethod.HasAttribute<IsReference>(nil) then
-      AddToContext(LMethodResult);
-
-    FreeContext;
+      AddToContext(FMethodResult);
   end;
 end;
 
@@ -559,18 +563,22 @@ begin
   Assert(Assigned(FConstructorInfo));
   Assert(Assigned(FMethod));
 
-  if DoBeforeInvoke then
-  begin
-    FInvocationTime := TStopwatch.StartNew;
-    FResourceInstance := FConstructorInfo.ConstructorFunc();
-    try
-      ContextInjection;
-      InvokeResourceMethod;
-    finally
-      FResourceInstance.Free;
+  try
+    if DoBeforeInvoke then
+    begin
+      FInvocationTime := TStopwatch.StartNew;
+      FResourceInstance := FConstructorInfo.ConstructorFunc();
+      try
+        ContextInjection;
+        InvokeResourceMethod;
+      finally
+        FResourceInstance.Free;
+      end;
+      FInvocationTime.Stop;
+      DoAfterInvoke;
     end;
-    FInvocationTime.Stop;
-    DoAfterInvoke;
+  finally
+    FreeContext;
   end;
 end;
 
@@ -689,6 +697,10 @@ begin
   FToken := nil;
   FRttiContext := TRttiContext.Create;
   FContext := TList<TValue>.Create;
+  FMethod := nil;
+  FMethodArguments := [];
+  FMethodResult := TValue.Empty;
+  FResourceInstance := nil;
   FInvocationTime.Reset;
   Prepare;
 end;
