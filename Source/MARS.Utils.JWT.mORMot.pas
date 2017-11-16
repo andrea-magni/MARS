@@ -24,13 +24,19 @@ implementation
 
 uses
   DateUtils, Generics.Collections, Rtti
-, MARS.Utils.JWT, MARS.Core.JSON
+, MARS.Core.Utils, MARS.Utils.JWT
 ;
 
 function DateTimeToMinutes(const ADateTime: TDateTime): Integer; inline;
 begin
-  Result := Round(ADateTime * 24 * 60);
+  Result := Round(ADateTime * MinsPerDay);
 end;
+
+function DateTimeToSeconds(const ADateTime: TDateTime): Integer; inline;
+begin
+  Result := Round(ADateTime * SecsPerDay);
+end;
+
 
 function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string;
 var
@@ -40,10 +46,7 @@ var
   LArray: TTVarRecDynArray;
   LClaim: TPair<string, TValue>;
 begin
-  LJWT := TJWTHS256.Create(
-    StringToUTF8(ASecret), 0, [jrcIssuer], []//, 60
-  , DateTimeToMinutes(AClaims.ByName(JWT_DURATION_CLAIM, 0).AsExtended)
-  );
+  LJWT := TJWTHS256.Create(StringToUTF8(ASecret), 0, [jrcIssuer], []);
   try
     LClaimsValues.Init([], dvArray);
     for LClaim in AClaims do
@@ -53,6 +56,7 @@ begin
     end;
     LClaimsValues.ToArrayOfConst(LArray);
 
+//    LJWT.ExpirationSeconds := DateTimeToSeconds(AClaims.ByName(JWT_DURATION_CLAIM, 0).AsExtended);
     LToken := LJWT.Compute(
       LArray
     , StringToUTF8( AClaims.ByName(JWT_ISSUER_CLAIM).AsString )
@@ -71,38 +75,40 @@ function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: 
 var
   LJWT: TJWTAbstract;
   LContent: TJWTContent;
-  LJSONObj: TJSONObject;
+  LName: RawUTF8;
+  LValue: RawUTF8;
 begin
-  LJWT := TJWTHS256.Create(
-    StringToUTF8(ASecret), 0, [jrcIssuer], []
-  , DateTimeToMinutes(AClaims.ByName(JWT_DURATION_CLAIM, 0).AsExtended)
-  );
+  LJWT := TJWTHS256.Create(StringToUTF8(ASecret), 0, [jrcIssuer], []);
   try
     LJWT.Options := [joHeaderParse, joAllowUnexpectedClaims];
     LJWT.Verify(StringToUTF8(AToken), LContent);
     Result := LContent.result = jwtValid;
 
     if jrcAudience in LContent.claims then
-      AClaims.Values[JWT_AUDIENCE_CLAIM] := LContent.reg[TJWTClaim.jrcAudience];
+      AClaims.Values[JWT_AUDIENCE_CLAIM] := string(LContent.reg[TJWTClaim.jrcAudience]);
     if jrcExpirationTime in LContent.claims then
-      AClaims.Values[JWT_EXPIRATION_CLAIM] := StrToInt64Def(LContent.reg[TJWTClaim.jrcExpirationTime], 0);
+      AClaims.Values[JWT_EXPIRATION_CLAIM] := StrToInt64Def(string(LContent.reg[TJWTClaim.jrcExpirationTime]), 0);
     if jrcIssuedAt in LContent.claims then
-      AClaims.Values[JWT_ISSUED_AT_CLAIM] := StrToIntDef(LContent.reg[TJWTClaim.jrcIssuedAt], 0);
+      AClaims.Values[JWT_ISSUED_AT_CLAIM] := StrToIntDef(string(LContent.reg[TJWTClaim.jrcIssuedAt]), 0);
     if jrcIssuer in LContent.claims then
-      AClaims.Values[JWT_ISSUER_CLAIM] := LContent.reg[TJWTClaim.jrcIssuer];
+      AClaims.Values[JWT_ISSUER_CLAIM] := string(LContent.reg[TJWTClaim.jrcIssuer]);
     if jrcJwtID in LContent.claims then
-      AClaims.Values[JWT_JWT_ID_CLAIM] := LContent.reg[TJWTClaim.jrcJwtID];
+      AClaims.Values[JWT_JWT_ID_CLAIM] := string(LContent.reg[TJWTClaim.jrcJwtID]);
     if jrcNotBefore in LContent.claims then
-      AClaims.Values[JWT_NOT_BEFORE_CLAIM] := StrToInt64Def(LContent.reg[TJWTClaim.jrcNotBefore], 0);
+      AClaims.Values[JWT_NOT_BEFORE_CLAIM] := StrToInt64Def(string(LContent.reg[TJWTClaim.jrcNotBefore]), 0);
     if jrcSubject in LContent.claims then
-      AClaims.Values[JWT_SUBJECT_CLAIM] := LContent.reg[TJWTClaim.jrcSubject];
+      AClaims.Values[JWT_SUBJECT_CLAIM] := string(LContent.reg[TJWTClaim.jrcSubject]);
 
-    LJSONObj := TJSONObject.ParseJSONValue(LContent.data.ToJSON()) as TJSONObject;
-    try
-       AClaims.LoadFromJSON(LJSONObj);
-    finally
-      LJSONObj.Free;
+    for LName in LContent.data.Names do
+    begin
+      LValue := '';
+      LContent.data.GetAsRawUTF8(LName, LValue);
+      AClaims.Values[string(LName)] := GuessTValueFromString( string(LValue) );
     end;
+
+//    if LContent.data.GetValueIndex(JWT_DURATION_CLAIM)<> -1 then
+//      AClaims.Values[JWT_DURATION_CLAIM] := StrToInt64Def(LContent.data[JWT_DURATION_CLAIM], 0);
+
   finally
     LJWT.Free;
   end;
