@@ -394,8 +394,6 @@ begin
   LContentType := string(Response.ContentType);
 
   try
-    FillResourceMethodParameters;
-
     LMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
 
     // handle response
@@ -477,6 +475,7 @@ begin
   ReadAuthorizationInfo;
   CheckAuthentication;
   CheckAuthorization;
+  FillResourceMethodParameters;
 end;
 
 procedure TMARSActivation.ReadAuthorizationInfo;
