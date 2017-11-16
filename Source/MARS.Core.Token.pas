@@ -49,6 +49,8 @@ type
     function GetIssuer: string;
     procedure SetIssuer(const AValue: string);
     procedure SetDuration(const AValue: TDateTime);
+    function GetDurationMins: Int64;
+    function GetDurationSecs: Int64;
   protected
     function GetTokenFromBearer(const ARequest: TWebRequest): string; virtual;
     function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
@@ -82,6 +84,8 @@ type
     property Issuer: string read GetIssuer;
     property IssuedAt: TDateTime read GetIssuedAt;
     property Duration: TDateTime read GetDuration;
+    property DurationMins: Int64 read GetDurationMins;
+    property DurationSecs: Int64 read GetDurationSecs;
     property CookieEnabled: Boolean read FCookieEnabled;
     property CookieName: string read FCookieName;
     property CookieDomain: string read FCookieDomain;
@@ -121,6 +125,7 @@ begin
   FToken := '';
   FIsVerified := False;
   FClaims.Clear;
+  UpdateCookie;
 end;
 
 constructor TMARSToken.Create(const ARequest: TWebRequest; const AResponse: TWebResponse;
@@ -152,6 +157,16 @@ begin
     Result := LDurationValue
   else
     Result := 0.0;
+end;
+
+function TMARSToken.GetDurationMins: Int64;
+begin
+  Result := Trunc(Duration * MinsPerDay);
+end;
+
+function TMARSToken.GetDurationSecs: Int64;
+begin
+  Result := Trunc(Duration * MinsPerDay * 60);
 end;
 
 function TMARSToken.GetExpiration: TDateTime;
@@ -290,6 +305,7 @@ begin
 
   FToken := BuildJWTToken(ASecret, FClaims);
   FIsVerified := True;
+  UpdateCookie;
 end;
 
 procedure TMARSToken.Load(const AToken, ASecret: string);

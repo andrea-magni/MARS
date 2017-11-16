@@ -13,6 +13,7 @@ type
   TMARSJWT = class(TObject)
   private
   protected
+    procedure Duration(const ASeconds: Int64);
   public
     const DUMMY_SECRET = 'dummy_secret';
 
@@ -21,6 +22,18 @@ type
 
     [Test]
     procedure VerifyOne;
+
+    [Test]
+    procedure Duration1min;
+
+    [Test]
+    procedure Duration30secs;
+
+    [Test]
+    procedure Duration5secs;
+
+    [Test]
+    procedure Duration1sec;
   end;
 
 implementation
@@ -74,6 +87,60 @@ begin
   finally
     LParams.Free;
   end;
+end;
+
+procedure TMARSJWT.Duration(const ASeconds: Int64);
+var
+  LParams: TMARSParameters;
+  LToken: TMARSToken;
+  LDuration: TDateTime;
+begin
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
+    LDuration := ASeconds / SecsPerDay;
+    LParams.Values[JWT_DURATION_PARAM] := LDuration;
+
+    LToken := TMARSToken.Create('', LParams);
+    try
+      LToken.Build(DUMMY_SECRET);
+      Assert.IsNotEmpty(LToken.Token);
+
+      LToken.Load(LToken.Token, DUMMY_SECRET);
+      Assert.IsFalse(LToken.IsExpired, 'Token expired');
+      Assert.IsTrue(SameValue(LToken.Expiration, LToken.IssuedAt + LDuration, (0.5 / SecsPerDay)) // half second as epsilon
+      , 'Expiration = IssuedAt + Duration |'
+      +' [' + DateTimeToStr(LToken.Expiration) + '] = '
+      +' [' + DateTimeToStr(LToken.IssuedAt) + '] + '
+      +' [' + DateTimeToStr(LToken.Duration) + ' = ' + IntToStr(LToken.DurationSecs) + ' s ]'
+      );
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT.Duration1min;
+begin
+  Duration(60);
+end;
+
+procedure TMARSJWT.Duration1sec;
+begin
+  Duration(1);
+end;
+
+procedure TMARSJWT.Duration30secs;
+begin
+  Duration(30);
+end;
+
+procedure TMARSJWT.Duration5secs;
+begin
+  Duration(5);
 end;
 
 procedure TMARSJWT.VerifyOne;

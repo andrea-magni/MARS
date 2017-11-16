@@ -582,7 +582,6 @@ begin
     if Token.IsVerified and Token.IsExpired then
     begin
       Token.Clear;
-      Token.UpdateCookie;
       raise EMARSAuthenticationException.Create('Token expired', 403);
     end;
   end;

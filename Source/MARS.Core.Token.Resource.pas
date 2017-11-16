@@ -61,12 +61,12 @@ uses
 
 procedure TMARSTokenResource.AfterLogin(const AUserName, APassword: string);
 begin
-  Token.UpdateCookie;
+
 end;
 
 procedure TMARSTokenResource.AfterLogout;
 begin
-  Token.UpdateCookie;
+
 end;
 
 function TMARSTokenResource.Authenticate(const AUserName, APassword: string): Boolean;
