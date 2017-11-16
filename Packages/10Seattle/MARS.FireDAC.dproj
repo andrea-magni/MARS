@@ -96,18 +96,16 @@
         <DCCReference Include="FireDAC.dcp"/>
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="FireDACCommon.dcp"/>
-        <DCCReference Include="DataSnapFireDAC.dcp"/>
-        <DCCReference Include="fmx.dcp"/>
         <DCCReference Include="inet.dcp"/>
         <DCCReference Include="IndySystem.dcp"/>
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
-        <DCCReference Include="fmxFireDAC.dcp"/>
         <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.DataModule.pas">
             <Form>MARSFDDataModuleResource</Form>
+            <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.ReadersAndWriters.pas"/>

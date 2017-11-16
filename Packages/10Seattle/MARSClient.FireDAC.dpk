@@ -38,7 +38,6 @@ requires
   FireDAC,
   FireDACCommonDriver,
   FireDACCommon,
-  DataSnapFireDAC,
   designide;
 
 contains

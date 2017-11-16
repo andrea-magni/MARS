@@ -171,7 +171,6 @@
         <DCCReference Include="FireDAC.dcp"/>
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="FireDACCommon.dcp"/>
-        <DCCReference Include="DataSnapFireDAC.dcp"/>
         <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Client.FireDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Editor.pas"/>
@@ -201,18 +200,6 @@
                     <Source Name="MainSource">MARSClient.FireDAC.dpk</Source>
                 </Source>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5cdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5cdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5adt_d10.bpl">File c:\dev\delphi\Bpl\ibo5adt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5tdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5tdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5vdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5vdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5fdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5fdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5xdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5xdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5wdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5wdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5wxdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5wxdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5ftsdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5ftsdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5rpldt_d10.bpl">File c:\dev\delphi\Bpl\ibo5rpldt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5admdt_d10.bpl">File c:\dev\delphi\Bpl\ibo5admdt_d10.bpl not found</Excluded_Packages>
-                    <Excluded_Packages Name="c:\dev\delphi\Bpl\ibo5edt_d10.bpl">File c:\dev\delphi\Bpl\ibo5edt_d10.bpl not found</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k230.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp230.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
