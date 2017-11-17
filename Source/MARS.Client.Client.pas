@@ -19,6 +19,7 @@ uses
   ;
 
 type
+  TMARSAuthEndorsement = (Cookie, AuthorizationBearer);
   TMARSHttpVerb = (Get, Put, Post, Head, Delete, Patch);
   TMARSClientErrorEvent = procedure (AResource: TObject;
     AException: Exception; AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc; var AHandled: Boolean) of object;
@@ -39,6 +40,7 @@ type
     FHttpClient: TIdHTTP;
     FMARSEngineURL: string;
     FOnError: TMARSClientErrorEvent;
+    FAuthEndorsement: TMARSAuthEndorsement;
     function GetRequest: TIdHTTPRequest;
     function GetResponse: TIdHTTPResponse;
     function GetConnectTimeout: Integer;
@@ -115,7 +117,6 @@ type
     class function PostStream(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const AContent: TStream; const AToken: string = ''): Boolean;
-
   published
     property MARSEngineURL: string read FMARSEngineURL write FMARSEngineURL;
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
@@ -123,6 +124,7 @@ type
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
     property ProtocolVersion: TIdHTTPProtocolVersion read GetProtocolVersion write SetProtocolVersion;
     property HttpClient: TIdHTTP read FHttpClient;
+    property AuthEndorsement: TMARSAuthEndorsement read FAuthEndorsement write FAuthEndorsement default TMARSAuthEndorsement.Cookie;
   end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
@@ -168,11 +170,13 @@ begin
   LDestClient.ReadTimeout := ReadTimeout;
   LDestClient.OnError := OnError;
   LDestClient.ProtocolVersion := ProtocolVersion;
+  LDestClient.AuthEndorsement := AuthEndorsement;
 end;
 
 constructor TMARSClient.Create(AOwner: TComponent);
 begin
   inherited;
+  FAuthEndorsement := Cookie;
   FHttpClient := TIdHTTP.Create(Self);
   try
     FHttpClient.SetSubComponent(True);
@@ -218,13 +222,16 @@ end;
 
 procedure TMARSClient.EndorseAuthorization(const AAuthToken: string);
 begin
-  if not (AAuthToken = '') then
+  if AuthEndorsement = AuthorizationBearer then
   begin
-    FHttpClient.Request.CustomHeaders.FoldLines := False;
-    FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
-  end
-  else
-    FHttpClient.Request.CustomHeaders.Values['Authorization'] := '';
+    if not (AAuthToken = '') then
+    begin
+      FHttpClient.Request.CustomHeaders.FoldLines := False;
+      FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
+    end
+    else
+      FHttpClient.Request.CustomHeaders.Values['Authorization'] := '';
+  end;
 end;
 
 procedure TMARSClient.Get(const AURL: string; AResponseContent: TStream;

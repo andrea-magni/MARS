@@ -5,7 +5,7 @@ interface
 uses
   Classes, SysUtils
 , DUnitX.TestFramework
-, MARS.Core.URL
+, MARS.Core.URL, MARS.Core.Utils
 ;
 
 type
@@ -19,6 +19,14 @@ type
 
     [Test] procedure URLMatching();
   end;
+
+  [TestFixture('Utils')]
+  TMARSCoreUtilsTest = class(TObject)
+  private
+  public
+    [Test] procedure GuessTValueFromStr;
+  end;
+
 
   [TestFixture('RecordToJSON')]
   TMARSRecordToJSONTest = class(TObject)
@@ -37,7 +45,8 @@ implementation
 { TMARSCoreTest }
 
 uses Tests.Records.Types,
-  MARS.Core.JSON;
+  MARS.Core.JSON,
+  Rtti;
 
 procedure TMARSCoreTest.ParseBase;
 var
@@ -251,6 +260,31 @@ begin
   Assert.IsNotNull(LJSONObj);
   Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Surname'));
   Assert.AreEqual(LRecord.Surname, LJSONObj.ReadStringValue('Name'));
+end;
+
+{ TMARSCoreUtilsTest }
+
+procedure TMARSCoreUtilsTest.GuessTValueFromStr;
+var
+  LValue: TValue;
+begin
+  LValue := GuessTValueFromString('');
+  Assert.AreEqual('', LValue.AsString, 'Empty string = Empty string');
+
+  LValue := GuessTValueFromString('Andrea');
+  Assert.AreEqual('Andrea', LValue.AsString, 'String value');
+
+  LValue := GuessTValueFromString('123');
+  Assert.AreEqual(123, LValue.AsInteger, 'Integer value');
+
+  LValue := GuessTValueFromString(FloatToStr(123.5));
+  Assert.AreEqual(123.5, LValue.AsExtended, 'Decimal value');
+
+  LValue := GuessTValueFromString('true');
+  Assert.AreEqual(true, LValue.AsBoolean, 'Boolean true value');
+
+  LValue := GuessTValueFromString('false');
+  Assert.AreEqual(false, LValue.AsBoolean, 'Boolean false value');
 end;
 
 initialization

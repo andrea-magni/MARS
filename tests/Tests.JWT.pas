@@ -8,6 +8,8 @@ uses
 
 ;
 
+{$I MARS.inc}
+
 type
   [TestFixture('JWT')]
   TMARSJWT = class(TObject)
