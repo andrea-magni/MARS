@@ -577,14 +577,15 @@ end;
 
 procedure TMARSActivation.CheckAuthentication;
 begin
+  if (Token.Token <> '') and Token.IsExpired then
+    Token.Clear;
+
   if FAuthorizationInfo.NeedsAuthentication then
-  begin
-    if Token.IsVerified and Token.IsExpired then
+    if ((Token.Token = '') or not Token.IsVerified) then
     begin
       Token.Clear;
-      raise EMARSAuthenticationException.Create('Token expired', 403);
+      raise EMARSAuthenticationException.Create('Token missing, not valid or expired', 403);
     end;
-  end;
 end;
 
 procedure TMARSActivation.CheckAuthorization;

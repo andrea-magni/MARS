@@ -16,6 +16,7 @@ uses
 , MARS.Core.URL
 , MARS.Utils.Parameters
 
+
 {$IFDEF mORMot-JWT}
 , MARS.Utils.JWT.mORMot
 {$ENDIF}
@@ -23,6 +24,7 @@ uses
 {$IFDEF JOSE-JWT}
 , MARS.Utils.JWT.JOSE
 {$ENDIF}
+
 ;
 
 type
@@ -39,16 +41,14 @@ type
     FCookieSecure: Boolean;
     FRequest: TWebRequest;
     FResponse: TWebResponse;
+    FDuration: TDateTime;
+    FIssuer: string;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetExpiration: TDateTime;
     function GetIssuedAt: TDateTime;
     function GetRoles: TArray<string>;
     procedure SetRoles(const AValue: TArray<string>);
-    function GetDuration: TDateTime;
-    function GetIssuer: string;
-    procedure SetIssuer(const AValue: string);
-    procedure SetDuration(const AValue: TDateTime);
     function GetDurationMins: Int64;
     function GetDurationSecs: Int64;
   protected
@@ -81,9 +81,9 @@ type
     property IsExpired: Boolean read GetIsExpired;
     property Claims: TMARSParameters read FClaims;
     property Expiration: TDateTime read GetExpiration;
-    property Issuer: string read GetIssuer;
+    property Issuer: string read FIssuer;
     property IssuedAt: TDateTime read GetIssuedAt;
-    property Duration: TDateTime read GetDuration;
+    property Duration: TDateTime read FDuration;
     property DurationMins: Int64 read GetDurationMins;
     property DurationSecs: Int64 read GetDurationSecs;
     property CookieEnabled: Boolean read FCookieEnabled;
@@ -115,8 +115,8 @@ constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSPara
 begin
   inherited Create;
   FClaims := TMARSParameters.Create('');
-  SetIssuer(AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString);
-  SetDuration(AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended);
+  FIssuer := AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
+  FDuration := AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended;
   Load(AToken, AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString);
 end;
 
@@ -146,17 +146,6 @@ destructor TMARSToken.Destroy;
 begin
   FClaims.Free;
   inherited;
-end;
-
-function TMARSToken.GetDuration: TDateTime;
-var
-  LDurationValue: TDateTime;
-begin
-  LDurationValue := FClaims.ByName(JWT_DURATION_CLAIM, 0).AsExtended;
-  if LDurationValue > 0 then
-    Result := LDurationValue
-  else
-    Result := 0.0;
 end;
 
 function TMARSToken.GetDurationMins: Int64;
@@ -189,11 +178,6 @@ begin
     Result := UnixToDateTime(LUnixValue {$ifdef DelphiXE7_UP}, False {$endif})
   else
     Result := 0.0;
-end;
-
-function TMARSToken.GetIssuer: string;
-begin
-  Result := FClaims[JWT_ISSUER_CLAIM].AsString;
 end;
 
 function TMARSToken.GetRoles: TArray<string>;
@@ -302,6 +286,8 @@ begin
 
   FClaims[JWT_ISSUED_AT_CLAIM] := DateTimeToUnix(LIssuedAt {$ifdef DelphiXE7_UP}, False{$endif});
   FClaims[JWT_EXPIRATION_CLAIM] := DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE7_UP}, False{$endif});
+  FClaims[JWT_ISSUER_CLAIM] := FIssuer;
+  FClaims[JWT_DURATION_CLAIM] := FDuration;
 
   FToken := BuildJWTToken(ASecret, FClaims);
   FIsVerified := True;
@@ -315,17 +301,6 @@ begin
 
   if AToken <> '' then
     FIsVerified := LoadJWTToken(AToken, ASecret, FClaims);
-end;
-
-
-procedure TMARSToken.SetDuration(const AValue: TDateTime);
-begin
-  FClaims[JWT_DURATION_CLAIM] := AValue;
-end;
-
-procedure TMARSToken.SetIssuer(const AValue: string);
-begin
-  FClaims[JWT_ISSUER_CLAIM] := AValue;
 end;
 
 procedure TMARSToken.SetRoles(const AValue: TArray<string>);
