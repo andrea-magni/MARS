@@ -40,8 +40,7 @@ requires
   xmlrtl,
   DbxCommonDriver,
   dsnap,
-  MARS.Utils,
-  MARS.JOSE;
+  MARS.Utils;
 
 contains
   MARS.Core.Application in '..\..\Source\MARS.Core.Application.pas',
@@ -60,7 +59,6 @@ contains
   MARS.Core.Injection in '..\..\Source\MARS.Core.Injection.pas',
   MARS.Core.Injection.Types in '..\..\Source\MARS.Core.Injection.Types.pas',
   MARS.Core.Activation.InjectionService in '..\..\Source\MARS.Core.Activation.InjectionService.pas',
-  MARS.Core.Token.InjectionService in '..\..\Source\MARS.Core.Token.InjectionService.pas',
   MARS.Core.Activation.Interfaces in '..\..\Source\MARS.Core.Activation.Interfaces.pas';
 
 end.
