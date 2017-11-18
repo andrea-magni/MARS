@@ -5,49 +5,46 @@ interface
 uses
   Classes, SysUtils, Rtti, Types
 , DUnitX.TestFramework
-
+, MARS.Core.Token
+, MARS.mORMotJWT.Token, MARS.JOSEJWT.Token
 ;
 
-{$I MARS.inc}
-
 type
-  [TestFixture('JWT')]
-  TMARSJWT = class(TObject)
+  TMARSJWT<T: TMARSToken> = class(TObject)
   private
   protected
     procedure Duration(const ASeconds: Int64);
+    function GetTokenForVerifyOne: string; virtual;
   public
     const DUMMY_SECRET = 'dummy_secret';
 
-    [Test]
-    procedure BuildOne;
-
-    [Test]
-    procedure VerifyOne;
-
-    [Test]
-    procedure Duration1min;
-
-    [Test]
-    procedure Duration30secs;
-
-    [Test]
-    procedure Duration5secs;
-
-    [Test]
-    procedure Duration1sec;
+    [Test] procedure BuildOne;
+    [Test] procedure VerifyOne;
+    [Test] procedure Duration1min;
+    [Test] procedure Duration30secs;
+    [Test] procedure Duration5secs;
+    [Test] procedure Duration1sec;
   end;
+
+  [TestFixture('JWT.mORMotJWT')]
+  TMARSmORMotJWT = class(TMARSJWT<TMARSmORMotJWTToken>)
+  protected
+    function GetTokenForVerifyOne: string; override;
+  end;
+
+  [TestFixture('JWT.JOSEJWT')]
+  TMARSJOSEJWT = class(TMARSJWT<TMARSJOSEJWTToken>);
 
 implementation
 
 uses
   Math
-, MARS.Utils.Parameters, MARS.Core.Token, MARS.Utils.JWT
+, MARS.Utils.Parameters, MARS.Utils.JWT
 ;
 
 { TMARSJWTmORMotTest }
 
-procedure TMARSJWT.BuildOne;
+procedure TMARSJWT<T>.BuildOne;
 const
   DUMMY_DURATION = 1;
 var
@@ -60,7 +57,7 @@ begin
     LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
     LParams.Values[JWT_DURATION_PARAM] := DUMMY_DURATION;
 
-    LToken := TMARSToken.Create('', LParams);
+    LToken := T.Create('', LParams);
     try
       LToken.UserName := 'Andrea1';
       LToken.Roles := ['standard'];
@@ -91,7 +88,7 @@ begin
   end;
 end;
 
-procedure TMARSJWT.Duration(const ASeconds: Int64);
+procedure TMARSJWT<T>.Duration(const ASeconds: Int64);
 var
   LParams: TMARSParameters;
   LToken: TMARSToken;
@@ -104,7 +101,7 @@ begin
     LDuration := ASeconds / SecsPerDay;
     LParams.Values[JWT_DURATION_PARAM] := LDuration;
 
-    LToken := TMARSToken.Create('', LParams);
+    LToken := T.Create('', LParams);
     try
       LToken.Build(DUMMY_SECRET);
       Assert.IsNotEmpty(LToken.Token);
@@ -125,52 +122,48 @@ begin
   end;
 end;
 
-procedure TMARSJWT.Duration1min;
+procedure TMARSJWT<T>.Duration1min;
 begin
   Duration(60);
 end;
 
-procedure TMARSJWT.Duration1sec;
+procedure TMARSJWT<T>.Duration1sec;
 begin
   Duration(1);
 end;
 
-procedure TMARSJWT.Duration30secs;
+procedure TMARSJWT<T>.Duration30secs;
 begin
   Duration(30);
 end;
 
-procedure TMARSJWT.Duration5secs;
+procedure TMARSJWT<T>.Duration5secs;
 begin
   Duration(5);
 end;
 
-procedure TMARSJWT.VerifyOne;
+function TMARSJWT<T>.GetTokenForVerifyOne: string;
+begin
+  // beware: will expire one million days after Nov 15th, 2017 that is somewhere around Thu, 13 Oct 4755 :-D
+  Result := 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'
+    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0='
+    +'.OacKD-duGSLeQA21eEzPYlRaIKX7fCWs54GyVpbHC0E=';
+end;
+
+procedure TMARSJWT<T>.VerifyOne;
 var
   LParams: TMARSParameters;
   LToken: TMARSToken;
-  LTokenString: string;
 begin
-  // beware: will expire one million days after Nov 15th, 2017 that is somewhere around Thu, 13 Oct 4755 :-D
-  LTokenString := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
-    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDc0MTM3MSwiZXhwIjoyMDExMzk1NDUxLCJDbGFpbTIiOjEyMywiVXNlck5hbWUiOiJBbmRyZWExIiwiTEFOR1VBR0VfSUQiOjEsImlzcyI6Ik1BUlMtQ3VyaW9zaXR5IiwiQ2xhaW0xIjoiUHJpbW8ifQ'
-    +'.k-p3NEEBWXYlf4ilaZn8fE3ufxN29ezMPg8k_HTQg9c';
-
-  {$IFDEF JOSE-JWT}
-  LTokenString := 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'
-    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0='
-    +'.OacKD-duGSLeQA21eEzPYlRaIKX7fCWs54GyVpbHC0E=';
-  {$IFEND}
-
   LParams := TMARSParameters.Create('');
   try
     LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
 
-    LToken := TMARSToken.Create(LTokenString, LParams);
+    LToken := T.Create(GetTokenForVerifyOne, LParams);
     try
       Assert.IsTrue(LToken.Token <> '', 'Token is not empty');
-      Assert.IsFalse(LToken.IsExpired, 'Token expired');
       Assert.IsTrue(LToken.IsVerified, 'Token verified');
+      Assert.IsFalse(LToken.IsExpired, 'Token expired');
       Assert.AreEqual('MARS-Curiosity', LToken.Issuer, 'Issuer');
 
       Assert.IsTrue('Primo' = LToken.Claims.Values['Claim1'].AsString, 'Custom claims 1');
@@ -183,7 +176,17 @@ begin
   end;
 end;
 
+{ TMARSmORMotJWT }
+
+function TMARSmORMotJWT.GetTokenForVerifyOne: string;
+begin
+  Result := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDc0MTM3MSwiZXhwIjoyMDExMzk1NDUxLCJDbGFpbTIiOjEyMywiVXNlck5hbWUiOiJBbmRyZWExIiwiTEFOR1VBR0VfSUQiOjEsImlzcyI6Ik1BUlMtQ3VyaW9zaXR5IiwiQ2xhaW0xIjoiUHJpbW8ifQ'
+    +'.k-p3NEEBWXYlf4ilaZn8fE3ufxN29ezMPg8k_HTQg9c';
+end;
+
 initialization
-  TDUnitX.RegisterTestFixture(TMARSJWT);
+  TDUnitX.RegisterTestFixture(TMARSmORMotJWT);
+  TDUnitX.RegisterTestFixture(TMARSJOSEJWT);
 
 end.

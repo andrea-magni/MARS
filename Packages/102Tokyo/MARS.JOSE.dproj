@@ -186,6 +186,7 @@
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
+        <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas"/>
@@ -198,7 +199,8 @@
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Utils.JWT.JOSE.pas"/>
+        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.InjectionService.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

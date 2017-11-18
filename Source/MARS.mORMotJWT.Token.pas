@@ -3,42 +3,37 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit MARS.Utils.JWT.mORMot;
+unit MARS.mORMotJWT.Token;
 
 interface
-
-{$I Synopse.inc}
 
 uses
   Classes, SysUtils
 , MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
+, MARS.Core.Token
 
 , SynCommons, SynCrypto, SynEcc, SynLZ
 ;
 
-function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string;
-function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean;
-
+type
+  TMARSmORMotJWTToken = class(TMARSToken)
+  protected
+    function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string; override;
+    function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean; override;
+  end;
 
 implementation
 
 uses
   DateUtils, Generics.Collections, Rtti
 , MARS.Core.Utils, MARS.Utils.JWT
+, MARS.mORMotJWT.Token.InjectionService
 ;
 
-function DateTimeToMinutes(const ADateTime: TDateTime): Integer; inline;
-begin
-  Result := Round(ADateTime * MinsPerDay);
-end;
+{ TMARSmORMotJWTToken }
 
-function DateTimeToSeconds(const ADateTime: TDateTime): Integer; inline;
-begin
-  Result := Round(ADateTime * SecsPerDay);
-end;
-
-
-function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string;
+function TMARSmORMotJWTToken.BuildJWTToken(const ASecret: string;
+  const AClaims: TMARSParameters): string;
 var
   LJWT: TJWTAbstract;
   LToken: RawUTF8;
@@ -56,7 +51,6 @@ begin
     end;
     LClaimsValues.ToArrayOfConst(LArray);
 
-//    LJWT.ExpirationSeconds := DateTimeToSeconds(AClaims.ByName(JWT_DURATION_CLAIM, 0).AsExtended);
     LToken := LJWT.Compute(
       LArray
     , StringToUTF8( AClaims.ByName(JWT_ISSUER_CLAIM).AsString )
@@ -71,7 +65,8 @@ begin
   end;
 end;
 
-function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean;
+function TMARSmORMotJWTToken.LoadJWTToken(const AToken, ASecret: string;
+  var AClaims: TMARSParameters): Boolean;
 var
   LJWT: TJWTAbstract;
   LContent: TJWTContent;
@@ -105,10 +100,6 @@ begin
       LContent.data.GetAsRawUTF8(LName, LValue);
       AClaims.Values[string(LName)] := GuessTValueFromString( string(LValue) );
     end;
-
-//    if LContent.data.GetValueIndex(JWT_DURATION_CLAIM)<> -1 then
-//      AClaims.Values[JWT_DURATION_CLAIM] := StrToInt64Def(LContent.data[JWT_DURATION_CLAIM], 0);
-
   finally
     LJWT.Free;
   end;

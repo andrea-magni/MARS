@@ -239,6 +239,9 @@ begin
   if not Assigned(FToken) then
     FToken := GetContextValue(FRttiContext.GetType(Self.ClassType).GetField('FToken')).Value.AsType<TMARSToken>;
   Result := FToken;
+
+  if not Assigned(Result) then
+    raise Exception.Create('Token injection failed in MARSActivation');
 end;
 
 function TMARSActivation.GetURL: TMARSURL;

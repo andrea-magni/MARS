@@ -162,8 +162,6 @@
         <DCCReference Include="DbxCommonDriver.dcp"/>
         <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
-        <DCCReference Include="MARS.mORMot.dcp"/>
-        <DCCReference Include="MARS.JOSE.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Core.Application.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Attributes.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Cache.pas"/>
@@ -180,7 +178,6 @@
         <DCCReference Include="..\..\Source\MARS.Core.Injection.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Injection.Types.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Activation.InjectionService.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Core.Token.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Activation.Interfaces.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>

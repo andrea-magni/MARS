@@ -17,13 +17,13 @@ uses
 , MARS.Utils.Parameters
 
 
-{$IFDEF mORMot-JWT}
-, MARS.Utils.JWT.mORMot
-{$ENDIF}
-
-{$IFDEF JOSE-JWT}
-, MARS.Utils.JWT.JOSE
-{$ENDIF}
+//{$IFDEF mORMot-JWT}
+//, MARS.Utils.JWT.mORMot
+//{$ENDIF}
+//
+//{$IFDEF JOSE-JWT}
+//, MARS.Utils.JWT.JOSE
+//{$ENDIF}
 
 ;
 
@@ -56,6 +56,10 @@ type
     function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
     function GetToken(const ARequest: TWebRequest): string; virtual;
     function GetIsExpired: Boolean; virtual;
+
+    function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string; virtual; abstract;
+    function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean; virtual; abstract;
+
     property Request: TWebRequest read FRequest;
     property Response: TWebResponse read FResponse;
   public
@@ -106,7 +110,6 @@ uses
   , MARS.Core.Utils
   , MARS.Utils.Parameters.JSON
   , MARS.Utils.JWT
-  , MARS.Core.Token.InjectionService
   ;
 
 { TMARSToken }
