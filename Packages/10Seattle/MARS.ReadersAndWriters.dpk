@@ -47,5 +47,3 @@ contains
   MARS.Core.MessageBodyReaders in '..\..\Source\MARS.Core.MessageBodyReaders.pas';
 
 end.
-
-

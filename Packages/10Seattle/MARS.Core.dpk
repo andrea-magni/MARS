@@ -62,5 +62,3 @@ contains
   MARS.Core.Activation.Interfaces in '..\..\Source\MARS.Core.Activation.Interfaces.pas';
 
 end.
-
-

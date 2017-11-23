@@ -55,5 +55,3 @@ contains
   MARS.JOSEJWT.Token.InjectionService in '..\..\Source\MARS.JOSEJWT.Token.InjectionService.pas';
 
 end.
-
-
