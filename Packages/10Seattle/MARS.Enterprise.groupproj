@@ -38,15 +38,6 @@
     <Target Name="MARS_Utils:Make">
         <MSBuild Projects="MARS.Utils.dproj" Targets="Make"/>
     </Target>
-    <Target Name="MARS_JOSE">
-        <MSBuild Projects="MARS.JOSE.dproj"/>
-    </Target>
-    <Target Name="MARS_JOSE:Clean">
-        <MSBuild Projects="MARS.JOSE.dproj" Targets="Clean"/>
-    </Target>
-    <Target Name="MARS_JOSE:Make">
-        <MSBuild Projects="MARS.JOSE.dproj" Targets="Make"/>
-    </Target>
     <Target Name="MARS_Core">
         <MSBuild Projects="MARS.Core.dproj"/>
     </Target>
@@ -55,6 +46,24 @@
     </Target>
     <Target Name="MARS_Core:Make">
         <MSBuild Projects="MARS.Core.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARS_mORMot">
+        <MSBuild Projects="MARS.mORMot.dproj"/>
+    </Target>
+    <Target Name="MARS_mORMot:Clean">
+        <MSBuild Projects="MARS.mORMot.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_mORMot:Make">
+        <MSBuild Projects="MARS.mORMot.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARS_JOSE">
+        <MSBuild Projects="MARS.JOSE.dproj"/>
+    </Target>
+    <Target Name="MARS_JOSE:Clean">
+        <MSBuild Projects="MARS.JOSE.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_JOSE:Make">
+        <MSBuild Projects="MARS.JOSE.dproj" Targets="Make"/>
     </Target>
     <Target Name="MARS_ReadersAndWriters">
         <MSBuild Projects="MARS.ReadersAndWriters.dproj"/>
