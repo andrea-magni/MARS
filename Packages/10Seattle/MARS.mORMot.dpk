@@ -30,6 +30,8 @@ package MARS.mORMot;
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
+{$warn DUPLICATE_CTOR_DTOR OFF} // avoid W1029 unneeded hints
+
 requires
   rtl,
   IndySystem,
