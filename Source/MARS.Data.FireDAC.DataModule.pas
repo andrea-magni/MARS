@@ -50,7 +50,7 @@ type
     procedure BeforeApplyUpdates(ADeltas: TArray<TFDMemTable>; ADelta: TFDMemTable;
       ADataSet: TFDDataSet); virtual;
   public
-    [GET]
+    [GET, IsReference]
     function Retrieve: TArray<TFDDataSet>; virtual;
 
     [POST]

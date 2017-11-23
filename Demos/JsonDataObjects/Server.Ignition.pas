@@ -31,6 +31,11 @@ uses
   , MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders
   , MARS.Utils.Parameters.IniFile
+  {$IFDEF MSWINDOWS}
+  , MARS.mORMotJWT.Token
+  {$ELSE}
+  , MARS.JOSEJWT.Token
+  {$ENDIF}
 
   , Server.Resources
   ;

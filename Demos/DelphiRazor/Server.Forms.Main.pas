@@ -17,6 +17,11 @@ uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
   , MARS.http.Server.Indy
 
   , MARS.Core.Application
+  {$IFDEF MSWINDOWS}
+  , MARS.mORMotJWT.Token
+  {$ELSE}
+  , MARS.JOSEJWT.Token
+  {$ENDIF}
   , System.Actions
   ;
 

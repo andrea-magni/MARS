@@ -29,14 +29,17 @@ implementation
 uses
     MARS.Core.Application
   , MARS.Core.Utils
-  , MARS.Core.MessageBodyWriter
-  , MARS.Core.MessageBodyWriters
+  , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders
   , MARS.Utils.Parameters.IniFile
-
-  , Server.Resources
   , MARS.Data.FireDAC
   , MARS.Core.Activation, MARS.Core.Activation.Interfaces
+  {$IFDEF MSWINDOWS}
+  , MARS.mORMotJWT.Token
+  {$ELSE}
+  , MARS.JOSEJWT.Token
+  {$ENDIF}
+  , Server.Resources
   ;
 
 { TServerEngine }

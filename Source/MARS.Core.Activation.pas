@@ -574,11 +574,11 @@ begin
       try
         ContextInjection;
         InvokeResourceMethod;
+        FInvocationTime.Stop;
+        DoAfterInvoke;
       finally
         FResourceInstance.Free;
       end;
-      FInvocationTime.Stop;
-      DoAfterInvoke;
     end;
   finally
     FreeContext;

@@ -17,7 +17,11 @@ uses
 
   , MARS.Core.Engine
   , MARS.http.Server.Indy
-
+  {$IFDEF MSWINDOWS}
+  , MARS.mORMotJWT.Token
+  {$ELSE}
+  , MARS.JOSEJWT.Token
+  {$ENDIF}
 
   , MARS.Core.Application
   ;

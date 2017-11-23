@@ -33,10 +33,14 @@ uses
   , MARS.Core.MessageBodyReaders
   , MARS.Utils.Parameters.IniFile
 
-  , Server.Resources
   , MARS.Data.FireDAC
   , MARS.Core.Activation, DB, Rtti
-//  , MARS.Utils.ReqRespLogger.CodeSite
+  {$IFDEF MSWINDOWS}
+  , MARS.mORMotJWT.Token
+  {$ELSE}
+  , MARS.JOSEJWT.Token
+  {$ENDIF}
+  , Server.Resources
   ;
 
 { TServerEngine }

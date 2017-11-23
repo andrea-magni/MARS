@@ -22,6 +22,13 @@ uses
   {$ifdef DelphiXE4_UP}
   , System.Actions
   {$endif}
+
+  {$IFDEF MSWINDOWS}
+  , MARS.mORMotJWT.Token
+  {$ELSE}
+  , MARS.JOSEJWT.Token
+  {$ENDIF}
+
   ;
 
 type
