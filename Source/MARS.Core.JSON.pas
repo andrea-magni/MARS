@@ -52,14 +52,13 @@ type
     property Name: string read FName;
   end;
 
-
-
   TToRecordFilterProc = reference to procedure (const AField: TRttiField;
     const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
 
   TToJSONFilterProc = reference to procedure (const AField: TRttiField;
     const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
 
+  TJSONRawString = type string;
 
 {$ifndef DelphiXE6_UP}
   TJSONArrayEnumerator = class

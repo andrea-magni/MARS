@@ -131,7 +131,6 @@ begin
     if LJSONString = '' then
       Exit;
 
-
     // JSONP
     LJSONPProc :=
       procedure (AAttr: JSONPAttribute)
@@ -313,7 +312,7 @@ begin
     TJSONValueWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := (AType.Handle = TypeInfo(string)) and (AMediaType = TMediaType.APPLICATION_JSON);
+        Result := (AType.Handle = TypeInfo(TJSONRawString)) and (AMediaType = TMediaType.APPLICATION_JSON);
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
