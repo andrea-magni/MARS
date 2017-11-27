@@ -39,14 +39,25 @@ type
     [Test] procedure AssignedValues;
   end;
 
+  [TestFixture('RecordFromDataSet')]
+  TMARSRecordFromDataSetTest = class(TObject)
+  private
+  public
+    [Test] procedure Basic;
+  end;
+
+
 
 implementation
 
 { TMARSCoreTest }
 
-uses Tests.Records.Types,
-  MARS.Core.JSON,
-  Rtti;
+uses
+  Rtti
+, FireDAC.Comp.Client, Data.DB
+, MARS.Core.JSON, MARS.Rtti.Utils
+, Tests.Records.Types
+;
 
 procedure TMARSCoreTest.ParseBase;
 var
@@ -287,8 +298,75 @@ begin
   Assert.AreEqual(false, LValue.AsBoolean, 'Boolean false value');
 end;
 
+{ TMARSRecordFromDataSetTest }
+
+procedure TMARSRecordFromDataSetTest.Basic;
+type
+  TMyRecord = record
+    MyString: string;
+    MyInteger: Integer;
+    MyBoolean: Boolean;
+    MyFloat: Double;
+    MyBCD: Currency;
+    MyDateTime: TDateTime;
+    MyDate: TDate;
+    MyTime: TTime;
+  end;
+var
+  LDataSet: TFDMemTable;
+  LRecord: TMyRecord;
+begin
+  LDataSet := TFDMemTable.Create(nil);
+  try
+    LDataSet.FieldDefs.Add('MyString', ftString, 100);
+    LDataSet.FieldDefs.Add('MyInteger', ftInteger);
+    LDataSet.FieldDefs.Add('MyBoolean', ftBoolean);
+    LDataSet.FieldDefs.Add('MyFloat', ftFloat);
+    LDataSet.FieldDefs.Add('MyBCD', ftBCD);
+    LDataSet.FieldDefs.Add('MyDateTime', ftDateTime);
+    LDataSet.FieldDefs.Add('MyDate', ftDate);
+    LDataSet.FieldDefs.Add('MyTime', ftTime);
+    LDataSet.CreateDataSet;
+    LDataSet.Active := True;
+
+    // all values set
+    LDataSet.AppendRecord(['Andrea Magni', 123, True, 3.14, 7.75
+      , EncodeDate(1982, 05, 24) + EncodeTime(13, 00, 0, 0)
+      , EncodeDate(1982, 05, 24)
+      , EncodeTime(13, 00, 0, 0)]);
+    TRecord<TMyRecord>.FromDataSet(LRecord, LDataSet);
+
+    Assert.AreEqual(LRecord.MyString, LDataSet.FieldByName('MyString').AsString);
+    Assert.AreEqual(LRecord.MyInteger, LDataSet.FieldByName('MyInteger').AsInteger);
+    Assert.AreEqual(LRecord.MyBoolean, LDataSet.FieldByName('MyBoolean').AsBoolean);
+    Assert.AreEqual(LRecord.MyFloat, LDataSet.FieldByName('MyFloat').AsFloat);
+    Assert.AreEqual(LRecord.MyBCD, LDataSet.FieldByName('MyBCD').AsCurrency);
+    Assert.AreEqual(LRecord.MyDateTime, LDataSet.FieldByName('MyDateTime').AsDateTime);
+    Assert.AreEqual(LRecord.MyDate, LDataSet.FieldByName('MyDate').AsDateTime);
+    Assert.AreEqual(LRecord.MyTime, LDataSet.FieldByName('MyTime').AsDateTime);
+
+    // some values missing
+    LDataSet.AppendRecord(['Andrea Magni', nil, True, 3.14, 7.75, nil]);
+    TRecord<TMyRecord>.FromDataSet(LRecord, LDataSet);
+
+    Assert.AreEqual(LRecord.MyString, LDataSet.FieldByName('MyString').AsString);
+    Assert.AreEqual(LRecord.MyInteger, LDataSet.FieldByName('MyInteger').AsInteger);
+    Assert.AreEqual(LRecord.MyBoolean, LDataSet.FieldByName('MyBoolean').AsBoolean);
+    Assert.AreEqual(LRecord.MyFloat, LDataSet.FieldByName('MyFloat').AsFloat);
+    Assert.AreEqual(LRecord.MyBCD, LDataSet.FieldByName('MyBCD').AsCurrency);
+    Assert.AreEqual(LRecord.MyDateTime, LDataSet.FieldByName('MyDateTime').AsDateTime);
+    Assert.AreEqual(LRecord.MyDate, LDataSet.FieldByName('MyDate').AsDateTime);
+    Assert.AreEqual(LRecord.MyTime, LDataSet.FieldByName('MyTime').AsDateTime);
+
+  finally
+    LDataSet.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSCoreTest);
-
+  TDUnitX.RegisterTestFixture(TMARSCoreUtilsTest);
+  TDUnitX.RegisterTestFixture(TMARSRecordToJSONTest);
+  TDUnitX.RegisterTestFixture(TMARSRecordFromDataSetTest);
 
 end.

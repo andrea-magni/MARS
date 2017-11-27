@@ -669,7 +669,10 @@ begin
         else
           LRecordField.SetValue(@ARecord, LDataSetField.AsInteger <> 0);
       end
-      else if LRecordField.FieldType.Handle = TypeInfo(TDateTime) then
+      else if (LRecordField.FieldType.Handle = TypeInfo(TDateTime))
+           or (LRecordField.FieldType.Handle = TypeInfo(TDate))
+           or (LRecordField.FieldType.Handle = TypeInfo(TTime))
+      then
       begin
         if (LDataSetField.DataType in [ftDate, ftDateTime, ftTime, ftTimeStamp]) then
           LRecordField.SetValue(@ARecord, LDataSetField.AsDateTime)
