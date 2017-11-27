@@ -20,11 +20,14 @@ type
     function GetRttiType: TRttiType;
     procedure SetValue(AInstance: Pointer; const AValue: TValue);
 
-    function HasAttribute<T: TCustomAttribute>: Boolean; overload;
+    function HasAttribute<T: TCustomAttribute>(const AInherited: Boolean = False): Boolean; overload;
     function HasAttribute<T: TCustomAttribute>(
-      const ADoSomething: TProc<T>): Boolean; overload;
+      const ADoSomething: TProc<T>; const AInherited: Boolean = False): Boolean; overload;
+
     function ForEachAttribute<T: TCustomAttribute>(
-      const ADoSomething: TProc<T>): Integer;
+      const ADoSomething: TProc<T>; const AInherited: Boolean = False): Integer; overload;
+    function ForEachAttribute<T: TCustomAttribute>(
+      const ADoSomething: TFunc<T, Boolean>; const AInherited: Boolean = False): Integer; overload;
   end;
 
   TRttiTypeHelper = class helper(TRttiObjectHelper) for TRttiType
@@ -162,12 +165,28 @@ end;
 { TRttiObjectHelper }
 
 function TRttiObjectHelper.ForEachAttribute<T>(
-  const ADoSomething: TProc<T>): Integer;
+  const ADoSomething: TProc<T>; const AInherited: Boolean): Integer;
 var
   LAttribute: TCustomAttribute;
+  LAttributes: TArray<TCustomAttribute>;
+  LBaseType: TRttiType;
+  LType: TRttiType;
 begin
   Result := 0;
-  for LAttribute in Self.GetAttributes do
+  LAttributes := Self.GetAttributes;
+
+  LType := Self.GetRttiType;
+  if AInherited and Assigned(LType) then
+  begin
+    LBaseType := LType.BaseType;
+    while Assigned(LBaseType) do
+    begin
+     LAttributes := LAttributes + LBaseType.GetAttributes;
+     LBaseType := LBaseType.BaseType;
+    end;
+  end;
+
+  for LAttribute in LAttributes do
   begin
     if LAttribute.InheritsFrom(TClass(T)) then
     begin
@@ -178,9 +197,46 @@ begin
   end;
 end;
 
-function TRttiObjectHelper.HasAttribute<T>: Boolean;
+function TRttiObjectHelper.HasAttribute<T>(const AInherited: Boolean): Boolean;
 begin
-  Result := HasAttribute<T>(nil);
+  Result := HasAttribute<T>(nil, AInherited);
+end;
+
+function TRttiObjectHelper.ForEachAttribute<T>(
+  const ADoSomething: TFunc<T, Boolean>; const AInherited: Boolean): Integer;
+var
+  LAttribute: TCustomAttribute;
+  LAttributes: TArray<TCustomAttribute>;
+  LBaseType: TRttiType;
+  LContinue: Boolean;
+  LType: TRttiType;
+begin
+  Result := 0;
+  LAttributes := Self.GetAttributes;
+
+  LType := Self.GetRttiType;
+  if AInherited and Assigned(LType) then
+  begin
+    LBaseType := LType.BaseType;
+    while Assigned(LBaseType) do
+    begin
+     LAttributes := LAttributes + LBaseType.GetAttributes;
+     LBaseType := LBaseType.BaseType;
+    end;
+  end;
+
+  for LAttribute in LAttributes do
+  begin
+    if LAttribute.InheritsFrom(TClass(T)) then
+    begin
+      if Assigned(ADoSomething) then
+        LContinue := ADoSomething(T(LAttribute));
+      Inc(Result);
+
+      if not LContinue then
+        Break;
+    end;
+  end;
 end;
 
 function TRttiObjectHelper.GetRttiType: TRttiType;
@@ -191,27 +247,31 @@ begin
   else if Self is TRttiProperty then
     Result := TRttiProperty(Self).PropertyType
   else if Self is TRttiParameter then
-    Result := TRttiParameter(Self).ParamType;
+    Result := TRttiParameter(Self).ParamType
+  else if Self is TRttiType then
+    Result := TRttiType(Self);
 end;
 
 function TRttiObjectHelper.HasAttribute<T>(
-  const ADoSomething: TProc<T>): Boolean;
+  const ADoSomething: TProc<T>; const AInherited: Boolean): Boolean;
 var
   LAttribute: TCustomAttribute;
+  LResult: Boolean;
 begin
-  Result := False;
-  for LAttribute in Self.GetAttributes do
-  begin
-    if LAttribute.InheritsFrom(TClass(T)) then
+  LResult := False;
+
+  ForEachAttribute<T>(
+    function (AAttr: T): Boolean
     begin
-      Result := True;
-
+      Result := False;
+      LResult := True;
       if Assigned(ADoSomething) then
-        ADoSomething(T(LAttribute));
+        ADoSomething(AAttr);
+    end
+  , AInherited
+  );
 
-      Break;
-    end;
-  end;
+  Result := LResult;
 end;
 
 procedure TRttiObjectHelper.SetValue(AInstance: Pointer; const AValue: TValue);
