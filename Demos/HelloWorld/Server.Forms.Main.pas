@@ -59,8 +59,7 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.MessageBodyWriter
-  , MARS.Core.MessageBodyWriters
+    MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.URL
   , MARS.Utils.Parameters.IniFile
   ;

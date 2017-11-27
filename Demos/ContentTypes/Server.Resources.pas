@@ -37,6 +37,10 @@ type
     [GET, Path('/json'), Produces(TMediaType.APPLICATION_JSON)]
     function JSON1: TJSONObject;
 
+    [GET, Path('/json2'), Produces(TMediaType.APPLICATION_JSON)]
+    function JSON2: TJSONRawString;
+
+
     [GET, Path('/jpeg'), Produces('image/jpg')]
     function JpegImage: TStream;
 
@@ -155,6 +159,11 @@ function THelloWorldResource.JSON1: TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('Hello', 'World');
+end;
+
+function THelloWorldResource.JSON2: TJSONRawString;
+begin
+  Result := '{ "name": "Andrea", "surname": "Magni" }';
 end;
 
 function THelloWorldResource.PdfDocument: TStream;
