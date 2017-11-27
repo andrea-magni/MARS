@@ -33,6 +33,8 @@ type
     [Test]
     procedure ArrayOfDataSets;
 
+    [Test]
+    procedure ArrayOfDataSetsInTValue;
   end;
 
 implementation
@@ -51,6 +53,62 @@ var
   LData: TFDAdaptedDataSet;
 begin
   TFDDataSets.ToJSON([FDQuery1, FDQuery2, FDQuery3], FOutputStream);
+
+  LDataSets := TFDDataSets.FromJSON(FOutputStream);
+  Assert.AreEqual(3, Length(LDataSets));
+  try
+    for LDataSet in LDataSets do
+    begin
+      LName := LDataSet.Name;
+      LData := LDataSet;
+
+      if SameText(LName, FDQuery1.Name) then
+      begin
+        Assert.AreEqual(FDQuery1.RecordCount, LData.RecordCount);
+        Assert.AreEqual(FDQuery1.Fields.Count, LData.Fields.Count);
+        Assert.AreEqual(FDQuery1.Fields[0].FieldName, LData.Fields[0].FieldName);
+
+        FDQuery1.First;
+        LData.First;
+        Assert.AreEqual(FDQuery1.Fields[0].Value, LData.Fields[0].Value);
+      end
+      else if SameText(LName, FDQuery2.Name) then
+      begin
+        Assert.AreEqual(FDQuery2.RecordCount, LData.RecordCount);
+        Assert.AreEqual(FDQuery2.Fields.Count, LData.Fields.Count);
+        Assert.AreEqual(FDQuery2.Fields[0].FieldName, LData.Fields[0].FieldName);
+
+        FDQuery2.First;
+        LData.First;
+        Assert.AreEqual(FDQuery2.Fields[0].Value, LData.Fields[0].Value);
+      end
+      else if SameText(LName, FDQuery3.Name) then
+      begin
+        Assert.AreEqual(FDQuery3.RecordCount, LData.RecordCount);
+        Assert.AreEqual(FDQuery3.Fields.Count, LData.Fields.Count);
+        Assert.AreEqual(FDQuery3.Fields[0].FieldName, LData.Fields[0].FieldName);
+
+        FDQuery3.First;
+        LData.First;
+        Assert.AreEqual(FDQuery3.Fields[0].Value, LData.Fields[0].Value);
+      end;
+    end;
+
+  finally
+    TFDDatasets.FreeAll(LDataSets);
+  end;
+end;
+
+procedure TMARSFireDACReaderWriterTest.ArrayOfDataSetsInTValue;
+var
+  LDataSet: TFDMemTable;
+  LDataSets: TArray<TFDMemTable>;
+  LName: string;
+  LData: TFDAdaptedDataSet;
+begin
+  TFDDataSets.ToJSON(
+    TValue.From<TArray<TFDCustomQuery>>([FDQuery1, FDQuery2, FDQuery3])
+    , FOutputStream);
 
   LDataSets := TFDDataSets.FromJSON(FOutputStream);
   Assert.AreEqual(3, Length(LDataSets));

@@ -3,11 +3,10 @@ unit MARS.Data.FireDAC.Utils;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections
+  Classes, SysUtils, Generics.Collections, Rtti
 , MARS.Core.JSON
 , FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Intf
 , FireDAC.DatS, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def
-
 ;
 
 type
@@ -25,15 +24,24 @@ type
   TFDDataSets = class
   private
   protected
+    class procedure WriteDataSet(const ADest: TJSONObject; const ADataSet: TFDDataSet;
+      const ADefaultName: string);
   public
     // Base64(Zip(binary format))
     class function DataSetToEncodedBinaryString(const ADataSet: TFDDataSet): string;
     class procedure EncodedBinaryStringToDataSet(const AString: string; const ADataSet: TFDDataSet);
+
+    class function ToJSON(const ADataSets: TValue): TJSONObject; overload;
+    class procedure ToJSON(const ADataSets: TValue; const AStream: TStream;
+      const AEncoding: TEncoding = nil); overload;
+
     class function ToJSON(const ADataSets: TArray<TFDDataSet>): TJSONObject; overload;
     class procedure ToJSON(const ADataSets: TArray<TFDDataSet>; const AStream: TStream;
       const AEncoding: TEncoding = nil); overload;
+
     class function FromJSON(const AJSON: TJSONObject): TArray<TFDMemTable>; overload;
     class function FromJSON(const AStream: TStream; const AEncoding: TEncoding = nil): TArray<TFDMemTable>; overload;
+
     class procedure FreeAll(var ADataSets: TArray<TFDDataSet>); overload;
     class procedure FreeAll(var ADataSets: TArray<TFDMemTable>); overload;
   end;
@@ -46,26 +54,12 @@ uses
 
 class function TFDDataSets.ToJSON(const ADataSets: TArray<TFDDataSet>): TJSONObject;
 var
-  LCurrent: TFDDataSet;
   LIndex: Integer;
-  LName: string;
 begin
   Result := TJSONObject.Create;
   try
-    if Length(ADataSets) > 0 then
-    begin
-      for LIndex := Low(ADataSets) to High(ADataSets) do
-      begin
-        LCurrent := ADataSets[LIndex];
-        if not LCurrent.Active then
-          LCurrent.Active := True;
-        LName := LCurrent.Name;
-        if LName = '' then
-          LName := 'DataSet' + LIndex.ToString;
-
-        Result.WriteStringValue(LName, DataSetToEncodedBinaryString(LCurrent));
-      end;
-    end;
+    for LIndex := Low(ADataSets) to High(ADataSets) do
+      WriteDataSet(Result, ADataSets[LIndex], 'DataSet' + LIndex.ToString);
   except
     Result.Free;
     raise;
@@ -150,6 +144,23 @@ begin
   end;
 end;
 
+class function TFDDataSets.ToJSON(const ADataSets: TValue): TJSONObject;
+var
+  LIndex: Integer;
+begin
+  Assert(ADataSets.IsArray);
+
+  Result := TJSONObject.Create;
+  try
+    for LIndex := 0 to ADataSets.GetArrayLength-1 do
+      WriteDataSet(Result, ADataSets.GetArrayElement(LIndex).AsObject as TFDDataSet
+        , 'DataSet' + LIndex.ToString);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 class function TFDDataSets.FromJSON(const AJSON: TJSONObject): TArray<TFDMemTable>;
 var
   LPair: TJSONPair;
@@ -185,6 +196,36 @@ begin
   finally
     LJSONObject.Free;
   end;
+end;
+
+class procedure TFDDataSets.ToJSON(const ADataSets: TValue;
+  const AStream: TStream; const AEncoding: TEncoding);
+var
+  LJSONObject: TJSONObject;
+begin
+  LJSONObject := TFDDataSets.ToJSON(ADataSets);
+  try
+    JSONValueToStream(LJSONObject, AStream, AEncoding);
+  finally
+    LJSONObject.Free;
+  end;
+end;
+
+class procedure TFDDataSets.WriteDataSet(const ADest: TJSONObject; const ADataSet: TFDDataSet;
+  const ADefaultName: string);
+var
+  LName: string;
+begin
+  Assert(Assigned(ADest));
+  Assert(Assigned(ADataSet));
+
+  if not ADataSet.Active then
+    ADataSet.Active := True;
+  LName := ADataSet.Name;
+  if LName = '' then
+    LName := ADefaultName;
+
+  ADest.WriteStringValue(LName, DataSetToEncodedBinaryString(ADataSet));
 end;
 
 { TMARSFDApplyUpdatesRes }

@@ -94,7 +94,7 @@ procedure TArrayFDDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: 
 var
   LResult: TJSONObject;
 begin
-  LResult := TFDDataSets.ToJSON(AValue.AsType<TArray<TFDDataSet>>);
+  LResult := TFDDataSets.ToJSON(AValue);
   try
     TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally
