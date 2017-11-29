@@ -17,6 +17,8 @@ type
 
     [Test] procedure QueryParams();
 
+    [Test] procedure PathParams();
+
     [Test] procedure URLMatching();
   end;
 
@@ -86,6 +88,32 @@ begin
     Assert.IsFalse(LURL.MatchPath('/rest/default/helloworld/Alien'));
   finally
     LURL.Free;
+  end;
+end;
+
+procedure TMARSCoreTest.PathParams;
+var
+  LPrototype, LURL: TMARSURL;
+begin
+  LPrototype := TMARSURL.Create(
+    'http://localhost:8080/rest/default/myres/{AURLEncodedValue}'
+  );
+  try
+    Assert.AreEqual(4, Length(LPrototype.PathTokens));
+    Assert.AreEqual('{AURLEncodedValue}', LPrototype.PathTokens[3]);
+
+    LURL := TMARSURL.Create(
+      'http://localhost:8080/rest/default/myres/http%3A%2F%2Fwww.google.it%2F%3Fq%3DAndrea%20Magni'
+    );
+    try
+      Assert.AreEqual(4, Length(LURL.PathTokens));
+      Assert.AreEqual('http://www.google.it/?q=Andrea Magni', LURL.PathTokens[3]);
+
+    finally
+      LURL.Free;
+    end;
+  finally
+    LPrototype.Free;
   end;
 end;
 

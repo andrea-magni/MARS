@@ -210,7 +210,7 @@ begin
     LQuery := '?' + LQuery;
 
   // Add the protocol in order to make Parse work.
-  Create('http://' + string(AWebRequest.Host) + ':' + IntToStr(AWebRequest.ServerPort) + string(AWebRequest.PathInfo) + LQuery);
+  Create('http://' + string(AWebRequest.Host) + ':' + IntToStr(AWebRequest.ServerPort) + string(AWebRequest.RawPathInfo) + LQuery);
 end;
 
 constructor TMARSURL.CreateDummy(const APaths: array of string; const ABaseURL: string);
@@ -343,6 +343,7 @@ end;
 function TMARSURL.ParsePathTokens(const APath: string): TArray<string>;
 var
   LPath: string;
+  LIndex: Integer;
 begin
   LPath := EnsureFirstPathDelimiter(EnsureLastPathDelimiter(APath));
   Result := TArray<string>(SplitString(LPath, URL_PATH_SEPARATOR));
@@ -351,6 +352,9 @@ begin
     Result := Copy(Result, 1);
   while (Length(Result) > 0) and (Result[High(Result)] = '') do
     SetLength(Result, High(Result));
+
+  for LIndex := Low(Result) to High(Result)do
+    Result[LIndex] := URLDecode(Result[LIndex]);
 end;
 
 procedure TMARSURL.ParseQueryTokens;
