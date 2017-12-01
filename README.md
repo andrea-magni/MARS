@@ -34,5 +34,6 @@ Build your REST applications (server and client) with my library:
 
 # Contributions
 This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
+Most of the code has been written by me with some significant contributions by Nando Dessena and Stefan Glienke. Some of my customers actually act as beta testers and early adopters (I want to thank them all for the trust and efforts).
 
 [Andrea Magni](http://www.andreamagni.eu)
