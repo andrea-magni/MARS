@@ -107,6 +107,8 @@ var
   LName: string;
   LItem: TMARSFDResourceDatasetsItem;
   LCopyDataSetProc: TThreadProcedure;
+  LIndex: Integer;
+  LFound: Boolean;
 begin
   inherited;
 
@@ -124,6 +126,29 @@ begin
           LItem.DataSet.EnableControls;
         end;
       end;
+
+    //purge dataset on client no more present on the server
+    LIndex := 0;
+    while LIndex < FResourceDataSets.Count do
+    begin
+      LName := FResourceDataSets.Item[LIndex].DataSetName;
+
+      LFound := False;
+      for LDataSet in LDataSets do
+      begin
+        if SameText(LDataSet.Name, LName) then
+        begin
+          LFound := True;
+          Break;
+        end;
+      end;
+
+      if not LFound then
+        FResourceDataSets.Delete(LIndex)
+      else
+        Inc(LIndex);
+    end;
+
 
     for LDataSet in LDataSets do
     begin
