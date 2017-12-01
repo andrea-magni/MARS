@@ -504,11 +504,27 @@ end;
 
 function QueryParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
+var
+  LMediaType: TMediaType;
+  LReader: IMessageBodyReader;
 begin
-  Result := StringToTValue(
-      AActivation.Request.QueryFields.Values[GetActualName(ADestination)]
-    , ADestination.GetRttiType
-  );
+  // 1 - MessageBodyReader mechanism (standard)
+  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+  if Assigned(LReader) then
+    try
+      Result := LReader.ReadFrom(
+        TEncoding.UTF8.GetBytes(AActivation.Request.QueryFields.Values[GetActualName(ADestination)])
+        , ADestination, LMediaType, AActivation);
+    finally
+      FreeAndNil(LMediaType);
+    end
+  else // 2 - fallback (raw)
+  begin
+    Result := StringToTValue(
+        AActivation.Request.QueryFields.Values[GetActualName(ADestination)]
+      , ADestination.GetRttiType
+    );
+  end;
 end;
 
 { FormParamAttribute }
