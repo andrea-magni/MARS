@@ -41,6 +41,13 @@ type
     [Test] procedure AssignedValues;
   end;
 
+  [TestFixture('JSONToRecord')]
+  TMARSJSONToRecordTest = class(TObject)
+  private
+  public
+    [Test] procedure Basic;
+  end;
+
   [TestFixture('RecordFromDataSet')]
   TMARSRecordFromDataSetTest = class(TObject)
   private
@@ -309,21 +316,35 @@ var
 begin
   LValue := GuessTValueFromString('');
   Assert.AreEqual('', LValue.AsString, 'Empty string = Empty string');
+  Assert.IsTrue(LValue.Kind = tkUnknown, 'Kind = tkUnknown');
 
   LValue := GuessTValueFromString('Andrea');
   Assert.AreEqual('Andrea', LValue.AsString, 'String value');
+  Assert.IsTrue(LValue.Kind = tkUString, 'Kind = tkUString');
 
   LValue := GuessTValueFromString('123');
   Assert.AreEqual(123, LValue.AsInteger, 'Integer value');
+  Assert.IsTrue(LValue.Kind = tkInteger, 'Kind = tkInteger');
+
+  LValue := GuessTValueFromString('123000000000');
+  Assert.AreEqual(123000000000, LValue.AsInt64, 'Int64 value');
+  Assert.IsTrue(LValue.Kind = tkInt64, 'Kind = tkInt64');
 
   LValue := GuessTValueFromString(FloatToStr(123.5));
   Assert.AreEqual(123.5, LValue.AsExtended, 'Decimal value');
+  Assert.IsTrue(LValue.Kind = tkFloat, 'Kind = tkFloat');
 
   LValue := GuessTValueFromString('true');
   Assert.AreEqual(true, LValue.AsBoolean, 'Boolean true value');
+  Assert.IsTrue(LValue.Kind = tkEnumeration, 'Kind = tkEnumeration');
 
   LValue := GuessTValueFromString('false');
   Assert.AreEqual(false, LValue.AsBoolean, 'Boolean false value');
+  Assert.IsTrue(LValue.Kind = tkEnumeration, 'Kind = tkEnumeration');
+
+  LValue := GuessTValueFromString(DateToJSON(EncodeDate(1982, 5, 24)));
+  Assert.AreEqual(EncodeDate(1982, 5, 24), TDateTime(LValue.AsExtended), 'Date value');
+  Assert.IsTrue(LValue.Kind = tkFloat, 'Kind = tkFloat');
 end;
 
 { TMARSRecordFromDataSetTest }
@@ -391,10 +412,38 @@ begin
   end;
 end;
 
+{ TMARSJSONToRecordTest }
+
+procedure TMARSJSONToRecordTest.Basic;
+var
+  LJSONObj: TJSONObject;
+  LRecord: TPrimitiveTypesRecord;
+  LJSONData: string;
+begin
+  LJSONData :=
+      '{'
+    + ' "AString": "Andrea", "ABoolean": true, "AInteger": 123,'
+    + ' "AFloat": 1234.56789, "ACurrency": 7.75, '
+    + ' "ADate": "1982-05-24T00:00:00.000+02:00", "AChar": "C"'
+    + '}';
+  LJSONObj := TJSONObject.ParseJSONValue(LJSONData) as TJSONObject;
+  LRecord := LJSONObj.ToRecord<TPrimitiveTypesRecord>();
+
+  Assert.IsNotNull(LJSONObj);
+  Assert.AreEqual(LRecord.AString, LJSONObj.ReadStringValue('AString'));
+  Assert.AreEqual(LRecord.ABoolean, LJSONObj.ReadBoolValue('ABoolean'));
+  Assert.AreEqual(LRecord.AInteger, LJSONObj.ReadIntegerValue('AInteger'));
+  Assert.AreEqual(LRecord.AFloat, LJSONObj.ReadDoubleValue('AFloat'));
+  Assert.IsTrue(LRecord.ACurrency = LJSONObj.ReadDoubleValue('ACurrency'), 'Currency');
+  Assert.IsTrue(LRecord.ADate = LJSONObj.ReadDateTimeValue('ADate'), 'Date');
+
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSCoreTest);
   TDUnitX.RegisterTestFixture(TMARSCoreUtilsTest);
   TDUnitX.RegisterTestFixture(TMARSRecordToJSONTest);
+  TDUnitX.RegisterTestFixture(TMARSJSONToRecordTest);
   TDUnitX.RegisterTestFixture(TMARSRecordFromDataSetTest);
 
 end.

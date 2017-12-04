@@ -40,12 +40,12 @@ uses
     AOverWriteDest: Boolean = True; AThenResetDestPosition: Boolean = True);
 
 {$ifndef DelphiXE6_UP}
-  function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
-  function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = True): TDateTime;
+  function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
+  function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = False): TDateTime;
 {$endif}
 
-  function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
-  function JSONToDate(const ADate: string; AReturnUTC: Boolean = True): TDateTime;
+  function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
+  function JSONToDate(const ADate: string; AReturnUTC: Boolean = False): TDateTime;
 
   function IsMask(const AString: string): Boolean;
   function MatchesMask(const AString, AMask: string): Boolean;
@@ -139,18 +139,29 @@ var
   LValueDouble: Double;
   LValueBool: Boolean;
   LValueInt64: Int64;
+  LValueDateTime: TDateTime;
 begin
-  Val(AString, LValueInteger, LErrorCode);
-  if LErrorCode = 0 then
-    Result := LValueInteger
-  else if TryStrToInt64(AString, LValueInt64) then
-    Result := LValueInt64
-  else if TryStrToFloat(AString, LValueDouble) then
-    Result := LValueDouble
-  else if TryStrToBool(AString, LValueBool) then
-    Result := LValueBool
-  else
-    Result := TValue.From<string>(AString);
+  if AString = '' then
+    Result := TValue.Empty
+  else begin
+    Val(AString, LValueInteger, LErrorCode);
+    if LErrorCode = 0 then
+      Result := LValueInteger
+    else if TryStrToInt64(AString, LValueInt64) then
+      Result := LValueInt64
+    else if TryStrToFloat(AString, LValueDouble) then
+      Result := LValueDouble
+    else if TryStrToFloat(AString, LValueDouble, TFormatSettings.Create('en')) then
+      Result := LValueDouble
+    else if TryStrToBool(AString, LValueBool) then
+      Result := LValueBool
+    else if (AString.CountChar('-') >= 2)
+      and TryISO8601ToDate(AString.DeQuotedString('"'), LValueDateTime, False)
+    then
+      Result := LValueDateTime
+    else
+      Result := AString;
+  end;
 end;
 
 
@@ -208,14 +219,14 @@ begin
 end;
 
 
-function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
+function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
 begin
   Result := '';
   if ADate <> 0 then
     Result := DateToISO8601(ADate, AInputIsUTC);
 end;
 
-function JSONToDate(const ADate: string; AReturnUTC: Boolean = True): TDateTime;
+function JSONToDate(const ADate: string; AReturnUTC: Boolean = False): TDateTime;
 begin
   Result := 0.0;
   if ADate<>'' then
@@ -223,12 +234,12 @@ begin
 end;
 
 {$ifndef DelphiXE6_UP}
-function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = True): string;
+function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
 begin
   Result := DateTimeToXMLTime(ADate, not AInputIsUTC);
 end;
 
-function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = True): TDateTime;
+function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = False): TDateTime;
 begin
   Result := XMLTimeToDateTime(AISODate, AReturnUTC);
 end;
