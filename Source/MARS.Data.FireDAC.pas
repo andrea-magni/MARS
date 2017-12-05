@@ -512,10 +512,9 @@ end;
 
 function TMARSFireDAC.GetContextValue(const AName: string; const ADesiredType: TFieldType): TValue;
 var
-  LSubject: string;
-  LIdentifier: string;
-  LHasArgument: Boolean;
-  LArgument: string;
+  LFirstToken, LSecondToken: string;
+  LHasThirdToken: Boolean;
+  LSecondTokenAndAll, LThirdTokenAndAll: string;
   LNameTokens: TArray<string>;
   LFirstDelim, LSecondDelim: Integer;
 
@@ -527,45 +526,46 @@ begin
   if Length(LNameTokens) < 2 then
     Exit;
 
-  LSubject := LNameTokens[0];
-  LIdentifier := LNameTokens[1];
-  LHasArgument := Length(LNameTokens) > 2;
-  if LHasArgument then
+  LFirstToken := LNameTokens[0];
+  LSecondToken := LNameTokens[1];
+  LFirstDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER);
+  LSecondTokenAndAll := AName.Substring(LFirstDelim + 1);
+  LHasThirdToken := Length(LNameTokens) > 2;
+  if LHasThirdToken then
   begin
-    LFirstDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER);
     LSecondDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER, LFirstDelim + Length(PARAM_AND_MACRO_DELIMITER));
-    LArgument := AName.Substring(LSecondDelim + 1);
+    LThirdTokenAndAll := AName.Substring(LSecondDelim + 1);
   end;
 
-  if SameText(LSubject, 'Token') then
+  if SameText(LFirstToken, 'Token') then
   begin
-    Result := ReadPropertyValue(Activation.Token, LIdentifier);
+    Result := ReadPropertyValue(Activation.Token, LSecondToken);
 
-    if SameText(LIdentifier, 'HasRole') and LHasArgument then
-      Result := Activation.Token.HasRole(LArgument)
-    else if SameText(LIdentifier, 'Claim') and LHasArgument then
-      Result := Activation.Token.Claims.ByNameText(LArgument);
+    if SameText(LSecondToken, 'HasRole') and LHasThirdToken then
+      Result := Activation.Token.HasRole(LThirdTokenAndAll)
+    else if SameText(LSecondToken, 'Claim') and LHasThirdToken then
+      Result := Activation.Token.Claims.ByNameText(LThirdTokenAndAll);
   end
-  else if SameText(LSubject, 'PathParam') then
+  else if SameText(LFirstToken, 'PathParam') then
   begin
-    LIndex := Activation.URLPrototype.GetPathParamIndex(LIdentifier);
+    LIndex := Activation.URLPrototype.GetPathParamIndex(LSecondTokenAndAll);
     if (LIndex > -1) and (LIndex < Length(Activation.URL.PathTokens)) then
       Result := Activation.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
     else
-      raise EMARSFireDACException.CreateFmt('PathParam not found: %s', [LIdentifier]);
+      raise EMARSFireDACException.CreateFmt('PathParam not found: %s', [LSecondTokenAndAll]);
   end
-  else if SameText(LSubject, 'QueryParam') then
-    Result := Activation.URL.QueryTokenByName(LIdentifier)
-  else if SameText(LSubject, 'FormParam') then
-    Result := Activation.Request.ContentFields.Values[LIdentifier]
-  else if SameText(LSubject, 'Request') then
-    Result := ReadPropertyValue(Activation.Request, LIdentifier)
-//  else if SameText(LSubject, 'Response') then
-//    Result := ReadPropertyValue(Activation.Response, LIdentifier)
-  else if SameText(LSubject, 'URL') then
-    Result := ReadPropertyValue(Activation.URL, LIdentifier)
-  else if SameText(LSubject, 'URLPrototype') then
-    Result := ReadPropertyValue(Activation.URLPrototype, LIdentifier)
+  else if SameText(LFirstToken, 'QueryParam') then
+    Result := Activation.URL.QueryTokenByName(LSecondTokenAndAll)
+  else if SameText(LFirstToken, 'FormParam') then
+    Result := Activation.Request.ContentFields.Values[LSecondTokenAndAll]
+  else if SameText(LFirstToken, 'Request') then
+    Result := ReadPropertyValue(Activation.Request, LSecondTokenAndAll)
+//  else if SameText(LFirstToken, 'Response') then
+//    Result := ReadPropertyValue(Activation.Response, LSecondToken)
+  else if SameText(LFirstToken, 'URL') then
+    Result := ReadPropertyValue(Activation.URL, LSecondTokenAndAll)
+  else if SameText(LFirstToken, 'URLPrototype') then
+    Result := ReadPropertyValue(Activation.URLPrototype, LSecondTokenAndAll)
   else // last chance, custom injection
     for LCustomProvider in FContextValueProviders do
       LCustomProvider(Activation, AName, ADesiredType, Result);

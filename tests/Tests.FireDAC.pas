@@ -35,12 +35,16 @@ type
 
     [Test]
     procedure ArrayOfDataSetsInTValue;
+
+    [Test]
+    procedure ParamsInjection;
   end;
 
 implementation
 
 uses
-  IOUtils, Data.DB
+  IOUtils, Data.DB,
+  MARS.Core.Activation.Interfaces
 ;
 
 { TMARSFireDACWriterTest }
@@ -152,6 +156,33 @@ begin
 
   finally
     TFDDatasets.FreeAll(LDataSets);
+  end;
+end;
+
+procedure TMARSFireDACReaderWriterTest.ParamsInjection;
+var
+  LFD: TMARSFireDAC;
+  LQuery: TFDQuery;
+begin
+  LFD := TMARSFireDAC.Create('MAIN_DB');
+  try
+    LQuery := LFD.CreateQuery('select * from EMPLOYEE where EMP_NO = :Custom_VALUE1', nil, False);
+    try
+      LFD.AddContextValueProvider(
+        procedure (const AActivation: IMARSActivation;
+        const AName: string; const ADesiredType: TFieldType; out AValue: TValue)
+        begin
+          if SameText(AName, 'Custom_VALUE1') then
+            AValue := 123;
+        end
+      );
+      LFD.InjectParamValues(LQuery.Command);
+      Assert.AreEqual(123, LQuery.ParamByName('Custom_VALUE1').AsInteger);
+    finally
+      LQuery.Free;
+    end;
+  finally
+    LFD.Free;
   end;
 end;
 
