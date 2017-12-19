@@ -171,6 +171,16 @@ begin
   LDestClient.OnError := OnError;
   LDestClient.ProtocolVersion := ProtocolVersion;
   LDestClient.AuthEndorsement := AuthEndorsement;
+
+  LDestClient.HttpClient.IOHandler := HttpClient.IOHandler;
+  LDestClient.HttpClient.AllowCookies := HttpClient.AllowCookies;
+  LDestClient.HttpClient.ProxyParams.BasicAuthentication := HttpClient.ProxyParams.BasicAuthentication;
+  LDestClient.HttpClient.ProxyParams.ProxyPort := HttpClient.ProxyParams.ProxyPort;
+  LDestClient.HttpClient.ProxyParams.ProxyServer := HttpClient.ProxyParams.ProxyServer;
+  LDestClient.HttpClient.Request.BasicAuthentication := HttpClient.Request.BasicAuthentication;
+  LDestClient.HttpClient.Request.Host := HttpClient.Request.Host;
+  LDestClient.HttpClient.Request.Password := HttpClient.Request.Password;
+  LDestClient.HttpClient.Request.Username := HttpClient.Request.Username;
 end;
 
 constructor TMARSClient.Create(AOwner: TComponent);
