@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{48E75129-EE24-48D4-AE54-2F549C909CC8}</ProjectGuid>
         <MainSource>MARSClient.Core.dpk</MainSource>
-        <ProjectVersion>18.2</ProjectVersion>
+        <ProjectVersion>18.3</ProjectVersion>
         <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>

@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{5170D912-4303-47AD-85A6-D77D3D0874DA}</ProjectGuid>
         <MainSource>MARS.ReadersAndWriters.dpk</MainSource>
-        <ProjectVersion>18.2</ProjectVersion>
+        <ProjectVersion>18.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>

@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{CFDDCD9D-D0A9-42FE-8036-193E21B00BD9}</ProjectGuid>
         <MainSource>MARS.mORMot.dpk</MainSource>
-        <ProjectVersion>18.2</ProjectVersion>
+        <ProjectVersion>18.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
