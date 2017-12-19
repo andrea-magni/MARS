@@ -513,7 +513,9 @@ begin
   if Assigned(LReader) then
     try
       Result := LReader.ReadFrom(
-        TEncoding.UTF8.GetBytes(AActivation.Request.QueryFields.Values[GetActualName(ADestination)])
+        {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+        AActivation.Request.QueryFields.Values[GetActualName(ADestination)]
+        {$ifdef Delphi10Berlin_UP} ) {$endif}
         , ADestination, LMediaType, AActivation);
     finally
       FreeAndNil(LMediaType);
