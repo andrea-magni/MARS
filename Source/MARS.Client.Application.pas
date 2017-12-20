@@ -31,7 +31,7 @@ type
   private
     FAppName: string;
     FDefaultMediaType: string;
-    FClient: TMARSClient;
+    FClient: TMARSCustomClient;
     FOnError: TMARSClientErrorEvent;
   protected
     function GetPath: string; virtual;
@@ -42,7 +42,7 @@ type
   published
     property DefaultMediaType: string read FDefaultMediaType write FDefaultMediaType;
     property AppName: string read FAppName write FAppName;
-    property Client: TMARSClient read FClient write FClient;
+    property Client: TMARSCustomClient read FClient write FClient;
     property Path: string read GetPath;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
   end;
@@ -81,7 +81,7 @@ begin
   FDefaultMediaType := 'application/json';
   FAppName := 'default';
   if TMARSComponentHelper.IsDesigning(Self) then
-    FClient := TMARSComponentHelper.FindDefault<TMARSClient>(Self);
+    FClient := TMARSComponentHelper.FindDefault<TMARSCustomClient>(Self);
 end;
 
 procedure TMARSClientApplication.DoError(const AResource: TObject;

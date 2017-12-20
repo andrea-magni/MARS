@@ -15,7 +15,7 @@ uses
   , MARS.Utils.Parameters
   , MARS.Utils.Parameters.JSON
 
-  , MARS.Client.Resource
+   , MARS.Client.Resource
   ;
 
 type
@@ -43,10 +43,10 @@ type
     FIssuedAt: TDateTime;
     function GetIsExpired: Boolean;
   protected
-    procedure AfterGET(); override;
-    procedure BeforePOST(AContent: TMemoryStream); override;
-    procedure AfterPOST(); override;
-    procedure AfterDELETE; override;
+    procedure AfterGET(const AContent: TStream); override;
+    procedure BeforePOST(const AContent: TMemoryStream); override;
+    procedure AfterPOST(const AContent: TStream); override;
+    procedure AfterDELETE(const AContent: TStream); override;
     procedure ParseData; virtual;
     function GetAuthToken: string; override;
     procedure AssignTo(Dest: TPersistent); override;
@@ -90,31 +90,31 @@ end;
 
 { TMARSClientToken }
 
-procedure TMARSClientToken.AfterDELETE();
+procedure TMARSClientToken.AfterDELETE(const AContent: TStream);
 begin
   inherited;
   if Assigned(FData) then
     FData.Free;
-  FData := StreamToJSONValue(Client.Response.ContentStream) as TJSONObject;
+  FData := StreamToJSONValue(AContent) as TJSONObject;
   ParseData;
 end;
 
-procedure TMARSClientToken.AfterGET();
+procedure TMARSClientToken.AfterGET(const AContent: TStream);
 begin
   inherited;
   if Assigned(FData) then
     FData.Free;
-  FData := StreamToJSONValue(Client.Response.ContentStream) as TJSONObject;
+  FData := StreamToJSONValue(AContent) as TJSONObject;
   ParseData;
 end;
 
-procedure TMARSClientToken.AfterPOST();
+procedure TMARSClientToken.AfterPOST(const AContent: TStream);
 begin
   inherited;
 
   if Assigned(FData) then
     FData.Free;
-  FData := StreamToJSONValue(Client.Response.ContentStream) as TJSONObject;
+  FData := StreamToJSONValue(AContent) as TJSONObject;
   ParseData;
 end;
 
@@ -129,7 +129,7 @@ begin
   LDest.Password := Password;
 end;
 
-procedure TMARSClientToken.BeforePOST(AContent: TMemoryStream);
+procedure TMARSClientToken.BeforePOST(const AContent: TMemoryStream);
 var
   LStreamWriter: TStreamWriter;
 begin

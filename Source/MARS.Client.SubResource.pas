@@ -35,7 +35,7 @@ type
     FParentResource: TMARSClientResource;
   protected
     function GetPath: string; override;
-    function GetClient: TMARSClient; override;
+    function GetClient: TMARSCustomClient; override;
     function GetApplication: TMARSClientApplication; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -75,7 +75,7 @@ begin
     Result := inherited GetApplication;
 end;
 
-function TMARSClientSubResource.GetClient: TMARSClient;
+function TMARSClientSubResource.GetClient: TMARSCustomClient;
 begin
   if Assigned(SpecificClient) then
     Result := SpecificClient

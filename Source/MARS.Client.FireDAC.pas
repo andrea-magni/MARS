@@ -63,9 +63,9 @@ type
     FOnApplyUpdatesError: TOnApplyUpdatesErrorEvent;
     FApplyUpdatesResults: TArray<TMARSFDApplyUpdatesRes>;
   protected
-    procedure AfterGET(); override;
-    procedure BeforePOST(AContent: TMemoryStream); override;
-    procedure AfterPOST(); override;
+    procedure AfterGET(const AContent: TStream); override;
+    procedure BeforePOST(const AContent: TMemoryStream); override;
+    procedure AfterPOST(const AContent: TStream); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
     procedure AssignTo(Dest: TPersistent); override;
@@ -100,7 +100,7 @@ end;
 
 { TMARSFDResource }
 
-procedure TMARSFDResource.AfterGET();
+procedure TMARSFDResource.AfterGET(const AContent: TStream);
 var
   LDataSet: TFDMemTable;
   LDataSets: TArray<TFDMemTable>;
@@ -112,7 +112,7 @@ var
 begin
   inherited;
 
-  LDataSets := TFDDataSets.FromJSON(Client.Response.ContentStream);
+  LDataSets := TFDDataSets.FromJSON(AContent);
   try
     LCopyDataSetProc :=
       procedure
@@ -176,14 +176,14 @@ begin
   end;
 end;
 
-procedure TMARSFDResource.AfterPOST();
+procedure TMARSFDResource.AfterPOST(const AContent: TStream);
 begin
   inherited;
   if Client.LastCmdSuccess then
   begin
     if Assigned(FPOSTResponse) then
       FPOSTResponse.Free;
-    FPOSTResponse := StreamToJSONValue(Client.Response.ContentStream);
+    FPOSTResponse := StreamToJSONValue(AContent);
 
     FApplyUpdatesResults := [];
     if FPOSTResponse is TJSONArray then
@@ -244,7 +244,7 @@ begin
   LDest.ResourceDataSets.Assign(ResourceDataSets);
 end;
 
-procedure TMARSFDResource.BeforePOST(AContent: TMemoryStream);
+procedure TMARSFDResource.BeforePOST(const AContent: TMemoryStream);
 var
   LDeltas: TArray<TFDDataSet>;
   LDelta: TFDDataSet;
