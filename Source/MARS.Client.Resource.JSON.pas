@@ -33,8 +33,8 @@ type
   private
     FResponse: TJSONValue;
   protected
-    procedure AfterGET(); override;
-    procedure AfterPOST(); override;
+    procedure AfterGET(const AContent: TStream); override;
+    procedure AfterPOST(const AContent: TStream); override;
     function GetResponseAsString: string; virtual;
   public
     constructor Create(AOwner: TComponent); override;
@@ -59,20 +59,20 @@ end;
 
 { TMARSClientResourceJSON }
 
-procedure TMARSClientResourceJSON.AfterGET();
+procedure TMARSClientResourceJSON.AfterGET(const AContent: TStream);
 begin
   inherited;
   if Assigned(FResponse) then
     FResponse.Free;
-  FResponse := StreamToJSONValue(Client.Response.ContentStream);
+  FResponse := StreamToJSONValue(AContent);
 end;
 
-procedure TMARSClientResourceJSON.AfterPOST;
+procedure TMARSClientResourceJSON.AfterPOST(const AContent: TStream);
 begin
   inherited;
   if Assigned(FResponse) then
     FResponse.Free;
-  FResponse := StreamToJSONValue(Client.Response.ContentStream);
+  FResponse := StreamToJSONValue(AContent);
 end;
 
 constructor TMARSClientResourceJSON.Create(AOwner: TComponent);

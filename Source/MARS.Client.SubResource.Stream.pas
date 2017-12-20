@@ -32,8 +32,8 @@ type
   private
     FResponse: TStream;
   protected
-    procedure AfterGET(); override;
-    procedure AfterPOST(); override;
+    procedure AfterGET(const AContent: TStream); override;
+    procedure AfterPOST(const AContent: TStream); override;
     function GetResponseSize: Int64; virtual;
 
   public
@@ -59,16 +59,16 @@ end;
 
 { TMARSClientResourceJSON }
 
-procedure TMARSClientSubResourceStream.AfterGET();
+procedure TMARSClientSubResourceStream.AfterGET(const AContent: TStream);
 begin
   inherited;
-  CopyStream(Client.Response.ContentStream, FResponse);
+  CopyStream(AContent, FResponse);
 end;
 
-procedure TMARSClientSubResourceStream.AfterPOST;
+procedure TMARSClientSubResourceStream.AfterPOST(const AContent: TStream);
 begin
   inherited;
-  CopyStream(Client.Response.ContentStream, FResponse);
+  CopyStream(AContent, FResponse);
 end;
 
 constructor TMARSClientSubResourceStream.Create(AOwner: TComponent);

@@ -33,7 +33,7 @@ type
   private
     FResource: string;
     FApplication: TMARSClientApplication;
-    FSpecificClient: TMARSClient;
+    FSpecificClient: TMARSCustomClient;
     FSpecificToken: string;
     FPathParamsValues: TStrings;
     FQueryParams: TStrings;
@@ -42,7 +42,7 @@ type
     procedure SetPathParamsValues(const Value: TStrings);
     procedure SetQueryParams(const Value: TStrings);
   protected
-    function GetClient: TMARSClient; virtual;
+    function GetClient: TMARSCustomClient; virtual;
     function GetPath: string; virtual;
     function GetURL: string; virtual;
     function GetApplication: TMARSClientApplication; virtual;
@@ -50,16 +50,16 @@ type
     function GetAuthToken: string; virtual;
 
     procedure BeforeGET; virtual;
-    procedure AfterGET; virtual;
+    procedure AfterGET(const AContent: TStream); virtual;
 
-    procedure BeforePOST(AContent: TMemoryStream); virtual;
-    procedure AfterPOST; virtual;
+    procedure BeforePOST(const AContent: TMemoryStream); virtual;
+    procedure AfterPOST(const AContent: TStream); virtual;
 
-    procedure BeforePUT(AContent: TMemoryStream); virtual;
-    procedure AfterPUT; virtual;
+    procedure BeforePUT(const AContent: TMemoryStream); virtual;
+    procedure AfterPUT(const AContent: TStream); virtual;
 
-    procedure BeforeDELETE; virtual;
-    procedure AfterDELETE; virtual;
+    procedure BeforeDELETE(const AContent: TMemoryStream); virtual;
+    procedure AfterDELETE(const AContent: TStream); virtual;
 
     procedure DoError(const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
     procedure AssignTo(Dest: TPersistent); override;
@@ -83,8 +83,8 @@ type
     procedure PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
-    procedure DELETE(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
+    procedure DELETE(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
 //    procedure PATCH(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
 //      const AAfterExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
@@ -110,9 +110,9 @@ type
     property Accept: string read GetAccept;
     property Application: TMARSClientApplication read GetApplication write FApplication;
     property AuthToken: string read GetAuthToken;
-    property Client: TMARSClient read GetClient;
+    property Client: TMARSCustomClient read GetClient;
     property SpecificAccept: string read FSpecificAccept write FSpecificAccept;
-    property SpecificClient: TMARSClient read FSpecificClient write FSpecificClient;
+    property SpecificClient: TMARSCustomClient read FSpecificClient write FSpecificClient;
     property SpecificToken: string read FSpecificToken write FSpecificToken;
     property Resource: string read FResource write FResource;
     property Path: string read GetPath;
@@ -146,17 +146,17 @@ begin
 
 end;
 
-procedure TMARSClientCustomResource.AfterGET;
+procedure TMARSClientCustomResource.AfterGET(const AContent: TStream);
 begin
 
 end;
 
-procedure TMARSClientCustomResource.AfterPOST;
+procedure TMARSClientCustomResource.AfterPOST(const AContent: TStream);
 begin
 
 end;
 
-procedure TMARSClientCustomResource.AfterPUT;
+procedure TMARSClientCustomResource.AfterPUT(const AContent: TStream);
 begin
 
 end;
@@ -178,7 +178,7 @@ begin
   LDestResource.Token := Token;
 end;
 
-procedure TMARSClientCustomResource.BeforeDELETE;
+procedure TMARSClientCustomResource.BeforeDELETE(const AContent: TMemoryStream);
 begin
 
 end;
@@ -188,12 +188,12 @@ begin
 
 end;
 
-procedure TMARSClientCustomResource.BeforePOST(AContent: TMemoryStream);
+procedure TMARSClientCustomResource.BeforePOST(const AContent: TMemoryStream);
 begin
 
 end;
 
-procedure TMARSClientCustomResource.BeforePUT(AContent: TMemoryStream);
+procedure TMARSClientCustomResource.BeforePUT(const AContent: TMemoryStream);
 begin
 
 end;
@@ -218,7 +218,7 @@ begin
     Result := (Token as TMARSClientToken).Token;
 end;
 
-function TMARSClientCustomResource.GetClient: TMARSClient;
+function TMARSClientCustomResource.GetClient: TMARSCustomClient;
 begin
   Result := nil;
   if Assigned(FSpecificClient) then
@@ -259,27 +259,33 @@ begin
     Result := Result + '?' + SmartConcat(TMARSURL.URLEncode(FQueryParams.ToStringArray), '&');
 end;
 
-procedure TMARSClientCustomResource.DELETE(const ABeforeExecute,
-  AAfterExecute: TMARSClientProc; const AOnException: TMARSClientExecptionProc);
+procedure TMARSClientCustomResource.DELETE(const ABeforeExecute: TProc<TMemoryStream>;
+  const AAfterExecute: TMARSClientResponseProc; const AOnException: TMARSClientExecptionProc);
 var
   LResponseStream: TMemoryStream;
+  LContent: TMemoryStream;
 begin
   try
-    BeforeDELETE();
-
-    if Assigned(ABeforeExecute) then
-      ABeforeExecute();
-
-    LResponseStream := TMemoryStream.Create;
+    LContent := TMemoryStream.Create;
     try
-      Client.Delete(URL, LResponseStream, AuthToken);
+      BeforeDELETE(LContent);
 
-      AfterDELETE();
+      if Assigned(ABeforeExecute) then
+        ABeforeExecute(LContent);
 
-      if Assigned(AAfterExecute) then
-        AAfterExecute();
+      LResponseStream := TMemoryStream.Create;
+      try
+        Client.Delete(URL, LContent, LResponseStream, AuthToken);
+
+        AfterDELETE(LResponseStream);
+
+        if Assigned(AAfterExecute) then
+          AAfterExecute(LResponseStream);
+      finally
+        LResponseStream.Free;
+      end;
     finally
-      LResponseStream.Free;
+      LContent.Free;
     end;
   except
     on E:Exception do
@@ -291,7 +297,7 @@ begin
           , procedure (AStream: TStream)
             begin
               if Assigned(AAfterExecute) then
-                AAfterExecute();
+                AAfterExecute(AStream);
             end);
     end;
   end;
@@ -331,7 +337,7 @@ begin
     try
       Client.Get(URL, LResponseStream, Accept, AuthToken);
 
-      AfterGET();
+      AfterGET(LResponseStream);
 
       if Assigned(AAfterExecute) then
         AAfterExecute(LResponseStream);
@@ -404,11 +410,11 @@ procedure TMARSClientCustomResource.GETAsync(
   const AOnException: TMARSClientExecptionProc;
   ASynchronize: Boolean);
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LApplication: TMARSClientApplication;
   LResource, LParentResource: TMARSClientCustomResource;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := TMARSCustomClient(Client.ClassType).Create(nil);
   try
     LClient.Assign(Client);
     LApplication := TMARSClientApplication.Create(nil);
@@ -501,7 +507,7 @@ begin
       try
         Client.Post(URL, LContent, LResponseStream, AuthToken);
 
-        AfterPOST();
+        AfterPOST(LResponseStream);
 
         if Assigned(AAfterExecute) then
           AAfterExecute(LResponseStream);
@@ -529,11 +535,11 @@ procedure TMARSClientCustomResource.POSTAsync(
   const AOnException: TMARSClientExecptionProc;
   ASynchronize: Boolean);
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LApplication: TMARSClientApplication;
   LResource, LParentResource: TMARSClientCustomResource;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := TMARSCustomClient(Client.ClassType).Create(nil);
   try
     LClient.Assign(Client);
     LApplication := TMARSClientApplication.Create(nil);
@@ -628,7 +634,7 @@ begin
       try
         Client.Put(URL, LContent, LResponseStream, AuthToken);
 
-        AfterPUT();
+        AfterPUT(LResponseStream);
 
         if Assigned(AAfterExecute) then
           AAfterExecute(LResponseStream);

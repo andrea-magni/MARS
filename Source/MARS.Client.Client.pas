@@ -13,16 +13,16 @@ uses
   SysUtils, Classes
   , MARS.Core.JSON
   , MARS.Client.Utils
-
-  // Indy
-  , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP
   ;
 
 type
   TMARSAuthEndorsement = (Cookie, AuthorizationBearer);
   TMARSHttpVerb = (Get, Put, Post, Head, Delete, Patch);
-  TMARSClientErrorEvent = procedure (AResource: TObject;
-    AException: Exception; AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc; var AHandled: Boolean) of object;
+  TMARSClientErrorEvent = procedure (
+    AResource: TObject; AException: Exception; AVerb: TMARSHttpVerb;
+    const AAfterExecute: TMARSClientResponseProc; var AHandled: Boolean) of object;
+
+  TMARSCustomClient = class; // fwd
 
   {$ifdef DelphiXE2_UP}
     [ComponentPlatformsAttribute(
@@ -35,38 +35,32 @@ type
     {$endif}
      or pidAndroid)]
   {$endif}
-  TMARSClient = class(TComponent)
+  TMARSCustomClient = class(TComponent)
   private
-    FHttpClient: TIdHTTP;
     FMARSEngineURL: string;
     FOnError: TMARSClientErrorEvent;
     FAuthEndorsement: TMARSAuthEndorsement;
-    function GetRequest: TIdHTTPRequest;
-    function GetResponse: TIdHTTPResponse;
-    function GetConnectTimeout: Integer;
-    function GetReadTimeout: Integer;
-    procedure SetConnectTimeout(const Value: Integer);
-    procedure SetReadTimeout(const Value: Integer);
-    function GetProtocolVersion: TIdHTTPProtocolVersion;
-    procedure SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
   protected
-    procedure EndorseAuthorization(const AAuthToken: string);
+    function GetConnectTimeout: Integer; virtual;
+    function GetReadTimeout: Integer; virtual;
+    procedure SetConnectTimeout(const Value: Integer); virtual;
+    procedure SetReadTimeout(const Value: Integer); virtual;
+
+    procedure EndorseAuthorization(const AAuthToken: string); virtual;
     procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
 
-    procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
+    procedure DoError(const AResource: TObject; const AException: Exception;
+      const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
 
-    procedure Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
-    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string);
-    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
-    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
-    function LastCmdSuccess: Boolean;
-    function ResponseText: string;
+    procedure Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); virtual;
+    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string); virtual;
+    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); virtual;
+    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); virtual;
 
-    property Request: TIdHTTPRequest read GetRequest;
-    property Response: TIdHTTPResponse read GetResponse;
+    function LastCmdSuccess: Boolean; virtual;
+    function ResponseText: string; virtual;
 
     // shortcuts
     class function GetJSON<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
@@ -122,14 +116,10 @@ type
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
-    property ProtocolVersion: TIdHTTPProtocolVersion read GetProtocolVersion write SetProtocolVersion;
-    property HttpClient: TIdHTTP read FHttpClient;
     property AuthEndorsement: TMARSAuthEndorsement read FAuthEndorsement write FAuthEndorsement default TMARSAuthEndorsement.Cookie;
   end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
-
-procedure Register;
 
 implementation
 
@@ -142,11 +132,6 @@ uses
   , MARS.Client.Application
 ;
 
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClient]);
-end;
-
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
 begin
 {$ifdef DelphiXE7_UP}
@@ -156,66 +141,38 @@ begin
 {$endif}
 end;
 
-{ TMARSClient }
+{ TMARSCustomClient }
 
-procedure TMARSClient.AssignTo(Dest: TPersistent);
+procedure TMARSCustomClient.AssignTo(Dest: TPersistent);
 var
-  LDestClient: TMARSClient;
+  LDestClient: TMARSCustomClient;
 begin
 //  inherited;
-  LDestClient := Dest as TMARSClient;
+  LDestClient := Dest as TMARSCustomClient;
 
-  LDestClient.MARSEngineURL := MARSEngineURL;
-  LDestClient.ConnectTimeout := ConnectTimeout;
-  LDestClient.ReadTimeout := ReadTimeout;
-  LDestClient.OnError := OnError;
-  LDestClient.ProtocolVersion := ProtocolVersion;
-  LDestClient.AuthEndorsement := AuthEndorsement;
-
-  LDestClient.HttpClient.IOHandler := HttpClient.IOHandler;
-  LDestClient.HttpClient.AllowCookies := HttpClient.AllowCookies;
-  LDestClient.HttpClient.ProxyParams.BasicAuthentication := HttpClient.ProxyParams.BasicAuthentication;
-  LDestClient.HttpClient.ProxyParams.ProxyPort := HttpClient.ProxyParams.ProxyPort;
-  LDestClient.HttpClient.ProxyParams.ProxyServer := HttpClient.ProxyParams.ProxyServer;
-  LDestClient.HttpClient.Request.BasicAuthentication := HttpClient.Request.BasicAuthentication;
-  LDestClient.HttpClient.Request.Host := HttpClient.Request.Host;
-  LDestClient.HttpClient.Request.Password := HttpClient.Request.Password;
-  LDestClient.HttpClient.Request.Username := HttpClient.Request.Username;
+  if Assigned(LDestClient) then
+  begin
+    LDestClient.MARSEngineURL := MARSEngineURL;
+    LDestClient.ConnectTimeout := ConnectTimeout;
+    LDestClient.ReadTimeout := ReadTimeout;
+    LDestClient.OnError := OnError;
+  end;
 end;
 
-constructor TMARSClient.Create(AOwner: TComponent);
+constructor TMARSCustomClient.Create(AOwner: TComponent);
 begin
   inherited;
   FAuthEndorsement := Cookie;
-  FHttpClient := TIdHTTP.Create(Self);
-  try
-    FHttpClient.SetSubComponent(True);
-    FHttpClient.Name := 'HttpClient';
-  except
-    FHttpClient.Free;
-    raise;
-  end;
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
 
 
-procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
+procedure TMARSCustomClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
   EndorseAuthorization(AAuthToken);
-{$ifdef DelphiXE7_UP}
-  FHttpClient.Delete(AURL, AResponseContent);
-{$else}
-  FHttpClient.Delete(AURL{, AResponseContent});
-{$endif}
 end;
 
-destructor TMARSClient.Destroy;
-begin
-  FHttpClient.Free;
-  inherited;
-end;
-
-procedure TMARSClient.DoError(const AResource: TObject;
+procedure TMARSCustomClient.DoError(const AResource: TObject;
   const AException: Exception; const AVerb: TMARSHttpVerb;
   const AAfterExecute: TMARSClientResponseProc);
 var
@@ -230,96 +187,77 @@ begin
     raise EMARSClientException.Create(AException.Message)
 end;
 
-procedure TMARSClient.EndorseAuthorization(const AAuthToken: string);
+procedure TMARSCustomClient.EndorseAuthorization(const AAuthToken: string);
 begin
-  if AuthEndorsement = AuthorizationBearer then
-  begin
-    if not (AAuthToken = '') then
-    begin
-      FHttpClient.Request.CustomHeaders.FoldLines := False;
-      FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
-    end
-    else
-      FHttpClient.Request.CustomHeaders.Values['Authorization'] := '';
-  end;
 end;
 
-procedure TMARSClient.Get(const AURL: string; AResponseContent: TStream;
+procedure TMARSCustomClient.Get(const AURL: string; AResponseContent: TStream;
   const AAccept: string; const AAuthToken: string);
 begin
-  FHttpClient.Request.Accept := AAccept;
   EndorseAuthorization(AAuthToken);
-  FHttpClient.Get(AURL, AResponseContent);
 end;
 
-function TMARSClient.GetConnectTimeout: Integer;
+function TMARSCustomClient.GetConnectTimeout: Integer;
 begin
-  Result := FHttpClient.ConnectTimeout;
+  Result := -1;
 end;
 
-function TMARSClient.GetReadTimeout: Integer;
+function TMARSCustomClient.GetReadTimeout: Integer;
 begin
-  Result := FHttpClient.ReadTimeout;
+  Result := -1;
 end;
 
-function TMARSClient.GetRequest: TIdHTTPRequest;
+//function TMARSCustomClient.GetRequest: TIdHTTPRequest;
+//begin
+//  Result := FHttpClient.Request;
+//end;
+
+//function TMARSCustomClient.GetResponse: TIdHTTPResponse;
+//begin
+//  Result := FHttpClient.Response;
+//end;
+
+function TMARSCustomClient.LastCmdSuccess: Boolean;
 begin
-  Result := FHttpClient.Request;
+  Result := False;
 end;
 
-function TMARSClient.GetResponse: TIdHTTPResponse;
-begin
-  Result := FHttpClient.Response;
-end;
-
-function TMARSClient.LastCmdSuccess: Boolean;
-begin
-  Result := FHttpClient.ResponseCode = 200;
-end;
-
-procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSCustomClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
   EndorseAuthorization(AAuthToken);
-  FHttpClient.Post(AURL, AContent, AResponse);
 end;
 
-procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSCustomClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
 begin
   EndorseAuthorization(AAuthToken);
-  FHttpClient.Put(AURL, AContent, AResponse);
 end;
 
-function TMARSClient.ResponseText: string;
+function TMARSCustomClient.ResponseText: string;
 begin
-  Result := FHttpClient.ResponseText;
+  Result := '';
 end;
 
-procedure TMARSClient.SetConnectTimeout(const Value: Integer);
+procedure TMARSCustomClient.SetConnectTimeout(const Value: Integer);
 begin
-  FHttpClient.ConnectTimeout := Value;
+
 end;
 
-procedure TMARSClient.SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
+procedure TMARSCustomClient.SetReadTimeout(const Value: Integer);
 begin
-  FHttpClient.ProtocolVersion := Value;
+
 end;
 
-procedure TMARSClient.SetReadTimeout(const Value: Integer);
-begin
-  FHttpClient.ReadTimeout := Value;
-end;
-
-class function TMARSClient.GetAsString(const AEngineURL, AAppName,
+class function TMARSCustomClient.GetAsString(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const AToken: string): string;
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LResource: TMARSClientResource;
   LApp: TMARSClientApplication;
   LIndex: Integer;
   LFinalURL: string;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := Create(nil);
   try
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
@@ -352,18 +290,18 @@ begin
   end;
 end;
 
-class function TMARSClient.GetJSON<T>(const AEngineURL, AAppName,
+class function TMARSCustomClient.GetJSON<T>(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const AToken: string; const AIgnoreResult: Boolean): T;
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LResource: TMARSClientResourceJSON;
   LApp: TMARSClientApplication;
   LIndex: Integer;
   LFinalURL: string;
 begin
   Result := nil;
-  LClient := TMARSClient.Create(nil);
+  LClient := Create(nil);
   try
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
@@ -401,19 +339,19 @@ begin
 end;
 
 {$ifdef DelphiXE7_UP}
-class procedure TMARSClient.GetJSONAsync<T>(const AEngineURL, AAppName,
+class procedure TMARSCustomClient.GetJSONAsync<T>(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const ACompletionHandler: TProc<T>;
   const AOnException: TMARSClientExecptionProc; const AToken: string;
   const ASynchronize: Boolean);
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LResource: TMARSClientResourceJSON;
   LApp: TMARSClientApplication;
   LIndex: Integer;
   LFinalURL: string;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := Create(nil);
   try
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
@@ -464,33 +402,28 @@ begin
 end;
 {$endif}
 
-function TMARSClient.GetProtocolVersion: TIdHTTPProtocolVersion;
-begin
-  Result := FHttpClient.ProtocolVersion;
-end;
-
-class function TMARSClient.GetStream(const AEngineURL, AAppName,
+class function TMARSCustomClient.GetStream(const AEngineURL, AAppName,
   AResourceName: string; const AToken: string): TStream;
 begin
   Result := GetStream(AEngineURL, AAppName, AResourceName, nil, nil, AToken);
 end;
 
-class function TMARSClient.GetJSON<T>(const AEngineURL, AAppName,
+class function TMARSCustomClient.GetJSON<T>(const AEngineURL, AAppName,
   AResourceName: string; const AToken: string): T;
 begin
   Result := GetJSON<T>(AEngineURL, AAppName, AResourceName, nil, nil, AToken);
 end;
 
-class function TMARSClient.GetStream(const AEngineURL, AAppName,
+class function TMARSCustomClient.GetStream(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const AToken: string): TStream;
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LResource: TMARSClientResourceStream;
   LApp: TMARSClientApplication;
   LIndex: Integer;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := Create(nil);
   try
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
@@ -530,17 +463,17 @@ begin
   end;
 end;
 
-class function TMARSClient.PostJSON(const AEngineURL, AAppName,
+class function TMARSCustomClient.PostJSON(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
   const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>; const AToken: string
 ): Boolean;
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LResource: TMARSClientResourceJSON;
   LApp: TMARSClientApplication;
   LIndex: Integer;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := Create(nil);
   try
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
@@ -582,7 +515,7 @@ begin
           end
         , nil
         );
-        Result := LClient.Response.ResponseCode = 200;
+        Result := LClient.LastCmdSuccess;
       finally
         LResource.Free;
       end;
@@ -596,7 +529,7 @@ end;
 
 
 {$ifdef DelphiXE7_UP}
-class procedure TMARSClient.PostJSONAsync(const AEngineURL, AAppName,
+class procedure TMARSCustomClient.PostJSONAsync(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const AContent: TJSONValue;
   const ACompletionHandler: TProc<TJSONValue>;
@@ -604,12 +537,12 @@ class procedure TMARSClient.PostJSONAsync(const AEngineURL, AAppName,
   const AToken: string;
   const ASynchronize: Boolean);
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LResource: TMARSClientResourceJSON;
   LApp: TMARSClientApplication;
   LIndex: Integer;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := Create(nil);
   try
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
@@ -673,17 +606,17 @@ begin
 end;
 {$endif}
 
-class function TMARSClient.PostStream(const AEngineURL, AAppName,
+class function TMARSCustomClient.PostStream(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const AContent: TStream; const AToken: string
 ): Boolean;
 var
-  LClient: TMARSClient;
+  LClient: TMARSCustomClient;
   LResource: TMARSClientResourceStream;
   LApp: TMARSClientApplication;
   LIndex: Integer;
 begin
-  LClient := TMARSClient.Create(nil);
+  LClient := Create(nil);
   try
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
@@ -715,7 +648,7 @@ begin
           end
         , nil, nil
         );
-        Result := LClient.Response.ResponseCode = 200;
+        Result := LClient.LastCmdSuccess;
       finally
         LResource.Free;
       end;
