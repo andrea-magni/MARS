@@ -34,6 +34,7 @@ type
     FHttpClient: TNetHTTPClient;
     FLastResponse: IHTTPResponse;
   protected
+    procedure AssignTo(Dest: TPersistent); override;
 //    function GetProtocolVersion: TIdHTTPProtocolVersion;
 //    procedure SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
 
@@ -43,7 +44,6 @@ type
     procedure SetReadTimeout(const Value: Integer); override;
 
     procedure EndorseAuthorization(const AAuthToken: string); override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -136,10 +136,7 @@ begin
   if AuthEndorsement = AuthorizationBearer then
   begin
     if not (AAuthToken = '') then
-    begin
-//      FHttpClient.Request.CustomHeaders.FoldLines := False;
-      FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + AAuthToken;
-    end
+      FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + AAuthToken
     else
       FHttpClient.CustomHeaders['Authorization'] := '';
   end;

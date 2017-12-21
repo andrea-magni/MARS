@@ -33,6 +33,7 @@ type
   private
     FHttpClient: TIdHTTP;
   protected
+    procedure AssignTo(Dest: TPersistent); override;
 //    function GetRequest: TIdHTTPRequest;
 //    function GetResponse: TIdHTTPResponse;
     function GetProtocolVersion: TIdHTTPProtocolVersion;
@@ -44,7 +45,6 @@ type
     procedure SetReadTimeout(const Value: Integer); override;
 
     procedure EndorseAuthorization(const AAuthToken: string); override;
-    procedure AssignTo(Dest: TPersistent); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;

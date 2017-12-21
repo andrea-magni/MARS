@@ -41,13 +41,16 @@ type
     FOnError: TMARSClientErrorEvent;
     FAuthEndorsement: TMARSAuthEndorsement;
   protected
+    procedure AssignTo(Dest: TPersistent); override;
+
     function GetConnectTimeout: Integer; virtual;
     function GetReadTimeout: Integer; virtual;
     procedure SetConnectTimeout(const Value: Integer); virtual;
     procedure SetReadTimeout(const Value: Integer); virtual;
+    procedure SetAuthEndorsement(const Value: TMARSAuthEndorsement);
 
     procedure EndorseAuthorization(const AAuthToken: string); virtual;
-    procedure AssignTo(Dest: TPersistent); override;
+    procedure AuthEndorsementChanged; virtual;
   public
     constructor Create(AOwner: TComponent); override;
 
@@ -116,7 +119,7 @@ type
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
-    property AuthEndorsement: TMARSAuthEndorsement read FAuthEndorsement write FAuthEndorsement default TMARSAuthEndorsement.Cookie;
+    property AuthEndorsement: TMARSAuthEndorsement read FAuthEndorsement write SetAuthEndorsement default TMARSAuthEndorsement.Cookie;
   end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
@@ -159,6 +162,11 @@ begin
   end;
 end;
 
+procedure TMARSCustomClient.AuthEndorsementChanged;
+begin
+
+end;
+
 constructor TMARSCustomClient.Create(AOwner: TComponent);
 begin
   inherited;
@@ -189,6 +197,7 @@ end;
 
 procedure TMARSCustomClient.EndorseAuthorization(const AAuthToken: string);
 begin
+
 end;
 
 procedure TMARSCustomClient.Get(const AURL: string; AResponseContent: TStream;
@@ -235,6 +244,16 @@ end;
 function TMARSCustomClient.ResponseText: string;
 begin
   Result := '';
+end;
+
+procedure TMARSCustomClient.SetAuthEndorsement(
+  const Value: TMARSAuthEndorsement);
+begin
+  if FAuthEndorsement <> Value then
+  begin
+    FAuthEndorsement := Value;
+    AuthEndorsementChanged;
+  end;
 end;
 
 procedure TMARSCustomClient.SetConnectTimeout(const Value: Integer);
