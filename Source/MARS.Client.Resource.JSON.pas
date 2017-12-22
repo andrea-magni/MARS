@@ -40,6 +40,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    function ResponseAs<T: record>: T;
+    function ResponseAsArray<T: record>: TArray<T>;
   published
     property Response: TJSONValue read FResponse write FResponse;
     property ResponseAsString: string read GetResponseAsString;
@@ -92,6 +94,16 @@ begin
   Result := '';
   if Assigned(FResponse) then
     Result := FResponse.ToJSON;
+end;
+
+function TMARSClientResourceJSON.ResponseAs<T>: T;
+begin
+  Result := (Response as TJSONObject).ToRecord<T>;
+end;
+
+function TMARSClientResourceJSON.ResponseAsArray<T>: TArray<T>;
+begin
+  Result := (Response as TJSONArray).ToArrayOfRecord<T>;
 end;
 
 end.
