@@ -414,7 +414,7 @@ var
   LApplication: TMARSClientApplication;
   LResource, LParentResource: TMARSClientCustomResource;
 begin
-  LClient := TMARSCustomClient(Client.ClassType).Create(nil);
+  LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
     LClient.Assign(Client);
     LApplication := TMARSClientApplication.Create(nil);
@@ -539,7 +539,7 @@ var
   LApplication: TMARSClientApplication;
   LResource, LParentResource: TMARSClientCustomResource;
 begin
-  LClient := TMARSCustomClient(Client.ClassType).Create(nil);
+  LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
     LClient.Assign(Client);
     LApplication := TMARSClientApplication.Create(nil);
