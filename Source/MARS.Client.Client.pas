@@ -23,6 +23,7 @@ type
     const AAfterExecute: TMARSClientResponseProc; var AHandled: Boolean) of object;
 
   TMARSCustomClient = class; // fwd
+  TMARSCustomClientClass = class of TMARSCustomClient;
 
   {$ifdef DelphiXE2_UP}
     [ComponentPlatformsAttribute(
