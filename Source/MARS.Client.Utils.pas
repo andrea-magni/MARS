@@ -13,6 +13,16 @@ uses
 
 type
   EMARSClientException = class(Exception);
+  EMARSClientHttpException = class(EMARSClientException)
+  private
+    FStatusText: string;
+    FStatusCode: Integer;
+  public
+    constructor Create(const AStatusText: string; const AStatusCode: Integer = 500); virtual;
+
+    property StatusText: string read FStatusText;
+    property StatusCode: Integer read FStatusCode;
+  end;
 
   TMARSClientProc = TProc;
   TMARSClientResponseProc = TProc<TStream>;
@@ -52,5 +62,15 @@ begin
   end;
 end;
 
+
+{ EMARSClientHttpException }
+
+constructor EMARSClientHttpException.Create(const AStatusText: string;
+  const AStatusCode: Integer);
+begin
+  inherited Create(AStatusCode.ToString + ': ' + AStatusText);
+  FStatusCode := AStatusCode;
+  FStatusText := AStatusText;
+end;
 
 end.
