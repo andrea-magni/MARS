@@ -44,6 +44,7 @@ type
     procedure SetReadTimeout(const Value: Integer); override;
 
     procedure EndorseAuthorization(const AAuthToken: string); override;
+    procedure CheckLastCmdSuccess; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -102,6 +103,15 @@ begin
   end;
 end;
 
+procedure TMARSNetClient.CheckLastCmdSuccess;
+begin
+  if not Assigned(FLastResponse) then
+    Exit;
+
+  if not LastCmdSuccess then
+    raise EMARSClientHttpException.Create(FLastResponse.StatusText, FLastResponse.StatusCode);
+end;
+
 constructor TMARSNetClient.Create(AOwner: TComponent);
 begin
   inherited;
@@ -114,7 +124,6 @@ begin
     FHttpClient.Free;
     raise;
   end;
-
 end;
 
 
@@ -123,6 +132,7 @@ begin
   inherited;
 
   FLastResponse := FHttpClient.Delete(AURL, AResponse);
+  CheckLastCmdSuccess;
 end;
 
 destructor TMARSNetClient.Destroy;
@@ -148,6 +158,7 @@ begin
   FHttpClient.Accept := AAccept;
   inherited;
   FLastResponse := FHttpClient.Get(AURL, AResponseContent);
+  CheckLastCmdSuccess;
 end;
 
 function TMARSNetClient.GetConnectTimeout: Integer;
@@ -170,6 +181,7 @@ begin
   inherited;
   AContent.Position := 0;
   FLastResponse := FHttpClient.Post(AURL, AContent, AResponse);
+  CheckLastCmdSuccess;
 end;
 
 procedure TMARSNetClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
@@ -177,6 +189,7 @@ begin
   inherited;
   AContent.Position := 0;
   FLastResponse := FHttpClient.Put(AURL, AContent, AResponse);
+  CheckLastCmdSuccess;
 end;
 
 function TMARSNetClient.ResponseText: string;
