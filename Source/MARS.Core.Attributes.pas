@@ -141,6 +141,13 @@ type
       const AActivation: IMARSActivation): TValue; override;
   end;
 
+  FormParamsAttribute = class(RequestParamAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
+
   HeaderParamAttribute = class(NamedRequestParamAttribute)
   public
     function GetValue(const ADestination: TRttiObject;
@@ -221,56 +228,13 @@ type
 implementation
 
 uses
-  StrUtils, DateUtils
-, MARS.Rtti.Utils
+  MARS.Rtti.Utils
 , MARS.Core.MessageBodyReader
 , MARS.Core.MediaType
 {$ifndef DelphiXE7_UP}
 , TypInfo
 {$endif}
 ;
-
-function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
-begin
-  if ADesiredType.IsObjectOfType<TJSONValue> then
-    Result := TJSONObject.ParseJSONValue(AString)
-  else
-  begin
-    case ADesiredType.TypeKind of
-      tkInt64,
-      tkInteger: Result := StrToIntDef(AString, 0);
-      tkEnumeration: begin
-        if SameText(ADesiredType.Name, 'Boolean') then
-          Result := StrToBoolDef(AString, False);
-      end;
-      tkFloat: begin
-        if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1  then
-        begin
-          try
-            Result := ISO8601ToDate(AString);
-          except
-            Result := StrToDateTime(AString)
-          end;
-        end
-        else
-          Result := StrToFloatDef(AString, 0.0);
-      end;
-
-  {$ifdef DelphiXE7_UP}
-      tkChar: begin
-                if AString.IsEmpty then
-                  Result := ''
-                else
-                  Result := TValue.From(AString.Chars[0]);
-              end;
-  {$else}
-      tkChar: Result := TValue.From(Copy(AString, 1, 1));
-  {$endif}
-      else
-        Result := AString;
-    end;
-  end;
-end;
 
 { ContentTypeAttribute }
 
@@ -533,11 +497,29 @@ end;
 
 function FormParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
+var
+  LMediaType: TMediaType;
+  LReader: IMessageBodyReader;
 begin
-  Result := StringToTValue(
+  // 1 - MessageBodyReader mechanism (standard)
+  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+  if Assigned(LReader) then
+    try
+      Result := LReader.ReadFrom(
+        {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
       AActivation.Request.ContentFields.Values[GetActualName(ADestination)]
-    , ADestination.GetRttiType
-  );
+        {$ifdef Delphi10Berlin_UP} ) {$endif}
+        , ADestination, LMediaType, AActivation);
+    finally
+      FreeAndNil(LMediaType);
+    end
+  else // 2 - fallback (raw)
+  begin
+    Result := StringToTValue(
+      AActivation.Request.ContentFields.Values[GetActualName(ADestination)]
+      , ADestination.GetRttiType
+    );
+  end;
 end;
 
 { HeaderParamAttribute }
@@ -634,6 +616,38 @@ begin
   FEnabled := AEnabled;
   FCallbackKey := ACallbackKey;
   FContentType := AContentType;
+end;
+
+{ FormParamsAttribute }
+
+function FormParamsAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+var
+  LMediaType: TMediaType;
+  LReader: IMessageBodyReader;
+  LValues: TStringList;
+begin
+  LValues := TStringList.Create;
+  try
+    LValues.Assign(AActivation.Request.ContentFields);
+
+    // 1 - MessageBodyReader mechanism (standard)
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+    if Assigned(LReader) then
+      try
+        Result := LReader.ReadFrom(
+          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+        LValues.Text
+          {$ifdef Delphi10Berlin_UP} ) {$endif}
+          , ADestination, LMediaType, AActivation);
+      finally
+        FreeAndNil(LMediaType);
+      end
+    else // 2 - fallback (raw)
+      Result := StringToTValue(LValues.Text, ADestination.GetRttiType);
+  finally
+    LValues.Free;
+  end;
 end;
 
 end.

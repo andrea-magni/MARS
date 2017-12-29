@@ -37,7 +37,7 @@ type
 
   end;
 
-  [Consumes(TMediaType.APPLICATION_JSON)]
+  [Consumes(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)]
   TRecordReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -157,16 +157,31 @@ function TRecordReader.ReadFrom(
 ): TValue;
 var
   LJSON: TJSONObject;
+  LFormData: TStringList;
 begin
   Result := TValue.Empty;
-  LJSON := TJSONValueReader.ReadJSONValue(
-    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
-  if Assigned(LJSON) then
+
+  if AMediaType.Matches(TMediaType.APPLICATION_FORM_URLENCODED_TYPE) then
+  begin
+    LFormData := TStringList.Create;
     try
-      Result := LJSON.ToRecord(ADestination.GetRttiType);
+      LFormData.Text := TEncoding.UTF8.GetString(AInputData);
+      Result := StringsToRecord(LFormData, ADestination.GetRttiType);
     finally
-      LJSON.Free;
+      LFormData.Free;
     end;
+  end
+  else
+  begin
+    LJSON := TJSONValueReader.ReadJSONValue(
+      AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
+    if Assigned(LJSON) then
+      try
+        Result := LJSON.ToRecord(ADestination.GetRttiType);
+      finally
+        LJSON.Free;
+      end;
+  end;
 end;
 
 { TArrayOfRecordReader }

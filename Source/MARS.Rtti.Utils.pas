@@ -83,7 +83,12 @@ type
     class procedure SetFieldByName(var ARecord: R; const AFieldName: string; const AValue: TValue);
     class function GetFieldByName(var ARecord: R; const AFieldName: string): TValue; overload;
     class function GetFieldByName(var ARecord: R; const AFieldName: string; const ADefault: TValue): TValue; overload;
+    class function FromStrings(const AStrings: TStrings): R;
+//    class procedure ToStrings(var AStrings: TStrings; const AClear: Boolean = True);
+//    class function ToArrayOfString: TArray<string>;
   end;
+
+  function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType): TValue;
 
 function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
   const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
@@ -94,14 +99,125 @@ function ExecuteMethod(const AInstance: TValue; AMethod: TRttiMethod; const AArg
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
 procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: Integer);
 
+function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
 
 implementation
 
 uses
-    Generics.Collections
+    StrUtils, DateUtils, Generics.Collections
   , MARS.Core.Utils
-  , DateUtils
 ;
+
+function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType): TValue;
+var
+  LField: TRttiField;
+//  LValue: TValue;
+  LRecordInstance: Pointer;
+//  LFilterProc: TToRecordFilterProc;
+  LAccept: Boolean;
+  LJSONName: string;
+  LAssignedValuesField: TRttiField;
+  LAssignedValues: TArray<string>;
+
+//  function GetRecordFilterProc: TToRecordFilterProc;
+//  var
+//    LMethod: TRttiMethod;
+//  begin
+//    Result := nil;
+//    // looking for TMyRecord.ToRecordFilter(const AField: TRttiField; const AObj: TJSONObject): Boolean;
+//
+//    LMethod := ARecordType.FindMethodFunc<TRttiField, TJSONObject, Boolean>('ToRecordFilter');
+//    if Assigned(LMethod) then
+//      Result :=
+//        procedure (const AField: TRttiField; const ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean)
+//        begin
+//          AAccept := LMethod.Invoke(ARecord, [AField, AJSONObject]).AsBoolean;
+//        end;
+//  end;
+
+begin
+  TValue.Make(nil, ARecordType.Handle, Result);
+  LRecordInstance := Result.GetReferenceToRawData;
+
+//  LFilterProc := AFilterProc;
+//  if not Assigned(LFilterProc) then
+//    LFilterProc := GetRecordFilterProc();
+
+  LAssignedValuesField := ARecordType.GetField('_AssignedValues');
+  if Assigned(LAssignedValuesField)
+     and not LAssignedValuesField.FieldType.IsDynamicArrayOf<string>
+  then
+    LAssignedValuesField := nil;
+  LAssignedValues := [];
+
+  for LField in ARecordType.GetFields do
+  begin
+    LAccept := True;
+//    if Assigned(LFilterProc) then
+//      LFilterProc(LField, Result, Self, LAccept);
+
+    if LAccept then
+    begin
+      LJSONName := LField.Name;
+      LField.HasAttribute<JSONNameAttribute>(
+        procedure (AAttr: JSONNameAttribute)
+        begin
+          LJSONName := AAttr.Name;
+        end
+      );
+      if LJSONName <> '' then
+      begin
+        LField.SetValue(LRecordInstance, StringToTValue(AStrings.Values[LJSONName], LField.FieldType));
+        LAssignedValues := LAssignedValues + [LField.Name];
+      end;
+    end;
+  end;
+  if Assigned(LAssignedValuesField) then
+    LAssignedValuesField.SetValue(LRecordInstance, TValue.From<TArray<string>>(LAssignedValues));
+end;
+
+function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
+begin
+  if ADesiredType.IsObjectOfType<TJSONValue> then
+    Result := TJSONObject.ParseJSONValue(AString)
+  else
+  begin
+    case ADesiredType.TypeKind of
+      tkInt64,
+      tkInteger: Result := StrToIntDef(AString, 0);
+      tkEnumeration: begin
+        if SameText(ADesiredType.Name, 'Boolean') then
+          Result := StrToBoolDef(AString, False);
+      end;
+      tkFloat: begin
+        if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1  then
+        begin
+          try
+            Result := ISO8601ToDate(AString);
+          except
+            Result := StrToDateTime(AString)
+          end;
+        end
+        else
+          Result := StrToFloatDef(AString, 0.0);
+      end;
+
+  {$ifdef DelphiXE7_UP}
+      tkChar: begin
+                if AString.IsEmpty then
+                  Result := ''
+                else
+                  Result := TValue.From(AString.Chars[0]);
+              end;
+  {$else}
+      tkChar: Result := TValue.From(Copy(AString, 1, 1));
+  {$endif}
+      else
+        Result := AString;
+    end;
+  end;
+end;
+
 
 procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: Integer);
 begin
@@ -745,6 +861,14 @@ begin
   end;
 end;
 
+class function TRecord<R>.FromStrings(const AStrings: TStrings): R;
+var
+  LRecordType: TRttiType;
+begin
+  LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
+  Result := StringsToRecord(AStrings, LRecordType).AsType<R>;
+end;
+
 class function TRecord<R>.GetFieldByName(var ARecord: R;
   const AFieldName: string): TValue;
 begin
@@ -775,6 +899,7 @@ begin
   LField := LRecordType.GetField(AFieldName);
   LField.SetValue(@ARecord, AValue);
 end;
+
 
 class procedure TRecord<R>.ToDataSet(const ARecord: R; const ADataSet: TDataSet;
   const AAppend: Boolean);
