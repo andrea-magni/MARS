@@ -77,11 +77,21 @@ type
     ): TValue; virtual;
   end;
 
+  [Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)]
+  TFormParamFileReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue; virtual;
+  end;
+
 
 implementation
 
 uses
-  StrUtils, NetEncoding
+  StrUtils, NetEncoding, Web.HttpApp
   , MARS.Core.JSON
   , MARS.Core.Utils, MARS.Rtti.Utils
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
@@ -157,19 +167,22 @@ function TRecordReader.ReadFrom(
 ): TValue;
 var
   LJSON: TJSONObject;
-  LFormData: TStringList;
+  LRequest: TWebRequest;
 begin
   Result := TValue.Empty;
 
   if AMediaType.Matches(TMediaType.APPLICATION_FORM_URLENCODED_TYPE) then
   begin
-    LFormData := TStringList.Create;
-    try
-      LFormData.Text := TEncoding.UTF8.GetString(AInputData);
-      Result := StringsToRecord(LFormData, ADestination.GetRttiType);
-    finally
-      LFormData.Free;
-    end;
+    LRequest := AActivation.Request;
+    Result := StringsToRecord(LRequest.ContentFields, ADestination.GetRttiType
+    , procedure (const AName: string; const AField: TRttiField; var AValue: TValue)
+      begin
+        if AField.FieldType.Handle = TypeInfo(TFormParamFile) then
+          AValue := TValue.From<TFormParamFile>(
+            TFormParamFile.CreateFromRequest(LRequest, AName)
+          );
+      end
+    );
   end
   else
   begin
@@ -281,6 +294,35 @@ begin
  {$endif}
 end;
 
+{ TFormParamFileReader }
+
+function TFormParamFileReader.ReadFrom(
+  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const ADestination: TRttiObject; const AMediaType: TMediaType;
+    const AActivation: IMARSActivation
+): TValue;
+var
+  LNamedObject: TRttiNamedObject;
+  LName: string;
+begin
+  Result := TValue.Empty;
+  LNamedObject := ADestination as TRttiNamedObject;
+  if Assigned(LNamedObject) then
+  begin
+    LName := LNamedObject.Name;
+    ADestination.HasAttribute<FormParamAttribute>(
+      procedure (AAttribute: FormParamAttribute)
+      begin
+        if AAttribute.Name <> '' then
+          LName := AAttribute.Name;
+      end
+    );
+
+    Result := TValue.From<TFormParamFile>(
+      TFormParamFile.CreateFromRequest(AActivation.Request, LName)
+    );
+  end;
+end;
 
 procedure RegisterReaders;
 begin
@@ -322,6 +364,8 @@ begin
         Result := TMARSMessageBodyReaderRegistry.AFFINITY_MEDIUM;
       end
   );
+
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TFormParamFile>(TFormParamFileReader);
 
 end;
 

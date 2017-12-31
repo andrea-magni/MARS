@@ -87,8 +87,10 @@ type
 //    class procedure ToStrings(var AStrings: TStrings; const AClear: Boolean = True);
 //    class function ToArrayOfString: TArray<string>;
   end;
+  TOnGetRecordFieldValueProc = reference to procedure (const AName: string; const AField: TRttiField; var AValue: TValue);
 
-  function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType): TValue;
+  function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType;
+    const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue;
 
 function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
   const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
@@ -108,7 +110,8 @@ uses
   , MARS.Core.Utils
 ;
 
-function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType): TValue;
+function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType;
+  const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue;
 var
   LField: TRttiField;
 //  LValue: TValue;
@@ -118,6 +121,7 @@ var
   LJSONName: string;
   LAssignedValuesField: TRttiField;
   LAssignedValues: TArray<string>;
+  LValue: TValue;
 
 //  function GetRecordFilterProc: TToRecordFilterProc;
 //  var
@@ -167,7 +171,10 @@ begin
       );
       if LJSONName <> '' then
       begin
-        LField.SetValue(LRecordInstance, StringToTValue(AStrings.Values[LJSONName], LField.FieldType));
+        LValue := StringToTValue(AStrings.Values[LJSONName], LField.FieldType);
+        if Assigned(AOnGetFieldValue) then
+          AOnGetFieldValue(LJSONName, LField, LValue);
+        LField.SetValue(LRecordInstance, LValue);
         LAssignedValues := LAssignedValues + [LField.Name];
       end;
     end;

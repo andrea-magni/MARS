@@ -10,11 +10,19 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes
-  , RTTI
-  , MARS.Core.JSON
-  , SyncObjs
-  ;
+  SysUtils, Classes, RTTI, SyncObjs, Web.HttpApp
+, MARS.Core.JSON
+;
+
+type
+  TFormParamFile = record
+    FieldName: string;
+    FileName: string;
+    Bytes: TBytes;
+    ContentType: string;
+    procedure Clear;
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
+  end;
 
   function CreateCompactGuidStr: string;
 
@@ -57,6 +65,8 @@ uses
   function StreamToBase64(const AStream: TStream): string;
   procedure Base64ToStream(const ABase64: string; const ADestStream: TStream);
 
+  function StreamToBytes(const ASource: TStream): TBytes;
+
 implementation
 
 uses
@@ -65,7 +75,14 @@ uses
   , XSBuiltIns
 {$endif}
   , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
-  ;
+;
+
+function StreamToBytes(const ASource: TStream): TBytes;
+begin
+  SetLength(Result, ASource.Size);
+  if ASource.Read(Result, ASource.Size) <> ASource.Size then
+    raise Exception.Create('Unable to copy all content to TBytes');
+end;
 
 procedure ZipStream(const ASource: TStream; const ADest: TStream);
 var
@@ -410,6 +427,36 @@ begin
     Result := LObj.ToJSON;
   finally
     LObj.Free;
+  end;
+end;
+
+{ TFormParamFile }
+
+procedure TFormParamFile.Clear;
+begin
+  FieldName := '';
+  FileName := '';
+  Bytes := [];
+  ContentType := '';
+end;
+
+constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
+var
+  LIndex: Integer;
+  LFile: TAbstractWebRequestFile;
+begin
+  Clear;
+  for LIndex := 0 to ARequest.Files.Count - 1 do
+  begin
+    LFile := ARequest.Files[LIndex];
+    if SameText(LFile.FieldName, AFieldName) then
+    begin
+      FieldName := LFile.FieldName;
+      FileName := LFile.FileName;
+      Bytes := StreamToBytes(LFile.Stream);
+      ContentType := LFile.ContentType;
+      Break;
+    end;
   end;
 end;
 

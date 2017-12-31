@@ -11,7 +11,7 @@ interface
 
 uses
   Classes, SysUtils, RTTI, Generics.Collections
-  , HttpApp
+  , HttpApp, Web.ReqMulti
   , MARS.Core.Declarations
   , MARS.Core.Utils
   , MARS.Core.URL  
@@ -136,6 +136,7 @@ type
   end;
 
   FormParamAttribute = class(NamedRequestParamAttribute)
+  protected
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
@@ -500,26 +501,24 @@ function FormParamAttribute.GetValue(const ADestination: TRttiObject;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
+  LActualName: string;
 begin
+  LActualName := GetActualName(ADestination);
   // 1 - MessageBodyReader mechanism (standard)
   TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
   if Assigned(LReader) then
     try
       Result := LReader.ReadFrom(
         {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-      AActivation.Request.ContentFields.Values[GetActualName(ADestination)]
+        AActivation.Request.ContentFields.Values[LActualName]
         {$ifdef Delphi10Berlin_UP} ) {$endif}
-        , ADestination, LMediaType, AActivation);
+      , ADestination, LMediaType, AActivation);
     finally
       FreeAndNil(LMediaType);
     end
   else // 2 - fallback (raw)
-  begin
-    Result := StringToTValue(
-      AActivation.Request.ContentFields.Values[GetActualName(ADestination)]
-      , ADestination.GetRttiType
-    );
-  end;
+    Result := StringToTValue(AActivation.Request.ContentFields.Values[LActualName]
+      , ADestination.GetRttiType);
 end;
 
 { HeaderParamAttribute }
@@ -625,29 +624,17 @@ function FormParamsAttribute.GetValue(const ADestination: TRttiObject;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
-  LValues: TStringList;
 begin
-  LValues := TStringList.Create;
-  try
-    LValues.Assign(AActivation.Request.ContentFields);
-
-    // 1 - MessageBodyReader mechanism (standard)
-    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
-    if Assigned(LReader) then
-      try
-        Result := LReader.ReadFrom(
-          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-        LValues.Text
-          {$ifdef Delphi10Berlin_UP} ) {$endif}
-          , ADestination, LMediaType, AActivation);
-      finally
-        FreeAndNil(LMediaType);
-      end
-    else // 2 - fallback (raw)
-      Result := StringToTValue(LValues.Text, ADestination.GetRttiType);
-  finally
-    LValues.Free;
-  end;
+  // 1 - MessageBodyReader mechanism (standard)
+  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+  if Assigned(LReader) then
+    try
+      Result := LReader.ReadFrom(nil, ADestination, LMediaType, AActivation);
+    finally
+      FreeAndNil(LMediaType);
+    end
+  else // 2 - fallback (raw)
+    Result := StringToTValue(AActivation.Request.ContentFields.Text, ADestination.GetRttiType);
 end;
 
 end.
