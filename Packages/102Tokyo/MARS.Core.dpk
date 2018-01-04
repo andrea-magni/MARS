@@ -38,7 +38,6 @@ requires
   IndyProtocols,
   IndyCore,
   xmlrtl,
-  DbxCommonDriver,
   dsnap,
   MARS.Utils;
 

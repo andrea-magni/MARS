@@ -34,7 +34,6 @@ package MARSClient.FireDAC;
 requires
   rtl,
   MARSClient.Core,
-  DbxCommonDriver,
   FireDAC,
   FireDACCommonDriver,
   FireDACCommon;
