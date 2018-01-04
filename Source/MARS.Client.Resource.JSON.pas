@@ -11,9 +11,8 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON
-
-  , MARS.Client.Resource
+  , MARS.Core.JSON, MARS.Client.Utils
+  , MARS.Client.Resource, MARS.Client.CustomResource
   , MARS.Client.Client
   ;
 
@@ -39,6 +38,27 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure POST(const AJSONValue: TJSONValue;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+
+    procedure POST<R: record>(const ARecord: R;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+
+    procedure POST<R: record>(const AArrayOfRecord: TArray<R>;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+
+    procedure POSTAsync(const AJSONValue: TJSONValue;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ASynchronize: Boolean = True); overload;
 
     function ResponseAs<T: record>: T;
     function ResponseAsArray<T: record>: TArray<T>;
@@ -94,6 +114,40 @@ begin
   Result := '';
   if Assigned(FResponse) then
     Result := FResponse.ToJSON;
+end;
+
+procedure TMARSClientResourceJSON.POST(const AJSONValue: TJSONValue;
+  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+  const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+begin
+
+end;
+
+procedure TMARSClientResourceJSON.POST<R>(const ARecord: R;
+  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+  const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+begin
+
+end;
+
+procedure TMARSClientResourceJSON.POST<R>(const AArrayOfRecord: TArray<R>;
+  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+  const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+begin
+
+end;
+
+
+procedure TMARSClientResourceJSON.POSTAsync(const AJSONValue: TJSONValue;
+  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+  const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
+  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+  const ASynchronize: Boolean = True);
+begin
+
 end;
 
 function TMARSClientResourceJSON.ResponseAs<T>: T;
