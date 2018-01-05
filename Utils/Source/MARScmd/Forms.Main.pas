@@ -25,8 +25,6 @@ type
     ReplaceTextLabel: TLabel;
     MatchesEdit: TEdit;
     FileExtensionsLabel: TLabel;
-    TestButton: TButton;
-    ExecuteButton: TButton;
     ActionList1: TActionList;
     NextButton: TButton;
     NextAction: TAction;
@@ -35,6 +33,8 @@ type
     Button2: TButton;
     DestinationFolderEdit: TEdit;
     DestinationFolderLabel: TLabel;
+    ExecuteButton: TButton;
+    Image1: TImage;
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure NextActionExecute(Sender: TObject);
@@ -92,7 +92,8 @@ end;
 
 procedure TMainForm.ExecuteActionUpdate(Sender: TObject);
 begin
-  ExecuteAction.Enabled := TMARSCmd.Current.CanExecute;
+  ExecuteAction.Enabled := (MainPageControl.ActivePage = ExecuteTab)
+    and TMARSCmd.Current.CanExecute;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -125,6 +126,7 @@ end;
 
 procedure TMainForm.TestActionExecute(Sender: TObject);
 begin
+  TMARSCmd.Current.DestinationPath := '';
   TMARSCmd.Current.PrepareNewProject(SearchTextEdit.Text, ReplaceTextEdit.Text, MatchesEdit.Text);
   DestinationFolderEdit.Text := TMARSCmd.Current.DestinationPath;
 end;
