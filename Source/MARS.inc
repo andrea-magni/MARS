@@ -1,3 +1,8 @@
+// *** BEWARE ***
+// if your Delphi edition/license does not include FireDAC,
+// remove the following MARS_FIREDAC definition!
+{$define MARS_FIREDAC}
+
 {$if compilerversion = 22}
   {$define DelphiXE}
 {$ifend}

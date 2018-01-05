@@ -13,6 +13,11 @@ uses
     System.Classes, System.SysUtils, Generics.Collections, Rtti
 
   , Data.DB
+// *** BEWARE ***
+// if your Delphi edition/license does not include FireDAC,
+// remove the MARS_FIREDAC definition in the MARS.inc file!
+// This is likely to be the case if you are compiling your first project and
+// got a "FireDAC.DApt not found" error at the following line
   , FireDAC.DApt, FireDAC.DApt.Intf, FireDAC.DatS
   , FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def
   , FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Stan.StorageXML, FireDAC.Stan.Param
