@@ -12,8 +12,7 @@ uses
 {$ifdef DelphiXE3_UP}
   System.SysUtils,
   System.Types,
-  IPPeerServer,
-  IPPeerAPI,
+//  IPPeerServer, IPPeerAPI,
   IdHTTPWebBrokerBridge,
   IdSchedulerOfThreadPool,
   Web.WebReq,
