@@ -10,7 +10,7 @@ Build your REST applications (server and client) with my library:
 1. standard: build Delphi REST servers to be consumed by other technologies (including web apps, .Net, Java, php...) and build your client applications against any REST server;
 1. Delphi-like: built using modern Delphi features and enabled with Delphi-to-Delphi specific facilities to get more power!
 
-- Compatibility: **Recent Delphi versions (from XE7 up to 10.2.1 Tokyo)** (older versions should be quite compatible)
+- Compatibility: **Recent Delphi versions (from XE7 up to 10.2.2 Tokyo)** (older versions should be quite compatible)
 
 # Get started
 * Grab a copy of MARS (git clone or download zip)
@@ -30,7 +30,7 @@ Build your REST applications (server and client) with my library:
 
 # Demos and MARSTemplate
 * Try some demos (i.e. "Demos\HelloWorld", "Demos\Authorization", "Demos\FireDAC Basic")
-* start your first project by copying "Demos\MARSTemplate"
+* compile and run the MARScmd_VCL.dproj in [MARS Folder]\Utils\Source\MARScmd, it will help you to create your first project by cloning "Demos\MARSTemplate" into a new folder
 
 # Contributions
 This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
