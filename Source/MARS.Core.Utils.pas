@@ -22,6 +22,7 @@ type
     ContentType: string;
     procedure Clear;
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
+    function ToString: string;
   end;
 
   function CreateCompactGuidStr: string;
@@ -458,6 +459,11 @@ begin
       Break;
     end;
   end;
+end;
+
+function TFormParamFile.ToString: string;
+begin
+  Result := SmartConcat([FieldName, FileName, ContentType, Length(Bytes).ToString + ' bytes']);
 end;
 
 end.

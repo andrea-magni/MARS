@@ -37,7 +37,10 @@ type
 
   end;
 
-  [Consumes(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)]
+  [Consumes(TMediaType.APPLICATION_JSON)
+ , Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
+ , Consumes(TMediaType.MULTIPART_FORM_DATA)
+  ]
   TRecordReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -77,7 +80,9 @@ type
     ): TValue; virtual;
   end;
 
-  [Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)]
+  [Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
+ , Consumes(TMediaType.MULTIPART_FORM_DATA)
+  ]
   TFormParamFileReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -171,7 +176,9 @@ var
 begin
   Result := TValue.Empty;
 
-  if AMediaType.Matches(TMediaType.APPLICATION_FORM_URLENCODED_TYPE) then
+  if AMediaType.Matches(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
+    or AMediaType.Matches(TMediaType.MULTIPART_FORM_DATA)
+  then
   begin
     LRequest := AActivation.Request;
     Result := StringsToRecord(LRequest.ContentFields, ADestination.GetRttiType
