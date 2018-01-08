@@ -21,7 +21,19 @@ type
     Bytes: TBytes;
     ContentType: string;
     procedure Clear;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    function ToString: string;
+  end;
+
+  TFormParam = record
+    FieldName: string;
+    Value: TValue;
+    function IsFile: Boolean;
+    function AsFile: TFormParamFile;
+    procedure Clear;
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
     function ToString: string;
   end;
 
@@ -81,6 +93,7 @@ uses
 function StreamToBytes(const ASource: TStream): TBytes;
 begin
   SetLength(Result, ASource.Size);
+  ASource.Position := 0;
   if ASource.Read(Result, ASource.Size) <> ASource.Size then
     raise Exception.Create('Unable to copy all content to TBytes');
 end;
@@ -443,27 +456,102 @@ end;
 
 constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
 var
-  LIndex: Integer;
+  LIndex, LFileIndex: Integer;
   LFile: TAbstractWebRequestFile;
 begin
   Clear;
+  LFileIndex := -1;
   for LIndex := 0 to ARequest.Files.Count - 1 do
   begin
     LFile := ARequest.Files[LIndex];
     if SameText(LFile.FieldName, AFieldName) then
     begin
-      FieldName := LFile.FieldName;
-      FileName := LFile.FileName;
-      Bytes := StreamToBytes(LFile.Stream);
-      ContentType := LFile.ContentType;
+      LFileIndex := LIndex;
       Break;
     end;
   end;
+
+  CreateFromRequest(ARequest, LIndex);
+end;
+
+constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest;
+  const AFileIndex: Integer);
+var
+  LFile: TAbstractWebRequestFile;
+begin
+  Clear;
+  if (AFileIndex >= 0) and (AFileIndex < ARequest.Files.Count) then
+  begin
+    LFile := ARequest.Files[AFileIndex];
+
+    FieldName := LFile.FieldName;
+    FileName := LFile.FileName;
+    Bytes := StreamToBytes(LFile.Stream);
+    ContentType := LFile.ContentType;
+   end;
 end;
 
 function TFormParamFile.ToString: string;
 begin
-  Result := SmartConcat([FieldName, FileName, ContentType, Length(Bytes).ToString + ' bytes']);
+  Result := FieldName + '=' + SmartConcat([FileName, ContentType, Length(Bytes).ToString + ' bytes']);
+end;
+
+{ TFormParam }
+
+function TFormParam.AsFile: TFormParamFile;
+begin
+  Result := Value.AsType<TFormParamFile>;
+end;
+
+procedure TFormParam.Clear;
+begin
+  FieldName := '';
+  Value := TValue.Empty;
+end;
+
+constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+  const AFileIndex: Integer);
+var
+  LValue: TFormParamFile;
+begin
+  Clear;
+  LValue := TFormParamFile.CreateFromRequest(ARequest, AFileIndex);
+  Value := TValue.From<TFormParamFile>(LValue);
+  FieldName := LValue.FieldName;
+end;
+
+constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+  const AFieldName: string);
+var
+  LIndex: Integer;
+begin
+  Clear;
+  LIndex := ARequest.ContentFields.IndexOfName(AFieldName);
+  if LIndex <> -1 then
+  begin
+    FieldName := AFieldName;
+    Value := ARequest.ContentFields.ValueFromIndex[LIndex];
+  end
+  else
+  begin
+    FieldName := AFieldName;
+    Value := TValue.From<TFormParamFile>(
+      TFormParamFile.CreateFromRequest(ARequest, AFieldName)
+    );
+  end;
+end;
+
+function TFormParam.IsFile: Boolean;
+begin
+  Result := Value.IsType<TFormParamFile>;
+end;
+
+function TFormParam.ToString: string;
+begin
+  if IsFile then
+    Result := AsFile.ToString
+  else
+    Result := FieldName + '=' + Value.ToString;
 end;
 
 end.

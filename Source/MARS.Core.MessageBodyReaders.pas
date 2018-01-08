@@ -83,7 +83,19 @@ type
   [Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
  , Consumes(TMediaType.MULTIPART_FORM_DATA)
   ]
-  TFormParamFileReader = class(TInterfacedObject, IMessageBodyReader)
+  TFormParamReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue; virtual;
+  end;
+
+  [Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
+ , Consumes(TMediaType.MULTIPART_FORM_DATA)
+  ]
+  TArrayOfTFormParamReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
@@ -301,9 +313,9 @@ begin
  {$endif}
 end;
 
-{ TFormParamFileReader }
+{ TFormParamReader }
 
-function TFormParamFileReader.ReadFrom(
+function TFormParamReader.ReadFrom(
   {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
     const ADestination: TRttiObject; const AMediaType: TMediaType;
     const AActivation: IMARSActivation
@@ -325,11 +337,42 @@ begin
       end
     );
 
-    Result := TValue.From<TFormParamFile>(
-      TFormParamFile.CreateFromRequest(AActivation.Request, LName)
+    Result := TValue.From<TFormParam>(
+      TFormParam.CreateFromRequest(AActivation.Request, LName)
     );
   end;
 end;
+
+{ TArrayOfTFormParamReader }
+
+function TArrayOfTFormParamReader.ReadFrom(
+  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation
+): TValue;
+var
+  LResult: TArray<TFormParam>;
+  LRequest: TWebRequest;
+  LIndex: Integer;
+begin
+  LResult := [];
+
+  if AMediaType.Matches(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
+    or AMediaType.Matches(TMediaType.MULTIPART_FORM_DATA)
+  then
+  begin
+    LRequest := AActivation.Request;
+
+    for LIndex := 0 to LRequest.ContentFields.Count - 1 do
+      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LRequest.ContentFields.Names[LIndex])];
+
+    for LIndex := 0 to LRequest.Files.Count - 1 do
+      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LIndex)];
+  end;
+
+  Result := TValue.From<TArray<TFormParam>>(LResult);
+end;
+
 
 procedure RegisterReaders;
 begin
@@ -372,7 +415,18 @@ begin
       end
   );
 
-  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TFormParamFile>(TFormParamFileReader);
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TFormParam>(TFormParamReader);
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader(
+    TArrayOfTFormParamReader
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := AType.IsDynamicArrayOf<TFormParam>(false);
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyReaderRegistry.AFFINITY_MEDIUM;
+      end
+  );
 
 end;
 
