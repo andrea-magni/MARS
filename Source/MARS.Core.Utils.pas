@@ -37,6 +37,12 @@ type
     function ToString: string;
   end;
 
+  TDump = class
+  public
+    class procedure Request(const ARequest: TWebRequest; const AFileName: string); overload; virtual;
+  end;
+
+
   function CreateCompactGuidStr: string;
 
   function ObjectToJSON(const AObject: TObject): TJSONObject;
@@ -89,6 +95,7 @@ uses
 {$endif}
   , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
 ;
+
 
 function StreamToBytes(const ASource: TStream): TBytes;
 begin
@@ -471,7 +478,7 @@ begin
     end;
   end;
 
-  CreateFromRequest(ARequest, LIndex);
+  CreateFromRequest(ARequest, LFileIndex);
 end;
 
 constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest;
@@ -552,6 +559,76 @@ begin
     Result := AsFile.ToString
   else
     Result := FieldName + '=' + Value.ToString;
+end;
+
+{ TDump }
+
+class procedure TDump.Request(const ARequest: TWebRequest;
+  const AFileName: string);
+var
+  LSS: TStringStream;
+  LHeaders: string;
+  LRawString: string;
+  LBytesStream: TBytesStream;
+begin
+  try
+    try
+      LRawString := 'Content: ' + ARequest.Content;
+    except
+      try
+        LRawString := TEncoding.UTF8.GetString(ARequest.RawContent);
+      except
+        try
+          LBytesStream := TBytesStream.Create(ARequest.RawContent);
+          try
+            LRawString := StreamToString(LBytesStream);
+          finally
+            LBytesStream.Free;
+          end;
+        except
+          LRawString := 'Unable to read content: ' + Length(ARequest.RawContent).ToString + ' bytes';
+        end;
+      end;
+    end;
+
+    LHeaders := string.join(sLineBreak, [
+      'PathInfo: ' + ARequest.PathInfo
+    , 'Method: ' + ARequest.Method
+    , 'ProtocolVersion: ' + ARequest.ProtocolVersion
+    , 'Authorization: ' + ARequest.Authorization
+    , 'Accept: ' + ARequest.Accept
+
+    , 'ContentFields: ' + ARequest.ContentFields.CommaText
+    , 'CookieFields: ' + ARequest.CookieFields.CommaText
+    , 'QueryFields: ' + ARequest.QueryFields.CommaText
+
+    , 'ContentType: ' + ARequest.ContentType
+    , 'ContentEncoding: ' + ARequest.ContentEncoding
+    , 'ContentLength: ' + ARequest.ContentLength.ToString
+    , 'ContentVersion: ' + ARequest.ContentVersion
+
+    , 'RemoteAddr: ' + ARequest.RemoteAddr
+    , 'RemoteHost: ' + ARequest.RemoteHost
+    , 'RemoteIP: ' + ARequest.RemoteIP
+    ]);
+
+    LSS := TStringStream.Create(LHeaders + sLineBreak + sLineBreak + LRawString);
+    try
+      LSS.SaveToFile(AFileName);
+    finally
+      LSS.Free;
+    end;
+  except on E:Exception do
+    begin
+      LSS := TStringStream.Create('Error: ' + E.ToString);
+      try
+        LSS.SaveToFile(AFileName);
+      finally
+        LSS.Free;
+      end;
+    end;
+    // no exceptions allowed outside here
+  end;
 end;
 
 end.
