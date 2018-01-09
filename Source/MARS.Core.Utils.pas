@@ -23,6 +23,7 @@ type
     procedure Clear;
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor Create(const AFieldName: string; const AFileName: string; const ABytes: TBytes; const AContentType: string);
     function ToString: string;
   end;
 
@@ -34,6 +35,7 @@ type
     procedure Clear;
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor Create(const AFieldName: string; const AValue: TValue);
     function ToString: string;
   end;
 
@@ -481,6 +483,15 @@ begin
   CreateFromRequest(ARequest, LFileIndex);
 end;
 
+constructor TFormParamFile.Create(const AFieldName, AFileName: string;
+  const ABytes: TBytes; const AContentType: string);
+begin
+  FieldName := AFieldName;
+  FileName := AFileName;
+  Bytes := ABytes;
+  ContentType := AContentType;
+end;
+
 constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest;
   const AFileIndex: Integer);
 var
@@ -491,10 +502,7 @@ begin
   begin
     LFile := ARequest.Files[AFileIndex];
 
-    FieldName := LFile.FieldName;
-    FileName := LFile.FileName;
-    Bytes := StreamToBytes(LFile.Stream);
-    ContentType := LFile.ContentType;
+    Create(LFile.FieldName, LFile.FileName, StreamToBytes(LFile.Stream), LFile.ContentType);
    end;
 end;
 
@@ -514,6 +522,13 @@ procedure TFormParam.Clear;
 begin
   FieldName := '';
   Value := TValue.Empty;
+end;
+
+constructor TFormParam.Create(const AFieldName: string; const AValue: TValue);
+begin
+  Clear;
+  FieldName := AFieldName;
+  Value := AValue;
 end;
 
 constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
