@@ -56,7 +56,8 @@ contains
   MARS.Client.SubResource.Stream in '..\..\Source\MARS.Client.SubResource.Stream.pas',
   MARS.Client.Token in '..\..\Source\MARS.Client.Token.pas',
   MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',
-  MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas';
+  MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas',
+  MARS.Client.Resource.FormData in '..\..\Source\MARS.Client.Resource.FormData.pas';
 
 end.
 

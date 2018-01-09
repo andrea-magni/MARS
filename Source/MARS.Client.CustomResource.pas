@@ -79,7 +79,7 @@ type
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}): string; {$ifndef DelphiXE2_UP}overload;{$endif}
     procedure POST(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
     procedure PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
@@ -272,7 +272,7 @@ begin
 
     LResponseStream := TMemoryStream.Create;
     try
-      Client.Delete(URL, LResponseStream, AuthToken);
+      Client.Delete(URL, LResponseStream, AuthToken, Accept);
 
       AfterDELETE();
 
@@ -499,7 +499,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Post(URL, LContent, LResponseStream, AuthToken);
+        Client.Post(URL, LContent, LResponseStream, AuthToken, Accept);
 
         AfterPOST();
 
@@ -626,7 +626,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Put(URL, LContent, LResponseStream, AuthToken);
+        Client.Put(URL, LContent, LResponseStream, AuthToken, Accept);
 
         AfterPUT();
 

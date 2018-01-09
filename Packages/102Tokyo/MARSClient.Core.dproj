@@ -108,6 +108,7 @@
         <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Utils.LiveBindings.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormData.pas"/>
         <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
@@ -148,6 +149,10 @@
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTAPPLICATION</ResourceId>
         </RcItem>
+        <RcItem Include="..\..\media\TMARSClientResourceFormData.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTRESOURCEFORMDATA</ResourceId>
+        </RcItem>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -174,7 +179,7 @@
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="3">
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\18.0\Bpl\MARSClient.Core240.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\19.0\Bpl\MARSClient.Core250.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARSClient_Core.bpl</RemoteName>
                         <Overwrite>true</Overwrite>

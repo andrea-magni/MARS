@@ -11,8 +11,8 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON
-  , MARS.Client.Utils
+  , Generics.Collections
+  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils
 
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP
@@ -58,10 +58,15 @@ type
 
     procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
 
-    procedure Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
+    procedure Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string; const Accept: string);
     procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string);
-    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
-    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string;
+      const AAccept: string); overload;
+    procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string; const AAccept: string); overload;
+    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string); overload;
+    procedure Put(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string; const AAccept: string); overload;
     function LastCmdSuccess: Boolean;
     function ResponseText: string;
 
@@ -135,6 +140,7 @@ implementation
 
 uses
     Rtti, TypInfo
+  , IdMultipartFormData
   , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
@@ -199,7 +205,7 @@ begin
 end;
 
 
-procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string);
+procedure TMARSClient.Delete(const AURL: string; AResponseContent: TStream; const AAuthToken: string; const Accept: string);
 begin
   EndorseAuthorization(AAuthToken);
 {$ifdef DelphiXE7_UP}
@@ -277,14 +283,16 @@ begin
   Result := FHttpClient.ResponseCode = 200;
 end;
 
-procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
+  FHttpClient.Request.Accept := AAccept;
   EndorseAuthorization(AAuthToken);
   FHttpClient.Post(AURL, AContent, AResponse);
 end;
 
-procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
+  FHttpClient.Request.Accept := AAccept;
   EndorseAuthorization(AAuthToken);
   FHttpClient.Put(AURL, AContent, AResponse);
 end;
@@ -530,6 +538,30 @@ begin
   end;
 end;
 
+procedure TMARSClient.Post(const AURL: string;
+  const AFormData: TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken: string; const AAccept: string);
+var
+  LFormDataStream: TIdMultiPartFormDataStream;
+  LFormParam: TFormParam;
+begin
+  FHttpClient.Request.Accept := AAccept;
+  EndorseAuthorization(AAuthToken);
+
+  LFormDataStream := TIdMultiPartFormDataStream.Create;
+  try
+    for LFormParam in AFormData do
+      LFormDataStream.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString);
+
+    LFormDataStream.Position := 0;
+    FHttpClient.ProtocolVersion := TIdHTTPProtocolVersion.pv1_1;
+    FHttpClient.HTTPOptions := FHttpClient.HTTPOptions + [hoKeepOrigProtocol];
+    FHttpClient.Post(AURL, LFormDataStream, AResponse);
+  finally
+    LFormDataStream.Free;
+  end;
+end;
+
 class function TMARSClient.PostJSON(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
   const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>; const AToken: string
@@ -727,5 +759,26 @@ begin
   end;
 end;
 
+
+procedure TMARSClient.Put(const AURL: string;
+  const AFormData: TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken: string; const AAccept: string);
+var
+  LFormDataStream: TIdMultiPartFormDataStream;
+  LFormParam: TFormParam;
+begin
+  FHttpClient.Request.Accept := AAccept;
+  EndorseAuthorization(AAuthToken);
+
+  LFormDataStream := TIdMultiPartFormDataStream.Create;
+  try
+    for LFormParam in AFormData do
+      LFormDataStream.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString);
+
+    FHttpClient.Put(AURL, LFormDataStream, AResponse);
+  finally
+    LFormDataStream.Free;
+  end;
+end;
 
 end.
