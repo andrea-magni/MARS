@@ -46,8 +46,9 @@ type
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
-
   published
+    property FormData: TArray<TFormParam> read FFormData;
+    property Response: TMemoryStream read FResponse;
     property ResponseAsString: string read GetResponseAsString;
   end;
 
