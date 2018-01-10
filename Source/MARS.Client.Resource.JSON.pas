@@ -121,7 +121,17 @@ procedure TMARSClientResourceJSON.POST(const AJSONValue: TJSONValue;
   const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
   const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
 begin
-
+  POST(
+    procedure (AContent: TMemoryStream)
+    begin
+      JSONValueToStream(AJSONValue, AContent);
+      AContent.Position := 0;
+      if Assigned(ABeforeExecute) then
+        ABeforeExecute(AContent);
+    end
+  , AAfterExecute
+  , AOnException
+  );
 end;
 
 procedure TMARSClientResourceJSON.POST<R>(const ARecord: R;
@@ -129,7 +139,24 @@ procedure TMARSClientResourceJSON.POST<R>(const ARecord: R;
   const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
   const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
 begin
-
+  POST(
+    procedure (AContent: TMemoryStream)
+    var
+      LJSONValue: TJSONValue;
+    begin
+      LJSONValue := TJSONObject.RecordToJSON<R>(ARecord);
+      try
+        JSONValueToStream(LJSONValue, AContent);
+      finally
+        LJSONValue.Free;
+      end;
+      AContent.Position := 0;
+      if Assigned(ABeforeExecute) then
+        ABeforeExecute(AContent);
+    end
+  , AAfterExecute
+  , AOnException
+  );
 end;
 
 procedure TMARSClientResourceJSON.POST<R>(const AArrayOfRecord: TArray<R>;
@@ -137,7 +164,24 @@ procedure TMARSClientResourceJSON.POST<R>(const AArrayOfRecord: TArray<R>;
   const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
   const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
 begin
-
+  POST(
+    procedure (AContent: TMemoryStream)
+    var
+      LJSONValue: TJSONValue;
+    begin
+      LJSONValue := TJSONArray.ArrayOfRecordToJSON<R>(AArrayOfRecord);
+      try
+        JSONValueToStream(LJSONValue, AContent);
+      finally
+        LJSONValue.Free;
+      end;
+      AContent.Position := 0;
+      if Assigned(ABeforeExecute) then
+        ABeforeExecute(AContent);
+    end
+  , AAfterExecute
+  , AOnException
+  );
 end;
 
 
@@ -147,7 +191,18 @@ procedure TMARSClientResourceJSON.POSTAsync(const AJSONValue: TJSONValue;
   const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
   const ASynchronize: Boolean = True);
 begin
-
+  POSTAsync(
+    procedure (AContent: TMemoryStream)
+    begin
+      JSONValueToStream(AJSONValue, AContent);
+      AContent.Position := 0;
+      if Assigned(ABeforeExecute) then
+        ABeforeExecute(AContent);
+    end
+  , ACompletionHandler
+  , AOnException
+  , ASynchronize
+  );
 end;
 
 function TMARSClientResourceJSON.ResponseAs<T>: T;
