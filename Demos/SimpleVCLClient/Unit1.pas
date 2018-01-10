@@ -8,7 +8,9 @@ uses
   FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
   FireDAC.DApt.Intf, Data.DB, Vcl.Grids, Vcl.DBGrids, FireDAC.Comp.DataSet,
   FireDAC.Comp.Client, MARS.Client.CustomResource, MARS.Client.Resource,
-  MARS.Client.FireDAC, MARS.Client.Application, MARS.Client.Client, Vcl.StdCtrls;
+  MARS.Client.FireDAC, MARS.Client.Application, MARS.Client.Client, Vcl.StdCtrls,
+  MARS.Client.Client.Indy
+;
 
 type
   TForm1 = class(TForm)

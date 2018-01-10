@@ -8,7 +8,9 @@ uses
   FMX.Controls.Presentation, FMX.ScrollBox, FMX.Memo, FMX.Layouts,
   MARS.Client.SubResource, System.JSON, MARS.Client.CustomResource,
   MARS.Client.Resource, MARS.Client.Token, MARS.Client.Application,
-  MARS.Client.Client, FMX.StdCtrls, FMX.Edit, MARS.Utils.Parameters;
+  MARS.Client.Client, FMX.StdCtrls, FMX.Edit, MARS.Utils.Parameters,
+  MARS.Client.Client.Indy
+  ;
 
 type
   TMainForm = class(TForm)

@@ -9,8 +9,8 @@ interface
 
 uses
   System.SysUtils, System.Classes, MARS.Client.Application,
-  MARS.Client.Client
-  ;
+  MARS.Client.Client, MARS.Client.Client.Indy
+ ;
 
 type
   TMainDataModule = class(TDataModule)

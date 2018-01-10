@@ -7,7 +7,8 @@ uses
   MARS.Client.SubResource.JSON, System.JSON, MARS.Client.CustomResource,
   MARS.Client.Resource, MARS.Client.Resource.JSON, MARS.Client.Client,
   MARS.Client.SubResource.Stream, MARS.Client.Application,
-  MARS.Utils.Parameters, MARS.Client.Token;
+  MARS.Utils.Parameters, MARS.Client.Token, MARS.Client.Client.Indy
+;
 
 type
   TJSONArrayProc = TProc<TJSONArray>;

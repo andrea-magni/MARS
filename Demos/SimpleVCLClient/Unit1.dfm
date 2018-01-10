@@ -61,6 +61,20 @@ object Form1: TForm1
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 0
     ReadTimeout = -1
+    ProtocolVersion = pv1_1
+    HttpClient.AllowCookies = True
+    HttpClient.ProxyParams.BasicAuthentication = False
+    HttpClient.ProxyParams.ProxyPort = 0
+    HttpClient.Request.ContentLength = -1
+    HttpClient.Request.ContentRangeEnd = -1
+    HttpClient.Request.ContentRangeStart = -1
+    HttpClient.Request.ContentRangeInstanceLength = -1
+    HttpClient.Request.Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    HttpClient.Request.BasicAuthentication = False
+    HttpClient.Request.UserAgent = 'Mozilla/3.0 (compatible; Indy Library)'
+    HttpClient.Request.Ranges.Units = 'bytes'
+    HttpClient.Request.Ranges = <>
+    HttpClient.HTTPOptions = [hoForceEncodeParams]
     Left = 48
     Top = 32
   end
@@ -73,6 +87,7 @@ object Form1: TForm1
   end
   object MARSDatamoduleResource: TMARSFDResource
     Application = MARSClientApplication1
+    SpecificAccept = 'application/json-firedac,application/json'
     Resource = 'maindata'
     QueryParams.Strings = (
       '')
@@ -88,7 +103,6 @@ object Form1: TForm1
   end
   object employee1: TFDMemTable
     ActiveStoredUsage = []
-    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll

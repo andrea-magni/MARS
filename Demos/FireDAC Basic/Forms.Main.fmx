@@ -96,6 +96,7 @@ object Form1: TForm1
   end
   object MARSFDResource1: TMARSFDResource
     Application = MARSClientApplication1
+    SpecificAccept = 'application/json-firedac,application/json'
     Resource = 'maindata'
     ResourceDataSets = <
       item
