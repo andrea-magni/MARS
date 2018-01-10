@@ -11,7 +11,7 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON, MARS.Client.Utils, MARS.Client.Client
+  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
 
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP
@@ -49,10 +49,15 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); override;
+    procedure Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string); override;
     procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string); override;
-    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); override;
-    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); override;
+    procedure Post(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string); override;
+    procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string; const AAccept: string); override;
+    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string); override;
+    procedure Put(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string; const AAccept: string); override;
 
     function LastCmdSuccess: Boolean; override;
     function ResponseText: string; override;
@@ -72,7 +77,7 @@ procedure Register;
 implementation
 
 uses
-    Rtti, TypInfo
+    Rtti, TypInfo, IdMultipartFormData
   , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
@@ -125,10 +130,10 @@ begin
 end;
 
 
-procedure TMARSIndyClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSIndyClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   inherited;
-
+  FHttpClient.Request.Accept := AAccept;
 {$ifdef DelphiXE7_UP}
   FHttpClient.Delete(AURL, AResponse);
 {$else}
@@ -186,18 +191,20 @@ end;
 
 function TMARSIndyClient.LastCmdSuccess: Boolean;
 begin
-  Result := FHttpClient.ResponseCode = 200;
+  Result := (FHttpClient.ResponseCode >= 200) and (FHttpClient.ResponseCode < 300);
 end;
 
-procedure TMARSIndyClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSIndyClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   inherited;
+  FHttpClient.Request.Accept := AAccept;
   FHttpClient.Post(AURL, AContent, AResponse);
 end;
 
-procedure TMARSIndyClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSIndyClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   inherited;
+  FHttpClient.Request.Accept := AAccept;
   FHttpClient.Put(AURL, AContent, AResponse);
 end;
 
@@ -224,6 +231,53 @@ end;
 function TMARSIndyClient.GetProtocolVersion: TIdHTTPProtocolVersion;
 begin
   Result := FHttpClient.ProtocolVersion;
+end;
+
+procedure TMARSIndyClient.Post(const AURL: string;
+  const AFormData: TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken, AAccept: string);
+var
+  LFormDataStream: TIdMultiPartFormDataStream;
+  LFormParam: TFormParam;
+begin
+  inherited;
+
+  FHttpClient.Request.Accept := AAccept;
+
+  LFormDataStream := TIdMultiPartFormDataStream.Create;
+  try
+    for LFormParam in AFormData do
+      LFormDataStream.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString);
+
+//    LFormDataStream.Position := 0;
+//    FHttpClient.ProtocolVersion := TIdHTTPProtocolVersion.pv1_1;
+//    FHttpClient.HTTPOptions := FHttpClient.HTTPOptions + [hoKeepOrigProtocol];
+    FHttpClient.Request.ContentType := LFormDataStream.RequestContentType;
+    FHttpClient.Post(AURL, LFormDataStream, AResponse);
+  finally
+    LFormDataStream.Free;
+  end;
+end;
+
+procedure TMARSIndyClient.Put(const AURL: string;
+  const AFormData: TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken, AAccept: string);
+var
+  LFormDataStream: TIdMultiPartFormDataStream;
+  LFormParam: TFormParam;
+begin
+  inherited;
+
+  FHttpClient.Request.Accept := AAccept;
+  LFormDataStream := TIdMultiPartFormDataStream.Create;
+  try
+    for LFormParam in AFormData do
+      LFormDataStream.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString);
+
+    FHttpClient.Put(AURL, LFormDataStream, AResponse);
+  finally
+    LFormDataStream.Free;
+  end;
 end;
 
 end.

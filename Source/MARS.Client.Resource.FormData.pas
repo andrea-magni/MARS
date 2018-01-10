@@ -33,7 +33,7 @@ type
     FFormData: TArray<TFormParam>;
     FResponse: TMemoryStream;
   protected
-    procedure AfterPOST(); override;
+    procedure AfterPOST(const AContent: TStream); override;
     function GetResponseAsString: string; virtual;
   public
     constructor Create(AOwner: TComponent); override;
@@ -63,11 +63,11 @@ end;
 
 { TMARSClientResourceFormData }
 
-procedure TMARSClientResourceFormData.AfterPOST;
+procedure TMARSClientResourceFormData.AfterPOST(const AContent: TStream);
 begin
   inherited;
-  Client.Response.ContentStream.Position := 0;
-  FResponse.CopyFrom(Client.Response.ContentStream, 0);
+  AContent.Position := 0;
+  FResponse.CopyFrom(AContent, 0);
 end;
 
 constructor TMARSClientResourceFormData.Create(AOwner: TComponent);
@@ -117,7 +117,7 @@ begin
     try
       Client.Post(URL, FFormData, LResponseStream, AuthToken, Accept);
 
-      AfterPOST();
+      AfterPOST(LResponseStream);
 
       if Assigned(AAfterExecute) then
         AAfterExecute(LResponseStream);

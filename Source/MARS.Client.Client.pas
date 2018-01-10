@@ -12,7 +12,7 @@ interface
 uses
   SysUtils, Classes
   , MARS.Core.JSON
-  , MARS.Client.Utils
+  , MARS.Client.Utils, MARS.Core.Utils
   ;
 
 type
@@ -58,10 +58,18 @@ type
     procedure DoError(const AResource: TObject; const AException: Exception;
       const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
 
-    procedure Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); virtual;
-    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string); virtual;
-    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); virtual;
-    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); virtual;
+    procedure Delete(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string); virtual;
+    procedure Get(const AURL: string; AResponseContent: TStream;
+      const AAccept: string; const AAuthToken: string); virtual;
+    procedure Post(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string); overload; virtual;
+    procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string; const AAccept: string); overload; virtual;
+    procedure Put(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string); overload; virtual;
+    procedure Put(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string; const AAccept: string); overload; virtual;
 
     function LastCmdSuccess: Boolean; virtual;
     function ResponseText: string; virtual;
@@ -176,7 +184,7 @@ begin
 end;
 
 
-procedure TMARSCustomClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSCustomClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   EndorseAuthorization(AAuthToken);
 end;
@@ -232,12 +240,12 @@ begin
   Result := False;
 end;
 
-procedure TMARSCustomClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSCustomClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   EndorseAuthorization(AAuthToken);
 end;
 
-procedure TMARSCustomClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSCustomClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   EndorseAuthorization(AAuthToken);
 end;
@@ -483,6 +491,13 @@ begin
   end;
 end;
 
+procedure TMARSCustomClient.Post(const AURL: string;
+  const AFormData: TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken, AAccept: string);
+begin
+  EndorseAuthorization(AAuthToken);
+end;
+
 class function TMARSCustomClient.PostJSON(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
   const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>; const AToken: string
@@ -680,5 +695,12 @@ begin
   end;
 end;
 
+
+procedure TMARSCustomClient.Put(const AURL: string;
+  const AFormData: TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken, AAccept: string);
+begin
+  EndorseAuthorization(AAuthToken);
+end;
 
 end.

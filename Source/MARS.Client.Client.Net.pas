@@ -11,7 +11,7 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON, MARS.Client.Utils, MARS.Client.Client
+  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
 
   // Net
 , System.Net.URLClient, System.Net.HttpClient, System.Net.HttpClientComponent
@@ -49,10 +49,22 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); override;
-    procedure Get(const AURL: string; AResponseContent: TStream; const AAccept: string; const AAuthToken: string); override;
-    procedure Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); override;
-    procedure Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string); override;
+    procedure Delete(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string); override;
+    procedure Get(const AURL: string; AResponseContent: TStream;
+      const AAccept: string; const AAuthToken: string); override;
+
+    procedure Post(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string); override;
+    procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string;
+      const AAccept: string); override;
+
+    procedure Put(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string); override;
+    procedure Put(const AURL: string; const AFormData: System.TArray<TFormParam>;
+      const AResponse: TStream; const AAuthToken: string;
+      const AAccept: string); override;
 
     function LastCmdSuccess: Boolean; override;
     function ResponseText: string; override;
@@ -66,7 +78,7 @@ procedure Register;
 implementation
 
 uses
-    Rtti, TypInfo
+    Rtti, TypInfo, System.Net.Mime
   , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
@@ -127,10 +139,10 @@ begin
 end;
 
 
-procedure TMARSNetClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSNetClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   inherited;
-
+  FHttpClient.Accept := AAccept;
   FLastResponse := FHttpClient.Delete(AURL, AResponse);
   CheckLastCmdSuccess;
 end;
@@ -173,20 +185,22 @@ end;
 
 function TMARSNetClient.LastCmdSuccess: Boolean;
 begin
-  Result := FLastResponse.StatusCode = 200;
+  Result := (FLastResponse.StatusCode >= 200) and (FLastResponse.StatusCode < 300)
 end;
 
-procedure TMARSNetClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSNetClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   inherited;
+  FHttpClient.Accept := AAccept;
   AContent.Position := 0;
   FLastResponse := FHttpClient.Post(AURL, AContent, AResponse);
   CheckLastCmdSuccess;
 end;
 
-procedure TMARSNetClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string);
+procedure TMARSNetClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
   inherited;
+  FHttpClient.Accept := AAccept;
   AContent.Position := 0;
   FLastResponse := FHttpClient.Put(AURL, AContent, AResponse);
   CheckLastCmdSuccess;
@@ -216,5 +230,68 @@ end;
 //begin
 //  Result := FHttpClient.ProtocolVersion;
 //end;
+
+procedure TMARSNetClient.Post(const AURL: string;
+  const AFormData: TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken, AAccept: string);
+var
+  LFormData: TMultipartFormData;
+  LFormParam: TFormParam;
+begin
+  inherited;
+
+  FHttpClient.Accept := AAccept;
+  LFormData := TMultipartFormData.Create();
+  try
+    for LFormParam in AFormData do
+    begin
+      if not LFormParam.IsFile then
+        LFormData.AddField(LFormParam.FieldName, LFormParam.Value.ToString)
+      else
+      begin
+        //TODO AM: save bytes to file and use TempFileName
+        LFormData.AddFile(LFormParam.AsFile.FieldName, LFormParam.AsFile.FileName);
+      end;
+    end;
+
+    FLastResponse := FHttpClient.Post(AURL, LFormData, AResponse);
+    CheckLastCmdSuccess;
+  finally
+    LFormData.Free;
+  end;
+end;
+
+procedure TMARSNetClient.Put(const AURL: string;
+  const AFormData: System.TArray<TFormParam>; const AResponse: TStream;
+  const AAuthToken, AAccept: string);
+var
+  LFormData: TMultipartFormData;
+  LFormParam: TFormParam;
+begin
+  inherited;
+
+  FHttpClient.Accept := AAccept;
+  LFormData := TMultipartFormData.Create();
+  try
+    if not LFormParam.IsFile then
+      LFormData.AddField(LFormParam.FieldName, LFormParam.Value.ToString)
+    else
+    begin
+      //TODO AM: save bytes to file and use TempFileName
+      LFormData.AddFile(LFormParam.AsFile.FieldName, LFormParam.AsFile.FileName);
+    end;
+
+
+    //TODO AM: verify if calling PUT with LFormData.Stream is safe enough and actually working
+    // (TNetHttpClient does not provide an overload of put for TMultipartFormData (10.2.2 Tokyo)
+    LFormData.Stream.Position := 0;
+    FHttpClient.ContentType := LFormData.MimeTypeHeader;
+    FLastResponse := FHttpClient.Put(AURL, LFormData.Stream, AResponse);
+    CheckLastCmdSuccess;
+  finally
+    LFormData.Free;
+  end;
+end;
+
 
 end.

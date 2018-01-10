@@ -198,6 +198,7 @@
         <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.Indy.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormData.pas"/>
         <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
@@ -241,6 +242,10 @@
         <RcItem Include="..\..\media\TMARSNetClient.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSNETCLIENT</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientResourceFormData.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTRESOURCEFORMDATA</ResourceId>
         </RcItem>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
