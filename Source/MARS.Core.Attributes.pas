@@ -629,7 +629,9 @@ begin
   TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
   if Assigned(LReader) then
     try
-      Result := LReader.ReadFrom(nil, ADestination, LMediaType, AActivation);
+
+      Result := LReader.ReadFrom({$ifdef Delphi10Berlin_UP}nil{$else}''{$endif}
+        , ADestination, LMediaType, AActivation);
     finally
       FreeAndNil(LMediaType);
     end

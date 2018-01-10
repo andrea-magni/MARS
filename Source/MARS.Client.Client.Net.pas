@@ -201,12 +201,20 @@ end;
 
 function TMARSNetClient.GetConnectTimeout: Integer;
 begin
-  Result := FHttpClient.ConnectionTimeout;
+  {$ifdef Delphi10Berlin_UP}
+    Result := FHttpClient.ConnectionTimeout;
+  {$else}
+    Result := -1;
+  {$endif}
 end;
 
 function TMARSNetClient.GetReadTimeout: Integer;
 begin
-  Result := FHttpClient.ResponseTimeout;
+  {$ifdef Delphi10Berlin_UP}
+    Result := FHttpClient.ResponseTimeout;
+  {$else}
+    Result := -1;
+  {$endif}
 end;
 
 function TMARSNetClient.LastCmdSuccess: Boolean;
@@ -239,7 +247,11 @@ end;
 
 procedure TMARSNetClient.SetConnectTimeout(const Value: Integer);
 begin
-  FHttpClient.ConnectionTimeout := Value;
+  {$ifdef Delphi10Berlin_UP}
+    FHttpClient.ConnectionTimeout := Value;
+  {$else}
+    // not available!
+  {$endif}
 end;
 
 //procedure TMARSNetClient.SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
@@ -249,7 +261,11 @@ end;
 
 procedure TMARSNetClient.SetReadTimeout(const Value: Integer);
 begin
-  FHttpClient.ResponseTimeout := Value;
+  {$ifdef Delphi10Berlin_UP}
+    FHttpClient.ResponseTimeout := Value;
+  {$else}
+    // not available!
+  {$endif}
 end;
 
 //function TMARSNetClient.GetProtocolVersion: TIdHTTPProtocolVersion;

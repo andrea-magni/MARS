@@ -186,7 +186,7 @@
         <DCCReference Include="MARS.Utils.dcp"/>
         <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Client.Net.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.CustomResource.Editor.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.CustomResource.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Messaging.Resource.pas"/>
@@ -199,6 +199,9 @@
         <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Utils.LiveBindings.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Client.Indy.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormData.pas"/>
         <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
