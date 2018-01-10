@@ -21,8 +21,29 @@ type
     Bytes: TBytes;
     ContentType: string;
     procedure Clear;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor Create(const AFieldName: string; const AFileName: string; const ABytes: TBytes; const AContentType: string);
+    function ToString: string;
   end;
+
+  TFormParam = record
+    FieldName: string;
+    Value: TValue;
+    function IsFile: Boolean;
+    function AsFile: TFormParamFile;
+    procedure Clear;
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor Create(const AFieldName: string; const AValue: TValue);
+    function ToString: string;
+  end;
+
+  TDump = class
+  public
+    class procedure Request(const ARequest: TWebRequest; const AFileName: string); overload; virtual;
+  end;
+
 
   function CreateCompactGuidStr: string;
 
@@ -77,9 +98,11 @@ uses
   , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
 ;
 
+
 function StreamToBytes(const ASource: TStream): TBytes;
 begin
   SetLength(Result, ASource.Size);
+  ASource.Position := 0;
   if ASource.Read(Result, ASource.Size) <> ASource.Size then
     raise Exception.Create('Unable to copy all content to TBytes');
 end;
@@ -442,21 +465,184 @@ end;
 
 constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
 var
-  LIndex: Integer;
+  LIndex, LFileIndex: Integer;
   LFile: TAbstractWebRequestFile;
 begin
   Clear;
+  LFileIndex := -1;
   for LIndex := 0 to ARequest.Files.Count - 1 do
   begin
     LFile := ARequest.Files[LIndex];
     if SameText(LFile.FieldName, AFieldName) then
     begin
-      FieldName := LFile.FieldName;
-      FileName := LFile.FileName;
-      Bytes := StreamToBytes(LFile.Stream);
-      ContentType := LFile.ContentType;
+      LFileIndex := LIndex;
       Break;
     end;
+  end;
+
+  CreateFromRequest(ARequest, LFileIndex);
+end;
+
+constructor TFormParamFile.Create(const AFieldName, AFileName: string;
+  const ABytes: TBytes; const AContentType: string);
+begin
+  FieldName := AFieldName;
+  FileName := AFileName;
+  Bytes := ABytes;
+  ContentType := AContentType;
+end;
+
+constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest;
+  const AFileIndex: Integer);
+var
+  LFile: TAbstractWebRequestFile;
+begin
+  Clear;
+  if (AFileIndex >= 0) and (AFileIndex < ARequest.Files.Count) then
+  begin
+    LFile := ARequest.Files[AFileIndex];
+
+    Create(LFile.FieldName, LFile.FileName, StreamToBytes(LFile.Stream), LFile.ContentType);
+   end;
+end;
+
+function TFormParamFile.ToString: string;
+begin
+  Result := FieldName + '=' + SmartConcat([FileName, ContentType, Length(Bytes).ToString + ' bytes']);
+end;
+
+{ TFormParam }
+
+function TFormParam.AsFile: TFormParamFile;
+begin
+  Result := Value.AsType<TFormParamFile>;
+end;
+
+procedure TFormParam.Clear;
+begin
+  FieldName := '';
+  Value := TValue.Empty;
+end;
+
+constructor TFormParam.Create(const AFieldName: string; const AValue: TValue);
+begin
+  Clear;
+  FieldName := AFieldName;
+  Value := AValue;
+end;
+
+constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+  const AFileIndex: Integer);
+var
+  LValue: TFormParamFile;
+begin
+  Clear;
+  LValue := TFormParamFile.CreateFromRequest(ARequest, AFileIndex);
+  Value := TValue.From<TFormParamFile>(LValue);
+  FieldName := LValue.FieldName;
+end;
+
+constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+  const AFieldName: string);
+var
+  LIndex: Integer;
+begin
+  Clear;
+  LIndex := ARequest.ContentFields.IndexOfName(AFieldName);
+  if LIndex <> -1 then
+  begin
+    FieldName := AFieldName;
+    Value := ARequest.ContentFields.ValueFromIndex[LIndex];
+  end
+  else
+  begin
+    FieldName := AFieldName;
+    Value := TValue.From<TFormParamFile>(
+      TFormParamFile.CreateFromRequest(ARequest, AFieldName)
+    );
+  end;
+end;
+
+function TFormParam.IsFile: Boolean;
+begin
+  Result := Value.IsType<TFormParamFile>;
+end;
+
+function TFormParam.ToString: string;
+begin
+  if IsFile then
+    Result := AsFile.ToString
+  else
+    Result := FieldName + '=' + Value.ToString;
+end;
+
+{ TDump }
+
+class procedure TDump.Request(const ARequest: TWebRequest;
+  const AFileName: string);
+var
+  LSS: TStringStream;
+  LHeaders: string;
+  LRawString: string;
+  LBytesStream: TBytesStream;
+begin
+  try
+    try
+      LRawString := 'Content: ' + ARequest.Content;
+    except
+      try
+        LRawString := TEncoding.UTF8.GetString(ARequest.RawContent);
+      except
+        try
+          LBytesStream := TBytesStream.Create(ARequest.RawContent);
+          try
+            LRawString := StreamToString(LBytesStream);
+          finally
+            LBytesStream.Free;
+          end;
+        except
+          LRawString := 'Unable to read content: ' + Length(ARequest.RawContent).ToString + ' bytes';
+        end;
+      end;
+    end;
+
+    LHeaders := string.join(sLineBreak, [
+      'PathInfo: ' + ARequest.PathInfo
+    , 'Method: ' + ARequest.Method
+    , 'ProtocolVersion: ' + ARequest.ProtocolVersion
+    , 'Authorization: ' + ARequest.Authorization
+    , 'Accept: ' + ARequest.Accept
+
+    , 'ContentFields: ' + ARequest.ContentFields.CommaText
+    , 'CookieFields: ' + ARequest.CookieFields.CommaText
+    , 'QueryFields: ' + ARequest.QueryFields.CommaText
+
+    , 'ContentType: ' + ARequest.ContentType
+    , 'ContentEncoding: ' + ARequest.ContentEncoding
+    , 'ContentLength: ' + ARequest.ContentLength.ToString
+    , 'ContentVersion: ' + ARequest.ContentVersion
+
+    , 'RemoteAddr: ' + ARequest.RemoteAddr
+    , 'RemoteHost: ' + ARequest.RemoteHost
+    , 'RemoteIP: ' + ARequest.RemoteIP
+    ]);
+
+    LSS := TStringStream.Create(LHeaders + sLineBreak + sLineBreak + LRawString);
+    try
+      LSS.SaveToFile(AFileName);
+    finally
+      LSS.Free;
+    end;
+  except on E:Exception do
+    begin
+      LSS := TStringStream.Create('Error: ' + E.ToString);
+      try
+        LSS.SaveToFile(AFileName);
+      finally
+        LSS.Free;
+      end;
+    end;
+    // no exceptions allowed outside here
   end;
 end;
 

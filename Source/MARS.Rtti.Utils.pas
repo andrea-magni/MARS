@@ -84,8 +84,8 @@ type
     class function GetFieldByName(var ARecord: R; const AFieldName: string): TValue; overload;
     class function GetFieldByName(var ARecord: R; const AFieldName: string; const ADefault: TValue): TValue; overload;
     class function FromStrings(const AStrings: TStrings): R;
-//    class procedure ToStrings(var AStrings: TStrings; const AClear: Boolean = True);
-//    class function ToArrayOfString: TArray<string>;
+    class procedure ToStrings(const ARecord: R; var AStrings: TStrings; const AClear: Boolean = True);
+    class function ToArrayOfString(const ARecord: R): TArray<string>;
   end;
   TOnGetRecordFieldValueProc = reference to procedure (const AName: string; const AField: TRttiField; var AValue: TValue);
 
@@ -908,6 +908,19 @@ begin
 end;
 
 
+class function TRecord<R>.ToArrayOfString(const ARecord: R): TArray<string>;
+var
+  LDummy: TStrings;
+begin
+  LDummy := TStringList.Create;
+  try
+    ToStrings(ARecord, LDummy);
+    Result := LDummy.ToStringArray;
+  finally
+    LDummy.Free;
+  end;
+end;
+
 class procedure TRecord<R>.ToDataSet(const ARecord: R; const ADataSet: TDataSet;
   const AAppend: Boolean);
 var
@@ -943,6 +956,43 @@ begin
   except
     ADataSet.Cancel;
     raise;
+  end;
+end;
+
+class procedure TRecord<R>.ToStrings(const ARecord: R; var AStrings: TStrings;
+  const AClear: Boolean);
+var
+  LRecordType: TRttiType;
+  LField: TRttiField;
+  LFieldType: TRttiType;
+  LFieldValue: TValue;
+  LToStringMethod: TRttiMethod;
+begin
+  Assert(Assigned(AStrings));
+
+  if AClear then
+    AStrings.Clear;
+
+  LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
+
+  for LField in LRecordType.GetFields do
+  begin
+    LFieldType := LField.FieldType;
+    LFieldValue := LField.GetValue(@ARecord);
+
+    if LFieldType.IsRecord then
+    begin
+      LToStringMethod := LFieldType.GetMethod('ToString');
+      if Assigned(LToStringMethod) then
+        AStrings.AddPair(LField.Name, LToStringMethod.Invoke(LFieldValue, []).ToString)
+      else
+      begin
+        //AM TODO recursion using ToStrings here
+        AStrings.AddPair(LField.Name, LField.GetValue(@ARecord).ToString);
+      end;
+    end
+    else
+      AStrings.AddPair(LField.Name, LField.GetValue(@ARecord).ToString);
   end;
 end;
 

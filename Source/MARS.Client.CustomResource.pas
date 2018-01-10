@@ -505,7 +505,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Post(URL, LContent, LResponseStream, AuthToken);
+        Client.Post(URL, LContent, LResponseStream, AuthToken, Accept);
 
         AfterPOST(LResponseStream);
 
@@ -632,7 +632,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Put(URL, LContent, LResponseStream, AuthToken);
+        Client.Put(URL, LContent, LResponseStream, AuthToken, Accept);
 
         AfterPUT(LResponseStream);
 
