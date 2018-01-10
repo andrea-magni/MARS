@@ -14,7 +14,7 @@ uses
   , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
 
   // Indy
-  , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP
+  , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP, IdMultipartFormData
   ;
 
 type
@@ -41,8 +41,11 @@ type
 
     function GetConnectTimeout: Integer; override;
     function GetReadTimeout: Integer; override;
+
     procedure SetConnectTimeout(const Value: Integer); override;
     procedure SetReadTimeout(const Value: Integer); override;
+
+    function CreateMultipartFormData(AFormData: TArray<TFormParam>): TIdMultiPartFormDataStream;
 
     procedure EndorseAuthorization(const AAuthToken: string); override;
   public
@@ -77,7 +80,7 @@ procedure Register;
 implementation
 
 uses
-    Rtti, TypInfo, IdMultipartFormData
+    Rtti, TypInfo
   , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
@@ -129,6 +132,26 @@ begin
 
 end;
 
+
+function TMARSIndyClient.CreateMultipartFormData(
+  AFormData: TArray<TFormParam>): TIdMultiPartFormDataStream;
+var
+  LFormParam: TFormParam;
+begin
+  Result := TIdMultiPartFormDataStream.Create;
+  try
+    for LFormParam in AFormData do
+    begin
+      if not LFormParam.IsFile then
+        Result.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString)
+      else
+        Result.AddFile(LFormParam.FieldName, LFormPAram.AsFile.FileName);
+    end;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
 
 procedure TMARSIndyClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
 begin
@@ -238,17 +261,13 @@ procedure TMARSIndyClient.Post(const AURL: string;
   const AAuthToken, AAccept: string);
 var
   LFormDataStream: TIdMultiPartFormDataStream;
-  LFormParam: TFormParam;
 begin
   inherited;
 
   FHttpClient.Request.Accept := AAccept;
 
-  LFormDataStream := TIdMultiPartFormDataStream.Create;
+  LFormDataStream := CreateMultipartFormData(AFormData);
   try
-    for LFormParam in AFormData do
-      LFormDataStream.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString);
-
 //    LFormDataStream.Position := 0;
 //    FHttpClient.ProtocolVersion := TIdHTTPProtocolVersion.pv1_1;
 //    FHttpClient.HTTPOptions := FHttpClient.HTTPOptions + [hoKeepOrigProtocol];
@@ -264,16 +283,13 @@ procedure TMARSIndyClient.Put(const AURL: string;
   const AAuthToken, AAccept: string);
 var
   LFormDataStream: TIdMultiPartFormDataStream;
-  LFormParam: TFormParam;
 begin
   inherited;
 
   FHttpClient.Request.Accept := AAccept;
-  LFormDataStream := TIdMultiPartFormDataStream.Create;
+  LFormDataStream := CreateMultipartFormData(AFormData);
   try
-    for LFormParam in AFormData do
-      LFormDataStream.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString);
-
+    FHttpClient.Request.ContentType := LFormDataStream.RequestContentType;
     FHttpClient.Put(AURL, LFormDataStream, AResponse);
   finally
     LFormDataStream.Free;

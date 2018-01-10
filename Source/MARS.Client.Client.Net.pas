@@ -14,7 +14,8 @@ uses
   , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
 
   // Net
-, System.Net.URLClient, System.Net.HttpClient, System.Net.HttpClientComponent
+  , System.Net.URLClient, System.Net.HttpClient, System.Net.HttpClientComponent
+  , System.Net.Mime
   ;
 
 type
@@ -42,6 +43,8 @@ type
     function GetReadTimeout: Integer; override;
     procedure SetConnectTimeout(const Value: Integer); override;
     procedure SetReadTimeout(const Value: Integer); override;
+
+    function CreateMultipartFormData(AFormData: TArray<TFormParam>): TMultipartFormData;
 
     procedure EndorseAuthorization(const AAuthToken: string); override;
     procedure CheckLastCmdSuccess; virtual;
@@ -78,7 +81,7 @@ procedure Register;
 implementation
 
 uses
-    Rtti, TypInfo, System.Net.Mime
+    Rtti, TypInfo
   , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
@@ -164,6 +167,29 @@ begin
   end;
 end;
 
+function TMARSNetClient.CreateMultipartFormData(
+  AFormData: TArray<TFormParam>): TMultipartFormData;
+var
+  LFormParam: TFormParam;
+begin
+  Result := TMultipartFormData.Create();
+  try
+    for LFormParam in AFormData do
+    begin
+      if not LFormParam.IsFile then
+        Result.AddField(LFormParam.FieldName, LFormParam.Value.ToString)
+      else
+      begin
+        //TODO AM: save bytes to file and use TempFileName
+        Result.AddFile(LFormParam.AsFile.FieldName, LFormParam.AsFile.FileName);
+      end;
+    end;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 procedure TMARSNetClient.Get(const AURL: string; AResponseContent: TStream;
   const AAccept: string; const AAuthToken: string);
 begin
@@ -236,24 +262,12 @@ procedure TMARSNetClient.Post(const AURL: string;
   const AAuthToken, AAccept: string);
 var
   LFormData: TMultipartFormData;
-  LFormParam: TFormParam;
 begin
   inherited;
 
   FHttpClient.Accept := AAccept;
-  LFormData := TMultipartFormData.Create();
+  LFormData := CreateMultipartFormData(AFormData);
   try
-    for LFormParam in AFormData do
-    begin
-      if not LFormParam.IsFile then
-        LFormData.AddField(LFormParam.FieldName, LFormParam.Value.ToString)
-      else
-      begin
-        //TODO AM: save bytes to file and use TempFileName
-        LFormData.AddFile(LFormParam.AsFile.FieldName, LFormParam.AsFile.FileName);
-      end;
-    end;
-
     FLastResponse := FHttpClient.Post(AURL, LFormData, AResponse);
     CheckLastCmdSuccess;
   finally
@@ -266,22 +280,12 @@ procedure TMARSNetClient.Put(const AURL: string;
   const AAuthToken, AAccept: string);
 var
   LFormData: TMultipartFormData;
-  LFormParam: TFormParam;
 begin
   inherited;
 
   FHttpClient.Accept := AAccept;
-  LFormData := TMultipartFormData.Create();
+  LFormData := CreateMultipartFormData(AFormData);
   try
-    if not LFormParam.IsFile then
-      LFormData.AddField(LFormParam.FieldName, LFormParam.Value.ToString)
-    else
-    begin
-      //TODO AM: save bytes to file and use TempFileName
-      LFormData.AddFile(LFormParam.AsFile.FieldName, LFormParam.AsFile.FileName);
-    end;
-
-
     //TODO AM: verify if calling PUT with LFormData.Stream is safe enough and actually working
     // (TNetHttpClient does not provide an overload of put for TMultipartFormData (10.2.2 Tokyo)
     LFormData.Stream.Position := 0;
