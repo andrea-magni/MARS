@@ -595,12 +595,15 @@ var
   LSS: TStringStream;
   LHeaders: string;
   LRawString: string;
+  {$ifdef Delphi10Berlin_UP}
   LBytesStream: TBytesStream;
+  {$endif}
 begin
   try
     try
       LRawString := 'Content: ' + ARequest.Content;
     except
+      {$IFDEF Delphi10Berlin_UP}
       try
         LRawString := TEncoding.UTF8.GetString(ARequest.RawContent);
       except
@@ -615,6 +618,9 @@ begin
           LRawString := 'Unable to read content: ' + Length(ARequest.RawContent).ToString + ' bytes';
         end;
       end;
+      {$ELSE}
+      LRawString := ARequest.RawContent;
+      {$ENDIF}
     end;
 
     LHeaders := string.join(sLineBreak, [

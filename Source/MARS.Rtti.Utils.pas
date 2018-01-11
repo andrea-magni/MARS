@@ -984,15 +984,15 @@ begin
     begin
       LToStringMethod := LFieldType.GetMethod('ToString');
       if Assigned(LToStringMethod) then
-        AStrings.AddPair(LField.Name, LToStringMethod.Invoke(LFieldValue, []).ToString)
+        AStrings.Values[LField.Name] := LToStringMethod.Invoke(LFieldValue, []).ToString
       else
       begin
         //AM TODO recursion using ToStrings here
-        AStrings.AddPair(LField.Name, LField.GetValue(@ARecord).ToString);
+        AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;
       end;
     end
     else
-      AStrings.AddPair(LField.Name, LField.GetValue(@ARecord).ToString);
+      AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;
   end;
 end;
 
