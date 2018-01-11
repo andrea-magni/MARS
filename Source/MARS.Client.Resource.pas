@@ -36,8 +36,10 @@ type
     property Application;
     property AuthToken;
     property Client;
+    property ContentType;
     property SpecificAccept;
     property SpecificClient;
+    property SpecificContentType;
     property Resource;
     property Path;
     property PathParamsValues;

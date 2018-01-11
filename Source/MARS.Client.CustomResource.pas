@@ -38,6 +38,7 @@ type
     FPathParamsValues: TStrings;
     FQueryParams: TStrings;
     FSpecificAccept: string;
+    FSpecificContentType: string;
     FToken: TMARSClientCustomResource;
     procedure SetPathParamsValues(const Value: TStrings);
     procedure SetQueryParams(const Value: TStrings);
@@ -46,7 +47,8 @@ type
     function GetPath: string; virtual;
     function GetURL: string; virtual;
     function GetApplication: TMARSClientApplication; virtual;
-    function GetAccept: string;
+    function GetAccept: string; virtual;
+    function GetContentType: string; virtual;
     function GetAuthToken: string; virtual;
 
     procedure BeforeGET; virtual;
@@ -108,11 +110,13 @@ type
 {$endif}
 
     property Accept: string read GetAccept;
+    property ContentType: string read GetContentType;
     property Application: TMARSClientApplication read GetApplication write FApplication;
     property AuthToken: string read GetAuthToken;
     property Client: TMARSCustomClient read GetClient;
     property SpecificAccept: string read FSpecificAccept write FSpecificAccept;
     property SpecificClient: TMARSCustomClient read FSpecificClient write FSpecificClient;
+    property SpecificContentType: string read FSpecificContentType write FSpecificContentType;
     property SpecificToken: string read FSpecificToken write FSpecificToken;
     property Resource: string read FResource write FResource;
     property Path: string read GetPath;
@@ -129,14 +133,10 @@ type
 implementation
 
 uses
-  {$ifdef DelphiXE7_UP}
-    System.Threading,
-  {$endif}
-    MARS.Core.URL
-  , MARS.Core.Utils
-  , MARS.Client.Token
-  , MARS.Client.Resource
-  , MARS.Client.SubResource
+  {$ifdef DelphiXE7_UP}System.Threading,{$endif}
+   MARS.Core.URL, MARS.Core.Utils, MARS.Client.Token
+ , MARS.Client.Resource, MARS.Client.SubResource
+ , MARS.Core.MediaType
 ;
 
 { TMARSClientCustomResource }
@@ -170,6 +170,7 @@ begin
   LDestResource.Application := Application;
 
   LDestResource.SpecificAccept := SpecificAccept;
+  LDestResource.SpecificContentType := SpecificContentType;
   LDestResource.SpecificClient := SpecificClient;
   LDestResource.SpecificToken := SpecificToken;
   LDestResource.Resource := Resource;
@@ -209,6 +210,8 @@ begin
   end;
   FPathParamsValues := TStringList.Create;
   FQueryParams := TStringList.Create;
+  FSpecificAccept := TMediaType.WILDCARD;
+  FSpecificContentType := '';
 end;
 
 function TMARSClientCustomResource.GetAuthToken: string;
@@ -228,6 +231,13 @@ begin
     if Assigned(FApplication) then
       Result := FApplication.Client;
   end;
+end;
+
+function TMARSClientCustomResource.GetContentType: string;
+begin
+  Result := FSpecificContentType;
+  if (Result = '') and Assigned(Application) then
+    Result := Application.DefaultContentType;
 end;
 
 function TMARSClientCustomResource.GetPath: string;
@@ -275,7 +285,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Delete(URL, LContent, LResponseStream, AuthToken, Accept);
+        Client.Delete(URL, LContent, LResponseStream, AuthToken, Accept, ContentType);
 
         AfterDELETE(LResponseStream);
 
@@ -335,7 +345,7 @@ begin
 
     LResponseStream := TMemoryStream.Create;
     try
-      Client.Get(URL, LResponseStream, Accept, AuthToken);
+      Client.Get(URL, LResponseStream, AuthToken, Accept, ContentType);
 
       AfterGET(LResponseStream);
 
@@ -505,7 +515,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Post(URL, LContent, LResponseStream, AuthToken, Accept);
+        Client.Post(URL, LContent, LResponseStream, AuthToken, Accept, ContentType);
 
         AfterPOST(LResponseStream);
 
@@ -632,7 +642,7 @@ begin
 
       LResponseStream := TMemoryStream.Create;
       try
-        Client.Put(URL, LContent, LResponseStream, AuthToken, Accept);
+        Client.Put(URL, LContent, LResponseStream, AuthToken, Accept, ContentType);
 
         AfterPUT(LResponseStream);
 

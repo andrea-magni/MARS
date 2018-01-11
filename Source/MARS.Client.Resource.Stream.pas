@@ -50,7 +50,8 @@ procedure Register;
 implementation
 
 uses
-  MARS.Core.Utils;
+  MARS.Core.Utils,
+  MARS.Core.MediaType;
 
 procedure Register;
 begin
@@ -74,7 +75,8 @@ end;
 constructor TMARSClientResourceStream.Create(AOwner: TComponent);
 begin
   inherited;
-  SpecificAccept := '*/*';
+  SpecificAccept := TMediaType.WILDCARD;
+  SpecificContentType := TMediaType.APPLICATION_OCTET_STREAM;
   FResponse := TMemoryStream.Create;
 end;
 

@@ -51,7 +51,8 @@ procedure Register;
 implementation
 
 uses
-  MARS.Core.Utils;
+  MARS.Core.Utils, MARS.Core.MediaType
+;
 
 procedure Register;
 begin
@@ -80,6 +81,8 @@ constructor TMARSClientSubResourceJSON.Create(AOwner: TComponent);
 begin
   inherited;
   FResponse := TJSONObject.Create;
+  SpecificAccept := TMediaType.APPLICATION_JSON;
+  SpecificContentType := TMediaType.APPLICATION_JSON;
 end;
 
 destructor TMARSClientSubResourceJSON.Destroy;

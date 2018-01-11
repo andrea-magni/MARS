@@ -56,6 +56,10 @@ procedure Register;
 
 implementation
 
+uses
+  MARS.Core.MediaType
+;
+
 procedure Register;
 begin
   RegisterComponents('MARS-Curiosity Client', [TMARSClientResourceFormData]);
@@ -75,6 +79,7 @@ begin
   inherited;
   FFormData := [];
   FResponse := TMemoryStream.Create;
+  SpecificContentType := TMediaType.MULTIPART_FORM_DATA;
 end;
 
 destructor TMARSClientResourceFormData.Destroy;
@@ -115,7 +120,7 @@ begin
 
     LResponseStream := TMemoryStream.Create;
     try
-      Client.Post(URL, FFormData, LResponseStream, AuthToken, Accept);
+      Client.Post(URL, FFormData, LResponseStream, AuthToken, Accept, ContentType);
 
       AfterPOST(LResponseStream);
 

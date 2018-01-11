@@ -31,16 +31,20 @@ type
   private
     FAppName: string;
     FDefaultMediaType: string;
+    FDefaultContentType: string;
     FClient: TMARSCustomClient;
     FOnError: TMARSClientErrorEvent;
   protected
     function GetPath: string; virtual;
     procedure AssignTo(Dest: TPersistent); override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation);
+      override;
   public
     constructor Create(AOwner: TComponent); override;
     procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
   published
     property DefaultMediaType: string read FDefaultMediaType write FDefaultMediaType;
+    property DefaultContentType: string read FDefaultContentType write FDefaultContentType;
     property AppName: string read FAppName write FAppName;
     property Client: TMARSCustomClient read FClient write FClient;
     property Path: string read GetPath;
@@ -52,7 +56,7 @@ procedure Register;
 implementation
 
 uses
-  MARS.Core.URL
+  MARS.Core.URL, MARS.Core.MediaType
   ;
 
 procedure Register;
@@ -78,7 +82,8 @@ end;
 constructor TMARSClientApplication.Create(AOwner: TComponent);
 begin
   inherited;
-  FDefaultMediaType := 'application/json';
+  FDefaultMediaType := TMediaType.APPLICATION_JSON;
+  FDefaultContentType := TMediaType.APPLICATION_JSON;
   FAppName := 'default';
   if TMARSComponentHelper.IsDesigning(Self) then
     FClient := TMARSComponentHelper.FindDefault<TMARSCustomClient>(Self);
@@ -112,6 +117,16 @@ begin
     LEngine := FClient.MARSEngineURL;
 
   Result := TMARSURL.CombinePath([LEngine, AppName])
+end;
+
+procedure TMARSClientApplication.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
+  inherited;
+  if (Operation = opRemove) and (Client = AComponent) then
+    Client := nil;
+  if not Assigned(Client) and TMARSComponentHelper.IsDesigning(Self) then
+    Client := TMARSComponentHelper.FindDefault<TMARSCustomClient>(Self);
 end;
 
 end.

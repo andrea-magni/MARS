@@ -53,21 +53,21 @@ type
     destructor Destroy; override;
 
     procedure Delete(const AURL: string; AContent, AResponse: TStream;
-      const AAuthToken: string; const AAccept: string); override;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Get(const AURL: string; AResponseContent: TStream;
-      const AAccept: string; const AAuthToken: string); override;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
 
     procedure Post(const AURL: string; AContent, AResponse: TStream;
-      const AAuthToken: string; const AAccept: string); override;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
-      const AResponse: TStream; const AAuthToken: string;
-      const AAccept: string); override;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
 
     procedure Put(const AURL: string; AContent, AResponse: TStream;
-      const AAuthToken: string; const AAccept: string); override;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Put(const AURL: string; const AFormData: System.TArray<TFormParam>;
       const AResponse: TStream; const AAuthToken: string;
-      const AAccept: string); override;
+      const AAccept: string; const AContentType: string); override;
 
     function LastCmdSuccess: Boolean; override;
     function ResponseText: string; override;
@@ -142,10 +142,12 @@ begin
 end;
 
 
-procedure TMARSNetClient.Delete(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
+procedure TMARSNetClient.Delete(const AURL: string; AContent, AResponse: TStream;
+  const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
   inherited;
   FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
   FLastResponse := FHttpClient.Delete(AURL, AResponse);
   CheckLastCmdSuccess;
 end;
@@ -191,9 +193,10 @@ begin
 end;
 
 procedure TMARSNetClient.Get(const AURL: string; AResponseContent: TStream;
-  const AAccept: string; const AAuthToken: string);
+  const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
   FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
   inherited;
   FLastResponse := FHttpClient.Get(AURL, AResponseContent);
   CheckLastCmdSuccess;
@@ -222,19 +225,23 @@ begin
   Result := (FLastResponse.StatusCode >= 200) and (FLastResponse.StatusCode < 300)
 end;
 
-procedure TMARSNetClient.Post(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
+procedure TMARSNetClient.Post(const AURL: string; AContent, AResponse: TStream;
+  const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
   inherited;
   FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
   AContent.Position := 0;
   FLastResponse := FHttpClient.Post(AURL, AContent, AResponse);
   CheckLastCmdSuccess;
 end;
 
-procedure TMARSNetClient.Put(const AURL: string; AContent, AResponse: TStream; const AAuthToken: string; const AAccept: string);
+procedure TMARSNetClient.Put(const AURL: string; AContent, AResponse: TStream;
+  const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
   inherited;
   FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
   AContent.Position := 0;
   FLastResponse := FHttpClient.Put(AURL, AContent, AResponse);
   CheckLastCmdSuccess;
@@ -275,13 +282,14 @@ end;
 
 procedure TMARSNetClient.Post(const AURL: string;
   const AFormData: TArray<TFormParam>; const AResponse: TStream;
-  const AAuthToken, AAccept: string);
+  const AAuthToken, AAccept: string; const AContentType: string);
 var
   LFormData: TMultipartFormData;
 begin
   inherited;
 
   FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
   LFormData := CreateMultipartFormData(AFormData);
   try
     FLastResponse := FHttpClient.Post(AURL, LFormData, AResponse);
@@ -293,13 +301,14 @@ end;
 
 procedure TMARSNetClient.Put(const AURL: string;
   const AFormData: System.TArray<TFormParam>; const AResponse: TStream;
-  const AAuthToken, AAccept: string);
+  const AAuthToken, AAccept: string; const AContentType: string);
 var
   LFormData: TMultipartFormData;
 begin
   inherited;
 
   FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
   LFormData := CreateMultipartFormData(AFormData);
   try
     //TODO AM: verify if calling PUT with LFormData.Stream is safe enough and actually working

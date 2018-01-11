@@ -79,9 +79,10 @@ procedure Register;
 implementation
 
 uses
-    DateUtils
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils;
+  DateUtils
+, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.MediaType
+;
 
 procedure Register;
 begin
@@ -157,6 +158,8 @@ begin
   FData := TJSONObject.Create;
   FUserRoles := TStringList.Create;
   FClaims := TMARSParameters.Create('');
+  SpecificAccept := TMediaType.APPLICATION_JSON;
+  SpecificContentType := TMediaType.APPLICATION_JSON;
 end;
 
 destructor TMARSClientToken.Destroy;

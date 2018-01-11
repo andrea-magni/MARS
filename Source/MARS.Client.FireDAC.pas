@@ -283,6 +283,7 @@ begin
   inherited;
   FResourceDataSets := TMARSFDResourceDatasets.Create(TMARSFDResourceDatasetsItem);
   SpecificAccept := TMediaType.APPLICATION_JSON_FireDAC + ',' + TMediaType.APPLICATION_JSON;
+  SpecificContentType := TMediaType.APPLICATION_JSON_FireDAC;
 end;
 
 destructor TMARSFDResource.Destroy;
