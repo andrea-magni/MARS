@@ -36,7 +36,7 @@ type
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
     constructor Create(const AFieldName: string; const AValue: TValue);
-    constructor CreateFile(const AFieldName: string; const AFileName: string; const ABytes: TBytes = []; const AContentType: string = '');
+    constructor CreateFile(const AFieldName: string; const AFileName: string; const ABytes: TBytes = nil; const AContentType: string = '');
     function ToString: string;
   end;
 
