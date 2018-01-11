@@ -72,7 +72,8 @@ type
     property Current: TJSONValue read GetCurrent;
   end;
 {$endif}
-  TJSONArrayHelper = class helper for TJSONArray
+
+  TJSONArrayHelper= class helper for TJSONArray
   private
     {$ifndef DelphiXE6_UP}
     function GetCount: Integer; inline;
@@ -188,7 +189,6 @@ begin
 
   else if (AValue.Kind in [tkRecord]) then
     Result := TJSONObject.RecordToJSON(AValue)
-
 
   else if (AValue.IsType<Boolean>) then
     Result := BooleanToTJSON(AValue.AsType<Boolean>)
@@ -552,7 +552,10 @@ begin
       begin
         LValue := LField.GetValue(ARecord.GetReferenceToRawData);
 
-        WriteTValue(LJSONName, LValue);
+        if LValue.IsType<TValue>(False) then
+          WriteTValue(LJSONName, LValue.AsType<TValue>) //unboxing TValue from TValue
+        else
+          WriteTValue(LJSONName, LValue);
       end;
     end;
   end;
