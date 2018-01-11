@@ -36,6 +36,7 @@ type
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
     constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
     constructor Create(const AFieldName: string; const AValue: TValue);
+    constructor CreateFile(const AFieldName: string; const AFileName: string; const ABytes: TBytes = []; const AContentType: string = '');
     function ToString: string;
   end;
 
@@ -529,6 +530,16 @@ begin
   Clear;
   FieldName := AFieldName;
   Value := AValue;
+end;
+
+constructor TFormParam.CreateFile(const AFieldName, AFileName: string;
+  const ABytes: TBytes; const AContentType: string);
+begin
+  Create(AFieldName
+  , TValue.From<TFormParamFile>(
+      TFormParamFile.Create(AFieldName, AFileName, ABytes, AContentType)
+    )
+  );
 end;
 
 constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;

@@ -89,6 +89,8 @@ type
     property Count: Integer read GetCount;
     property Items[const Index: Integer]: TJSONValue read GetValue;
     {$endif}
+
+    class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil): TJSONArray;
   end;
 
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
@@ -317,6 +319,18 @@ begin
   Result := [];
   for LElement in Self do
     Result := Result + [(LElement as TJSONObject).ToRecord<T>()]
+end;
+
+class function TJSONArrayHelper.ArrayOfRecordToJSON<T>(const AArray: TArray<T>;
+  const AFilterProc: TToJSONFilterProc): TJSONArray;
+begin
+  Result := TJSONArray.Create;
+  try
+    Result.FromArrayOfRecord<T>(AArray, AFilterProc);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 function TJSONArrayHelper.ForEach<T>(const AFunc: TFunc<T, Boolean>): Integer;
