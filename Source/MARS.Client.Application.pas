@@ -74,6 +74,7 @@ begin
   LDestApp := Dest as TMARSClientApplication;
 
   LDestApp.DefaultMediaType := DefaultMediaType;
+  LDestApp.DefaultContentType := DefaultContentType;
   LDestApp.AppName := AppName;
   LDestApp.Client := Client;
   LDestApp.OnError := OnError;
@@ -125,7 +126,7 @@ begin
   inherited;
   if (Operation = opRemove) and (Client = AComponent) then
     Client := nil;
-  if not Assigned(Client) and TMARSComponentHelper.IsDesigning(Self) then
+  if not Assigned(Client) and (Operation = opInsert) and TMARSComponentHelper.IsDesigning(Self) then
     Client := TMARSComponentHelper.FindDefault<TMARSCustomClient>(Self);
 end;
 

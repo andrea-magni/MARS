@@ -37,6 +37,9 @@ type
     function GetPath: string; override;
     function GetClient: TMARSCustomClient; override;
     function GetApplication: TMARSClientApplication; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation);
+      override;
+
   public
     constructor Create(AOwner: TComponent); override;
 
@@ -91,6 +94,14 @@ begin
     Result := TMARSURL.CombinePath([FParentResource.Path, Resource])
   else
     Result := inherited GetPath;
+end;
+
+procedure TMARSClientSubResource.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
+  inherited;
+  if (Operation = opRemove) and (ParentResource = AComponent) then
+    ParentResource := nil;
 end;
 
 end.

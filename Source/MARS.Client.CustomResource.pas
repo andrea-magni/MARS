@@ -65,6 +65,8 @@ type
 
     procedure DoError(const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
     procedure AssignTo(Dest: TPersistent); override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -267,6 +269,22 @@ begin
 
   if FQueryParams.Count > 0 then
     Result := Result + '?' + SmartConcat(TMARSURL.URLEncode(FQueryParams.ToStringArray), '&');
+end;
+
+procedure TMARSClientCustomResource.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
+  inherited;
+  if (Operation = opRemove) then
+  begin
+    if SpecificClient = AComponent then
+      SpecificClient := nil;
+    if Token = AComponent then
+      Token := nil;
+    if Application = AComponent then
+      Application := nil;
+  end;
+
 end;
 
 procedure TMARSClientCustomResource.DELETE(const ABeforeExecute: TProc<TMemoryStream>;
