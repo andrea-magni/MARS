@@ -34,7 +34,6 @@ type
     FDefaultContentType: string;
     FClient: TMARSCustomClient;
     FOnError: TMARSClientErrorEvent;
-    function IsAppNameStored: Boolean;
   protected
     function GetPath: string; virtual;
     procedure AssignTo(Dest: TPersistent); override;
@@ -48,8 +47,8 @@ type
   published
     property DefaultMediaType: string read FDefaultMediaType write FDefaultMediaType;
     property DefaultContentType: string read FDefaultContentType write FDefaultContentType;
-    [Stored('IsAppNameStored')]
-    property AppName: string read FAppName write FAppName stored IsAppNameStored;
+    [Default(DEFAULT_APPNAME)]
+    property AppName: string read FAppName write FAppName;
     property Client: TMARSCustomClient read FClient write FClient;
     property Path: string read GetPath;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
@@ -122,11 +121,6 @@ begin
     LEngine := FClient.MARSEngineURL;
 
   Result := TMARSURL.CombinePath([LEngine, AppName])
-end;
-
-function TMARSClientApplication.IsAppNameStored: Boolean;
-begin
-  Result := FAppName <> DEFAULT_APPNAME;
 end;
 
 procedure TMARSClientApplication.Notification(AComponent: TComponent;
