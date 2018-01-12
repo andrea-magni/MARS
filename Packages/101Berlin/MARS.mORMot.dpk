@@ -49,7 +49,3 @@ contains
   MARS.mORMotJWT.Token.InjectionService in '..\..\Source\MARS.mORMotJWT.Token.InjectionService.pas';
 
 end.
-
-
-
-

@@ -115,7 +115,6 @@
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="xmlrtl.dcp"/>
-        <DCCReference Include="DbxCommonDriver.dcp"/>
         <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Core.Application.pas"/>
