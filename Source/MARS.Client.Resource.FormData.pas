@@ -71,6 +71,7 @@ procedure TMARSClientResourceFormData.AfterPOST(const AContent: TStream);
 begin
   inherited;
   AContent.Position := 0;
+  FResponse.Size := 0; // clear
   FResponse.CopyFrom(AContent, 0);
 end;
 
