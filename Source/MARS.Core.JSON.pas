@@ -552,7 +552,11 @@ begin
       begin
         LValue := LField.GetValue(ARecord.GetReferenceToRawData);
 
-        if LValue.IsType<TValue>(False) then
+        {$ifdef Delphi10Tokyo_UP}
+          if LValue.IsType<TValue>(False) then
+        {$else}
+          if LValue.IsType<TValue> then
+        {$endif}
           WriteTValue(LJSONName, LValue.AsType<TValue>) //unboxing TValue from TValue
         else
           WriteTValue(LJSONName, LValue);

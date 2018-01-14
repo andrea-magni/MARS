@@ -36,7 +36,7 @@ uses
   Dialogs
 {$endif}
   , DesignIntf
-  , Windows;
+  , Windows, IdHTTP;
 
 procedure Register;
 begin
@@ -53,21 +53,25 @@ end;
 procedure TMARSClientCustomResourceEditor.ExecuteVerb(Index: Integer);
 begin
   inherited;
+  try
+    case Index of
+      0: CurrentObj.GET(nil, nil, nil);
+      1: CurrentObj.POST(nil, nil, nil);
+      2: CurrentObj.DELETE(nil, nil, nil);
+  //    3: CurrentObj.PUT;
+  //    4: CurrentObj.PATCH;
+  //    5: CurrentObj.HEAD;
+  //    6: CurrentObj.OPTIONS;
+    end;
 
-  case Index of
-    0: CurrentObj.GET(nil, nil, nil);
-    1: CurrentObj.POST(nil, nil, nil);
-    2: CurrentObj.DELETE(nil, nil, nil);
-//    3: CurrentObj.PUT;
-//    4: CurrentObj.PATCH;
-//    5: CurrentObj.HEAD;
-//    6: CurrentObj.OPTIONS;
+    if (GetKeyState(VK_LSHIFT) < 0) then
+      ShowMessage(CurrentObj.Client.ResponseText);
+  except
+    on E: EIdHTTPProtocolException do
+     raise Exception.Create('Error: ' + E.ErrorCode.ToString + ' ' + E.ErrorMessage + sLineBreak + E.Message);
   end;
 
-  if (GetKeyState(VK_LSHIFT) < 0) then
-    ShowMessage(CurrentObj.Client.ResponseText);
-
-  Designer.Modified;
+    Designer.Modified;
 end;
 
 function TMARSClientCustomResourceEditor.GetVerb(Index: Integer): string;

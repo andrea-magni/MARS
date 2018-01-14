@@ -277,13 +277,11 @@ begin
   inherited;
 
   FHttpClient.Request.Accept := AAccept;
-  FHttpClient.Request.ContentType := AContentType;
 
   LFormDataStream := CreateMultipartFormData(AFormData);
   try
-//    FHttpClient.ProtocolVersion := TIdHTTPProtocolVersion.pv1_1;
-//    FHttpClient.HTTPOptions := FHttpClient.HTTPOptions + [hoKeepOrigProtocol];
-    FHttpClient.Request.ContentType := LFormDataStream.RequestContentType;
+
+    FHttpClient.Request.ContentType :=  'multipart/form-data, ' + LFormDataStream.RequestContentType;
     FHttpClient.Post(AURL, LFormDataStream, AResponse);
   finally
     LFormDataStream.Free;
@@ -299,7 +297,6 @@ begin
   inherited;
 
   FHttpClient.Request.Accept := AAccept;
-  FHttpClient.Request.ContentType := AContentType;
   LFormDataStream := CreateMultipartFormData(AFormData);
   try
     FHttpClient.Request.ContentType := LFormDataStream.RequestContentType;

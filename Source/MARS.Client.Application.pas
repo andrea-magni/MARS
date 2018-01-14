@@ -42,9 +42,12 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
+
+    const DEFAULT_APPNAME = 'default';
   published
     property DefaultMediaType: string read FDefaultMediaType write FDefaultMediaType;
     property DefaultContentType: string read FDefaultContentType write FDefaultContentType;
+    [Default(DEFAULT_APPNAME)]
     property AppName: string read FAppName write FAppName;
     property Client: TMARSCustomClient read FClient write FClient;
     property Path: string read GetPath;
@@ -85,8 +88,8 @@ begin
   inherited;
   FDefaultMediaType := TMediaType.APPLICATION_JSON;
   FDefaultContentType := TMediaType.APPLICATION_JSON;
-  FAppName := 'default';
-  if TMARSComponentHelper.IsDesigning(Self) then
+  FAppName := DEFAULT_APPNAME;
+  if TMARSComponentHelper.IsDesigning(Self) and not Assigned(FClient) then
     FClient := TMARSComponentHelper.FindDefault<TMARSCustomClient>(Self);
 end;
 
