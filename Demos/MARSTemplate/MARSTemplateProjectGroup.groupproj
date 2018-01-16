@@ -15,6 +15,9 @@
         <Projects Include="MARSTemplateServerConsoleApplication.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="MARSTemplateServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="MARSTemplateServerApacheModule.dproj">
             <Dependencies/>
         </Projects>
@@ -68,6 +71,15 @@
     <Target Name="MARSTemplateServerConsoleApplication:Make">
         <MSBuild Projects="MARSTemplateServerConsoleApplication.dproj" Targets="Make"/>
     </Target>
+    <Target Name="MARSTemplateServerDaemon">
+        <MSBuild Projects="MARSTemplateServerDaemon.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerDaemon:Clean">
+        <MSBuild Projects="MARSTemplateServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerDaemon:Make">
+        <MSBuild Projects="MARSTemplateServerDaemon.dproj" Targets="Make"/>
+    </Target>
     <Target Name="MARSTemplateServerApacheModule">
         <MSBuild Projects="MARSTemplateServerApacheModule.dproj"/>
     </Target>
@@ -96,13 +108,13 @@
         <MSBuild Projects="MARSTemplateClient.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARSTemplateServerApplication;MARSTemplateServerFMXApplication;MARSTemplateServerService;MARSTemplateServerConsoleApplication;MARSTemplateServerApacheModule;MARSTemplateServerISAPI;MARSTemplateClient"/>
+        <CallTarget Targets="MARSTemplateServerApplication;MARSTemplateServerFMXApplication;MARSTemplateServerService;MARSTemplateServerConsoleApplication;MARSTemplateServerDaemon;MARSTemplateServerApacheModule;MARSTemplateServerISAPI;MARSTemplateClient"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARSTemplateServerApplication:Clean;MARSTemplateServerFMXApplication:Clean;MARSTemplateServerService:Clean;MARSTemplateServerConsoleApplication:Clean;MARSTemplateServerApacheModule:Clean;MARSTemplateServerISAPI:Clean;MARSTemplateClient:Clean"/>
+        <CallTarget Targets="MARSTemplateServerApplication:Clean;MARSTemplateServerFMXApplication:Clean;MARSTemplateServerService:Clean;MARSTemplateServerConsoleApplication:Clean;MARSTemplateServerDaemon:Clean;MARSTemplateServerApacheModule:Clean;MARSTemplateServerISAPI:Clean;MARSTemplateClient:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARSTemplateServerApplication:Make;MARSTemplateServerFMXApplication:Make;MARSTemplateServerService:Make;MARSTemplateServerConsoleApplication:Make;MARSTemplateServerApacheModule:Make;MARSTemplateServerISAPI:Make;MARSTemplateClient:Make"/>
+        <CallTarget Targets="MARSTemplateServerApplication:Make;MARSTemplateServerFMXApplication:Make;MARSTemplateServerService:Make;MARSTemplateServerConsoleApplication:Make;MARSTemplateServerDaemon:Make;MARSTemplateServerApacheModule:Make;MARSTemplateServerISAPI:Make;MARSTemplateClient:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
