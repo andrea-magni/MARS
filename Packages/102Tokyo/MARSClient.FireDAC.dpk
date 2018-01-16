@@ -34,7 +34,7 @@ package MARSClient.FireDAC;
 requires
   rtl,
   MARSClient.Core,
-  FireDAC,
+  FireDAC, // if you get a compilation error here, probably your Delphi edition does not include FireDAC, skip this whole package
   FireDACCommonDriver,
   FireDACCommon;
 
