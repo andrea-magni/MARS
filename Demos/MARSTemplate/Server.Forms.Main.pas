@@ -23,6 +23,7 @@ type
     StartButton: TButton;
     StopButton: TButton;
     PortNumberEdit: TEdit;
+    MainTreeView: TTreeView;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -32,6 +33,8 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     FServer: TMARShttpServerIndy;
+  protected
+    procedure RenderEngines(const ATreeView: TTreeView);
   public
   end;
 
@@ -44,8 +47,55 @@ implementation
 
 uses
   StrUtils, Web.HttpApp
-  , MARS.Core.URL, MARS.Core.Engine
+  , MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
   , Server.Ignition;
+
+procedure TMainForm.RenderEngines(const ATreeView: TTreeView);
+begin
+
+  ATreeview.Items.BeginUpdate;
+  try
+    ATreeview.Items.Clear;
+    TMARSEngineRegistry.Instance.EnumerateEngines(
+      procedure (AName: string; AEngine: TMARSEngine)
+      var
+        LEngineItem: TTreeNode;
+      begin
+        LEngineItem := ATreeview.Items.AddChild(nil
+          , AName +  ' [ :' + AEngine.Port.ToString + AEngine.BasePath + ']'
+        );
+
+        AEngine.EnumerateApplications(
+          procedure (AName: string; AApplication: TMARSApplication)
+          var
+            LApplicationItem: TTreeNode;
+          begin
+            LApplicationItem := ATreeview.Items.AddChild(LEngineItem
+              , AApplication.Name +  ' [' + AApplication.BasePath + ']'
+            );
+
+            AApplication.EnumerateResources(
+              procedure (AName: string; AInfo: TMARSConstructorInfo)
+              var
+                LResourceItem: TTreeNode;
+              begin
+                LResourceItem := ATreeview.Items.AddChild(LApplicationItem
+                  , AInfo.TypeTClass.ClassName +  ' [' + AName + ']'
+                );
+
+              end
+            );
+          end
+        );
+      end
+    );
+
+    if ATreeView.Items.Count > 0 then
+      ATreeView.Items[0].Expand(True);
+  finally
+    ATreeView.Items.EndUpdate;
+  end;
+end;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -69,6 +119,8 @@ begin
         Handled := True;
       end;
     end;
+
+  RenderEngines(MainTreeView);
 
   StartServerAction.Execute;
 end;

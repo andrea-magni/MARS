@@ -57,6 +57,19 @@ object MainForm: TMainForm
       OnChange = PortNumberEditChange
     end
   end
+  object MainTreeView: TTreeView
+    Left = 0
+    Top = 73
+    Width = 464
+    Height = 128
+    Align = alClient
+    Indent = 19
+    TabOrder = 1
+    ExplicitLeft = 16
+    ExplicitTop = 88
+    ExplicitWidth = 121
+    ExplicitHeight = 97
+  end
   object MainActionList: TActionList
     Left = 384
     Top = 24
