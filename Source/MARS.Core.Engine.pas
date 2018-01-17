@@ -40,25 +40,24 @@ type
     FParameters: TMARSParameters;
     FName: string;
     FOnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent;
-
-    function GetBasePath: string;
-    function GetPort: Integer;
-    function GetThreadPoolSize: Integer;
-    procedure SetBasePath(const Value: string);
-    procedure SetPort(const Value: Integer);
-    procedure SetThreadPoolSize(const Value: Integer);
   protected
-    procedure PatchCORS(const ARequest: TWebRequest; const AResponse: TWebResponse);
+    function GetBasePath: string; virtual;
+    function GetPort: Integer; virtual;
+    function GetThreadPoolSize: Integer; virtual;
+    procedure SetBasePath(const Value: string); virtual;
+    procedure SetPort(const Value: Integer); virtual;
+    procedure SetThreadPoolSize(const Value: Integer); virtual;
+    procedure PatchCORS(const ARequest: TWebRequest; const AResponse: TWebResponse); virtual;
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
     destructor Destroy; override;
 
-    function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse): Boolean;
+    function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse): Boolean; virtual;
 
     function AddApplication(const AName, ABasePath: string;
       const AResources: array of string; const AParametersSliceName: string = ''): TMARSApplication; virtual;
 
-    procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>);
+    procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>); virtual;
 
     property Applications: TMARSApplicationDictionary read FApplications;
     property Parameters: TMARSParameters read FParameters;
@@ -74,19 +73,22 @@ type
   TMARSEngineRegistry=class
   private
     FItems: TDictionary<string, TMARSEngine>;
-    function GetCount: Integer;
+    FCriticalSection: TCriticalSection;
   protected
     class var _Instance: TMARSEngineRegistry;
     class function GetInstance: TMARSEngineRegistry; static;
-    function GetEngine(const AName: string): TMARSEngine;
+    function GetCount: Integer; virtual;
+    function GetEngine(const AName: string): TMARSEngine; virtual;
     class function GetDefaultEngine: TMARSEngine; static;
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
-    procedure RegisterEngine(const AEngine: TMARSEngine);
-    procedure UnregisterEngine(const AEngine: TMARSEngine); overload;
-    procedure UnregisterEngine(const AEngineName: string); overload;
+    procedure RegisterEngine(const AEngine: TMARSEngine); virtual;
+    procedure UnregisterEngine(const AEngine: TMARSEngine); overload; virtual;
+    procedure UnregisterEngine(const AEngineName: string); overload; virtual;
+
+    procedure EnumerateEngines(const ADoSomething: TProc<string, TMARSEngine>); virtual;
 
     property Engine[const AName: string]: TMARSEngine read GetEngine; default;
 
@@ -122,10 +124,15 @@ begin
       LParametersSliceName := AName;
     Result.Parameters.CopyFrom(Parameters, LParametersSliceName);
 
-    Applications.Add(
-      TMARSURL.CombinePath([BasePath, ABasePath]).ToLower
-      , Result
-    );
+    FCriticalSection.Enter;
+    try
+      Applications.Add(
+        TMARSURL.CombinePath([BasePath, ABasePath]).ToLower
+        , Result
+      );
+    finally
+      FCriticalSection.Leave;
+    end;
   except
     Result.Free;
     raise
@@ -304,12 +311,31 @@ constructor TMARSEngineRegistry.Create;
 begin
   inherited Create;
   FItems := TDictionary<string, TMARSEngine>.Create;
+  FCriticalSection := TCriticalSection.Create;
 end;
 
 destructor TMARSEngineRegistry.Destroy;
 begin
+  FCriticalSection.Free;
   FItems.Free;
   inherited;
+end;
+
+procedure TMARSEngineRegistry.EnumerateEngines(
+  const ADoSomething: TProc<string, TMARSEngine>);
+var
+  LPair: TPair<string, TMARSEngine>;
+begin
+  if Assigned(ADoSomething) then
+  begin
+    FCriticalSection.Enter;
+    try
+      for LPair in FItems do
+        ADoSomething(LPair.Key, LPair.Value);
+    finally
+      FCriticalSection.Leave;
+    end;
+  end;
 end;
 
 function TMARSEngineRegistry.GetCount: Integer;
@@ -338,18 +364,30 @@ end;
 procedure TMARSEngineRegistry.RegisterEngine(const AEngine: TMARSEngine);
 begin
   Assert(Assigned(AEngine));
-  FItems.AddOrSetValue(AEngine.Name, AEngine);
+
+  FCriticalSection.Enter;
+  try
+    FItems.AddOrSetValue(AEngine.Name, AEngine);
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
 
 procedure TMARSEngineRegistry.UnregisterEngine(const AEngine: TMARSEngine);
 begin
   Assert(Assigned(AEngine));
+
   UnregisterEngine(AEngine.Name);
 end;
 
 procedure TMARSEngineRegistry.UnregisterEngine(const AEngineName: string);
 begin
-  FItems.Remove(AEngineName);
+  FCriticalSection.Enter;
+  try
+    FItems.Remove(AEngineName);
+  finally
+    FCriticalSection.Leave;
+  end;
 end;
 
 end.
