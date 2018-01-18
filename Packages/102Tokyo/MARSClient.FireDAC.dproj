@@ -44,13 +44,15 @@
         <GenPackage>true</GenPackage>
         <SanitizedProjectName>MARSClient_FireDAC</SanitizedProjectName>
         <GenDll>true</GenDll>
-        <DCC_DcuOutput>..\..\Lib\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcuOutput>..\..\Lib250\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
         <DCC_F>false</DCC_F>
         <DCC_K>false</DCC_K>
+        <VerInfo_Locale>2057</VerInfo_Locale>
+        <VerInfo_Keys>CompanyName=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <DCC_UsePackage>rtl;inet;DbxCommonDriver;dbrtl;FireDACCommon;FireDACCommonDriver;FireDAC;DataSnapFireDAC;IndySystem;IndyProtocols;IndyCore;bindengine;bindcomp;$(DCC_UsePackage)</DCC_UsePackage>
