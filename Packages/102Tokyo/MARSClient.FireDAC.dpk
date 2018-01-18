@@ -28,7 +28,7 @@ package MARSClient.FireDAC;
 {$DESCRIPTION 'MARS-Curiosity Client FireDAC'}
 {$LIBSUFFIX '250'}
 {$DESIGNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,
