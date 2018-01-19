@@ -29,7 +29,7 @@ package MARSClient.Core;
 {$DESCRIPTION 'MARS-Curiosity Client Core'}
 {$LIBSUFFIX '240'}
 {$DESIGNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,
