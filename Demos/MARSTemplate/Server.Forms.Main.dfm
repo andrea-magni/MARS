@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS-Curiosity Template Server'
+  Caption = 'MARSTemplate Server'
   ClientHeight = 201
   ClientWidth = 464
   Color = clBtnFace
@@ -65,10 +65,6 @@ object MainForm: TMainForm
     Align = alClient
     Indent = 19
     TabOrder = 1
-    ExplicitLeft = 16
-    ExplicitTop = 88
-    ExplicitWidth = 121
-    ExplicitHeight = 97
   end
   object MainActionList: TActionList
     Left = 384

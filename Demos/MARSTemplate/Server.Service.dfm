@@ -2,7 +2,7 @@ object ServerService: TServerService
   OldCreateOrder = False
   OnCreate = ServiceCreate
   OnDestroy = ServiceDestroy
-  DisplayName = 'MARS-Curiosity ServerService'
+  DisplayName = 'MARSTemplate Service'
   OnStart = ServiceStart
   OnStop = ServiceStop
   Height = 150
