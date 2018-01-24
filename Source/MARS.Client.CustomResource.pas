@@ -109,6 +109,11 @@ type
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const ASynchronize: Boolean = True); overload;
+    procedure PUTAsync(
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ASynchronize: Boolean = True); overload;
 {$endif}
 
     property Accept: string read GetAccept;
@@ -682,6 +687,92 @@ begin
     end;
   end;
 end;
+
+{$ifdef DelphiXE7_UP}
+procedure TMARSClientCustomResource.PUTAsync(
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const ACompletionHandler: TProc<TMARSClientCustomResource>;
+  const AOnException: TMARSClientExecptionProc;
+  const ASynchronize: Boolean);
+var
+  LClient: TMARSCustomClient;
+  LApplication: TMARSClientApplication;
+  LResource, LParentResource: TMARSClientCustomResource;
+begin
+  LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
+  try
+    LClient.Assign(Client);
+    LApplication := TMARSClientApplication.Create(nil);
+    try
+      LApplication.Assign(Application);
+      LApplication.Client := LClient;
+      LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
+      try
+        LResource.Assign(Self);
+        LResource.SpecificClient := nil;
+        LResource.Application := LApplication;
+
+        LParentResource := nil;
+        if Self is TMARSClientSubResource then
+        begin
+          LParentResource := TMARSClientCustomResourceClass(TMARSClientSubResource(Self).ParentResource.ClassType).Create(nil);
+          try
+            LParentResource.Assign(TMARSClientSubResource(Self).ParentResource);
+            LParentResource.SpecificClient := nil;
+            LParentResource.Application := LApplication;
+            (LResource as TMARSClientSubResource).ParentResource := LParentResource as TMARSClientResource;
+          except
+            LParentResource.Free;
+            raise;
+          end;
+        end;
+
+        TTask.Run(
+          procedure
+          begin
+            try
+              LResource.PUT(
+                ABeforeExecute
+              , procedure (AStream: TStream)
+                begin
+                  if Assigned(ACompletionHandler) then
+                  begin
+                    if ASynchronize then
+                      TThread.Synchronize(nil
+                        , procedure
+                          begin
+                            ACompletionHandler(LResource);
+                          end
+                      )
+                    else
+                      ACompletionHandler(LResource);
+                  end;
+                end
+              , AOnException
+              );
+            finally
+              LResource.Free;
+              if Assigned(LParentResource) then
+                LParentResource.Free;
+              LApplication.Free;
+              LClient.Free;
+            end;
+          end
+        );
+      except
+        LResource.Free;
+        raise;
+      end;
+    except
+      LApplication.Free;
+      raise;
+    end;
+  except
+    LClient.Free;
+    raise;
+  end;
+end;
+{$endif}
 
 procedure TMARSClientCustomResource.SetPathParamsValues(const Value: TStrings);
 begin
