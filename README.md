@@ -32,6 +32,11 @@ Build your REST applications (server and client) with my library:
 * Try some demos (i.e. "Demos\HelloWorld", "Demos\Authorization", "Demos\FireDAC Basic")
 * compile and run the MARScmd_VCL.dproj in [MARS Folder]\Utils\Source\MARScmd, it will help you to create your first project by cloning "Demos\MARSTemplate" into a new folder
 
+# Map (list most functionalities and concepts)
+
+[PDF](media/MARS-Curiosity%20Map.pdf) | [PNG](media/MARS-Curiosity%20Map.png)
+![MARS map](media/MARS-Curiosity%20Map.png)
+
 # Contributions
 This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
 Most of the code has been written by me with some significant contributions by Nando Dessena and Stefan Glienke. Some of my customers actually act as beta testers and early adopters (I want to thank them all for the trust and efforts).
