@@ -170,7 +170,10 @@ var
   LArray: TJSONArray;
   LIndex: Integer;
 begin
-  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
+  if AValue.IsEmpty and not AValue.IsArray then
+    Result := TJSONNull.Create
+
+  else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
     Result := TJSONString.Create(AValue.AsString)
 
   else if AValue.IsArray then
@@ -208,8 +211,12 @@ begin
   else if (AValue.Kind in [tkFloat]) then
     Result := TJSONNumber.Create( AValue.AsType<Double> )
 
+  else if (AValue.IsObjectInstance) then
+    Result := ObjectToJSON(AValue.AsObject)
+
   else
     Result := TJSONString.Create(AValue.ToString);
+
 end;
 
 function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
@@ -553,9 +560,9 @@ begin
         LValue := LField.GetValue(ARecord.GetReferenceToRawData);
 
         {$ifdef Delphi10Tokyo_UP}
-          if LValue.IsType<TValue>(False) then
+          if LValue.IsType<TValue>(False) and (not LValue.IsArray) then
         {$else}
-          if LValue.IsType<TValue> then
+          if LValue.IsType<TValue> and (not LValue.IsArray) then
         {$endif}
           WriteTValue(LJSONName, LValue.AsType<TValue>) //unboxing TValue from TValue
         else

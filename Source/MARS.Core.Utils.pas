@@ -421,19 +421,27 @@ function ObjectToJSON(const AObject: TObject): TJSONObject;
 var
   LType: TRttiType;
   LProperty: TRttiProperty;
+  LPropertyValue: TValue;
 begin
   Result := TJSONObject.Create;
   try
     if Assigned(AObject) then
     begin
+      Result.AddPair('ClassName', AObject.ClassName);
       LType := TRttiContext.Create.GetType(AObject.ClassType);
       for LProperty in LType.GetProperties do
       begin
         if (LProperty.IsReadable)
-          and (not ((LProperty.PropertyType.IsInstance) or (LProperty.PropertyType.TypeKind = tkInterface)))
+          and (not (LProperty.PropertyType.TypeKind = tkInterface))
           and (LProperty.Visibility in [mvPublic, mvPublished])
         then
-          Result.AddPair(LProperty.Name, LProperty.GetValue(AObject).ToString);
+        begin
+          LPropertyValue := LProperty.GetValue(AObject);
+          if LProperty.PropertyType.IsInstance then
+            Result.AddPair(LProperty.Name, ObjectToJSON(LPropertyValue.AsObject)) // recursion
+          else
+            Result.AddPair(LProperty.Name, LPropertyValue.ToString);
+        end;
       end;
     end;
   except
