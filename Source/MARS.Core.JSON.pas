@@ -211,7 +211,7 @@ begin
   else if (AValue.Kind in [tkFloat]) then
     Result := TJSONNumber.Create( AValue.AsType<Double> )
 
-  else if (AValue.IsObjectInstance) then
+  else if (AValue.IsInstanceOf(TObject)) then
     Result := ObjectToJSON(AValue.AsObject)
 
   else
