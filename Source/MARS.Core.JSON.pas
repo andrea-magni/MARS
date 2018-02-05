@@ -117,6 +117,8 @@ type
       const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue; overload;
     function ReadValue(const AName: string; const ADesiredType: TRttiType;
       const ANameCaseSensitive: Boolean; out AValue: TValue): Boolean; overload;
+    function ReadArrayValue(const AName: string): TJSONArray; overload;
+    function ReadArrayValue<T: record>(const AName: string): TArray<T>; overload;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -468,6 +470,23 @@ class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
 begin
   Assert(Assigned(AJSON));
   Result := AJSON.ToRecord<T>(AFilterProc);
+end;
+
+function TJSONObjectHelper.ReadArrayValue(const AName: string): TJSONArray;
+begin
+  Result := nil;
+  TryGetValue<TJSONArray>(AName, Result);
+end;
+
+function TJSONObjectHelper.ReadArrayValue<T>(const AName: string): TArray<T>;
+var
+  LArray: TJSONArray;
+begin
+  LArray := ReadArrayValue(AName);
+  if Assigned(LArray) then
+    Result := LArray.ToArrayOfRecord<T>
+  else
+    Result := [];
 end;
 
 function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
