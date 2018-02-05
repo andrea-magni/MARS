@@ -117,8 +117,8 @@ type
       const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue; overload;
     function ReadValue(const AName: string; const ADesiredType: TRttiType;
       const ANameCaseSensitive: Boolean; out AValue: TValue): Boolean; overload;
-    function ReadArrayValue(const AName: string): TJSONArray; overload;
-    function ReadArrayValue<T: record>(const AName: string): TArray<T>; overload;
+    function ReadArrayValue(const AName: string): TJSONArray; overload; inline;
+    function ReadArrayValue<T: record>(const AName: string): TArray<T>; overload; inline;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -129,6 +129,8 @@ type
       const AInputIsUTC: Boolean = False);
     procedure WriteUnixTimeValue(const AName: string; const AValue: TDateTime);
     procedure WriteTValue(const AName: string; const AValue: TValue);
+    procedure WriteArrayValue(const AName: string; const AArray: TJSONArray); overload; inline;
+    procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>); overload; inline;
 
     property Values[const name: string]: Variant read GetValue; default;
 
@@ -848,6 +850,18 @@ end;
 function TJSONObjectHelper.ToRecord<T>(const AFilterProc: TToRecordFilterProc = nil): T;
 begin
   Result := ToRecord(TRttiContext.Create.GetType(TypeInfo(T)), AFilterProc).AsType<T>;
+end;
+
+procedure TJSONObjectHelper.WriteArrayValue(const AName: string;
+  const AArray: TJSONArray);
+begin
+  AddPair(AName, AArray);
+end;
+
+procedure TJSONObjectHelper.WriteArrayValue<T>(const AName: string;
+  const AArray: TArray<T>);
+begin
+  WriteArrayValue(AName, TJSONArray.ArrayOfRecordToJSON<T>(AArray));
 end;
 
 procedure TJSONObjectHelper.WriteBoolValue(const AName: string;
