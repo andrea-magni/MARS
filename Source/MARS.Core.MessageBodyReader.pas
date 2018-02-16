@@ -140,29 +140,37 @@ var
   LReaderRttiType: TRttiType;
 
   LReaderMediaTypes: TMediaTypeList;
-  LMethodConsumesMediaTypes: TMediaTypeList;
+  LConsumesMediaTypes: TMediaTypeList;
   LAllowedMediaTypes: TArray<string>;
   LMediaTypes: TArray<string>;
   LMediaType: string;
   LCandidateMediaType: string;
+  LAttributes: TArray<TCustomAttribute>;
 //  LCandidateQualityFactor: Double;
 begin
-  Assert(Assigned(ADestination));
-  LMethod := ADestination.Parent as TRttiMethod;
-  Assert(Assigned(LMethod));
-
   AMediaType := nil;
   AReader := nil;
   LFound := False;
   LCandidateAffinity := -1;
   LCandidateMediaType := '';
 //  LCandidateQualityFactor := -1;
+  LMethod := nil;
 
-  // consider method's Consumes
-  LMethodConsumesMediaTypes := GetConsumesMediaTypes(LMethod);
+  Assert(Assigned(ADestination));
+  if ADestination.Parent is TRttiMethod then
+  begin
+    LMethod := ADestination.Parent as TRttiMethod;
+    LConsumesMediaTypes := GetConsumesMediaTypes(LMethod);
+    LAttributes := LMethod.GetAttributes;
+  end
+  else begin
+    LConsumesMediaTypes := GetConsumesMediaTypes(ADestination);
+    LAttributes := ADestination.GetAttributes;
+  end;
+
   try
-    if LMethodConsumesMediaTypes.Count > 0 then
-      LAllowedMediaTypes := LMethodConsumesMediaTypes.ToArrayOfString
+    if LConsumesMediaTypes.Count > 0 then
+      LAllowedMediaTypes := LConsumesMediaTypes.ToArrayOfString
     else
 {$ifdef DelphiXE7_UP}
       LAllowedMediaTypes := [];
@@ -174,8 +182,8 @@ begin
       or ((Length(LAllowedMediaTypes) = 1) and (LAllowedMediaTypes[0] = TMediaType.WILDCARD))
     then // defaults
     begin
-      if LMethodConsumesMediaTypes.Count > 0 then
-        LAllowedMediaTypes := LMethodConsumesMediaTypes.ToArrayOfString
+      if LConsumesMediaTypes.Count > 0 then
+        LAllowedMediaTypes := LConsumesMediaTypes.ToArrayOfString
       else
       begin
         SetLength(LAllowedMediaTypes, 2);
@@ -195,17 +203,17 @@ begin
           else
             LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LReaderMediaTypes);
           for LMediaType in LMediaTypes do
-            if LReaderEntry.IsReadable(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType) then
+            if LReaderEntry.IsReadable(ADestination.GetRttiType, LAttributes, LMediaType) then
             begin
               if not LFound
                  or (
-                   (LCandidateAffinity < LReaderEntry.GetAffinity(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType))
+                   (LCandidateAffinity < LReaderEntry.GetAffinity(ADestination.GetRttiType, LAttributes, LMediaType))
 //                   or (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
                  )
               then
               begin
                 LCandidate := LReaderEntry;
-                LCandidateAffinity := LCandidate.GetAffinity(ADestination.GetRttiType, LMethod.GetAttributes, LMediaType);
+                LCandidateAffinity := LCandidate.GetAffinity(ADestination.GetRttiType, LAttributes, LMediaType);
                 LCandidateMediaType := LMediaType;
 //                LCandidateQualityFactor := 1;
                 LFound := True;
@@ -222,7 +230,7 @@ begin
         AMediaType := TMediaType.Create(LCandidateMediaType);
       end;
   finally
-    LMethodConsumesMediaTypes.Free;
+    LConsumesMediaTypes.Free;
   end;
 end;
 
