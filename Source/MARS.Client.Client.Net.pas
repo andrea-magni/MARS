@@ -70,6 +70,7 @@ type
       const AAccept: string; const AContentType: string); override;
 
     function LastCmdSuccess: Boolean; override;
+    function ResponseStatusCode: Integer; override;
     function ResponseText: string; override;
   published
 //    property ProtocolVersion: TIdHTTPProtocolVersion read GetProtocolVersion write SetProtocolVersion;
@@ -245,6 +246,11 @@ begin
   AContent.Position := 0;
   FLastResponse := FHttpClient.Put(AURL, AContent, AResponse);
   CheckLastCmdSuccess;
+end;
+
+function TMARSNetClient.ResponseStatusCode: Integer;
+begin
+  Result := FLastResponse.StatusCode;
 end;
 
 function TMARSNetClient.ResponseText: string;
