@@ -74,6 +74,7 @@ type
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
 
     function LastCmdSuccess: Boolean; virtual;
+    function ResponseStatusCode: Integer; virtual;
     function ResponseText: string; virtual;
 
     // shortcuts
@@ -253,6 +254,11 @@ procedure TMARSCustomClient.Put(const AURL: string; AContent, AResponse: TStream
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
   EndorseAuthorization(AAuthToken);
+end;
+
+function TMARSCustomClient.ResponseStatusCode: Integer;
+begin
+  Result := -1;
 end;
 
 function TMARSCustomClient.ResponseText: string;

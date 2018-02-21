@@ -68,6 +68,7 @@ type
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
 
     function LastCmdSuccess: Boolean; override;
+    function ResponseStatusCode: Integer; override;
     function ResponseText: string; override;
 
   //  property Request: TIdHTTPRequest read GetRequest;
@@ -241,6 +242,11 @@ begin
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
   FHttpClient.Put(AURL, AContent, AResponse);
+end;
+
+function TMARSIndyClient.ResponseStatusCode: Integer;
+begin
+  Result := FHttpClient.ResponseCode;
 end;
 
 function TMARSIndyClient.ResponseText: string;
