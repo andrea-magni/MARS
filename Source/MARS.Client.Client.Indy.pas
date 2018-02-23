@@ -175,7 +175,7 @@ begin
       if not LFormParam.IsFile then
         Result.AddFormField(LFormParam.FieldName, LFormParam.Value.ToString)
       else
-        Result.AddFile(LFormParam.FieldName, LFormPAram.AsFile.FileName);
+        Result.AddFile(LFormParam.FieldName, LFormParam.AsFile.FileName, LFormParam.AsFile.ContentType);
     end;
   except
     Result.Free;
