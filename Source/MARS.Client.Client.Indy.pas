@@ -15,6 +15,7 @@ uses
 
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP, IdMultipartFormData
+  , IdCookie, IdCookieManager
   ;
 
 type
@@ -104,6 +105,7 @@ end;
 procedure TMARSIndyClient.AssignTo(Dest: TPersistent);
 var
   LDestClient: TMARSIndyClient;
+  LCookieManager: TIdCookieManager;
 begin
   inherited;
   if Dest is TMARSIndyClient then
@@ -113,6 +115,19 @@ begin
     LDestClient.AuthEndorsement := AuthEndorsement;
     LDestClient.HttpClient.IOHandler := HttpClient.IOHandler;
     LDestClient.HttpClient.AllowCookies := HttpClient.AllowCookies;
+    if HttpClient.AllowCookies and Assigned(HttpClient.CookieManager) then
+    begin
+      LCookieManager := TIdCookieManager.Create(LDestClient);
+      try
+        LCookieManager.CookieCollection.AddCookies(
+          HttpClient.CookieManager.CookieCollection
+        );
+        LDestClient.HttpClient.CookieManager := LCookieManager;
+      except
+        LCookieManager.Free;
+        raise;
+      end;
+    end;
     LDestClient.HttpClient.ProxyParams.BasicAuthentication := HttpClient.ProxyParams.BasicAuthentication;
     LDestClient.HttpClient.ProxyParams.ProxyPort := HttpClient.ProxyParams.ProxyPort;
     LDestClient.HttpClient.ProxyParams.ProxyServer := HttpClient.ProxyParams.ProxyServer;
