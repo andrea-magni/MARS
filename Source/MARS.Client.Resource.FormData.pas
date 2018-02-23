@@ -34,6 +34,7 @@ type
     FResponse: TMemoryStream;
   protected
     procedure AfterPOST(const AContent: TStream); override;
+    procedure AfterPUT(const AContent: TStream); override;
     function GetResponseAsString: string; virtual;
   public
     constructor Create(AOwner: TComponent); override;
@@ -46,8 +47,18 @@ type
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
+
+    procedure PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; override;
+    procedure PUT(const AFormData: TArray<TFormParam>;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
+
+
   published
-    property FormData: TArray<TFormParam> read FFormData;
+    property FormData: TArray<TFormParam> read FFormData write FFormData;
     property Response: TMemoryStream read FResponse;
     property ResponseAsString: string read GetResponseAsString;
   end;
@@ -68,6 +79,14 @@ end;
 { TMARSClientResourceFormData }
 
 procedure TMARSClientResourceFormData.AfterPOST(const AContent: TStream);
+begin
+  inherited;
+  AContent.Position := 0;
+  FResponse.Size := 0; // clear
+  FResponse.CopyFrom(AContent, 0);
+end;
+
+procedure TMARSClientResourceFormData.AfterPUT(const AContent: TStream);
 begin
   inherited;
   AContent.Position := 0;
@@ -102,6 +121,52 @@ procedure TMARSClientResourceFormData.POST(const AFormData: TArray<TFormParam>;
 begin
   FFormData := AFormData;
   POST(ABeforeExecute, AAfterExecute, AOnException);
+end;
+
+procedure TMARSClientResourceFormData.PUT(const AFormData: TArray<TFormParam>;
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const AAfterExecute: TMARSClientResponseProc;
+  const AOnException: TMARSClientExecptionProc);
+begin
+  FFormData := AFormData;
+  PUT(ABeforeExecute, AAfterExecute, AOnException);
+end;
+
+procedure TMARSClientResourceFormData.PUT(
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const AAfterExecute: TMARSClientResponseProc;
+  const AOnException: TMARSClientExecptionProc);
+var
+  LResponseStream: TMemoryStream;
+begin
+  // inherited (!)
+
+  try
+    BeforePUT(nil);
+
+    if Assigned(ABeforeExecute) then
+      ABeforeExecute(nil);
+
+    LResponseStream := TMemoryStream.Create;
+    try
+      Client.Put(URL, FFormData, LResponseStream, AuthToken, Accept, ContentType);
+
+      AfterPUT(LResponseStream);
+
+      if Assigned(AAfterExecute) then
+        AAfterExecute(LResponseStream);
+    finally
+      LResponseStream.Free;
+    end;
+  except
+    on E:Exception do
+    begin
+      if Assigned(AOnException) then
+        AOnException(E)
+      else
+        DoError(E, TMARSHttpVerb.Put, AAfterExecute);
+    end;
+  end;
 end;
 
 procedure TMARSClientResourceFormData.POST(
