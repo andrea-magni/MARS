@@ -39,6 +39,8 @@ type
 //    function GetProtocolVersion: TIdHTTPProtocolVersion;
 //    procedure SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
 
+    procedure CloneCookies(const ADestination, ASource: TNetHTTPClient);
+
     function GetConnectTimeout: Integer; override;
     function GetReadTimeout: Integer; override;
     procedure SetConnectTimeout(const Value: Integer); override;
@@ -109,6 +111,7 @@ begin
     LDestClient.AuthEndorsement := AuthEndorsement;
 //    LDestClient.HttpClient.IOHandler := HttpClient.IOHandler;
     LDestClient.HttpClient.AllowCookies := HttpClient.AllowCookies;
+    CloneCookies(LDestClient.HttpClient, HttpClient);
 //    LDestClient.HttpClient.ProxyParams.BasicAuthentication := HttpClient.ProxyParams.BasicAuthentication;
 //    LDestClient.HttpClient.ProxyParams.ProxyPort := HttpClient.ProxyParams.ProxyPort;
 //    LDestClient.HttpClient.ProxyParams.ProxyServer := HttpClient.ProxyParams.ProxyServer;
@@ -126,6 +129,23 @@ begin
 
   if not LastCmdSuccess then
     raise EMARSClientHttpException.Create(FLastResponse.StatusText, FLastResponse.StatusCode);
+end;
+
+procedure TMARSNetClient.CloneCookies(const ADestination,
+  ASource: TNetHTTPClient);
+var
+  LIndex: Integer;
+  LCookie: TCookie;
+  LURI: TURI;
+begin
+  for LIndex := 0 to Length(ASource.CookieManager.Cookies)-1 do
+  begin
+    LCookie := ASource.CookieManager.Cookies[LIndex];
+    LURI := Default(TURI);
+    LURI.Host := LCookie.Domain;
+    LURI.Path := LCookie.Path;
+    ADestination.CookieManager.AddServerCookie(LCookie, LURI);
+  end;
 end;
 
 constructor TMARSNetClient.Create(AOwner: TComponent);

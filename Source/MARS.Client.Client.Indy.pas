@@ -37,6 +37,9 @@ type
     procedure AssignTo(Dest: TPersistent); override;
 //    function GetRequest: TIdHTTPRequest;
 //    function GetResponse: TIdHTTPResponse;
+
+    procedure CloneCookies(const ADestination, ASource: TIdHTTP);
+
     function GetProtocolVersion: TIdHTTPProtocolVersion;
     procedure SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
 
@@ -105,7 +108,6 @@ end;
 procedure TMARSIndyClient.AssignTo(Dest: TPersistent);
 var
   LDestClient: TMARSIndyClient;
-  LCookieManager: TIdCookieManager;
 begin
   inherited;
   if Dest is TMARSIndyClient then
@@ -115,19 +117,7 @@ begin
     LDestClient.AuthEndorsement := AuthEndorsement;
     LDestClient.HttpClient.IOHandler := HttpClient.IOHandler;
     LDestClient.HttpClient.AllowCookies := HttpClient.AllowCookies;
-    if HttpClient.AllowCookies and Assigned(HttpClient.CookieManager) then
-    begin
-      LCookieManager := TIdCookieManager.Create(LDestClient);
-      try
-        LCookieManager.CookieCollection.AddCookies(
-          HttpClient.CookieManager.CookieCollection
-        );
-        LDestClient.HttpClient.CookieManager := LCookieManager;
-      except
-        LCookieManager.Free;
-        raise;
-      end;
-    end;
+    CloneCookies(LDestClient.HttpClient, HttpClient);
     LDestClient.HttpClient.ProxyParams.BasicAuthentication := HttpClient.ProxyParams.BasicAuthentication;
     LDestClient.HttpClient.ProxyParams.ProxyPort := HttpClient.ProxyParams.ProxyPort;
     LDestClient.HttpClient.ProxyParams.ProxyServer := HttpClient.ProxyParams.ProxyServer;
@@ -135,6 +125,25 @@ begin
     LDestClient.HttpClient.Request.Host := HttpClient.Request.Host;
     LDestClient.HttpClient.Request.Password := HttpClient.Request.Password;
     LDestClient.HttpClient.Request.Username := HttpClient.Request.Username;
+  end;
+end;
+
+procedure TMARSIndyClient.CloneCookies(const ADestination, ASource: TIdHTTP);
+var
+  LCookieManager: TIdCookieManager;
+begin
+  if ASource.AllowCookies and Assigned(ASource.CookieManager) then
+  begin
+    LCookieManager := TIdCookieManager.Create(ADestination);
+    try
+      LCookieManager.CookieCollection.AddCookies(
+        ASource.CookieManager.CookieCollection
+      );
+      ADestination.CookieManager := LCookieManager;
+    except
+      LCookieManager.Free;
+      raise;
+    end;
   end;
 end;
 
