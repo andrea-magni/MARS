@@ -477,8 +477,29 @@ begin
 
         TTask.Run(
           procedure
+          var
+            LOnException: TProc<Exception>;
           begin
             try
+              if Assigned(AOnException) then
+              begin
+                LOnException :=
+                  procedure (AException: Exception)
+                  begin
+                    if ASynchronize then
+                      TThread.Synchronize(nil
+                        , procedure
+                          begin
+                            AOnException(AException);
+                          end
+                      )
+                    else
+                      AOnException(AException);
+                  end;
+              end
+              else
+                LOnException := nil;
+
               LResource.GET(nil
                 , procedure (AStream: TStream)
                   begin
@@ -495,7 +516,8 @@ begin
                         ACompletionHandler(LResource);
                     end;
                   end
-                , AOnException);
+                , LOnException
+                );
               finally
                 LResource.Free;
                 if Assigned(LParentResource) then
@@ -602,8 +624,29 @@ begin
 
         TTask.Run(
           procedure
+          var
+            LOnException: TProc<Exception>;
           begin
             try
+              if Assigned(AOnException) then
+              begin
+                LOnException :=
+                  procedure (AException: Exception)
+                  begin
+                    if ASynchronize then
+                      TThread.Synchronize(nil
+                        , procedure
+                          begin
+                            AOnException(AException);
+                          end
+                      )
+                    else
+                      AOnException(AException);
+                  end;
+              end
+              else
+                LOnException := nil;
+
               LResource.POST(
                 ABeforeExecute
               , procedure (AStream: TStream)
@@ -621,7 +664,7 @@ begin
                       ACompletionHandler(LResource);
                   end;
                 end
-              , AOnException
+              , LOnException
               );
             finally
               LResource.Free;
@@ -729,8 +772,29 @@ begin
 
         TTask.Run(
           procedure
+          var
+            LOnException: TProc<Exception>;
           begin
             try
+              if Assigned(AOnException) then
+              begin
+                LOnException :=
+                  procedure (AException: Exception)
+                  begin
+                    if ASynchronize then
+                      TThread.Synchronize(nil
+                        , procedure
+                          begin
+                            AOnException(AException);
+                          end
+                      )
+                    else
+                      AOnException(AException);
+                  end;
+              end
+              else
+                LOnException := nil;
+
               LResource.PUT(
                 ABeforeExecute
               , procedure (AStream: TStream)
@@ -748,7 +812,7 @@ begin
                       ACompletionHandler(LResource);
                   end;
                 end
-              , AOnException
+              , LOnException
               );
             finally
               LResource.Free;
