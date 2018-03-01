@@ -477,6 +477,8 @@ end;
 
 procedure TMARSActivation.Prepare;
 begin
+  Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
+
   CheckResource;
   CheckMethod;
   ReadAuthorizationInfo;
