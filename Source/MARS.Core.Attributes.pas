@@ -97,6 +97,52 @@ type
 
   ContextAttribute = class(MARSAttribute);
 
+  ConfigParamAttribute = class(ContextAttribute)
+  protected
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; virtual;
+  end;
+
+  ConfigSingleParamAttribute = class(ConfigParamAttribute)
+  private
+    FName: string;
+    FDefaultValue: TValue;
+  public
+    constructor Create(const AName: string; const ADefaultValue: TValue); overload;
+    constructor Create(const AName: string); overload;
+
+    property Name: string read FName write FName;
+    property DefaultValue: TValue read FDefaultValue write FDefaultValue;
+  end;
+
+  EngineParamAttribute = class(ConfigSingleParamAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
+  ApplicationParamAttribute = class(ConfigSingleParamAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
+  ConfigParamFuncAttribute = class(ConfigParamAttribute);
+  TConfigParamFunc = reference to function(const AName: string): TValue;
+
+  EngineParamFuncAttribute = class(ConfigParamFuncAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
+  ApplicationParamFuncAttribute = class(ConfigParamFuncAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
   RequestParamAttribute = class(ContextAttribute)
   private
   protected
@@ -637,6 +683,85 @@ begin
     end
   else // 2 - fallback (raw)
     Result := StringToTValue(AActivation.Request.ContentFields.Text, ADestination.GetRttiType);
+end;
+
+{ ConfigSingleParamAttribute }
+
+constructor ConfigSingleParamAttribute.Create(const AName: string;
+  const ADefaultValue: TValue);
+begin
+  inherited Create;
+  FName := AName;
+  FDefaultValue := ADefaultValue;
+end;
+
+constructor ConfigSingleParamAttribute.Create(const AName: string);
+begin
+  Create(AName, TValue.Empty);
+end;
+
+
+{ ConfigParamAttribute }
+
+function ConfigParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  Result := TValue.Empty;
+end;
+
+{ EngineParamAttribute }
+
+function EngineParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  if Assigned(AActivation.Engine) then
+    Result := AActivation.Engine.Parameters.ByNameText(Name, DefaultValue)
+  else
+    Result := inherited GetValue(ADestination, AActivation);
+end;
+
+
+{ ApplicationParamAttribute }
+
+function ApplicationParamAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  if Assigned(AActivation.Application) then
+    Result := AActivation.Application.Parameters.ByNameText(Name, DefaultValue)
+  else
+    Result := inherited GetValue(ADestination, AActivation);
+end;
+
+{ EngineParamFuncAttribute }
+
+function EngineParamFuncAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  if ADestination.GetRttiType.Handle = TypeInfo(TConfigParamFunc) then
+    Result := TValue.From<TConfigParamFunc>(
+      function (const AName: string): TValue
+      begin
+        Result := AActivation.Engine.Parameters.ByNameText(AName);
+      end
+    )
+  else
+    Result := inherited GetValue(ADestination, AActivation);
+end;
+
+{ ApplicationParamFuncAttribute }
+
+function ApplicationParamFuncAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  if ADestination.GetRttiType.Handle = TypeInfo(TConfigParamFunc) then
+    Result := TValue.From<TConfigParamFunc>(
+      function (const AName: string): TValue
+      begin
+        Result := AActivation.Application.Parameters.ByNameText(AName);
+      end
+    )
+  else
+    Result := inherited GetValue(ADestination, AActivation);
 end;
 
 end.
