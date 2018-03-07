@@ -154,7 +154,6 @@ begin
   LCandidateAffinity := -1;
   LCandidateMediaType := '';
 //  LCandidateQualityFactor := -1;
-  LMethod := nil;
 
   Assert(Assigned(ADestination));
   if ADestination.Parent is TRttiMethod then
