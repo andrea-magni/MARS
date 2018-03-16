@@ -238,6 +238,7 @@ begin
   if not Assigned(LEncoding) then
     LEncoding := TEncoding.Default;
   AStream.Position := 0;
+  AStream.Size := 0;
   LStreamWriter := TStreamWriter.Create(AStream, LEncoding);
   try
     LStreamWriter.Write(AString);
