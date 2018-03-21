@@ -79,7 +79,7 @@ type
     constructor Create; virtual;
     destructor Destroy; override;
 
-    [GET, Path('/{*}')]
+    [GET, Path('/{*}'), Produces(TMediaType.WILDCARD)]
     function GetDocument():string; virtual;
   end;
 

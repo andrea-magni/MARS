@@ -51,6 +51,8 @@ type
   RazorFilesFolderAttribute = class(RazorSingleValueAttribute);
   RazorTemplatesFolderAttribute = class(RazorSingleValueAttribute);
 
+  RazorTranslateAttribute = class(RazorAttribute);
+
   TOnLangProc = reference to procedure (const AFieldName: string; var AReplaceText: string);
   TOnValueProc = reference to procedure (const ObjectName: string; const FieldName: string; var ReplaceText: string);
   TOnObjectForPathProc = reference to procedure (ExecData: TRazorExecData);
@@ -80,6 +82,10 @@ type
     function GetErrorPage: string; virtual;
     function GetFilesFolder: string; virtual;
     function GetTemplatesFolder: string; virtual;
+    function UserLoggedIn: boolean; virtual;
+    function UserRoles: string; virtual;
+    function UserLanguageID: Integer; virtual;
+
 
     procedure OnObjectForPathHandler(Sender: TObject; ExecData: TRazorExecData); virtual;
     procedure OnScaffoldingHandler(Sender: TObject; const qualifClassName: string;
@@ -93,6 +99,7 @@ type
     destructor Destroy; override;
 
     function ProcessRequest(const AErrorIfNotFound: Boolean = True): string; virtual;
+    function DoBlock(const AContent: string; const AEncoding: TEncoding = nil): string; overload; virtual;
 
     property Activation: IMARSActivation read FActivation;
     property Application: TMARSApplication read FApplication;
@@ -157,6 +164,31 @@ begin
   FreeAndNil(FParameters);
   FreeAndNil(FRazorEngine);
   inherited;
+end;
+
+function TMARSDelphiRazor.DoBlock(const AContent: string; const AEncoding: TEncoding): string;
+var
+  LRazorProc: TRlxRazorProcessor;
+begin
+  LRazorProc := TRlxRazorProcessor.Create(nil);
+  try
+    LRazorProc.RazorEngine := RazorEngine;
+//    LRazorProc.InputFilename := FilePath;
+    LRazorProc.UserLoggedIn := UserLoggedIn;
+    LRazorProc.UserRoles := UserRoles;
+    LRazorProc.LanguageID := UserLanguageID;
+    LRazorProc.OnLang := Self.OnLangHandler;
+//    LRazorProc.AddToDictionary ('page', pageInfo, False);
+//    execData.PathInfo := pageInfo.Page;
+//    execData.PathParam := pageInfo.Item;
+//    execData.LRazorProc := LRazorProc;
+//    ConnectObjectForPath (execData);
+//    LRazorProc.Request := Request; // passed manually
+//    Result := LRazorProc.Content;
+    Result := LRazorProc.DoBlock(AContent, AEncoding)
+  finally
+    LRazorProc.Free;
+  end;
 end;
 
 function TMARSDelphiRazor.GetBasePath: string;
@@ -306,13 +338,30 @@ begin
   LFound := False;
   Result := RazorEngine.ProcessRequest(Activation.Request
     , LFound
-    , Token.IsVerified
-    , Token.Claims.ByName('LANGUAGE_ID', 1).AsInteger
+    , UserLoggedIn
+    , UserLanguageID
     , ''
-    , string.join(',', Token.Roles)
+    , UserRoles
   );
   if (not LFound) and AErrorIfNotFound then
     raise EMARSHttpException.Create('File not found', 404);
+end;
+
+function TMARSDelphiRazor.UserLanguageID: Integer;
+begin
+  Result := 1;
+  if Assigned(Token) then
+    Result := Token.Claims.ByName('LANGUAGE_ID', 1).AsInteger;
+end;
+
+function TMARSDelphiRazor.UserLoggedIn: boolean;
+begin
+  Result := Assigned(Token) and (Token.IsVerified and not Token.IsExpired);
+end;
+
+function TMARSDelphiRazor.UserRoles: string;
+begin
+  Result := string.join(',', Token.Roles);
 end;
 
 { RazorSingleValueAttribute }
