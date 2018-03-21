@@ -167,6 +167,7 @@ begin
 
   if Assigned(LDestClient) then
   begin
+    LDestClient.AuthEndorsement := AuthEndorsement;
     LDestClient.MARSEngineURL := MARSEngineURL;
     LDestClient.ConnectTimeout := ConnectTimeout;
     LDestClient.ReadTimeout := ReadTimeout;
@@ -298,6 +299,7 @@ var
 begin
   LClient := Create(nil);
   try
+    LClient.AuthEndorsement := AuthorizationBearer;
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
     try
@@ -342,6 +344,7 @@ begin
   Result := nil;
   LClient := Create(nil);
   try
+    LClient.AuthEndorsement := AuthorizationBearer;
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
     try
@@ -392,6 +395,7 @@ var
 begin
   LClient := Create(nil);
   try
+    LClient.AuthEndorsement := AuthorizationBearer;
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
     try
@@ -464,6 +468,7 @@ var
 begin
   LClient := Create(nil);
   try
+    LClient.AuthEndorsement := AuthorizationBearer;
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
     try
@@ -521,6 +526,7 @@ var
 begin
   LClient := Create(nil);
   try
+    LClient.AuthEndorsement := AuthorizationBearer;
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
     try
@@ -590,6 +596,7 @@ var
 begin
   LClient := Create(nil);
   try
+    LClient.AuthEndorsement := AuthorizationBearer;
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
     try
@@ -664,6 +671,7 @@ var
 begin
   LClient := Create(nil);
   try
+    LClient.AuthEndorsement := AuthorizationBearer;
     LClient.MARSEngineURL := AEngineURL;
     LApp := TMARSClientApplication.Create(nil);
     try
