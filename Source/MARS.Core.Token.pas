@@ -57,13 +57,16 @@ type
     function GetToken(const ARequest: TWebRequest): string; virtual;
     function GetIsExpired: Boolean; virtual;
 
-    function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string; virtual; abstract;
-    function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean; virtual; abstract;
+    function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string; virtual;
+    function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean; virtual;
 
     property Request: TWebRequest read FRequest;
     property Response: TWebResponse read FResponse;
   public
+    constructor Create(); reintroduce; overload; virtual;
     constructor Create(const AToken: string; const AParameters: TMARSParameters); overload; virtual;
+    constructor Create(const AToken: string; const ASecret: string;
+      const AIssuer: string; const ADuration: TDateTime); overload; virtual;
     constructor Create(const ARequest: TWebRequest; const AResponse: TWebResponse;
       const AParameters: TMARSParameters; const AURL: TMARSURL); overload; virtual;
     destructor Destroy; override;
@@ -71,6 +74,7 @@ type
     procedure Build(const ASecret: string);
     procedure Load(const AToken, ASecret: string);
     procedure Clear;
+    function Clone(const AIgnoreRequestResponse: Boolean = True): TMARSToken; virtual;
 
     function HasRole(const ARole: string): Boolean; overload; virtual;
     function HasRole(const ARoles: TArray<string>): Boolean; overload; virtual;
@@ -116,11 +120,18 @@ uses
 
 constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSParameters);
 begin
-  inherited Create;
-  FClaims := TMARSParameters.Create('');
-  FIssuer := AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
-  FDuration := AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended;
-  Load(AToken, AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString);
+  Create(
+    AToken
+  , AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
+  , AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString
+  , AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended
+  );
+end;
+
+function TMARSToken.BuildJWTToken(const ASecret: string;
+  const AClaims: TMARSParameters): string;
+begin
+  Result := '';
 end;
 
 procedure TMARSToken.Clear;
@@ -129,6 +140,40 @@ begin
   FIsVerified := False;
   FClaims.Clear;
   UpdateCookie;
+end;
+
+function TMARSToken.Clone(const AIgnoreRequestResponse: Boolean): TMARSToken;
+begin
+  Result := TMARSToken.Create();
+  try
+    if not AIgnoreRequestResponse then
+    begin
+      Result.FRequest := Request;
+      Result.FResponse := Response;
+    end;
+    Result.FCookieEnabled := CookieEnabled;
+    Result.FCookieName := CookieName;
+    Result.FCookieDomain := CookieDomain;
+    Result.FCookiePath := CookiePath;
+    Result.FCookieSecure := CookieSecure;
+    Result.FIssuer := Issuer;
+    Result.FDuration := Duration;
+    Result.FToken := Token;
+    Result.FIsVerified := IsVerified;
+    Result.FClaims.CopyFrom(Claims);
+  except
+    FreeAndNil(Result);
+    raise;
+  end;
+end;
+
+constructor TMARSToken.Create(const AToken, ASecret, AIssuer: string;
+  const ADuration: TDateTime);
+begin
+  Create;
+  FIssuer := AIssuer;
+  FDuration := ADuration;
+  Load(AToken, ASecret);
 end;
 
 constructor TMARSToken.Create(const ARequest: TWebRequest; const AResponse: TWebResponse;
@@ -143,6 +188,12 @@ begin
   FCookiePath := AParameters.ByName(JWT_COOKIEPATH_PARAM, AURL.BasePath).AsString;
   FCookieSecure := AParameters.ByName(JWT_COOKIESECURE_PARAM, JWT_COOKIESECURE_PARAM_DEFAULT).AsBoolean;
   Create(GetToken(ARequest), AParameters);
+end;
+
+constructor TMARSToken.Create;
+begin
+  inherited Create;
+  FClaims := TMARSParameters.Create('');
 end;
 
 destructor TMARSToken.Destroy;
@@ -304,6 +355,12 @@ begin
 
   if AToken <> '' then
     FIsVerified := LoadJWTToken(AToken, ASecret, FClaims);
+end;
+
+function TMARSToken.LoadJWTToken(const AToken, ASecret: string;
+  var AClaims: TMARSParameters): Boolean;
+begin
+  Result := False;
 end;
 
 procedure TMARSToken.SetRoles(const AValue: TArray<string>);
