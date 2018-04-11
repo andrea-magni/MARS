@@ -13,7 +13,7 @@ uses
   SysUtils, Classes
 
   , MARS.Client.Resource
-  , MARS.Client.Client
+  , MARS.Client.Client, MARS.Client.Utils
   ;
 
 type
@@ -39,6 +39,11 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure POST(const AStream: TStream;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
 
   published
     property Response: TStream read FResponse;
@@ -89,6 +94,24 @@ end;
 function TMARSClientResourceStream.GetResponseSize: Int64;
 begin
   Result := FResponse.Size;
+end;
+
+procedure TMARSClientResourceStream.POST(const AStream: TStream;
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const AAfterExecute: TMARSClientResponseProc;
+  const AOnException: TMARSClientExecptionProc);
+begin
+  POST(
+    procedure (AContent: TMemoryStream)
+    begin
+      AContent.CopyFrom(AStream, 0);
+      AContent.Position := 0;
+      if Assigned(ABeforeExecute) then
+        ABeforeExecute(AContent);
+    end
+  , AAfterExecute
+  , AOnException
+  );
 end;
 
 end.
