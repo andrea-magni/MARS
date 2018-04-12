@@ -67,8 +67,10 @@ procedure TDataSetWriterXML.WriteTo(const AValue: TValue; const AMediaType: TMed
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LStreamWriter: TStreamWriter;
+  LEncoding: TEncoding;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LEncoding := GetDesiredEncoding(AActivation);
+  LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
   try
     if AValue.AsObject is TClientDataSet then // CDS
       LStreamWriter.Write(TClientDataSet(AValue.AsObject).XMLData)

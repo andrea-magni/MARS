@@ -95,6 +95,16 @@ type
     property Value: string read FValue write FValue;
   end;
 
+  EncodingAttribute = class(MARSAttribute)
+  private
+    FEncodingName: string;
+    function GetEncoding: TEncoding;
+  public
+    constructor Create(const AEncodingName: string);
+    property Name: string read FEncodingName write FEncodingName;
+    property Encoding: TEncoding read GetEncoding;
+  end;
+
   ContextAttribute = class(MARSAttribute);
 
   ConfigParamAttribute = class(ContextAttribute)
@@ -762,6 +772,26 @@ begin
     )
   else
     Result := inherited GetValue(ADestination, AActivation);
+end;
+
+{ EncodingAttribute }
+
+constructor EncodingAttribute.Create(const AEncodingName: string);
+begin
+  inherited Create;
+  FEncodingName := AEncodingName;
+end;
+
+function EncodingAttribute.GetEncoding: TEncoding;
+begin
+  Result := TEncoding.Default;
+  if SameText(Name, 'ANSI') then Result := TEncoding.ANSI
+  else if SameText(Name, 'ASCII') then Result := TEncoding.ASCII
+  else if SameText(Name, 'BigEndianUnicode') then Result := TEncoding.BigEndianUnicode
+  else if SameText(Name, 'Default') then Result := TEncoding.Default
+  else if SameText(Name, 'Unicode') then Result := TEncoding.Unicode
+  else if SameText(Name, 'UTF7') then Result := TEncoding.UTF7
+  else if SameText(Name, 'UTF8') then Result := TEncoding.UTF8;
 end;
 
 end.

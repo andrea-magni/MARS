@@ -53,8 +53,10 @@ procedure TJsonDataObjectsWriter.WriteTo(const AValue: TValue; const AMediaType:
 var
   LStreamWriter: TStreamWriter;
   LJsonBO: TJsonBaseObject;
+  LEncoding: TEncoding;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LEncoding := GetDesiredEncoding;
+  LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
   try
     LJsonBO := AValue.AsObject as TJsonBaseObject;
     if Assigned(LJsonBO) then

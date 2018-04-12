@@ -26,6 +26,8 @@ type
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TJSONValueWriter = class(TInterfacedObject, IMessageBodyWriter)
+  protected
+  public
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
 
@@ -65,6 +67,8 @@ type
   end;
 
 
+  function GetDesiredEncoding(const AActivation: IMARSActivation): TEncoding;
+
 implementation
 
 uses
@@ -73,6 +77,30 @@ uses
   , MARS.Core.Utils
   , MARS.Rtti.Utils
   ;
+
+function GetDesiredEncoding(const AActivation: IMARSActivation): TEncoding;
+var
+  LEncoding: TEncoding;
+begin
+  LEncoding := TEncoding.Default;
+
+  // look for attribute on Method
+  if not AActivation.Method.HasAttribute<EncodingAttribute>(
+    procedure(AAttr: EncodingAttribute)
+    begin
+      LEncoding := AAttr.Encoding;
+    end
+  ) then // if not found, look for attribute on Resource
+    AActivation.Resource.HasAttribute<EncodingAttribute>(
+      procedure(AAttr: EncodingAttribute)
+      begin
+        LEncoding := AAttr.Encoding;
+      end
+    );
+
+  Result := LEncoding;
+end;
+
 
 { TObjectWriter }
 
@@ -117,8 +145,10 @@ var
   LJSONPEnabled: Boolean;
   LJSONPProc: TProc<JSONPAttribute>;
   LContentType: string;
+  LEncoding: TEncoding;
 begin
-  LStreamWriter := TStreamWriter.Create(AOutputStream);
+  LEncoding := GetDesiredEncoding(AActivation);
+  LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
   try
     LJSONString := '';
     if AValue.IsType<string> then
