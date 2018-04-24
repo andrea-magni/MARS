@@ -72,7 +72,7 @@ type
     FAuthorizationInfo: TMARSAuthorizationInfo;
 
     procedure FreeContext; virtual;
-    procedure CleanupGarbage(const AValue: TValue); virtual;
+    procedure CleanupGarbage(const AValue: TValue; const ADestroyed: TList<TObject>); virtual;
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
@@ -340,13 +340,28 @@ begin
   end;
 end;
 
-procedure TMARSActivation.CleanupGarbage(const AValue: TValue);
+procedure TMARSActivation.CleanupGarbage(const AValue: TValue; const ADestroyed: TList<TObject>);
+
+  procedure FreeOnlyOnce();
+  var
+    LObj: TObject;
+  begin
+    if AValue.IsArray then Exit; //AM workaround, somehow we can get here with a TValue that is not an object
+
+    LObj := AValue.AsObject;
+    if not ADestroyed.Contains(LObj) then
+    begin
+      ADestroyed.Add(LObj);
+      LObj.Free;
+    end;
+  end;
+
 var
   LIndex: Integer;
   LValue: TValue;
 begin
   case AValue.Kind of
-    tkClass: AValue.AsObject.Free;
+    tkClass: FreeOnlyOnce();
     tkArray,
     tkDynArray:
     begin
@@ -354,8 +369,8 @@ begin
       begin
         LValue := AValue.GetArrayElement(LIndex);
         case LValue.Kind of
-          tkClass: LValue.AsObject.Free;
-          tkArray, tkDynArray: CleanupGarbage(LValue); //recursion
+          tkClass: FreeOnlyOnce;
+          tkArray, tkDynArray: CleanupGarbage(LValue, ADestroyed); //recursion
         end;
       end;
     end;
@@ -375,16 +390,7 @@ begin
     while FContext.Count > 0 do
     begin
       LValue := FContext[0];
-      if LValue.IsObject then
-      begin
-        if not LDestroyed.Contains(LValue.AsObject) then
-        begin
-          LDestroyed.Add(LValue.AsObject);
-          CleanupGarbage(LValue);
-        end;
-      end
-      else
-        CleanupGarbage(LValue);
+      CleanupGarbage(LValue, LDestroyed);
       FContext.Delete(0);
     end;
   finally

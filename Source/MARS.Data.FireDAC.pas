@@ -133,6 +133,8 @@ type
       const AOnBeforeOpen: TProc<TFDQuery>;
       const AOnDataSetReady: TProc<TFDQuery>); overload; virtual;
 
+    function SetName<T: TComponent>(const AComponent: T; const AName: string): T; overload;
+
     procedure InTransaction(const ADoSomething: TProc<TFDTransaction>);
 
     property Connection: TFDConnection read GetConnection;
@@ -632,6 +634,11 @@ begin
   end;
 end;
 
+function TMARSFireDAC.SetName<T>(const AComponent: T; const AName: string): T;
+begin
+  AComponent.Name := AName;
+  Result := AComponent;
+end;
 
 { TMARSFDMemTable }
 
