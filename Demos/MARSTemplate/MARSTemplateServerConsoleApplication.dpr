@@ -103,11 +103,26 @@ begin
   Write(cArrow);
 end;
 
+procedure SetupThreadScheduler(const AServer: TIdHTTPWebBrokerBridge);
+var
+  LScheduler: TIdSchedulerOfThreadPool;
+begin
+  LScheduler := TIdSchedulerOfThreadPool.Create(AServer);
+  try
+    LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
+    AServer.Scheduler := LScheduler;
+    AServer.MaxConnections := LScheduler.PoolSize;
+  except
+    AServer.Scheduler.Free;
+    AServer.Scheduler := nil;
+    raise;
+  end;
+end;
+
 procedure RunServer();
 var
   LServer: TIdHTTPWebBrokerBridge;
   LDummyIndy: TDummyIndyServer;
-  LScheduler: TIdSchedulerOfThreadPool;
   LResponse: string;
 begin
   WriteCommands;
@@ -116,20 +131,10 @@ begin
     LServer := TIdHTTPWebBrokerBridge.Create(nil);
     try
       LServer.DefaultPort := TServerEngine.Default.Port;
-
-      LScheduler := TIdSchedulerOfThreadPool.Create(LServer);
-      try
-        LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
-        LServer.Scheduler := LScheduler;
-        LServer.MaxConnections := LScheduler.PoolSize;
-        LServer.OnParseAuthentication := LDummyIndy.ParseAuthenticationHandler;
-      except
-        LServer.Scheduler.Free;
-        LServer.Scheduler := nil;
-        raise;
-      end;
-
-
+      LServer.OnParseAuthentication := LDummyIndy.ParseAuthenticationHandler;
+      {$IFNDEF LINUX}
+      SetupThreadScheduler(LServer);
+      {$ENDIF}
 
       while True do
       begin
