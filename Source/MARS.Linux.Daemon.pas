@@ -206,7 +206,9 @@ begin
   try
     FServer := TIdHTTPWebBrokerBridge.Create(nil);
     try
-      SetupThreadScheduler;
+      FServer.OnParseAuthentication := FDummyIndy.ParseAuthenticationHandler;
+
+//      SetupThreadScheduler;
       StartServer;
 
       IdleCycle;
@@ -261,7 +263,6 @@ begin
     FScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
     FServer.Scheduler := FScheduler;
     FServer.MaxConnections := FScheduler.PoolSize;
-    FServer.OnParseAuthentication := FDummyIndy.ParseAuthenticationHandler;
   except
     FServer.Scheduler.Free;
     FServer.Scheduler := nil;
