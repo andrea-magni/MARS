@@ -47,13 +47,6 @@ type
     property Token;
   end;
 
-procedure Register;
-
 implementation
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClientResource]);
-end;
 
 end.

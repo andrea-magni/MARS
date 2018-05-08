@@ -54,18 +54,11 @@ type
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
   end;
 
-procedure Register;
-
 implementation
 
 uses
   MARS.Core.URL, MARS.Core.MediaType
   ;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClientApplication]);
-end;
 
 { TMARSClientApplication }
 

@@ -25,22 +25,13 @@ type
     function GetVerbCount: Integer; override;
   end;
 
-procedure Register;
-
 implementation
 
 uses
   Windows
   , VCL.Dialogs
-  , DesignIntf
-
   , FireDAC.Comp.Client
 ;
-
-procedure Register;
-begin
-  RegisterComponentEditor(TMARSFDResource, TMARSFDResourceEditor);
-end;
 
 { TMARSFDResourceEditor }
 

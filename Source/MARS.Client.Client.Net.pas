@@ -79,8 +79,6 @@ type
     property HttpClient: TNetHTTPClient read FHttpClient;
   end;
 
-procedure Register;
-
 implementation
 
 uses
@@ -91,11 +89,6 @@ uses
   , MARS.Client.Resource.Stream
   , MARS.Client.Application
 ;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSNetClient]);
-end;
 
 { TMARSNetClient }
 
