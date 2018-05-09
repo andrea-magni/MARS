@@ -55,7 +55,7 @@ var
   LJsonBO: TJsonBaseObject;
   LEncoding: TEncoding;
 begin
-  LEncoding := GetDesiredEncoding;
+  LEncoding := GetDesiredEncoding(AActivation);
   LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
   try
     LJsonBO := AValue.AsObject as TJsonBaseObject;

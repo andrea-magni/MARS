@@ -44,7 +44,8 @@ implementation
 {$R *.fmx}
 
 uses
-    MARS.Core.URL, MARS.Core.Engine
+    Web.HTTPApp
+  , MARS.Core.URL, MARS.Core.Engine
   , Server.Ignition;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);

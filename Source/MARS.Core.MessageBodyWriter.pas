@@ -83,6 +83,8 @@ type
     const AFFINITY_ZERO = 0;
   end;
 
+function GetDesiredEncoding(const AActivation: IMARSActivation): TEncoding;
+
 implementation
 
 uses
@@ -91,6 +93,29 @@ uses
   , MARS.Core.Exceptions
   , MARS.Core.Attributes
   ;
+
+function GetDesiredEncoding(const AActivation: IMARSActivation): TEncoding;
+var
+  LEncoding: TEncoding;
+begin
+  LEncoding := TEncoding.Default;
+
+  // look for attribute on Method
+  if not AActivation.Method.HasAttribute<EncodingAttribute>(
+    procedure(AAttr: EncodingAttribute)
+    begin
+      LEncoding := AAttr.Encoding;
+    end
+  ) then // if not found, look for attribute on Resource
+    AActivation.Resource.HasAttribute<EncodingAttribute>(
+      procedure(AAttr: EncodingAttribute)
+      begin
+        LEncoding := AAttr.Encoding;
+      end
+    );
+
+  Result := LEncoding;
+end;
 
 { TMARSMessageBodyRegistry }
 
