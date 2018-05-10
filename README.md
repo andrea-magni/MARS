@@ -23,8 +23,8 @@ Build your REST applications (server and client) with my library:
     * Build All
   * Open [MARS Folder]\Packages\102Tokyo\MARSClient.Enterprise.groupproj
     * Build All
-    * Install MARSClient.Core
-    * Install MARSClient.FireDAC    
+    * Install MARSClient.CoreDesign
+    * Install MARSClient.FireDACDesign    
 
 (please correct accordingly to your Delphi version and edition)
 
@@ -39,6 +39,6 @@ Build your REST applications (server and client) with my library:
 
 # Contributions
 This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
-Most of the code has been written by me with some significant contributions by Nando Dessena and Stefan Glienke. Some of my customers actually act as beta testers and early adopters (I want to thank them all for the trust and efforts).
+Most of the code has been written by me with some significant contributions by Nando Dessena, Stefan Glienke and Davide Rossi. Some of my customers actually act as beta testers and early adopters (I want to thank them all for the trust and efforts).
 
 [Andrea Magni](http://www.andreamagni.eu)
