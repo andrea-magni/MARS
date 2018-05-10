@@ -47,18 +47,11 @@ type
     property ParentResource: TMARSClientResource read FParentResource write FParentResource;
   end;
 
-procedure Register;
-
 implementation
 
 uses
     MARS.Client.Utils
   , MARS.Core.URL;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClientSubResource]);
-end;
 
 { TMARSClientSubResource }
 

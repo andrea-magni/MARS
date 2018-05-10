@@ -85,8 +85,6 @@ type
 
   TMARSClient = class(TMARSIndyClient); // compatibility
 
-procedure Register;
-
 implementation
 
 uses
@@ -97,11 +95,6 @@ uses
   , MARS.Client.Resource.Stream
   , MARS.Client.Application
 ;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClient]);
-end;
 
 { TMARSIndyClient }
 

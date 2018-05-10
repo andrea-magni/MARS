@@ -28,7 +28,7 @@ package MARSClient.Core;
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'MARS-Curiosity Client Core'}
 {$LIBSUFFIX '250'}
-{$DESIGNONLY}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
@@ -38,14 +38,11 @@ requires
   IndySystem,
   IndyProtocols,
   IndyCore,
-  bindengine,
-  bindcomp,
   MARS.Utils;
 
 contains
   MARS.Client.Application in '..\..\Source\MARS.Client.Application.pas',
   MARS.Client.Client.Net in '..\..\Source\MARS.Client.Client.Net.pas',
-  MARS.Client.CustomResource.Editor in '..\..\Source\MARS.Client.CustomResource.Editor.pas',
   MARS.Client.CustomResource in '..\..\Source\MARS.Client.CustomResource.pas',
   MARS.Client.Messaging.Resource in '..\..\Source\MARS.Client.Messaging.Resource.pas',
   MARS.Client.Resource.JSON in '..\..\Source\MARS.Client.Resource.JSON.pas',
@@ -55,7 +52,6 @@ contains
   MARS.Client.SubResource in '..\..\Source\MARS.Client.SubResource.pas',
   MARS.Client.SubResource.Stream in '..\..\Source\MARS.Client.SubResource.Stream.pas',
   MARS.Client.Token in '..\..\Source\MARS.Client.Token.pas',
-  MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',
   MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas',
   MARS.Client.Client in '..\..\Source\MARS.Client.Client.pas',
   MARS.Client.Client.Indy in '..\..\Source\MARS.Client.Client.Indy.pas',
