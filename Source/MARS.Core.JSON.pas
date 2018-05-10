@@ -758,7 +758,9 @@ begin
   end
   else if AValue is TJSONString then // Date and string
   begin
-    if (ADesiredType.Handle = TypeInfo(TDateTime))
+    if ADesiredType is TRttiEnumerationType then
+      Result := TValue.FromOrdinal(ADesiredType.Handle, GetEnumValue(ADesiredType.Handle, TJSONString(AValue).Value))
+    else if (ADesiredType.Handle = TypeInfo(TDateTime))
       or (ADesiredType.Handle = TypeInfo(TDate))
       or (ADesiredType.Handle = TypeInfo(TTime))
     then
