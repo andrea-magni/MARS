@@ -21,7 +21,7 @@ uses
 {$else}
   , Rtti
 {$endif}
-  , TypInfo
+  , TypInfo, REST.JSON
 ;
 
 type
@@ -145,14 +145,22 @@ type
     property Pairs[const Index: Integer]: TJSONPair read GetPair;
 {$endif}
 
+    class function ObjectToJSON(const AObject: TObject;
+      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; overload;
+
+    class function JSONToObject<T: class, constructor>(const AJSON: TJSONObject;
+      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): T; overload;
+
     class function RecordToJSON<T: record>(ARecord: T;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
     class function RecordToJSON(const ARecord: TValue;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
+
     class function JSONToRecord<T: record>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
     class function JSONToRecord(const ARecordType: TRttiType; const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
+
     class function TValueToJSONValue(const AValue: TValue): TJSONValue;
     class function TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType): TValue;
   end;
@@ -460,6 +468,12 @@ begin
   Result := LValue.Value;
 end;
 
+class function TJSONObjectHelper.JSONToObject<T>(const AJSON: TJSONObject;
+  const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): T;
+begin
+  Result := TJSON.JsonToObject<T>(AJSON, AOptions);
+end;
+
 class function TJSONObjectHelper.JSONToRecord(const ARecordType: TRttiType;
   const AJSON: TJSONObject; const AFilterProc: TToRecordFilterProc): TValue;
 begin
@@ -472,6 +486,12 @@ class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
 begin
   Assert(Assigned(AJSON));
   Result := AJSON.ToRecord<T>(AFilterProc);
+end;
+
+class function TJSONObjectHelper.ObjectToJSON(const AObject: TObject;
+  const AOptions: TJsonOptions): TJSONObject;
+begin
+  Result := TJSON.ObjectToJsonObject(AObject, AOptions);
 end;
 
 function TJSONObjectHelper.ReadArrayValue(const AName: string): TJSONArray;
@@ -528,6 +548,7 @@ begin
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsDouble;
 end;
+
 
 procedure TJSONObjectHelper.FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil);
 

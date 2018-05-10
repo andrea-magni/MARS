@@ -10,7 +10,7 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes, RTTI, SyncObjs, Web.HttpApp
+  SysUtils, Classes, RTTI, SyncObjs, Web.HttpApp, REST.JSON
 , MARS.Core.JSON
 ;
 
@@ -48,8 +48,8 @@ type
 
   function CreateCompactGuidStr: string;
 
-  function ObjectToJSON(const AObject: TObject): TJSONObject;
-  function ObjectToJSONString(const AObject: TObject): string;
+  function ObjectToJSON(const AObject: TObject;
+    const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; deprecated 'use MARS.Core.JSON.TJSONObject.ObjectToJSON';
 
   function BooleanToTJSON(AValue: Boolean): TJSONValue;
 
@@ -418,49 +418,9 @@ begin
     Result := Result + IntToHex(LBuffer[I], 2);
 end;
 
-function ObjectToJSON(const AObject: TObject): TJSONObject;
-var
-  LType: TRttiType;
-  LProperty: TRttiProperty;
-  LPropertyValue: TValue;
+function ObjectToJSON(const AObject: TObject; const AOptions: TJsonOptions): TJSONObject;
 begin
-  Result := TJSONObject.Create;
-  try
-    if Assigned(AObject) then
-    begin
-      Result.AddPair('ClassName', AObject.ClassName);
-      LType := TRttiContext.Create.GetType(AObject.ClassType);
-      for LProperty in LType.GetProperties do
-      begin
-        if (LProperty.IsReadable)
-          and (not (LProperty.PropertyType.TypeKind = tkInterface))
-          and (LProperty.Visibility in [mvPublic, mvPublished])
-        then
-        begin
-          LPropertyValue := LProperty.GetValue(AObject);
-          if LProperty.PropertyType.IsInstance then
-            Result.AddPair(LProperty.Name, ObjectToJSON(LPropertyValue.AsObject)) // recursion
-          else
-            Result.AddPair(LProperty.Name, LPropertyValue.ToString);
-        end;
-      end;
-    end;
-  except
-    Result.Free;
-    raise;
-  end;
-end;
-
-function ObjectToJSONString(const AObject: TObject): string;
-var
-  LObj: TJSONObject;
-begin
-  LObj := ObjectToJSON(AObject);
-  try
-    Result := LObj.ToJSON;
-  finally
-    LObj.Free;
-  end;
+  Result := TJSONObject.ObjectToJSON(AObject, AOptions);
 end;
 
 { TFormParamFile }
