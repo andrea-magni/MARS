@@ -74,8 +74,6 @@ type
     property IsExpired: Boolean read GetIsExpired;
   end;
 
-procedure Register;
-
 implementation
 
 uses
@@ -83,11 +81,6 @@ uses
 , MARS.Core.Utils, MARS.Rtti.Utils
 , MARS.Core.MediaType
 ;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClientToken]);
-end;
 
 { TMARSClientToken }
 

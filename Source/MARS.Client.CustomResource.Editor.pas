@@ -25,8 +25,6 @@ type
     function GetVerbCount: Integer; override;
   end;
 
-procedure Register;
-
 implementation
 
 uses
@@ -35,13 +33,7 @@ uses
 {$else}
   Dialogs
 {$endif}
-  , DesignIntf
   , Windows, IdHTTP;
-
-procedure Register;
-begin
-  RegisterComponentEditor(TMARSClientCustomResource, TMARSClientCustomResourceEditor);
-end;
 
 { TMARSClientCustomResourceEditor }
 

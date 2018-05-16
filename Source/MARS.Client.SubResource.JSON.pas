@@ -46,18 +46,11 @@ type
     property ResponseAsString: string read GetResponseAsString;
   end;
 
-procedure Register;
-
 implementation
 
 uses
   MARS.Core.Utils, MARS.Core.MediaType
 ;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClientSubResourceJSON]);
-end;
 
 { TMARSClientResourceJSON }
 

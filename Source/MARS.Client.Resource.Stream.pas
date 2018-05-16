@@ -50,18 +50,11 @@ type
     property ResponseSize: Int64 read GetResponseSize;
   end;
 
-procedure Register;
-
 implementation
 
 uses
   MARS.Core.Utils,
   MARS.Core.MediaType;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClientResourceStream]);
-end;
 
 { TMARSClientResourceStream }
 

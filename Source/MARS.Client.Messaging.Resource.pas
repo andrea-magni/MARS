@@ -52,14 +52,7 @@ type
     property OnMessage: TMARSMessageEvent read FOnMessage write FOnMessage;
   end;
 
-procedure Register;
-
 implementation
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSClientMessagingResource]);
-end;
 
 { TMARSClientMessagingResource }
 

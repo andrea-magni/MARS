@@ -82,7 +82,7 @@ procedure TObjectWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaTy
 var
   LObj: TJSONObject;
 begin
-  LObj := ObjectToJSON(AValue.AsObject);
+  LObj := TJSONObject.ObjectToJSON(AValue.AsObject);
   try
 //      LObj.AddPair('Writer', ClassName);
     TJSONValueWriter.WriteJSONValue(LObj, AMediaType, AOutputStream, AActivation);

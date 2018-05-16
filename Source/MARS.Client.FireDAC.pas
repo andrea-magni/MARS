@@ -82,8 +82,6 @@ type
     property ApplyUpdatesResults: TArray<TMARSFDApplyUpdatesRes> read FApplyUpdatesResults;
   end;
 
-procedure Register;
-
 implementation
 
 uses
@@ -92,11 +90,6 @@ uses
   , MARS.Core.Utils, MARS.Client.Utils, MARS.Rtti.Utils
   , MARS.Core.Exceptions, MARS.Core.MediaType
   ;
-
-procedure Register;
-begin
-  RegisterComponents('MARS-Curiosity Client', [TMARSFDResource]);
-end;
 
 { TMARSFDResource }
 
