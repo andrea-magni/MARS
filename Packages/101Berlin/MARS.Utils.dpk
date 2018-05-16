@@ -36,7 +36,8 @@ requires
   inet,
   IndySystem,
   IndyProtocols,
-  IndyCore;
+  IndyCore,
+  RESTComponents;
 
 contains
   MARS.Core.Utils in '..\..\Source\MARS.Core.Utils.pas',
