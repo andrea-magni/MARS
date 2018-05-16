@@ -1,11 +1,8 @@
 ﻿[MARSApplication]
 Coordinates=150,53,96,33
 
-[MARSClient]
-Coordinates=71,70,69,33
-
 []
-Coordinates=150,1,109,33
+Coordinates=71,70,69,33
 Visible=False
 
 [MainForm.BindSourceDB1]

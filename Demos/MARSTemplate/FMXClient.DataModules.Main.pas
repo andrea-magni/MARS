@@ -9,13 +9,13 @@ interface
 
 uses
   System.SysUtils, System.Classes, MARS.Client.Application,
-  MARS.Client.Client, MARS.Client.Client.Indy
+  MARS.Client.Client, MARS.Client.Client.Net
 ;
 
 type
   TMainDataModule = class(TDataModule)
-    MARSClient: TMARSClient;
     MARSApplication: TMARSClientApplication;
+    MARSClient: TMARSNetClient;
   private
   public
   end;
