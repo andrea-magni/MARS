@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{29A0C2A3-BA6B-44DF-B909-A20D8DBF1B9B}</ProjectGuid>
         <MainSource>MARSClient.FireDAC.dpk</MainSource>
-        <ProjectVersion>18.3</ProjectVersion>
+        <ProjectVersion>18.4</ProjectVersion>
         <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>

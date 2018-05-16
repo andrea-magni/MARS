@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{23B6403C-F0F9-4052-8A2C-DD683FA7FD3D}</ProjectGuid>
         <MainSource>MARS.Core.dpk</MainSource>
-        <ProjectVersion>18.3</ProjectVersion>
+        <ProjectVersion>18.4</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>

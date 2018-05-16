@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{16057797-C497-46DA-B133-A45E7F564D8D}</ProjectGuid>
         <MainSource>MARS.JOSE.dpk</MainSource>
-        <ProjectVersion>18.3</ProjectVersion>
+        <ProjectVersion>18.4</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
