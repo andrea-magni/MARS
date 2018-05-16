@@ -105,21 +105,21 @@ type
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ASynchronize: Boolean = True); overload;
+      const ASynchronize: Boolean = True); overload; virtual;
     procedure GETAsync(
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ASynchronize: Boolean = True); overload;
+      const ASynchronize: Boolean = True); overload; virtual;
     procedure POSTAsync(
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ASynchronize: Boolean = True); overload;
+      const ASynchronize: Boolean = True); overload; virtual;
     procedure PUTAsync(
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ASynchronize: Boolean = True); overload;
+      const ASynchronize: Boolean = True); overload; virtual;
 {$endif}
 
     property Accept: string read GetAccept;

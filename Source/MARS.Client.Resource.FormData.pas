@@ -12,7 +12,7 @@ interface
 uses
   SysUtils, Classes, Generics.Collections
 
-  , MARS.Client.Resource, MARS.Client.Client
+  , MARS.Client.Resource, MARS.Client.CustomResource, MARS.Client.Client
   , MARS.Client.Utils, MARS.Core.Utils
 ;
 
@@ -33,6 +33,7 @@ type
     FFormData: TArray<TFormParam>;
     FResponse: TMemoryStream;
   protected
+    procedure AssignTo(Dest: TPersistent); override;
     procedure AfterPOST(const AContent: TStream); override;
     procedure AfterPUT(const AContent: TStream); override;
     function GetResponseAsString: string; virtual;
@@ -40,23 +41,42 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure POST(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+    procedure POST(
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; override;
-    procedure POST(const AFormData: TArray<TFormParam>;
+    procedure POST(
+      const AFormData: TArray<TFormParam>;
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
 
-    procedure PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+    procedure POSTAsync(
+      const AFormData: TArray<TFormParam>;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ASynchronize: Boolean = True); overload; virtual;
+
+    procedure PUT(
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; override;
-    procedure PUT(const AFormData: TArray<TFormParam>;
+    procedure PUT(
+      const AFormData: TArray<TFormParam>;
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
 
+    procedure PUTAsync(
+      const AFormData: TArray<TFormParam>;
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ASynchronize: Boolean = True); overload; virtual;
 
+    function ResponseAs<T: record>: T;
+    function ResponseAsArray<T: record>: TArray<T>;
   published
     property FormData: TArray<TFormParam> read FFormData write FFormData;
     property Response: TMemoryStream read FResponse;
@@ -66,7 +86,7 @@ type
 implementation
 
 uses
-  MARS.Core.MediaType
+  MARS.Core.MediaType, MARS.Core.JSON
 ;
 
 { TMARSClientResourceFormData }
@@ -85,6 +105,13 @@ begin
   AContent.Position := 0;
   FResponse.Size := 0; // clear
   FResponse.CopyFrom(AContent, 0);
+end;
+
+procedure TMARSClientResourceFormData.AssignTo(Dest: TPersistent);
+begin
+  inherited;
+  if Dest is TMARSClientResourceFormData then
+    TMARSClientResourceFormData(Dest).FormData := FFormData;
 end;
 
 constructor TMARSClientResourceFormData.Create(AOwner: TComponent);
@@ -116,6 +143,16 @@ begin
   POST(ABeforeExecute, AAfterExecute, AOnException);
 end;
 
+procedure TMARSClientResourceFormData.POSTAsync(
+  const AFormData: TArray<TFormParam>;
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const ACompletionHandler: TProc<TMARSClientCustomResource>;
+  const AOnException: TMARSClientExecptionProc; const ASynchronize: Boolean);
+begin
+  FFormData := AFormData;
+  inherited POSTAsync(ABeforeExecute, ACompletionHandler, AOnException, ASynchronize);
+end;
+
 procedure TMARSClientResourceFormData.PUT(const AFormData: TArray<TFormParam>;
   const ABeforeExecute: TProc<TMemoryStream>;
   const AAfterExecute: TMARSClientResponseProc;
@@ -123,6 +160,40 @@ procedure TMARSClientResourceFormData.PUT(const AFormData: TArray<TFormParam>;
 begin
   FFormData := AFormData;
   PUT(ABeforeExecute, AAfterExecute, AOnException);
+end;
+
+procedure TMARSClientResourceFormData.PUTAsync(
+  const AFormData: TArray<TFormParam>;
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const ACompletionHandler: TProc<TMARSClientCustomResource>;
+  const AOnException: TMARSClientExecptionProc; const ASynchronize: Boolean);
+begin
+  FFormData := AFormData;
+  inherited PUTAsync(ABeforeExecute, ACompletionHandler, AOnException, ASynchronize);
+end;
+
+function TMARSClientResourceFormData.ResponseAs<T>: T;
+var
+  LJSON: TJSONValue;
+begin
+  LJSON :=  StreamToJSONValue(Response);
+  try
+    Result := (LJSON as TJSONObject).ToRecord<T>;
+  finally
+    LJSON.Free;
+  end;
+end;
+
+function TMARSClientResourceFormData.ResponseAsArray<T>: TArray<T>;
+var
+  LJSON: TJSONValue;
+begin
+  LJSON := StreamToJSONValue(Response);
+  try
+    Result := (LJSON as TJSONArray).ToArrayOfRecord<T>;
+  finally
+    LJSON.Free;
+  end;
 end;
 
 procedure TMARSClientResourceFormData.PUT(
