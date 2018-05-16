@@ -13,7 +13,7 @@ uses
   SysUtils, Classes, Generics.Collections
 
   , MARS.Client.Resource, MARS.Client.CustomResource, MARS.Client.Client
-  , MARS.Client.Utils, MARS.Core.Utils
+  , MARS.Client.Utils, MARS.Core.Utils, MARS.Core.JSON
 ;
 
 type
@@ -75,6 +75,7 @@ type
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const ASynchronize: Boolean = True); overload; virtual;
 
+    function ResponseAsJSON: TJSONValue;
     function ResponseAs<T: record>: T;
     function ResponseAsArray<T: record>: TArray<T>;
   published
@@ -86,7 +87,7 @@ type
 implementation
 
 uses
-  MARS.Core.MediaType, MARS.Core.JSON
+  MARS.Core.MediaType
 ;
 
 { TMARSClientResourceFormData }
@@ -176,7 +177,7 @@ function TMARSClientResourceFormData.ResponseAs<T>: T;
 var
   LJSON: TJSONValue;
 begin
-  LJSON :=  StreamToJSONValue(Response);
+  LJSON :=  ResponseAsJSON;
   try
     Result := (LJSON as TJSONObject).ToRecord<T>;
   finally
@@ -188,12 +189,17 @@ function TMARSClientResourceFormData.ResponseAsArray<T>: TArray<T>;
 var
   LJSON: TJSONValue;
 begin
-  LJSON := StreamToJSONValue(Response);
+  LJSON := ResponseAsJSON;
   try
     Result := (LJSON as TJSONArray).ToArrayOfRecord<T>;
   finally
     LJSON.Free;
   end;
+end;
+
+function TMARSClientResourceFormData.ResponseAsJSON: TJSONValue;
+begin
+  Result := StreamToJSONValue(Response);
 end;
 
 procedure TMARSClientResourceFormData.PUT(
