@@ -31,6 +31,17 @@ type
   end;
 
   [Consumes(TMediaType.APPLICATION_JSON)]
+  TArrayOfObjectReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue; virtual;
+  end;
+
+
+  [Consumes(TMediaType.APPLICATION_JSON)]
   TJSONValueReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -252,26 +263,28 @@ begin
 end;
 
 
-{ TArrayOfRecordReader }
+{ TArrayOfObjectReader }
 
-function TArrayOfRecordReader.ReadFrom(
+function TArrayOfObjectReader.ReadFrom(
 {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
   const ADestination: TRttiObject; const AMediaType: TMediaType;
-  const AActivation: IMARSActivation
-): TValue;
+  const AActivation: IMARSActivation): TValue;
 var
   LJSONArray: TJSONArray;
   LJSONValue: TJSONValue;
   LJSONObject: TJSONObject;
-  LRecordType: TRttiType;
+  LElementType: TRttiType;
   LArray: TValue;
   LArrayType: TRttiType;
   LIndex: Integer;
 begin
   Result := TValue.Empty;
   LArrayType := ADestination.GetRttiType;
-  LRecordType := LArrayType.GetArrayElementType;
-  if not Assigned(LRecordType) then
+  LElementType := LArrayType.GetArrayElementType;
+  if not Assigned(LElementType) then
+    Exit;
+
+  if not (LElementType is TRttiInstanceType) then
     Exit;
 
   LJSONValue := TJSONValueReader.ReadJSONValue(
@@ -288,13 +301,77 @@ begin
         begin
           LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
           if Assigned(LJSONObject) then
-            LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LRecordType));
+            LArray.SetArrayElement(
+                LIndex
+              , TJSONObject.JSONToObject(
+                  TRttiInstanceType(LElementType).MetaclassType
+                , LJSONObject
+              )
+            );
         end;
       end
       else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
       begin
         SetArrayLength(LArray, LArrayType, 1);
-        LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LRecordType));
+        LArray.SetArrayElement(
+            0
+          , TJSONObject.JSONToObject(
+                TRttiInstanceType(LElementType).MetaclassType
+              , TJSONObject(LJSONValue)
+            )
+        );
+      end;
+
+      Result := LArray;
+    finally
+      LJSONValue.Free;
+    end;
+end;
+
+
+{ TArrayOfRecordReader }
+
+function TArrayOfRecordReader.ReadFrom(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation
+): TValue;
+var
+  LJSONArray: TJSONArray;
+  LJSONValue: TJSONValue;
+  LJSONObject: TJSONObject;
+  LElementType: TRttiType;
+  LArray: TValue;
+  LArrayType: TRttiType;
+  LIndex: Integer;
+begin
+  Result := TValue.Empty;
+  LArrayType := ADestination.GetRttiType;
+  LElementType := LArrayType.GetArrayElementType;
+  if not Assigned(LElementType) then
+    Exit;
+
+  LJSONValue := TJSONValueReader.ReadJSONValue(
+    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
+  if Assigned(LJSONValue) then
+    try
+      TValue.Make(nil, LArrayType.Handle, LArray);
+      if LJSONValue is TJSONArray then
+      begin
+        LJSONArray := TJSONArray(LJSONValue);
+
+        SetArrayLength(LArray, LArrayType, LJSONArray.Count);
+        for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
+        begin
+          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
+          if Assigned(LJSONObject) then
+            LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LElementType));
+        end;
+      end
+      else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
+      begin
+        SetArrayLength(LArray, LArrayType, 1);
+        LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LElementType));
       end;
 
       Result := LArray;
@@ -417,6 +494,18 @@ begin
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
         Result := AType.IsObjectOfType<TObject>;
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyReaderRegistry.AFFINITY_LOW;
+      end
+  );
+
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader(
+    TArrayOfObjectReader
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := AType.IsDynamicArrayOf<TObject>;
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
