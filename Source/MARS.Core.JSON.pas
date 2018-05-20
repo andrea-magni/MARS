@@ -81,7 +81,10 @@ type
     {$endif}
   public
     function ToArrayOfRecord<T: record>(): TArray<T>;
-    procedure FromArrayOfRecord<T: record>(AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil);
+    procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
+      const AFilterProc: TToJSONFilterProc = nil);
+    procedure FromArrayOfObject<T: class>(const AArray: TArray<T>;
+      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]);
     function ForEach<T: TJSONValue>(const AFunc: TFunc<T,Boolean>): Integer;
 
     {$ifndef DelphiXE6_UP}
@@ -92,6 +95,7 @@ type
     {$endif}
 
     class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil): TJSONArray;
+    class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>): TJSONArray;
   end;
 
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
@@ -150,6 +154,9 @@ type
 
     class function JSONToObject<T: class, constructor>(const AJSON: TJSONObject;
       const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): T; overload;
+
+    class function JSONToObject(const AClassType: TClass; const AJSON: TJSONObject;
+      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TObject; overload;
 
     class function RecordToJSON<T: record>(ARecord: T;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
@@ -340,6 +347,18 @@ begin
     Result := Result + [(LElement as TJSONObject).ToRecord<T>()]
 end;
 
+class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(
+  const AArray: TArray<T>): TJSONArray;
+begin
+  Result := TJSONArray.Create;
+  try
+    Result.FromArrayOfObject<T>(AArray);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 class function TJSONArrayHelper.ArrayOfRecordToJSON<T>(const AArray: TArray<T>;
   const AFilterProc: TToJSONFilterProc): TJSONArray;
 begin
@@ -372,7 +391,21 @@ begin
   end;
 end;
 
-procedure TJSONArrayHelper.FromArrayOfRecord<T>(AArray: TArray<T>;
+procedure TJSONArrayHelper.FromArrayOfObject<T>(const AArray: TArray<T>;
+  const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]);
+var
+  LObject: T;
+  LObj: TJSONObject;
+begin
+  // clear all
+  while Count > 0 do
+    Remove(0);
+
+  for LObject in AArray do
+    AddElement(TJSONObject.ObjectToJSON(LObject, AOptions));
+end;
+
+procedure TJSONArrayHelper.FromArrayOfRecord<T>(const AArray: TArray<T>;
   const AFilterProc: TToJSONFilterProc);
 var
   LRecord: T;
@@ -468,6 +501,26 @@ begin
   Result := LValue.Value;
 end;
 
+class function TJSONObjectHelper.JSONToObject(const AClassType: TClass;
+  const AJSON: TJSONObject; const AOptions: TJsonOptions): TObject;
+var
+  LConstructor: TRttiMethod;
+begin
+  Result := nil;
+
+  LConstructor := TRTTIHelper.FindParameterLessConstructor(AClassType);
+  if not Assigned(LConstructor) then
+    Exit;
+
+  Result := LConstructor.Invoke(AClassType, []).AsObject;
+  try
+    TJson.JsonToObject(Result, AJSON, AOptions);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
 class function TJSONObjectHelper.JSONToObject<T>(const AJSON: TJSONObject;
   const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): T;
 begin
@@ -548,7 +601,6 @@ begin
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsDouble;
 end;
-
 
 procedure TJSONObjectHelper.FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil);
 

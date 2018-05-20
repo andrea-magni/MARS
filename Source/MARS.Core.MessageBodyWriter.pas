@@ -99,20 +99,28 @@ var
   LEncoding: TEncoding;
 begin
   LEncoding := TEncoding.Default;
+  if not Assigned(AActivation) then
+  begin
+    Result := LEncoding;
+    Exit;
+  end;
 
   // look for attribute on Method
-  if not AActivation.Method.HasAttribute<EncodingAttribute>(
+  if Assigned(AActivation.Method) and not AActivation.Method.HasAttribute<EncodingAttribute>(
     procedure(AAttr: EncodingAttribute)
     begin
       LEncoding := AAttr.Encoding;
     end
-  ) then // if not found, look for attribute on Resource
-    AActivation.Resource.HasAttribute<EncodingAttribute>(
-      procedure(AAttr: EncodingAttribute)
-      begin
-        LEncoding := AAttr.Encoding;
-      end
-    );
+  ) then // if not found, fallback looking for attribute on Resource
+  begin
+    if Assigned(AActivation.Resource) then
+      AActivation.Resource.HasAttribute<EncodingAttribute>(
+        procedure(AAttr: EncodingAttribute)
+        begin
+          LEncoding := AAttr.Encoding;
+        end
+      );
+  end;
 
   Result := LEncoding;
 end;

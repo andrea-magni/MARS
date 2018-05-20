@@ -342,13 +342,13 @@ end;
 
 procedure TMARSActivation.CleanupGarbage(const AValue: TValue; const ADestroyed: TList<TObject>);
 
-  procedure FreeOnlyOnce();
+  procedure FreeOnlyOnce(const AValueToFree: TValue);
   var
     LObj: TObject;
   begin
-    if AValue.IsArray then Exit; //AM workaround, somehow we can get here with a TValue that is not an object
+    if AValueToFree.IsArray then Exit; //AM workaround, somehow we can get here with a TValue that is not an object
 
-    LObj := AValue.AsObject;
+    LObj := AValueToFree.AsObject;
     if not ADestroyed.Contains(LObj) then
     begin
       ADestroyed.Add(LObj);
@@ -361,7 +361,7 @@ var
   LValue: TValue;
 begin
   case AValue.Kind of
-    tkClass: FreeOnlyOnce();
+    tkClass: FreeOnlyOnce(AValue);
     tkArray,
     tkDynArray:
     begin
@@ -369,7 +369,7 @@ begin
       begin
         LValue := AValue.GetArrayElement(LIndex);
         case LValue.Kind of
-          tkClass: FreeOnlyOnce;
+          tkClass: FreeOnlyOnce(LValue);
           tkArray, tkDynArray: CleanupGarbage(LValue, ADestroyed); //recursion
         end;
       end;

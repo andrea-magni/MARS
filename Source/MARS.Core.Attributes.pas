@@ -395,6 +395,8 @@ begin
 
       tkUString: Result := TEncoding.UTF8.GetString(AActivation.Request.RawContent);
 
+      tkClass: Result := nil;
+
       else
         Result := TValue.From<TBytes>(AActivation.Request.RawContent);
     end;
@@ -404,6 +406,8 @@ begin
       , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
 
       tkUString: Result := AActivation.Request.RawContent;
+
+      tkClass: Result := nil;
 
       else
         Result := AActivation.Request.RawContent;

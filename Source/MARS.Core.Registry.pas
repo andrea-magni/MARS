@@ -11,6 +11,7 @@ interface
 
 uses
   SysUtils, Classes, Rtti, TypInfo, Generics.Collections
+, MARS.Rtti.Utils
 ;
 
 type
@@ -19,7 +20,6 @@ type
     FConstructorFunc: TFunc<TObject>;
     FTypeTClass: TClass;
   protected
-    function FindConstructor(AClass: TClass): TRttiMethod;
   public
     constructor Create(AClass: TClass; const AConstructorFunc: TFunc<TObject>);
 
@@ -146,26 +146,8 @@ begin
         if FTypeTClass.InheritsFrom(TDataModule) then
           Result := TDataModuleClass(FTypeTClass).Create(nil)
         else
-          Result := FindConstructor(FTypeTClass).Invoke(FTypeTClass, []).AsObject;
+          Result := TRttiHelper.FindParameterLessConstructor(FTypeTClass).Invoke(FTypeTClass, []).AsObject;
       end;
-end;
-
-function TMARSConstructorInfo.FindConstructor(AClass: TClass): TRttiMethod;
-var
-  LType: TRttiType;
-  LMethod: TRttiMethod;
-begin
-  Result := nil;
-  LType := TRttiContext.Create.GetType(AClass);
-
-  for LMethod in LType.GetMethods do
-  begin
-    if LMethod.IsConstructor and (Length(LMethod.GetParameters) = 0) then
-    begin
-      Result := LMethod;
-      Break;
-    end;
-  end;
 end;
 
 end.

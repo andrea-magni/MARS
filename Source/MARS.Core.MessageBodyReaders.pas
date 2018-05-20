@@ -21,6 +21,16 @@ uses
 
 type
   [Consumes(TMediaType.APPLICATION_JSON)]
+  TObjectReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue; virtual;
+  end;
+
+  [Consumes(TMediaType.APPLICATION_JSON)]
   TJSONValueReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -216,6 +226,32 @@ begin
   end;
 end;
 
+{ TObjectReader }
+
+function TObjectReader.ReadFrom(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LJSON: TJSONValue;
+begin
+  Result := TValue.Empty;
+
+  LJSON := TJSONValueReader.ReadJSONValue(
+    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
+  if Assigned(LJSON) then
+    try
+      if (LJSON is TJSONObject) and (ADestination.GetRttiType is TRttiInstanceType) then
+        Result := TJSONObject.JSONToObject(
+            TRttiInstanceType(ADestination.GetRttiType).MetaclassType
+          , TJSONObject(LJSON)
+        );
+    finally
+      LJSON.Free;
+    end;
+end;
+
+
 { TArrayOfRecordReader }
 
 function TArrayOfRecordReader.ReadFrom(
@@ -376,6 +412,18 @@ end;
 
 procedure RegisterReaders;
 begin
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader(
+    TObjectReader
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := AType.IsObjectOfType<TObject>;
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyReaderRegistry.AFFINITY_LOW;
+      end
+  );
+
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TJSONValue>(TJSONValueReader);
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TStream>(TStreamReader);
 

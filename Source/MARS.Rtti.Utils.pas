@@ -73,6 +73,8 @@ type
 
     class function ForEachFieldWithAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TFunc<TRttiField, T, Boolean>): Integer; overload;
     class function ForEachField(AInstance: TObject; const ADoSomething: TFunc<TRttiField, Boolean>): Integer;
+
+    class function FindParameterLessConstructor(const AClass: TClass): TRttiMethod;
   end;
 
   TRecord<R: record> = class
@@ -718,6 +720,26 @@ begin
 end;
 
 { TRttiHelper }
+
+class function TRttiHelper.FindParameterLessConstructor(
+  const AClass: TClass): TRttiMethod;
+var
+  LContext: TRttiContext;
+  LType: TRttiType;
+  LMethod: TRttiMethod;
+begin
+  Result := nil;
+  LType := LContext.GetType(AClass);
+
+  for LMethod in LType.GetMethods do
+  begin
+    if LMethod.IsConstructor and (Length(LMethod.GetParameters) = 0) then
+    begin
+      Result := LMethod;
+      Break;
+    end;
+  end;
+end;
 
 class function TRttiHelper.ForEachAttribute<T>(AInstance: TObject;
   const ADoSomething: TProc<T>): Integer;

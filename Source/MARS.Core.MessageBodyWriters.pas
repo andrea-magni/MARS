@@ -25,6 +25,12 @@ type
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
+  TArrayOfObjectWriter = class(TInterfacedObject, IMessageBodyWriter)
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
+  end;
+
+  [Produces(TMediaType.APPLICATION_JSON)]
   TJSONValueWriter = class(TInterfacedObject, IMessageBodyWriter)
   protected
   public
@@ -80,14 +86,41 @@ uses
 procedure TObjectWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LObj: TJSONObject;
+  LJSON: TJSONValue;
 begin
-  LObj := TJSONObject.ObjectToJSON(AValue.AsObject);
+  LJSON := TJSONObject.ObjectToJSON(AValue.AsObject);
   try
-//      LObj.AddPair('Writer', ClassName);
-    TJSONValueWriter.WriteJSONValue(LObj, AMediaType, AOutputStream, AActivation);
+    TJSONValueWriter.WriteJSONValue(LJSON, AMediaType, AOutputStream, AActivation);
   finally
-    LObj.Free;
+    LJSON.Free;
+  end;
+end;
+
+{ TArrayOfObjectWriter }
+
+procedure TArrayOfObjectWriter.WriteTo(const AValue: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+var
+  LJSONArray: TJSONArray;
+  LIndex: Integer;
+  LElement: TValue;
+begin
+  if not AValue.IsArray then
+    Exit;
+
+  LJSONArray := TJSONArray.Create;
+  try
+    for LIndex := 0 to AValue.GetArrayLength -1 do
+    begin
+      LElement := AValue.GetArrayElement(LIndex);
+
+      LJSONArray.AddElement(TJSONObject.ObjectToJSON(LElement.AsObject));
+    end;
+
+    TJSONValueWriter.WriteJSONValue(LJSONArray, AMediaType, AOutputStream, AActivation);
+  finally
+    LJSONArray.Free;
   end;
 end;
 
@@ -324,11 +357,30 @@ begin
   );
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TStream>(TStreamValueWriter);
-  TMARSMessageBodyRegistry.Instance.RegisterWriter<TObject>(TObjectWriter,
-    function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-    begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
-    end
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TObjectWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := AType.IsObjectOfType<TObject>;
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
+      end
+  );
+
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TArrayOfObjectWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := AType.IsDynamicArrayOf<TObject>;
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
+      end
   );
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
@@ -355,15 +407,16 @@ begin
       end
   );
 
-  TMARSMessageBodyRegistry.Instance.RegisterWriter(TStandardMethodWriter
-  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
-    begin
-      Result := (AMediaType = TMediaType.APPLICATION_JSON) or (AMediaType = TMediaType.WILDCARD);
-    end
-  , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
-    begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_ZERO;
-    end
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TStandardMethodWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := (AMediaType = TMediaType.APPLICATION_JSON) or (AMediaType = TMediaType.WILDCARD);
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_ZERO;
+      end
   );
 end;
 
