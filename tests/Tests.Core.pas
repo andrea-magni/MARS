@@ -478,11 +478,11 @@ begin
   LRecord := LJSONObj.ToRecord<TVariantsRecord>();
 
   Assert.IsNotNull(LJSONObj);
-  Assert.IsTrue(LRecord.Value1 = 'Andrea');
-  Assert.IsTrue(LRecord.Value2 = true);
-  Assert.IsTrue(LRecord.Value3 = 123);
-  Assert.IsTrue(SameValue(LRecord.Value4, 1234.56789));
-  Assert.IsTrue(LRecord.Value5 = 7.75);
+  Assert.IsTrue(LRecord.Value1 = 'Andrea', 'string');
+  Assert.IsTrue(LRecord.Value2 = true, 'Boolean');
+  Assert.IsTrue(LRecord.Value3 = 123, 'Integer');
+  Assert.IsTrue(SameValue(LRecord.Value4, 1234.56789), 'Float');
+  Assert.IsTrue(LRecord.Value5 = 7.75, 'Currency');
 //   Assert.IsTrue(DateOf(LRecord.Value6) = EncodeDate(1982, 05, 24));
 
 end;

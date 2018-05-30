@@ -822,14 +822,10 @@ begin
       or (ADesiredType.Handle = TypeInfo(TTime))
     then
       Result := JSONToDate(TJSONString(AValue).Value)
-      { TODO -oAndrea :
-Teoretically, you can have a string value here and a Variant as DesiredType.
-To support this case, one should determine if the string is a valid date and then return a date instead of a string.
-At the moment, date values (strings in JSON) will pass as strings into Variants. }
     else
     begin // strings
-      if ADesiredType.Handle = TypeInfo(TValue) then
-        Result := GuessTValueFromString(AValue.ToString)
+      if (ADesiredType.Handle = TypeInfo(TValue)) or (ADesiredType.Handle = TypeInfo(Variant)) then
+        Result := GuessTValueFromString(TJSONString(AValue).Value)
       else
         Result := TJSONString(AValue).Value;
     end;
