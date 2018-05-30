@@ -39,6 +39,8 @@ type
     [Test] procedure JSONNameAttribute;
 
     [Test] procedure AssignedValues;
+
+    [Test] procedure Variants;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -46,6 +48,7 @@ type
   private
   public
     [Test] procedure Basic;
+    [Test] procedure Variants;
   end;
 
   [TestFixture('RecordFromDataSet')]
@@ -62,7 +65,7 @@ implementation
 { TMARSCoreTest }
 
 uses
-  Rtti
+  Rtti, Variants, Math, DateUtils
 , FireDAC.Comp.Client, Data.DB
 , MARS.Core.JSON, MARS.Rtti.Utils
 , Tests.Records.Types
@@ -308,6 +311,26 @@ begin
   Assert.AreEqual(LRecord.Surname, LJSONObj.ReadStringValue('Name'));
 end;
 
+procedure TMARSRecordToJSONTest.Variants;
+var
+  LJSONObj: TJSONObject;
+  LRecord: TVariantsRecord;
+begin
+  LRecord.Value1 := 'The answer';
+  LRecord.Value2 := 42;
+  LRecord.Value3 := 3.14;
+  LRecord.Value4 := True;
+  LRecord.Value5 := Null;
+
+  LJSONObj := TJSONObject.RecordToJSON<TVariantsRecord>(LRecord);
+
+  Assert.IsNotNull(LJSONObj);
+  Assert.AreEqual(VarToStr(LRecord.Value1), LJSONObj.ReadStringValue('Value1'));
+  Assert.AreEqual(42, LJSONObj.ReadIntegerValue('Value2'));
+  Assert.IsTrue(SameValue(3.14, LJSONObj.ReadDoubleValue('Value3')));
+  Assert.AreEqual(True, LJSONObj.ReadBoolValue('Value4'));
+end;
+
 { TMARSCoreUtilsTest }
 
 procedure TMARSCoreUtilsTest.GuessTValueFromStr;
@@ -436,6 +459,31 @@ begin
   Assert.AreEqual(LRecord.AFloat, LJSONObj.ReadDoubleValue('AFloat'));
   Assert.IsTrue(LRecord.ACurrency = LJSONObj.ReadDoubleValue('ACurrency'), 'Currency');
   Assert.IsTrue(LRecord.ADate = LJSONObj.ReadDateTimeValue('ADate'), 'Date');
+
+end;
+
+procedure TMARSJSONToRecordTest.Variants;
+var
+  LJSONObj: TJSONObject;
+  LRecord: TVariantsRecord;
+  LJSONData: string;
+begin
+  LJSONData :=
+      '{'
+    + ' "Value1": "Andrea", "Value2": true, "Value3": 123,'
+    + ' "Value4": 1234.56789, "Value5": 7.75, '
+    + ' "Value6": "1982-05-24T00:00:00.000+02:00", "Value7": "C"'
+    + '}';
+  LJSONObj := TJSONObject.ParseJSONValue(LJSONData) as TJSONObject;
+  LRecord := LJSONObj.ToRecord<TVariantsRecord>();
+
+  Assert.IsNotNull(LJSONObj);
+  Assert.IsTrue(LRecord.Value1 = 'Andrea');
+  Assert.IsTrue(LRecord.Value2 = true);
+  Assert.IsTrue(LRecord.Value3 = 123);
+  Assert.IsTrue(SameValue(LRecord.Value4, 1234.56789));
+  Assert.IsTrue(LRecord.Value5 = 7.75);
+//   Assert.IsTrue(DateOf(LRecord.Value6) = EncodeDate(1982, 05, 24));
 
 end;
 

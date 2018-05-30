@@ -230,6 +230,9 @@ begin
   else if (AValue.Kind in [tkFloat]) then
     Result := TJSONNumber.Create( AValue.AsType<Double> )
 
+  else if (AValue.Kind in [tkVariant]) then
+    Result := TValueToJSONValue( TValue.FromVariant(AValue.AsVariant) )
+
   else if (AValue.IsInstanceOf(TObject)) then
     Result := ObjectToJSON(AValue.AsObject)
 
@@ -790,6 +793,8 @@ begin
   if (AValue is TJSONTrue) or (AValue is TJSONFalse) then
     Result := AValue is TJSONTrue
 {$endif}
+//  else if ADesiredType.Handle = TypeInfo(Variant) then
+//    Result := TValue.
   else if AValue is TJSONNumber then // Numbers (Integer and Float)
   begin
 {$ifdef DelphiXE6_UP}
@@ -808,17 +813,21 @@ begin
     end;
 
   end
-  else if AValue is TJSONString then // Date and string
+  else if AValue is TJSONString then
   begin
-    if ADesiredType is TRttiEnumerationType then
+    if ADesiredType is TRttiEnumerationType then  // enumerated types
       Result := TValue.FromOrdinal(ADesiredType.Handle, GetEnumValue(ADesiredType.Handle, TJSONString(AValue).Value))
-    else if (ADesiredType.Handle = TypeInfo(TDateTime))
+    else if (ADesiredType.Handle = TypeInfo(TDateTime)) // dates
       or (ADesiredType.Handle = TypeInfo(TDate))
       or (ADesiredType.Handle = TypeInfo(TTime))
     then
       Result := JSONToDate(TJSONString(AValue).Value)
+      { TODO -oAndrea :
+Teoretically, you can have a string value here and a Variant as DesiredType.
+To support this case, one should determine if the string is a valid date and then return a date instead of a string.
+At the moment, date values (strings in JSON) will pass as strings into Variants. }
     else
-    begin
+    begin // strings
       if ADesiredType.Handle = TypeInfo(TValue) then
         Result := GuessTValueFromString(AValue.ToString)
       else

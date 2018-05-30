@@ -60,6 +60,16 @@ type
     Mistery: TNamedIntegerRecord;
   end;
 
+  TVariantsRecord = record
+    Value1: Variant;
+    Value2: Variant;
+    Value3: Variant;
+    Value4: Variant;
+    Value5: Variant;
+    Value6: Variant;
+    Value7: Variant;
+  end;
+
 
 implementation
 
