@@ -48,9 +48,11 @@ begin
     Result := TJSONString.Create(AField.DisplayText)
   else
   begin
-    if AField.DataType in [ftSmallint, ftInteger, ftWord, ftLargeint, ftLongWord, ftShortint, ftByte, ftAutoInc]
+    if AField.DataType in [ftSmallint, ftInteger, ftWord, ftLongWord, ftShortint, ftByte, ftAutoInc]
     then
       Result := TJSONNumber.Create(AField.AsInteger)
+    else if AField.DataType in [ftLargeInt] then
+      Result := TJSONNumber.Create(AField.AsLargeInt)
     else if AField.DataType in [ftSingle, ftExtended, ftFloat, ftBCD, ftFMTBcd] then
       Result := TJSONNumber.Create(AField.AsFloat)
     else if AField.DataType in [ftCurrency] then
