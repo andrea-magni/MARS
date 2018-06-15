@@ -208,7 +208,7 @@ end;
 
 function StreamToString(const AStream: TStream; const AEncoding: TEncoding = nil): string;
 var
-  LStreamReader: TStreamReader;
+  LBytes: TBytes;
   LEncoding: TEncoding;
 begin
   Result := '';
@@ -219,32 +219,27 @@ begin
     LEncoding := TEncoding.Default;
 
   AStream.Position := 0;
-  LStreamReader := TStreamReader.Create(AStream, LEncoding);
-  try
-    Result := LStreamReader.ReadToEnd;
-  finally
-    LStreamReader.Free;
-  end;
+  SetLength(LBytes, AStream.Size);
+  AStream.Read(LBytes, AStream.Size);
+  Result := LEncoding.GetString(LBytes);
 end;
 
 procedure StringToStream(const AStream: TStream; const AString: string; const AEncoding: TEncoding = nil);
 var
-  LStreamWriter: TStreamWriter;
   LEncoding: TEncoding;
+  LBytes: TBytes;
 begin
   if not Assigned(AStream) then
     Exit;
+
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
     LEncoding := TEncoding.Default;
-  AStream.Position := 0;
+
+  LBytes := LEncoding.GetBytes(AString);
+
   AStream.Size := 0;
-  LStreamWriter := TStreamWriter.Create(AStream, LEncoding);
-  try
-    LStreamWriter.Write(AString);
-  finally
-    LStreamWriter.Free;
-  end;
+  AStream.Write(LBytes, Length(LBytes));
 end;
 
 function IsMask(const AString: string): Boolean;
@@ -300,20 +295,15 @@ end;
 
 function StreamToJSONValue(const AStream: TStream; const AEncoding: TEncoding): TJSONValue;
 var
-  LStreamReader: TStreamReader;
   LEncoding: TEncoding;
+  LJSONString: string;
 begin
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
     LEncoding := TEncoding.Default;
 
-  AStream.Position := 0;
-  LStreamReader := TStreamReader.Create(AStream, LEncoding);
-  try
-    Result := TJSONObject.ParseJSONValue(LStreamReader.ReadToEnd);
-  finally
-    LStreamReader.Free;
-  end;
+  LJSONString := LEncoding.GetString(StreamToBytes(AStream));
+  Result := TJSONObject.ParseJSONValue(LJSONString);
 end;
 
 procedure JSONValueToStream(const AValue: TJSONValue; const ADestStream: TStream; const AEncoding: TEncoding);
