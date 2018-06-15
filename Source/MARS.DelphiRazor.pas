@@ -24,7 +24,7 @@ uses
   , MARS.Utils.Parameters
   , MARS.Core.Activation.Interfaces
 
-  , RlxRazor
+  , RlxRazorMARS
 ;
 
 type

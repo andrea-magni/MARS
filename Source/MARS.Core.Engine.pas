@@ -238,7 +238,7 @@ begin
         AResponse.StatusCode := 500;
         AResponse.Content := 'Internal server error'
         {$IFDEF DEBUG}
-          + ': ' + E.Message
+          + ' [' + E.ClassName + '] ' + E.Message
         {$ENDIF}
         ;
         AResponse.ContentType := TMediaType.TEXT_PLAIN;
