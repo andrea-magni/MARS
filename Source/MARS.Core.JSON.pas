@@ -104,7 +104,6 @@ type
     function GetCount: Integer; inline;
     function GetPair(const Index: Integer): TJSONPair; inline;
 {$endif}
-    function GetValue(const name: string): Variant;
     function GetExactPairName(const ACaseInsensitiveName: string): string;
   public
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
@@ -135,8 +134,6 @@ type
     procedure WriteTValue(const AName: string; const AValue: TValue);
     procedure WriteArrayValue(const AName: string; const AArray: TJSONArray); overload; inline;
     procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>); overload; inline;
-
-    property Values[const name: string]: Variant read GetValue; default;
 
     procedure FromRecord<T: record>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil); overload;
@@ -482,27 +479,6 @@ begin
   end;
 end;
 
-function TJSONObjectHelper.GetValue(const name: string): Variant;
-var
-  LPair: TJSONPair;
-  LValue: TJSONValue;
-begin
-{$ifdef DelphiXE6_UP}
-  LPair := GetPairByName(name);
-{$else}
-  LPair := Get(name);
-{$endif}
-  if not Assigned(LPair) then
-    Exit(Unassigned);
-  LValue := LPair.JsonValue;
-  if LValue is TJSONTrue then
-    Exit(True);
-  if LValue is TJSONFalse then
-    Exit(False);
-  if LValue is TJSONNumber then
-    Exit(TJSONNumber(LValue).AsDouble);
-  Result := LValue.Value;
-end;
 
 class function TJSONObjectHelper.JSONToObject(const AClassType: TClass;
   const AJSON: TJSONObject; const AOptions: TJsonOptions): TObject;
