@@ -67,7 +67,6 @@ type
       const AGetAffinity: TGetAffinityFunction = nil); overload;
 
     procedure FindWriter(const AActivation: IMARSActivation;
-//      const AMethod: TRttiMethod; const AAccept: string;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 
     procedure Enumerate(const AProc: TProc<TEntryInfo>);
@@ -156,7 +155,6 @@ begin
 end;
 
 procedure TMARSMessageBodyRegistry.FindWriter(const AActivation: IMARSActivation;
-//  const AMethod: TRttiMethod; const AAccept: string;
   out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 var
   LWriterEntry: TEntryInfo;
@@ -297,10 +295,10 @@ var
   LList: TMediaTypeList;
   LMethod: TRttiMethod;
 begin
-  LMethod := AActivation.Method;
-
   LList := TMediaTypeList.Create;
   try
+    LMethod := AActivation.Method;
+
     LMethod.ForEachAttribute<ProducesAttribute>(
       procedure (AProduces: ProducesAttribute)
       begin
@@ -331,7 +329,6 @@ begin
           end
        );
     end;
-
   except
     LList.Free;
     raise;

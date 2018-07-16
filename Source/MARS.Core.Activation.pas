@@ -36,6 +36,8 @@ type
 
   TMARSBeforeInvokeProc = reference to procedure(const AActivation: IMARSActivation; out AIsAllowed: Boolean);
   TMARSAfterInvokeProc = reference to procedure(const AActivation: IMARSActivation);
+  TMARSInvokeErrorProc = reference to procedure(const AActivation: IMARSActivation;
+    const AException: Exception; var AHandled: Boolean);
 
   TMARSAuthorizationInfo = record
   public
@@ -52,6 +54,7 @@ type
     FResponse: TWebResponse;
     class var FBeforeInvokeProcs: TArray<TMARSBeforeInvokeProc>;
     class var FAfterInvokeProcs: TArray<TMARSAfterInvokeProc>;
+    class var FInvokeErrorProcs: TArray<TMARSInvokeErrorProc>;
   protected
     FRttiContext: TRttiContext;
     FConstructorInfo: TMARSConstructorInfo;
@@ -81,10 +84,12 @@ type
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
     procedure SetCustomHeaders; virtual;
-    procedure WriteToResponse(const AValue: TValue; const ACustomContentType: Boolean); virtual;
+    procedure WriteToResponse(const AValue: TValue;
+      const AValueContentType: string; const AOriginalContentType: string); virtual;
 
     function DoBeforeInvoke: Boolean;
     procedure DoAfterInvoke;
+    procedure DoInvokeError(const E: Exception); virtual;
 
     procedure CheckResource; virtual;
     procedure CheckMethod; virtual;
@@ -95,8 +100,6 @@ type
     constructor Create(const AEngine: TMARSEngine; const AApplication: TMARSApplication;
       const ARequest: TWebRequest; const AResponse: TWebResponse; const AURL: TMARSURL); virtual;
     destructor Destroy; override;
-
-    procedure Prepare; virtual;
 
     // --- IMARSActivation implementation --------------
     procedure AddToContext(AValue: TValue); virtual;
@@ -135,6 +138,7 @@ type
 //    class procedure UnregisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
     class procedure RegisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
 //    class procedure UnregisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
+    class procedure RegisterInvokeError(const AInvokeError: TMARSInvokeErrorProc);
 
     class var CreateActivationFunc: TMARSActivationFactoryFunc;
     class function CreateActivation(const AEngine: TMARSEngine;
@@ -242,7 +246,7 @@ begin
   Result := FToken;
 
   if not Assigned(Result) then
-    raise Exception.Create('Token injection failed in MARSActivation');
+    raise EMARSException.Create('Token injection failed in MARSActivation');
 end;
 
 function TMARSActivation.GetURL: TMARSURL;
@@ -399,7 +403,8 @@ begin
   end;
 end;
 
-procedure TMARSActivation.WriteToResponse(const AValue: TValue; const ACustomContentType: Boolean);
+procedure TMARSActivation.WriteToResponse(const AValue: TValue;
+  const AValueContentType: string; const AOriginalContentType: string);
 var
   LStream: TBytesStream;
 begin
@@ -414,7 +419,7 @@ begin
     try
       if Assigned(FWriter) then
       begin
-        if not ACustomContentType then
+        if AValueContentType = AOriginalContentType then
           Response.ContentType := FWriterMediaType.ToString;
 
         LStream := TBytesStream.Create();
@@ -456,8 +461,6 @@ begin
           else
             Response.Content := AValue.ToString;
         end;
-
-        Response.StatusCode := 200;
       end;
     finally
       FWriter := nil;
@@ -481,23 +484,11 @@ begin
     // actual method invocation
     FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
 
-    WriteToResponse(FMethodResult, not SameText(string(Response.ContentType), LContentType));
+    WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
   finally
     if not FMethod.HasAttribute<IsReference>(nil) then
       AddToContext(FMethodResult);
   end;
-end;
-
-procedure TMARSActivation.Prepare;
-begin
-  Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
-
-  CheckResource;
-  CheckMethod;
-  ReadAuthorizationInfo;
-  CheckAuthentication;
-  CheckAuthorization;
-  FillResourceMethodParameters;
 end;
 
 procedure TMARSActivation.ReadAuthorizationInfo;
@@ -539,15 +530,19 @@ end;
 class procedure TMARSActivation.RegisterAfterInvoke(
   const AAfterInvoke: TMARSAfterInvokeProc);
 begin
-  SetLength(FAfterInvokeProcs, Length(FAfterInvokeProcs) + 1);
-  FAfterInvokeProcs[Length(FAfterInvokeProcs)-1] := TMARSAfterInvokeProc(AAfterInvoke);
+  FAfterInvokeProcs := FAfterInvokeProcs + [TMARSAfterInvokeProc(AAfterInvoke)];
 end;
 
 class procedure TMARSActivation.RegisterBeforeInvoke(
   const ABeforeInvoke: TMARSBeforeInvokeProc);
 begin
-  SetLength(FBeforeInvokeProcs, Length(FBeforeInvokeProcs) + 1);
-  FBeforeInvokeProcs[Length(FBeforeInvokeProcs)-1] := TMARSBeforeInvokeProc(ABeforeInvoke);
+  FBeforeInvokeProcs := FBeforeInvokeProcs + [TMARSBeforeInvokeProc(ABeforeInvoke)];
+end;
+
+class procedure TMARSActivation.RegisterInvokeError(
+  const AInvokeError: TMARSInvokeErrorProc);
+begin
+  FInvokeErrorProcs := FInvokeErrorProcs + [TMARSInvokeErrorProc(AInvokeError)];
 end;
 
 procedure TMARSActivation.SetCustomHeaders;
@@ -582,19 +577,54 @@ begin
   Assert(Assigned(FMethod));
 
   try
-    if DoBeforeInvoke then
-    begin
-      FInvocationTime := TStopwatch.StartNew;
-      FResourceInstance := FConstructorInfo.ConstructorFunc();
-      try
-        ContextInjection;
-        InvokeResourceMethod;
-        FInvocationTime.Stop;
-        DoAfterInvoke;
-      finally
-        FResourceInstance.Free;
+    try
+      Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
+
+      CheckResource;
+      CheckMethod;
+
+      ReadAuthorizationInfo;
+      CheckAuthentication;
+      CheckAuthorization;
+
+      FillResourceMethodParameters;
+
+      if DoBeforeInvoke then
+      begin
+        FInvocationTime := TStopwatch.StartNew;
+        FResourceInstance := FConstructorInfo.ConstructorFunc();
+        try
+          ContextInjection;
+          InvokeResourceMethod;
+          FInvocationTime.Stop;
+          DoAfterInvoke;
+        finally
+          FResourceInstance.Free;
+        end;
+      end;
+
+
+    except on E:Exception do
+      begin
+        if E is EMARSHttpException then
+        begin
+          Response.StatusCode := EMARSHttpException(E).Status;
+          Response.Content := E.Message;
+          Response.ContentType := TMediaType.TEXT_PLAIN;
+        end
+        else begin
+          Response.StatusCode := 500;
+          Response.Content := 'Internal server error';
+          {$IFDEF DEBUG}
+          Response.Content := 'Internal server error: [' + E.ClassName + '] ' + E.Message;
+          {$ENDIF}
+          Response.ContentType := TMediaType.TEXT_PLAIN;
+        end;
+
+        DoInvokeError(E);
       end;
     end;
+
   finally
     FreeContext;
   end;
@@ -629,7 +659,7 @@ begin
   FindMethodToInvoke;
 
   if not Assigned(FMethod) then
-    raise EMARSApplicationException.Create(
+    raise EMARSMethodNotFoundException.Create(
       Format('[%s] No implementation found for http method %s'
       , [URL.Resource
 {$ifndef Delphi10Seattle_UP}
@@ -643,7 +673,7 @@ end;
 procedure TMARSActivation.CheckResource;
 begin
   if not Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo) then
-    raise EMARSApplicationException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
+    raise EMARSResourceNotFoundException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 end;
 
 procedure TMARSActivation.AddToContext(AValue: TValue);
@@ -720,7 +750,6 @@ begin
   FMethodResult := TValue.Empty;
   FResourceInstance := nil;
   FInvocationTime.Reset;
-  Prepare;
 end;
 
 class function TMARSActivation.CreateActivation(const AEngine: TMARSEngine;
@@ -756,6 +785,20 @@ begin
   Result := True;
   for LSubscriber in FBeforeInvokeProcs do
     LSubscriber(Self, Result);
+end;
+
+procedure TMARSActivation.DoInvokeError(const E: Exception);
+var
+  LSubscriber: TMARSInvokeErrorProc;
+  LHandled: Boolean;
+begin
+  LHandled := False;
+  for LSubscriber in FInvokeErrorProcs do
+  begin
+    LSubscriber(Self, E, LHandled);
+    if LHandled then
+      Break;
+  end;
 end;
 
 { TMARSAuthorizationInfo }

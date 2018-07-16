@@ -20,6 +20,8 @@ uses
 
 type
   EMARSApplicationException = class(EMARSHttpException);
+  EMARSResourceNotFoundException = class(EMARSApplicationException);
+  EMARSMethodNotFoundException = class(EMARSApplicationException);
   EMARSAuthenticationException = class(EMARSApplicationException);
   EMARSAuthorizationException = class(EMARSApplicationException);
 

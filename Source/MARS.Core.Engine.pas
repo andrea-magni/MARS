@@ -220,32 +220,12 @@ begin
       raise EMARSEngineException.Create(Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath]), 404);
 
     LURL.BasePath := LApplicationPath;
-    try
-      LActivation := TMARSActivation.CreateActivation(Self, LApplication, ARequest, AResponse, LURL);
-      try
-        LActivation.Invoke;
-      finally
-        LActivation := nil;
-      end;
-    except on E: Exception do
-      if E is EMARSHttpException then
-      begin
-        AResponse.StatusCode := EMARSHttpException(E).Status;
-        AResponse.Content := E.Message;
-        AResponse.ContentType := TMediaType.TEXT_HTML;
-      end
-      else begin
-        AResponse.StatusCode := 500;
-        AResponse.Content := 'Internal server error'
-        {$IFDEF DEBUG}
-          + ': [' + E.ClassName + '] ' + E.Message
-        {$ENDIF}
-        ;
-        AResponse.ContentType := TMediaType.TEXT_PLAIN;
-    //    raise;
-      end;
+    LActivation := TMARSActivation.CreateActivation(Self, LApplication, ARequest, AResponse, LURL);
+    if Assigned(LActivation) then
+    begin
+      LActivation.Invoke;
+      Result := True;
     end;
-    Result := True;
   finally
     LURL.Free;
   end;

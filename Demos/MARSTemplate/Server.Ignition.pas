@@ -10,7 +10,7 @@ unit Server.Ignition;
 interface
 
 uses
-  Classes, SysUtils
+  Classes, SysUtils, Rtti
   , MARS.Core.Engine
 ;
 
@@ -61,16 +61,25 @@ begin
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
 
-//    // to execute something before each activation
+    // to execute something before each activation
 //    TMARSActivation.RegisterBeforeInvoke(
 //      procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
 //      begin
 //
 //      end
 //    );
-//    // to execute something after each activation
+
+    // to execute something after each activation
 //    TMARSActivation.RegisterAfterInvoke(
 //      procedure (const AActivation: IMARSActivation)
+//      begin
+//
+//      end
+//    );
+
+    // to execute something on error
+//    TMARSActivation.RegisterInvokeError(
+//      procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
 //      begin
 //
 //      end
