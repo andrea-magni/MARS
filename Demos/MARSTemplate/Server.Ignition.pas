@@ -60,6 +60,22 @@ begin
 {$IFDEF MARS_FIREDAC}
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
+
+//    // to execute something before each activation
+//    TMARSActivation.RegisterBeforeInvoke(
+//      procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
+//      begin
+//
+//      end
+//    );
+//    // to execute something after each activation
+//    TMARSActivation.RegisterAfterInvoke(
+//      procedure (const AActivation: IMARSActivation)
+//      begin
+//
+//      end
+//    );
+
   except
     FreeAndNil(FEngine);
     raise;

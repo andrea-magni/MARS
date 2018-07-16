@@ -81,6 +81,7 @@ type
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
     procedure SetCustomHeaders; virtual;
+    procedure WriteToResponse(const AValue: TValue; const ACustomContentType: Boolean); virtual;
 
     function DoBeforeInvoke: Boolean;
     procedure DoAfterInvoke;
@@ -398,83 +399,89 @@ begin
   end;
 end;
 
-procedure TMARSActivation.InvokeResourceMethod();
+procedure TMARSActivation.WriteToResponse(const AValue: TValue; const ACustomContentType: Boolean);
 var
   LStream: TBytesStream;
+begin
+  // 1 - TMARSResponse (override)
+  if (not AValue.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
+     and AValue.IsInstanceOf(TMARSResponse)
+  then
+    TMARSResponse(AValue.AsObject).CopyTo(Response)
+  // 2 - MessageBodyWriter mechanism (standard)
+  else begin
+    TMARSMessageBodyRegistry.Instance.FindWriter(Self, FWriter, FWriterMediaType);
+    try
+      if Assigned(FWriter) then
+      begin
+        if not ACustomContentType then
+          Response.ContentType := FWriterMediaType.ToString;
+
+        LStream := TBytesStream.Create();
+        try
+          FWriter.WriteTo(AValue, FWriterMediaType, LStream, Self);
+          LStream.Position := 0;
+          Response.ContentStream := LStream;
+        except
+          LStream.Free;
+          raise;
+        end;
+      end
+      // 3 - fallback (raw)
+      else
+      begin
+        Response.ContentType := GetProducesValue;
+        if Response.ContentType = '' then
+          Response.ContentType := TMediaType.WILDCARD;
+        if Assigned(FMethod.ReturnType) then
+        begin
+          if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
+            Response.Content := AValue.AsString
+          else if (AValue.IsType<Boolean>) then
+            Response.Content := BoolToStr(AValue.AsType<Boolean>, True)
+          else if AValue.TypeInfo = TypeInfo(TDateTime) then
+            Response.Content := DateToJSON(AValue.AsType<TDateTime>)
+          else if AValue.TypeInfo = TypeInfo(TDate) then
+            Response.Content := DateToJSON(AValue.AsType<TDate>)
+          else if AValue.TypeInfo = TypeInfo(TTime) then
+            Response.Content := DateToJSON(AValue.AsType<TTime>)
+
+          else if (AValue.Kind in [tkInt64]) then
+            Response.Content := IntToStr(AValue.AsType<Int64>)
+          else if (AValue.Kind in [tkInteger]) then
+            Response.Content := IntToStr(AValue.AsType<Integer>)
+
+          else if (AValue.Kind in [tkFloat]) then
+            Response.Content := FormatFloat('0.00000000', AValue.AsType<Double>)
+          else
+            Response.Content := AValue.ToString;
+        end;
+
+        Response.StatusCode := 200;
+      end;
+    finally
+      FWriter := nil;
+      FreeAndNil(FWriterMediaType);
+    end;
+  end;
+end;
+
+procedure TMARSActivation.InvokeResourceMethod();
+var
   LContentType: string;
 begin
   Assert(Assigned(FMethod));
 
   // cache initial ContentType value to check later if it has been changed
   LContentType := string(Response.ContentType);
-
   try
-    FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
-
-    // handle response
+    // set attribute-based custom header's values
     SetCustomHeaders;
 
-    // 1 - TMARSResponse (override)
-    if (not FMethodResult.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
-       and FMethodResult.IsInstanceOf(TMARSResponse)
-    then
-      TMARSResponse(FMethodResult.AsObject).CopyTo(Response)
-    // 2 - MessageBodyWriter mechanism (standard)
-    else begin
-      TMARSMessageBodyRegistry.Instance.FindWriter(Self, FWriter, FWriterMediaType);
-      try
-        if Assigned(FWriter) then
-        begin
-          if string(Response.ContentType) = LContentType then
-            Response.ContentType := FWriterMediaType.ToString;
+    // actual method invocation
+    FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
 
-          LStream := TBytesStream.Create();
-          try
-            FWriter.WriteTo(FMethodResult, FWriterMediaType, LStream, Self);
-            LStream.Position := 0;
-            Response.ContentStream := LStream;
-          except
-            LStream.Free;
-            raise;
-          end;
-        end
-        // 3 - fallback (raw)
-        else
-        begin
-          Response.ContentType := GetProducesValue;
-          if Response.ContentType = '' then
-            Response.ContentType := TMediaType.WILDCARD;
-          if Assigned(FMethod.ReturnType) then
-          begin
-            if (FMethodResult.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
-              Response.Content := FMethodResult.AsString
-            else if (FMethodResult.IsType<Boolean>) then
-              Response.Content := BoolToStr(FMethodResult.AsType<Boolean>, True)
-            else if FMethodResult.TypeInfo = TypeInfo(TDateTime) then
-              Response.Content := DateToJSON(FMethodResult.AsType<TDateTime>)
-            else if FMethodResult.TypeInfo = TypeInfo(TDate) then
-              Response.Content := DateToJSON(FMethodResult.AsType<TDate>)
-            else if FMethodResult.TypeInfo = TypeInfo(TTime) then
-              Response.Content := DateToJSON(FMethodResult.AsType<TTime>)
-
-            else if (FMethodResult.Kind in [tkInt64]) then
-              Response.Content := IntToStr(FMethodResult.AsType<Int64>)
-            else if (FMethodResult.Kind in [tkInteger]) then
-              Response.Content := IntToStr(FMethodResult.AsType<Integer>)
-
-            else if (FMethodResult.Kind in [tkFloat]) then
-              Response.Content := FormatFloat('0.00000000', FMethodResult.AsType<Double>)
-            else
-              Response.Content := FMethodResult.ToString;
-          end;
-
-          Response.StatusCode := 200;
-        end;
-      finally
-        FWriter := nil;
-        FreeAndNil(FWriterMediaType);
-      end;
-    end;
+    WriteToResponse(FMethodResult, not SameText(string(Response.ContentType), LContentType));
   finally
     if not FMethod.HasAttribute<IsReference>(nil) then
       AddToContext(FMethodResult);
