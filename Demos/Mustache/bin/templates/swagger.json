@@ -67,7 +67,7 @@
         },
         "security": [
           {
-            "Authorization": "{{Authorization}}"
+            "token_auth": []
           }
         ]
       } {{^-last}},{{/-last}}      
@@ -76,6 +76,11 @@
 {{/Paths}}    
   },
   "securityDefinitions": {
+    "token_auth": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "Authorization"
+    }
   },
   "definitions": {
     "System.string": {
