@@ -19,10 +19,11 @@ uses
 
   , MARS.dmustache, MARS.dmustache.InjectionService
   , MARS.Metadata, MARS.Metadata.JSON, MARS.Metadata.InjectionService
+  , MARS.Metadata.Attributes
   ;
 
 type
-  [Path('helloworld')]
+  [Path('helloworld'), MetaDescription('This is my helloworld resource!')]
   THelloWorldResource = class
   protected
     [Context] mustache: TMARSdmustache;
@@ -39,8 +40,11 @@ type
     [GET, Path('metadata/bootstrap'), Produces(TMediaType.TEXT_HTML)]
     function MetadataBootstrap([Context] Metadata: TMARSApplicationMetadata): string;
 
+    [GET, Path('metadata/swagger'), Produces(TMediaType.APPLICATION_JSON)]
+    function MetadataSwagger([Context] Metadata: TMARSEngineMetadata): TMARSResponse;
+
     [GET, Path('metadata/json'), Produces(TMediaType.APPLICATION_JSON)]
-    function MetadataJSON([Context] Metadata: TMARSApplicationMetadata): string;
+    function MetadataJSON([Context] Metadata: TMARSEngineMetadata): TJSONObject;
   end;
 
   [Path('token')]
@@ -61,6 +65,14 @@ begin
   Result := mustache.RenderTemplateWithJSON('metadata_simple.html', Metadata.ToJSON, True);
 end;
 
+function THelloWorldResource.MetadataSwagger(
+  Metadata: TMARSEngineMetadata): TMARSResponse;
+begin
+  Result := TMARSResponse.Create;
+  Result.ContentType := 'application/json';
+  Result.Content := mustache.RenderTemplateWithJSON('swagger.json', Metadata.ToJSON, True);
+end;
+
 function THelloWorldResource.MetadataBootstrap(
   Metadata: TMARSApplicationMetadata): string;
 begin
@@ -68,16 +80,9 @@ begin
 end;
 
 function THelloWorldResource.MetadataJSON(
-  Metadata: TMARSApplicationMetadata): string;
-var
-  LJSON: TJSONObject;
+  Metadata: TMARSEngineMetadata): TJSONObject;
 begin
-  LJSON := Metadata.ToJSON;
-  try
-    Result := LJSON.ToJSON;
-  finally
-    LJSON.Free;
-  end;
+  Result := Metadata.ToJSON;
 end;
 
 function THelloWorldResource.SayHelloTo(Someone: string): string;
