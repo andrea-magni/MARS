@@ -43,7 +43,7 @@ type
 implementation
 
 uses
-    MARS.Core.Utils
+    MARS.Core.Utils, MARS.Core.URL
   , MARS.Rtti.Utils
   , MARS.Core.Attributes
   , MARS.Core.Exceptions
@@ -111,6 +111,7 @@ var
   LMethodMetadata: TMARSMethodMetadata;
   LParameters: TArray<TRttiParameter>;
   LParameter: TRttiParameter;
+  LPathFullPath: string;
 begin
   LMethodMetadata := TMARSMethodMetadata.Create(AResourceMetadata);
   try
@@ -180,6 +181,9 @@ begin
     LParameters := AMethod.GetParameters;
     for LParameter in LParameters do
       ReadParameter(AResourceMetadata, LMethodMetadata, LParameter, AMethod);
+
+    LPathFullPath := TMARSURL.CombinePath([AResourceMetadata.Path, LMethodMetadata.Path]);
+    AResourceMetadata.GetParent.AddPath(LPathFullPath, LMethodMetadata);
   except
     LMethodMetadata.Free;
     raise;
@@ -207,6 +211,7 @@ begin
         );
 
         LRequestParamMetadata.Kind := AAttribute.Kind;
+        LRequestParamMetadata.SwaggerKind := AAttribute.SwaggerKind;
         if AAttribute is NamedRequestParamAttribute then
           LRequestParamMetadata.Name := NamedRequestParamAttribute(AAttribute).Name;
         if LRequestParamMetadata.Name.IsEmpty then

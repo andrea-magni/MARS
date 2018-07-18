@@ -157,10 +157,12 @@ type
   private
   protected
     function GetKind: string; virtual;
+    function GetSwaggerKind: string; virtual;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; virtual;
     property Kind: string read GetKind;
+    property SwaggerKind: string read GetSwaggerKind;
   end;
 
   NamedRequestParamAttribute = class(RequestParamAttribute)
@@ -179,6 +181,7 @@ type
   protected
     function GetParamIndex(const ADestination: TRttiObject;
       const APrototypeURL: TMARSURL): Integer;
+    function GetSwaggerKind: string; override;
   public
     property ParamIndex: Integer read FParamIndex write FParamIndex;
     function GetValue(const ADestination: TRttiObject;
@@ -186,6 +189,8 @@ type
   end;
 
   QueryParamAttribute = class(NamedRequestParamAttribute)
+  protected
+    function GetSwaggerKind: string; override;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
@@ -193,6 +198,7 @@ type
 
   FormParamAttribute = class(NamedRequestParamAttribute)
   protected
+    function GetSwaggerKind: string; override;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
@@ -206,18 +212,24 @@ type
 
 
   HeaderParamAttribute = class(NamedRequestParamAttribute)
+  protected
+    function GetSwaggerKind: string; override;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
   end;
 
   CookieParamAttribute = class(NamedRequestParamAttribute)
+  protected
+    function GetSwaggerKind: string; override;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
   end;
 
   BodyParamAttribute = class(RequestParamAttribute)
+  protected
+    function GetSwaggerKind: string; override;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
@@ -372,6 +384,11 @@ end;
 
 { BodyParamAttribute }
 
+function BodyParamAttribute.GetSwaggerKind: string;
+begin
+  Result := 'body';
+end;
+
 function BodyParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 var
@@ -519,6 +536,11 @@ begin
 {$endif}
 end;
 
+function RequestParamAttribute.GetSwaggerKind: string;
+begin
+  Result := '';
+end;
+
 function RequestParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 begin
@@ -526,6 +548,11 @@ begin
 end;
 
 { QueryParamAttribute }
+
+function QueryParamAttribute.GetSwaggerKind: string;
+begin
+  Result := 'query';
+end;
 
 function QueryParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
@@ -556,6 +583,11 @@ end;
 
 { FormParamAttribute }
 
+function FormParamAttribute.GetSwaggerKind: string;
+begin
+  Result := 'formData';
+end;
+
 function FormParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 var
@@ -583,6 +615,11 @@ end;
 
 { HeaderParamAttribute }
 
+function HeaderParamAttribute.GetSwaggerKind: string;
+begin
+  Result := 'header';
+end;
+
 function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 begin
@@ -593,6 +630,11 @@ begin
 end;
 
 { CookieParamAttribute }
+
+function CookieParamAttribute.GetSwaggerKind: string;
+begin
+  Result := 'cookie';
+end;
 
 function CookieParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
@@ -611,6 +653,11 @@ begin
   Result := APrototypeURL.GetPathParamIndex(
     GetActualName(ADestination)
   );
+end;
+
+function PathParamAttribute.GetSwaggerKind: string;
+begin
+  Result := 'path';
 end;
 
 function PathParamAttribute.GetValue(const ADestination: TRttiObject;
