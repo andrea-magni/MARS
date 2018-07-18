@@ -573,9 +573,6 @@ end;
 
 procedure TMARSActivation.Invoke;
 begin
-  Assert(Assigned(FConstructorInfo));
-  Assert(Assigned(FMethod));
-
   try
     try
       Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
