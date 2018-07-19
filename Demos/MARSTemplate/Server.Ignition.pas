@@ -61,29 +61,61 @@ begin
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
 
+(*
+    FEngine.OnBeforeHandleRequest :=
+      function (AEngine: TMARSEngine; AURL: TMARSURL;
+        ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
+      ): Boolean
+      begin
+        Result := True;
+{
+        // skip favicon requests (browser)
+        if SameText(AURL.Document, 'favicon.ico') then
+        begin
+          Result := False;
+          Handled := True;
+        end;
+}
+{
+        // Handle CORS and PreFlight
+        if SameText(ARequest.Method, 'OPTIONS') then
+        begin
+          Handled := True;
+          Result := False;
+        end;
+}
+      end;
+*)
+
+(*
     // to execute something before each activation
-//    TMARSActivation.RegisterBeforeInvoke(
-//      procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
-//      begin
-//
-//      end
-//    );
+    TMARSActivation.RegisterBeforeInvoke(
+      procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
+      begin
 
+      end
+    );
+*)
+
+(*
     // to execute something after each activation
-//    TMARSActivation.RegisterAfterInvoke(
-//      procedure (const AActivation: IMARSActivation)
-//      begin
-//
-//      end
-//    );
+    TMARSActivation.RegisterAfterInvoke(
+      procedure (const AActivation: IMARSActivation)
+      begin
 
+      end
+    );
+*)
+
+(*
     // to execute something on error
-//    TMARSActivation.RegisterInvokeError(
-//      procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
-//      begin
-//
-//      end
-//    );
+    TMARSActivation.RegisterInvokeError(
+      procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
+      begin
+
+      end
+    );
+*)
 
   except
     FreeAndNil(FEngine);

@@ -76,11 +76,10 @@ begin
 
             AApplication.EnumerateResources(
               procedure (AName: string; AInfo: TMARSConstructorInfo)
-              var
-                LResourceItem: TTreeNode;
               begin
-                LResourceItem := ATreeview.Items.AddChild(LApplicationItem
-                  , AInfo.TypeTClass.ClassName +  ' [' + AName + ']'
+                ATreeview.Items.AddChild(
+                  LApplicationItem
+                , AInfo.TypeTClass.ClassName +  ' [' + AName + ']'
                 );
 
               end
@@ -105,20 +104,6 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   PortNumberEdit.Text := IntToStr(TServerEngine.Default.Port);
-
-  // skip favicon requests (browser)
-  TServerEngine.Default.OnBeforeHandleRequest :=
-    function (AEngine: TMARSEngine; AURL: TMARSURL;
-      ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
-    ): Boolean
-    begin
-      Result := True;
-      if SameText(AURL.Document, 'favicon.ico') then
-      begin
-        Result := False;
-        Handled := True;
-      end;
-    end;
 
   RenderEngines(MainTreeView);
 

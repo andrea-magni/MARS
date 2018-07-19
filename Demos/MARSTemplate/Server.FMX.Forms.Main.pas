@@ -57,20 +57,6 @@ procedure TMainForm.FormCreate(Sender: TObject);
 begin
   PortNumberEdit.Text := TServerEngine.Default.Port.ToString;
 
-  // skip favicon requests (browser)
-  TServerEngine.Default.OnBeforeHandleRequest :=
-    function (AEngine: TMARSEngine; AURL: TMARSURL;
-      ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
-    ): Boolean
-    begin
-      Result := True;
-      if SameText(AURL.Document, 'favicon.ico') then
-      begin
-        Result := False;
-        Handled := True;
-      end
-    end;
-
   StartServerAction.Execute;
 end;
 
