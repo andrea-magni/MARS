@@ -3,7 +3,7 @@ unit MARS.Data.FireDAC.Utils;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections, Rtti
+  Classes, SysUtils, Generics.Collections, Rtti, System.JSON
 , MARS.Core.JSON
 , FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Intf
 , FireDAC.DatS, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def

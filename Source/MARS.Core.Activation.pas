@@ -657,14 +657,7 @@ begin
 
   if not Assigned(FMethod) then
     raise EMARSMethodNotFoundException.Create(
-      Format('[%s] No implementation found for http method %s'
-      , [URL.Resource
-{$ifndef Delphi10Seattle_UP}
-         , GetEnumName(TypeInfo(TMethodType), Integer(Request.MethodType))
-{$else}
-         , TRttiEnumerationType.GetName<TMethodType>(Request.MethodType)
-{$endif}
-      ]), 404);
+      Format('[%s] No implementation found for http method %s', [URL.Resource, Request.Method]), 404);
 end;
 
 procedure TMARSActivation.CheckResource;
