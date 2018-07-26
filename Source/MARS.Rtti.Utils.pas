@@ -32,11 +32,6 @@ type
 
   TRttiTypeHelper = class helper(TRttiObjectHelper) for TRttiType
   protected
-    function MethodParametersMatch(const AMethod: TRttiMethod): Boolean; overload;
-    function MethodParametersMatch<A1>(const AMethod: TRttiMethod): Boolean; overload;
-    function MethodParametersMatch<A1,A2>(const AMethod: TRttiMethod): Boolean; overload;
-    function MethodParametersMatch<A1,A2,A3>(const AMethod: TRttiMethod): Boolean; overload;
-    function MethodParametersMatch<A1,A2,A3,A4>(const AMethod: TRttiMethod): Boolean; overload;
   public
     function ForEachMethodWithAttribute<T: TCustomAttribute>(
       const ADoSomething: TFunc<TRttiMethod, T, Boolean>): Integer;
@@ -66,6 +61,12 @@ type
 
   TRttiHelper = class
   public
+    class function MethodParametersMatch(const AMethod: TRttiMethod): Boolean; overload;
+    class function MethodParametersMatch<A1>(const AMethod: TRttiMethod): Boolean; overload;
+    class function MethodParametersMatch<A1,A2>(const AMethod: TRttiMethod): Boolean; overload;
+    class function MethodParametersMatch<A1,A2,A3>(const AMethod: TRttiMethod): Boolean; overload;
+    class function MethodParametersMatch<A1,A2,A3,A4>(const AMethod: TRttiMethod): Boolean; overload;
+
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject): Boolean; overload;
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TProc<T>): Boolean; overload;
 
@@ -421,7 +422,7 @@ begin
   begin
     if not (
       (LMethod.ReturnType.Handle = TypeInfo(R))
-      and MethodParametersMatch<A1,A2,A3,A4>(LMethod)
+      and TRttiHelper.MethodParametersMatch<A1,A2,A3,A4>(LMethod)
     ) then
       LMethod := nil;
   end;
@@ -439,7 +440,7 @@ begin
   begin
     if not (
       (LMethod.ReturnType.Handle = TypeInfo(R))
-      and MethodParametersMatch<A1,A2,A3>(LMethod)
+      and TRttiHelper.MethodParametersMatch<A1,A2,A3>(LMethod)
     ) then
       LMethod := nil;
   end;
@@ -457,7 +458,7 @@ begin
   begin
     if not (
       (LMethod.ReturnType.Handle = TypeInfo(R))
-      and MethodParametersMatch<A1,A2>(LMethod)
+      and TRttiHelper.MethodParametersMatch<A1,A2>(LMethod)
     ) then
       LMethod := nil;
   end;
@@ -475,7 +476,7 @@ begin
   begin
     if not (
       (LMethod.ReturnType.Handle = TypeInfo(R))
-      and MethodParametersMatch<A1>(LMethod)
+      and TRttiHelper.MethodParametersMatch<A1>(LMethod)
     ) then
       LMethod := nil;
   end;
@@ -493,7 +494,7 @@ begin
   begin
     if not (
       (LMethod.ReturnType.Handle = TypeInfo(R))
-      and MethodParametersMatch(LMethod)
+      and TRttiHelper.MethodParametersMatch(LMethod)
     ) then
       LMethod := nil;
   end;
@@ -667,13 +668,15 @@ begin
     Result := IsObjectOfType((LType as TRttiInstanceType).MetaclassType, AAllowInherithance);
 end;
 
-function TRttiTypeHelper.MethodParametersMatch(
+{ TRttiHelper }
+
+class function TRttiHelper.MethodParametersMatch(
   const AMethod: TRttiMethod): Boolean;
 begin
   Result := Length(AMethod.GetParameters) = 0;
 end;
 
-function TRttiTypeHelper.MethodParametersMatch<A1, A2, A3, A4>(
+class function TRttiHelper.MethodParametersMatch<A1, A2, A3, A4>(
   const AMethod: TRttiMethod): Boolean;
 var
   LParameters: TArray<TRttiParameter>;
@@ -686,7 +689,7 @@ begin
     and (LParameters[3].ParamType.Handle = TypeInfo(A4));
 end;
 
-function TRttiTypeHelper.MethodParametersMatch<A1, A2, A3>(
+class function TRttiHelper.MethodParametersMatch<A1, A2, A3>(
   const AMethod: TRttiMethod): Boolean;
 var
   LParameters: TArray<TRttiParameter>;
@@ -698,7 +701,7 @@ begin
     and (LParameters[2].ParamType.Handle = TypeInfo(A3));
 end;
 
-function TRttiTypeHelper.MethodParametersMatch<A1, A2>(
+class function TRttiHelper.MethodParametersMatch<A1, A2>(
   const AMethod: TRttiMethod): Boolean;
 var
   LParameters: TArray<TRttiParameter>;
@@ -709,7 +712,7 @@ begin
     and (LParameters[1].ParamType.Handle = TypeInfo(A2));
 end;
 
-function TRttiTypeHelper.MethodParametersMatch<A1>(
+class function TRttiHelper.MethodParametersMatch<A1>(
   const AMethod: TRttiMethod): Boolean;
 var
   LParameters: TArray<TRttiParameter>;
@@ -718,8 +721,6 @@ begin
   Result := (Length(LParameters) = 1)
     and (LParameters[0].ParamType.Handle = TypeInfo(A1));
 end;
-
-{ TRttiHelper }
 
 class function TRttiHelper.FindParameterLessConstructor(
   const AClass: TClass): TRttiMethod;

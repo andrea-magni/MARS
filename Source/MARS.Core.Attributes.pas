@@ -105,6 +105,12 @@ type
     property Encoding: TEncoding read GetEncoding;
   end;
 
+  InvocationEventAttribute = class(MARSAttribute);
+
+  BeforeInvokeAttribute = class(InvocationEventAttribute);
+  AfterInvokeAttribute = class(InvocationEventAttribute);
+  InvokeErrorAttribute = class(InvocationEventAttribute);
+
   ContextAttribute = class(MARSAttribute);
 
   ConfigParamAttribute = class(ContextAttribute)

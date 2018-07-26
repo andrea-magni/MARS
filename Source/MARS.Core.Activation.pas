@@ -572,6 +572,27 @@ end;
 //end;
 
 procedure TMARSActivation.Invoke;
+
+  procedure HandleException(const AException: Exception);
+  begin
+    if AException is EMARSHttpException then
+    begin
+      Response.StatusCode := EMARSHttpException(AException).Status;
+      Response.Content := AException.Message;
+      Response.ContentType := TMediaType.TEXT_PLAIN;
+    end
+    else begin
+      Response.StatusCode := 500;
+      Response.Content := 'Internal server error';
+      {$IFDEF DEBUG}
+      Response.Content := 'Internal server error: [' + AException.ClassName + '] ' + AException.Message;
+      {$ENDIF}
+      Response.ContentType := TMediaType.TEXT_PLAIN;
+    end;
+
+    DoInvokeError(AException);
+  end;
+
 begin
   try
     try
@@ -586,43 +607,25 @@ begin
 
       FillResourceMethodParameters;
 
+      FInvocationTime := TStopwatch.StartNew;
+      FResourceInstance := FConstructorInfo.ConstructorFunc();
+
+      ContextInjection;
       if DoBeforeInvoke then
       begin
-        FInvocationTime := TStopwatch.StartNew;
-        FResourceInstance := FConstructorInfo.ConstructorFunc();
-        try
-          ContextInjection;
-          InvokeResourceMethod;
-          FInvocationTime.Stop;
-          DoAfterInvoke;
-        finally
-          FResourceInstance.Free;
-        end;
+        InvokeResourceMethod;
+        FInvocationTime.Stop;
+        DoAfterInvoke;
       end;
-
 
     except on E:Exception do
-      begin
-        if E is EMARSHttpException then
-        begin
-          Response.StatusCode := EMARSHttpException(E).Status;
-          Response.Content := E.Message;
-          Response.ContentType := TMediaType.TEXT_PLAIN;
-        end
-        else begin
-          Response.StatusCode := 500;
-          Response.Content := 'Internal server error';
-          {$IFDEF DEBUG}
-          Response.Content := 'Internal server error: [' + E.ClassName + '] ' + E.Message;
-          {$ENDIF}
-          Response.ContentType := TMediaType.TEXT_PLAIN;
-        end;
-
-        DoInvokeError(E);
-      end;
+      HandleException(E);
     end;
 
   finally
+    if Assigned(FResourceInstance) then
+      FResourceInstance.Free;
+
     FreeContext;
   end;
 end;
@@ -766,15 +769,46 @@ var
 begin
   for LSubscriber in FAfterInvokeProcs do
     LSubscriber(Self);
+
+  Resource.ForEachMethodWithAttribute<AfterInvokeAttribute>(
+    function (AMethod: TRttiMethod; AAttribute: AfterInvokeAttribute): Boolean
+    var
+      LReturnValue: TValue;
+    begin
+      Result := True;
+      LReturnValue := AMethod.Invoke(FResourceInstance, []);
+      if Assigned(AMethod.ReturnType) and (AMethod.ReturnType.Handle = TypeInfo(Boolean)) then
+        Result := LReturnValue.AsBoolean;
+    end
+  );
 end;
 
 function TMARSActivation.DoBeforeInvoke: Boolean;
 var
   LSubscriber: TMARSBeforeInvokeProc;
+  LResult: Boolean;
 begin
-  Result := True;
+  LResult := True;
   for LSubscriber in FBeforeInvokeProcs do
-    LSubscriber(Self, Result);
+    LSubscriber(Self, LResult);
+
+  if LResult then
+    Resource.ForEachMethodWithAttribute<BeforeInvokeAttribute>(
+      function (AMethod: TRttiMethod; AAttribute: BeforeInvokeAttribute): Boolean
+      var
+        LReturnValue: TValue;
+      begin
+        Result := True;
+        LReturnValue := AMethod.Invoke(FResourceInstance, []);
+        if Assigned(AMethod.ReturnType) and (AMethod.ReturnType.Handle = TypeInfo(Boolean)) then
+        begin
+          LResult := LReturnValue.AsBoolean;
+          Result := LReturnValue.AsBoolean;
+        end;
+      end
+    );
+
+  Result := LResult;
 end;
 
 procedure TMARSActivation.DoInvokeError(const E: Exception);
@@ -789,6 +823,22 @@ begin
     if LHandled then
       Break;
   end;
+
+  if not LHandled then
+    Resource.ForEachMethodWithAttribute<InvokeErrorAttribute>(
+      function (AMethod: TRttiMethod; AAttribute: InvokeErrorAttribute): Boolean
+      var
+        LReturnValue: TValue;
+      begin
+        Result := True;
+        if TRttiHelper.MethodParametersMatch<Exception>(AMethod) then
+        begin
+          LReturnValue := AMethod.Invoke(FResourceInstance, [E]);
+          if Assigned(AMethod.ReturnType) and (AMethod.ReturnType.Handle = TypeInfo(Boolean)) then
+            Result := LReturnValue.AsBoolean;
+        end;
+      end
+    );
 end;
 
 { TMARSAuthorizationInfo }
