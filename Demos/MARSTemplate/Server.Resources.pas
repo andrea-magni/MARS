@@ -10,14 +10,11 @@ interface
 uses
   SysUtils, Classes
 
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-  , MARS.Core.JSON
-  , MARS.Core.Response
+  , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON, MARS.Core.Response
   , MARS.Core.URL
 
   , MARS.Core.Token.Resource
-  ;
+;
 
 type
   [Path('helloworld')]

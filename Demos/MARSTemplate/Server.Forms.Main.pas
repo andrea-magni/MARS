@@ -48,7 +48,9 @@ implementation
 uses
   StrUtils, Web.HttpApp
   , MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
-  , Server.Ignition;
+  , MARS.Core.Registry.Utils
+  , Server.Ignition
+;
 
 procedure TMainForm.RenderEngines(const ATreeView: TTreeView);
 begin
