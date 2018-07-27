@@ -43,15 +43,19 @@ uses
 type
   EMARSFireDACException = class(EMARSApplicationException);
 
-  ConnectionAttribute = class(TCustomAttribute)
+  MARSFireDACAttribute = class(TCustomAttribute);
+
+  ConnectionAttribute = class(MARSFireDACAttribute)
   private
     FConnectionDefName: string;
+    FExpandMacros: Boolean;
   public
-    constructor Create(AConnectionDefName: string);
+    constructor Create(AConnectionDefName: string; const AExpandMacros: Boolean = False);
     property ConnectionDefName: string read FConnectionDefName;
+    property ExpandMacros: Boolean read FExpandMacros;
   end;
 
-  SQLStatementAttribute = class(TCustomAttribute)
+  SQLStatementAttribute = class(MARSFireDACAttribute)
   private
     FName: string;
     FSQLStatement: string;
@@ -87,10 +91,12 @@ type
       ARow: TFDDatSRow; ARequest: TFDUpdateRequest; var AAction: TFDErrorAction);
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TFDConnection; virtual;
-    function GetContextValue(const AName: string; const ADesiredType: TFieldType = ftUnknown): TValue; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
+
+    class function GetContextValue(const AName: string; const AActivation: IMARSActivation;
+      const ADesiredType: TFieldType = ftUnknown): TValue; virtual;
 
     procedure InjectParamValues(const ACommand: TFDCustomCommand); virtual;
     procedure InjectMacroValues(const ACommand: TFDCustomCommand); virtual;
@@ -294,10 +300,11 @@ end;
 
 { ConnectionAttribute }
 
-constructor ConnectionAttribute.Create(AConnectionDefName: string);
+constructor ConnectionAttribute.Create(AConnectionDefName: string; const AExpandMacros: Boolean = False);
 begin
   inherited Create;
   FConnectionDefName := AConnectionDefName;
+  FExpandMacros := AExpandMacros;
 end;
 
 { SQLStatementAttribute }
@@ -517,7 +524,8 @@ begin
   Result := FConnection;
 end;
 
-function TMARSFireDAC.GetContextValue(const AName: string; const ADesiredType: TFieldType): TValue;
+class function TMARSFireDAC.GetContextValue(const AName: string; const AActivation: IMARSActivation;
+  const ADesiredType: TFieldType): TValue;
 var
   LFirstToken, LSecondToken: string;
   LHasThirdToken: Boolean;
@@ -546,36 +554,36 @@ begin
 
   if SameText(LFirstToken, 'Token') then
   begin
-    Result := ReadPropertyValue(Activation.Token, LSecondToken);
+    Result := ReadPropertyValue(AActivation.Token, LSecondToken);
 
     if SameText(LSecondToken, 'HasRole') and LHasThirdToken then
-      Result := Activation.Token.HasRole(LThirdTokenAndAll)
+      Result := AActivation.Token.HasRole(LThirdTokenAndAll)
     else if SameText(LSecondToken, 'Claim') and LHasThirdToken then
-      Result := Activation.Token.Claims.ByNameText(LThirdTokenAndAll);
+      Result := AActivation.Token.Claims.ByNameText(LThirdTokenAndAll);
   end
   else if SameText(LFirstToken, 'PathParam') then
   begin
-    LIndex := Activation.URLPrototype.GetPathParamIndex(LSecondTokenAndAll);
-    if (LIndex > -1) and (LIndex < Length(Activation.URL.PathTokens)) then
-      Result := Activation.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
+    LIndex := AActivation.URLPrototype.GetPathParamIndex(LSecondTokenAndAll);
+    if (LIndex > -1) and (LIndex < Length(AActivation.URL.PathTokens)) then
+      Result := AActivation.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
     else
       raise EMARSFireDACException.CreateFmt('PathParam not found: %s', [LSecondTokenAndAll]);
   end
   else if SameText(LFirstToken, 'QueryParam') then
-    Result := Activation.URL.QueryTokenByName(LSecondTokenAndAll)
+    Result := AActivation.URL.QueryTokenByName(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'FormParam') then
-    Result := Activation.Request.ContentFields.Values[LSecondTokenAndAll]
+    Result := AActivation.Request.ContentFields.Values[LSecondTokenAndAll]
   else if SameText(LFirstToken, 'Request') then
-    Result := ReadPropertyValue(Activation.Request, LSecondTokenAndAll)
+    Result := ReadPropertyValue(AActivation.Request, LSecondTokenAndAll)
 //  else if SameText(LFirstToken, 'Response') then
-//    Result := ReadPropertyValue(Activation.Response, LSecondToken)
+//    Result := ReadPropertyValue(AActivation.Response, LSecondToken)
   else if SameText(LFirstToken, 'URL') then
-    Result := ReadPropertyValue(Activation.URL, LSecondTokenAndAll)
+    Result := ReadPropertyValue(AActivation.URL, LSecondTokenAndAll)
   else if SameText(LFirstToken, 'URLPrototype') then
-    Result := ReadPropertyValue(Activation.URLPrototype, LSecondTokenAndAll)
+    Result := ReadPropertyValue(AActivation.URLPrototype, LSecondTokenAndAll)
   else // last chance, custom injection
     for LCustomProvider in FContextValueProviders do
-      LCustomProvider(Activation, AName, ADesiredType, Result);
+      LCustomProvider(AActivation, AName, ADesiredType, Result);
 end;
 
 procedure TMARSFireDAC.InjectMacroValues(const ACommand: TFDCustomCommand);
@@ -586,7 +594,7 @@ begin
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
-    LMacro.Value := GetContextValue(LMacro.Name, MacroDataTypeToFieldType(LMacro.DataType)).AsVariant;
+    LMacro.Value := GetContextValue(LMacro.Name, Activation, MacroDataTypeToFieldType(LMacro.DataType)).AsVariant;
   end;
 end;
 
@@ -598,7 +606,7 @@ begin
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
-    LParam.Value := GetContextValue(LParam.Name, LParam.DataType).AsVariant;
+    LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
   end;
 end;
 

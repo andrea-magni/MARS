@@ -27,7 +27,9 @@ type
       const AActivation: IMARSActivation; out AValue: TInjectionValue);
 
     const FireDAC_ConnectionDefName_PARAM = 'FireDAC.ConnectionDefName';
+    const FireDAC_ConnectionExpandMacros_PARAM = 'FireDAC.ConnectionExpandMacros';
     const FireDAC_ConnectionDefName_PARAM_DEFAULT = 'MAIN_DB';
+    const FireDAC_ConnectionExpandMacros_PARAM_DEFAULT = False;
   end;
 
 implementation
@@ -47,14 +49,17 @@ function TMARSFireDACInjectionService.GetConnectionDefName(
   const AActivation: IMARSActivation): string;
 var
   LConnectionDefName: string;
+  LExpandMacros: Boolean;
 begin
   LConnectionDefName := '';
+  LExpandMacros := False;
 
   // field, property or method param annotation
   ADestination.HasAttribute<ConnectionAttribute>(
     procedure (AAttrib: ConnectionAttribute)
     begin
       LConnectionDefName := AAttrib.ConnectionDefName;
+      LExpandMacros := AAttrib.ExpandMacros;
     end
   );
 
@@ -64,6 +69,7 @@ begin
       procedure (AAttrib: ConnectionAttribute)
       begin
         LConnectionDefName := AAttrib.ConnectionDefName;
+        LExpandMacros := AAttrib.ExpandMacros;
       end
     );
 
@@ -73,14 +79,23 @@ begin
       procedure (AAttrib: ConnectionAttribute)
       begin
         LConnectionDefName := AAttrib.ConnectionDefName;
+        LExpandMacros := AAttrib.ExpandMacros;
       end
     );
 
   // last chance: application parameters
   if (LConnectionDefName = '') then
+  begin
     LConnectionDefName := AActivation.Application.Parameters.ByName(
       FireDAC_ConnectionDefName_PARAM, FireDAC_ConnectionDefName_PARAM_DEFAULT
     ).AsString;
+    LExpandMacros := AActivation.Application.Parameters.ByName(
+      FireDAC_ConnectionExpandMacros_PARAM, FireDAC_ConnectionExpandMacros_PARAM_DEFAULT
+    ).AsBoolean;
+  end;
+
+  if LExpandMacros then
+    LConnectionDefName := TMARSFireDAC.GetContextValue(LConnectionDefName, AActivation, ftString).AsString;
 
   Result := LConnectionDefName;
 end;
