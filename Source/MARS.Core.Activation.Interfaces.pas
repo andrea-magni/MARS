@@ -17,7 +17,6 @@ uses
   , MARS.Core.Application
   , MARS.Core.Engine
   , MARS.Core.Token
-  , MARS.Core.Registry
   , MARS.Core.MediaType
   , MARS.Core.Injection.Types
   ;

@@ -11,23 +11,10 @@ interface
 
 uses
   SysUtils, Classes, Rtti, TypInfo, Generics.Collections
-, MARS.Rtti.Utils
+, MARS.Rtti.Utils, MARS.Core.Registry.Utils
 ;
 
 type
-  TMARSConstructorInfo = class
-  private
-    FConstructorFunc: TFunc<TObject>;
-    FTypeTClass: TClass;
-  protected
-  public
-    constructor Create(AClass: TClass; const AConstructorFunc: TFunc<TObject>);
-
-    property TypeTClass: TClass read FTypeTClass;
-    property ConstructorFunc: TFunc<TObject> read FConstructorFunc write FConstructorFunc;
-    function Clone: TMARSConstructorInfo;
-  end;
-
   TMARSResourceRegistry = class(TObjectDictionary<string, TMARSConstructorInfo>)
   private
   protected
@@ -37,10 +24,10 @@ type
   public
     constructor Create; virtual;
     function RegisterResource<T: class>: TMARSConstructorInfo; overload;
-    function RegisterResource<T: class>(const AConstructorFunc: TFunc<TObject>): TMARSConstructorInfo; overload;
+    function RegisterResource<T: class>(const AConstructorFunc: TMARSConstructorFunc): TMARSConstructorInfo; overload;
 
     function GetResourceClass(const AResource: string; out Value: TClass): Boolean;
-    function GetResourceInstance<T: class>: T;
+    function GetResourceInstance<T: class>(const AContext: TValue): T;
 
     class property Instance: TMARSResourceRegistry read GetInstance;
     class destructor ClassDestroy;
@@ -54,8 +41,6 @@ type
 {$endif}
 
 implementation
-
-type TDataModuleClass = class of TDataModule;
 
 {$ifdef DelphiXE}
 class function TObjectHelper.QualifiedClassName: string;
@@ -72,14 +57,14 @@ end;
 
 { TMARSResourceRegistry }
 
-function TMARSResourceRegistry.GetResourceInstance<T>: T;
+function TMARSResourceRegistry.GetResourceInstance<T>(const AContext: TValue): T;
 var
   LInfo: TMARSConstructorInfo;
 begin
   if Self.TryGetValue(T.ClassName, LInfo) then
   begin
     if LInfo.ConstructorFunc <> nil then
-      Result := LInfo.ConstructorFunc() as T;
+      Result := LInfo.ConstructorFunc(AContext) as T;
   end;
 end;
 
@@ -89,7 +74,7 @@ begin
 end;
 
 function TMARSResourceRegistry.RegisterResource<T>(
-  const AConstructorFunc: TFunc<TObject>): TMARSConstructorInfo;
+  const AConstructorFunc: TMARSConstructorFunc): TMARSConstructorInfo;
 begin
   Result := TMARSConstructorInfo.Create(TClass(T), AConstructorFunc);
   Self.Add(T.QualifiedClassName.ToLower, Result);
@@ -122,32 +107,6 @@ begin
   Result := Self.TryGetValue(AResource, LInfo);
   if Result then
     Value := LInfo.TypeTClass;
-end;
-
-{ TMARSConstructorInfo }
-
-function TMARSConstructorInfo.Clone: TMARSConstructorInfo;
-begin
-  Result := TMARSConstructorInfo.Create(FTypeTClass, FConstructorFunc);
-end;
-
-constructor TMARSConstructorInfo.Create(AClass: TClass;
-  const AConstructorFunc: TFunc<TObject>);
-begin
-  inherited Create;
-  FConstructorFunc := AConstructorFunc;
-  FTypeTClass := AClass;
-
-  // provide a default constructor function
-  if not Assigned(FConstructorFunc) then
-    FConstructorFunc :=
-      function: TObject
-      begin
-        if FTypeTClass.InheritsFrom(TDataModule) then
-          Result := TDataModuleClass(FTypeTClass).Create(nil)
-        else
-          Result := TRttiHelper.FindParameterLessConstructor(FTypeTClass).Invoke(FTypeTClass, []).AsObject;
-      end;
 end;
 
 end.

@@ -18,7 +18,7 @@ uses
   , MARS.Core.Application
   , MARS.Core.Engine
   , MARS.Core.Token
-  , MARS.Core.Registry
+  , MARS.Core.Registry.Utils
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MediaType
   , MARS.Core.Injection.Types
@@ -608,7 +608,7 @@ begin
       FillResourceMethodParameters;
 
       FInvocationTime := TStopwatch.StartNew;
-      FResourceInstance := FConstructorInfo.ConstructorFunc();
+      FResourceInstance := FConstructorInfo.ConstructorFunc(Self);
 
       ContextInjection;
       if DoBeforeInvoke then

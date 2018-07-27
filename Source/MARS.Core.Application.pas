@@ -11,12 +11,9 @@ interface
 
 uses
     SysUtils, Classes, Rtti, Generics.Collections
-  , MARS.Core.Classes
-  , MARS.Core.URL
-  , MARS.Core.Registry
-  , MARS.Core.Exceptions
-  , MARS.Utils.Parameters
-  ;
+  , MARS.Core.Classes, MARS.Core.URL, MARS.Core.Exceptions, MARS.Utils.Parameters
+  , MARS.Core.Registry, MARS.Core.Registry.Utils
+;
 
 type
   EMARSApplicationException = class(EMARSHttpException);
