@@ -9,10 +9,7 @@ interface
 
 uses
     Classes, SysUtils, Rtti, TypInfo
-  , MARS.Metadata
-  , MARS.Core.Engine
-  , MARS.Core.Application
-  , MARS.Core.Registry
+  , MARS.Metadata, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry.Utils
 ;
 
 type
