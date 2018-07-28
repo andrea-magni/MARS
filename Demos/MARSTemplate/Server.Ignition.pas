@@ -31,18 +31,12 @@ type
 implementation
 
 uses
-    MARS.Core.Application
-  , MARS.Core.Utils
+    MARS.Core.Activation, MARS.Core.Activation.Interfaces
+  , MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
-  , MARS.Utils.Parameters.IniFile
   {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC {$ENDIF}
-  , MARS.Core.Activation, MARS.Core.Activation.Interfaces
-  {$IFDEF MSWINDOWS}
-  , MARS.mORMotJWT.Token
-  {$ELSE}
-  , MARS.JOSEJWT.Token
-  {$ENDIF}
+  {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
   , Server.Resources
   ;
 
@@ -60,7 +54,7 @@ begin
 {$IFDEF MARS_FIREDAC}
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
-
+{$REGION 'OnBeforeHandleRequest example'}
 (*
     FEngine.OnBeforeHandleRequest :=
       function (AEngine: TMARSEngine; AURL: TMARSURL;
@@ -86,7 +80,8 @@ begin
 }
       end;
 *)
-
+{$ENDREGION}
+{$REGION 'Global BeforeInvoke handler example'}
 (*
     // to execute something before each activation
     TMARSActivation.RegisterBeforeInvoke(
@@ -96,7 +91,8 @@ begin
       end
     );
 *)
-
+{$ENDREGION}
+{$REGION 'Global AfterInvoke handler example'}
 (*
     // to execute something after each activation
     TMARSActivation.RegisterAfterInvoke(
@@ -106,7 +102,8 @@ begin
       end
     );
 *)
-
+{$ENDREGION}
+{$REGION 'Global InvokeError handler example'}
 (*
     // to execute something on error
     TMARSActivation.RegisterInvokeError(
@@ -116,7 +113,7 @@ begin
       end
     );
 *)
-
+{$ENDREGION}
   except
     FreeAndNil(FEngine);
     raise;

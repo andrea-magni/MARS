@@ -113,7 +113,7 @@ begin
     AServer.Scheduler := LScheduler;
     AServer.MaxConnections := LScheduler.PoolSize;
   except
-    AServer.Scheduler.Free;
+    AServer.Scheduler.DisposeOf;
     AServer.Scheduler := nil;
     raise;
   end;

@@ -10,8 +10,9 @@ unit Server.Forms.Main;
 interface
 
 uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
-  , MARS.http.Server.Indy, System.Actions
-  ;
+  , System.Actions
+  , MARS.http.Server.Indy
+;
 
 type
   TMainForm = class(TForm)
@@ -106,9 +107,7 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   PortNumberEdit.Text := IntToStr(TServerEngine.Default.Port);
-
   RenderEngines(MainTreeView);
-
   StartServerAction.Execute;
 end;
 

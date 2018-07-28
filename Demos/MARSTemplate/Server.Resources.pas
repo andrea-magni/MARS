@@ -13,7 +13,7 @@ uses
   , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON, MARS.Core.Response
   , MARS.Core.URL
 
-  , MARS.Core.Token.Resource
+  , MARS.Core.Token.Resource //, MARS.Core.Token
 ;
 
 type
