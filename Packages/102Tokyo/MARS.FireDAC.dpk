@@ -33,7 +33,7 @@ package MARS.FireDAC;
 requires
   rtl,
   dbrtl,
-  FireDAC, // if you get a compilation error here, probably your Delphi edition does not include FireDAC, skip this whole package
+  FireDAC,
   FireDACCommonDriver,
   FireDACCommon,
   inet,
