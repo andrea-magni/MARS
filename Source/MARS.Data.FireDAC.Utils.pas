@@ -71,7 +71,7 @@ var
   LDataSet: TFDDataSet;
 begin
   for LDataSet in ADataSets do
-    LDataSet.Free;
+    LDataSet.DisposeOf;
   ADataSets := [];
 end;
 
