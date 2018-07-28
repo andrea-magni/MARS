@@ -171,15 +171,13 @@ var
   LMediaType: string;
   LCandidateMediaType: string;
   LCandidateQualityFactor: Double;
-  LMethod: TRttiMethod;
   LAccept: string;
   LMethodReturnType: TRttiType;
   LMethodAttributes: TArray<TCustomAttribute>;
 begin
-  LMethod := AActivation.Method;
   LAccept := AActivation.Request.Accept;
-  LMethodReturnType := LMethod.ReturnType;
-  LMethodAttributes := LMethod.GetAttributes;
+  LMethodReturnType := AActivation.MethodReturnType;
+  LMethodAttributes := AActivation.MethodAttributes;
 
   AMediaType := nil;
   AWriter := nil;
@@ -299,8 +297,8 @@ begin
   try
     LMethod := AActivation.Method;
 
-    LMethod.ForEachAttribute<ProducesAttribute>(
-      procedure (AProduces: ProducesAttribute)
+    TRttiHelper.ForEachAttribute<ProducesAttribute>(AActivation.MethodAttributes
+    , procedure (AProduces: ProducesAttribute)
       begin
         LList.Add( TMediaType.Create(AProduces.Value) );
       end
@@ -322,8 +320,8 @@ begin
     // to add Produces
     if LMethod.Parent <> AActivation.Resource then
     begin
-       AActivation.Resource.ForEachAttribute<ProducesAttribute>(
-          procedure (AProduces: ProducesAttribute)
+      TRttiHelper.ForEachAttribute<ProducesAttribute>(AActivation.ResourceAttributes
+        , procedure (AProduces: ProducesAttribute)
           begin
             LList.Add( TMediaType.Create(AProduces.Value) );
           end

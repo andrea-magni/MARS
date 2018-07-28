@@ -20,21 +20,23 @@ type
     function GetRttiType: TRttiType;
     procedure SetValue(AInstance: Pointer; const AValue: TValue);
 
-    function HasAttribute<T: TCustomAttribute>(const AInherited: Boolean = False): Boolean; overload;
+    function HasAttribute<T: TCustomAttribute>(const AInherited: Boolean = False): Boolean; overload; inline;
     function HasAttribute<T: TCustomAttribute>(
       const ADoSomething: TProc<T>; const AInherited: Boolean = False): Boolean; overload;
 
+    function GetAllAttributes(const AInherited: Boolean = False): TArray<TCustomAttribute>;
+
     function ForEachAttribute<T: TCustomAttribute>(
-      const ADoSomething: TProc<T>; const AInherited: Boolean = False): Integer; overload;
+      const ADoSomething: TProc<T>; const AInherited: Boolean = False): Integer; overload; inline;
     function ForEachAttribute<T: TCustomAttribute>(
-      const ADoSomething: TFunc<T, Boolean>; const AInherited: Boolean = False): Integer; overload;
+      const ADoSomething: TFunc<T, Boolean>; const AInherited: Boolean = False): Integer; overload; inline;
   end;
 
   TRttiTypeHelper = class helper(TRttiObjectHelper) for TRttiType
   protected
   public
     function ForEachMethodWithAttribute<T: TCustomAttribute>(
-      const ADoSomething: TFunc<TRttiMethod, T, Boolean>): Integer;
+      const ADoSomething: TFunc<TRttiMethod, T, Boolean>): Integer; inline;
 
     function ForEachFieldWithAttribute<T: TCustomAttribute>(
       const ADoSomething: TFunc<TRttiField, T, Boolean>): Integer;
@@ -70,7 +72,16 @@ type
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject): Boolean; overload;
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TProc<T>): Boolean; overload;
 
-    class function ForEachAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TProc<T>): Integer; overload;
+    class function ForEachAttribute<T: TCustomAttribute>(const AInstance: TObject;
+      const ADoSomething: TProc<T>): Integer; overload;
+
+    class function ForEachAttribute<T: TCustomAttribute>(const AAttributes: TArray<TCustomAttribute>;
+      const ADoSomething: TProc<T>): Integer; overload;
+    class function ForEachAttribute<T: TCustomAttribute>(const AAttributes: TArray<TCustomAttribute>;
+      const ADoSomething: TFunc<T, Boolean>): Integer; overload;
+
+    class function ForEachMethodWithAttribute<T: TCustomAttribute>(const AMethods: TArray<TRttiMethod>;
+      const ADoSomething: TFunc<TRttiMethod, T, Boolean>): Integer;
 
     class function ForEachFieldWithAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TFunc<TRttiField, T, Boolean>): Integer; overload;
     class function ForEachField(AInstance: TObject; const ADoSomething: TFunc<TRttiField, Boolean>): Integer;
@@ -292,35 +303,8 @@ end;
 
 function TRttiObjectHelper.ForEachAttribute<T>(
   const ADoSomething: TProc<T>; const AInherited: Boolean): Integer;
-var
-  LAttribute: TCustomAttribute;
-  LAttributes: TArray<TCustomAttribute>;
-  LBaseType: TRttiType;
-  LType: TRttiType;
 begin
-  Result := 0;
-  LAttributes := Self.GetAttributes;
-
-  LType := Self.GetRttiType;
-  if AInherited and Assigned(LType) then
-  begin
-    LBaseType := LType.BaseType;
-    while Assigned(LBaseType) do
-    begin
-     LAttributes := LAttributes + LBaseType.GetAttributes;
-     LBaseType := LBaseType.BaseType;
-    end;
-  end;
-
-  for LAttribute in LAttributes do
-  begin
-    if LAttribute.InheritsFrom(TClass(T)) then
-    begin
-      if Assigned(ADoSomething) then
-        ADoSomething(T(LAttribute));
-      Inc(Result);
-    end;
-  end;
+  Result := TRttiHelper.ForEachAttribute<T>(GetAllAttributes(AInherited), ADoSomething);
 end;
 
 function TRttiObjectHelper.HasAttribute<T>(const AInherited: Boolean): Boolean;
@@ -330,37 +314,27 @@ end;
 
 function TRttiObjectHelper.ForEachAttribute<T>(
   const ADoSomething: TFunc<T, Boolean>; const AInherited: Boolean): Integer;
+begin
+  Result := TRttiHelper.ForEachAttribute<T>(GetAllAttributes(AInherited), ADoSomething);
+end;
+
+function TRttiObjectHelper.GetAllAttributes(
+  const AInherited: Boolean): TArray<TCustomAttribute>;
 var
-  LAttribute: TCustomAttribute;
-  LAttributes: TArray<TCustomAttribute>;
   LBaseType: TRttiType;
-  LContinue: Boolean;
   LType: TRttiType;
 begin
-  Result := 0;
-  LAttributes := Self.GetAttributes;
+  Result := Self.GetAttributes;
 
+  { TODO -oAndrea : Implement AInherited = True behavior when Self is a TRttiMethod instance }
   LType := Self.GetRttiType;
   if AInherited and Assigned(LType) then
   begin
     LBaseType := LType.BaseType;
     while Assigned(LBaseType) do
     begin
-     LAttributes := LAttributes + LBaseType.GetAttributes;
+     Result := Result + LBaseType.GetAttributes;
      LBaseType := LBaseType.BaseType;
-    end;
-  end;
-
-  for LAttribute in LAttributes do
-  begin
-    if LAttribute.InheritsFrom(TClass(T)) then
-    begin
-      if Assigned(ADoSomething) then
-        LContinue := ADoSomething(T(LAttribute));
-      Inc(Result);
-
-      if not LContinue then
-        Break;
     end;
   end;
 end;
@@ -531,30 +505,8 @@ end;
 
 function TRttiTypeHelper.ForEachMethodWithAttribute<T>(
   const ADoSomething: TFunc<TRttiMethod, T, Boolean>): Integer;
-var
-  LMethod: TRttiMethod;
-  LBreak: Boolean;
 begin
-  Result := 0;
-  for LMethod in Self.GetMethods do
-  begin
-    LBreak := False;
-    if LMethod.HasAttribute<T>(
-         procedure (AAttrib: T)
-         begin
-           if Assigned(ADoSomething) then
-           begin
-             if not ADoSomething(LMethod, AAttrib) then
-               LBreak := True;
-           end;
-         end
-       )
-    then
-      Inc(Result);
-
-    if LBreak then
-      Break;
-  end;
+  Result := TRttiHelper.ForEachMethodWithAttribute<T>(Self.GetMethods, ADoSomething);
 end;
 
 function TRttiTypeHelper.ForEachPropertyWithAttribute<T>(
@@ -742,7 +694,7 @@ begin
   end;
 end;
 
-class function TRttiHelper.ForEachAttribute<T>(AInstance: TObject;
+class function TRttiHelper.ForEachAttribute<T>(const AInstance: TObject;
   const ADoSomething: TProc<T>): Integer;
 var
   LContext: TRttiContext;
@@ -752,6 +704,45 @@ begin
   LType := LContext.GetType(AInstance.ClassType);
   if Assigned(LType) then
     Result := LType.ForEachAttribute<T>(ADoSomething);
+end;
+
+class function TRttiHelper.ForEachAttribute<T>(const AAttributes: TArray<TCustomAttribute>;
+  const ADoSomething: TFunc<T, Boolean>): Integer;
+var
+  LAttribute: TCustomAttribute;
+  LContinue: Boolean;
+begin
+  Result := 0;
+  if not Assigned(ADoSomething) then
+    Exit;
+
+  for LAttribute in AAttributes do
+  begin
+    if LAttribute.InheritsFrom(TClass(T)) then
+    begin
+      LContinue := ADoSomething(T(LAttribute));
+      Inc(Result);
+
+      if not LContinue then
+        Break;
+    end;
+  end;
+end;
+
+class function TRttiHelper.ForEachAttribute<T>(const AAttributes: TArray<TCustomAttribute>;
+  const ADoSomething: TProc<T>): Integer;
+var
+  LAttribute: TCustomAttribute;
+begin
+  if Assigned(ADoSomething) then
+    for LAttribute in AAttributes do
+    begin
+      if LAttribute.InheritsFrom(TClass(T)) then
+      begin
+        ADoSomething(T(LAttribute));
+        Inc(Result);
+      end;
+    end;
 end;
 
 class function TRttiHelper.ForEachField(AInstance: TObject;
@@ -791,6 +782,35 @@ begin
   LType := LContext.GetType(AInstance.ClassType);
   if Assigned(LType) then
     Result := LType.ForEachFieldWithAttribute<T>(ADoSomething);
+end;
+
+class function TRttiHelper.ForEachMethodWithAttribute<T>(
+  const AMethods: TArray<TRttiMethod>;
+  const ADoSomething: TFunc<TRttiMethod, T, Boolean>): Integer;
+var
+  LMethod: TRttiMethod;
+  LBreak: Boolean;
+begin
+  Result := 0;
+  if not Assigned(ADoSomething) then
+    Exit;
+
+  for LMethod in AMethods do
+  begin
+    LBreak := False;
+    if LMethod.HasAttribute<T>(
+         procedure (AAttrib: T)
+         begin
+           if not ADoSomething(LMethod, AAttrib) then
+             LBreak := True;
+         end
+       )
+    then
+      Inc(Result);
+
+    if LBreak then
+      Break;
+  end;
 end;
 
 class function TRttiHelper.IfHasAttribute<T>(AInstance: TObject): Boolean;

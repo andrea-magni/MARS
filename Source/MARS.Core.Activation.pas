@@ -10,20 +10,13 @@ unit MARS.Core.Activation;
 interface
 
 uses
-  SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
-  , HTTPApp
+  SysUtils, Classes, Generics.Collections, Rtti, Diagnostics, HTTPApp
 
-  , MARS.Core.Classes
-  , MARS.Core.URL
-  , MARS.Core.Application
-  , MARS.Core.Engine
-  , MARS.Core.Token
-  , MARS.Core.Registry.Utils
+  , MARS.Core.Classes, MARS.Core.URL, MARS.Core.MediaType
+  , MARS.Core.Application, MARS.Core.Engine, MARS.Core.Token
+  , MARS.Core.Registry.Utils, MARS.Core.Injection.Types, MARS.Core.Activation.Interfaces
   , MARS.Core.MessageBodyWriter
-  , MARS.Core.MediaType
-  , MARS.Core.Injection.Types
-  , MARS.Core.Activation.Interfaces
-  ;
+;
 
 type
   TMARSActivation = class;
@@ -65,7 +58,11 @@ type
     FToken: TMARSToken;
     FContext: TList<TValue>;
     FMethod: TRttiMethod;
+    FMethodReturnType: TRttiType;
+    FMethodAttributes: TArray<TCustomAttribute>;
     FResource: TRttiType;
+    FResourceMethods: TArray<TRttiMethod>;
+    FResourceAttributes: TArray<TCustomAttribute>;
     FResourceInstance: TObject;
     FMethodArguments: TArray<TValue>;
     FMethodResult: TValue;
@@ -110,10 +107,13 @@ type
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
     function GetMethod: TRttiMethod;
+    function GetMethodReturnType: TRttiType;
     function GetMethodArguments: TArray<TValue>;
+    function GetMethodAttributes: TArray<TCustomAttribute>;
     function GetMethodResult: TValue;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
+    function GetResourceAttributes: TArray<TCustomAttribute>;
     function GetResourceInstance: TObject;
     function GetResponse: TWebResponse;
     function GetURL: TMARSURL;
@@ -190,9 +190,19 @@ begin
   Result := FMethodArguments;
 end;
 
+function TMARSActivation.GetMethodAttributes: TArray<TCustomAttribute>;
+begin
+  Result := FMethodAttributes;
+end;
+
 function TMARSActivation.GetMethodResult: TValue;
 begin
   Result := FMethodResult;
+end;
+
+function TMARSActivation.GetMethodReturnType: TRttiType;
+begin
+  Result := FMethodReturnType;
 end;
 
 function TMARSActivation.GetProducesValue: string;
@@ -227,6 +237,11 @@ end;
 function TMARSActivation.GetResource: TRttiType;
 begin
   Result := FResource;
+end;
+
+function TMARSActivation.GetResourceAttributes: TArray<TCustomAttribute>;
+begin
+  Result := FResourceAttributes;
 end;
 
 function TMARSActivation.GetResourceInstance: TObject;
@@ -295,7 +310,11 @@ var
   LMethodPath: string;
 begin
   FResource := FRttiContext.GetType(FConstructorInfo.TypeTClass);
+  FResourceAttributes := FResource.GetAllAttributes(True);
+  FResourceMethods := FResource.GetMethods;
   FMethod := nil;
+  FMethodReturnType := nil;
+  FMethodAttributes := [];
   FreeAndNil(FURLPrototype);
 
   LResourcePath := '';
@@ -306,7 +325,7 @@ begin
     end
   );
 
-  for LMethod in FResource.GetMethods do
+  for LMethod in FResourceMethods do
   begin
     if (LMethod.Visibility < TMemberVisibility.mvPublic)
       or LMethod.IsConstructor or LMethod.IsDestructor
@@ -335,6 +354,8 @@ begin
         if LPathMatches and LHttpMethodMatches then
         begin
           FMethod := LMethod;
+          FMethodAttributes := FMethod.GetAllAttributes(False);
+          FMethodReturnType := FMethod.ReturnType;
           Break;
         end;
       finally
@@ -518,8 +539,8 @@ begin
           LAllowedRoles.AddStrings(RolesAllowedAttribute(AAttribute).Roles);
       end;
 
-    FMethod.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
-    FResource.ForEachAttribute<AuthorizationAttribute>(LProcessAuthorizationAttribute);
+    TRttiHelper.ForEachAttribute<AuthorizationAttribute>(FMethodAttributes, LProcessAuthorizationAttribute);
+    TRttiHelper.ForEachAttribute<AuthorizationAttribute>(FResourceAttributes, LProcessAuthorizationAttribute);
 
     FAuthorizationInfo.AllowedRoles := LAllowedRoles.ToStringArray;
   finally
@@ -555,8 +576,8 @@ begin
     begin
       Response.CustomHeaders.Values[ACustomHeader.HeaderName] := ACustomHeader.Value;
     end;
-  FResource.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
-  FMethod.ForEachAttribute<CustomHeaderAttribute>(LCustomAtributeProcessor);
+  TRttiHelper.ForEachAttribute<CustomHeaderAttribute>(FResourceAttributes, LCustomAtributeProcessor);
+  TRttiHelper.ForEachAttribute<CustomHeaderAttribute>(FMethodAttributes, LCustomAtributeProcessor);
 end;
 
 //class procedure TMARSActivation.UnregisterAfterInvoke(
@@ -734,14 +755,24 @@ begin
   FRequest := ARequest;
   FResponse := AResponse;
   FURL := AURL;
+
   FURLPrototype := nil;
   FToken := nil;
+
   FRttiContext := TRttiContext.Create;
   FContext := TList<TValue>.Create;
+
   FMethod := nil;
+  FMethodReturnType := nil;
+  FMethodAttributes := [];
   FMethodArguments := [];
   FMethodResult := TValue.Empty;
+
+  FResource := nil;
+  FResourceMethods := [];
+  FResourceAttributes := [];
   FResourceInstance := nil;
+
   FInvocationTime.Reset;
 end;
 
@@ -770,8 +801,8 @@ begin
   for LSubscriber in FAfterInvokeProcs do
     LSubscriber(Self);
 
-  Resource.ForEachMethodWithAttribute<AfterInvokeAttribute>(
-    function (AMethod: TRttiMethod; AAttribute: AfterInvokeAttribute): Boolean
+  TRttiHelper.ForEachMethodWithAttribute<AfterInvokeAttribute>(FResourceMethods
+  , function (AMethod: TRttiMethod; AAttribute: AfterInvokeAttribute): Boolean
     var
       LReturnValue: TValue;
     begin
@@ -793,8 +824,8 @@ begin
     LSubscriber(Self, LResult);
 
   if LResult then
-    Resource.ForEachMethodWithAttribute<BeforeInvokeAttribute>(
-      function (AMethod: TRttiMethod; AAttribute: BeforeInvokeAttribute): Boolean
+    TRttiHelper.ForEachMethodWithAttribute<BeforeInvokeAttribute>(FResourceMethods
+    , function (AMethod: TRttiMethod; AAttribute: BeforeInvokeAttribute): Boolean
       var
         LReturnValue: TValue;
       begin
@@ -825,8 +856,8 @@ begin
   end;
 
   if not LHandled then
-    Resource.ForEachMethodWithAttribute<InvokeErrorAttribute>(
-      function (AMethod: TRttiMethod; AAttribute: InvokeErrorAttribute): Boolean
+    TRttiHelper.ForEachMethodWithAttribute<InvokeErrorAttribute>(FResourceMethods
+    , function (AMethod: TRttiMethod; AAttribute: InvokeErrorAttribute): Boolean
       var
         LReturnValue: TValue;
       begin

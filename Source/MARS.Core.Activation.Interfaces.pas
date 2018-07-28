@@ -33,10 +33,13 @@ type
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
     function GetMethod: TRttiMethod;
+    function GetMethodReturnType: TRttiType;
     function GetMethodArguments: TArray<TValue>;
+    function GetMethodAttributes: TArray<TCustomAttribute>;
     function GetMethodResult: TValue;
     function GetRequest: TWebRequest;
     function GetResource: TRttiType;
+    function GetResourceAttributes: TArray<TCustomAttribute>;
     function GetResourceInstance: TObject;
     function GetResponse: TWebResponse;
     function GetURL: TMARSURL;
@@ -47,10 +50,13 @@ type
     property Engine: TMARSEngine read GetEngine;
     property InvocationTime: TStopwatch read GetInvocationTime;
     property Method: TRttiMethod read GetMethod;
+    property MethodReturnType: TRttiType read GetMethodReturnType;
     property MethodArguments: TArray<TValue> read GetMethodArguments;
+    property MethodAttributes: TArray<TCustomAttribute> read GetMethodAttributes;
     property MethodResult: TValue read GetMethodResult;
     property Request: TWebRequest read GetRequest;
     property Resource: TRttiType read GetResource;
+    property ResourceAttributes: TArray<TCustomAttribute> read GetResourceAttributes;
     property ResourceInstance: TObject read GetResourceInstance;
     property Response: TWebResponse read GetResponse;
     property URL: TMARSURL read GetURL;
