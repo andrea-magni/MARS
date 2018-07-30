@@ -216,7 +216,6 @@ type
       const AActivation: IMARSActivation): TValue; override;
   end;
 
-
   HeaderParamAttribute = class(NamedRequestParamAttribute)
   protected
     function GetSwaggerKind: string; override;
@@ -628,11 +627,36 @@ end;
 
 function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
+var
+  LDestinationType: TRttiType;
+  LRequest: TWebRequest;
+  LRecordInstance: Pointer;
+  LField: TRttiField;
+  LName: string;
 begin
-  Result := StringToTValue(
-      AActivation.Request.GetFieldByName(GetActualName(ADestination))
-    , ADestination.GetRttiType
-  );
+  LDestinationType := ADestination.GetRttiType;
+  LRequest := AActivation.Request;
+
+  if Name.Equals('*') and LDestinationType.IsRecord then
+  begin
+    TValue.Make(nil, LDestinationType.Handle, Result);
+    LRecordInstance := Result.GetReferenceToRawData;
+
+    for LField in LDestinationType.GetFields do
+    begin
+      LName := LField.Name;
+      LField.HasAttribute<HeaderParamAttribute>(
+        procedure (AAttribute: HeaderParamAttribute)
+        begin
+          LName := AAttribute.Name;
+        end
+      );
+
+      LField.SetValue(LRecordInstance, StringToTValue(LRequest.GetFieldByName(LName), LField.FieldType));
+    end;
+  end
+  else
+    Result := StringToTValue(LRequest.GetFieldByName(GetActualName(ADestination)), LDestinationType);
 end;
 
 { CookieParamAttribute }

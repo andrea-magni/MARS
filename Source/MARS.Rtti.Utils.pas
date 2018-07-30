@@ -22,9 +22,9 @@ type
 
     function HasAttribute<T: TCustomAttribute>(const AInherited: Boolean = False): Boolean; overload; inline;
     function HasAttribute<T: TCustomAttribute>(
-      const ADoSomething: TProc<T>; const AInherited: Boolean = False): Boolean; overload;
+      const ADoSomething: TProc<T>; const AInherited: Boolean = False): Boolean; overload; inline;
 
-    function GetAllAttributes(const AInherited: Boolean = False): TArray<TCustomAttribute>;
+    function GetAllAttributes(const AInherited: Boolean = False): TArray<TCustomAttribute>; inline;
 
     function ForEachAttribute<T: TCustomAttribute>(
       const ADoSomething: TProc<T>; const AInherited: Boolean = False): Integer; overload; inline;
@@ -204,7 +204,7 @@ begin
   else
   begin
     case ADesiredType.TypeKind of
-      tkInt64,
+      tkInt64: Result := StrToInt64Def(AString, 0);
       tkInteger: Result := StrToIntDef(AString, 0);
       tkEnumeration: begin
         if SameText(ADesiredType.Name, 'Boolean') then

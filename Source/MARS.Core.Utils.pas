@@ -99,7 +99,6 @@ uses
   , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
 ;
 
-
 function StreamToBytes(const ASource: TStream): TBytes;
 begin
   SetLength(Result, ASource.Size);
