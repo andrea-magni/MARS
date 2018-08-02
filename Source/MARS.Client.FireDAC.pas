@@ -82,6 +82,36 @@ type
     property ApplyUpdatesResults: TArray<TMARSFDApplyUpdatesRes> read FApplyUpdatesResults;
   end;
 
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or pidOSX32 or pidiOSSimulator or pidiOSDevice or pidAndroid)]
+  TMARSFDDataSetResource = class(TMARSClientResource)
+  private
+    FApplyUpdatesResult: TMARSFDApplyUpdatesRes;
+    FDataSet: TFDMemTable;
+    FSynchronize: Boolean;
+    FSendDelta: Boolean;
+    FSort: string;
+    FFilter: string;
+  protected
+    procedure SetDataSet(const Value: TFDMemTable);
+
+    procedure BeforeGET; override;
+    procedure AfterGET(const AContent: TStream); override;
+
+    procedure Notification(AComponent: TComponent; Operation: TOperation);
+      override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+  published
+    property Filter: string read FFilter write FFilter;
+    property Sort: string read FSort write FSort;
+    property DataSet: TFDMemTable read FDataSet write SetDataSet;
+    property Synchronize: Boolean read FSynchronize write FSynchronize;
+    property SendDelta: Boolean read FSendDelta write FSendDelta;
+    property ApplyUpdatesResult: TMARSFDApplyUpdatesRes read FApplyUpdatesResult;
+  end;
+
+
 implementation
 
 uses
@@ -384,6 +414,89 @@ begin
     begin
       if SendDelta then
         FDataSet.CachedUpdates := True;
+      FDataSet.ActiveStoredUsage := [];
+    end;
+  end;
+end;
+
+{ TMARSFDDataSetResource }
+
+procedure TMARSFDDataSetResource.AfterGET(const AContent: TStream);
+var
+  LDataSet: TFDMemTable;
+  LDataSets: TArray<TFDMemTable>;
+  LCopyDataSetProc: TThreadProcedure;
+begin
+  inherited;
+
+  if not Assigned(FDataSet) then
+    Exit;
+
+  LDataSets := TFDDataSets.FromJSON(AContent);
+  try
+    for LDataSet in LDataSets do
+    begin
+      LCopyDataSetProc :=
+        procedure
+        begin
+          FDataSet.DisableControls;
+          try
+            FDataSet.Close;
+            FDataSet.Data := LDataset;
+            FDataSet.ApplyUpdates;
+          finally
+            FDataSet.EnableControls;
+          end;
+        end;
+
+        if Synchronize then
+          TThread.Synchronize(nil, LCopyDataSetProc)
+        else
+          LCopyDataSetProc();
+    end;
+  finally
+    TFDDataSets.FreeAll(LDataSets);
+  end;
+end;
+
+procedure TMARSFDDataSetResource.BeforeGET;
+begin
+  inherited;
+  QueryParams.Values['filter'] := Filter;
+  QueryParams.Values['sort'] := Sort;
+end;
+
+constructor TMARSFDDataSetResource.Create(AOwner: TComponent);
+begin
+  inherited;
+  FSynchronize := True;
+  FSendDelta := True;
+  SpecificAccept := TMediaType.APPLICATION_JSON_FireDAC + ',' + TMediaType.APPLICATION_JSON;
+  SpecificContentType := TMediaType.APPLICATION_JSON_FireDAC;
+end;
+
+destructor TMARSFDDataSetResource.Destroy;
+begin
+  inherited;
+end;
+
+procedure TMARSFDDataSetResource.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
+  inherited;
+  if (AComponent = FDataSet) and (Operation = TOperation.opRemove) then
+    FDataSet := nil;
+end;
+
+procedure TMARSFDDataSetResource.SetDataSet(const Value: TFDMemTable);
+begin
+  if FDataSet <> Value then
+  begin
+    FDataSet := Value;
+
+    if Assigned(FDataSet) then
+    begin
+      FDataSet.CachedUpdates := True;
       FDataSet.ActiveStoredUsage := [];
     end;
   end;

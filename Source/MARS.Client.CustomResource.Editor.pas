@@ -50,7 +50,7 @@ begin
       0: CurrentObj.GET(nil, nil, nil);
       1: CurrentObj.POST(nil, nil, nil);
       2: CurrentObj.DELETE(nil, nil, nil);
-  //    3: CurrentObj.PUT;
+      3: CurrentObj.PUT;
   //    4: CurrentObj.PATCH;
   //    5: CurrentObj.HEAD;
   //    6: CurrentObj.OPTIONS;
@@ -72,7 +72,7 @@ begin
     0: Result := 'GET';
     1: Result := 'POST';
     2: Result := 'DELETE';
-//    3: Result := 'PUT';
+    3: Result := 'PUT';
 //    4: Result := 'PATCH';
 //    5: Result := 'HEAD';
 //    6: Result := 'OPTIONS';
@@ -81,7 +81,7 @@ end;
 
 function TMARSClientCustomResourceEditor.GetVerbCount: Integer;
 begin
-  Result := 3;
+  Result := 4;
 end;
 
 end.

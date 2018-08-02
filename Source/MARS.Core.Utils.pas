@@ -398,13 +398,13 @@ end;
 
 function CreateCompactGuidStr: string;
 var
-  I: Integer;
-  LBuffer: array[0..15] of Byte;
+  LIndex: Integer;
+  LBytes: TBytes;
 begin
-  CreateGUID(TGUID(LBuffer));
   Result := '';
-  for I := 0 to 15 do
-    Result := Result + IntToHex(LBuffer[I], 2);
+  LBytes := TGUID.NewGuid.ToByteArray();
+  for LIndex := 0 to Length(LBytes)-1 do
+    Result := Result + IntToHex(LBytes[LIndex], 2);
 end;
 
 function ObjectToJSON(const AObject: TObject; const AOptions: TJsonOptions): TJSONObject;
