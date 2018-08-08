@@ -98,8 +98,12 @@ type
     class function GetContextValue(const AName: string; const AActivation: IMARSActivation;
       const ADesiredType: TFieldType = ftUnknown): TValue; virtual;
 
-    procedure InjectParamValues(const ACommand: TFDCustomCommand); virtual;
-    procedure InjectMacroValues(const ACommand: TFDCustomCommand); virtual;
+    procedure InjectParamValues(const ACommand: TFDCustomCommand;
+      const AOnlyIfEmpty: Boolean = True); virtual;
+    procedure InjectMacroValues(const ACommand: TFDCustomCommand;
+      const AOnlyIfEmpty: Boolean = True); virtual;
+
+    procedure InjectMacroAndParamValues(const ACommand: TFDCustomCommand; const AOnlyIfEmpty: Boolean = True);
 
     constructor Create(const AConnectionDefName: string;
       const AActivation: IMARSActivation = nil); virtual;
@@ -398,8 +402,7 @@ begin
     Assert(LDataSet <> nil);
     Assert(LDataSet.Command <> nil);
 
-    InjectMacroValues(LDataSet.Command);
-    InjectParamValues(LDataSet.Command);
+    InjectMacroAndParamValues(LDataSet.Command);
 
     if Assigned(AOnBeforeApplyUpdates) then
       AOnBeforeApplyUpdates(LDataSet, LDelta);
@@ -445,8 +448,7 @@ begin
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
     Result.CommandText.Text := ASQL;
-    InjectMacroValues(Result);
-    InjectParamValues(Result);
+    InjectMacroAndParamValues(Result);
     if AContextOwned then
       Activation.AddToContext(Result);
   except
@@ -464,8 +466,7 @@ begin
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
-    InjectMacroValues(Result.Command);
-    InjectParamValues(Result.Command);
+    InjectMacroAndParamValues(Result.Command);
     if AContextOwned then
       Activation.AddToContext(Result);
   except
@@ -586,7 +587,14 @@ begin
       LCustomProvider(AActivation, AName, ADesiredType, Result);
 end;
 
-procedure TMARSFireDAC.InjectMacroValues(const ACommand: TFDCustomCommand);
+procedure TMARSFireDAC.InjectMacroAndParamValues(
+  const ACommand: TFDCustomCommand; const AOnlyIfEmpty: Boolean);
+begin
+  InjectMacroValues(ACommand, AOnlyIfEmpty);
+  InjectParamValues(ACommand, AOnlyIfEmpty);
+end;
+
+procedure TMARSFireDAC.InjectMacroValues(const ACommand: TFDCustomCommand; const AOnlyIfEmpty: Boolean);
 var
   LIndex: Integer;
   LMacro: TFDMacro;
@@ -594,11 +602,12 @@ begin
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
-    LMacro.Value := GetContextValue(LMacro.Name, Activation, MacroDataTypeToFieldType(LMacro.DataType)).AsVariant;
+    if ((not AOnlyIfEmpty) or LMacro.IsNull) then
+      LMacro.Value := GetContextValue(LMacro.Name, Activation, MacroDataTypeToFieldType(LMacro.DataType)).AsVariant;
   end;
 end;
 
-procedure TMARSFireDAC.InjectParamValues(const ACommand: TFDCustomCommand);
+procedure TMARSFireDAC.InjectParamValues(const ACommand: TFDCustomCommand; const AOnlyIfEmpty: Boolean);
 var
   LIndex: Integer;
   LParam: TFDParam;
@@ -606,7 +615,8 @@ begin
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
-    LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
+    if ((not AOnlyIfEmpty) or LParam.IsNull) then
+      LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
   end;
 end;
 
