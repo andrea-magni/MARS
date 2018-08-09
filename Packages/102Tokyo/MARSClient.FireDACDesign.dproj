@@ -44,7 +44,7 @@
         <DllSuffix>250</DllSuffix>
         <DesignOnlyPackage>true</DesignOnlyPackage>
         <DCC_UnitSearchPath>../../Source/Core;../../Source/Data/FireDAC;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_Description>MARS-Curiosity REST Library (Client)</DCC_Description>
+        <DCC_Description>MARS-Curiosity REST Library (Client) - FireDAC</DCC_Description>
         <DCC_AdditionalSwitches>-LUDesignIDE</DCC_AdditionalSwitches>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Winapi;Vcl;$(DCC_Namespace)</DCC_Namespace>
         <GenPackage>true</GenPackage>
