@@ -10,7 +10,7 @@ Build your REST applications (server and client) with my library:
 1. standard: build Delphi REST servers to be consumed by other technologies (including web apps, .Net, Java, php...) and build your client applications against any REST server;
 1. Delphi-like: built using modern Delphi features and enabled with Delphi-to-Delphi specific facilities to get more power!
 
-- Compatibility: **Recent Delphi versions (from XE7 up to 10.2.2 Tokyo)** (older versions should be quite compatible)
+- Compatibility: **Recent Delphi versions (from XE7 up to 10.2 Tokyo)** (older versions should be quite compatible)
 
 # Get started
 * Grab a copy of MARS (git clone or download zip)
@@ -18,15 +18,15 @@ Build your REST applications (server and client) with my library:
   * [MARS Folder]\Source
   * [MARS Folder]\ThirdParty\delphi-jose-jwt\Source
   * [MARS Folder]\ThirdParty\mORMot\Source
-* Packages (example for 10.2 Tokyo Enterprise):
-  * Open [MARS Folder]\Packages\102Tokyo\MARS.Enterprise.groupproj
+* Packages (example for 10.2 Tokyo):
+  * Open [MARS Folder]\Packages\102Tokyo\MARS.groupproj
     * Build All
-  * Open [MARS Folder]\Packages\102Tokyo\MARSClient.Enterprise.groupproj
+  * Open [MARS Folder]\Packages\102Tokyo\MARSClient.groupproj
     * Build All
     * Install MARSClient.CoreDesign
     * Install MARSClient.FireDACDesign    
 
-(please correct accordingly to your Delphi version and edition)
+(please adapt these steps to your Delphi version)
 
 # Demos and MARSTemplate
 * Try some demos (i.e. "Demos\HelloWorld", "Demos\Authorization", "Demos\FireDAC Basic")
