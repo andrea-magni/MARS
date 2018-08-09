@@ -618,6 +618,7 @@ begin
   try
     try
       Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
+      FInvocationTime := TStopwatch.StartNew;
 
       CheckResource;
       CheckMethod;
@@ -626,10 +627,8 @@ begin
       CheckAuthentication;
       CheckAuthorization;
 
-      FillResourceMethodParameters;
-
-      FInvocationTime := TStopwatch.StartNew;
       FResourceInstance := FConstructorInfo.ConstructorFunc(Self);
+      FillResourceMethodParameters;
 
       ContextInjection;
       if DoBeforeInvoke then
@@ -855,7 +854,7 @@ begin
       Break;
   end;
 
-  if not LHandled then
+  if Assigned(FResourceInstance) and (not LHandled) then
     TRttiHelper.ForEachMethodWithAttribute<InvokeErrorAttribute>(FResourceMethods
     , function (AMethod: TRttiMethod; AAttribute: InvokeErrorAttribute): Boolean
       var

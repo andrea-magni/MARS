@@ -146,6 +146,8 @@ var
   LMediaType: string;
   LCandidateMediaType: string;
   LAttributes: TArray<TCustomAttribute>;
+  LExtraConsumesMediaTypes: TMediaTypeList;
+  LExtraMediaType: TMediaType;
 //  LCandidateQualityFactor: Double;
 begin
   AMediaType := nil;
@@ -160,6 +162,16 @@ begin
   begin
     LMethod := ADestination.Parent as TRttiMethod;
     LConsumesMediaTypes := GetConsumesMediaTypes(LMethod);
+    LExtraConsumesMediaTypes := GetConsumesMediaTypes(ADestination);
+    try
+      while LExtraConsumesMediaTypes.Count > 0 do
+      begin
+        LExtraMediaType := LExtraConsumesMediaTypes.Extract(LExtraConsumesMediaTypes.Items[0]);
+        LConsumesMediaTypes.Add(LExtraMediaType);
+      end;
+    finally
+      LExtraConsumesMediaTypes.Free;
+    end;
     LAttributes := LMethod.GetAttributes;
   end
   else begin

@@ -627,15 +627,40 @@ end;
 
 function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
+
+  function GetHeaderParamValue(const TheDestination: TRttiObject; const TheName: string): TValue;
+  var
+    LMediaType: TMediaType;
+    LReader: IMessageBodyReader;
+  begin
+    Result := TValue.Empty;
+    // 1 - MessageBodyReader mechanism (standard)
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(TheDestination, LReader, LMediaType);
+    if Assigned(LReader) then
+      try
+        Result := LReader.ReadFrom(
+          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+          AActivation.Request.GetFieldByName(TheName)
+          {$ifdef Delphi10Berlin_UP} ) {$endif}
+          , TheDestination, LMediaType, AActivation);
+      finally
+        FreeAndNil(LMediaType);
+      end
+    else // 2 - fallback (raw)
+    begin
+      Result := StringToTValue(
+          AActivation.Request.GetFieldByName(TheName), TheDestination.GetRttiType
+      );
+    end;
+  end;
+
 var
   LDestinationType: TRttiType;
-  LRequest: TWebRequest;
   LRecordInstance: Pointer;
   LField: TRttiField;
   LName: string;
 begin
   LDestinationType := ADestination.GetRttiType;
-  LRequest := AActivation.Request;
 
   if Name.Equals('*') and LDestinationType.IsRecord then
   begin
@@ -652,11 +677,11 @@ begin
         end
       );
 
-      LField.SetValue(LRecordInstance, StringToTValue(LRequest.GetFieldByName(LName), LField.FieldType));
+      LField.SetValue(LRecordInstance, GetHeaderParamValue(LField, LName));
     end;
   end
   else
-    Result := StringToTValue(LRequest.GetFieldByName(GetActualName(ADestination)), LDestinationType);
+    Result := GetHeaderParamValue(ADestination, GetActualName(ADestination));
 end;
 
 { CookieParamAttribute }
