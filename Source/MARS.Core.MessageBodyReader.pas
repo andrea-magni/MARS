@@ -158,25 +158,21 @@ begin
 //  LCandidateQualityFactor := -1;
 
   Assert(Assigned(ADestination));
-  if ADestination.Parent is TRttiMethod then
+
+  LConsumesMediaTypes := GetConsumesMediaTypes(ADestination);
+  LAttributes := ADestination.GetAttributes;
+
+  if (LConsumesMediaTypes.Count = 0) and (ADestination.Parent is TRttiMethod) then
   begin
-    LMethod := ADestination.Parent as TRttiMethod;
+    LMethod := TRttiMethod(ADestination.Parent);
+    FreeAndNil(LConsumesMediaTypes);
     LConsumesMediaTypes := GetConsumesMediaTypes(LMethod);
-    LExtraConsumesMediaTypes := GetConsumesMediaTypes(ADestination);
-    try
-      while LExtraConsumesMediaTypes.Count > 0 do
-      begin
-        LExtraMediaType := LExtraConsumesMediaTypes.Extract(LExtraConsumesMediaTypes.Items[0]);
-        LConsumesMediaTypes.Add(LExtraMediaType);
-      end;
-    finally
-      LExtraConsumesMediaTypes.Free;
-    end;
-    LAttributes := LMethod.GetAttributes;
-  end
-  else begin
-    LConsumesMediaTypes := GetConsumesMediaTypes(ADestination);
-    LAttributes := ADestination.GetAttributes;
+  end;
+
+  if (Length(LAttributes) = 0) and (ADestination.Parent is TRttiMethod) then
+  begin
+    LMethod := TRttiMethod(ADestination.Parent);
+    LAttributes :=  LAttributes + LMethod.GetAttributes;
   end;
 
   try
