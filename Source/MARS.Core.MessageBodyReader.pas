@@ -146,8 +146,6 @@ var
   LMediaType: string;
   LCandidateMediaType: string;
   LAttributes: TArray<TCustomAttribute>;
-  LExtraConsumesMediaTypes: TMediaTypeList;
-  LExtraMediaType: TMediaType;
 //  LCandidateQualityFactor: Double;
 begin
   AMediaType := nil;
