@@ -368,6 +368,14 @@ begin
   LValue := GuessTValueFromString(DateToJSON(EncodeDate(1982, 5, 24)));
   Assert.AreEqual(EncodeDate(1982, 5, 24), TDateTime(LValue.AsExtended), 'Date value');
   Assert.IsTrue(LValue.Kind = tkFloat, 'Kind = tkFloat');
+
+  LValue := GuessTValueFromString('1982-05-24');
+  Assert.AreEqual(EncodeDate(1982, 5, 24), DateOf(TDateTime(LValue.AsExtended)), 'Date ISO8601 value');
+  Assert.IsTrue(LValue.Kind = tkFloat, 'Kind = tkFloat');
+
+  LValue := GuessTValueFromString('D32DCA14-1B26-43C2-94E4');
+  Assert.AreEqual('D32DCA14-1B26-43C2-94E4', LValue.AsString, 'String with dashes value');
+  Assert.IsTrue(LValue.Kind = tkUString, 'Kind = tkUString');
 end;
 
 { TMARSRecordFromDataSetTest }

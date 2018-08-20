@@ -174,7 +174,7 @@ end;
 
 function GuessTValueFromString(const AString: string): TValue;
 var
-  LValueInteger: Integer;
+  LValueInteger, LDummy: Integer;
   LErrorCode: Integer;
   LValueDouble: Double;
   LValueBool: Boolean;
@@ -184,8 +184,7 @@ begin
   if AString = '' then
     Result := TValue.Empty
   else begin
-    Val(AString, LValueInteger, LErrorCode);
-    if LErrorCode = 0 then
+    if Integer.TryParse(AString, LValueInteger)then
       Result := LValueInteger
     else if TryStrToInt64(AString, LValueInt64) then
       Result := LValueInt64
@@ -195,7 +194,7 @@ begin
       Result := LValueDouble
     else if TryStrToBool(AString, LValueBool) then
       Result := LValueBool
-    else if (AString.CountChar('-') >= 2)
+    else if (AString.CountChar('-') >= 2) and Integer.TryParse(AString.SubString(0, 4), LDummy)
       and TryISO8601ToDate(AString.DeQuotedString('"'), LValueDateTime, False)
     then
       Result := LValueDateTime
