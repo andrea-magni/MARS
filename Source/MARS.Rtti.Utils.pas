@@ -905,6 +905,11 @@ begin
         else
           LRecordField.SetValue(@ARecord, StrToDateTimeDef(LDataSetField.AsString, 0));
       end
+      else if LRecordField.FieldType.Handle.Kind=tkEnumeration then
+      begin
+          LRecordField.SetValue(@ARecord,
+          TValue.FromOrdinal(LRecordField.FieldType.Handle,LDataSetField.AsInteger));
+      end      
       else
         LRecordField.SetValue(@ARecord, TValue.FromVariant(LDataSetField.Value));
     end;
