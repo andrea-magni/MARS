@@ -121,7 +121,8 @@ begin
     Exit;
 
   if not LastCmdSuccess then
-    raise EMARSClientHttpException.Create(FLastResponse.StatusText, FLastResponse.StatusCode);
+    raise EMARSClientHttpException.Create(FLastResponse.StatusText, FLastResponse.StatusCode,
+      FLastResponse.ContentStream, FLastResponse.MimeType);
 end;
 
 procedure TMARSNetClient.CloneCookies(const ADestination,

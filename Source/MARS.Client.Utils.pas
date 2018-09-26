@@ -17,11 +17,17 @@ type
   private
     FStatusText: string;
     FStatusCode: Integer;
+    FContent: TMemoryStream;
+    FContentType: string;
   public
-    constructor Create(const AStatusText: string; const AStatusCode: Integer = 500); virtual;
+    constructor Create(const AStatusText: string; const AStatusCode: Integer = 500;
+      const AContent: TStream = nil; const AContentType: string = ''); virtual;
+    destructor Destroy; override;
 
     property StatusText: string read FStatusText;
     property StatusCode: Integer read FStatusCode;
+    property Content: TMemoryStream read FContent;
+    property ContentType: string read FContentType;
   end;
 
   TMARSClientProc = TProc;
@@ -66,11 +72,24 @@ end;
 { EMARSClientHttpException }
 
 constructor EMARSClientHttpException.Create(const AStatusText: string;
-  const AStatusCode: Integer);
+  const AStatusCode: Integer; const AContent: TStream; const AContentType: string);
 begin
   inherited Create(AStatusCode.ToString + ': ' + AStatusText);
   FStatusCode := AStatusCode;
   FStatusText := AStatusText;
+  FContent := nil;
+  if Assigned(AContent) then
+  begin
+    FContent := TMemoryStream.Create;
+    FContent.CopyFrom(AContent, 0);
+  end;
+  FContentType := AContentType;
+end;
+
+destructor EMARSClientHttpException.Destroy;
+begin
+  FreeAndNil(FContent);
+  inherited;
 end;
 
 end.
