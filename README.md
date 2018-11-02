@@ -18,15 +18,15 @@ Build your REST applications (server and client) with my library:
   * [MARS Folder]\Source
   * [MARS Folder]\ThirdParty\delphi-jose-jwt\Source
   * [MARS Folder]\ThirdParty\mORMot\Source
-* Packages (example for 10.2 Tokyo Enterprise):
-  * Open [MARS Folder]\Packages\102Tokyo\MARS.Enterprise.groupproj
+* Packages (example for 10.2 Tokyo):
+  * Open [MARS Folder]\Packages\102Tokyo\MARS.groupproj
     * Build All
-  * Open [MARS Folder]\Packages\102Tokyo\MARSClient.Enterprise.groupproj
+  * Open [MARS Folder]\Packages\102Tokyo\MARSClient.groupproj
     * Build All
     * Install MARSClient.CoreDesign
     * Install MARSClient.FireDACDesign    
 
-(please correct accordingly to your Delphi version and edition)
+(please correct accordingly to your Delphi version)
 
 # Demos and MARSTemplate
 * Try some demos (i.e. "Demos\HelloWorld", "Demos\Authorization", "Demos\FireDAC Basic")
