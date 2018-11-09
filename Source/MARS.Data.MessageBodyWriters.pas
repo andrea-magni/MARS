@@ -69,7 +69,8 @@ var
   LStreamWriter: TStreamWriter;
   LEncoding: TEncoding;
 begin
-  LEncoding := GetDesiredEncoding(AActivation);
+  if not GetDesiredEncoding(AActivation, LEncoding) then
+    LEncoding := TEncoding.UTF8; // UTF8 by default
   LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
   try
     if AValue.AsObject is TClientDataSet then // CDS

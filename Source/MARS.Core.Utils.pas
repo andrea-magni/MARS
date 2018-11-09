@@ -175,7 +175,6 @@ end;
 function GuessTValueFromString(const AString: string): TValue;
 var
   LValueInteger, LDummy: Integer;
-  LErrorCode: Integer;
   LValueDouble: Double;
   LValueBool: Boolean;
   LValueInt64: Int64;

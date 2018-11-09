@@ -453,36 +453,6 @@ begin
           raise;
         end;
       end
-      // 3 - fallback (raw)
-      else
-      begin
-        Response.ContentType := GetProducesValue;
-        if Response.ContentType = '' then
-          Response.ContentType := TMediaType.WILDCARD;
-        if Assigned(FMethod.ReturnType) then
-        begin
-          if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
-            Response.Content := AValue.AsString
-          else if (AValue.IsType<Boolean>) then
-            Response.Content := BoolToStr(AValue.AsType<Boolean>, True)
-          else if AValue.TypeInfo = TypeInfo(TDateTime) then
-            Response.Content := DateToJSON(AValue.AsType<TDateTime>)
-          else if AValue.TypeInfo = TypeInfo(TDate) then
-            Response.Content := DateToJSON(AValue.AsType<TDate>)
-          else if AValue.TypeInfo = TypeInfo(TTime) then
-            Response.Content := DateToJSON(AValue.AsType<TTime>)
-
-          else if (AValue.Kind in [tkInt64]) then
-            Response.Content := IntToStr(AValue.AsType<Int64>)
-          else if (AValue.Kind in [tkInteger]) then
-            Response.Content := IntToStr(AValue.AsType<Integer>)
-
-          else if (AValue.Kind in [tkFloat]) then
-            Response.Content := FormatFloat('0.00000000', AValue.AsType<Double>)
-          else
-            Response.Content := AValue.ToString;
-        end;
-      end;
     finally
       FWriter := nil;
       FreeAndNil(FWriterMediaType);

@@ -72,6 +72,14 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
+  [Produces(TMediaType.WILDCARD)]
+  TPrimitiveTypesWriter = class(TInterfacedObject, IMessageBodyWriter)
+  private
+  public
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
+  end;
+
 implementation
 
 uses
@@ -143,7 +151,6 @@ end;
 procedure TJSONValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LJSONValue: TJSONValue;
   LJSONString: string;
   LCallbackName: string;
@@ -152,53 +159,52 @@ var
   LJSONPProc: TProc<JSONPAttribute>;
   LContentType: string;
   LEncoding: TEncoding;
+  LContentBytes: TBytes;
 begin
-  LEncoding := GetDesiredEncoding(AActivation);
-  LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
-  try
-    LJSONString := '';
-    if AValue.IsType<string> then
-      LJSONString := AValue.AsType<string>
-    else if AValue.IsType<TJSONValue> then
+  if not GetDesiredEncoding(AActivation, LEncoding) then
+    LEncoding := TEncoding.UTF8; // UTF8 by default
+
+  LJSONString := '';
+  if AValue.IsType<string> then
+    LJSONString := AValue.AsType<string>
+  else if AValue.IsType<TJSONValue> then
+  begin
+    LJSONValue := AValue.AsObject as TJSONValue;
+    LJSONString := LJSONValue.ToJSON;
+  end;
+  if LJSONString = '' then
+    Exit;
+
+  // JSONP
+  LJSONPProc :=
+    procedure (AAttr: JSONPAttribute)
     begin
-      LJSONValue := AValue.AsObject as TJSONValue;
-      LJSONString := LJSONValue.ToJSON;
+      LJSONPEnabled := AAttr.Enabled;
+      LCallbackKey := AAttr.CallbackKey;
+      LContentType := AAttr.ContentType;
     end;
-    if LJSONString = '' then
-      Exit;
 
-    // JSONP
-    LJSONPProc :=
-      procedure (AAttr: JSONPAttribute)
-      begin
-        LJSONPEnabled := AAttr.Enabled;
-        LCallbackKey := AAttr.CallbackKey;
-        LContentType := AAttr.ContentType;
-      end;
-
-    LJSONPEnabled := False;
-    if Assigned(AActivation) then
+  LJSONPEnabled := False;
+  if Assigned(AActivation) then
+  begin
+    if not AActivation.Method.HasAttribute<JSONPAttribute>(LJSONPProc) then
+      AActivation.Resource.HasAttribute<JSONPAttribute>(LJSONPProc);
+    if LJSONPEnabled then
     begin
-      if not AActivation.Method.HasAttribute<JSONPAttribute>(LJSONPProc) then
-        AActivation.Resource.HasAttribute<JSONPAttribute>(LJSONPProc);
+      LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
+      if LCallbackName = '' then
+        LCallbackName := 'callback';
+
       if LJSONPEnabled then
       begin
-        LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
-        if LCallbackName = '' then
-          LCallbackName := 'callback';
-
-        if LJSONPEnabled then
-        begin
-          LJSONString := LCallbackName + '(' + LJSONString + ');';
-          AActivation.Response.ContentType := LContentType;
-        end;
+        LJSONString := LCallbackName + '(' + LJSONString + ');';
+        AActivation.Response.ContentType := LContentType;
       end;
     end;
-
-    LStreamWriter.Write(LJSONString);
-  finally
-    LStreamWriter.Free;
   end;
+
+  LContentBytes := LEncoding.GetBytes(LJSONString);
+  AOutputStream.Write(LContentBytes, Length(LContentBytes));
 end;
 
 { TStreamValueWriter }
@@ -340,6 +346,46 @@ begin
   end;
 end;
 
+{ TPrimitiveTypesWriter }
+
+procedure TPrimitiveTypesWriter.WriteTo(const AValue: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+var
+  LEncoding: TEncoding;
+  LContentBytes: TBytes;
+  LContent: string;
+begin
+  if not GetDesiredEncoding(AActivation, LEncoding) then
+    LEncoding := TEncoding.UTF8; // UTF8 by default
+
+  AActivation.Response.ContentType := 'text/plain; charset=' + GetEncodingName(LEncoding);
+  AActivation.Response.ContentEncoding := GetEncodingName(LEncoding);
+
+  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString]) then
+    LContent := AValue.AsString
+  else if (AValue.IsType<Boolean>) then
+    LContent := BoolToStr(AValue.AsType<Boolean>, True)
+  else if AValue.TypeInfo = TypeInfo(TDateTime) then
+    LContent := DateToJSON(AValue.AsType<TDateTime>)
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    LContent := DateToJSON(AValue.AsType<TDate>)
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    LContent := DateToJSON(AValue.AsType<TTime>)
+
+  else if (AValue.Kind in [tkInt64]) then
+    LContent := IntToStr(AValue.AsType<Int64>)
+  else if (AValue.Kind in [tkInteger]) then
+    LContent := IntToStr(AValue.AsType<Integer>)
+
+  else if (AValue.Kind in [tkFloat]) then
+    LContent := FormatFloat('0.00000000', AValue.AsType<Double>)
+  else // last resource
+    LContent := AValue.ToString;
+
+  LContentBytes := LEncoding.GetBytes(LContent);
+  AOutputStream.Write(LContentBytes, Length(LContentBytes));
+end;
 
 procedure RegisterWriters;
 begin
@@ -416,6 +462,21 @@ begin
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
         Result := TMARSMessageBodyRegistry.AFFINITY_ZERO;
+      end
+  );
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TPrimitiveTypesWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := (AType.TypeKind in [tkInteger, tkChar, tkEnumeration, tkFloat,
+          tkString, tkSet, tkWChar, tkLString, tkWString,
+          tkVariant, tkArray, tkRecord, tkInt64, tkDynArray, tkUString]);
+//          and (AMediaType = TMediaType.WILDCARD);
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
       end
   );
 end;
