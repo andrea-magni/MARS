@@ -76,7 +76,6 @@ type
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
-    function GetProducesValue: string; virtual;
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
@@ -203,30 +202,6 @@ end;
 function TMARSActivation.GetMethodReturnType: TRttiType;
 begin
   Result := FMethodReturnType;
-end;
-
-function TMARSActivation.GetProducesValue: string;
-var
-  LProduces: string;
-begin
-  LProduces := '';
-
-  Method.HasAttribute<ProducesAttribute>(
-    procedure(AAttr: ProducesAttribute)
-    begin
-      LProduces := AAttr.Value;
-    end
-  );
-  if LProduces = '' then
-    Resource.HasAttribute<ProducesAttribute>(
-      procedure(AAttr: ProducesAttribute)
-      begin
-        LProduces := AAttr.Value;
-      end
-    );
-  { TODO -oAndrea : Fallback to Application default? }
-
-  Result := LProduces;
 end;
 
 function TMARSActivation.GetRequest: TWebRequest;

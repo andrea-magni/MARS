@@ -75,6 +75,9 @@ type
   [Produces(TMediaType.WILDCARD)]
   TPrimitiveTypesWriter = class(TInterfacedObject, IMessageBodyWriter)
   private
+  protected
+    function GetProducesValue(const AActivation: IMARSActivation;
+      var AContentType: string): Boolean; virtual;
   public
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -348,6 +351,36 @@ end;
 
 { TPrimitiveTypesWriter }
 
+function TPrimitiveTypesWriter.GetProducesValue(const AActivation: IMARSActivation;
+  var AContentType: string): Boolean;
+var
+  LProduces: string;
+  LFound: Boolean;
+begin
+  LFound := False;
+  LProduces := '';
+
+  AActivation.Method.HasAttribute<ProducesAttribute>(
+    procedure(AAttr: ProducesAttribute)
+    begin
+      LProduces := AAttr.Value;
+      LFound := True;
+    end
+  );
+  if not LFound then
+    AActivation.Resource.HasAttribute<ProducesAttribute>(
+      procedure(AAttr: ProducesAttribute)
+      begin
+        LProduces := AAttr.Value;
+        LFound := True;
+      end
+    );
+
+  Result := LFound;
+  if Result then
+    AContentType := LProduces;
+end;
+
 procedure TPrimitiveTypesWriter.WriteTo(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
@@ -355,12 +388,24 @@ var
   LEncoding: TEncoding;
   LContentBytes: TBytes;
   LContent: string;
+  LContentType: string;
+  LEncodingName: string;
 begin
   if not GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
+  LEncodingName := GetEncodingName(LEncoding);
 
-  AActivation.Response.ContentType := 'text/plain; charset=' + GetEncodingName(LEncoding);
-  AActivation.Response.ContentEncoding := GetEncodingName(LEncoding);
+  LContentType := AActivation.Response.ContentType;
+  if GetProducesValue(AActivation, LContentType) then
+  begin
+    if not LContentType.ToLower.Contains('charset=') then
+      LContentType := LContentType + '; charset=' + LEncodingName;
+    AActivation.Response.ContentType := LContentType;
+  end
+  else
+    AActivation.Response.ContentType := 'text/plain; charset=' + LEncodingName; // default: text/plain
+
+  AActivation.Response.ContentEncoding := LEncodingName;
 
   LContent := TValueToString(AValue);
 
