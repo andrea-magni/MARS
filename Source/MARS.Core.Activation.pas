@@ -452,7 +452,7 @@ begin
           LStream.Free;
           raise;
         end;
-      end
+      end;
     finally
       FWriter := nil;
       FreeAndNil(FWriterMediaType);

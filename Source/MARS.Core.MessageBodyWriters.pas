@@ -362,26 +362,7 @@ begin
   AActivation.Response.ContentType := 'text/plain; charset=' + GetEncodingName(LEncoding);
   AActivation.Response.ContentEncoding := GetEncodingName(LEncoding);
 
-  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString]) then
-    LContent := AValue.AsString
-  else if (AValue.IsType<Boolean>) then
-    LContent := BoolToStr(AValue.AsType<Boolean>, True)
-  else if AValue.TypeInfo = TypeInfo(TDateTime) then
-    LContent := DateToJSON(AValue.AsType<TDateTime>)
-  else if AValue.TypeInfo = TypeInfo(TDate) then
-    LContent := DateToJSON(AValue.AsType<TDate>)
-  else if AValue.TypeInfo = TypeInfo(TTime) then
-    LContent := DateToJSON(AValue.AsType<TTime>)
-
-  else if (AValue.Kind in [tkInt64]) then
-    LContent := IntToStr(AValue.AsType<Int64>)
-  else if (AValue.Kind in [tkInteger]) then
-    LContent := IntToStr(AValue.AsType<Integer>)
-
-  else if (AValue.Kind in [tkFloat]) then
-    LContent := FormatFloat('0.00000000', AValue.AsType<Double>)
-  else // last resource
-    LContent := AValue.ToString;
+  LContent := TValueToString(AValue);
 
   LContentBytes := LEncoding.GetBytes(LContent);
   AOutputStream.Write(LContentBytes, Length(LContentBytes));
@@ -469,7 +450,7 @@ begin
     TPrimitiveTypesWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := (AType.TypeKind in [tkInteger, tkChar, tkEnumeration, tkFloat,
+        Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
           tkString, tkSet, tkWChar, tkLString, tkWString,
           tkVariant, tkArray, tkRecord, tkInt64, tkDynArray, tkUString]);
 //          and (AMediaType = TMediaType.WILDCARD);

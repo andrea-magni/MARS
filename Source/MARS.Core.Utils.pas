@@ -81,6 +81,7 @@ type
   function MatchesMask(const AString, AMask: string): Boolean;
 
   function GuessTValueFromString(const AString: string): TValue;
+  function TValueToString(const AValue: TValue; const ARecursion: Integer = 0): string;
 
   procedure ZipStream(const ASource: TStream; const ADest: TStream);
   procedure UnzipStream(const ASource: TStream; const ADest: TStream);
@@ -202,6 +203,61 @@ begin
   end;
 end;
 
+function TValueToString(const AValue: TValue; const ARecursion: Integer = 0): string;
+var
+  LIndex: Integer;
+  LElement: TValue;
+  LRecordType: TRttiRecordType;
+  LField: TRttiField;
+begin
+  Result := '';
+
+  if AValue.IsArray then
+  begin
+    Result := '';
+    for LIndex := 0 to AValue.GetArrayLength-1 do
+    begin
+      LElement := AValue.GetArrayElement(LIndex);
+      if Result <> '' then
+        Result := Result + ', ';
+      Result := Result  + TValueToString(LElement, ARecursion);
+    end;
+    Result := '[' + Result + ']';
+  end
+  else if AValue.Kind = tkRecord then
+  begin
+    LRecordType := TRttiContext.Create.GetType(AValue.TypeInfo) as TRttiRecordType;
+
+    Result := '';
+    for LField in LRecordType.GetFields do
+    begin
+      if Result <> '' then
+        Result := Result +  ', ';
+      Result := Result + LField.Name + ': ' + TValueToString( LField.GetValue(AValue.GetReferenceToRawData), ARecursion + 1 );
+    end;
+    Result := '(' + Result + ')';
+  end
+  else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString]) then
+    Result := AValue.AsString
+  else if (AValue.IsType<Boolean>) then
+    Result := BoolToStr(AValue.AsType<Boolean>, True)
+  else if AValue.TypeInfo = TypeInfo(TDateTime) then
+    Result := DateToJSON(AValue.AsType<TDateTime>)
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    Result := DateToJSON(AValue.AsType<TDate>)
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    Result := DateToJSON(AValue.AsType<TTime>)
+
+  else if (AValue.Kind in [tkInt64]) then
+    Result := IntToStr(AValue.AsType<Int64>)
+  else if (AValue.Kind in [tkInteger]) then
+    Result := IntToStr(AValue.AsType<Integer>)
+
+  else if (AValue.Kind in [tkFloat]) then
+    Result := FormatFloat('0.00000000', AValue.AsType<Double>)
+  else
+    Result := AValue.ToString;
+end;
 
 function StreamToString(const AStream: TStream; const AEncoding: TEncoding = nil): string;
 var
