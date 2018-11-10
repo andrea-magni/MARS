@@ -1,44 +1,98 @@
-![MARS-curiosity logo](https://www.andreamagni.eu/images/MARS-Curiosity-d.png)
+![MARS-curiosity logo](media/logo-small-MARS.png)
 
-_\* The Delphi stylized helmet icon is trademark of Embarcadero Technologies._
-
-# MARS - Curiosity
 *Delphi REST Library*
 
-Build your REST applications (server and client) with my library:
-1. lightweight: no dictations on your application code, no heavy dependencies, take what you need of the library;
-1. standard: build Delphi REST servers to be consumed by other technologies (including web apps, .Net, Java, php...) and build your client applications against any REST server;
-1. Delphi-like: built using modern Delphi features and enabled with Delphi-to-Delphi specific facilities to get more power!
+1) Lightweight
+1) Easy and powerful
+1) 100% RESTful Web Service
+1) Delphi-like
+1) Advanced dataset support with FireDAC
 
-- Compatibility: **Recent Delphi versions (from XE7 up to 10.2.2 Tokyo)** (older versions should be quite compatible)
+[More features ...](./docs/MainFeatures.md)
 
-# Get started
-* Grab a copy of MARS (git clone or download zip)
-* Add three folders to your Library Path:
-  * [MARS Folder]\Source
-  * [MARS Folder]\ThirdParty\delphi-jose-jwt\Source
-  * [MARS Folder]\ThirdParty\mORMot\Source
-* Packages (example for 10.2 Tokyo):
-  * Open [MARS Folder]\Packages\102Tokyo\MARS.groupproj
-    * Build All
-  * Open [MARS Folder]\Packages\102Tokyo\MARSClient.groupproj
-    * Build All
-    * Install MARSClient.CoreDesign
-    * Install MARSClient.FireDACDesign    
+# Installation
 
-(please correct accordingly to your Delphi version)
+1) Clone or download this project
+1) Add folders to RAD Studio Library Path
+1) Build All
+1) Install two packages
 
-# Demos and MARSTemplate
-* Try some demos (i.e. "Demos\HelloWorld", "Demos\Authorization", "Demos\FireDAC Basic")
-* compile and run the MARScmd_VCL.dproj in [MARS Folder]\Utils\Source\MARScmd, it will help you to create your first project by cloning "Demos\MARSTemplate" into a new folder
+[More about the instalation ...](docs/Instalation.md)
 
-# Map (list most functionalities and concepts)
+# Use the Code Luke!
 
-[PDF](media/MARS-Curiosity%20Map.pdf) | [PNG](media/MARS-Curiosity%20Map.png)
-![MARS map](media/MARS-Curiosity%20Map.png)
+Build REST server with MARS Curiosity is very easy. To run a simple REST server just create a new Console Application and use the following code:
 
-# Contributions
-This is an open source project, so obviously every contribution/help/suggestion will be very appreciated.
-Most of the code has been written by me with some significant contributions by Nando Dessena, Stefan Glienke and Davide Rossi. Some of my customers actually act as beta testers and early adopters (I want to thank them all for the trust and efforts).
+```pascal
+program Mars1;
 
-[Andrea Magni](http://www.andreamagni.eu)
+{$APPTYPE CONSOLE}
+
+{$R *.res}
+
+uses
+  System.SysUtils,
+  MARS.Core.Engine,
+  MARS.http.Server.Indy,
+  MARS.mORMotJWT.Token,
+  MARS.Core.Attributes,
+  MARS.Core.MediaType,
+  MARS.Core.Registry;
+
+type
+  [Path('helloworld')]
+  THelloWorldResource = class
+  public
+    [GET, Produces(TMediaType.TEXT_PLAIN)]
+    function SayHelloWorld: string;
+  end;
+
+function THelloWorldResource.SayHelloWorld: string;
+begin
+  Result := 'Hello World! Zażółć gęślą jaźń';
+end;
+
+var
+  FEngine: MARS.Core.Engine.TMARSEngine;
+  FServer: MARS.http.Server.Indy.TMARShttpServerIndy;
+begin
+  // ----------------------------------
+  // Register a resource class
+  MARS.Core.Registry.TMARSResourceRegistry.Instance.
+    RegisterResource<THelloWorldResource>;
+  // ----------------------------------
+  // Build and configure the engine
+  FEngine := MARS.Core.Engine.TMARSEngine.Create;
+  FEngine.BasePath := '/rest';
+  FEngine.Port := 8080;
+  FEngine.AddApplication('DefaultAPI', '/default', ['*.THelloWorldResource']);
+  FServer := MARS.http.Server.Indy.TMARShttpServerIndy.Create(FEngine);
+  // ----------------------------------
+  // Run the REST server
+  FServer.Active := True;
+  Writeln ('Server is running ...');
+  Write ('Press Enter to stop ...');
+  Readln;
+  // ----------------------------------
+  // Close the server
+  FServer.Active := False;
+  FreeAndNil(FServer);
+  FreeAndNil(FEngine);
+end.
+```
+
+#Documentation
+
+* [More demos and templates](./docs/README.md)
+* [Andrea Magni Blog](http://www.andreamagni.eu)
+* [More demos and templates](./docs/Demos.md)
+
+# Contribution
+
+[See Contribution Guide](./CONTRIBUTING.md)
+
+# Thanks
+
+Most of the code has been written by the author (Andrea Magni) with some significant contributions by Nando Dessena, Stefan Glienke and Davide Rossi. Some of my customers actually act as beta testers and early adopters. I want to thank them all for the trust and effort.
+
+> The Delphi stylized helmet icon is trademark of Embarcadero Technologies.
