@@ -261,7 +261,9 @@ begin
   Result := FToken;
 
   if not Assigned(Result) then
-    raise EMARSException.Create('Token injection failed in MARSActivation');
+    raise EMARSException.Create('Token injection failed in MARSActivation. '
+      + 'Check you have added at least one Token implementation to your uses clause. '
+      + 'On Windows, try adding MARS.mORMotJWT.Token unit to your uses clause.');
 end;
 
 function TMARSActivation.GetURL: TMARSURL;
