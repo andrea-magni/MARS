@@ -17,7 +17,7 @@
 1) Build All
 1) Install two packages
 
-[More about the instalation ...](docs/Instalation.md)
+[More about the installation ...](docs/Instalation.md)
 
 # Use the Code Luke!
 
@@ -49,7 +49,7 @@ type
 
 function THelloWorldResource.SayHelloWorld: string;
 begin
-  Result := 'Hello World! Zażółć gęślą jaźń';
+  Result := 'Hello World! Here is MARS Curiosity ...';
 end;
 
 var
