@@ -35,6 +35,7 @@ uses
   MARS.Core.Engine,
   MARS.http.Server.Indy,
   MARS.mORMotJWT.Token,
+  MARS.Core.MessageBodyWriters,
   MARS.Core.Attributes,
   MARS.Core.MediaType,
   MARS.Core.Registry;
