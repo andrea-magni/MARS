@@ -429,7 +429,9 @@ begin
           LStream.Free;
           raise;
         end;
-      end;
+      end
+      else
+        raise EMARSHttpException.CreateFmt('MessageBodyWriter not found for method %s of resource %s', [Method.Name, Resource.Name]);
     finally
       FWriter := nil;
       FreeAndNil(FWriterMediaType);
@@ -452,7 +454,8 @@ begin
     // actual method invocation
     FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
 
-    WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
+    if Assigned(FMethodReturnType) then // if the method is actually a function and not a procedure
+      WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
   finally
     if not FMethod.HasAttribute<IsReference>(nil) then
       AddToContext(FMethodResult);
