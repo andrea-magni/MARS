@@ -2,22 +2,22 @@
 
 *Delphi REST Library*
 
-1) Lightweight
-1) Easy and powerful
-1) 100% RESTful Web Service
-1) Delphi-like
-1) Advanced dataset support with FireDAC
+1. Lightweight
+1. Easy and powerful
+1. 100% RESTful Web Service
+1. Delphi-like
+1. Advanced dataset support with FireDAC
 
 [More features ...](./docs/MainFeatures.md)
 
 # Installation
 
-1) Clone or download this project
-1) Add folders to RAD Studio Library Path
-1) Build All
-1) Install two packages
+1. Clone or download this project
+1. Add folders to RAD Studio Library Path
+1. Build All
+1. Install two packages
 
-[More about the installation ...](docs/Instalation.md)
+[More about the installation ...](docs/Installation.md)
 
 # Use the Code Luke!
 
