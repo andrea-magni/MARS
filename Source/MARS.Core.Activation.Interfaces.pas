@@ -32,6 +32,9 @@ type
     function GetApplication: TMARSApplication;
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
+    function GetSetupTime: TStopwatch;
+    function GetTeardownTime: TStopwatch;
+    function GetSerializationTime: TStopwatch;
     function GetMethod: TRttiMethod;
     function GetMethodReturnType: TRttiType;
     function GetMethodArguments: TArray<TValue>;
@@ -49,6 +52,9 @@ type
     property Application: TMARSApplication read GetApplication;
     property Engine: TMARSEngine read GetEngine;
     property InvocationTime: TStopwatch read GetInvocationTime;
+    property SetupTime: TStopwatch read GetSetupTime;
+    property TeardownTime: TStopwatch read GetTeardownTime;
+    property SerializationTime: TStopwatch read GetSerializationTime;
     property Method: TRttiMethod read GetMethod;
     property MethodReturnType: TRttiType read GetMethodReturnType;
     property MethodArguments: TArray<TValue> read GetMethodArguments;

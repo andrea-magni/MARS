@@ -69,6 +69,9 @@ type
     FWriter: IMessageBodyWriter;
     FWriterMediaType: TMediaType;
     FInvocationTime: TStopWatch;
+    FSetupTime: TStopWatch;
+    FTeardownTime: TStopWatch;
+    FSerializationTime: TStopWatch;
     FAuthorizationInfo: TMARSAuthorizationInfo;
 
     procedure FreeContext; virtual;
@@ -105,6 +108,9 @@ type
     function GetApplication: TMARSApplication;
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
+    function GetSetupTime: TStopwatch;
+    function GetTeardownTime: TStopwatch;
+    function GetSerializationTime: TStopwatch;
     function GetMethod: TRttiMethod;
     function GetMethodReturnType: TRttiType;
     function GetMethodArguments: TArray<TValue>;
@@ -135,9 +141,13 @@ type
 
     class procedure RegisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
 //    class procedure UnregisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
+    class procedure ClearBeforeInvokes;
     class procedure RegisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
 //    class procedure UnregisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
+    class procedure ClearAfterInvokes;
     class procedure RegisterInvokeError(const AInvokeError: TMARSInvokeErrorProc);
+    class procedure ClearInvokeErrors;
+
 
     class var CreateActivationFunc: TMARSActivationFactoryFunc;
     class function CreateActivation(const AEngine: TMARSEngine;
@@ -227,6 +237,21 @@ end;
 function TMARSActivation.GetResponse: TWebResponse;
 begin
   Result := FResponse;
+end;
+
+function TMARSActivation.GetSerializationTime: TStopwatch;
+begin
+  Result := FSerializationTime;
+end;
+
+function TMARSActivation.GetSetupTime: TStopwatch;
+begin
+  Result := FSetupTime;
+end;
+
+function TMARSActivation.GetTeardownTime: TStopwatch;
+begin
+  Result := FTeardownTime;
 end;
 
 function TMARSActivation.GetToken: TMARSToken;
@@ -380,6 +405,21 @@ begin
   end;
 end;
 
+class procedure TMARSActivation.ClearAfterInvokes;
+begin
+  FAfterInvokeProcs := [];
+end;
+
+class procedure TMARSActivation.ClearBeforeInvokes;
+begin
+  FBeforeInvokeProcs := [];
+end;
+
+class procedure TMARSActivation.ClearInvokeErrors;
+begin
+  FInvokeErrorProcs := [];
+end;
+
 procedure TMARSActivation.FreeContext;
 var
   LDestroyed: TList<TObject>;
@@ -454,8 +494,10 @@ begin
     // actual method invocation
     FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
 
+    FSerializationTime := TStopwatch.StartNew;
     if Assigned(FMethodReturnType) then // if the method is actually a function and not a procedure
       WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
+    FSerializationTime.Stop;
   finally
     if not FMethod.HasAttribute<IsReference>(nil) then
       AddToContext(FMethodResult);
@@ -570,6 +612,8 @@ begin
       Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
       FInvocationTime := TStopwatch.StartNew;
 
+      // setup phase
+      FSetupTime := TStopWatch.StartNew;
       CheckResource;
       CheckMethod;
 
@@ -581,10 +625,12 @@ begin
       FillResourceMethodParameters;
 
       ContextInjection;
+      FSetupTime.Stop;
+
+      // invocation phase
       if DoBeforeInvoke then
       begin
         InvokeResourceMethod;
-        FInvocationTime.Stop;
         DoAfterInvoke;
       end;
 
@@ -593,10 +639,14 @@ begin
     end;
 
   finally
+    // teardown phase
+    FTeardownTime := TStopwatch.StartNew;
     if Assigned(FResourceInstance) then
       FResourceInstance.Free;
-
     FreeContext;
+    FTeardownTime.Stop;
+
+    FInvocationTime.Stop;
   end;
 end;
 
@@ -723,6 +773,9 @@ begin
   FResourceInstance := nil;
 
   FInvocationTime.Reset;
+  FSetupTime.Reset;
+  FTeardownTime.Reset;
+  FSerializationTime.Reset;
 end;
 
 class function TMARSActivation.CreateActivation(const AEngine: TMARSEngine;
