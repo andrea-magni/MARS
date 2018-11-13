@@ -1,6 +1,6 @@
 ![MARS-curiosity logo](media/logo-small-MARS.png)
 
-*Delphi REST Library*
+# Delphi REST Library
 
 1. Lightweight
 1. Easy and powerful
@@ -14,7 +14,7 @@
 
 1. Clone or download this project
 1. Add folders to RAD Studio Library Path
-1. Build All
+1. Build All in the RAD Studio IDE
 1. Install two packages
 
 [More about the installation ...](docs/Installation.md)
@@ -89,12 +89,20 @@ end.
 
 * [MARS Documentation Page](./docs/README.md) TBD
 
+## Forum
+
+Official MARS Curiosity forum at Delphi-Praxis International: https://en.delphipraxis.net/forum/34-mars-curiosity-rest-library/
+
 # Contribution
 
-[See Contribution Guide](./CONTRIBUTING.md)
+It would be great if you would like to support this project. It's quite easy and you can became better Gitter then.
+
+* [See Contribution Guide](./CONTRIBUTING.md)
 
 # Thanks
 
 Most of the code has been written by the author (Andrea Magni) with some significant contributions by Nando Dessena, Stefan Glienke and Davide Rossi. Some of my customers actually act as beta testers and early adopters. I want to thank them all for the trust and effort.
 
-> The Delphi stylized helmet icon is trademark of Embarcadero Technologies.
+# COPYRIGHTS
+
+* The Delphi stylized helmet icon is trademark of Embarcadero Technologies.
