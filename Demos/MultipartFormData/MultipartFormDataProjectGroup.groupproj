@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MultipartFormDataServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MultipartFormDataServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MultipartFormDataServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MultipartFormDataServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MultipartFormDataServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MultipartFormDataServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MultipartFormDataServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MultipartFormDataClient.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MultipartFormDataServerApplication">
+        <MSBuild Projects="MultipartFormDataServerApplication.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataServerApplication:Clean">
+        <MSBuild Projects="MultipartFormDataServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataServerApplication:Make">
+        <MSBuild Projects="MultipartFormDataServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MultipartFormDataServerFMXApplication">
+        <MSBuild Projects="MultipartFormDataServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataServerFMXApplication:Clean">
+        <MSBuild Projects="MultipartFormDataServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataServerFMXApplication:Make">
+        <MSBuild Projects="MultipartFormDataServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MultipartFormDataServerService">
+        <MSBuild Projects="MultipartFormDataServerService.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataServerService:Clean">
+        <MSBuild Projects="MultipartFormDataServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataServerService:Make">
+        <MSBuild Projects="MultipartFormDataServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MultipartFormDataServerConsoleApplication">
+        <MSBuild Projects="MultipartFormDataServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataServerConsoleApplication:Clean">
+        <MSBuild Projects="MultipartFormDataServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataServerConsoleApplication:Make">
+        <MSBuild Projects="MultipartFormDataServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MultipartFormDataServerDaemon">
+        <MSBuild Projects="MultipartFormDataServerDaemon.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataServerDaemon:Clean">
+        <MSBuild Projects="MultipartFormDataServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataServerDaemon:Make">
+        <MSBuild Projects="MultipartFormDataServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MultipartFormDataServerApacheModule">
+        <MSBuild Projects="MultipartFormDataServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataServerApacheModule:Clean">
+        <MSBuild Projects="MultipartFormDataServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataServerApacheModule:Make">
+        <MSBuild Projects="MultipartFormDataServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MultipartFormDataServerISAPI">
+        <MSBuild Projects="MultipartFormDataServerISAPI.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataServerISAPI:Clean">
+        <MSBuild Projects="MultipartFormDataServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataServerISAPI:Make">
+        <MSBuild Projects="MultipartFormDataServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MultipartFormDataClient">
+        <MSBuild Projects="MultipartFormDataClient.dproj"/>
+    </Target>
+    <Target Name="MultipartFormDataClient:Clean">
+        <MSBuild Projects="MultipartFormDataClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MultipartFormDataClient:Make">
+        <MSBuild Projects="MultipartFormDataClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MultipartFormDataServerApplication;MultipartFormDataServerFMXApplication;MultipartFormDataServerService;MultipartFormDataServerConsoleApplication;MultipartFormDataServerDaemon;MultipartFormDataServerApacheModule;MultipartFormDataServerISAPI;MultipartFormDataClient"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MultipartFormDataServerApplication:Clean;MultipartFormDataServerFMXApplication:Clean;MultipartFormDataServerService:Clean;MultipartFormDataServerConsoleApplication:Clean;MultipartFormDataServerDaemon:Clean;MultipartFormDataServerApacheModule:Clean;MultipartFormDataServerISAPI:Clean;MultipartFormDataClient:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MultipartFormDataServerApplication:Make;MultipartFormDataServerFMXApplication:Make;MultipartFormDataServerService:Make;MultipartFormDataServerConsoleApplication:Make;MultipartFormDataServerDaemon:Make;MultipartFormDataServerApacheModule:Make;MultipartFormDataServerISAPI:Make;MultipartFormDataClient:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
