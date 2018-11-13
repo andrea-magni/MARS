@@ -82,7 +82,8 @@ type
     const AFFINITY_ZERO = 0;
   end;
 
-function GetDesiredEncoding(const AActivation: IMARSActivation): TEncoding;
+function GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
+function GetEncodingName(const AEncoding: TEncoding): string;
 
 implementation
 
@@ -93,22 +94,25 @@ uses
   , MARS.Core.Attributes
   ;
 
-function GetDesiredEncoding(const AActivation: IMARSActivation): TEncoding;
+function GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
 var
   LEncoding: TEncoding;
+  LFound: Boolean;
 begin
-  LEncoding := TEncoding.Default;
   if not Assigned(AActivation) then
   begin
-    Result := LEncoding;
+    AEncoding := TEncoding.Default;
+    Result := False;
     Exit;
   end;
 
+  LFound := False;
   // look for attribute on Method
   if Assigned(AActivation.Method) and not AActivation.Method.HasAttribute<EncodingAttribute>(
     procedure(AAttr: EncodingAttribute)
     begin
       LEncoding := AAttr.Encoding;
+      LFound := True;
     end
   ) then // if not found, fallback looking for attribute on Resource
   begin
@@ -117,11 +121,30 @@ begin
         procedure(AAttr: EncodingAttribute)
         begin
           LEncoding := AAttr.Encoding;
+          LFound := True;
         end
       );
   end;
 
-  Result := LEncoding;
+  Result := False;
+  if LFound then
+  begin
+    AEncoding := LEncoding;
+    Result := True;
+  end;
+end;
+
+function GetEncodingName(const AEncoding: TEncoding): string;
+begin
+  Result := '';
+
+  if AEncoding = TEncoding.ANSI then Result := 'ANSI'
+  else if AEncoding = TEncoding.ASCII then Result := 'ASCII'
+  else if AEncoding = TEncoding.BigEndianUnicode then Result :='BigEndianUnicode'
+  else if AEncoding = TEncoding.Default then Result :='Default'
+  else if AEncoding = TEncoding.Unicode then Result :='Unicode'
+  else if AEncoding = TEncoding.UTF7 then Result :='UTF7'
+  else if AEncoding = TEncoding.UTF8 then Result :='UTF8';
 end;
 
 { TMARSMessageBodyRegistry }

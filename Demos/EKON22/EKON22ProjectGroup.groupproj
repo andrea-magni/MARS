@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="EKON22ServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="EKON22ServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="EKON22ServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="EKON22ServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="EKON22ServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="EKON22ServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="EKON22ServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="EKON22Client.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="EKON22ServerApplication">
+        <MSBuild Projects="EKON22ServerApplication.dproj"/>
+    </Target>
+    <Target Name="EKON22ServerApplication:Clean">
+        <MSBuild Projects="EKON22ServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22ServerApplication:Make">
+        <MSBuild Projects="EKON22ServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EKON22ServerFMXApplication">
+        <MSBuild Projects="EKON22ServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="EKON22ServerFMXApplication:Clean">
+        <MSBuild Projects="EKON22ServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22ServerFMXApplication:Make">
+        <MSBuild Projects="EKON22ServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EKON22ServerService">
+        <MSBuild Projects="EKON22ServerService.dproj"/>
+    </Target>
+    <Target Name="EKON22ServerService:Clean">
+        <MSBuild Projects="EKON22ServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22ServerService:Make">
+        <MSBuild Projects="EKON22ServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EKON22ServerConsoleApplication">
+        <MSBuild Projects="EKON22ServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="EKON22ServerConsoleApplication:Clean">
+        <MSBuild Projects="EKON22ServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22ServerConsoleApplication:Make">
+        <MSBuild Projects="EKON22ServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EKON22ServerDaemon">
+        <MSBuild Projects="EKON22ServerDaemon.dproj"/>
+    </Target>
+    <Target Name="EKON22ServerDaemon:Clean">
+        <MSBuild Projects="EKON22ServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22ServerDaemon:Make">
+        <MSBuild Projects="EKON22ServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EKON22ServerApacheModule">
+        <MSBuild Projects="EKON22ServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="EKON22ServerApacheModule:Clean">
+        <MSBuild Projects="EKON22ServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22ServerApacheModule:Make">
+        <MSBuild Projects="EKON22ServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EKON22ServerISAPI">
+        <MSBuild Projects="EKON22ServerISAPI.dproj"/>
+    </Target>
+    <Target Name="EKON22ServerISAPI:Clean">
+        <MSBuild Projects="EKON22ServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22ServerISAPI:Make">
+        <MSBuild Projects="EKON22ServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EKON22Client">
+        <MSBuild Projects="EKON22Client.dproj"/>
+    </Target>
+    <Target Name="EKON22Client:Clean">
+        <MSBuild Projects="EKON22Client.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EKON22Client:Make">
+        <MSBuild Projects="EKON22Client.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="EKON22ServerApplication;EKON22ServerFMXApplication;EKON22ServerService;EKON22ServerConsoleApplication;EKON22ServerDaemon;EKON22ServerApacheModule;EKON22ServerISAPI;EKON22Client"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="EKON22ServerApplication:Clean;EKON22ServerFMXApplication:Clean;EKON22ServerService:Clean;EKON22ServerConsoleApplication:Clean;EKON22ServerDaemon:Clean;EKON22ServerApacheModule:Clean;EKON22ServerISAPI:Clean;EKON22Client:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="EKON22ServerApplication:Make;EKON22ServerFMXApplication:Make;EKON22ServerService:Make;EKON22ServerConsoleApplication:Make;EKON22ServerDaemon:Make;EKON22ServerApacheModule:Make;EKON22ServerISAPI:Make;EKON22Client:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

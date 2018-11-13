@@ -76,7 +76,6 @@ type
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
-    function GetProducesValue: string; virtual;
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
@@ -205,30 +204,6 @@ begin
   Result := FMethodReturnType;
 end;
 
-function TMARSActivation.GetProducesValue: string;
-var
-  LProduces: string;
-begin
-  LProduces := '';
-
-  Method.HasAttribute<ProducesAttribute>(
-    procedure(AAttr: ProducesAttribute)
-    begin
-      LProduces := AAttr.Value;
-    end
-  );
-  if LProduces = '' then
-    Resource.HasAttribute<ProducesAttribute>(
-      procedure(AAttr: ProducesAttribute)
-      begin
-        LProduces := AAttr.Value;
-      end
-    );
-  { TODO -oAndrea : Fallback to Application default? }
-
-  Result := LProduces;
-end;
-
 function TMARSActivation.GetRequest: TWebRequest;
 begin
   Result := FRequest;
@@ -261,7 +236,9 @@ begin
   Result := FToken;
 
   if not Assigned(Result) then
-    raise EMARSException.Create('Token injection failed in MARSActivation');
+    raise EMARSException.Create('Token injection failed in MARSActivation. '
+      + 'Check you have added at least one Token implementation to your uses clause. '
+      + 'On Windows, try adding MARS.mORMotJWT.Token unit to your uses clause.');
 end;
 
 function TMARSActivation.GetURL: TMARSURL;
@@ -453,36 +430,8 @@ begin
           raise;
         end;
       end
-      // 3 - fallback (raw)
       else
-      begin
-        Response.ContentType := GetProducesValue;
-        if Response.ContentType = '' then
-          Response.ContentType := TMediaType.WILDCARD;
-        if Assigned(FMethod.ReturnType) then
-        begin
-          if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString])  then
-            Response.Content := AValue.AsString
-          else if (AValue.IsType<Boolean>) then
-            Response.Content := BoolToStr(AValue.AsType<Boolean>, True)
-          else if AValue.TypeInfo = TypeInfo(TDateTime) then
-            Response.Content := DateToJSON(AValue.AsType<TDateTime>)
-          else if AValue.TypeInfo = TypeInfo(TDate) then
-            Response.Content := DateToJSON(AValue.AsType<TDate>)
-          else if AValue.TypeInfo = TypeInfo(TTime) then
-            Response.Content := DateToJSON(AValue.AsType<TTime>)
-
-          else if (AValue.Kind in [tkInt64]) then
-            Response.Content := IntToStr(AValue.AsType<Int64>)
-          else if (AValue.Kind in [tkInteger]) then
-            Response.Content := IntToStr(AValue.AsType<Integer>)
-
-          else if (AValue.Kind in [tkFloat]) then
-            Response.Content := FormatFloat('0.00000000', AValue.AsType<Double>)
-          else
-            Response.Content := AValue.ToString;
-        end;
-      end;
+        raise EMARSHttpException.CreateFmt('MessageBodyWriter not found for method %s of resource %s', [Method.Name, Resource.Name]);
     finally
       FWriter := nil;
       FreeAndNil(FWriterMediaType);
@@ -505,7 +454,8 @@ begin
     // actual method invocation
     FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
 
-    WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
+    if Assigned(FMethodReturnType) then // if the method is actually a function and not a procedure
+      WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
   finally
     if not FMethod.HasAttribute<IsReference>(nil) then
       AddToContext(FMethodResult);
