@@ -11,9 +11,11 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON, MARS.Core.MediaType
-  , MARS.Client.Utils, MARS.Core.Utils
-  ;
+, MARS.Core.JSON
+, MARS.Core.Utils
+, MARS.Core.MediaType
+, MARS.Client.Utils
+;
 
 type
   TMARSAuthEndorsement = (Cookie, AuthorizationBearer);
