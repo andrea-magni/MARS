@@ -39,6 +39,7 @@ type
     FQueryParams: TStrings;
     FSpecificAccept: string;
     FSpecificContentType: string;
+    FSpecificURL: string;
     FToken: TMARSClientCustomResource;
     procedure SetPathParamsValues(const Value: TStrings);
     procedure SetQueryParams(const Value: TStrings);
@@ -131,6 +132,7 @@ type
     property SpecificClient: TMARSCustomClient read FSpecificClient write FSpecificClient;
     property SpecificContentType: string read FSpecificContentType write FSpecificContentType;
     property SpecificToken: string read FSpecificToken write FSpecificToken;
+    property SpecificURL: string read FSpecificURL write FSpecificURL;
     property Resource: string read FResource write FResource;
     property Path: string read GetPath;
     property PathParamsValues: TStrings read FPathParamsValues write SetPathParamsValues;
@@ -266,20 +268,30 @@ begin
   if Assigned(Application) then
     LApplication := Application.AppName;
 
-
   Result := TMARSURL.CombinePath([LEngine, LApplication, Resource]);
 end;
 
 
 function TMARSClientCustomResource.GetURL: string;
+var
+  LQueryString: string;
 begin
-  Result := TMARSURL.CombinePath([
-    Path
-    , TMARSURL.CombinePath(TMARSURL.URLEncode(FPathParamsValues.ToStringArray))
-  ]);
+  if FSpecificURL <> '' then
+    Result := FSpecificURL
+  else
+    Result := TMARSURL.CombinePath([
+      Path
+      , TMARSURL.CombinePath(TMARSURL.URLEncode(FPathParamsValues.ToStringArray))
+    ]);
 
   if FQueryParams.Count > 0 then
-    Result := Result + '?' + SmartConcat(TMARSURL.URLEncode(FQueryParams.ToStringArray), '&');
+  begin
+    LQueryString := SmartConcat(TMARSURL.URLEncode(FQueryParams.ToStringArray), TMARSURL.URL_QUERY_SEPARATOR);
+    if Result.Contains(TMARSURL.URL_QUERY_PREFIX) then
+      Result := Result + TMARSURL.URL_QUERY_SEPARATOR + LQueryString
+    else
+      Result := Result + TMARSURL.URL_QUERY_PREFIX + LQueryString;
+  end;
 end;
 
 procedure TMARSClientCustomResource.Notification(AComponent: TComponent;

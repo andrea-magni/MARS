@@ -54,6 +54,7 @@ type
   public
     const URL_PATH_SEPARATOR = '/';
     const URL_QUERY_SEPARATOR = '&';
+    const URL_QUERY_PREFIX = '?';
     const DUMMY_URL = 'http://localhost:1234/';
     const PATH_PARAM_WILDCARD = '{*}';
 
@@ -207,7 +208,7 @@ var
 begin
   LQuery := string(AWebRequest.Query);
   if LQuery <> '' then
-    LQuery := '?' + LQuery;
+    LQuery := URL_QUERY_PREFIX + LQuery;
 
   // Add the protocol in order to make Parse work.
   Create('http://' + string(AWebRequest.Host) + ':' + IntToStr(AWebRequest.ServerPort) + string(AWebRequest.RawPathInfo) + LQuery);
@@ -368,8 +369,8 @@ begin
   if FQuery <> '' then
   begin
     LQuery := URLDecode(FQuery);
-    while StartsStr(LQuery, '?') do
-      LQuery := RightStr(LQuery, Length(LQuery) - 1);
+    while StartsStr(LQuery, URL_QUERY_PREFIX) do
+      LQuery := RightStr(LQuery, Length(LQuery) - Length(URL_QUERY_PREFIX));
 
     LStrings := TStringList.Create;
     try
