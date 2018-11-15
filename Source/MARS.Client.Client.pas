@@ -97,8 +97,11 @@ type
       const ASynchronize: Boolean = True); overload;
 {$endif}
 
+    class function GetAsString(const AURL: string;
+      const AToken: string = ''; const AAccept: string = TMediaType.WILDCARD): string; overload;
+
     class function GetAsString(const AEngineURL, AAppName, AResourceName: string;
-      const APathParams: TArray<string>; const AQueryParams: TStrings;
+      const APathParams: TArray<string>; const AQueryParams: TStrings = nil;
       const AToken: string = ''; const AAccept: string = TMediaType.WILDCARD): string; overload;
 
     class function PostJSON(const AEngineURL, AAppName, AResourceName: string;
@@ -141,12 +144,13 @@ function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
 implementation
 
 uses
-    Rtti, TypInfo
-  , MARS.Client.CustomResource
-  , MARS.Client.Resource
-  , MARS.Client.Resource.JSON
-  , MARS.Client.Resource.Stream
-  , MARS.Client.Application
+  Rtti, TypInfo
+, MARS.Core.URL
+, MARS.Client.CustomResource
+, MARS.Client.Resource
+, MARS.Client.Resource.JSON
+, MARS.Client.Resource.Stream
+, MARS.Client.Application
 ;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
@@ -291,44 +295,46 @@ end;
 
 class function TMARSCustomClient.GetAsString(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
-  const AQueryParams: TStrings; const AToken: string = '';
-  const AAccept: string = TMediaType.WILDCARD): string;
+  const AQueryParams: TStrings; const AToken: string;
+  const AAccept: string): string;
+var
+  LURL: TMARSURL;
+  LQuery: string;
+begin
+  LURL := TMARSURL.CreateDummy(APathParams + [AAppName, AResourceName], AEngineURL);
+  try
+    LQuery := '';
+    if Assigned(AQueryParams) and (AQueryParams.Count > 0) then
+      LQuery := '?' + SmartConcat(TMARSURL.URLEncode(AQueryParams.ToStringArray), TMARSURL.URL_QUERY_SEPARATOR);
+
+    Result := GetAsString(LURL.URL + LQuery, AToken, AAccept);
+  finally
+    LURL.Free;
+  end;
+end;
+
+class function TMARSCustomClient.GetAsString(const AURL: string; const AToken,
+  AAccept: string): string;
 var
   LClient: TMARSCustomClient;
   LResource: TMARSClientResource;
-  LApp: TMARSClientApplication;
-  LIndex: Integer;
-  LFinalURL: string;
 begin
   LClient := Create(nil);
   try
     LClient.AuthEndorsement := AuthorizationBearer;
-    LClient.MARSEngineURL := AEngineURL;
-    LApp := TMARSClientApplication.Create(nil);
+    LClient.MARSEngineURL := '';
+
+    LResource := TMARSClientResource.Create(nil);
     try
-      LApp.Client := LClient;
-      LApp.AppName := AAppName;
-      LResource := TMARSClientResource.Create(nil);
-      try
-        LResource.Application := LApp;
-        LResource.Resource := AResourceName;
+      LResource.SpecificClient := LClient;
+      LResource.Resource := '';
 
-        LResource.PathParamsValues.Clear;
-        for LIndex := 0 to Length(APathParams)-1 do
-          LResource.PathParamsValues.Add(APathParams[LIndex]);
-
-        if Assigned(AQueryParams) then
-          LResource.QueryParams.Assign(AQueryParams);
-
-        LFinalURL := LResource.URL;
-        LResource.SpecificToken := AToken;
-        LResource.SpecificAccept := AAccept;
-        Result := LResource.GETAsString();
-      finally
-        LResource.Free;
-      end;
+      LResource.SpecificURL := AURL;
+      LResource.SpecificToken := AToken;
+      LResource.SpecificAccept := AAccept;
+      Result := LResource.GETAsString();
     finally
-      LApp.Free;
+      LResource.Free;
     end;
   finally
     LClient.Free;
@@ -366,7 +372,6 @@ begin
         if Assigned(AQueryParams) then
           LResource.QueryParams.Assign(AQueryParams);
 
-        LFinalURL := LResource.URL;
         LResource.SpecificToken := AToken;
         LResource.GET(nil, nil, nil);
 
