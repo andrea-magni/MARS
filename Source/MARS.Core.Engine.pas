@@ -32,6 +32,8 @@ type
 
   TMARSEngineBeforeHandleRequestEvent = reference to function(AEngine: TMARSEngine;
     AURL: TMARSURL; ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean): Boolean;
+  TMARSEngineAfterHandleRequestEvent = reference to procedure(AEngine: TMARSEngine;
+    AURL: TMARSURL; ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean);
 
   TMARSEngine = class
   private
@@ -40,6 +42,7 @@ type
     FParameters: TMARSParameters;
     FName: string;
     FOnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent;
+    FOnAfterHandleRequest: TMARSEngineAfterHandleRequestEvent;
   protected
     function GetBasePath: string; virtual;
     function GetPort: Integer; virtual;
@@ -68,6 +71,7 @@ type
     property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
 
     property OnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent read FOnBeforeHandleRequest write FOnBeforeHandleRequest;
+    property OnAfterHandleRequest: TMARSEngineAfterHandleRequestEvent read FOnAfterHandleRequest write FOnAfterHandleRequest;
   end;
 
   TMARSEngineRegistry=class
@@ -226,6 +230,9 @@ begin
       LActivation.Invoke;
       Result := True;
     end;
+
+    if Assigned(FOnAfterHandleRequest) then
+      FOnAfterHandleRequest(Self, LURL, ARequest, AResponse, Result);
   finally
     LURL.Free;
   end;

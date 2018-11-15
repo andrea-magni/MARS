@@ -11,9 +11,11 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON
-  , MARS.Client.Utils, MARS.Core.Utils
-  ;
+, MARS.Core.JSON
+, MARS.Core.Utils
+, MARS.Core.MediaType
+, MARS.Client.Utils
+;
 
 type
   TMARSAuthEndorsement = (Cookie, AuthorizationBearer);
@@ -97,7 +99,7 @@ type
 
     class function GetAsString(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
-      const AToken: string = ''): string; overload;
+      const AToken: string = ''; const AAccept: string = TMediaType.WILDCARD): string; overload;
 
     class function PostJSON(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
@@ -289,7 +291,8 @@ end;
 
 class function TMARSCustomClient.GetAsString(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
-  const AQueryParams: TStrings; const AToken: string): string;
+  const AQueryParams: TStrings; const AToken: string = '';
+  const AAccept: string = TMediaType.WILDCARD): string;
 var
   LClient: TMARSCustomClient;
   LResource: TMARSClientResource;
@@ -319,6 +322,7 @@ begin
 
         LFinalURL := LResource.URL;
         LResource.SpecificToken := AToken;
+        LResource.SpecificAccept := AAccept;
         Result := LResource.GETAsString();
       finally
         LResource.Free;
