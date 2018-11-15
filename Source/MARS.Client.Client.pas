@@ -27,6 +27,9 @@ type
   TMARSCustomClient = class; // fwd
   TMARSCustomClientClass = class of TMARSCustomClient;
 
+  TMARSClientBeforeExecuteProc = reference to procedure (const AURL: string;
+    const AClient: TMARSCustomClient);
+
   TMARSProxyConfig = class(TPersistent)
   private
     FPort: Integer;
@@ -64,6 +67,9 @@ type
     FProxyConfig: TMARSProxyConfig;
     FAuthToken: string;
     procedure SetProxyConfig(const Value: TMARSProxyConfig);
+  protected
+    class var FBeforeExecuteProcs: TArray<TMARSClientBeforeExecuteProc>;
+    class procedure FireBeforeExecute(const AURL: string; const AClient: TMARSCustomClient);
   protected
     procedure AssignTo(Dest: TPersistent); override;
 
@@ -156,6 +162,10 @@ type
     class function PostStream(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const AContent: TStream; const AToken: string = ''): Boolean;
+
+    class function RegisterBeforeExecute(const ABeforeExecute: TMARSClientBeforeExecuteProc): Integer;
+    class procedure UnregisterBeforeExecute(const AIndex: Integer);
+    class procedure ClearBeforeExecute;
   published
     property MARSEngineURL: string read FMARSEngineURL write FMARSEngineURL;
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
@@ -226,6 +236,11 @@ begin
     ApplyProxyConfig;
 end;
 
+class procedure TMARSCustomClient.ClearBeforeExecute;
+begin
+  FBeforeExecuteProcs := [];
+end;
+
 constructor TMARSCustomClient.Create(AOwner: TComponent);
 begin
   inherited;
@@ -268,6 +283,15 @@ begin
   // to be implemented in inherited classes
 end;
 
+class procedure TMARSCustomClient.FireBeforeExecute(const AURL: string;
+  const AClient: TMARSCustomClient);
+var
+  LProc: TMARSClientBeforeExecuteProc;
+begin
+  for LProc in FBeforeExecuteProcs do
+    LProc(AURL, AClient);
+end;
+
 procedure TMARSCustomClient.Get(const AURL: string; AResponseContent: TStream;
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
@@ -304,6 +328,13 @@ begin
   BeforeExecute;
 end;
 
+class function TMARSCustomClient.RegisterBeforeExecute(
+  const ABeforeExecute: TMARSClientBeforeExecuteProc): Integer;
+begin
+  FBeforeExecuteProcs := FBeforeExecuteProcs + [TMARSClientBeforeExecuteProc(ABeforeExecute)];
+  Result := Length(FBeforeExecuteProcs) - 1;
+end;
+
 function TMARSCustomClient.ResponseStatusCode: Integer;
 begin
   Result := -1;
@@ -338,6 +369,12 @@ end;
 procedure TMARSCustomClient.SetReadTimeout(const Value: Integer);
 begin
   // to be implemented in inherited classes
+end;
+
+class procedure TMARSCustomClient.UnregisterBeforeExecute(
+  const AIndex: Integer);
+begin
+  System.Delete(FBeforeExecuteProcs, AIndex, 1);
 end;
 
 class function TMARSCustomClient.GetAsString(const AEngineURL, AAppName,
@@ -379,6 +416,7 @@ begin
       LResource.SpecificURL := AURL;
       LResource.SpecificToken := AToken;
       LResource.SpecificAccept := AAccept;
+      FireBeforeExecute(LResource.URL, LClient);
       Result := LResource.GETAsString();
     finally
       LResource.Free;
@@ -420,6 +458,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LResource.SpecificToken := AToken;
+        FireBeforeExecute(LResource.URL, LClient);
         LResource.GET(nil, nil, nil);
 
         Result := nil;
@@ -543,6 +582,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LResource.SpecificToken := AToken;
+        FireBeforeExecute(LResource.URL, LClient);
         LResource.GET(nil, nil, nil);
 
         Result := TMemoryStream.Create;
@@ -602,6 +642,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LResource.SpecificToken := AToken;
+        FireBeforeExecute(LResource.URL, LClient);
         LResource.POST(
           procedure (AStream: TMemoryStream)
           var
@@ -747,6 +788,7 @@ begin
           LResource.QueryParams.Assign(AQueryParams);
 
         LResource.SpecificToken := AToken;
+        FireBeforeExecute(LResource.URL, LClient);
         LResource.POST(
           procedure (AStream: TMemoryStream)
           begin
