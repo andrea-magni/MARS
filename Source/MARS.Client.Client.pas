@@ -27,6 +27,24 @@ type
   TMARSCustomClient = class; // fwd
   TMARSCustomClientClass = class of TMARSCustomClient;
 
+  TMARSProxyConfig = class(TPersistent)
+  private
+    FPort: Integer;
+    FPassword: string;
+    FHost: string;
+    FUserName: string;
+    FEnabled: Boolean;
+  protected
+    procedure AssignTo(Dest: TPersistent); override;
+  public
+  published
+    property Enabled: Boolean read FEnabled write FEnabled;
+    property Host: string read FHost write FHost;
+    property Port: Integer read FPort write FPort;
+    property UserName: string read FUserName write FUserName;
+    property Password: string read FPassword write FPassword;
+  end;
+
   {$ifdef DelphiXE2_UP}
     [ComponentPlatformsAttribute(
         pidWin32 or pidWin64
@@ -43,6 +61,9 @@ type
     FMARSEngineURL: string;
     FOnError: TMARSClientErrorEvent;
     FAuthEndorsement: TMARSAuthEndorsement;
+    FProxyConfig: TMARSProxyConfig;
+    FAuthToken: string;
+    procedure SetProxyConfig(const Value: TMARSProxyConfig);
   protected
     procedure AssignTo(Dest: TPersistent); override;
 
@@ -52,10 +73,14 @@ type
     procedure SetReadTimeout(const Value: Integer); virtual;
     procedure SetAuthEndorsement(const Value: TMARSAuthEndorsement);
 
-    procedure EndorseAuthorization(const AAuthToken: string); virtual;
+    procedure ApplyProxyConfig; virtual;
+    procedure EndorseAuthorization; virtual;
     procedure AuthEndorsementChanged; virtual;
+    procedure BeforeExecute; virtual;
+    property AuthToken: string read FAuthToken;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
 
     procedure DoError(const AResource: TObject; const AException: Exception;
       const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
@@ -137,6 +162,7 @@ type
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
     property AuthEndorsement: TMARSAuthEndorsement read FAuthEndorsement write SetAuthEndorsement default TMARSAuthEndorsement.Cookie;
+    property ProxyConfig: TMARSProxyConfig read FProxyConfig write SetProxyConfig;
   end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
@@ -164,6 +190,11 @@ end;
 
 { TMARSCustomClient }
 
+procedure TMARSCustomClient.ApplyProxyConfig;
+begin
+  // to be implemented in inherited classes
+end;
+
 procedure TMARSCustomClient.AssignTo(Dest: TPersistent);
 var
   LDestClient: TMARSCustomClient;
@@ -178,6 +209,8 @@ begin
     LDestClient.ConnectTimeout := ConnectTimeout;
     LDestClient.ReadTimeout := ReadTimeout;
     LDestClient.OnError := OnError;
+
+    LDestClient.ProxyConfig.Assign(ProxyConfig);
   end;
 end;
 
@@ -186,9 +219,17 @@ begin
 
 end;
 
+procedure TMARSCustomClient.BeforeExecute;
+begin
+  EndorseAuthorization;
+  if ProxyConfig.Enabled then
+    ApplyProxyConfig;
+end;
+
 constructor TMARSCustomClient.Create(AOwner: TComponent);
 begin
   inherited;
+  FProxyConfig := TMARSProxyConfig.Create;
   FAuthEndorsement := Cookie;
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
@@ -197,7 +238,14 @@ end;
 procedure TMARSCustomClient.Delete(const AURL: string; AContent, AResponse: TStream;
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
-  EndorseAuthorization(AAuthToken);
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+end;
+
+destructor TMARSCustomClient.Destroy;
+begin
+  FreeAndNil(FProxyConfig);
+  inherited;
 end;
 
 procedure TMARSCustomClient.DoError(const AResource: TObject;
@@ -215,15 +263,16 @@ begin
     raise EMARSClientException.Create(AException.Message)
 end;
 
-procedure TMARSCustomClient.EndorseAuthorization(const AAuthToken: string);
+procedure TMARSCustomClient.EndorseAuthorization;
 begin
-
+  // to be implemented in inherited classes
 end;
 
 procedure TMARSCustomClient.Get(const AURL: string; AResponseContent: TStream;
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
-  EndorseAuthorization(AAuthToken);
+  FAuthToken := AAuthToken;
+  BeforeExecute;
 end;
 
 function TMARSCustomClient.GetConnectTimeout: Integer;
@@ -236,16 +285,6 @@ begin
   Result := -1;
 end;
 
-//function TMARSCustomClient.GetRequest: TIdHTTPRequest;
-//begin
-//  Result := FHttpClient.Request;
-//end;
-
-//function TMARSCustomClient.GetResponse: TIdHTTPResponse;
-//begin
-//  Result := FHttpClient.Response;
-//end;
-
 function TMARSCustomClient.LastCmdSuccess: Boolean;
 begin
   Result := False;
@@ -254,13 +293,15 @@ end;
 procedure TMARSCustomClient.Post(const AURL: string; AContent, AResponse: TStream;
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
-  EndorseAuthorization(AAuthToken);
+  FAuthToken := AAuthToken;
+  BeforeExecute;
 end;
 
 procedure TMARSCustomClient.Put(const AURL: string; AContent, AResponse: TStream;
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
-  EndorseAuthorization(AAuthToken);
+  FAuthToken := AAuthToken;
+  BeforeExecute;
 end;
 
 function TMARSCustomClient.ResponseStatusCode: Integer;
@@ -285,12 +326,18 @@ end;
 
 procedure TMARSCustomClient.SetConnectTimeout(const Value: Integer);
 begin
+  // to be implemented in inherited classes
+end;
 
+procedure TMARSCustomClient.SetProxyConfig(const Value: TMARSProxyConfig);
+begin
+  FProxyConfig := Value;
+  ApplyProxyConfig;
 end;
 
 procedure TMARSCustomClient.SetReadTimeout(const Value: Integer);
 begin
-
+  // to be implemented in inherited classes
 end;
 
 class function TMARSCustomClient.GetAsString(const AEngineURL, AAppName,
@@ -520,7 +567,8 @@ procedure TMARSCustomClient.Post(const AURL: string;
   const AFormData: TArray<TFormParam>; const AResponse: TStream;
   const AAuthToken, AAccept: string; const AContentType: string);
 begin
-  EndorseAuthorization(AAuthToken);
+  FAuthToken := AAuthToken;
+  BeforeExecute;
 end;
 
 class function TMARSCustomClient.PostJSON(const AEngineURL, AAppName,
@@ -728,7 +776,28 @@ procedure TMARSCustomClient.Put(const AURL: string;
   const AFormData: TArray<TFormParam>; const AResponse: TStream;
   const AAuthToken, AAccept: string; const AContentType: string);
 begin
-  EndorseAuthorization(AAuthToken);
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+end;
+
+{ TMARSProxyConfig }
+
+procedure TMARSProxyConfig.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSProxyConfig;
+begin
+//  inherited;
+  if Dest is TMARSProxyConfig then
+  begin
+    LDest := TMARSProxyConfig(Dest);
+
+    LDest.Enabled := Enabled;
+    LDest.Host := Host;
+    LDest.Port := Port;
+    LDest.UserName := UserName;
+    LDest.Password := Password;
+  end;
+
 end;
 
 end.

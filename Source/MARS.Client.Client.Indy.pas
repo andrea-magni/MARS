@@ -51,7 +51,8 @@ type
 
     function CreateMultipartFormData(AFormData: TArray<TFormParam>): TIdMultiPartFormDataStream;
 
-    procedure EndorseAuthorization(const AAuthToken: string); override;
+    procedure EndorseAuthorization; override;
+    procedure ApplyProxyConfig; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -108,6 +109,23 @@ uses
 ;
 
 { TMARSIndyClient }
+
+procedure TMARSIndyClient.ApplyProxyConfig;
+begin
+  inherited;
+  if not Assigned(FHttpClient) then
+    Exit;
+
+  if ProxyConfig.Enabled then
+  begin
+    FHttpClient.ProxyParams.ProxyServer := ProxyConfig.Host;
+    FHttpClient.ProxyParams.ProxyPort := ProxyConfig.Port;
+    FHttpClient.ProxyParams.ProxyUsername := ProxyConfig.UserName;
+    FHttpClient.ProxyParams.ProxyPassword := ProxyConfig.Password;
+  end
+  else
+    FHttpClient.ProxyParams.Clear;
+end;
 
 procedure TMARSIndyClient.AssignTo(Dest: TPersistent);
 var
@@ -206,14 +224,14 @@ begin
   inherited;
 end;
 
-procedure TMARSIndyClient.EndorseAuthorization(const AAuthToken: string);
+procedure TMARSIndyClient.EndorseAuthorization;
 begin
   if AuthEndorsement = AuthorizationBearer then
   begin
-    if not (AAuthToken = '') then
+    if not (AuthToken = '') then
     begin
       FHttpClient.Request.CustomHeaders.FoldLines := False;
-      FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AAuthToken;
+      FHttpClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + AuthToken;
     end
     else
       FHttpClient.Request.CustomHeaders.Values['Authorization'] := '';
