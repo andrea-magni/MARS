@@ -30,10 +30,12 @@ type
   EMARSEngineException = class(EMARSHttpException);
   TMARSEngine = class;
 
-  TMARSEngineBeforeHandleRequestEvent = reference to function(AEngine: TMARSEngine;
-    AURL: TMARSURL; ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean): Boolean;
-  TMARSEngineAfterHandleRequestEvent = reference to procedure(AEngine: TMARSEngine;
-    AURL: TMARSURL; ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean);
+  TBeforeHandleRequestProc = reference to function(const AEngine: TMARSEngine;
+    const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
+    var Handled: Boolean): Boolean;
+  TAfterHandleRequestProc = reference to procedure(const AEngine: TMARSEngine;
+    const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
+    var Handled: Boolean);
 
   TMARSEngine = class
   private
@@ -41,8 +43,8 @@ type
     FCriticalSection: TCriticalSection;
     FParameters: TMARSParameters;
     FName: string;
-    FOnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent;
-    FOnAfterHandleRequest: TMARSEngineAfterHandleRequestEvent;
+    FBeforeHandleRequest: TBeforeHandleRequestProc;
+    FAfterHandleRequest: TAfterHandleRequestProc;
   protected
     function GetBasePath: string; virtual;
     function GetPort: Integer; virtual;
@@ -70,8 +72,8 @@ type
     property Port: Integer read GetPort write SetPort;
     property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
 
-    property OnBeforeHandleRequest: TMARSEngineBeforeHandleRequestEvent read FOnBeforeHandleRequest write FOnBeforeHandleRequest;
-    property OnAfterHandleRequest: TMARSEngineAfterHandleRequestEvent read FOnAfterHandleRequest write FOnAfterHandleRequest;
+    property BeforeHandleRequest: TBeforeHandleRequestProc read FBeforeHandleRequest write FBeforeHandleRequest;
+    property AfterHandleRequest: TAfterHandleRequestProc read FAfterHandleRequest write FAfterHandleRequest;
   end;
 
   TMARSEngineRegistry=class
@@ -201,8 +203,8 @@ begin
 
   LURL := TMARSURL.Create(ARequest);
   try
-    if Assigned(FOnBeforeHandleRequest) then
-      if not FOnBeforeHandleRequest(Self, LURL, ARequest, AResponse, Result) then
+    if Assigned(FBeforeHandleRequest) then
+      if not FBeforeHandleRequest(Self, LURL, ARequest, AResponse, Result) then
         Exit;
 
     LApplicationPath := '';
@@ -231,8 +233,8 @@ begin
       Result := True;
     end;
 
-    if Assigned(FOnAfterHandleRequest) then
-      FOnAfterHandleRequest(Self, LURL, ARequest, AResponse, Result);
+    if Assigned(FAfterHandleRequest) then
+      FAfterHandleRequest(Self, LURL, ARequest, AResponse, Result); // TODO: switch to Activation
   finally
     LURL.Free;
   end;

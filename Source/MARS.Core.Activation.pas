@@ -610,7 +610,6 @@ begin
   try
     try
       Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
-      FInvocationTime := TStopwatch.StartNew;
 
       // setup phase
       FSetupTime := TStopWatch.StartNew;
@@ -628,9 +627,11 @@ begin
       FSetupTime.Stop;
 
       // invocation phase
+      FInvocationTime := TStopwatch.StartNew;
       if DoBeforeInvoke then
       begin
         InvokeResourceMethod;
+        FInvocationTime.Stop;
         DoAfterInvoke;
       end;
 
@@ -645,8 +646,6 @@ begin
       FResourceInstance.Free;
     FreeContext;
     FTeardownTime.Stop;
-
-    FInvocationTime.Stop;
   end;
 end;
 
