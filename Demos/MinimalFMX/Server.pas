@@ -68,7 +68,7 @@ implementation
 uses
   Generics.Collections
 , MARS.Core.Registry.Utils, MARS.mORMotJWT.Token, MARS.Core.MessageBodyWriters
-, MARS.Core.Activation
+, MARS.Core.Activation, MARS.Utils.Parameters.IniFile
 , Server.Resources
 ;
 
@@ -141,6 +141,7 @@ begin
   FEngine.BasePath := FEngineBasePath;
   FEngine.Port := FEnginePort;
   FEngine.ThreadPoolSize := FThreadPoolSize;
+  FEngine.Parameters.LoadFromIniFile;
 
   FApplication := FEngine.AddApplication(FApplicationName, FApplicationPath, FApplicationResources);
 

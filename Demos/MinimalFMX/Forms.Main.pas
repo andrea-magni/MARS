@@ -51,7 +51,7 @@ uses
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  TMARSResourceRegistry.Instance.RegisterResource<TSampleResource>;
+  TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
 
   FRequestCount := 0;
   FRequestTime := 0;
