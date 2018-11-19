@@ -40,7 +40,7 @@ uses
   , MARS.Core.Utils
   , MARS.Rtti.Utils
   , Gallery.Model
-  , Generics.Collections
+  , Generics.Collections, System.Rtti
 ;
 
 { TGalleryRazorResource }
@@ -90,7 +90,7 @@ end;
 
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<TGalleryRazorResource>(
-    function: TObject
+    function(const AContext: TValue): TObject
     begin
       Result := TGalleryRazorResource.Create;
     end

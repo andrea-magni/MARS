@@ -3,11 +3,10 @@ unit Data.Remote;
 interface
 
 uses
-  System.SysUtils, System.Classes, MARS.Client.SubResource,
-  MARS.Client.SubResource.JSON, System.JSON, MARS.Client.CustomResource,
+  System.SysUtils, System.Classes, System.JSON, MARS.Client.CustomResource,
   MARS.Client.Resource, MARS.Client.Resource.JSON, MARS.Client.Client,
-  MARS.Client.SubResource.Stream, MARS.Client.Application,
-  MARS.Utils.Parameters, MARS.Client.Token, MARS.Client.Client.Indy
+  MARS.Client.Application, MARS.Utils.Parameters, MARS.Client.Token, MARS.Client.Client.Indy,
+  MARS.Client.Resource.Stream
 ;
 
 type
@@ -18,8 +17,8 @@ type
     MARSClient: TMARSClient;
     CategoriesResource: TMARSClientResourceJSON;
     GalleryApplication: TMARSClientApplication;
-    CategoryItemsSubResource: TMARSClientSubResourceJSON;
-    ItemSubResource: TMARSClientSubResourceStream;
+    CategoryItemsSubResource: TMARSClientResourceJSON;
+    ItemSubResource: TMARSClientResourceStream;
     Token: TMARSClientToken;
     procedure GalleryApplicationError(AResource: TObject; AException: Exception;
       AVerb: TMARSHttpVerb; const AAfterExecute: TProc<System.Classes.TStream>;
@@ -89,7 +88,7 @@ end;
 procedure TRemoteData.GetItem(const ACategory, AItem: string;
   const AOnSuccess: TStreamProc);
 begin
-  ItemSubResource.Resource := '';
+  ItemSubResource.Resource := 'category';
   ItemSubResource.PathParamsValues.Clear;
   ItemSubResource.PathParamsValues.Add(ACategory);
   ItemSubResource.PathParamsValues.Add(AItem);
@@ -98,7 +97,7 @@ begin
     var
       LResponse: TStream;
     begin
-      LResponse := (AResource as TMARSClientSubResourceStream).Response;
+      LResponse := (AResource as TMARSClientResourceStream).Response;
       if Assigned(AOnSuccess) then
         AOnSuccess(LResponse);
     end
@@ -107,13 +106,13 @@ end;
 
 procedure TRemoteData.GetItems(const ACategory: string; const AOnSuccess: TJSONArrayProc);
 begin
-  CategoryItemsSubResource.Resource := ACategory;
+  CategoryItemsSubResource.Resource := 'category/' + ACategory;
   CategoryItemsSubResource.GETAsync(
     procedure (AResource: TMARSClientCustomResource)
     var
       LResponse: TJSONValue;
     begin
-      LResponse := (AResource as TMARSClientSubResourceJSON).Response;
+      LResponse := (AResource as TMARSClientResourceJSON).Response;
       if Assigned(AOnSuccess) and (LResponse is TJSONArray) then
         AOnSuccess(TJSONArray(LResponse));
     end
