@@ -10,12 +10,11 @@ interface
 uses
   System.SysUtils, System.Classes, MARS.Client.Application,
   MARS.Client.Client, MARS.Client.Client.Net, MARS.Client.CustomResource,
-  MARS.Client.Resource, System.JSON, MARS.Client.SubResource,
-  MARS.Client.SubResource.JSON
-, Model.Types, MARS.Client.Resource.JSON, MARS.Client.FireDAC,
-  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
-  FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
-  Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client, FireDAC.Stan.StorageBin
+  MARS.Client.Resource, System.JSON, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Stan.StorageBin, MARS.Client.FireDAC,
+  MARS.Client.Resource.JSON, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  Model.Types
 ;
 
 type
@@ -23,15 +22,15 @@ type
     MARSApplication: TMARSClientApplication;
     MARSClient: TMARSNetClient;
     HelloWorldRes: TMARSClientResource;
-    RecordSubRes: TMARSClientSubResourceJSON;
-    RecordArraySubRes: TMARSClientSubResourceJSON;
-    ObjectSubRes: TMARSClientSubResourceJSON;
-    ObjectArraySubRes: TMARSClientSubResourceJSON;
-    DatasetSubRes: TMARSClientSubResourceJSON;
+    RecordSubRes: TMARSClientResourceJSON;
+    RecordArraySubRes: TMARSClientResourceJSON;
+    ObjectSubRes: TMARSClientResourceJSON;
+    ObjectArraySubRes: TMARSClientResourceJSON;
+    DatasetSubRes: TMARSClientResourceJSON;
     QueryFromDBRes: TMARSFDDataSetResource;
     QueryFromDBDataset: TFDMemTable;
-    EchoSubRes: TMARSClientSubResource;
-    ReverseSubRes: TMARSClientSubResource;
+    EchoSubRes: TMARSClientResource;
+    ReverseSubRes: TMARSClientResource;
     RecordAgeRes: TMARSClientResourceJSON;
     employeeDetails: TMARSFDResource;
     EmployeeQuery1: TFDMemTable;
