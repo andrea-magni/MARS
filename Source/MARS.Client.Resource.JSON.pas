@@ -10,7 +10,7 @@ unit MARS.Client.Resource.JSON;
 interface
 
 uses
-  SysUtils, Classes
+  SysUtils, Classes, REST.Client, Generics.Collections
   , MARS.Core.JSON, MARS.Client.Utils
   , MARS.Client.Resource, MARS.Client.CustomResource
   , MARS.Client.Client
@@ -28,14 +28,25 @@ type
     {$endif}
      or pidAndroid)]
   {$endif}
-  TMARSClientResourceJSON = class(TMARSClientResource)
+  TMARSClientResourceJSON = class(TMARSClientResource, IRESTResponseJSON)
   private
     FResponse: TJSONValue;
+    FNotifyList: TList<TNotifyEvent>;
   protected
     procedure AfterGET(const AContent: TStream); override;
     procedure AfterPOST(const AContent: TStream); override;
     function GetResponseAsString: string; virtual;
+    procedure RefreshResponse(const AContent: TStream); virtual;
   public
+    // IRESTResponseJSON interface ---------------------------------------------
+    procedure AddJSONChangedEvent(const ANotify: TNotifyEvent);
+    procedure RemoveJSONChangedEvent(const ANotify: TNotifyEvent);
+    procedure GetJSONResponse(out AJSONValue: TJSONValue;
+      out AHasOwner: Boolean);
+    function HasJSONResponse: Boolean;
+    function HasResponseContent: Boolean;
+    // -------------------------------------------------------------------------
+
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
@@ -96,20 +107,23 @@ uses
 
 { TMARSClientResourceJSON }
 
+procedure TMARSClientResourceJSON.AddJSONChangedEvent(
+  const ANotify: TNotifyEvent);
+begin
+  if not FNotifyList.Contains(ANotify) then
+    FNotifyList.Add(ANotify);
+end;
+
 procedure TMARSClientResourceJSON.AfterGET(const AContent: TStream);
 begin
   inherited;
-  if Assigned(FResponse) then
-    FResponse.Free;
-  FResponse := StreamToJSONValue(AContent);
+  RefreshResponse(AContent);
 end;
 
 procedure TMARSClientResourceJSON.AfterPOST(const AContent: TStream);
 begin
   inherited;
-  if Assigned(FResponse) then
-    FResponse.Free;
-  FResponse := StreamToJSONValue(AContent);
+  RefreshResponse(AContent);
 end;
 
 constructor TMARSClientResourceJSON.Create(AOwner: TComponent);
@@ -118,12 +132,21 @@ begin
   FResponse := TJSONObject.Create;
   SpecificAccept := TMediaType.APPLICATION_JSON;
   SpecificContentType := TMediaType.APPLICATION_JSON;
+  FNotifyList := TList<TNotifyEvent>.Create;
 end;
 
 destructor TMARSClientResourceJSON.Destroy;
 begin
   FResponse.Free;
+  FreeAndNil(FNotifyList);
   inherited;
+end;
+
+procedure TMARSClientResourceJSON.GetJSONResponse(out AJSONValue: TJSONValue;
+  out AHasOwner: Boolean);
+begin
+  AJSONValue := FResponse;
+  AHasOwner := True;
 end;
 
 function TMARSClientResourceJSON.GetResponseAsString: string;
@@ -131,6 +154,16 @@ begin
   Result := '';
   if Assigned(FResponse) then
     Result := FResponse.ToJSON;
+end;
+
+function TMARSClientResourceJSON.HasJSONResponse: Boolean;
+begin
+  Result := Assigned(FResponse);
+end;
+
+function TMARSClientResourceJSON.HasResponseContent: Boolean;
+begin
+  Result := Assigned(FResponse);
 end;
 
 procedure TMARSClientResourceJSON.POST(const AJSONValue: TJSONValue;
@@ -307,6 +340,28 @@ begin
   , AOnException
   , ASynchronize
   );
+end;
+
+procedure TMARSClientResourceJSON.RefreshResponse(const AContent: TStream);
+var
+  LSubscriber: TNotifyEvent;
+begin
+  if Assigned(FResponse) then
+    FResponse.Free;
+  FResponse := StreamToJSONValue(AContent);
+
+  for LSubscriber in FNotifyList do
+    LSubscriber(Self);
+end;
+
+procedure TMARSClientResourceJSON.RemoveJSONChangedEvent(
+  const ANotify: TNotifyEvent);
+var
+  LIndex: Integer;
+begin
+  LIndex := FNotifyList.IndexOf(ANotify);
+  if LIndex <> -1 then
+    FNotifyList.Delete(LIndex);
 end;
 
 function TMARSClientResourceJSON.ResponseAs<T>: T;
