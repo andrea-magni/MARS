@@ -10,8 +10,7 @@ interface
 uses
   System.SysUtils, System.Classes, MARS.Client.CustomResource,
   MARS.Client.Resource, MARS.Client.Resource.JSON, MARS.Client.Application,
-  MARS.Client.Client, MARS.Client.SubResource, MARS.Client.SubResource.JSON,
-  MARS.Client.Messaging.Resource, System.JSON, MARS.Client.Client.Indy
+  MARS.Client.Client, System.JSON, MARS.Client.Client.Indy
 ;
 
 type
@@ -19,9 +18,9 @@ type
     MARSClient1: TMARSClient;
     MARSClientApplication1: TMARSClientApplication;
     HelloWorldResource: TMARSClientResource;
-    EchoStringResource: TMARSClientSubResource;
-    ReverseStringResource: TMARSClientSubResource;
-    SumSubResource: TMARSClientSubResource;
+    EchoStringResource: TMARSClientResource;
+    ReverseStringResource: TMARSClientResource;
+    SumSubResource: TMARSClientResource;
   private
     { Private declarations }
   public

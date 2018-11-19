@@ -6,6 +6,8 @@ object MainDataModule: TMainDataModule
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 0
     ReadTimeout = -1
+    ProxyConfig.Enabled = False
+    ProxyConfig.Port = 0
     ProtocolVersion = pv1_1
     HttpClient.AllowCookies = True
     HttpClient.ProxyParams.BasicAuthentication = False
@@ -14,8 +16,10 @@ object MainDataModule: TMainDataModule
     HttpClient.Request.ContentRangeEnd = -1
     HttpClient.Request.ContentRangeStart = -1
     HttpClient.Request.ContentRangeInstanceLength = -1
-    HttpClient.Request.Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    HttpClient.Request.ContentType = 'application/json'
+    HttpClient.Request.Accept = '*/*'
     HttpClient.Request.BasicAuthentication = False
+    HttpClient.Request.Host = 'localhost:8080'
     HttpClient.Request.UserAgent = 'Mozilla/3.0 (compatible; Indy Library)'
     HttpClient.Request.Ranges.Units = 'bytes'
     HttpClient.Request.Ranges = <>
@@ -25,35 +29,36 @@ object MainDataModule: TMainDataModule
   end
   object MARSClientApplication1: TMARSClientApplication
     DefaultMediaType = 'application/json'
-    AppName = 'default'
+    DefaultContentType = 'application/json'
     Client = MARSClient1
     Left = 280
     Top = 72
   end
   object HelloWorldResource: TMARSClientResource
     Application = MARSClientApplication1
+    SpecificAccept = '*/*'
     Resource = 'helloworld'
     Left = 280
     Top = 128
   end
-  object EchoStringResource: TMARSClientSubResource
+  object EchoStringResource: TMARSClientResource
     Application = MARSClientApplication1
-    Resource = 'echostring'
-    ParentResource = HelloWorldResource
+    SpecificAccept = '*/*'
+    Resource = 'helloworld/echostring'
     Left = 136
     Top = 192
   end
-  object ReverseStringResource: TMARSClientSubResource
+  object ReverseStringResource: TMARSClientResource
     Application = MARSClientApplication1
-    Resource = 'reversestring'
-    ParentResource = HelloWorldResource
+    SpecificAccept = '*/*'
+    Resource = 'helloworld/reversestring'
     Left = 280
     Top = 192
   end
-  object SumSubResource: TMARSClientSubResource
+  object SumSubResource: TMARSClientResource
     Application = MARSClientApplication1
-    Resource = 'sum'
-    ParentResource = HelloWorldResource
+    SpecificAccept = '*/*'
+    Resource = 'helloworld/sum'
     Left = 424
     Top = 192
   end
