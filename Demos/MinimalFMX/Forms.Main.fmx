@@ -1,0 +1,105 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 344
+  ClientWidth = 406
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  DesignerMasterStyle = 0
+  object TopToolBar: TToolBar
+    Size.Width = 406.000000000000000000
+    Size.Height = 40.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object TitleText: TText
+      Align = Center
+      AutoSize = True
+      Size.Width = 173.083984375000000000
+      Size.Height = 15.960937500000000000
+      Size.PlatformDefault = False
+      Text = 'MARS-Curiosity Minimal Project'
+      TextSettings.WordWrap = False
+    end
+  end
+  object MainContentLayout: TLayout
+    Align = Client
+    Size.Width = 406.000000000000000000
+    Size.Height = 282.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object ServerLayout: TLayout
+      Align = VertCenter
+      Position.Y = 56.000000000000000000
+      Size.Width = 406.000000000000000000
+      Size.Height = 170.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+      object StartStopLayout: TLayout
+        Align = Bottom
+        Position.Y = 120.000000000000000000
+        Size.Width = 406.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        object Button1: TButton
+          Action = StartStopAction
+          Align = Center
+          Enabled = True
+          ImageIndex = -1
+          TabOrder = 0
+        end
+      end
+      object ServerText: TText
+        Align = Top
+        Size.Width = 406.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Listening on port 8080'
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.FontColor = claFirebrick
+      end
+      object ResourcesText: TText
+        Align = Client
+        Size.Width = 406.000000000000000000
+        Size.Height = 70.000000000000000000
+        Size.PlatformDefault = False
+        Text = 'Listening on port 8080'
+        TextSettings.Font.StyleExt = {00070000000000000004000000}
+        TextSettings.FontColor = claDarkslategray
+      end
+    end
+  end
+  object StatusBar1: TStatusBar
+    Position.Y = 322.000000000000000000
+    ShowSizeGrip = True
+    Size.Width = 406.000000000000000000
+    Size.Height = 22.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 4
+    object StatusText: TText
+      Align = Contents
+      HitTest = False
+      Size.Width = 406.000000000000000000
+      Size.Height = 22.000000000000000000
+      Size.PlatformDefault = False
+    end
+  end
+  object Timer1: TTimer
+    Interval = 900
+    OnTimer = Timer1Timer
+    Left = 48
+    Top = 171
+  end
+  object MainActionList: TActionList
+    Left = 32
+    Top = 56
+    object StartStopAction: TAction
+      Text = 'Start'
+      OnExecute = StartStopActionExecute
+      OnUpdate = StartStopActionUpdate
+    end
+  end
+end

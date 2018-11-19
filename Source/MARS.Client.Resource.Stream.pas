@@ -35,7 +35,7 @@ type
     procedure AfterGET(const AContent: TStream); override;
     procedure AfterPOST(const AContent: TStream); override;
     function GetResponseSize: Int64; virtual;
-
+    function GetResponseAsString: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -47,6 +47,7 @@ type
 
   published
     property Response: TStream read FResponse;
+    property ResponseAsString;
     property ResponseSize: Int64 read GetResponseSize;
   end;
 
@@ -82,6 +83,11 @@ destructor TMARSClientResourceStream.Destroy;
 begin
   FResponse.Free;
   inherited;
+end;
+
+function TMARSClientResourceStream.GetResponseAsString: string;
+begin
+  Result := Format('[Binary data, size: %d]', [GetResponseSize]);
 end;
 
 function TMARSClientResourceStream.GetResponseSize: Int64;

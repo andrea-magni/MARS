@@ -13,6 +13,8 @@ object MainDataModule: TMainDataModule
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 60000
     ReadTimeout = 60000
+    ProxyConfig.Enabled = False
+    ProxyConfig.Port = 0
     HttpClient.Asynchronous = False
     HttpClient.ConnectionTimeout = 60000
     HttpClient.ResponseTimeout = 60000
@@ -31,48 +33,43 @@ object MainDataModule: TMainDataModule
     Left = 288
     Top = 72
   end
-  object RecordSubRes: TMARSClientSubResourceJSON
+  object RecordSubRes: TMARSClientResourceJSON
     Application = MARSApplication
     SpecificAccept = 'application/json'
     SpecificContentType = 'application/json'
-    Resource = 'record'
-    ParentResource = HelloWorldRes
+    Resource = 'helloworld/record'
     Left = 168
     Top = 136
   end
-  object RecordArraySubRes: TMARSClientSubResourceJSON
+  object RecordArraySubRes: TMARSClientResourceJSON
     Application = MARSApplication
     SpecificAccept = 'application/json'
     SpecificContentType = 'application/json'
-    Resource = 'recordarray'
-    ParentResource = HelloWorldRes
+    Resource = 'helloworld/recordarray'
     Left = 168
     Top = 192
   end
-  object ObjectSubRes: TMARSClientSubResourceJSON
+  object ObjectSubRes: TMARSClientResourceJSON
     Application = MARSApplication
     SpecificAccept = 'application/json'
     SpecificContentType = 'application/json'
-    Resource = 'object'
-    ParentResource = HelloWorldRes
+    Resource = 'helloworld/object'
     Left = 272
     Top = 136
   end
-  object ObjectArraySubRes: TMARSClientSubResourceJSON
+  object ObjectArraySubRes: TMARSClientResourceJSON
     Application = MARSApplication
     SpecificAccept = 'application/json'
     SpecificContentType = 'application/json'
-    Resource = 'objectarray'
-    ParentResource = HelloWorldRes
+    Resource = 'helloworld/objectarray'
     Left = 272
     Top = 192
   end
-  object DatasetSubRes: TMARSClientSubResourceJSON
+  object DatasetSubRes: TMARSClientResourceJSON
     Application = MARSApplication
     SpecificAccept = 'application/json'
     SpecificContentType = 'application/json'
-    Resource = 'dataset'
-    ParentResource = HelloWorldRes
+    Resource = 'helloworld/dataset'
     Left = 368
     Top = 136
   end
@@ -89,7 +86,6 @@ object MainDataModule: TMainDataModule
   end
   object QueryFromDBDataset: TFDMemTable
     ActiveStoredUsage = []
-    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll
@@ -101,19 +97,17 @@ object MainDataModule: TMainDataModule
     Left = 456
     Top = 192
   end
-  object EchoSubRes: TMARSClientSubResource
+  object EchoSubRes: TMARSClientResource
     Application = MARSApplication
     SpecificAccept = '*/*'
-    Resource = 'echo'
-    ParentResource = HelloWorldRes
+    Resource = 'helloworld/echo'
     Left = 64
     Top = 136
   end
-  object ReverseSubRes: TMARSClientSubResource
+  object ReverseSubRes: TMARSClientResource
     Application = MARSApplication
     SpecificAccept = '*/*'
-    Resource = 'reverse'
-    ParentResource = HelloWorldRes
+    Resource = 'helloworld/reverse'
     Left = 64
     Top = 200
   end

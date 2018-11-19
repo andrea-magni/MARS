@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
   FMX.Controls.Presentation, FMX.ScrollBox, FMX.Memo, FMX.Layouts,
-  MARS.Client.SubResource, System.JSON, MARS.Client.CustomResource,
+  System.JSON, MARS.Client.CustomResource,
   MARS.Client.Resource, MARS.Client.Token, MARS.Client.Application,
   MARS.Client.Client, FMX.StdCtrls, FMX.Edit, MARS.Utils.Parameters,
   MARS.Client.Client.Indy
@@ -18,7 +18,6 @@ type
     DefaultApplication: TMARSClientApplication;
     Token: TMARSClientToken;
     FirstResource: TMARSClientResource;
-    DetailsSubResource: TMARSClientSubResource;
     Layout1: TLayout;
     Layout3: TLayout;
     Memo1: TMemo;
@@ -30,6 +29,7 @@ type
     Label2: TLabel;
     FirstButton: TButton;
     FirstDetailsButton: TButton;
+    DetailsResource: TMARSClientResource;
     procedure LoginButtonClick(Sender: TObject);
     procedure FirstButtonClick(Sender: TObject);
     procedure FirstDetailsButtonClick(Sender: TObject);
@@ -59,11 +59,11 @@ end;
 procedure TMainForm.FirstDetailsButtonClick(Sender: TObject);
 begin
   Memo1.Lines.Clear;
-  Memo1.Lines.Add('Request URL: ' + DetailsSubResource.URL);
-  Memo1.Lines.Add('Token: ' + DetailsSubResource.AuthToken);
+  Memo1.Lines.Add('Request URL: ' + DetailsResource.URL);
+  Memo1.Lines.Add('Token: ' + DetailsResource.AuthToken);
   Memo1.Lines.Add('Token.IsVerified: ' + Token.IsVerified.ToString(TUseBoolStrs.True));
   Memo1.Lines.Add('Response (GET):');
-  Memo1.Lines.Add(DetailsSubResource.GETAsString());
+  Memo1.Lines.Add(DetailsResource.GETAsString());
 end;
 
 procedure TMainForm.LoginButtonClick(Sender: TObject);

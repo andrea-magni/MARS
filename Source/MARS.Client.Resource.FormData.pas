@@ -36,7 +36,7 @@ type
     procedure AssignTo(Dest: TPersistent); override;
     procedure AfterPOST(const AContent: TStream); override;
     procedure AfterPUT(const AContent: TStream); override;
-    function GetResponseAsString: string; virtual;
+    function GetResponseAsString: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -81,7 +81,7 @@ type
   published
     property FormData: TArray<TFormParam> read FFormData write FFormData;
     property Response: TMemoryStream read FResponse;
-    property ResponseAsString: string read GetResponseAsString;
+    property ResponseAsString;
   end;
 
 implementation

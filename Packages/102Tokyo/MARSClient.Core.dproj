@@ -118,13 +118,9 @@
         <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.Net.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.CustomResource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Messaging.Resource.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.JSON.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.Stream.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.SubResource.JSON.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.SubResource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.SubResource.Stream.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
@@ -204,6 +200,17 @@
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="3">
+                <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule">
+                    <Platform Name="OSX32">
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\19.0\Bpl\MARSClient.Core250.bpl" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>MARSClient_Core.bpl</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="..\..\..\..\Bpl\MARSClient.Core250.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARSClient_Core.bpl</RemoteName>
@@ -212,11 +219,6 @@
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\iossimulator\libPCRE.dylib" Class="DependencyModule">
                     <Platform Name="iOSSimulator">
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule">
-                    <Platform Name="OSX32">
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

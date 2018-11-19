@@ -51,6 +51,7 @@ type
     function GetAccept: string; virtual;
     function GetContentType: string; virtual;
     function GetAuthToken: string; virtual;
+    function GetResponseAsString: string; virtual;
 
     procedure BeforeGET; virtual;
     procedure AfterGET(const AContent: TStream); virtual;
@@ -137,6 +138,7 @@ type
     property Path: string read GetPath;
     property PathParamsValues: TStrings read FPathParamsValues write SetPathParamsValues;
     property QueryParams: TStrings read FQueryParams write SetQueryParams;
+    property ResponseAsString: string read GetResponseAsString;
     property Token: TMARSClientCustomResource read FToken write FToken;
     property URL: string read GetURL;
   published
@@ -149,9 +151,8 @@ implementation
 
 uses
   {$ifdef DelphiXE7_UP}System.Threading,{$endif}
-   MARS.Core.URL, MARS.Core.Utils, MARS.Client.Token
- , MARS.Client.Resource, MARS.Client.SubResource
- , MARS.Core.MediaType
+  MARS.Core.URL, MARS.Core.Utils, MARS.Client.Token
+, MARS.Client.Resource, MARS.Core.MediaType
 ;
 
 { TMARSClientCustomResource }
@@ -272,6 +273,11 @@ begin
 end;
 
 
+function TMARSClientCustomResource.GetResponseAsString: string;
+begin
+  Result := '';
+end;
+
 function TMARSClientCustomResource.GetURL: string;
 var
   LQueryString: string;
@@ -363,7 +369,7 @@ procedure TMARSClientCustomResource.DELETEAsync(
 var
   LClient: TMARSCustomClient;
   LApplication: TMARSClientApplication;
-  LResource, LParentResource: TMARSClientCustomResource;
+  LResource: TMARSClientCustomResource;
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
@@ -377,21 +383,6 @@ begin
         LResource.Assign(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
-
-        LParentResource := nil;
-        if Self is TMARSClientSubResource then
-        begin
-          LParentResource := TMARSClientCustomResourceClass(TMARSClientSubResource(Self).ParentResource.ClassType).Create(nil);
-          try
-            LParentResource.Assign(TMARSClientSubResource(Self).ParentResource);
-            LParentResource.SpecificClient := nil;
-            LParentResource.Application := LApplication;
-            (LResource as TMARSClientSubResource).ParentResource := LParentResource as TMARSClientResource;
-          except
-            LParentResource.Free;
-            raise;
-          end;
-        end;
 
         TTask.Run(
           procedure
@@ -439,8 +430,6 @@ begin
                 );
               finally
                 LResource.Free;
-                if Assigned(LParentResource) then
-                  LParentResource.Free;
                 LApplication.Free;
                 LClient.Free;
               end;
@@ -531,7 +520,7 @@ begin
   LResult := '';
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
-    LEncoding := TEncoding.Default;
+    LEncoding := TEncoding.UTF8;
 
   GET(ABeforeExecute
     , procedure (AResponse: TStream)
@@ -571,7 +560,7 @@ procedure TMARSClientCustomResource.GETAsync(
 var
   LClient: TMARSCustomClient;
   LApplication: TMARSClientApplication;
-  LResource, LParentResource: TMARSClientCustomResource;
+  LResource: TMARSClientCustomResource;
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
@@ -585,21 +574,6 @@ begin
         LResource.Assign(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
-
-        LParentResource := nil;
-        if Self is TMARSClientSubResource then
-        begin
-          LParentResource := TMARSClientCustomResourceClass(TMARSClientSubResource(Self).ParentResource.ClassType).Create(nil);
-          try
-            LParentResource.Assign(TMARSClientSubResource(Self).ParentResource);
-            LParentResource.SpecificClient := nil;
-            LParentResource.Application := LApplication;
-            (LResource as TMARSClientSubResource).ParentResource := LParentResource as TMARSClientResource;
-          except
-            LParentResource.Free;
-            raise;
-          end;
-        end;
 
         TTask.Run(
           procedure
@@ -646,8 +620,6 @@ begin
                 );
               finally
                 LResource.Free;
-                if Assigned(LParentResource) then
-                  LParentResource.Free;
                 LApplication.Free;
                 LClient.Free;
               end;
@@ -718,7 +690,7 @@ procedure TMARSClientCustomResource.POSTAsync(
 var
   LClient: TMARSCustomClient;
   LApplication: TMARSClientApplication;
-  LResource, LParentResource: TMARSClientCustomResource;
+  LResource: TMARSClientCustomResource;
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
@@ -732,21 +704,6 @@ begin
         LResource.Assign(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
-
-        LParentResource := nil;
-        if Self is TMARSClientSubResource then
-        begin
-          LParentResource := TMARSClientCustomResourceClass(TMARSClientSubResource(Self).ParentResource.ClassType).Create(nil);
-          try
-            LParentResource.Assign(TMARSClientSubResource(Self).ParentResource);
-            LParentResource.SpecificClient := nil;
-            LParentResource.Application := LApplication;
-            (LResource as TMARSClientSubResource).ParentResource := LParentResource as TMARSClientResource;
-          except
-            LParentResource.Free;
-            raise;
-          end;
-        end;
 
         TTask.Run(
           procedure
@@ -794,8 +751,6 @@ begin
               );
             finally
               LResource.Free;
-              if Assigned(LParentResource) then
-                LParentResource.Free;
               LApplication.Free;
               LClient.Free;
             end;
@@ -866,7 +821,7 @@ procedure TMARSClientCustomResource.PUTAsync(
 var
   LClient: TMARSCustomClient;
   LApplication: TMARSClientApplication;
-  LResource, LParentResource: TMARSClientCustomResource;
+  LResource: TMARSClientCustomResource;
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
@@ -880,21 +835,6 @@ begin
         LResource.Assign(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
-
-        LParentResource := nil;
-        if Self is TMARSClientSubResource then
-        begin
-          LParentResource := TMARSClientCustomResourceClass(TMARSClientSubResource(Self).ParentResource.ClassType).Create(nil);
-          try
-            LParentResource.Assign(TMARSClientSubResource(Self).ParentResource);
-            LParentResource.SpecificClient := nil;
-            LParentResource.Application := LApplication;
-            (LResource as TMARSClientSubResource).ParentResource := LParentResource as TMARSClientResource;
-          except
-            LParentResource.Free;
-            raise;
-          end;
-        end;
 
         TTask.Run(
           procedure
@@ -942,8 +882,6 @@ begin
               );
             finally
               LResource.Free;
-              if Assigned(LParentResource) then
-                LParentResource.Free;
               LApplication.Free;
               LClient.Free;
             end;

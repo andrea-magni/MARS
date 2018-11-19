@@ -85,9 +85,10 @@ begin
     PortNumberEdit.Text := FEngine.Port.ToString;
 
     // skip favicon requests (browser)
-    FEngine.OnBeforeHandleRequest :=
-      function (AEngine: TMARSEngine; AURL: TMARSURL;
-        ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
+    FEngine.BeforeHandleRequest :=
+      function (const AEngine: TMARSEngine; const AURL: TMARSURL;
+        const ARequest: TWebRequest; const AResponse: TWebResponse;
+        var Handled: Boolean
       ): Boolean
       begin
         Result := True;

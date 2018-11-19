@@ -55,9 +55,9 @@ begin
 {$IFDEF MARS_FIREDAC}
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
-{$REGION 'OnBeforeHandleRequest example'}
+{$REGION 'BeforeHandleRequest example'}
 
-    FEngine.OnBeforeHandleRequest :=
+    FEngine.BeforeHandleRequest :=
       function (AEngine: TMARSEngine; AURL: TMARSURL;
         ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
       ): Boolean

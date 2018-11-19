@@ -10,20 +10,23 @@ unit MARS.http.Server.Indy;
 interface
 
 uses
-  Classes, SysUtils
-  , SyncObjs
+  Classes, SysUtils, TimeSpan, SyncObjs
+
   , IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
   , IdSchedulerOfThreadPool
   , idHTTPWebBrokerBridge
 
   , MARS.Core.Engine
   , MARS.Core.Token
-  ;
+;
 
 type
   TMARShttpServerIndy = class(TIdCustomHTTPServer)
   private
     FEngine: TMARSEngine;
+    FStartedAt: TDateTime;
+    FStoppedAt: TDateTime;
+    function GetUpTime: TTimeSpan;
   protected
     procedure SetCookies(const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse); virtual;
     procedure Startup; override;
@@ -41,12 +44,15 @@ type
   public
     constructor Create(AEngine: TMARSEngine); virtual;
     property Engine: TMARSEngine read FEngine;
+    property StartedAt: TDateTime read FStartedAt;
+    property StoppedAt: TDateTime read FStoppedAt;
+    property UpTime: TTimeSpan read GetUpTime;
   end;
 
 implementation
 
 uses
-  StrUtils
+  StrUtils, DateUtils
 {$ifdef DelphiXE7_UP}
   , Web.HttpApp
 {$else}
@@ -111,6 +117,16 @@ begin
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
 end;
 
+function TMARShttpServerIndy.GetUpTime: TTimeSpan;
+begin
+  if Active then
+    Result := TTimeSpan.FromSeconds(SecondsBetween(FStartedAt, Now))
+  else if StoppedAt > 0 then
+    Result := TTimeSpan.FromSeconds(SecondsBetween(FStartedAt, FStoppedAt))
+  else
+    Result := TTimeSpan.Zero;
+end;
+
 procedure TMARShttpServerIndy.ParseAuthenticationHandler(AContext: TIdContext;
   const AAuthType, AAuthData: String; var VUsername, VPassword: String;
   var VHandled: Boolean);
@@ -166,6 +182,7 @@ procedure TMARShttpServerIndy.Shutdown;
 begin
   inherited;
   Bindings.Clear;
+  FStoppedAt := Now;
 end;
 
 procedure TMARShttpServerIndy.Startup;
@@ -175,6 +192,8 @@ begin
   AutoStartSession := False;
   SessionState := False;
   SetupThreadPooling(FEngine.ThreadPoolSize);
+  FStartedAt := Now;
+  FStoppedAt := 0;
 
   inherited;
 end;
