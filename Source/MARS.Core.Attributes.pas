@@ -890,7 +890,7 @@ end;
 
 function EncodingAttribute.GetEncoding: TEncoding;
 begin
-  Result := TEncoding.Default;
+  Result := TEncoding.UTF8;
   if SameText(Name, 'ANSI') then Result := TEncoding.ANSI
   else if SameText(Name, 'ASCII') then Result := TEncoding.ASCII
   else if SameText(Name, 'BigEndianUnicode') then Result := TEncoding.BigEndianUnicode

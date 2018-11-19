@@ -520,7 +520,7 @@ begin
   LResult := '';
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
-    LEncoding := TEncoding.Default;
+    LEncoding := TEncoding.UTF8;
 
   GET(ABeforeExecute
     , procedure (AResponse: TStream)

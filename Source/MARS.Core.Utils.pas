@@ -269,7 +269,7 @@ begin
     Exit;
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
-    LEncoding := TEncoding.Default;
+    LEncoding := TEncoding.UTF8;
 
   AStream.Position := 0;
   SetLength(LBytes, AStream.Size);
@@ -287,7 +287,7 @@ begin
 
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
-    LEncoding := TEncoding.Default;
+    LEncoding := TEncoding.UTF8;
 
   LBytes := LEncoding.GetBytes(AString);
 
@@ -353,7 +353,7 @@ var
 begin
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
-    LEncoding := TEncoding.Default;
+    LEncoding := TEncoding.UTF8;
 
   LJSONString := LEncoding.GetString(StreamToBytes(AStream));
   Result := TJSONObject.ParseJSONValue(LJSONString);
@@ -366,7 +366,7 @@ var
 begin
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
-    LEncoding := TEncoding.Default;
+    LEncoding := TEncoding.UTF8;
 
   LStreamWriter := TStreamWriter.Create(ADestStream, LEncoding);
   try

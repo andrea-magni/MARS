@@ -101,7 +101,7 @@ var
 begin
   if not Assigned(AActivation) then
   begin
-    AEncoding := TEncoding.Default;
+    AEncoding := TEncoding.UTF8;
     Result := False;
     Exit;
   end;
