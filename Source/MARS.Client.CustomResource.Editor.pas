@@ -33,7 +33,8 @@ uses
 {$else}
   Dialogs
 {$endif}
-  , Windows, IdHTTP;
+  , Windows, IdHTTP
+;
 
 { TMARSClientCustomResourceEditor }
 
@@ -57,7 +58,7 @@ begin
     end;
 
     if (GetKeyState(VK_LSHIFT) < 0) then
-      ShowMessage(CurrentObj.Client.ResponseText);
+      ShowMessage(CurrentObj.Client.ResponseText + sLineBreak + sLineBreak + CurrentObj.ResponseAsString);
   except
     on E: EIdHTTPProtocolException do
      raise Exception.Create('Error: ' + E.ErrorCode.ToString + ' ' + E.ErrorMessage + sLineBreak + E.Message);

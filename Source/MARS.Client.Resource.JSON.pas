@@ -31,11 +31,14 @@ type
   TMARSClientResourceJSON = class(TMARSClientResource, IRESTResponseJSON)
   private
     FResponse: TJSONValue;
+    FHasResponse: Boolean;
     FNotifyList: TList<TNotifyEvent>;
   protected
     procedure AfterGET(const AContent: TStream); override;
     procedure AfterPOST(const AContent: TStream); override;
-    function GetResponseAsString: string; virtual;
+    procedure AfterPUT(const AContent: TStream); override;
+    procedure AfterDELETE(const AContent: TStream); override;
+    function GetResponseAsString: string; override;
     procedure RefreshResponse(const AContent: TStream); virtual;
   public
     // IRESTResponseJSON interface ---------------------------------------------
@@ -96,7 +99,7 @@ type
     function ResponseAsArray<T: record>: TArray<T>;
   published
     property Response: TJSONValue read FResponse write FResponse;
-    property ResponseAsString: string read GetResponseAsString;
+    property ResponseAsString;
   end;
 
 implementation
@@ -114,6 +117,12 @@ begin
     FNotifyList.Add(ANotify);
 end;
 
+procedure TMARSClientResourceJSON.AfterDELETE(const AContent: TStream);
+begin
+  inherited;
+  RefreshResponse(AContent);
+end;
+
 procedure TMARSClientResourceJSON.AfterGET(const AContent: TStream);
 begin
   inherited;
@@ -126,10 +135,17 @@ begin
   RefreshResponse(AContent);
 end;
 
+procedure TMARSClientResourceJSON.AfterPUT(const AContent: TStream);
+begin
+  inherited;
+  RefreshResponse(AContent);
+end;
+
 constructor TMARSClientResourceJSON.Create(AOwner: TComponent);
 begin
   inherited;
   FResponse := TJSONObject.Create;
+  FHasResponse := False;
   SpecificAccept := TMediaType.APPLICATION_JSON;
   SpecificContentType := TMediaType.APPLICATION_JSON;
   FNotifyList := TList<TNotifyEvent>.Create;
@@ -153,17 +169,17 @@ function TMARSClientResourceJSON.GetResponseAsString: string;
 begin
   Result := '';
   if Assigned(FResponse) then
-    Result := FResponse.ToJSON;
+    Result := FResponse.ToString;
 end;
 
 function TMARSClientResourceJSON.HasJSONResponse: Boolean;
 begin
-  Result := Assigned(FResponse);
+  Result := FHasResponse;
 end;
 
 function TMARSClientResourceJSON.HasResponseContent: Boolean;
 begin
-  Result := Assigned(FResponse);
+  Result := FHasResponse;
 end;
 
 procedure TMARSClientResourceJSON.POST(const AJSONValue: TJSONValue;
@@ -349,6 +365,7 @@ begin
   if Assigned(FResponse) then
     FResponse.Free;
   FResponse := StreamToJSONValue(AContent);
+  FHasResponse := True;
 
   for LSubscriber in FNotifyList do
     LSubscriber(Self);

@@ -72,6 +72,7 @@ type
 
     function ApplyUpdatesHadErrors(const ADataSetName: string; var AErrorCount: Integer;
       var AErrorText: TArray<string>): Boolean; virtual;
+    function GetResponseAsString: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -314,6 +315,25 @@ begin
   FPOSTResponse.Free;
   FResourceDataSets.Free;
   inherited;
+end;
+
+function TMARSFDResource.GetResponseAsString: string;
+var
+  LIndex: Integer;
+  LDataSet: TMARSFDResourceDatasetsItem;
+  LDataSetInfo: string;
+begin
+  Result := inherited GetResponseAsString;
+  for LIndex := 0 to FResourceDataSets.Count-1 do
+  begin
+    LDataSet := FResourceDataSets.Item[LIndex];
+    if Result <> '' then
+      Result := Result + sLineBreak;
+    LDataSetInfo := 'N/A';
+    if Assigned(LDataSet.DataSet) then
+      LDataSetInfo := LDataSet.DataSet.RecordCount.ToString + ' records';
+    Result := Result + LDataSet.DataSetName + ': ' + LDataSetInfo;
+  end;
 end;
 
 procedure TMARSFDResource.Notification(AComponent: TComponent;
