@@ -1,0 +1,108 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="BootstrapServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BootstrapServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BootstrapServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BootstrapServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BootstrapServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BootstrapServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="BootstrapServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="BootstrapServerApplication">
+        <MSBuild Projects="BootstrapServerApplication.dproj"/>
+    </Target>
+    <Target Name="BootstrapServerApplication:Clean">
+        <MSBuild Projects="BootstrapServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BootstrapServerApplication:Make">
+        <MSBuild Projects="BootstrapServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BootstrapServerFMXApplication">
+        <MSBuild Projects="BootstrapServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="BootstrapServerFMXApplication:Clean">
+        <MSBuild Projects="BootstrapServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BootstrapServerFMXApplication:Make">
+        <MSBuild Projects="BootstrapServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BootstrapServerService">
+        <MSBuild Projects="BootstrapServerService.dproj"/>
+    </Target>
+    <Target Name="BootstrapServerService:Clean">
+        <MSBuild Projects="BootstrapServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BootstrapServerService:Make">
+        <MSBuild Projects="BootstrapServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BootstrapServerConsoleApplication">
+        <MSBuild Projects="BootstrapServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="BootstrapServerConsoleApplication:Clean">
+        <MSBuild Projects="BootstrapServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BootstrapServerConsoleApplication:Make">
+        <MSBuild Projects="BootstrapServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BootstrapServerDaemon">
+        <MSBuild Projects="BootstrapServerDaemon.dproj"/>
+    </Target>
+    <Target Name="BootstrapServerDaemon:Clean">
+        <MSBuild Projects="BootstrapServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BootstrapServerDaemon:Make">
+        <MSBuild Projects="BootstrapServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BootstrapServerApacheModule">
+        <MSBuild Projects="BootstrapServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="BootstrapServerApacheModule:Clean">
+        <MSBuild Projects="BootstrapServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BootstrapServerApacheModule:Make">
+        <MSBuild Projects="BootstrapServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BootstrapServerISAPI">
+        <MSBuild Projects="BootstrapServerISAPI.dproj"/>
+    </Target>
+    <Target Name="BootstrapServerISAPI:Clean">
+        <MSBuild Projects="BootstrapServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BootstrapServerISAPI:Make">
+        <MSBuild Projects="BootstrapServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="BootstrapServerApplication;BootstrapServerFMXApplication;BootstrapServerService;BootstrapServerConsoleApplication;BootstrapServerDaemon;BootstrapServerApacheModule;BootstrapServerISAPI"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="BootstrapServerApplication:Clean;BootstrapServerFMXApplication:Clean;BootstrapServerService:Clean;BootstrapServerConsoleApplication:Clean;BootstrapServerDaemon:Clean;BootstrapServerApacheModule:Clean;BootstrapServerISAPI:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="BootstrapServerApplication:Make;BootstrapServerFMXApplication:Make;BootstrapServerService:Make;BootstrapServerConsoleApplication:Make;BootstrapServerDaemon:Make;BootstrapServerApacheModule:Make;BootstrapServerISAPI:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
