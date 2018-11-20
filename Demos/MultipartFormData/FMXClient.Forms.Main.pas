@@ -16,6 +16,9 @@ type
   TMainForm = class(TForm)
     TopToolBar: TToolBar;
     TitleLabel: TLabel;
+    OpenDialog1: TOpenDialog;
+    SendDataToServerButton: TButton;
+    procedure SendDataToServerButtonClick(Sender: TObject);
   private
   public
   end;
@@ -28,7 +31,30 @@ implementation
 {$R *.fmx}
 
 uses
-  FMXClient.DataModules.Main
+  FMXClient.DataModules.Main, MARS.Core.JSON
   ;
+
+procedure TMainForm.SendDataToServerButtonClick(Sender: TObject);
+var
+  LObj: TJSONObject;
+begin
+  if OpenDialog1.Execute then
+  begin
+    LObj := TJSONObject.Create;
+    try
+      LObj.WriteStringValue('name', 'Andrea');
+      LObj.WriteStringValue('surname', 'Magni');
+
+      MainDataModule.SendDataToServer(LObj, OpenDialog1.FileName
+      , procedure (AResponse: TJSONObject)
+        begin
+          ShowMessage(AResponse.ToString);
+        end
+      );
+    finally
+      LObj.Free;
+    end;
+  end;
+end;
 
 end.
