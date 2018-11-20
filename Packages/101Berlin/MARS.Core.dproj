@@ -5,7 +5,7 @@
         <ProjectVersion>18.2</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
@@ -134,6 +134,7 @@
         <DCCReference Include="..\..\Source\MARS.Core.Injection.Types.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Activation.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Activation.Interfaces.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Registry.Utils.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

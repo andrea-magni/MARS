@@ -5,7 +5,7 @@
         <ProjectVersion>18.2</ProjectVersion>
         <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
@@ -104,22 +104,14 @@
         <DCCReference Include="IndySystem.dcp"/>
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
-        <DCCReference Include="bindengine.dcp"/>
-        <DCCReference Include="bindcomp.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.Net.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.Editor.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.CustomResource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Messaging.Resource.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.JSON.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.Stream.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.SubResource.JSON.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.SubResource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.SubResource.Stream.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Utils.LiveBindings.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.Indy.pas"/>
@@ -164,13 +156,13 @@
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTAPPLICATION</ResourceId>
         </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResourceFormData.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCEFORMDATA</ResourceId>
-        </RcItem>
         <RcItem Include="..\..\media\TMARSNetClient.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSNETCLIENT</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientResourceFormData.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTRESOURCEFORMDATA</ResourceId>
         </RcItem>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>

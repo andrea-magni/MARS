@@ -10,21 +10,21 @@ package MARSClient.Core;
 {$EXTENDEDSYNTAX ON}
 {$IMPORTEDDATA ON}
 {$IOCHECKS ON}
-{$LOCALSYMBOLS ON}
+{$LOCALSYMBOLS OFF}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
-{$OPTIMIZATION OFF}
+{$OPTIMIZATION ON}
 {$OVERFLOWCHECKS OFF}
 {$RANGECHECKS OFF}
-{$REFERENCEINFO ON}
+{$REFERENCEINFO OFF}
 {$SAFEDIVIDE OFF}
-{$STACKFRAMES ON}
+{$STACKFRAMES OFF}
 {$TYPEDADDRESS OFF}
 {$VARSTRINGCHECKS ON}
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE DEBUG}
+{$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'MARS-Curiosity Client Core'}
 {$LIBSUFFIX '240'}
@@ -38,24 +38,16 @@ requires
   IndySystem,
   IndyProtocols,
   IndyCore,
-  bindengine,
-  bindcomp,
   MARS.Utils;
 
 contains
   MARS.Client.Application in '..\..\Source\MARS.Client.Application.pas',
   MARS.Client.Client.Net in '..\..\Source\MARS.Client.Client.Net.pas',
-  MARS.Client.CustomResource.Editor in '..\..\Source\MARS.Client.CustomResource.Editor.pas',
   MARS.Client.CustomResource in '..\..\Source\MARS.Client.CustomResource.pas',
-  MARS.Client.Messaging.Resource in '..\..\Source\MARS.Client.Messaging.Resource.pas',
   MARS.Client.Resource.JSON in '..\..\Source\MARS.Client.Resource.JSON.pas',
   MARS.Client.Resource in '..\..\Source\MARS.Client.Resource.pas',
   MARS.Client.Resource.Stream in '..\..\Source\MARS.Client.Resource.Stream.pas',
-  MARS.Client.SubResource.JSON in '..\..\Source\MARS.Client.SubResource.JSON.pas',
-  MARS.Client.SubResource in '..\..\Source\MARS.Client.SubResource.pas',
-  MARS.Client.SubResource.Stream in '..\..\Source\MARS.Client.SubResource.Stream.pas',
   MARS.Client.Token in '..\..\Source\MARS.Client.Token.pas',
-  MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',
   MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas',
   MARS.Client.Client in '..\..\Source\MARS.Client.Client.pas',
   MARS.Client.Client.Indy in '..\..\Source\MARS.Client.Client.Indy.pas',

@@ -54,6 +54,3 @@ contains
   MARS.Client.Resource.FormData in '..\..\Source\MARS.Client.Resource.FormData.pas';
 
 end.
-
-
-

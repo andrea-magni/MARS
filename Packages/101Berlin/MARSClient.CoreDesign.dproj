@@ -5,7 +5,7 @@
         <ProjectVersion>18.3</ProjectVersion>
         <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
@@ -101,7 +101,9 @@
         <DCCReference Include="bindengine.dcp"/>
         <DCCReference Include="bindcomp.dcp"/>
         <DCCReference Include="MARSClient.Core.dcp"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Utils.LiveBindings.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Register.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.Editor.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
