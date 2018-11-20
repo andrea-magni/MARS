@@ -57,9 +57,10 @@ begin
   PortNumberEdit.Text := IntToStr(TServerEngine.Default.Port);
 
   // skip favicon requests (browser)
-  TServerEngine.Default.OnBeforeHandleRequest :=
-    function (AEngine: TMARSEngine; AURL: TMARSURL;
-      ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
+  TServerEngine.Default.BeforeHandleRequest :=
+    function (const AEngine: TMARSEngine;
+      const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
+      var Handled: Boolean
     ): Boolean
     begin
       Result := True;

@@ -57,8 +57,9 @@ begin
 {$REGION 'BeforeHandleRequest example'}
 (*
     FEngine.BeforeHandleRequest :=
-      function (AEngine: TMARSEngine; AURL: TMARSURL;
-        ARequest: TWebRequest; AResponse: TWebResponse; var Handled: Boolean
+      function (const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
+        var Handled: Boolean
       ): Boolean
       begin
         Result := True;
