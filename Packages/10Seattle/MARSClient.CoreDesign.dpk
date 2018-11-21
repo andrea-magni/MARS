@@ -1,4 +1,4 @@
-package MARSClient.FireDAC;
+package MARSClient.CoreDesign;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -27,20 +27,20 @@ package MARSClient.FireDAC;
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'MARS-Curiosity REST Library (Client)'}
 {$LIBSUFFIX '230'}
-{$RUNONLY}
+{$DESIGNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
-  rtl,
-  MARSClient.Core,
-  FireDAC,
-  FireDACCommonDriver,
-  FireDACCommon;
+  bindengine,
+  bindcomp,
+  MARSClient.Core;
 
 contains
-  MARS.Client.FireDAC in '..\..\Source\MARS.Client.FireDAC.pas',
-  MARS.Data.FireDAC.Utils in '..\..\Source\MARS.Data.FireDAC.Utils.pas';
+  MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',
+  MARS.Client.Register in '..\..\Source\MARS.Client.Register.pas',
+  MARS.Client.CustomResource.Editor in '..\..\Source\MARS.Client.CustomResource.Editor.pas';
 
 end.
+
 
 

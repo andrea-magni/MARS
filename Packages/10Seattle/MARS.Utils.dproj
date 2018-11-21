@@ -107,6 +107,7 @@
         <DCCReference Include="IndySystem.dcp"/>
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
+        <DCCReference Include="RESTComponents.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Core.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
