@@ -15,4 +15,4 @@
 
 (please correct accordingly to your Delphi version)
 
-> Compatibility: **Recent Delphi versions (from XE7 up to 10.2.3 Tokyo)** (older versions should be quite compatible)
+> Compatibility: **Recent Delphi versions (from XE7 up to 10.3 Rio)** (older versions should be quite compatible)
