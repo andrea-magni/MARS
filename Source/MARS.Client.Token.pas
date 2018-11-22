@@ -11,12 +11,9 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON
-  , MARS.Utils.Parameters
-  , MARS.Utils.Parameters.JSON
-
-   , MARS.Client.Resource
-  ;
+, MARS.Core.JSON, MARS.Client.Resource, MARS.Client.Utils
+, MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
+;
 
 type
   [ComponentPlatformsAttribute(pidAllPlatforms)]

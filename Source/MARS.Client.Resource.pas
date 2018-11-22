@@ -12,8 +12,9 @@ interface
 uses
   SysUtils, Classes
 
-  , MARS.Client.CustomResource
-  ;
+, MARS.Client.CustomResource
+, MARS.Client.Utils
+;
 
 type
   [ComponentPlatformsAttribute(pidAllPlatforms)]

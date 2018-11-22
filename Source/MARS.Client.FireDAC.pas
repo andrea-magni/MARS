@@ -11,15 +11,12 @@ interface
 
 uses
   Classes, SysUtils, Rtti
-  , MARS.Core.JSON
+, MARS.Core.JSON
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
-
-  , FireDAC.Comp.Client
-
-  , MARS.Client.Resource
-  , MARS.Client.Client
-  , MARS.Data.FireDAC.Utils
-  ;
+, FireDAC.Comp.Client
+, MARS.Client.Resource, MARS.Client.Client, MARS.Client.Utils
+, MARS.Data.FireDAC.Utils
+;
 
 type
   TMARSFDResourceDatasetsItem = class(TCollectionItem)
@@ -116,11 +113,11 @@ type
 implementation
 
 uses
-    FireDAC.Comp.DataSet
-  , FireDAC.Stan.StorageBin, FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageXML
-  , MARS.Core.Utils, MARS.Client.Utils, MARS.Rtti.Utils
-  , MARS.Core.Exceptions, MARS.Core.MediaType
-  ;
+  FireDAC.Comp.DataSet
+, FireDAC.Stan.StorageBin, FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageXML
+, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.Exceptions, MARS.Core.MediaType
+;
 
 { TMARSFDResource }
 
