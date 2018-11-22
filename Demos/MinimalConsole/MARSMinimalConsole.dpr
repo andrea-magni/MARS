@@ -60,8 +60,8 @@ var
   LInvocationTime: Int64;
   LSetupTime: Int64;
 begin
-  LInvocationTime := TInterlocked.Read(FInvocationTime);
-  LSetupTime := TInterlocked.Read(FSetupTime);
+  LInvocationTime := FInvocationTime;
+  LSetupTime := FSetupTime;
 
   GotoXY(0, 3);
   Writeln('');
@@ -79,7 +79,10 @@ begin
   begin
     FTimePerReq := LRequestTime / FRequestCount;
     WriteLine('Request time (ms/req): ', FormatFloat('#,#0.00', FTimePerReq));
-    WriteLine('Request per second: ', FormatFloat('#,#0.00', 1000 / FTimePerReq));
+    if FTimePerReq > 0 then
+      WriteLine('Request per second: ', FormatFloat('#,#0.00', 1000 / FTimePerReq))
+    else
+      WriteLine('Request per second: ', 'INF');
   end
   else
   begin
