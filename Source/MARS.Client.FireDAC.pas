@@ -55,7 +55,7 @@ type
       const AItem: TMARSFDResourceDatasetsItem; const AErrorCount: Integer;
       const AErrors: TArray<string>; var AHandled: Boolean) of object;
 
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or pidOSX32 or pidiOSSimulator or pidiOSDevice or pidAndroid)]
+  [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSFDResource = class(TMARSClientResource)
   private
     FResourceDataSets: TMARSFDResourceDatasets;
@@ -83,7 +83,7 @@ type
     property ApplyUpdatesResults: TArray<TMARSFDApplyUpdatesRes> read FApplyUpdatesResults;
   end;
 
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or pidOSX32 or pidiOSSimulator or pidiOSDevice or pidAndroid)]
+  [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSFDDataSetResource = class(TMARSClientResource)
   private
     FApplyUpdatesResult: TMARSFDApplyUpdatesRes;
