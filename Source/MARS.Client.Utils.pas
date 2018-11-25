@@ -11,6 +11,10 @@ uses
   Classes, SysUtils
   ;
 
+{$IFNDEF Delphi10Rio_UP}
+const pidAllPlatforms = $FFFF;
+{$ENDIF}
+
 type
   EMARSClientException = class(Exception);
   EMARSClientHttpException = class(EMARSClientException)
