@@ -10,6 +10,9 @@ unit MARS.Core.JSON;
 interface
 
 uses
+{$IFDEF Delphi10Rio_UP}
+  Generics.Collections,
+{$ENDIF}
 {$ifdef DelphiXE6_UP}
   JSON
 {$else}

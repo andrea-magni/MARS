@@ -298,7 +298,9 @@ begin
     end;
   except
     on E: Exception do
-      raise EMARSApplicationException.Create('Bad parameter values for resource method ' + FMethod.Name);
+      raise EMARSApplicationException.CreateFmt(
+        'Bad parameter value for method %s.%s (%s). %s', [FResource.Name, FMethod.Name, FURLPrototype.Path, E.Message]);
+
   end;
 end;
 
