@@ -126,7 +126,7 @@ begin
     begin
       LElement := AValue.GetArrayElement(LIndex);
 
-      LJSONArray.AddElement(TJSONObject.ObjectToJSON(LElement.AsObject));
+      LJSONArray.Add(TJSONObject.ObjectToJSON(LElement.AsObject));
     end;
 
     TJSONValueWriter.WriteJSONValue(LJSONArray, AMediaType, AOutputStream, AActivation);
@@ -272,7 +272,7 @@ begin
     begin
       LElement := AValue.GetArrayElement(LIndex);
 
-      LJSONArray.AddElement(TJSONObject.RecordToJSON(LElement));
+      LJSONArray.Add(TJSONObject.RecordToJSON(LElement));
     end;
 
     TJSONValueWriter.WriteJSONValue(LJSONArray, AMediaType, AOutputStream, AActivation);

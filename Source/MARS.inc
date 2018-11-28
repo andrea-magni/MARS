@@ -47,6 +47,10 @@
   {$define Delphi10Tokyo}
 {$ENDIF}
 
+{$if compilerversion = 33}
+  {$define Delphi10Rio}
+{$ENDIF}
+
 {$if compilerversion >= 22}
   {$define DelphiXE_UP}
 {$ENDIF}
@@ -146,3 +150,17 @@
   {$define Delphi10Tokyo_UP}  
 {$ENDIF}
 
+{$if compilerversion >= 33}
+  {$define DelphiXE_UP}
+  {$define DelphiXE2_UP}
+  {$define DelphiXE3_UP}
+  {$define DelphiXE4_UP}
+  {$define DelphiXE5_UP}
+  {$define DelphiXE6_UP}
+  {$define DelphiXE7_UP}
+  {$define DelphiXE8_UP}
+  {$define Delphi10Seattle_UP}
+  {$define Delphi10Berlin_UP}
+  {$define Delphi10Tokyo_UP}
+  {$define Delphi10Rio_UP}
+{$ENDIF}

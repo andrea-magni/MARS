@@ -14,9 +14,10 @@ uses
   , HttpApp, Web.ReqMulti
   , MARS.Core.Declarations
   , MARS.Core.Utils
-  , MARS.Core.URL  
+  , MARS.Core.URL
   , MARS.Core.JSON
   , MARS.Core.Activation.Interfaces
+  , MARS.Core.Exceptions
 ;
 
 type
@@ -164,6 +165,8 @@ type
   protected
     function GetKind: string; virtual;
     function GetSwaggerKind: string; virtual;
+    function GetActualName(const ADestination: TRttiObject): string; virtual;
+    procedure CheckRequiredAttribute(const ADestination: TRttiObject); virtual;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; virtual;
@@ -171,11 +174,19 @@ type
     property SwaggerKind: string read GetSwaggerKind;
   end;
 
+  ERequiredException = class(EMARSHttpException);
+
+  RequiredAttribute = class(MARSAttribute)
+  private
+  protected
+  public
+  end;
+
   NamedRequestParamAttribute = class(RequestParamAttribute)
   private
     FName: string;
   protected
-    function GetActualName(const ADestination: TRttiObject): string; virtual;
+    function GetActualName(const ADestination: TRttiObject): string; override;
   public
     constructor Create(const AName: string = ''); virtual;
     property Name: string read FName write FName;
@@ -211,6 +222,8 @@ type
   end;
 
   FormParamsAttribute = class(RequestParamAttribute)
+  protected
+    function GetSwaggerKind: string; override;
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
@@ -400,6 +413,9 @@ var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
 begin
+  if Length(AActivation.Request.RawContent) = 0 then
+    CheckRequiredAttribute(ADestination);
+
   // 1 - MessageBodyReader mechanism (standard)
   TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
   if Assigned(LReader) then
@@ -525,12 +541,27 @@ end;
 function NamedRequestParamAttribute.GetActualName(
   const ADestination: TRttiObject): string;
 begin
-  Result := Name;
-  if (Name = '') and Assigned(ADestination) and (ADestination is TRttiNamedObject) then
-    Result := TRttiNamedObject(ADestination).Name;
+  if Name <> '' then
+    Result := Name
+  else
+    Result := inherited GetActualName(ADestination);
 end;
 
 { RequestParamAttribute }
+
+procedure RequestParamAttribute.CheckRequiredAttribute(const ADestination: TRttiObject);
+begin
+  if ADestination.HasAttribute<RequiredAttribute> then
+    raise ERequiredException.CreateFmt('Required %s parameter missing: %s', [Self.GetSwaggerKind, GetActualName(ADestination)]);
+end;
+
+function RequestParamAttribute.GetActualName(
+  const ADestination: TRttiObject): string;
+begin
+  Result := '';
+  if Assigned(ADestination) and (ADestination is TRttiNamedObject) then
+    Result := TRttiNamedObject(ADestination).Name;
+end;
 
 function RequestParamAttribute.GetKind: string;
 begin
@@ -564,25 +595,32 @@ function QueryParamAttribute.GetValue(const ADestination: TRttiObject;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
+  LIndex: Integer;
 begin
-  // 1 - MessageBodyReader mechanism (standard)
-  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
-  if Assigned(LReader) then
-    try
-      Result := LReader.ReadFrom(
-        {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-        AActivation.Request.QueryFields.Values[GetActualName(ADestination)]
-        {$ifdef Delphi10Berlin_UP} ) {$endif}
-        , ADestination, LMediaType, AActivation);
-    finally
-      FreeAndNil(LMediaType);
-    end
-  else // 2 - fallback (raw)
+  LIndex := AActivation.Request.QueryFields.IndexOfName(GetActualName(ADestination));
+  if (LIndex = -1) then
+    CheckRequiredAttribute(ADestination)
+  else
   begin
-    Result := StringToTValue(
-        AActivation.Request.QueryFields.Values[GetActualName(ADestination)]
-      , ADestination.GetRttiType
-    );
+    // 1 - MessageBodyReader mechanism (standard)
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+    if Assigned(LReader) then
+      try
+        Result := LReader.ReadFrom(
+          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+          AActivation.Request.QueryFields.ValueFromIndex[LIndex]
+          {$ifdef Delphi10Berlin_UP} ) {$endif}
+          , ADestination, LMediaType, AActivation);
+      finally
+        FreeAndNil(LMediaType);
+      end
+    else // 2 - fallback (raw)
+    begin
+      Result := StringToTValue(
+          AActivation.Request.QueryFields.ValueFromIndex[LIndex]
+        , ADestination.GetRttiType
+      );
+    end;
   end;
 end;
 
@@ -598,24 +636,29 @@ function FormParamAttribute.GetValue(const ADestination: TRttiObject;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
-  LActualName: string;
+  LIndex: Integer;
 begin
-  LActualName := GetActualName(ADestination);
-  // 1 - MessageBodyReader mechanism (standard)
-  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
-  if Assigned(LReader) then
-    try
-      Result := LReader.ReadFrom(
-        {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-        AActivation.Request.ContentFields.Values[LActualName]
-        {$ifdef Delphi10Berlin_UP} ) {$endif}
-      , ADestination, LMediaType, AActivation);
-    finally
-      FreeAndNil(LMediaType);
-    end
-  else // 2 - fallback (raw)
-    Result := StringToTValue(AActivation.Request.ContentFields.Values[LActualName]
-      , ADestination.GetRttiType);
+  LIndex := AActivation.Request.ContentFields.IndexOfName(GetActualName(ADestination));
+  if (LIndex = -1) then
+    CheckRequiredAttribute(ADestination)
+  else
+  begin
+    // 1 - MessageBodyReader mechanism (standard)
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+    if Assigned(LReader) then
+      try
+        Result := LReader.ReadFrom(
+          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+          AActivation.Request.ContentFields.ValueFromIndex[LIndex]
+          {$ifdef Delphi10Berlin_UP} ) {$endif}
+        , ADestination, LMediaType, AActivation);
+      finally
+        FreeAndNil(LMediaType);
+      end
+    else // 2 - fallback (raw)
+      Result := StringToTValue(AActivation.Request.ContentFields.ValueFromIndex[LIndex]
+        , ADestination.GetRttiType);
+  end;
 end;
 
 { HeaderParamAttribute }
@@ -632,15 +675,20 @@ function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
   var
     LMediaType: TMediaType;
     LReader: IMessageBodyReader;
+    LValue: string;
   begin
     Result := TValue.Empty;
+    LValue := AActivation.Request.GetFieldByName(TheName);
+    if (LValue = '') then
+      CheckRequiredAttribute(TheDestination);
+
     // 1 - MessageBodyReader mechanism (standard)
     TMARSMessageBodyReaderRegistry.Instance.FindReader(TheDestination, LReader, LMediaType);
     if Assigned(LReader) then
       try
         Result := LReader.ReadFrom(
           {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-          AActivation.Request.GetFieldByName(TheName)
+          LValue
           {$ifdef Delphi10Berlin_UP} ) {$endif}
           , TheDestination, LMediaType, AActivation);
       finally
@@ -648,9 +696,7 @@ function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
       end
     else // 2 - fallback (raw)
     begin
-      Result := StringToTValue(
-          AActivation.Request.GetFieldByName(TheName), TheDestination.GetRttiType
-      );
+      Result := StringToTValue(LValue, TheDestination.GetRttiType);
     end;
   end;
 
@@ -693,9 +739,14 @@ end;
 
 function CookieParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
+var
+  LIndex: Integer;
 begin
+  LIndex := AActivation.Request.CookieFields.IndexOfName(GetActualName(ADestination));
+  if LIndex = -1 then
+    CheckRequiredAttribute(ADestination);
   Result := StringToTValue(
-      AActivation.Request.CookieFields.Values[GetActualName(ADestination)]
+      AActivation.Request.CookieFields.ValueFromIndex[LIndex]
     , ADestination.GetRttiType
   );
 end;
@@ -742,7 +793,9 @@ begin
     end;
 
     Result := StringToTValue(LValue, ADestination.GetRttiType);
-  end;
+  end
+  else
+    CheckRequiredAttribute(ADestination);
 end;
 
 { AuthorizationAttribute }
@@ -781,24 +834,34 @@ end;
 
 { FormParamsAttribute }
 
+function FormParamsAttribute.GetSwaggerKind: string;
+begin
+  Result := 'formData(s)';
+end;
+
 function FormParamsAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
 begin
-  // 1 - MessageBodyReader mechanism (standard)
-  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
-  if Assigned(LReader) then
-    try
+  if AActivation.Request.ContentFields.Count = 0 then
+    CheckRequiredAttribute(ADestination)
+  else
+  begin
+    // 1 - MessageBodyReader mechanism (standard)
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+    if Assigned(LReader) then
+      try
 
-      Result := LReader.ReadFrom({$ifdef Delphi10Berlin_UP}nil{$else}''{$endif}
-        , ADestination, LMediaType, AActivation);
-    finally
-      FreeAndNil(LMediaType);
-    end
-  else // 2 - fallback (raw)
-    Result := StringToTValue(AActivation.Request.ContentFields.Text, ADestination.GetRttiType);
+        Result := LReader.ReadFrom({$ifdef Delphi10Berlin_UP}nil{$else}''{$endif}
+          , ADestination, LMediaType, AActivation);
+      finally
+        FreeAndNil(LMediaType);
+      end
+    else // 2 - fallback (raw)
+      Result := StringToTValue(AActivation.Request.ContentFields.Text, ADestination.GetRttiType);
+  end;
 end;
 
 { ConfigSingleParamAttribute }

@@ -8,5 +8,5 @@ TMARSCLIENTSUBRESOURCESTREAM BITMAP "..\\..\\media\\TMARSClientSubResourceStream
 TMARSCLIENTTOKEN BITMAP "..\\..\\media\\TMARSClientToken.bmp"
 TMARSCLIENT BITMAP "..\\..\\media\\TMARSClient.bmp"
 TMARSCLIENTAPPLICATION BITMAP "..\\..\\media\\TMARSClientApplication.bmp"
-TMARSCLIENTRESOURCEFORMDATA BITMAP "..\\..\\media\\TMARSClientResourceFormData.bmp"
 TMARSNETCLIENT BITMAP "..\\..\\media\\TMARSNetClient.bmp"
+TMARSCLIENTRESOURCEFORMDATA BITMAP "..\\..\\media\\TMARSClientResourceFormData.bmp"

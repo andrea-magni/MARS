@@ -18,17 +18,7 @@ uses
   ;
 
 type
-  {$ifdef DelphiXE2_UP}
-    [ComponentPlatformsAttribute(
-        pidWin32 or pidWin64
-     or pidOSX32
-     or pidiOSSimulator
-     or pidiOSDevice
-    {$ifdef DelphiXE8_UP}
-     or pidiOSDevice32 or pidiOSDevice64
-    {$endif}
-     or pidAndroid)]
-  {$endif}
+  [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSClientCustomResource = class(TComponent)
   private
     FResource: string;

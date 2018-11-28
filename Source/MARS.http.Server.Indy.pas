@@ -21,11 +21,15 @@ uses
 ;
 
 type
+  TBeforeCommandGetFunc = reference to function (AContext: TIdContext;
+    ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo): Boolean;
+
   TMARShttpServerIndy = class(TIdCustomHTTPServer)
   private
     FEngine: TMARSEngine;
     FStartedAt: TDateTime;
     FStoppedAt: TDateTime;
+    FBeforeCommandGet: TBeforeCommandGetFunc;
     function GetUpTime: TTimeSpan;
   protected
     procedure SetCookies(const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse); virtual;
@@ -47,6 +51,8 @@ type
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
+
+    property BeforeCommandGet: TBeforeCommandGetFunc read FBeforeCommandGet write FBeforeCommandGet;
   end;
 
 implementation
@@ -69,6 +75,7 @@ begin
   inherited Create(nil);
   OnParseAuthentication := ParseAuthenticationHandler;
   FEngine := AEngine;
+  FBeforeCommandGet := nil;
 end;
 
 procedure TMARShttpServerIndy.DoCommandGet(AContext: TIdContext;
@@ -78,6 +85,10 @@ var
   LResponse: TIdHTTPAppResponse;
 begin
   inherited;
+
+  if Assigned(FBeforeCommandGet) then
+    if not FBeforeCommandGet(AContext, ARequestInfo, AResponseInfo) then
+      Exit;
 
   LRequest := TIdHTTPAppRequest.Create(AContext, ARequestInfo, AResponseInfo);
   try

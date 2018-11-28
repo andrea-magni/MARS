@@ -11,25 +11,12 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON
-  , MARS.Utils.Parameters
-  , MARS.Utils.Parameters.JSON
-
-   , MARS.Client.Resource
-  ;
+, MARS.Core.JSON, MARS.Client.Resource, MARS.Client.Utils
+, MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
+;
 
 type
-  {$ifdef DelphiXE2_UP}
-    [ComponentPlatformsAttribute(
-        pidWin32 or pidWin64
-     or pidOSX32
-     or pidiOSSimulator
-     or pidiOSDevice
-    {$ifdef DelphiXE8_UP}
-     or pidiOSDevice32 or pidiOSDevice64
-    {$endif}
-     or pidAndroid)]
-  {$endif}
+  [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSClientToken = class(TMARSClientResource)
   private
     FData: TJSONObject;

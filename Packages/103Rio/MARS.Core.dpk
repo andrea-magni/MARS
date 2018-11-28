@@ -1,0 +1,67 @@
+package MARS.Core;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity Core'}
+{$LIBSUFFIX '250'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  inet,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  xmlrtl,
+  dsnap,
+  MARS.Utils;
+
+contains
+  MARS.Core.Application in '..\..\Source\MARS.Core.Application.pas',
+  MARS.Core.Attributes in '..\..\Source\MARS.Core.Attributes.pas',
+  MARS.Core.Cache in '..\..\Source\MARS.Core.Cache.pas',
+  MARS.Core.Classes in '..\..\Source\MARS.Core.Classes.pas',
+  MARS.Core.Engine in '..\..\Source\MARS.Core.Engine.pas',
+  MARS.Core.MessageBodyReader in '..\..\Source\MARS.Core.MessageBodyReader.pas',
+  MARS.Core.MessageBodyWriter in '..\..\Source\MARS.Core.MessageBodyWriter.pas',
+  MARS.Core.Registry in '..\..\Source\MARS.Core.Registry.pas',
+  MARS.Core.Response in '..\..\Source\MARS.Core.Response.pas',
+  MARS.Core.Token in '..\..\Source\MARS.Core.Token.pas',
+  MARS.http.Core in '..\..\Source\MARS.http.Core.pas',
+  MARS.Core.Activation in '..\..\Source\MARS.Core.Activation.pas',
+  MARS.Core.Injection.Interfaces in '..\..\Source\MARS.Core.Injection.Interfaces.pas',
+  MARS.Core.Injection in '..\..\Source\MARS.Core.Injection.pas',
+  MARS.Core.Injection.Types in '..\..\Source\MARS.Core.Injection.Types.pas',
+  MARS.Core.Activation.InjectionService in '..\..\Source\MARS.Core.Activation.InjectionService.pas',
+  MARS.Core.Activation.Interfaces in '..\..\Source\MARS.Core.Activation.Interfaces.pas',
+  MARS.Core.Registry.Utils in '..\..\Source\MARS.Core.Registry.Utils.pas';
+
+end.
+
+
+

@@ -19,17 +19,7 @@ uses
   ;
 
 type
-  {$ifdef DelphiXE2_UP}
-    [ComponentPlatformsAttribute(
-        pidWin32 or pidWin64
-     or pidOSX32
-     or pidiOSSimulator
-     or pidiOSDevice
-    {$ifdef DelphiXE8_UP}
-     or pidiOSDevice32 or pidiOSDevice64
-    {$endif}
-     or pidAndroid)]
-  {$endif}
+  [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSIndyClient = class(TMARSCustomClient)
   private
     FHttpClient: TIdHTTP;
@@ -84,17 +74,7 @@ type
     property HttpClient: TIdHTTP read FHttpClient;
   end;
 
-  {$ifdef DelphiXE2_UP}
-    [ComponentPlatformsAttribute(
-        pidWin32 or pidWin64
-     or pidOSX32
-     or pidiOSSimulator
-     or pidiOSDevice
-    {$ifdef DelphiXE8_UP}
-     or pidiOSDevice32 or pidiOSDevice64
-    {$endif}
-     or pidAndroid)]
-  {$endif}
+  [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSClient = class(TMARSIndyClient); // compatibility
 
 implementation
