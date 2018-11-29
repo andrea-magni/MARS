@@ -635,18 +635,8 @@ begin
         FireBeforeExecute(LResource.URL, LClient);
         LResource.POST(
           procedure (AStream: TMemoryStream)
-          var
-            LWriter: TStreamWriter;
           begin
-            if Assigned(AContent) then
-            begin
-              LWriter := TStreamWriter.Create(AStream);
-              try
-                LWriter.Write(AContent.ToJSON);
-              finally
-                LWriter.Free;
-              end;
-            end;
+            JSONValueToStream(AContent, AStream);
           end
         , procedure (AStream: TStream)
           begin
@@ -705,18 +695,8 @@ begin
         LResource.SpecificToken := AToken;
         LResource.POSTAsync(
           procedure (AStream: TMemoryStream)
-          var
-            LWriter: TStreamWriter;
           begin
-            if Assigned(AContent) then
-            begin
-              LWriter := TStreamWriter.Create(AStream);
-              try
-                LWriter.Write(AContent.ToJSON);
-              finally
-                LWriter.Free;
-              end;
-            end;
+            JSONValueToStream(AContent, AStream);
           end
         , procedure (AResource: TMARSClientCustomResource)
           begin

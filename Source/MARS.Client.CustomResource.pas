@@ -514,16 +514,8 @@ begin
 
   GET(ABeforeExecute
     , procedure (AResponse: TStream)
-      var
-        LStreamReader: TStreamReader;
       begin
-        AResponse.Position := 0;
-        LStreamReader := TStreamReader.Create(AResponse, LEncoding);
-        try
-          LResult := LStreamReader.ReadToEnd;
-        finally
-          LStreamReader.Free;
-        end;
+        LResult := StreamToString(AResponse, LEncoding)
       end
     , AOnException
   );

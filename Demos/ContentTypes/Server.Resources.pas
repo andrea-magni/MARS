@@ -40,6 +40,17 @@ type
     [GET, Path('/json2'), Produces(TMediaType.APPLICATION_JSON)]
     function JSON2: TJSONRawString;
 
+    [GET, Path('/bool'), Produces(TMediaType.WILDCARD)]
+    function TestBool: Boolean;
+
+    [GET, Path('/int')]
+    function TestInt: Integer;
+
+    [GET, Path('/pi')]
+    function TestPi: Double;
+
+    [GET, Path('/string')]
+    function TestString: string;
 
     [GET, Path('/jpeg'), Produces('image/jpg')]
     function JpegImage: TStream;
@@ -176,7 +187,28 @@ begin
   Result := 'Hello World!';
 end;
 
+function THelloWorldResource.TestBool: Boolean;
+begin
+  Result := Random(100) < 50;
+end;
+
+function THelloWorldResource.TestInt: Integer;
+begin
+  Result := Random(100);
+end;
+
+function THelloWorldResource.TestPi: Double;
+begin
+  Result := Pi;
+end;
+
+function THelloWorldResource.TestString: string;
+begin
+  Result := 'MARS REST Server';
+end;
+
 initialization
+  Randomize;
   TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
 
 

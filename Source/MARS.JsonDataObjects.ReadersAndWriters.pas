@@ -41,29 +41,23 @@ type
 implementation
 
 uses
-    JsonDataObjects
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils
-  ;
+  JsonDataObjects
+, MARS.Core.Utils, MARS.Rtti.Utils
+;
 
 { TJsonDataObjectsWriter }
 
 procedure TJsonDataObjectsWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LJsonBO: TJsonBaseObject;
   LEncoding: TEncoding;
 begin
   LEncoding := GetDesiredEncoding(AActivation);
-  LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
-  try
-    LJsonBO := AValue.AsObject as TJsonBaseObject;
-    if Assigned(LJsonBO) then
-      LStreamWriter.Write(LJsonBO.ToJSON);
-  finally
-    LStreamWriter.Free;
-  end;
+
+  LJsonBO := AValue.AsObject as TJsonBaseObject;
+  if Assigned(LJsonBO) then
+    StringToStream(AOutputStream, LJsonBO.ToJSON, LEncoding);
 end;
 
 { TJsonDataObjectsReader }

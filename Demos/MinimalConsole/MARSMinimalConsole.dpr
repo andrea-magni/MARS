@@ -5,6 +5,7 @@
 {$R *.res}
 
 uses
+  Scalemm2,
   System.SysUtils,
   SyncObjs,
   Windows,
@@ -31,7 +32,7 @@ type
 
 function THelloWorldResource.SayHelloWorld: string;
 begin
-  Result := 'Hello World! Zażółć gęślą jaźń';
+  Result := 'Hello World! Zażółć gęślą jaźń.';
 end;
 
 var

@@ -9,13 +9,12 @@ interface
 
 uses
   Classes, SysUtils, Rtti
-
-  , MARS.Core.Attributes
-  , MARS.Core.Declarations
-  , MARS.Core.MediaType
-  , MARS.Core.MessageBodyWriter
-  , MARS.Core.Activation.Interfaces
-  ;
+, MARS.Core.Attributes
+, MARS.Core.Declarations
+, MARS.Core.MediaType
+, MARS.Core.MessageBodyWriter
+, MARS.Core.Activation.Interfaces
+;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -40,11 +39,10 @@ implementation
 
 uses
   DB, DBClient
-  , MARS.Core.JSON
-  , MARS.Core.MessageBodyWriters
-  , MARS.Data.Utils
-  , MARS.Rtti.Utils
-  ;
+, MARS.Core.JSON
+, MARS.Core.MessageBodyWriters
+, MARS.Data.Utils, MARS.Rtti.Utils, MARS.Core.Utils
+;
 
 { TDataSetWriterJSON }
 
@@ -66,20 +64,18 @@ end;
 procedure TDataSetWriterXML.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LStreamWriter: TStreamWriter;
   LEncoding: TEncoding;
+  LXML: string;
 begin
   if not GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
-  LStreamWriter := TStreamWriter.Create(AOutputStream, LEncoding);
-  try
-    if AValue.AsObject is TClientDataSet then // CDS
-      LStreamWriter.Write(TClientDataSet(AValue.AsObject).XMLData)
-    else // default
-      LStreamWriter.Write(DataSetToXML(Avalue.AsObject as TDataSet));
-  finally
-    LStreamWriter.Free;
-  end;
+
+  if AValue.AsObject is TClientDataSet then // CDS
+    LXML := TClientDataSet(AValue.AsObject).XMLData
+  else // default
+    LXML := DataSetToXML(AValue.AsObject as TDataSet);
+
+  StringToStream(AOutputStream, LXML, LEncoding);
 end;
 
 { TArrayDataSetWriter }

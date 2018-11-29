@@ -290,7 +290,6 @@ begin
     LEncoding := TEncoding.UTF8;
 
   LBytes := LEncoding.GetBytes(AString);
-
   AStream.Size := 0;
   AStream.Write(LBytes, Length(LBytes));
 end;
@@ -364,6 +363,9 @@ var
   LEncoding: TEncoding;
   LBytes: TBytes;
 begin
+  if not (Assigned(AValue) and Assigned(ADestStream)) then
+    Exit;
+
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
     LEncoding := TEncoding.UTF8;

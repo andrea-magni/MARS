@@ -111,16 +111,9 @@ begin
 end;
 
 procedure TMARSClientToken.BeforePOST(const AContent: TMemoryStream);
-var
-  LStreamWriter: TStreamWriter;
 begin
   inherited;
-  LStreamWriter := TStreamWriter.Create(AContent);
-  try
-    LStreamWriter.Write('username=' + FUserName + '&password=' + FPassword);
-  finally
-    LStreamWriter.Free;
-  end;
+  StringToStream(AContent, 'username=' + FUserName + '&password=' + FPassword);
 end;
 
 procedure TMARSClientToken.Clear;

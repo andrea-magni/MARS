@@ -55,6 +55,8 @@ type
 
 implementation
 
+uses MARS.Core.Utils;
+
 { TMARSReqRespLoggerMemory }
 
 class constructor TMARSReqRespLoggerMemory.ClassCreate;
@@ -258,7 +260,6 @@ var
   LCookies: string;
   LCookieIndex: Integer;
   LContentString: string;
-  LReader: TStreamReader;
 begin
   HTTPRequest.ToDataSet(ADataSet);
 
@@ -267,18 +268,13 @@ begin
   begin
     ADataSet.FieldByName('ContentSize').AsInteger := ContentStream.Size;
 
-    ContentStream.Position := 0;
-    LReader := TStreamReader.Create(ContentStream);
     try
-      try
-        LContentString := LReader.ReadToEnd;
-      except on E:EEncodingError do
-        LContentString := E.ToString;
-      end;
-      ContentStream.Position := 0;
-    finally
-      LReader.Free;
+      LContentString := StreamToString(ContentStream);
+    except on E:EEncodingError do
+      LContentString := E.ToString;
     end;
+    ContentStream.Position := 0;
+
     ADataSet.FieldByName('Content').AsString := LContentString;
   end;
 

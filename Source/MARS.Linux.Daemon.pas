@@ -224,21 +224,20 @@ end;
 procedure TMARSDaemon.DoLog(const AMsg: string);
 var
   LExeFileName, LLogFileName: string;
-  LStreamWriter: TStreamWriter;
+  LFileStream: TFileStream;
+  LBytes: TBytes;
 begin
 //  inherited DoLog('[' + Name +'] ' + AMsg);
 
   LExeFileName := ParamStr(0);
   LLogFileName := ChangeFileExt(LExeFileName, '.log');
 
-  LStreamWriter := TStreamWriter.Create(LLogFileName, True, TEncoding.UTF8);
+  LFileStream := TFileStream.Create(LLogFileName, fmCreate or fmOpenWrite or fmShareDenyWrite);
   try
-    LStreamWriter.Write(
-      string.join('|', [DateTimeToStr(Now), Name, AMsg])
-    );
-    LStreamWriter.WriteLine;
+    LBytes := TEncoding.UTF8.GetBytes(string.join('|', [DateTimeToStr(Now), Name, AMsg]) + sLineBreak);
+    LFileStream.Write(LBytes, Length(LBytes));
   finally
-    LStreamWriter.Free;
+    LFileStream.Free;
   end;
 end;
 
