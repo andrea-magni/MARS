@@ -105,25 +105,25 @@ type
     function HasToken: Boolean; virtual;
     procedure Invoke; virtual;
 
-    function GetApplication: TMARSApplication;
-    function GetEngine: TMARSEngine;
-    function GetInvocationTime: TStopwatch;
-    function GetSetupTime: TStopwatch;
-    function GetTeardownTime: TStopwatch;
-    function GetSerializationTime: TStopwatch;
-    function GetMethod: TRttiMethod;
-    function GetMethodReturnType: TRttiType;
-    function GetMethodArguments: TArray<TValue>;
-    function GetMethodAttributes: TArray<TCustomAttribute>;
-    function GetMethodResult: TValue;
-    function GetRequest: TWebRequest;
-    function GetResource: TRttiType;
-    function GetResourceAttributes: TArray<TCustomAttribute>;
-    function GetResourceInstance: TObject;
-    function GetResponse: TWebResponse;
-    function GetURL: TMARSURL;
-    function GetURLPrototype: TMARSURL;
-    function GetToken: TMARSToken;
+    function GetApplication: TMARSApplication; inline;
+    function GetEngine: TMARSEngine; inline;
+    function GetInvocationTime: TStopwatch; inline;
+    function GetSetupTime: TStopwatch; inline;
+    function GetTeardownTime: TStopwatch; inline;
+    function GetSerializationTime: TStopwatch; inline;
+    function GetMethod: TRttiMethod; inline;
+    function GetMethodReturnType: TRttiType; inline;
+    function GetMethodArguments: TArray<TValue>; inline;
+    function GetMethodAttributes: TArray<TCustomAttribute>; inline;
+    function GetMethodResult: TValue; inline;
+    function GetRequest: TWebRequest; inline;
+    function GetResource: TRttiType; inline;
+    function GetResourceAttributes: TArray<TCustomAttribute>; inline;
+    function GetResourceInstance: TObject; inline;
+    function GetResponse: TWebResponse; inline;
+    function GetURL: TMARSURL; inline;
+    function GetURLPrototype: TMARSURL; inline;
+    function GetToken: TMARSToken; inline;
     // ---
 
     property Application: TMARSApplication read FApplication;
@@ -257,13 +257,14 @@ end;
 function TMARSActivation.GetToken: TMARSToken;
 begin
   if not Assigned(FToken) then
+  begin
     FToken := GetContextValue(FRttiContext.GetType(Self.ClassType).GetField('FToken')).Value.AsType<TMARSToken>;
+    if not Assigned(FToken) then
+      raise EMARSException.Create('Token injection failed in MARSActivation. '
+        + 'Check you have added at least one Token implementation to your uses clause. '
+        + 'On Windows, try adding MARS.mORMotJWT.Token unit to your uses clause.');
+  end;
   Result := FToken;
-
-  if not Assigned(Result) then
-    raise EMARSException.Create('Token injection failed in MARSActivation. '
-      + 'Check you have added at least one Token implementation to your uses clause. '
-      + 'On Windows, try adding MARS.mORMotJWT.Token unit to your uses clause.');
 end;
 
 function TMARSActivation.GetURL: TMARSURL;
