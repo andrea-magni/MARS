@@ -497,8 +497,8 @@ begin
       begin
         Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
           tkString, tkSet, tkWChar, tkLString, tkWString,
-          tkVariant, tkArray, tkRecord, tkInt64, tkDynArray, tkUString]);
-//          and (AMediaType = TMediaType.WILDCARD);
+          tkVariant, tkArray, tkRecord, tkInt64, tkDynArray, tkUString])
+          and (AMediaType = TMediaType.WILDCARD);
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin

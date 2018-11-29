@@ -361,19 +361,15 @@ end;
 
 procedure JSONValueToStream(const AValue: TJSONValue; const ADestStream: TStream; const AEncoding: TEncoding);
 var
-  LStreamWriter: TStreamWriter;
   LEncoding: TEncoding;
+  LBytes: TBytes;
 begin
   LEncoding := AEncoding;
   if not Assigned(LEncoding) then
     LEncoding := TEncoding.UTF8;
 
-  LStreamWriter := TStreamWriter.Create(ADestStream, LEncoding);
-  try
-    LStreamWriter.Write(AValue.ToJSON);
-  finally
-    LStreamWriter.Free;
-  end;
+  LBytes := LEncoding.GetBytes(AValue.ToJSON);
+  ADestStream.Write(LBytes, Length(LBytes));
 end;
 
 function StringArrayToString(const AArray: TArray<string>; const ADelimiter: string = ','): string;
