@@ -12,12 +12,9 @@ interface
 uses
   Classes, SysUtils, Rtti
 
-  , MARS.Core.Attributes
-  , MARS.Core.Activation.Interfaces
-  , MARS.Core.Declarations
-  , MARS.Core.MediaType
-  , MARS.Core.MessageBodyReader
-  ;
+, MARS.Core.Attributes, MARS.Core.Activation.Interfaces, MARS.Core.Declarations
+, MARS.Core.MediaType, MARS.Core.MessageBodyReader
+;
 
 type
   [Consumes(TMediaType.APPLICATION_JSON)]
@@ -56,6 +53,22 @@ type
       const AActivation: IMARSActivation
     ): TValue;
 
+  end;
+
+  [Consumes(TMediaType.APPLICATION_XML)]
+  TXMLReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue; virtual;
+
+    class function ReadXML(
+      {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue;
   end;
 
   [Consumes(TMediaType.APPLICATION_JSON)
@@ -129,11 +142,11 @@ type
 implementation
 
 uses
-  StrUtils, NetEncoding, Web.HttpApp
-  , MARS.Core.JSON
-  , MARS.Core.Utils, MARS.Rtti.Utils
-  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
-  ;
+  StrUtils, NetEncoding, Web.HttpApp, Generics.Collections
+{$ifdef DelphiXE7_UP}, System.JSON {$endif}
+, Xml.XMLIntf, XMLDoc
+, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
+;
 
 { TJSONValueReader }
 
@@ -487,6 +500,45 @@ begin
 end;
 
 
+{ TXMLReader }
+
+function TXMLReader.ReadFrom(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LXMLDoc: IXMLDocument;
+  LEncoding: TEncoding;
+begin
+  Result := TValue.Empty;
+
+  LEncoding := TEncoding.UTF8;
+
+  LXMLDoc := TXMLDocument.Create(nil);
+{$ifdef Delphi10Berlin_UP}
+  LXMLDoc.LoadFromXML(LEncoding.GetString(AInputData));
+{$else}
+  LXMLDoc.LoadFromXML(AInputData);
+{$endif}
+  Result := TValue.From<IXMLDocument>(LXMLDoc);
+end;
+
+class function TXMLReader.ReadXML(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LXMLReader: TXMLReader;
+begin
+  LXMLReader := TXMLReader.Create;
+  try
+    Result := LXMLReader.ReadFrom(AInputData, ADestination, AMediaType, AActivation);
+  finally
+    LXMLReader.Free;
+  end;
+end;
+
+
 procedure RegisterReaders;
 begin
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader(
@@ -514,6 +566,7 @@ begin
   );
 
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TJSONValue>(TJSONValueReader);
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<IXMLDocument>(TXMLReader);
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TStream>(TStreamReader);
 
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader(
