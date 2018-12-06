@@ -38,7 +38,7 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
 
     class procedure WriteJSONValue(const AValue: TValue; const AMediaType: TMediaType;
-      AOutputStream: TStream; const AActivation: IMARSActivation); inline;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_XML)]
@@ -49,7 +49,7 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
 
     class procedure WriteXML(const AValue: TValue; const AMediaType: TMediaType;
-      AOutputStream: TStream; const AActivation: IMARSActivation); inline;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -149,8 +149,15 @@ end;
 class procedure TJSONValueWriter.WriteJSONValue(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
+var
+  LJSONWriter: TJSONValueWriter;
 begin
-  TMARSMessageBodyWriter.WriteWith<TJSONValueWriter>(AValue, AMediaType, AOutputStream, AActivation);
+  LJSONWriter := TJSONValueWriter.Create;
+  try
+    LJSONWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
+  finally
+    LJSONWriter.Free;
+  end;
 end;
 
 procedure TJSONValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
@@ -166,7 +173,7 @@ var
   LEncoding: TEncoding;
   LContentBytes: TBytes;
 begin
-  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
+  if not GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
 
   LJSONString := '';
@@ -393,7 +400,7 @@ var
   LContentType: string;
   LEncodingName: string;
 begin
-  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
+  if not GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
   LEncodingName := GetEncodingName(LEncoding);
 
@@ -426,7 +433,7 @@ var
   LXMLString: string;
   LXMLNode: IXMLNode;
 begin
-  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
+  if not GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
 
   LXMLString := '';
@@ -453,9 +460,17 @@ end;
 class procedure TXMLWriter.WriteXML(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
+var
+  LXMLWriter: TXMLWriter;
 begin
-  TMARSMessageBodyWriter.WriteWith<TXMLWriter>(AValue, AMediaType, AOutputStream, AActivation);
+  LXMLWriter := TXMLWriter.Create;
+  try
+    LXMLWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
+  finally
+    LXMLWriter.Free;
+  end;
 end;
+
 
 procedure RegisterWriters;
 begin
