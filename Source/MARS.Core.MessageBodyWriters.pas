@@ -497,15 +497,11 @@ begin
       begin
         Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
           tkString, tkSet, tkWChar, tkLString, tkWString,
-          tkVariant, tkArray, tkRecord, tkInt64, tkDynArray, tkUString])
-          and (
-            (AMediaType = TMediaType.WILDCARD)
-         or (AMediaType = TMediaType.TEXT_PLAIN) or (AMediaType = TMediaType.TEXT_HTML)
-         );
+          tkVariant, tkArray, tkRecord, tkInt64, tkDynArray, tkUString]);
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
+        Result := TMARSMessageBodyRegistry.AFFINITY_ZERO;
       end
   );
 end;

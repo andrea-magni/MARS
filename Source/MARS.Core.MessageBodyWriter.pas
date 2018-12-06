@@ -8,12 +8,10 @@ unit MARS.Core.MessageBodyWriter;
 interface
 
 uses
-    Classes, SysUtils, Rtti, Generics.Defaults, Generics.Collections
-  , MARS.Core.MediaType
-  , MARS.Core.Declarations
-  , MARS.Core.Classes
-  , MARS.Core.Activation.Interfaces
-  ;
+  Classes, SysUtils, Rtti, Generics.Defaults, Generics.Collections
+, MARS.Core.MediaType, MARS.Core.Declarations, MARS.Core.Classes
+, MARS.Core.Activation.Interfaces
+;
 
 type
   IMessageBodyWriter = interface
@@ -49,16 +47,12 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure RegisterWriter(
-      const ACreateInstance: TFunc<IMessageBodyWriter>;
-      const AIsWritable: TIsWritableFunction;
-      const AGetAffinity: TGetAffinityFunction;
+    procedure RegisterWriter(const ACreateInstance: TFunc<IMessageBodyWriter>;
+      const AIsWritable: TIsWritableFunction; const AGetAffinity: TGetAffinityFunction;
       AWriterRttiType: TRttiType); overload;
 
-    procedure RegisterWriter(
-      const AWriterClass: TClass;
-      const AIsWritable: TIsWritableFunction;
-      const AGetAffinity: TGetAffinityFunction); overload;
+    procedure RegisterWriter(const AWriterClass: TClass;
+      const AIsWritable: TIsWritableFunction; const AGetAffinity: TGetAffinityFunction); overload;
 
     procedure RegisterWriter(const AWriterClass: TClass; const ASubjectClass: TClass;
       const AGetAffinity: TGetAffinityFunction); overload;
@@ -88,11 +82,8 @@ function GetEncodingName(const AEncoding: TEncoding): string;
 implementation
 
 uses
-    MARS.Core.Utils
-  , MARS.Rtti.Utils
-  , MARS.Core.Exceptions
-  , MARS.Core.Attributes
-  ;
+  MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions, MARS.Core.Attributes
+;
 
 function GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
 var
