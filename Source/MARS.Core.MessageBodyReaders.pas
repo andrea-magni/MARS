@@ -14,7 +14,6 @@ uses
 
 , MARS.Core.Attributes, MARS.Core.Activation.Interfaces, MARS.Core.Declarations
 , MARS.Core.MediaType, MARS.Core.MessageBodyReader
-, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -219,7 +218,7 @@ function TRecordReader.ReadFrom(
 ): TValue;
 var
   LJSON: TJSONObject;
-  LRequest: IMARSRequest;
+  LRequest: TWebRequest;
 begin
   Result := TValue.Empty;
 
@@ -228,7 +227,7 @@ begin
   then
   begin
     LRequest := AActivation.Request;
-    Result := StringsToRecord(LRequest.GetFormParams, ADestination.GetRttiType
+    Result := StringsToRecord(LRequest.ContentFields, ADestination.GetRttiType
     , procedure (const AName: string; const AField: TRttiField; var AValue: TValue)
       begin
         if AField.FieldType.Handle = TypeInfo(TFormParamFile) then
@@ -402,24 +401,42 @@ function TStringReader.ReadFrom(
   const AActivation: IMARSActivation): TValue;
 var
   LType: TRttiType;
-  LEncoding: TEncoding;
-  LText: string;
+  LSL: TStringList;
+  {$ifdef Delphi10Berlin_UP}
+  LBytesStream: TBytesStream;
+  {$endif}
 begin
   Result := TValue.Empty;
   LType := ADestination.GetRttiType;
 
   {$ifdef Delphi10Berlin_UP}
-  if not TMARSMessageBodyReader.GetDesiredEncoding(AActivation, LEncoding) then
-    LEncoding := TEncoding.UTF8; // UTF8 by default
-  LText := LEncoding.GetString(AInputData);
+  LBytesStream := TBytesStream.Create(AInputData);
+  try
+    LSL := TStringList.Create;
+    try
+      LSL.LoadFromStream(LBytesStream);
+      if LType.IsDynamicArrayOf<string> then
+        Result := TValue.From<TArray<string>>( LSL.ToStringArray )
+      else if LType.Handle = TypeInfo(string) then
+        Result := LSL.Text;
+    finally
+      LSL.Free;
+    end;
+  finally
+    LBytesStream.Free;
+  end;
   {$else}
-  LText := string(AInputData);
+  LSL := TStringList.Create;
+  try
+    LSL.Text := string(AInputData);
+    if LType.IsDynamicArrayOf<string> then
+      Result := TValue.From<TArray<string>>( LSL.ToStringArray )
+    else if LType.Handle = TypeInfo(string) then
+      Result := LSL.Text;
+  finally
+    LSL.Free;
+  end;
  {$endif}
-
-  if LType.IsDynamicArrayOf<string> then
-    Result := TValue.From<TArray<string>>( LText.Split([sLineBreak]) )
-  else if LType.Handle = TypeInfo(string) then
-    Result := LText;
 end;
 
 { TFormParamReader }
@@ -461,7 +478,7 @@ function TArrayOfTFormParamReader.ReadFrom(
 ): TValue;
 var
   LResult: TArray<TFormParam>;
-  LRequest: IMARSRequest;
+  LRequest: TWebRequest;
   LIndex: Integer;
 begin
   LResult := [];
@@ -472,10 +489,10 @@ begin
   begin
     LRequest := AActivation.Request;
 
-    for LIndex := 0 to LRequest.GetFormParamCount - 1 do
-      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LRequest.GetFormParamName(LIndex))];
+    for LIndex := 0 to LRequest.ContentFields.Count - 1 do
+      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LRequest.ContentFields.Names[LIndex])];
 
-    for LIndex := 0 to LRequest.GetFilesCount - 1 do
+    for LIndex := 0 to LRequest.Files.Count - 1 do
       LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LIndex)];
   end;
 
