@@ -162,7 +162,7 @@ uses
   TypInfo
 , MARS.Core.Attributes, MARS.Core.Response, MARS.Core.MessageBodyReader
 , MARS.Core.Exceptions, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Rtti.Utils
-, MARS.Core.Injection, MARS.Core.Activation.InjectionService, MARS.Core.MessageBodyWriters
+, MARS.Core.Injection, MARS.Core.Activation.InjectionService
 ;
 
 { TMARSActivation }
