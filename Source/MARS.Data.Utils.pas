@@ -260,6 +260,8 @@ begin
   finally
     ADataSet.EnableControls;
   end;
+
+  Result := '<dataset>' + Result + '</dataset>';
 end;
 
 function DatasetMetadataToJSONObject(const ADataSet: TDataSet): TJSONObject;
