@@ -404,11 +404,12 @@ var
   LMediaType: string;
 begin
   Result := [];
-
   for LMediaType in AList1 do
   begin
-    if (LMediaType = TMediaType.WILDCARD) or AList2.Contains(LMediaType) then
-      Result := Result + [LMediaType];
+    if AList2.Contains(LMediaType) then
+      Result := Result + [LMediaType]
+    else if LMediaType = TMediaType.WILDCARD then
+      Result := Result + AList2.ToArrayOfString;
   end;
 end;
 
