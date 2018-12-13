@@ -188,6 +188,7 @@ var
   LAccept: string;
   LMethodReturnType: TRttiType;
   LMethodAttributes: TArray<TCustomAttribute>;
+  LAffinity: Integer;
 begin
   LAccept := AActivation.Request.Accept;
   LMethodReturnType := AActivation.MethodReturnType;
@@ -241,12 +242,15 @@ begin
             else
               LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LWriterMediaTypes);
             for LMediaType in LMediaTypes do
+            begin
+              LAffinity := LWriterEntry.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType);
               if LWriterEntry.IsWritable(LMethodReturnType, LMethodAttributes, LMediaType) then
               begin
                 if not LFound
+                   or (LCandidateAffinity < LAffinity)
                    or (
-                     (LCandidateAffinity < LWriterEntry.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType))
-                     or (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
+                     (LCandidateAffinity = LAffinity)
+                     and (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
                    )
                 then
                 begin
@@ -257,6 +261,7 @@ begin
                   LFound := True;
                 end;
               end;
+            end;
           finally
             LWriterMediaTypes.Free;
           end;
