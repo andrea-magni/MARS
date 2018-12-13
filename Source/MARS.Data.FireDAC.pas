@@ -229,8 +229,11 @@ begin
         LConnectionParams.CopyFrom(LData, LConnectionDefName);
         LParams := GetAsTStrings(LConnectionParams);
         try
-          FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
-          Result := Result + [LConnectionDefName];
+          if FDManager.ConnectionDefs.FindConnectionDef(LConnectionDefName) = nil then
+          begin
+            FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
+            Result := Result + [LConnectionDefName];
+          end;
         finally
           LParams.Free;
         end;
