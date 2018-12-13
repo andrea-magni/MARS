@@ -77,10 +77,7 @@ type
     function DataSet1: TDataSet;
 
 {$ifdef DelphiXE3_UP}
-    [GET, Path('/dataset2'),
-//    , Produces(TMediaType.APPLICATION_XML)
-//    , Produces(TMediaType.APPLICATION_JSON)
-]
+    [GET, Path('/dataset2')]
     function DataSet2: TFDMemTable;
 
     [GET, Path('/dataset3')
