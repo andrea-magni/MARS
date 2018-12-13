@@ -21,6 +21,8 @@ type
   TDataSetWriterJSON = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
+    class procedure WriteDataSet(const ADataSet: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -32,6 +34,8 @@ type
   [Produces(TMediaType.APPLICATION_XML)]
   TDataSetWriterXML = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
+    class procedure WriteDataSet(const ADataSet: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
@@ -45,6 +49,20 @@ uses
 ;
 
 { TDataSetWriterJSON }
+
+class procedure TDataSetWriterJSON.WriteDataSet(const ADataSet: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+var
+  LWriter: TDataSetWriterJSON;
+begin
+  LWriter := TDataSetWriterJSON.Create;
+  try
+    LWriter.WriteTo(ADataSet, AMediaType, AOutputStream, AActivation);
+  finally
+    LWriter.Free;
+  end;
+end;
 
 procedure TDataSetWriterJSON.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -60,6 +78,20 @@ begin
 end;
 
 { TDataSetWriterXML }
+
+class procedure TDataSetWriterXML.WriteDataSet(const ADataSet: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+var
+  LWriter: TDataSetWriterXML;
+begin
+  LWriter := TDataSetWriterXML.Create;
+  try
+    LWriter.WriteTo(ADataSet, AMediaType, AOutputStream, AActivation);
+  finally
+    LWriter.Free;
+  end;
+end;
 
 procedure TDataSetWriterXML.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
