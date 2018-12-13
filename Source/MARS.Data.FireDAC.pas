@@ -602,6 +602,9 @@ var
   LIndex: Integer;
   LMacro: TFDMacro;
 begin
+  if not Assigned(ACommand) then
+    Exit;
+
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
@@ -615,6 +618,8 @@ var
   LIndex: Integer;
   LParam: TFDParam;
 begin
+  if not Assigned(ACommand) then
+    Exit;
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
