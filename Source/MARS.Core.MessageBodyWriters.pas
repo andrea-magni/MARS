@@ -38,7 +38,7 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
 
     class procedure WriteJSONValue(const AValue: TValue; const AMediaType: TMediaType;
-      AOutputStream: TStream; const AActivation: IMARSActivation);
+      AOutputStream: TStream; const AActivation: IMARSActivation); inline;
   end;
 
   [Produces(TMediaType.APPLICATION_XML)]
@@ -49,7 +49,7 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
 
     class procedure WriteXML(const AValue: TValue; const AMediaType: TMediaType;
-      AOutputStream: TStream; const AActivation: IMARSActivation);
+      AOutputStream: TStream; const AActivation: IMARSActivation); inline;
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -149,15 +149,8 @@ end;
 class procedure TJSONValueWriter.WriteJSONValue(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
-var
-  LJSONWriter: TJSONValueWriter;
 begin
-  LJSONWriter := TJSONValueWriter.Create;
-  try
-    LJSONWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
-  finally
-    LJSONWriter.Free;
-  end;
+  TMARSMessageBodyWriter.WriteWith<TJSONValueWriter>(AValue, AMediaType, AOutputStream, AActivation);
 end;
 
 procedure TJSONValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
@@ -460,17 +453,9 @@ end;
 class procedure TXMLWriter.WriteXML(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
-var
-  LXMLWriter: TXMLWriter;
 begin
-  LXMLWriter := TXMLWriter.Create;
-  try
-    LXMLWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
-  finally
-    LXMLWriter.Free;
-  end;
+  TMARSMessageBodyWriter.WriteWith<TXMLWriter>(AValue, AMediaType, AOutputStream, AActivation);
 end;
-
 
 procedure RegisterWriters;
 begin
