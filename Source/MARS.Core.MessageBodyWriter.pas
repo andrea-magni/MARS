@@ -87,9 +87,11 @@ type
     class procedure WriteWith<T: class, constructor, IMessageBodyWriter>(
       const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation); inline;
-    class function GetDesiredEncoding(const AActivation: IMARSActivation;
-      var AEncoding: TEncoding): Boolean;
   end;
+
+
+function GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
+function GetEncodingName(const AEncoding: TEncoding): string;
 
 implementation
 
@@ -97,7 +99,7 @@ uses
   MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions, MARS.Core.Attributes
 ;
 
-class function TMARSMessageBodyWriter.GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
+function GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
 var
   LEncoding: TEncoding;
   LFound: Boolean;
@@ -135,6 +137,19 @@ begin
     AEncoding := LEncoding;
     Result := True;
   end;
+end;
+
+function GetEncodingName(const AEncoding: TEncoding): string;
+begin
+  Result := '';
+
+  if AEncoding = TEncoding.ANSI then Result := 'ANSI'
+  else if AEncoding = TEncoding.ASCII then Result := 'ASCII'
+  else if AEncoding = TEncoding.BigEndianUnicode then Result :='BigEndianUnicode'
+  else if AEncoding = TEncoding.Default then Result :='Default'
+  else if AEncoding = TEncoding.Unicode then Result :='Unicode'
+  else if AEncoding = TEncoding.UTF7 then Result :='UTF7'
+  else if AEncoding = TEncoding.UTF8 then Result :='UTF8';
 end;
 
 { TMARSMessageBodyWriter }
