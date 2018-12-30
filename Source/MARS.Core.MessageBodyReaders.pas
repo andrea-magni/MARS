@@ -401,42 +401,24 @@ function TStringReader.ReadFrom(
   const AActivation: IMARSActivation): TValue;
 var
   LType: TRttiType;
-  LSL: TStringList;
-  {$ifdef Delphi10Berlin_UP}
-  LBytesStream: TBytesStream;
-  {$endif}
+  LEncoding: TEncoding;
+  LText: string;
 begin
   Result := TValue.Empty;
   LType := ADestination.GetRttiType;
 
   {$ifdef Delphi10Berlin_UP}
-  LBytesStream := TBytesStream.Create(AInputData);
-  try
-    LSL := TStringList.Create;
-    try
-      LSL.LoadFromStream(LBytesStream);
-      if LType.IsDynamicArrayOf<string> then
-        Result := TValue.From<TArray<string>>( LSL.ToStringArray )
-      else if LType.Handle = TypeInfo(string) then
-        Result := LSL.Text;
-    finally
-      LSL.Free;
-    end;
-  finally
-    LBytesStream.Free;
-  end;
+  if not TMARSMessageBodyReader.GetDesiredEncoding(AActivation, LEncoding) then
+    LEncoding := TEncoding.UTF8; // UTF8 by default
+  LText := LEncoding.GetString(AInputData);
   {$else}
-  LSL := TStringList.Create;
-  try
-    LSL.Text := string(AInputData);
-    if LType.IsDynamicArrayOf<string> then
-      Result := TValue.From<TArray<string>>( LSL.ToStringArray )
-    else if LType.Handle = TypeInfo(string) then
-      Result := LSL.Text;
-  finally
-    LSL.Free;
-  end;
+  LText := string(AInputData);
  {$endif}
+
+  if LType.IsDynamicArrayOf<string> then
+    Result := TValue.From<TArray<string>>( LText.Split([sLineBreak]) )
+  else if LType.Handle = TypeInfo(string) then
+    Result := LText;
 end;
 
 { TFormParamReader }
