@@ -99,7 +99,7 @@ var
   LEncoding: TEncoding;
   LXML: string;
 begin
-  if not GetDesiredEncoding(AActivation, LEncoding) then
+  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
 
   if AValue.AsObject is TClientDataSet then // CDS
