@@ -166,7 +166,7 @@ var
   LEncoding: TEncoding;
   LContentBytes: TBytes;
 begin
-  if not GetDesiredEncoding(AActivation, LEncoding) then
+  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
 
   LJSONString := '';
@@ -393,7 +393,7 @@ var
   LContentType: string;
   LEncodingName: string;
 begin
-  if not GetDesiredEncoding(AActivation, LEncoding) then
+  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
   LEncodingName := GetEncodingName(LEncoding);
 
@@ -426,7 +426,7 @@ var
   LXMLString: string;
   LXMLNode: IXMLNode;
 begin
-  if not GetDesiredEncoding(AActivation, LEncoding) then
+  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
 
   LXMLString := '';
