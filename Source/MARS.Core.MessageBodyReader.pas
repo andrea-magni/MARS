@@ -22,9 +22,7 @@ uses
   ;
 
 type
-  IMessageBodyReader = interface
-  ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
-
+  IMessageBodyReader = interface ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
     function ReadFrom(
     {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
       const ADestination: TRttiObject; const AMediaType: TMediaType;
@@ -89,6 +87,19 @@ type
     const AFFINITY_VERY_LOW = 1;
     const AFFINITY_ZERO = 0;
   end;
+
+  TMARSMessageBodyReader = class
+  private
+  protected
+  public
+    class function ReadWith<T: class, constructor, IMessageBodyReader>(
+      {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+        const ADestination: TRttiObject; const AMediaType: TMediaType;
+        const AActivation: IMARSActivation): TValue; inline;
+    class function GetDesiredEncoding(const AActivation: IMARSActivation;
+      var AEncoding: TEncoding): Boolean;
+  end;
+
 
 implementation
 
@@ -362,6 +373,60 @@ begin
   LEntryInfo.GetAffinity := AGetAffinity;
 
   FRegistry.Add(LEntryInfo)
+end;
+
+{ TMARSMessageBodyReader }
+
+class function TMARSMessageBodyReader.GetDesiredEncoding(
+  const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
+var
+  LEncoding: TEncoding;
+  LFound: Boolean;
+begin
+  if not Assigned(AActivation) then
+  begin
+    AEncoding := TEncoding.UTF8;
+    Result := False;
+    Exit;
+  end;
+
+  LFound := False;
+  // look for attribute on Method
+  if Assigned(AActivation.Method) and not AActivation.Method.HasAttribute<EncodingAttribute>(
+    procedure(AAttr: EncodingAttribute)
+    begin
+      LEncoding := AAttr.Encoding;
+      LFound := True;
+    end
+  ) then // if not found, fallback looking for attribute on Resource
+  begin
+    if Assigned(AActivation.Resource) then
+      AActivation.Resource.HasAttribute<EncodingAttribute>(
+        procedure(AAttr: EncodingAttribute)
+        begin
+          LEncoding := AAttr.Encoding;
+          LFound := True;
+        end
+      );
+  end;
+
+  Result := False;
+  if LFound then
+  begin
+    AEncoding := LEncoding;
+    Result := True;
+  end;
+end;
+
+class function TMARSMessageBodyReader.ReadWith<T>(
+  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LMBReader: IMessageBodyReader;
+begin
+  LMBReader := T.Create;
+  Result := LMBReader.ReadFrom(AInputData, ADestination, AMediaType, AActivation);
 end;
 
 end.
