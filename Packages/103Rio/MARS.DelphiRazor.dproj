@@ -58,7 +58,7 @@
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-        <DllSuffix>250</DllSuffix>
+        <DllSuffix>260</DllSuffix>
         <DCC_Description>MARS-Curiosity REST Library</DCC_Description>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1040</VerInfo_Locale>
@@ -168,7 +168,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\18.0\Bpl\MARS.DelphiRazor240.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\20.0\Bpl\MARS.DelphiRazor260.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARS_DelphiRazor.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
