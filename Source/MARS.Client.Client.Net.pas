@@ -11,11 +11,11 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
+  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client,  MARS.Utils.Parameters
 
   // Net
   , System.Net.URLClient, System.Net.HttpClient, System.Net.HttpClientComponent
-  , System.Net.Mime
+  , System.Net.Mime, System.Generics.Collections
   ;
 
 type
@@ -37,6 +37,7 @@ type
     procedure SetReadTimeout(const Value: Integer); override;
 
     function CreateMultipartFormData(AFormData: TArray<TFormParam>): TMultipartFormData;
+    function CreateFormUrlEncoded(AFormUrlEncoded: TMARSParameters): TStrings;
 
 
     procedure EndorseAuthorization; override;
@@ -54,6 +55,9 @@ type
     procedure Post(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
+    procedure Post(const AURL: string; const AFormUrlEncoded: TMARSParameters;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
 
@@ -213,6 +217,23 @@ begin
   end;
 end;
 
+function TMARSNetClient.CreateFormUrlEncoded(
+  AFormUrlEncoded: TMARSParameters): TStrings;
+var
+  LItem: TPair<string, TValue>;
+  LList: TStringList;
+begin
+  LList := TStringList.Create;
+  try
+    for LItem in AFormUrlEncoded do
+      LList.AddPair(LItem.Key, LItem.Value.AsString);
+    Result := LList;
+  except
+    LList.Free;
+    raise;
+  end;
+end;
+
 procedure TMARSNetClient.Get(const AURL: string; AResponseContent: TStream;
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
@@ -325,6 +346,24 @@ begin
   end;
 end;
 
+procedure TMARSNetClient.Post(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
+  const AAuthToken, AAccept, AContentType: string);
+var
+  LFormUrlEncoded: TStrings;
+begin
+  inherited;
+
+  FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
+  LFormUrlEncoded := CreateFormUrlEncoded(AFormUrlEncoded);
+  try
+    FLastResponse := FHttpClient.Post(AURL, LFormUrlEncoded, AResponse);
+    CheckLastCmdSuccess;
+  finally
+    LFormUrlEncoded.Free;
+  end;
+end;
+
 procedure TMARSNetClient.Put(const AURL: string;
   const AFormData: System.TArray<TFormParam>; const AResponse: TStream;
   const AAuthToken, AAccept: string; const AContentType: string);
@@ -347,6 +386,5 @@ begin
     LFormData.Free;
   end;
 end;
-
 
 end.
