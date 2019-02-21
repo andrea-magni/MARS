@@ -75,7 +75,7 @@ type
 {$endif}
 
   function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
-  function JSONToDate(const ADate: string; AReturnUTC: Boolean = False): TDateTime;
+  function JSONToDate(const ADate: string; AReturnUTC: Boolean = False; const ADefault: TDateTime = 0.0): TDateTime;
 
   function IsMask(const AString: string): Boolean;
   function MatchesMask(const AString, AMask: string): Boolean;
@@ -331,9 +331,9 @@ begin
     Result := DateToISO8601(ADate, AInputIsUTC);
 end;
 
-function JSONToDate(const ADate: string; AReturnUTC: Boolean = False): TDateTime;
+function JSONToDate(const ADate: string; AReturnUTC: Boolean = False; const ADefault: TDateTime = 0.0): TDateTime;
 begin
-  Result := 0.0;
+  Result := ADefault;
   if ADate<>'' then
     Result := ISO8601ToDate(ADate, AReturnUTC);
 end;
