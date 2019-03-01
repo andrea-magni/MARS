@@ -3,7 +3,7 @@ unit MARS.Core.RequestAndResponse.Interfaces;
 interface
 
 uses
-  Classes, SysUtils;
+  Classes, SysUtils, Types;
 
 type
   IMARSRequest = interface
@@ -15,9 +15,6 @@ type
     function GetFormParamName(const AIndex: Integer): string;
     function GetFormParamValue(const AIndex: Integer): string; overload;
     function GetFormParamValue(const AName: string): string; overload;
-    function GetFormFileParamIndex(const AName: string): Integer;
-    function GetFormFileParam(const AIndex: Integer; out AFieldName, AFileName: string;
-      out ABytes: TBytes; out AContentType: string): Boolean;
     function GetHeaderParamValue(const AHeaderName: string): string;
     function GetCookieParamIndex(const AName: string): Integer;
     function GetCookieParamValue(const AIndex: Integer): string; overload;
@@ -35,7 +32,6 @@ type
     function GetRawPath: string;
 
     function AsObject: TObject;
-    procedure CheckWorkaroundForISAPI;
 
     property RawContent: TBytes read GetRawContent;
     property Content: string read GetContent;

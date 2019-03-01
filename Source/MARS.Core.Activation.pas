@@ -163,6 +163,7 @@ uses
 , MARS.Core.Attributes, MARS.Core.Response, MARS.Core.MessageBodyReader
 , MARS.Core.Exceptions, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Rtti.Utils
 , MARS.Core.Injection, MARS.Core.Activation.InjectionService
+, Web.HttpApp
 ;
 
 { TMARSActivation }
@@ -606,7 +607,8 @@ procedure TMARSActivation.Invoke;
 begin
   try
     try
-      Request.CheckWorkaroundForISAPI;
+      if Request.AsObject is TWebRequest then
+        TWebRequest(Request.AsObject).ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
 
       // setup phase
       FSetupTime := TStopWatch.StartNew;
