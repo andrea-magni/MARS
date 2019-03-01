@@ -11,13 +11,10 @@ interface
 
 uses
   Classes, SysUtils, RTTI, Generics.Collections
-  , HttpApp, Web.ReqMulti
-  , MARS.Core.Declarations
-  , MARS.Core.Utils
-  , MARS.Core.URL
-  , MARS.Core.JSON
-  , MARS.Core.Activation.Interfaces
-  , MARS.Core.Exceptions
+, Web.ReqMulti
+, MARS.Core.Declarations, MARS.Core.Utils, MARS.Core.URL, MARS.Core.JSON
+, MARS.Core.Activation.Interfaces, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.Exceptions
 ;
 
 type
@@ -36,48 +33,48 @@ type
   protected
     function GetHttpMethodName: string; virtual;
   public
-    function Matches(const ARequest: TWebRequest): Boolean; virtual;
+    function Matches(const ARequest: IMARSRequest): Boolean; virtual;
     property HttpMethodName: string read GetHttpMethodName;
   end;
 
-  ANYAttribute     = class(HttpMethodAttribute)
-  public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
-  end;
+//  ANYAttribute     = class(HttpMethodAttribute)
+//  public
+//    function Matches(const ARequest: IMARSRequest): Boolean; override;
+//  end;
 
   GETAttribute     = class(HttpMethodAttribute)
   public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
   POSTAttribute    = class(HttpMethodAttribute)
   public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
   PUTAttribute     = class(HttpMethodAttribute)
   public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
   DELETEAttribute  = class(HttpMethodAttribute)
   public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
   PATCHAttribute   = class(HttpMethodAttribute)
   public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
   HEADAttribute    = class(HttpMethodAttribute)
   public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
   OPTIONSAttribute = class(HttpMethodAttribute)
   public
-    function Matches(const ARequest: TWebRequest): Boolean; override;
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
   ConsumesAttribute = class(MARSAttribute)
@@ -466,59 +463,51 @@ begin
 {$endif}
 end;
 
-function HttpMethodAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function HttpMethodAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
   Result := False;
 end;
 
 { GETAttribute }
 
-function GETAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function GETAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
-  Result := ARequest.MethodType = TMethodType.mtGet;
+  Result := SameText(ARequest.Method, 'GET');
 end;
 
 { POSTAttribute }
 
-function POSTAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function POSTAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
-  Result := ARequest.MethodType = TMethodType.mtPost;
+  Result := SameText(ARequest.Method, 'POST');
 end;
 
 { PUTAttribute }
 
-function PUTAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function PUTAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
-  Result := ARequest.MethodType = TMethodType.mtPut;
+  Result := SameText(ARequest.Method, 'PUT');
 end;
 
 { DELETEAttribute }
 
-function DELETEAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function DELETEAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
-{$ifdef DelphiXE7_UP}
-  Result := ARequest.MethodType = TMethodType.mtDelete;
-{$else}
-  Result := SameText(string(ARequest.Method), 'Delete');
-{$endif}
+  Result := SameText(ARequest.Method, 'DELETE');
 end;
 
 { PATCHAttribute }
 
-function PATCHAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function PATCHAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
-{$ifdef DelphiXE7_UP}
-  Result := ARequest.MethodType = TMethodType.mtPatch;
-{$else}
-  Result := SameText(string(ARequest.Method), 'Patch');
-{$endif}
+  Result := SameText(ARequest.Method, 'PATCH');
 end;
 
 { HEADAttribute }
 
-function HEADAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function HEADAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
-  Result := ARequest.MethodType = TMethodType.mtHead;
+  Result := SameText(ARequest.Method, 'HEAD');
 end;
 
 { CustomHeaderAttribute }
@@ -597,7 +586,7 @@ var
   LReader: IMessageBodyReader;
   LIndex: Integer;
 begin
-  LIndex := AActivation.Request.QueryFields.IndexOfName(GetActualName(ADestination));
+  LIndex := AActivation.Request.GetQueryParamIndex(GetActualName(ADestination));
   if (LIndex = -1) then
     CheckRequiredAttribute(ADestination)
   else
@@ -608,7 +597,7 @@ begin
       try
         Result := LReader.ReadFrom(
           {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-          AActivation.Request.QueryFields.ValueFromIndex[LIndex]
+          AActivation.Request.GetQueryParamValue(LIndex)
           {$ifdef Delphi10Berlin_UP} ) {$endif}
           , ADestination, LMediaType, AActivation);
       finally
@@ -617,7 +606,7 @@ begin
     else // 2 - fallback (raw)
     begin
       Result := StringToTValue(
-          AActivation.Request.QueryFields.ValueFromIndex[LIndex]
+          AActivation.Request.GetQueryParamValue(LIndex)
         , ADestination.GetRttiType
       );
     end;
@@ -636,24 +625,10 @@ function FormParamAttribute.GetValue(const ADestination: TRttiObject;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
-  LParamIndex: Integer;
-  LFileIndex: Integer;
   LIndex: Integer;
-  LFile: TAbstractWebRequestFile;
 begin
-  LParamIndex := AActivation.Request.ContentFields.IndexOfName(GetActualName(ADestination));
-  LFileIndex := -1;
-  for LIndex := 0 to AActivation.Request.Files.Count-1 do
-  begin
-    LFile := AActivation.Request.Files[LIndex];
-    if SameText(LFile.FieldName, GetActualName(ADestination)) then
-    begin
-      LFileIndex := LIndex;
-      Break;
-    end;
-  end;
-
-  if (LParamIndex = -1) and (LFileIndex = -1) then
+  LIndex := AActivation.Request.GetFormParamIndex(GetActualName(ADestination));
+  if (LIndex = -1) then
     CheckRequiredAttribute(ADestination)
   else
   begin
@@ -663,14 +638,14 @@ begin
       try
         Result := LReader.ReadFrom(
           {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-          AActivation.Request.ContentFields.ValueFromIndex[LParamIndex]
+          AActivation.Request.GetFormParamValue(LIndex)
           {$ifdef Delphi10Berlin_UP} ) {$endif}
         , ADestination, LMediaType, AActivation);
       finally
         FreeAndNil(LMediaType);
       end
     else // 2 - fallback (raw)
-      Result := StringToTValue(AActivation.Request.ContentFields.ValueFromIndex[LParamIndex]
+      Result := StringToTValue(AActivation.Request.GetFormParamValue(LIndex)
         , ADestination.GetRttiType);
   end;
 end;
@@ -692,7 +667,7 @@ function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
     LValue: string;
   begin
     Result := TValue.Empty;
-    LValue := AActivation.Request.GetFieldByName(TheName);
+    LValue := AActivation.Request.GetHeaderParamValue(TheName);
     if (LValue = '') then
       CheckRequiredAttribute(TheDestination);
 
@@ -756,11 +731,11 @@ function CookieParamAttribute.GetValue(const ADestination: TRttiObject;
 var
   LIndex: Integer;
 begin
-  LIndex := AActivation.Request.CookieFields.IndexOfName(GetActualName(ADestination));
+  LIndex := AActivation.Request.GetCookieParamIndex(GetActualName(ADestination));
   if LIndex = -1 then
     CheckRequiredAttribute(ADestination);
   Result := StringToTValue(
-      AActivation.Request.CookieFields.ValueFromIndex[LIndex]
+      AActivation.Request.GetCookieParamValue(LIndex)
     , ADestination.GetRttiType
   );
 end;
@@ -821,16 +796,16 @@ begin
     Result := Result.Substring(0, Result.Length - 'Attribute'.Length);
 end;
 
-{ ANYAttribute }
-
-function ANYAttribute.Matches(const ARequest: TWebRequest): Boolean;
-begin
-  Result := ARequest.MethodType = TMethodType.mtAny;
-end;
+//{ ANYAttribute }
+//
+//function ANYAttribute.Matches(const ARequest: IMARSRequest): Boolean;
+//begin
+//  Result := SameText(ARequest.Method, 'ANY');
+//end;
 
 { OPTIONSAttribute }
 
-function OPTIONSAttribute.Matches(const ARequest: TWebRequest): Boolean;
+function OPTIONSAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
   Result := SameText(ARequest.Method, 'OPTIONS');
 end;
@@ -859,7 +834,7 @@ var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
 begin
-  if AActivation.Request.ContentFields.Count = 0 then
+  if AActivation.Request.GetFormParamCount = 0 then
     CheckRequiredAttribute(ADestination)
   else
   begin
@@ -874,7 +849,7 @@ begin
         FreeAndNil(LMediaType);
       end
     else // 2 - fallback (raw)
-      Result := StringToTValue(AActivation.Request.ContentFields.Text, ADestination.GetRttiType);
+      Result := StringToTValue(AActivation.Request.GetFormParams, ADestination.GetRttiType);
   end;
 end;
 

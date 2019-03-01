@@ -10,8 +10,8 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes, RTTI, SyncObjs, Web.HttpApp, REST.JSON
-, MARS.Core.JSON
+  SysUtils, Classes, RTTI, SyncObjs, REST.JSON
+, MARS.Core.JSON, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -21,8 +21,8 @@ type
     Bytes: TBytes;
     ContentType: string;
     procedure Clear;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFileIndex: Integer); overload;
     constructor Create(const AFieldName: string; const AFileName: string; const ABytes: TBytes; const AContentType: string);
     function ToString: string;
   end;
@@ -33,8 +33,8 @@ type
     function IsFile: Boolean;
     function AsFile: TFormParamFile;
     procedure Clear;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFileIndex: Integer); overload;
     constructor Create(const AFieldName: string; const AValue: TValue);
     constructor CreateFile(const AFieldName: string; const AFileName: string; const ABytes: TBytes = nil; const AContentType: string = '');
     function ToString: string;
@@ -42,7 +42,7 @@ type
 
   TDump = class
   public
-    class procedure Request(const ARequest: TWebRequest; const AFileName: string); overload; virtual;
+    class procedure Request(const ARequest: IMARSRequest; const AFileName: string); overload; virtual;
   end;
 
 
@@ -99,7 +99,7 @@ uses
 {$ifndef DelphiXE6_UP}
   , XSBuiltIns
 {$endif}
-  , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
+  , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding, HttpApp
 ;
 
 function GetEncodingName(const AEncoding: TEncoding): string;
@@ -490,22 +490,30 @@ begin
   ContentType := '';
 end;
 
-constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
+constructor TFormParamFile.CreateFromRequest(const ARequest: IMARSRequest; const AFieldName: string);
 var
   LIndex, LFileIndex: Integer;
   LFile: TAbstractWebRequestFile;
+  LWebRequest: TWebRequest;
 begin
   Clear;
   LFileIndex := -1;
-  for LIndex := 0 to ARequest.Files.Count - 1 do
+
+  if ARequest.AsObject is TWebRequest then
   begin
-    LFile := ARequest.Files[LIndex];
-    if SameText(LFile.FieldName, AFieldName) then
+    LWebRequest := TWebRequest(ARequest.AsObject);
+    for LIndex := 0 to LWebRequest.Files.Count - 1 do
     begin
-      LFileIndex := LIndex;
-      Break;
+      LFile := LWebRequest.Files[LIndex];
+      if SameText(LFile.FieldName, AFieldName) then
+      begin
+        LFileIndex := LIndex;
+        Break;
+      end;
     end;
-  end;
+  end
+  else
+    raise ENotImplemented.Create('TFormParamFile.CreateFromRequest');
 
   CreateFromRequest(ARequest, LFileIndex);
 end;
@@ -519,18 +527,25 @@ begin
   ContentType := AContentType;
 end;
 
-constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest;
+constructor TFormParamFile.CreateFromRequest(const ARequest: IMARSRequest;
   const AFileIndex: Integer);
 var
   LFile: TAbstractWebRequestFile;
+  LWebRequest: TWebRequest;
 begin
   Clear;
-  if (AFileIndex >= 0) and (AFileIndex < ARequest.Files.Count) then
+  if ARequest.AsObject is TWebRequest then
   begin
-    LFile := ARequest.Files[AFileIndex];
+    LWebRequest := TWebRequest(ARequest.AsObject);
+    if (AFileIndex >= 0) and (AFileIndex < LWebRequest.Files.Count) then
+    begin
+      LFile := LWebRequest.Files[AFileIndex];
 
-    Create(LFile.FieldName, LFile.FileName, StreamToBytes(LFile.Stream), LFile.ContentType);
-   end;
+      Create(LFile.FieldName, LFile.FileName, StreamToBytes(LFile.Stream), LFile.ContentType);
+     end;
+  end
+  else
+    raise ENotImplemented.Create('TFormParamFile.CreateFromRequest');
 end;
 
 function TFormParamFile.ToString: string;
@@ -568,7 +583,7 @@ begin
   );
 end;
 
-constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+constructor TFormParam.CreateFromRequest(const ARequest: IMARSRequest;
   const AFileIndex: Integer);
 var
   LValue: TFormParamFile;
@@ -579,17 +594,17 @@ begin
   FieldName := LValue.FieldName;
 end;
 
-constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+constructor TFormParam.CreateFromRequest(const ARequest: IMARSRequest;
   const AFieldName: string);
 var
   LIndex: Integer;
 begin
   Clear;
-  LIndex := ARequest.ContentFields.IndexOfName(AFieldName);
+  LIndex := ARequest.GetFormParamIndex(AFieldName);
   if LIndex <> -1 then
   begin
     FieldName := AFieldName;
-    Value := ARequest.ContentFields.ValueFromIndex[LIndex];
+    Value := ARequest.GetFormParamValue(LIndex);
   end
   else
   begin
@@ -615,7 +630,7 @@ end;
 
 { TDump }
 
-class procedure TDump.Request(const ARequest: TWebRequest;
+class procedure TDump.Request(const ARequest: IMARSRequest;
   const AFileName: string);
 var
   LSS: TStringStream;
@@ -624,50 +639,59 @@ var
   {$ifdef Delphi10Berlin_UP}
   LBytesStream: TBytesStream;
   {$endif}
+  LWebRequest: TWebRequest;
 begin
+  if ARequest.AsObject is TWebRequest then
+  begin
+    LWebRequest := TWebRequest(ARequest.AsObject);
+  end
+  else
+    raise ENotImplemented.Create('TDump.Request');
+
+
   try
     try
-      LRawString := 'Content: ' + ARequest.Content;
+      LRawString := 'Content: ' + LWebRequest.Content;
     except
       {$IFDEF Delphi10Berlin_UP}
       try
-        LRawString := TEncoding.UTF8.GetString(ARequest.RawContent);
+        LRawString := TEncoding.UTF8.GetString(LWebRequest.RawContent);
       except
         try
-          LBytesStream := TBytesStream.Create(ARequest.RawContent);
+          LBytesStream := TBytesStream.Create(LWebRequest.RawContent);
           try
             LRawString := StreamToString(LBytesStream);
           finally
             LBytesStream.Free;
           end;
         except
-          LRawString := 'Unable to read content: ' + Length(ARequest.RawContent).ToString + ' bytes';
+          LRawString := 'Unable to read content: ' + Length(LWebRequest.RawContent).ToString + ' bytes';
         end;
       end;
       {$ELSE}
-      LRawString := ARequest.RawContent;
+      LRawString := LWebRequest.RawContent;
       {$ENDIF}
     end;
 
     LHeaders := string.join(sLineBreak, [
-      'PathInfo: ' + ARequest.PathInfo
-    , 'Method: ' + ARequest.Method
-    , 'ProtocolVersion: ' + ARequest.ProtocolVersion
-    , 'Authorization: ' + ARequest.Authorization
-    , 'Accept: ' + ARequest.Accept
+      'PathInfo: ' + LWebRequest.PathInfo
+    , 'Method: ' + LWebRequest.Method
+    , 'ProtocolVersion: ' + LWebRequest.ProtocolVersion
+    , 'Authorization: ' + LWebRequest.Authorization
+    , 'Accept: ' + LWebRequest.Accept
 
-    , 'ContentFields: ' + ARequest.ContentFields.CommaText
-    , 'CookieFields: ' + ARequest.CookieFields.CommaText
-    , 'QueryFields: ' + ARequest.QueryFields.CommaText
+    , 'ContentFields: ' + LWebRequest.ContentFields.CommaText
+    , 'CookieFields: ' + LWebRequest.CookieFields.CommaText
+    , 'QueryFields: ' + LWebRequest.QueryFields.CommaText
 
-    , 'ContentType: ' + ARequest.ContentType
-    , 'ContentEncoding: ' + ARequest.ContentEncoding
-    , 'ContentLength: ' + ARequest.ContentLength.ToString
-    , 'ContentVersion: ' + ARequest.ContentVersion
+    , 'ContentType: ' + LWebRequest.ContentType
+    , 'ContentEncoding: ' + LWebRequest.ContentEncoding
+    , 'ContentLength: ' + LWebRequest.ContentLength.ToString
+    , 'ContentVersion: ' + LWebRequest.ContentVersion
 
-    , 'RemoteAddr: ' + ARequest.RemoteAddr
-    , 'RemoteHost: ' + ARequest.RemoteHost
-    , 'RemoteIP: ' + ARequest.RemoteIP
+    , 'RemoteAddr: ' + LWebRequest.RemoteAddr
+    , 'RemoteHost: ' + LWebRequest.RemoteHost
+    , 'RemoteIP: ' + LWebRequest.RemoteIP
     ]);
 
     LSS := TStringStream.Create(LHeaders + sLineBreak + sLineBreak + LRawString);

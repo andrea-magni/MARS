@@ -576,9 +576,9 @@ begin
   else if SameText(LFirstToken, 'QueryParam') then
     Result := AActivation.URL.QueryTokenByName(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'FormParam') then
-    Result := AActivation.Request.ContentFields.Values[LSecondTokenAndAll]
+    Result := AActivation.Request.GetFormParamValue(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'Request') then
-    Result := ReadPropertyValue(AActivation.Request, LSecondTokenAndAll)
+    Result := ReadPropertyValue(AActivation.Request.AsObject, LSecondTokenAndAll)
 //  else if SameText(LFirstToken, 'Response') then
 //    Result := ReadPropertyValue(AActivation.Response, LSecondToken)
   else if SameText(LFirstToken, 'URL') then
