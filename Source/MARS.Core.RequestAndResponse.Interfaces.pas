@@ -3,7 +3,7 @@ unit MARS.Core.RequestAndResponse.Interfaces;
 interface
 
 uses
-  Classes, SysUtils;
+  Classes, SysUtils, Types;
 
 type
   IMARSRequest = interface
