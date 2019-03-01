@@ -10,15 +10,11 @@ unit MARS.Core.Engine;
 interface
 
 uses
-  SysUtils, HTTPApp, Classes, Generics.Collections
+  SysUtils, Classes, Generics.Collections
   , SyncObjs
 
-  , MARS.Core.Classes
-  , MARS.Core.Registry
-  , MARS.Core.Application
-  , MARS.Core.URL
-  , MARS.Core.Exceptions
-  , MARS.Utils.Parameters
+  , MARS.Core.Classes, MARS.Core.Registry, MARS.Core.Application, MARS.Core.URL
+  , MARS.Core.Exceptions, MARS.Utils.Parameters, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 {$M+}
@@ -31,10 +27,10 @@ type
   TMARSEngine = class;
 
   TBeforeHandleRequestProc = reference to function(const AEngine: TMARSEngine;
-    const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
+    const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
     var Handled: Boolean): Boolean;
   TAfterHandleRequestProc = reference to procedure(const AEngine: TMARSEngine;
-    const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
+    const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
     var Handled: Boolean);
 
   TMARSEngine = class
@@ -52,12 +48,12 @@ type
     procedure SetBasePath(const Value: string); virtual;
     procedure SetPort(const Value: Integer); virtual;
     procedure SetThreadPoolSize(const Value: Integer); virtual;
-    procedure PatchCORS(const ARequest: TWebRequest; const AResponse: TWebResponse); virtual;
+    procedure PatchCORS(const ARequest: IMARSRequest; const AResponse: IMARSResponse); virtual;
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
     destructor Destroy; override;
 
-    function HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse): Boolean; virtual;
+    function HandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean; virtual;
 
     function AddApplication(const AName, ABasePath: string;
       const AResources: array of string; const AParametersSliceName: string = ''): TMARSApplication; virtual;
@@ -190,7 +186,7 @@ begin
   end;
 end;
 
-function TMARSEngine.HandleRequest(ARequest: TWebRequest; AResponse: TWebResponse): Boolean;
+function TMARSEngine.HandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean;
 var
   LApplication: TMARSApplication;
   LURL: TMARSURL;
@@ -240,13 +236,12 @@ begin
   end;
 end;
 
-procedure TMARSEngine.PatchCORS(const ARequest: TWebRequest;
-  const AResponse: TWebResponse);
+procedure TMARSEngine.PatchCORS(const ARequest: IMARSRequest;
+  const AResponse: IMARSResponse);
 
   procedure SetHeaderFromParameter(const AHeader, AParamName, ADefault: string);
   begin
-    AResponse.CustomHeaders.Values[AHeader] :=
-      Parameters.ByName(AParamName, ADefault).AsString;
+    AResponse.SetHeader(AHeader, Parameters.ByName(AParamName, ADefault).AsString);
   end;
 
 begin

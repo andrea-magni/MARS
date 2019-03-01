@@ -11,18 +11,11 @@ interface
 
 uses
   SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
-  , HTTPApp
-
-  , MARS.Core.URL
-  , MARS.Core.Application
-  , MARS.Core.Engine
-  , MARS.Core.Token
-  , MARS.Core.MediaType
-  , MARS.Core.Injection.Types
-  ;
+, MARS.Core.URL, MARS.Core.Application, MARS.Core.Engine, MARS.Core.Token
+, MARS.Core.MediaType, MARS.Core.Injection.Types, MARS.Core.RequestAndResponse.Interfaces
+;
 
 type
-
   IMARSActivation = interface
     procedure AddToContext(AValue: TValue);
     function HasToken: Boolean;
@@ -40,11 +33,11 @@ type
     function GetMethodArguments: TArray<TValue>;
     function GetMethodAttributes: TArray<TCustomAttribute>;
     function GetMethodResult: TValue;
-    function GetRequest: TWebRequest;
+    function GetRequest: IMARSRequest;
     function GetResource: TRttiType;
     function GetResourceAttributes: TArray<TCustomAttribute>;
     function GetResourceInstance: TObject;
-    function GetResponse: TWebResponse;
+    function GetResponse: IMARSResponse;
     function GetURL: TMARSURL;
     function GetURLPrototype: TMARSURL;
     function GetToken: TMARSToken;
@@ -60,11 +53,11 @@ type
     property MethodArguments: TArray<TValue> read GetMethodArguments;
     property MethodAttributes: TArray<TCustomAttribute> read GetMethodAttributes;
     property MethodResult: TValue read GetMethodResult;
-    property Request: TWebRequest read GetRequest;
+    property Request: IMARSRequest read GetRequest;
     property Resource: TRttiType read GetResource;
     property ResourceAttributes: TArray<TCustomAttribute> read GetResourceAttributes;
     property ResourceInstance: TObject read GetResourceInstance;
-    property Response: TWebResponse read GetResponse;
+    property Response: IMARSResponse read GetResponse;
     property URL: TMARSURL read GetURL;
     property URLPrototype: TMARSURL read GetURLPrototype;
     property Token: TMARSToken read GetToken;
