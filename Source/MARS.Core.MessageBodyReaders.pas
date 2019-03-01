@@ -14,6 +14,7 @@ uses
 
 , MARS.Core.Attributes, MARS.Core.Activation.Interfaces, MARS.Core.Declarations
 , MARS.Core.MediaType, MARS.Core.MessageBodyReader
+, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -218,7 +219,7 @@ function TRecordReader.ReadFrom(
 ): TValue;
 var
   LJSON: TJSONObject;
-  LRequest: TWebRequest;
+  LRequest: IMARSRequest;
 begin
   Result := TValue.Empty;
 
@@ -227,7 +228,7 @@ begin
   then
   begin
     LRequest := AActivation.Request;
-    Result := StringsToRecord(LRequest.ContentFields, ADestination.GetRttiType
+    Result := StringsToRecord(LRequest.GetFormParams, ADestination.GetRttiType
     , procedure (const AName: string; const AField: TRttiField; var AValue: TValue)
       begin
         if AField.FieldType.Handle = TypeInfo(TFormParamFile) then
@@ -460,7 +461,7 @@ function TArrayOfTFormParamReader.ReadFrom(
 ): TValue;
 var
   LResult: TArray<TFormParam>;
-  LRequest: TWebRequest;
+  LRequest: IMARSRequest;
   LIndex: Integer;
 begin
   LResult := [];
@@ -471,10 +472,10 @@ begin
   begin
     LRequest := AActivation.Request;
 
-    for LIndex := 0 to LRequest.ContentFields.Count - 1 do
-      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LRequest.ContentFields.Names[LIndex])];
+    for LIndex := 0 to LRequest.GetFormParamCount - 1 do
+      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LRequest.GetFormParamName(LIndex))];
 
-    for LIndex := 0 to LRequest.Files.Count - 1 do
+    for LIndex := 0 to LRequest.GetFilesCount - 1 do
       LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LIndex)];
   end;
 

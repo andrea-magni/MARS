@@ -11,10 +11,9 @@ interface
 
 uses
   SysUtils, Classes, Generics.Collections, SyncObjs, Rtti
-, HTTPApp, IdGlobal
+, IdGlobal
 
-, MARS.Core.URL
-, MARS.Utils.Parameters
+, MARS.Core.URL, MARS.Utils.Parameters, MARS.Core.RequestAndResponse.Interfaces
 
 
 //{$IFDEF mORMot-JWT}
@@ -39,8 +38,8 @@ type
     FCookieDomain: string;
     FCookiePath: string;
     FCookieSecure: Boolean;
-    FRequest: TWebRequest;
-    FResponse: TWebResponse;
+    FRequest: IMARSRequest;
+    FResponse: IMARSResponse;
     FDuration: TDateTime;
     FIssuer: string;
     function GetUserName: string;
@@ -52,22 +51,22 @@ type
     function GetDurationMins: Int64;
     function GetDurationSecs: Int64;
   protected
-    function GetTokenFromBearer(const ARequest: TWebRequest): string; virtual;
-    function GetTokenFromCookie(const ARequest: TWebRequest): string; virtual;
-    function GetToken(const ARequest: TWebRequest): string; virtual;
+    function GetTokenFromBearer(const ARequest: IMARSRequest): string; virtual;
+    function GetTokenFromCookie(const ARequest: IMARSRequest): string; virtual;
+    function GetToken(const ARequest: IMARSRequest): string; virtual;
     function GetIsExpired: Boolean; virtual;
 
     function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string; virtual;
     function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean; virtual;
 
-    property Request: TWebRequest read FRequest;
-    property Response: TWebResponse read FResponse;
+    property Request: IMARSRequest read FRequest;
+    property Response: IMARSResponse read FResponse;
   public
     constructor Create(); reintroduce; overload; virtual;
     constructor Create(const AToken: string; const AParameters: TMARSParameters); overload; virtual;
     constructor Create(const AToken: string; const ASecret: string;
       const AIssuer: string; const ADuration: TDateTime); overload; virtual;
-    constructor Create(const ARequest: TWebRequest; const AResponse: TWebResponse;
+    constructor Create(const ARequest: IMARSRequest; const AResponse: IMARSResponse;
       const AParameters: TMARSParameters; const AURL: TMARSURL); overload; virtual;
     destructor Destroy; override;
 
@@ -176,7 +175,7 @@ begin
   Load(AToken, ASecret);
 end;
 
-constructor TMARSToken.Create(const ARequest: TWebRequest; const AResponse: TWebResponse;
+constructor TMARSToken.Create(const ARequest: IMARSRequest; const AResponse: IMARSResponse;
   const AParameters: TMARSParameters; const AURL: TMARSURL);
 begin
   FRequest := ARequest;
@@ -254,7 +253,7 @@ begin
 {$endif}
 end;
 
-function TMARSToken.GetToken(const ARequest: TWebRequest): string;
+function TMARSToken.GetToken(const ARequest: IMARSRequest): string;
 begin
   // Beware: First match wins!
 
@@ -265,7 +264,7 @@ begin
     Result := GetTokenFromCookie(ARequest);
 end;
 
-function TMARSToken.GetTokenFromBearer(const ARequest: TWebRequest): string;
+function TMARSToken.GetTokenFromBearer(const ARequest: IMARSRequest): string;
 var
   LAuth: string;
   LAuthTokens: TArray<string>;
@@ -293,12 +292,12 @@ begin
       Result := LAuthTokens[1];
 end;
 
-function TMARSToken.GetTokenFromCookie(const ARequest: TWebRequest): string;
+function TMARSToken.GetTokenFromCookie(const ARequest: IMARSRequest): string;
 begin
   Result := '';
   if CookieEnabled and (CookieName <> '') then
 {$ifdef DelphiXE7_UP}
-    Result := TNetEncoding.URL.Decode(ARequest.CookieFields.Values[CookieName]);
+    Result := TNetEncoding.URL.Decode(ARequest.GetCookieParamValue(CookieName));
 {$else}
     Result := TIdURI.URLDecode(ARequest.CookieFields.Values[CookieName]);
 {$endif}
@@ -381,33 +380,15 @@ begin
 end;
 
 procedure TMARSToken.UpdateCookie;
-var
-  LContent: TStringList;
 begin
   if CookieEnabled then
   begin
     Assert(Assigned(Response));
 
-    LContent := TStringList.Create;
-    try
-      if IsVerified and not IsExpired then
-      begin
-        LContent.Values[CookieName] := Token;
-
-        Response.SetCookieField(
-          LContent, CookieDomain, CookiePath, Expiration, CookieSecure);
-      end
-      else begin
-        if Request.CookieFields.Values[CookieName] <> '' then
-        begin
-          LContent.Values[CookieName] := 'dummy';
-          Response.SetCookieField(
-            LContent, CookieDomain, CookiePath, Now-1, CookieSecure);
-        end;
-      end;
-    finally
-      LContent.Free;
-    end;
+    if IsVerified and not IsExpired then
+      Response.SetCookie(CookieName, Token, CookieDomain, CookiePath, Expiration, CookieSecure)
+    else if Request.GetCookieParamValue(CookieName) <> '' then
+      Response.SetCookie(CookieName, 'dummy', CookieDomain, CookiePath, Now-1, CookieSecure);
   end;
 end;
 
