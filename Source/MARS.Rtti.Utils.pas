@@ -103,8 +103,12 @@ type
   end;
   TOnGetRecordFieldValueProc = reference to procedure (const AName: string; const AField: TRttiField; var AValue: TValue);
 
+
+  function StringsToRecord(const AStrings: string; const ARecordType: TRttiType;
+    const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue; overload;
+
   function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType;
-    const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue;
+    const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue; overload;
 
 function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
   const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
@@ -123,6 +127,21 @@ uses
     StrUtils, DateUtils, Generics.Collections
   , MARS.Core.Utils
 ;
+
+function StringsToRecord(const AStrings: string; const ARecordType: TRttiType;
+  const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue;
+var
+  LSL: TStringList;
+begin
+  LSL := TStringList.Create;
+  try
+    LSL.Text := AStrings;
+    Result := StringsToRecord(LSL, ARecordType, AOnGetFieldValue);
+  finally
+    LSL.Free;
+  end;
+end;
+
 
 function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType;
   const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue;
