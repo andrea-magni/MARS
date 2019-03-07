@@ -15,6 +15,7 @@ uses
 , MARS.Core.Utils
 , MARS.Core.MediaType
 , MARS.Client.Utils
+, MARS.Utils.Parameters
 ;
 
 type
@@ -90,9 +91,15 @@ type
     procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
+    procedure Post(const AURL: string; const AFormUrlEncoded: TMARSParameters;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
     procedure Put(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
     procedure Put(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
+    procedure Put(const AURL: string; const AFormUrlEncoded: TMARSParameters;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
 
@@ -606,6 +613,13 @@ begin
   FireBeforeExecute(AURL, Self);
 end;
 
+procedure TMARSCustomClient.Post(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
+  const AAuthToken, AAccept, AContentType: string);
+begin
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+end;
+
 class function TMARSCustomClient.PostJSON(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
   const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>; const AToken: string
@@ -788,6 +802,12 @@ begin
   end;
 end;
 
+procedure TMARSCustomClient.Put(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
+  const AAuthToken, AAccept, AContentType: string);
+begin
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+end;
 
 procedure TMARSCustomClient.Put(const AURL: string;
   const AFormData: TArray<TFormParam>; const AResponse: TStream;
