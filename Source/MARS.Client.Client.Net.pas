@@ -15,7 +15,7 @@ uses
 
   // Net
   , System.Net.URLClient, System.Net.HttpClient, System.Net.HttpClientComponent
-  , System.Net.Mime, System.Generics.Collections
+, System.Net.Mime
   ;
 
 type
@@ -37,8 +37,6 @@ type
     procedure SetReadTimeout(const Value: Integer); override;
 
     function CreateMultipartFormData(AFormData: TArray<TFormParam>): TMultipartFormData;
-    function CreateFormUrlEncoded(AFormUrlEncoded: TMARSParameters): TStrings;
-
 
     procedure EndorseAuthorization; override;
     procedure CheckLastCmdSuccess; virtual;
@@ -228,23 +226,6 @@ begin
   end;
 end;
 
-function TMARSNetClient.CreateFormUrlEncoded(
-  AFormUrlEncoded: TMARSParameters): TStrings;
-var
-  LItem: TPair<string, TValue>;
-  LList: TStringList;
-begin
-  LList := TStringList.Create;
-  try
-    for LItem in AFormUrlEncoded do
-      LList.AddPair(LItem.Key, LItem.Value.AsString);
-    Result := LList;
-  except
-    LList.Free;
-    raise;
-  end;
-end;
-
 procedure TMARSNetClient.Get(const AURL: string; AResponseContent: TStream;
   const AAuthToken: string; const AAccept: string; const AContentType: string);
 begin
@@ -371,7 +352,7 @@ begin
 
   FHttpClient.Accept := AAccept;
   FHttpClient.ContentType := AContentType;
-  LFormUrlEncoded := CreateFormUrlEncoded(AFormUrlEncoded);
+  LFormUrlEncoded := AFormUrlEncoded.AsStrings;
   try
     FLastResponse := FHttpClient.Post(AURL, LFormUrlEncoded, AResponse);
     CheckLastCmdSuccess;
