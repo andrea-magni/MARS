@@ -571,7 +571,7 @@ function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault
 begin
   Result := ADefault;
   if Assigned(Self) then
-    Result := JSONToDate(ReadStringValue(AName), AReturnUTC);
+    Result := JSONToDate(ReadStringValue(AName), AReturnUTC, ADefault);
 end;
 
 function TJSONObjectHelper.ReadDoubleValue(const AName: string;

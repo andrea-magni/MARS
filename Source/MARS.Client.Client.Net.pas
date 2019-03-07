@@ -264,7 +264,8 @@ end;
 
 function TMARSNetClient.LastCmdSuccess: Boolean;
 begin
-  Result := (FLastResponse.StatusCode >= 200) and (FLastResponse.StatusCode < 300)
+  Result := Assigned(FLastResponse)
+    and ((FLastResponse.StatusCode >= 200) and (FLastResponse.StatusCode < 300));
 end;
 
 procedure TMARSNetClient.Post(const AURL: string; AContent, AResponse: TStream;
@@ -291,12 +292,16 @@ end;
 
 function TMARSNetClient.ResponseStatusCode: Integer;
 begin
-  Result := FLastResponse.StatusCode;
+  Result := -1;
+  if Assigned(FLastResponse) then
+    Result := FLastResponse.StatusCode;
 end;
 
 function TMARSNetClient.ResponseText: string;
 begin
-  Result := FLastResponse.StatusText;
+  Result := '';
+  if Assigned(FLastResponse) then
+    Result := FLastResponse.StatusText;
 end;
 
 procedure TMARSNetClient.SetConnectTimeout(const Value: Integer);

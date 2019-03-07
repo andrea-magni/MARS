@@ -46,7 +46,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <DllSuffix>240</DllSuffix>
+        <DllSuffix>260</DllSuffix>
         <DCC_UnitSearchPath>../../Source/Core;../../Source/Data/FireDAC;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_Description>MARS-Curiosity REST Library (Client)</DCC_Description>
         <DCC_AdditionalSwitches>-LUDesignIDE</DCC_AdditionalSwitches>
@@ -54,7 +54,7 @@
         <GenPackage>true</GenPackage>
         <SanitizedProjectName>MARSClient_CoreDesign</SanitizedProjectName>
         <GenDll>true</GenDll>
-        <DCC_DcuOutput>..\..\Lib250\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcuOutput>..\..\Lib260\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
@@ -89,7 +89,7 @@
         <DCC_RemoteDebug>true</DCC_RemoteDebug>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <DllSuffix>250</DllSuffix>
+        <DllSuffix>260</DllSuffix>
         <DCC_Description>MARS-Curiosity Client Core</DCC_Description>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
@@ -104,7 +104,7 @@
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <DllSuffix>250</DllSuffix>
+        <DllSuffix>260</DllSuffix>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -137,8 +137,10 @@
                     <Source Name="MainSource">MARSClient.CoreDesign.dpk</Source>
                 </Source>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k250.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp250.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\DataExplorerDBXPluginEnt260.bpl">DBExpress Enterprise Data Explorer Integration</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k260.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp260.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="C:\Program Files (x86)\Raize\CS5\Bin\CodeSiteExpressPkg_Design260.bpl">CodeSite Express 5.3.3</Excluded_Packages>
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="3">
@@ -172,7 +174,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\..\..\..\Bpl\MARSClient.CoreDesign250.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\..\..\..\Bpl\MARSClient.CoreDesign260.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARSClient_CoreDesign.bpl</RemoteName>
                         <Overwrite>true</Overwrite>

@@ -12,12 +12,10 @@ interface
 uses
   Classes, SysUtils, Rtti
 
-  , MARS.Core.Attributes
-  , MARS.Core.Activation.Interfaces
-  , MARS.Core.Declarations
-  , MARS.Core.MediaType
-  , MARS.Core.MessageBodyReader
-  ;
+, MARS.Core.Attributes, MARS.Core.Activation.Interfaces, MARS.Core.Declarations
+, MARS.Core.MediaType, MARS.Core.MessageBodyReader
+, MARS.Core.RequestAndResponse.Interfaces
+;
 
 type
   [Consumes(TMediaType.APPLICATION_JSON)]
@@ -56,6 +54,22 @@ type
       const AActivation: IMARSActivation
     ): TValue;
 
+  end;
+
+  [Consumes(TMediaType.APPLICATION_XML)]
+  TXMLReader = class(TInterfacedObject, IMessageBodyReader)
+  public
+    function ReadFrom(
+    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue; virtual;
+
+    class function ReadXML(
+      {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const ADestination: TRttiObject; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation
+    ): TValue;
   end;
 
   [Consumes(TMediaType.APPLICATION_JSON)
@@ -129,11 +143,11 @@ type
 implementation
 
 uses
-  StrUtils, NetEncoding, Web.HttpApp
-  , MARS.Core.JSON
-  , MARS.Core.Utils, MARS.Rtti.Utils
-  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
-  ;
+  StrUtils, NetEncoding, Web.HttpApp, Generics.Collections
+{$ifdef DelphiXE7_UP}, System.JSON {$endif}
+, Xml.XMLIntf, XMLDoc
+, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
+;
 
 { TJSONValueReader }
 
@@ -205,7 +219,7 @@ function TRecordReader.ReadFrom(
 ): TValue;
 var
   LJSON: TJSONObject;
-  LRequest: TWebRequest;
+  LRequest: IMARSRequest;
 begin
   Result := TValue.Empty;
 
@@ -214,7 +228,7 @@ begin
   then
   begin
     LRequest := AActivation.Request;
-    Result := StringsToRecord(LRequest.ContentFields, ADestination.GetRttiType
+    Result := StringsToRecord(LRequest.GetFormParams, ADestination.GetRttiType
     , procedure (const AName: string; const AField: TRttiField; var AValue: TValue)
       begin
         if AField.FieldType.Handle = TypeInfo(TFormParamFile) then
@@ -388,42 +402,24 @@ function TStringReader.ReadFrom(
   const AActivation: IMARSActivation): TValue;
 var
   LType: TRttiType;
-  LSL: TStringList;
-  {$ifdef Delphi10Berlin_UP}
-  LBytesStream: TBytesStream;
-  {$endif}
+  LEncoding: TEncoding;
+  LText: string;
 begin
   Result := TValue.Empty;
   LType := ADestination.GetRttiType;
 
   {$ifdef Delphi10Berlin_UP}
-  LBytesStream := TBytesStream.Create(AInputData);
-  try
-    LSL := TStringList.Create;
-    try
-      LSL.LoadFromStream(LBytesStream);
-      if LType.IsDynamicArrayOf<string> then
-        Result := TValue.From<TArray<string>>( LSL.ToStringArray )
-      else if LType.Handle = TypeInfo(string) then
-        Result := LSL.Text;
-    finally
-      LSL.Free;
-    end;
-  finally
-    LBytesStream.Free;
-  end;
+  if not TMARSMessageBodyReader.GetDesiredEncoding(AActivation, LEncoding) then
+    LEncoding := TEncoding.UTF8; // UTF8 by default
+  LText := LEncoding.GetString(AInputData);
   {$else}
-  LSL := TStringList.Create;
-  try
-    LSL.Text := string(AInputData);
-    if LType.IsDynamicArrayOf<string> then
-      Result := TValue.From<TArray<string>>( LSL.ToStringArray )
-    else if LType.Handle = TypeInfo(string) then
-      Result := LSL.Text;
-  finally
-    LSL.Free;
-  end;
+  LText := string(AInputData);
  {$endif}
+
+  if LType.IsDynamicArrayOf<string> then
+    Result := TValue.From<TArray<string>>( LText.Split([sLineBreak]) )
+  else if LType.Handle = TypeInfo(string) then
+    Result := LText;
 end;
 
 { TFormParamReader }
@@ -465,7 +461,7 @@ function TArrayOfTFormParamReader.ReadFrom(
 ): TValue;
 var
   LResult: TArray<TFormParam>;
-  LRequest: TWebRequest;
+  LRequest: IMARSRequest;
   LIndex: Integer;
 begin
   LResult := [];
@@ -476,14 +472,53 @@ begin
   begin
     LRequest := AActivation.Request;
 
-    for LIndex := 0 to LRequest.ContentFields.Count - 1 do
-      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LRequest.ContentFields.Names[LIndex])];
+    for LIndex := 0 to LRequest.GetFormParamCount - 1 do
+      LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LRequest.GetFormParamName(LIndex))];
 
-    for LIndex := 0 to LRequest.Files.Count - 1 do
+    for LIndex := 0 to LRequest.GetFilesCount - 1 do
       LResult := LResult + [TFormParam.CreateFromRequest(LRequest, LIndex)];
   end;
 
   Result := TValue.From<TArray<TFormParam>>(LResult);
+end;
+
+
+{ TXMLReader }
+
+function TXMLReader.ReadFrom(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LXMLDoc: IXMLDocument;
+  LEncoding: TEncoding;
+begin
+  Result := TValue.Empty;
+
+  LEncoding := TEncoding.UTF8;
+
+  LXMLDoc := TXMLDocument.Create(nil);
+{$ifdef Delphi10Berlin_UP}
+  LXMLDoc.LoadFromXML(LEncoding.GetString(AInputData));
+{$else}
+  LXMLDoc.LoadFromXML(AInputData);
+{$endif}
+  Result := TValue.From<IXMLDocument>(LXMLDoc);
+end;
+
+class function TXMLReader.ReadXML(
+{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const ADestination: TRttiObject; const AMediaType: TMediaType;
+  const AActivation: IMARSActivation): TValue;
+var
+  LXMLReader: TXMLReader;
+begin
+  LXMLReader := TXMLReader.Create;
+  try
+    Result := LXMLReader.ReadFrom(AInputData, ADestination, AMediaType, AActivation);
+  finally
+    LXMLReader.Free;
+  end;
 end;
 
 
@@ -514,6 +549,7 @@ begin
   );
 
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TJSONValue>(TJSONValueReader);
+  TMARSMessageBodyReaderRegistry.Instance.RegisterReader<IXMLDocument>(TXMLReader);
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader<TStream>(TStreamReader);
 
   TMARSMessageBodyReaderRegistry.Instance.RegisterReader(

@@ -229,8 +229,11 @@ begin
         LConnectionParams.CopyFrom(LData, LConnectionDefName);
         LParams := GetAsTStrings(LConnectionParams);
         try
-          FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
-          Result := Result + [LConnectionDefName];
+          if FDManager.ConnectionDefs.FindConnectionDef(LConnectionDefName) = nil then
+          begin
+            FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
+            Result := Result + [LConnectionDefName];
+          end;
         finally
           LParams.Free;
         end;
@@ -573,9 +576,9 @@ begin
   else if SameText(LFirstToken, 'QueryParam') then
     Result := AActivation.URL.QueryTokenByName(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'FormParam') then
-    Result := AActivation.Request.ContentFields.Values[LSecondTokenAndAll]
+    Result := AActivation.Request.GetFormParamValue(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'Request') then
-    Result := ReadPropertyValue(AActivation.Request, LSecondTokenAndAll)
+    Result := ReadPropertyValue(AActivation.Request.AsObject, LSecondTokenAndAll)
 //  else if SameText(LFirstToken, 'Response') then
 //    Result := ReadPropertyValue(AActivation.Response, LSecondToken)
   else if SameText(LFirstToken, 'URL') then
@@ -599,6 +602,9 @@ var
   LIndex: Integer;
   LMacro: TFDMacro;
 begin
+  if not Assigned(ACommand) then
+    Exit;
+
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
@@ -612,6 +618,8 @@ var
   LIndex: Integer;
   LParam: TFDParam;
 begin
+  if not Assigned(ACommand) then
+    Exit;
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
