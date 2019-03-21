@@ -36,10 +36,6 @@ type
     function GetFormParamName(const AIndex: Integer): string;
     function GetFormParamValue(const AIndex: Integer): string; overload;
     function GetFormParamValue(const AName: string): string; overload;
-    function GetFormFileParamIndex(const AName: string): Integer;
-    function GetFormFileParam(const AIndex: Integer; out AFieldName: string;
-      out AFileName: string; out ABytes: System.TArray<System.Byte>;
-      out AContentType: string): Boolean;
     function GetFormParams: string;
     function GetHeaderParamValue(const AHeaderName: string): string;
     function GetHostName: string;
@@ -50,7 +46,6 @@ type
     function GetQueryString: string;
     function GetRawContent: TBytes;
     function GetRawPath: string;
-    procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(ADCSRequest: ICrossHttpRequest); virtual;
   end;
@@ -189,11 +184,6 @@ begin
   Result := Self;
 end;
 
-procedure TMARSDCSRequest.CheckWorkaroundForISAPI;
-begin
-  // nothing to do
-end;
-
 constructor TMARSDCSRequest.Create(ADCSRequest: ICrossHttpRequest);
 begin
   inherited Create;
@@ -259,70 +249,6 @@ begin
   Result := 0;
 end;
 
-function TMARSDCSRequest.GetFormFileParam(const AIndex: Integer; out AFieldName,
-  AFileName: string; out ABytes: System.TArray<System.Byte>;
-  out AContentType: string): Boolean;
-var
-  LMultiPartBody: THttpMultiPartFormData;
-  LFile: TFormField;
-
-begin
-  Result := False;
-  if FDCSRequest.BodyType = btMultiPart then
-  begin
-    LMultiPartBody := FDCSRequest.Body as THttpMultiPartFormData;
-    Result := (AIndex >= 0) and (AIndex < LMultiPartBody.Count);
-    if Result then
-    begin
-      LFile := LMultiPartBody.Items[AIndex];
-      AFieldName := LFile.Name;
-      AFileName := LFile.FileName;
-      ABytes := LFile.AsBytes;
-      AContentType := LFile.ContentType;
-    end;
-  end;
-end;
-
-function TMARSDCSRequest.GetFormFileParamIndex(const AName: string): Integer;
-var
-  LMultiPartBody: THttpMultiPartFormData;
-  LIndex: Integer;
-  LItem: TFormField;
-  LURLParamsBody: THttpUrlParams;
-  LURLParamItem: TNameValue;
-begin
-  Result := -1;
-  if FDCSRequest.BodyType = btMultiPart then
-  begin
-    LMultiPartBody := FDCSRequest.Body as THttpMultiPartFormData;
-
-    for LIndex := 0 to LMultiPartBody.Count - 1 do
-    begin
-      LItem := LMultiPartBody.Items[LIndex];
-
-      if SameText(LItem.Name, AName) then
-      begin
-        Result := LIndex;
-        Break;
-      end;
-    end;
-  end
-  else if FDCSRequest.BodyType = btUrlEncoded then
-  begin
-    LURLParamsBody := FDCSRequest.Body as THttpUrlParams;
-
-    for LIndex := 0 to LURLParamsBody.Count-1 do
-    begin
-      LURLParamItem := LURLParamsBody.Items[LIndex];
-      if SameText(LURLParamItem.Name, AName) then
-      begin
-        Result := LIndex;
-        Break;
-      end;
-    end;
-  end;
-end;
-
 function TMARSDCSRequest.GetFormParamCount: Integer;
 begin
 //AM TODO
@@ -330,63 +256,16 @@ begin
 end;
 
 function TMARSDCSRequest.GetFormParamIndex(const AName: string): Integer;
-var
-  LMultiPartBody: THttpMultiPartFormData;
-  LIndex: Integer;
-  LItem: TFormField;
-  LURLParamsBody: THttpUrlParams;
-  LURLParamItem: TNameValue;
 begin
+//AM TODO
   Result := -1;
-  if FDCSRequest.BodyType = btMultiPart then
-  begin
-    LMultiPartBody := FDCSRequest.Body as THttpMultiPartFormData;
-
-    for LIndex := 0 to LMultiPartBody.Count - 1 do
-    begin
-      LItem := LMultiPartBody.Items[LIndex];
-
-      if SameText(LItem.Name, AName) then
-      begin
-        Result := LIndex;
-        Break;
-      end;
-    end;
-  end
-  else if FDCSRequest.BodyType = btUrlEncoded then
-  begin
-    LURLParamsBody := FDCSRequest.Body as THttpUrlParams;
-
-    for LIndex := 0 to LURLParamsBody.Count-1 do
-    begin
-      LURLParamItem := LURLParamsBody.Items[LIndex];
-      if SameText(LURLParamItem.Name, AName) then
-      begin
-        Result := LIndex;
-        Break;
-      end;
-    end;
-  end;
 end;
 
 function TMARSDCSRequest.GetFormParamName(const AIndex: Integer): string;
-var
-  LMultiPartBody: THttpMultiPartFormData;
-  LURLParamsBody: THttpUrlParams;
 begin
+//AM TODO
   Result := '';
-  if FDCSRequest.BodyType = btMultiPart then
-  begin
-    LMultiPartBody := FDCSRequest.Body as THttpMultiPartFormData;
-    Result := LMultiPartBody.Items[AIndex].Name;
-  end
-  else if FDCSRequest.BodyType = btUrlEncoded then
-  begin
-    LURLParamsBody := FDCSRequest.Body as THttpUrlParams;
-    Result := LURLParamsBody.Items[AIndex].Name;
-  end;
 end;
-
 
 function TMARSDCSRequest.GetFormParams: string;
 begin
@@ -396,25 +275,14 @@ end;
 
 function TMARSDCSRequest.GetFormParamValue(const AName: string): string;
 begin
-  Result := GetFormParamValue(GetFormParamIndex(AName));
+//AM TODO
+  Result := '';
 end;
 
 function TMARSDCSRequest.GetFormParamValue(const AIndex: Integer): string;
-var
-  LMultiPartBody: THttpMultiPartFormData;
-  LURLParamsBody: THttpUrlParams;
 begin
+//AM TODO
   Result := '';
-  if FDCSRequest.BodyType = btMultiPart then
-  begin
-    LMultiPartBody := FDCSRequest.Body as THttpMultiPartFormData;
-    Result := LMultiPartBody.Items[AIndex].AsString;
-  end
-  else if FDCSRequest.BodyType = btUrlEncoded then
-  begin
-    LURLParamsBody := FDCSRequest.Body as THttpUrlParams;
-    Result := LURLParamsBody.Items[AIndex].Value;
-  end;
 end;
 
 function TMARSDCSRequest.GetHeaderParamValue(const AHeaderName: string): string;
@@ -492,19 +360,16 @@ end;
 function TMARSDCSResponse.GetContent: string;
 begin
 //AM TODO
-  Result := '';
 end;
 
 function TMARSDCSResponse.GetContentEncoding: string;
 begin
 //AM TODO
-  Result := '';
 end;
 
 function TMARSDCSResponse.GetContentStream: TStream;
 begin
 //AM TODO
-  Result := nil;
 end;
 
 function TMARSDCSResponse.GetContentType: string;
