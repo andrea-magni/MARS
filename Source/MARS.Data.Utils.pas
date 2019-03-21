@@ -28,10 +28,8 @@ function DatasetMetadataToJSONObject(const ADataSet: TDataSet): TJSONObject;
 implementation
 
 uses
-    Rtti
-  , StrUtils, DateUtils
-  , MARS.Rtti.Utils
-  , MARS.Core.Utils;
+  Rtti, StrUtils, DateUtils, System.JSON
+, MARS.Rtti.Utils, MARS.Core.Utils;
 
 type
   TJSONFieldType = (NestedObject, NestedArray, SimpleValue);
