@@ -620,13 +620,6 @@ begin
   BeforeExecute;
 end;
 
-procedure TMARSCustomClient.Post(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
-  const AAuthToken, AAccept, AContentType: string);
-begin
-  FAuthToken := AAuthToken;
-  BeforeExecute;
-end;
-
 class function TMARSCustomClient.PostJSON(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
   const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>; const AToken: string
