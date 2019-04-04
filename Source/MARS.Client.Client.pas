@@ -245,6 +245,7 @@ procedure TMARSCustomClient.Delete(const AURL: string; AContent, AResponse: TStr
 begin
   FAuthToken := AAuthToken;
   BeforeExecute;
+  FireBeforeExecute(AURL, Self);
 end;
 
 destructor TMARSCustomClient.Destroy;
@@ -287,6 +288,7 @@ procedure TMARSCustomClient.Get(const AURL: string; AResponseContent: TStream;
 begin
   FAuthToken := AAuthToken;
   BeforeExecute;
+  FireBeforeExecute(AURL, Self);
 end;
 
 function TMARSCustomClient.GetConnectTimeout: Integer;
@@ -309,6 +311,7 @@ procedure TMARSCustomClient.Post(const AURL: string; AContent, AResponse: TStrea
 begin
   FAuthToken := AAuthToken;
   BeforeExecute;
+  FireBeforeExecute(AURL, Self);
 end;
 
 procedure TMARSCustomClient.Put(const AURL: string; AContent, AResponse: TStream;
@@ -316,6 +319,7 @@ procedure TMARSCustomClient.Put(const AURL: string; AContent, AResponse: TStream
 begin
   FAuthToken := AAuthToken;
   BeforeExecute;
+  FireBeforeExecute(AURL, Self);
 end;
 
 class function TMARSCustomClient.RegisterBeforeExecute(
@@ -599,6 +603,7 @@ procedure TMARSCustomClient.Post(const AURL: string;
 begin
   FAuthToken := AAuthToken;
   BeforeExecute;
+  FireBeforeExecute(AURL, Self);
 end;
 
 class function TMARSCustomClient.PostJSON(const AEngineURL, AAppName,
@@ -790,6 +795,7 @@ procedure TMARSCustomClient.Put(const AURL: string;
 begin
   FAuthToken := AAuthToken;
   BeforeExecute;
+  FireBeforeExecute(AURL, Self);
 end;
 
 { TMARSProxyConfig }
