@@ -12,13 +12,10 @@ interface
 uses
   Classes, SysUtils, Rtti
 
-  , MARS.Core.Attributes
-  , MARS.Core.Declarations
-  , MARS.Core.MediaType
-  , MARS.Core.MessageBodyWriter
-  , MARS.Core.MessageBodyReader
-  , MARS.Core.Activation.Interfaces
-  ;
+, MARS.Core.Attributes, MARS.Core.Declarations, MARS.Core.MediaType
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyReader
+, MARS.Core.Activation.Interfaces
+;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -53,7 +50,8 @@ var
   LJsonBO: TJsonBaseObject;
   LEncoding: TEncoding;
 begin
-  LEncoding := GetDesiredEncoding(AActivation);
+  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
+    LEncoding := TEncoding.UTF8;
 
   LJsonBO := AValue.AsObject as TJsonBaseObject;
   if Assigned(LJsonBO) then
@@ -89,3 +87,4 @@ initialization
   RegisterReadersAndWriters;
 
 end.
+
