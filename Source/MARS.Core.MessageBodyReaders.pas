@@ -143,7 +143,7 @@ type
 implementation
 
 uses
-  StrUtils, NetEncoding, Web.HttpApp, Generics.Collections
+  StrUtils, NetEncoding, Generics.Collections
 {$ifdef DelphiXE7_UP}, System.JSON {$endif}
 , Xml.XMLIntf, XMLDoc
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils

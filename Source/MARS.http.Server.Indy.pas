@@ -41,6 +41,9 @@ type
     function GetFormParamName(const AIndex: Integer): string; inline;
     function GetFormParamValue(const AIndex: Integer): string; overload; inline;
     function GetFormParamValue(const AName: string): string; overload; inline;
+    function GetFormFileParamIndex(const AName: string): Integer; inline;
+    function GetFormFileParam(const AIndex: Integer; out AFieldName, AFileName: string;
+      out ABytes: TBytes; out AContentType: string): Boolean;
     function GetFormParams: string; inline;
     function GetHeaderParamValue(const AHeaderName: string): string; inline;
     function GetHostName: string; inline;
@@ -51,8 +54,10 @@ type
     function GetQueryString: string; inline;
     function GetRawContent: TBytes; inline;
     function GetRawPath: string; inline;
+    procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(AWebRequest: TWebRequest); virtual;
+    property WebRequest: TWebRequest read FWebRequest;
   end;
 
   TMARSWebResponse = class(TInterfacedObject, IMARSResponse)
@@ -264,6 +269,11 @@ begin
   Result := Self;
 end;
 
+procedure TMARSWebRequest.CheckWorkaroundForISAPI;
+begin
+  FWebRequest.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
+end;
+
 constructor TMARSWebRequest.Create(AWebRequest: TWebRequest);
 begin
   inherited Create;
@@ -303,6 +313,39 @@ end;
 function TMARSWebRequest.GetFilesCount: Integer;
 begin
   Result := FWebRequest.Files.Count;
+end;
+
+function TMARSWebRequest.GetFormFileParam(const AIndex: Integer; out AFieldName,
+  AFileName: string; out ABytes: TBytes; out AContentType: string): Boolean;
+var
+  LFile: TAbstractWebRequestFile;
+begin
+  Result := (AIndex >= 0) and (AIndex < FWebRequest.Files.Count);
+  if Result then
+  begin
+    LFile := FWebRequest.Files[AIndex];
+    AFieldName := LFile.FieldName;
+    AFileName := LFile.FileName;
+    ABytes := StreamToBytes(LFile.Stream);
+    AContentType := LFile.ContentType;
+  end;
+end;
+
+function TMARSWebRequest.GetFormFileParamIndex(const AName: string): Integer;
+var
+  LFile: TAbstractWebRequestFile;
+  LIndex: Integer;
+begin
+  Result := -1;
+  for LIndex := 0 to FWebRequest.Files.Count-1 do
+  begin
+    LFile := FWebRequest.Files[LIndex];
+    if SameText(LFile.FieldName, AName) then
+    begin
+      Result := LIndex;
+      Break;
+    end;
+  end;
 end;
 
 function TMARSWebRequest.GetFormParamCount: Integer;
