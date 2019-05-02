@@ -99,7 +99,7 @@ uses
 {$ifndef DelphiXE6_UP}
   , XSBuiltIns
 {$endif}
-  , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding, HttpApp
+  , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
 ;
 
 function GetEncodingName(const AEncoding: TEncoding): string;
@@ -491,31 +491,8 @@ begin
 end;
 
 constructor TFormParamFile.CreateFromRequest(const ARequest: IMARSRequest; const AFieldName: string);
-var
-  LIndex, LFileIndex: Integer;
-  LFile: TAbstractWebRequestFile;
-  LWebRequest: TWebRequest;
 begin
-  Clear;
-  LFileIndex := -1;
-
-  if ARequest.AsObject is TWebRequest then
-  begin
-    LWebRequest := TWebRequest(ARequest.AsObject);
-    for LIndex := 0 to LWebRequest.Files.Count - 1 do
-    begin
-      LFile := LWebRequest.Files[LIndex];
-      if SameText(LFile.FieldName, AFieldName) then
-      begin
-        LFileIndex := LIndex;
-        Break;
-      end;
-    end;
-  end
-  else
-    raise ENotImplemented.Create('TFormParamFile.CreateFromRequest');
-
-  CreateFromRequest(ARequest, LFileIndex);
+  CreateFromRequest(ARequest, ARequest.GetFormFileParamIndex(AFieldName));
 end;
 
 constructor TFormParamFile.Create(const AFieldName, AFileName: string;
@@ -530,22 +507,13 @@ end;
 constructor TFormParamFile.CreateFromRequest(const ARequest: IMARSRequest;
   const AFileIndex: Integer);
 var
-  LFile: TAbstractWebRequestFile;
-  LWebRequest: TWebRequest;
+  LFieldName, LFileName, LContentType: string;
+  LBytes: TBytes;
 begin
-  Clear;
-  if ARequest.AsObject is TWebRequest then
-  begin
-    LWebRequest := TWebRequest(ARequest.AsObject);
-    if (AFileIndex >= 0) and (AFileIndex < LWebRequest.Files.Count) then
-    begin
-      LFile := LWebRequest.Files[AFileIndex];
-
-      Create(LFile.FieldName, LFile.FileName, StreamToBytes(LFile.Stream), LFile.ContentType);
-     end;
-  end
+  if ARequest.GetFormFileParam(AFileIndex, LFieldName, LFileName, LBytes, LContentType) then
+    Create(LFieldName, LFileName, LBytes, LContentType)
   else
-    raise ENotImplemented.Create('TFormParamFile.CreateFromRequest');
+    raise Exception.CreateFmt('Unable to extract data for file form param index %d', [AFileIndex]);
 end;
 
 function TFormParamFile.ToString: string;
@@ -639,59 +607,49 @@ var
   {$ifdef Delphi10Berlin_UP}
   LBytesStream: TBytesStream;
   {$endif}
-  LWebRequest: TWebRequest;
 begin
-  if ARequest.AsObject is TWebRequest then
-  begin
-    LWebRequest := TWebRequest(ARequest.AsObject);
-  end
-  else
-    raise ENotImplemented.Create('TDump.Request');
-
-
   try
     try
-      LRawString := 'Content: ' + LWebRequest.Content;
+      LRawString := 'Content: ' + ARequest.Content;
     except
       {$IFDEF Delphi10Berlin_UP}
       try
-        LRawString := TEncoding.UTF8.GetString(LWebRequest.RawContent);
+        LRawString := TEncoding.UTF8.GetString(ARequest.RawContent);
       except
         try
-          LBytesStream := TBytesStream.Create(LWebRequest.RawContent);
+          LBytesStream := TBytesStream.Create(ARequest.RawContent);
           try
             LRawString := StreamToString(LBytesStream);
           finally
             LBytesStream.Free;
           end;
         except
-          LRawString := 'Unable to read content: ' + Length(LWebRequest.RawContent).ToString + ' bytes';
+          LRawString := 'Unable to read content: ' + Length(ARequest.RawContent).ToString + ' bytes';
         end;
       end;
       {$ELSE}
-      LRawString := LWebRequest.RawContent;
+      LRawString := ARequest.RawContent;
       {$ENDIF}
     end;
 
     LHeaders := string.join(sLineBreak, [
-      'PathInfo: ' + LWebRequest.PathInfo
-    , 'Method: ' + LWebRequest.Method
-    , 'ProtocolVersion: ' + LWebRequest.ProtocolVersion
-    , 'Authorization: ' + LWebRequest.Authorization
-    , 'Accept: ' + LWebRequest.Accept
+      'RawPath: ' + ARequest.RawPath
+    , 'Method: ' + ARequest.Method
+    , 'Authorization: ' + ARequest.Authorization
+    , 'Accept: ' + ARequest.Accept
 
-    , 'ContentFields: ' + LWebRequest.ContentFields.CommaText
-    , 'CookieFields: ' + LWebRequest.CookieFields.CommaText
-    , 'QueryFields: ' + LWebRequest.QueryFields.CommaText
+//    , 'ContentFields: ' + ARequest.ContentFields.CommaText
+//    , 'CookieFields: ' + ARequest.CookieFields.CommaText
+//    , 'QueryFields: ' + ARequest.QueryFields.CommaText
 
-    , 'ContentType: ' + LWebRequest.ContentType
-    , 'ContentEncoding: ' + LWebRequest.ContentEncoding
-    , 'ContentLength: ' + LWebRequest.ContentLength.ToString
-    , 'ContentVersion: ' + LWebRequest.ContentVersion
+//    , 'ContentType: ' + ARequest.ContentType
+//    , 'ContentEncoding: ' + ARequest.ContentEncoding
+//    , 'ContentLength: ' + ARequest.ContentLength.ToString
+//    , 'ContentVersion: ' + ARequest.ContentVersion
 
-    , 'RemoteAddr: ' + LWebRequest.RemoteAddr
-    , 'RemoteHost: ' + LWebRequest.RemoteHost
-    , 'RemoteIP: ' + LWebRequest.RemoteIP
+//    , 'RemoteAddr: ' + ARequest.RemoteAddr
+//    , 'RemoteHost: ' + ARequest.RemoteHost
+//    , 'RemoteIP: ' + ARequest.RemoteIP
     ]);
 
     LSS := TStringStream.Create(LHeaders + sLineBreak + sLineBreak + LRawString);

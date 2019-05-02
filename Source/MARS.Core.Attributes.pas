@@ -625,10 +625,13 @@ function FormParamAttribute.GetValue(const ADestination: TRttiObject;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
-  LIndex: Integer;
+  LParamIndex, LFileIndex: Integer;
+  LActualName: string;
 begin
-  LIndex := AActivation.Request.GetFormParamIndex(GetActualName(ADestination));
-  if (LIndex = -1) then
+  LActualName := GetActualName(ADestination);
+  LParamIndex := AActivation.Request.GetFormParamIndex(LActualName);
+  LFileIndex := AActivation.Request.GetFormFileParamIndex(LActualName);
+  if (LParamIndex = -1) and (LFileIndex = -1) then
     CheckRequiredAttribute(ADestination)
   else
   begin
@@ -636,17 +639,23 @@ begin
     TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
     if Assigned(LReader) then
       try
-        Result := LReader.ReadFrom(
-          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-          AActivation.Request.GetFormParamValue(LIndex)
-          {$ifdef Delphi10Berlin_UP} ) {$endif}
-        , ADestination, LMediaType, AActivation);
+        if LParamIndex <> -1 then
+          Result := LReader.ReadFrom(
+            {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+            AActivation.Request.GetFormParamValue(LParamIndex)
+            {$ifdef Delphi10Berlin_UP} ) {$endif}
+          , ADestination, LMediaType, AActivation)
+        else if LFileIndex <> -1 then
+          Result := LReader.ReadFrom(
+            {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+            ''
+            {$ifdef Delphi10Berlin_UP} ) {$endif}
+          , ADestination, LMediaType, AActivation);
       finally
         FreeAndNil(LMediaType);
       end
     else // 2 - fallback (raw)
-      Result := StringToTValue(AActivation.Request.GetFormParamValue(LIndex)
-        , ADestination.GetRttiType);
+      Result := StringToTValue(AActivation.Request.GetFormParamValue(LParamIndex), ADestination.GetRttiType);
   end;
 end;
 
