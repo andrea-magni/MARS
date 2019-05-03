@@ -52,7 +52,7 @@ begin
     if FindCmdLineSwitch('configFileName', LConfigFileName) then
       Result := TPath.GetFullPath(LConfigFileName)
     else
-      Result := ChangeFileExt(ParamStr(0), '.ini');
+      Result := ChangeFileExt(GetModuleName(HInstance), '.ini');
   end
 end;
 

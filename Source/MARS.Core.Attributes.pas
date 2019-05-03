@@ -636,10 +636,24 @@ function FormParamAttribute.GetValue(const ADestination: TRttiObject;
 var
   LMediaType: TMediaType;
   LReader: IMessageBodyReader;
+  LParamIndex: Integer;
+  LFileIndex: Integer;
   LIndex: Integer;
+  LFile: TAbstractWebRequestFile;
 begin
-  LIndex := AActivation.Request.ContentFields.IndexOfName(GetActualName(ADestination));
-  if (LIndex = -1) then
+  LParamIndex := AActivation.Request.ContentFields.IndexOfName(GetActualName(ADestination));
+  LFileIndex := -1;
+  for LIndex := 0 to AActivation.Request.Files.Count-1 do
+  begin
+    LFile := AActivation.Request.Files[LIndex];
+    if SameText(LFile.FieldName, GetActualName(ADestination)) then
+    begin
+      LFileIndex := LIndex;
+      Break;
+    end;
+  end;
+
+  if (LParamIndex = -1) and (LFileIndex = -1) then
     CheckRequiredAttribute(ADestination)
   else
   begin
@@ -649,14 +663,14 @@ begin
       try
         Result := LReader.ReadFrom(
           {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
-          AActivation.Request.ContentFields.ValueFromIndex[LIndex]
+          AActivation.Request.ContentFields.ValueFromIndex[LParamIndex]
           {$ifdef Delphi10Berlin_UP} ) {$endif}
         , ADestination, LMediaType, AActivation);
       finally
         FreeAndNil(LMediaType);
       end
     else // 2 - fallback (raw)
-      Result := StringToTValue(AActivation.Request.ContentFields.ValueFromIndex[LIndex]
+      Result := StringToTValue(AActivation.Request.ContentFields.ValueFromIndex[LParamIndex]
         , ADestination.GetRttiType);
   end;
 end;
