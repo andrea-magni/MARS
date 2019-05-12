@@ -10,7 +10,9 @@ program MARSTestsProject;
 
 uses
   SysUtils,
+{$IFDEF TESTINSIGHT}
   TestInsight.DUnitX,
+{$ENDIF}
   DUnitX.TestFramework,
   DUnitX.Loggers.Console,
   Tests.Core in 'Tests.Core.pas',
