@@ -44,7 +44,7 @@ implementation
 
 uses
   StrUtils, Web.HttpApp
-  , MARS.Core.URL, MARS.Core.Engine, MARS.Core.RequestAndResponse.Interfaces
+  , MARS.Core.URL, MARS.Core.Engine
   , Server.Ignition;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -59,7 +59,7 @@ begin
   // skip favicon requests (browser)
   TServerEngine.Default.BeforeHandleRequest :=
     function (const AEngine: TMARSEngine;
-      const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
       var Handled: Boolean
     ): Boolean
     begin
@@ -116,3 +116,4 @@ begin
 end;
 
 end.
+
