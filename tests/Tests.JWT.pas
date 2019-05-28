@@ -27,10 +27,7 @@ type
   end;
 
   [TestFixture('JWT.mORMotJWT')]
-  TMARSmORMotJWT = class(TMARSJWT<TMARSmORMotJWTToken>)
-  protected
-    function GetTokenForVerifyOne: string; override;
-  end;
+  TMARSmORMotJWT = class(TMARSJWT<TMARSmORMotJWTToken>);
 
   [TestFixture('JWT.JOSEJWT')]
   TMARSJOSEJWT = class(TMARSJWT<TMARSJOSEJWTToken>);
@@ -145,9 +142,9 @@ end;
 function TMARSJWT<T>.GetTokenForVerifyOne: string;
 begin
   // beware: will expire one million days after Nov 15th, 2017 that is somewhere around Thu, 13 Oct 4755 :-D
-  Result := 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'
-    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0='
-    +'.OacKD-duGSLeQA21eEzPYlRaIKX7fCWs54GyVpbHC0E=';
+  Result := 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.'
+          + 'eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0.'
+          + '2DAhF5DWfTCPK13EYSkdlT2LRUA9kmHJcO9v-Gs0x6E';
 end;
 
 procedure TMARSJWT<T>.VerifyOne;
@@ -174,15 +171,6 @@ begin
   finally
     LParams.Free;
   end;
-end;
-
-{ TMARSmORMotJWT }
-
-function TMARSmORMotJWT.GetTokenForVerifyOne: string;
-begin
-  Result := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
-    +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDc0MTM3MSwiZXhwIjoyMDExMzk1NDUxLCJDbGFpbTIiOjEyMywiVXNlck5hbWUiOiJBbmRyZWExIiwiTEFOR1VBR0VfSUQiOjEsImlzcyI6Ik1BUlMtQ3VyaW9zaXR5IiwiQ2xhaW0xIjoiUHJpbW8ifQ'
-    +'.k-p3NEEBWXYlf4ilaZn8fE3ufxN29ezMPg8k_HTQg9c';
 end;
 
 initialization
