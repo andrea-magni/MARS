@@ -88,8 +88,7 @@ begin
   LBase64Str := StringReplace(LBase64Str, #13#10, '', [rfReplaceAll]);
   LBase64Str := StringReplace(LBase64Str, #13, '', [rfReplaceAll]);
   LBase64Str := StringReplace(LBase64Str, #10, '', [rfReplaceAll]);
-
-  LBase64Str := TrimRight(LBase64Str);
+  LBase64Str := LBase64Str.TrimRight(['=']);
 
   LBase64Str := StringReplace(LBase64Str, '+', '-', [rfReplaceAll]);
   LBase64Str := StringReplace(LBase64Str, '/', '_', [rfReplaceAll]);
