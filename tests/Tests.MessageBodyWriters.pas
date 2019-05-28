@@ -67,8 +67,8 @@ type
 implementation
 
 uses
-  DateUtils, Rtti
-, MARS.Core.JSON
+  DateUtils, Rtti, Generics.Collections
+, System.JSON, MARS.Core.JSON
 , Tests.Records.Types
 ;
 

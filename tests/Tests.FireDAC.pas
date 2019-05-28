@@ -5,7 +5,7 @@ interface
 uses
   Classes, SysUtils, Rtti, Types
 , DUnitX.TestFramework
-, FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.VCLUI.Wait, FireDAC.Phys.SQLite
+, FireDAC.Stan.Param, FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.VCLUI.Wait, FireDAC.Phys.SQLite
 , MARS.Core.MediaType
 , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyWriter
 , MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
