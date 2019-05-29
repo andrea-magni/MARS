@@ -21,38 +21,27 @@
 {******************************************************************************}
 
 /// <summary>
-///   JSON Web Key (JWK) RFC implementation (partial)
+///   Utility class to encode and decode a JWT
 /// </summary>
-/// <seealso href="https://tools.ietf.org/html/rfc7517">
-///   JWK RFC Document
-/// </seealso>
-unit JOSE.Core.JWK;
+unit JOSE.Builder;
 
 interface
 
 uses
-  SysUtils,
+  System.SysUtils,
   JOSE.Types.Bytes,
   JOSE.Core.Base,
-  JOSE.Encoding.Base64;
-
-type
-  TJWK = class(TJOSEBase)
-  private
-    FKey: TJOSEBytes;
-  public
-    constructor Create(AKey: TJOSEBytes);
-    property Key: TJOSEBytes read FKey write FKey;
-  end;
+  JOSE.Core.Parts,
+  JOSE.Core.JWA,
+  JOSE.Core.JWK,
+  JOSE.Core.JWT,
+  JOSE.Core.JWS,
+  JOSE.Core.JWE;
 
 implementation
 
-{ TJWK }
-
-constructor TJWK.Create(AKey: TJOSEBytes);
-begin
-  inherited Create;
-  FKey := AKey;
-end;
+uses
+  System.Types,
+  System.StrUtils;
 
 end.

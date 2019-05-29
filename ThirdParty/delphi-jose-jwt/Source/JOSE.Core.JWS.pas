@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {  Delphi JOSE Library                                                         }
-{  Copyright (c) 2015 Paolo Rossi                                              }
+{  Copyright (c) 2015-2017 Paolo Rossi                                         }
 {  https://github.com/paolo-rossi/delphi-jose-jwt                              }
 {                                                                              }
 {******************************************************************************}
@@ -28,53 +28,64 @@
 /// </seealso>
 unit JOSE.Core.JWS;
 
-{$I ..\..\..\Source\Mars.inc}
-
 interface
 
 uses
-  SysUtils,
+  System.SysUtils,
   JOSE.Types.Bytes,
   JOSE.Core.Base,
   JOSE.Core.Parts,
   JOSE.Core.JWA,
   JOSE.Core.JWK,
-  JOSE.Core.JWT;
+  JOSE.Core.JWT,
+  JOSE.Core.JWA.Signing;
 
 type
   TJWS = class(TJOSEParts)
   private
     const COMPACT_PARTS = 3;
-
-    function GetSigningInput: TSuperBytes;
-    function GetHeader: TSuperBytes;
-    function GetPayload: TSuperBytes;
-    function GetSignature: TSuperBytes;
-    procedure SetHeader(const Value: TSuperBytes);
-    procedure SetPayload(const Value: TSuperBytes);
-    procedure SetSignature(const Value: TSuperBytes);
+  private
+    FKey: TJOSEBytes;
+  private
+    function GetSigningInput: TJOSEBytes;
+    function GetHeader: TJOSEBytes;
+    function GetPayload: TJOSEBytes;
+    function GetSignature: TJOSEBytes;
+    procedure SetHeader(const Value: TJOSEBytes);
+    procedure SetPayload(const Value: TJOSEBytes);
+    procedure SetSignature(const Value: TJOSEBytes);
   protected
-    function GetCompactToken: TSuperBytes; override;
-    procedure SetCompactToken(const Value: TSuperBytes); override;
+    function GetAlgorithm(AAlgId: TJOSEAlgorithmId): IJOSESigningAlgorithm;
+    function GetCompactToken: TJOSEBytes; override;
+    procedure SetCompactToken(const Value: TJOSEBytes); override;
   public
     constructor Create(AToken: TJWT); override;
 
-    function Sign(AKey: TJWK; AAlg: TJWAEnum): TSuperBytes;
-    procedure Verify(AKey: TJWK; const ACompactToken: TSuperBytes);
+    procedure SetKey(const AKey: TBytes); overload;
+    procedure SetKey(const AKey: TJOSEBytes); overload;
+    procedure SetKey(const AKey: TJWK); overload;
 
-    property Header: TSuperBytes read GetHeader write SetHeader;
-    property Payload: TSuperBytes read GetPayload write SetPayload;
-    property Signature: TSuperBytes read GetSignature write SetSignature;
-    property SigningInput: TSuperBytes read GetSigningInput;
+    function Sign: TJOSEBytes; overload;
+    function Sign(AKey: TJWK; AAlgId: TJOSEAlgorithmId): TJOSEBytes; overload;
+
+    function VerifySignature: Boolean; overload;
+    function VerifySignature(AKey: TJWK; const ACompactToken: TJOSEBytes): Boolean; overload;
+
+    property Key: TJOSEBytes read FKey;
+    property Header: TJOSEBytes read GetHeader write SetHeader;
+    property Payload: TJOSEBytes read GetPayload write SetPayload;
+    property Signature: TJOSEBytes read GetSignature write SetSignature;
+    property SigningInput: TJOSEBytes read GetSigningInput;
   end;
 
 implementation
 
 uses
-  Types,
-  StrUtils,
+  System.Types,
+  System.StrUtils,
   JOSE.Encoding.Base64,
-  JOSE.Hashing.HMAC;
+  JOSE.Hashing.HMAC,
+  JOSE.Core.JWA.Factory;
 
 constructor TJWS.Create(AToken: TJWT);
 var
@@ -83,40 +94,57 @@ begin
   inherited Create(AToken);
 
   for LIndex := 0 to COMPACT_PARTS - 1 do
-    FParts.Add(TSuperBytes.Empty);
+    FParts.Add(TJOSEBytes.Empty);
 end;
 
-function TJWS.GetCompactToken: TSuperBytes;
+function TJWS.GetAlgorithm(AAlgId: TJOSEAlgorithmId): IJOSESigningAlgorithm;
+var
+  LAlgId: string;
+begin
+  LAlgId := FToken.Header.Algorithm;
+
+  if LAlgId.IsEmpty then
+    raise EJOSEException.CreateFmt('Signature algorithm header (%s) not set.',
+      [THeaderNames.ALGORITHM]);
+
+  Result := TJOSEAlgorithmRegistryFactory.Instance
+    .SigningAlgorithmRegistry.GetAlgorithm(LAlgId);
+  if Result = nil then
+    raise EJOSEException.CreateFmt('Signing algorithm (%s) is not supported.',
+      [LAlgId]);
+end;
+
+function TJWS.GetCompactToken: TJOSEBytes;
 begin
   Result := Header + PART_SEPARATOR + Payload + PART_SEPARATOR + Signature;
 end;
 
-function TJWS.GetHeader: TSuperBytes;
+function TJWS.GetHeader: TJOSEBytes;
 begin
   Result := FParts[0]
 end;
 
-function TJWS.GetPayload: TSuperBytes;
+function TJWS.GetPayload: TJOSEBytes;
 begin
   Result := FParts[1];
 end;
 
-function TJWS.GetSignature: TSuperBytes;
+function TJWS.GetSignature: TJOSEBytes;
 begin
   Result := FParts[2];
 end;
 
-function TJWS.GetSigningInput: TSuperBytes;
+function TJWS.GetSigningInput: TJOSEBytes;
 begin
   Result := Header + PART_SEPARATOR + Payload;
 end;
 
-procedure TJWS.SetCompactToken(const Value: TSuperBytes);
+procedure TJWS.SetCompactToken(const Value: TJOSEBytes);
 var
   LRes: TStringDynArray;
 begin
   LRes := SplitString(Value, PART_SEPARATOR);
-  if Length(LRes) = 3 then
+  if Length(LRes) = COMPACT_PARTS then
   begin
     FParts[0] := LRes[0];
     FParts[1] := LRes[1];
@@ -129,76 +157,83 @@ begin
     raise EJOSEException.CreateFmt('A JWS Compact Serialization must have %d parts', [COMPACT_PARTS]);
 end;
 
-procedure TJWS.SetHeader(const Value: TSuperBytes);
+procedure TJWS.SetHeader(const Value: TJOSEBytes);
 begin
   FParts[0] := Value;
 end;
 
-procedure TJWS.SetPayload(const Value: TSuperBytes);
+procedure TJWS.SetKey(const AKey: TBytes);
+begin
+  FKey := AKey;
+end;
+
+procedure TJWS.SetKey(const AKey: TJOSEBytes);
+begin
+  FKey := AKey;
+end;
+
+procedure TJWS.SetKey(const AKey: TJWK);
+begin
+  FKey := AKey.Key;
+end;
+
+procedure TJWS.SetPayload(const Value: TJOSEBytes);
 begin
   FParts[1] := Value;
 end;
 
-procedure TJWS.SetSignature(const Value: TSuperBytes);
+procedure TJWS.SetSignature(const Value: TJOSEBytes);
 begin
   FParts[2] := Value;
 end;
 
-function TJWS.Sign(AKey: TJWK; AAlg: TJWAEnum): TSuperBytes;
-var
-  LSign: TSuperBytes;
+function TJWS.Sign(AKey: TJWK; AAlgId: TJOSEAlgorithmId): TJOSEBytes;
 begin
-  Empty;
+  SetKey(AKey);
+  SetHeaderAlgorithm(AAlgId);
 
-  {$ifdef DelphiXE8_UP}
-  FToken.Header.Algorithm := AAlg.AsString;
-  {$else}
-  FToken.Header.Algorithm := TJWAEnumHelper.AsString(AAlg);
-  {$endif}
+  Result := Sign();
+end;
 
-  Header := TBase64.URLEncode(FToken.Header.JSON.ToString);
-  Payload := TBase64.URLEncode(FToken.Claims.JSON.ToString);
+function TJWS.Sign: TJOSEBytes;
+var
+  LAlgId: TJOSEAlgorithmId;
+  LAlg: IJOSESigningAlgorithm;
+begin
+  LAlgId.AsString := FToken.Header.Algorithm;
+  LAlg := GetAlgorithm(LAlgId);
 
-  case AAlg of
-    None:  LSign.Clear;
-    HS256: LSign := THMAC.Sign(SigningInput, AKey.Key, SHA256);
-    HS384: LSign := THMAC.Sign(SigningInput, AKey.Key, SHA384);
-    HS512: LSign := THMAC.Sign(SigningInput, AKey.Key, SHA512);
-  else
-    raise EJOSEException.Create('Signing algorithm not supported');
-  end;
-  Signature := TBase64.URLEncode(LSign.AsBytes);
+  if not FSkipKeyValidation then
+    LAlg.ValidateSigningKey(FKey);
+
+  Header := TBase64.URLEncode(ToJSON(FToken.Header.JSON));
+  Payload := TBase64.URLEncode(ToJSON(FToken.Claims.JSON));
+  Signature := LAlg.Sign(FKey, SigningInput);
 
   Result := Signature;
 end;
 
-procedure TJWS.Verify(AKey: TJWK; const ACompactToken: TSuperBytes);
-var
-  LExpectedSign: TSuperBytes;
-  LAlg: TJWAEnum;
+function TJWS.VerifySignature(AKey: TJWK; const ACompactToken: TJOSEBytes): Boolean;
 begin
-  CompactToken := ACompactToken;
+  SetKey(AKey);
+  SetCompactToken(ACompactToken);
 
-  {$ifdef DelphiXE8_UP}
-  LAlg.AsString := FToken.Header.Algorithm;
-  {$else}
-  LAlg := TJWAEnumHelper.FromString(FToken.Header.Algorithm);
-  {$endif}
-  case LAlg of
-    None : FToken.Verified := AKey.Key.IsEmpty;
-    HS256: LExpectedSign := THMAC.Sign(SigningInput, AKey.Key, SHA256);
-    HS384: LExpectedSign := THMAC.Sign(SigningInput, AKey.Key, SHA384);
-    HS512: LExpectedSign := THMAC.Sign(SigningInput, AKey.Key, SHA512);
-  else
-    raise EJOSEException.Create('Signing algorithm not supported');
-  end;
+  Result := VerifySignature;
+end;
 
-  if LAlg <> None then
-  begin
-    LExpectedSign := TBase64.URLEncode(LExpectedSign);
-    if LExpectedSign = Signature then
-      FToken.Verified := True;
-  end;
+function TJWS.VerifySignature: Boolean;
+var
+  LAlgId: TJOSEAlgorithmId;
+  LAlg: IJOSESigningAlgorithm;
+begin
+  LAlgId.AsString := FToken.Header.Algorithm;
+  LAlg := GetAlgorithm(LAlgId);
+
+  if not FSkipKeyValidation then
+    LAlg.ValidateVerificationKey(FKey);
+
+  Result := LAlg.VerifySignature(FKey, SigningInput, Signature);
+  FToken.Verified := Result;
 end;
 
 end.
