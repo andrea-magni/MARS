@@ -46,7 +46,7 @@ begin
     try
       LKey := TJWK.Create(ASecret);
       try
-        LSigner.Sign(LKey, HS256);
+        LSigner.Sign(LKey, TJOSEAlgorithmId.HS256);
 
         Result := LSigner.CompactToken;
       finally
