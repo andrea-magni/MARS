@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {  Delphi JOSE Library                                                         }
-{  Copyright (c) 2015 Paolo Rossi                                              }
+{  Copyright (c) 2015-2017 Paolo Rossi                                         }
 {  https://github.com/paolo-rossi/delphi-jose-jwt                              }
 {                                                                              }
 {******************************************************************************}
@@ -58,7 +58,7 @@ begin
   inherited Create(AToken);
 
   for LIndex := 0 to COMPACT_PARTS - 1 do
-    FParts.Add(TSuperBytes.Empty);
+    FParts.Add(TJOSEBytes.Empty);
 end;
 
 end.
