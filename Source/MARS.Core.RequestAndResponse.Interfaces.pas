@@ -11,6 +11,7 @@ type
     function GetContent: string;
     function GetQueryParamIndex(const AName: string): Integer;
     function GetQueryParamValue(const AIndex: Integer): string;
+    function GetQueryParamCount: Integer;
     function GetFormParamIndex(const AName: string): Integer;
     function GetFormParamName(const AIndex: Integer): string;
     function GetFormParamValue(const AIndex: Integer): string; overload;
@@ -18,14 +19,14 @@ type
     function GetFormFileParamIndex(const AName: string): Integer;
     function GetFormFileParam(const AIndex: Integer; out AFieldName, AFileName: string;
       out ABytes: TBytes; out AContentType: string): Boolean;
+    function GetFormParamCount: Integer;
     function GetHeaderParamValue(const AHeaderName: string): string;
     function GetCookieParamIndex(const AName: string): Integer;
     function GetCookieParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamValue(const AName: string): string; overload;
-    function GetFormParamCount: Integer;
+    function GetCookieParamCount: Integer;
     function GetFilesCount: Integer;
     function GetFormParams: string;
-
     function GetAccept: string;
     function GetAuthorization: string;
     function GetMethod: string;

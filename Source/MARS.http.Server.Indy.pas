@@ -35,6 +35,7 @@ type
     function GetCookieParamIndex(const AName: string): Integer; inline;
     function GetCookieParamValue(const AIndex: Integer): string; overload; inline;
     function GetCookieParamValue(const AName: string): string; overload; inline;
+    function GetCookieParamCount: Integer;
     function GetFilesCount: Integer; inline;
     function GetFormParamCount: Integer; inline;
     function GetFormParamIndex(const AName: string): Integer; inline;
@@ -51,12 +52,14 @@ type
     function GetPort: Integer; inline;
     function GetQueryParamIndex(const AName: string): Integer; inline;
     function GetQueryParamValue(const AIndex: Integer): string; inline;
+    function GetQueryParamCount: Integer;
     function GetQueryString: string; inline;
     function GetRawContent: TBytes; inline;
     function GetRawPath: string; inline;
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(AWebRequest: TWebRequest); virtual;
+
     property WebRequest: TWebRequest read FWebRequest;
   end;
 
@@ -295,6 +298,11 @@ begin
   Result := FWebRequest.Content;
 end;
 
+function TMARSWebRequest.GetCookieParamCount: Integer;
+begin
+  Result := FWebRequest.CookieFields.Count;
+end;
+
 function TMARSWebRequest.GetCookieParamIndex(const AName: string): Integer;
 begin
   Result := FWebRequest.CookieFields.IndexOfName(AName);
@@ -396,6 +404,11 @@ end;
 function TMARSWebRequest.GetPort: Integer;
 begin
   Result := FWebRequest.ServerPort;
+end;
+
+function TMARSWebRequest.GetQueryParamCount: Integer;
+begin
+  Result := FWebRequest.QueryFields.Count;
 end;
 
 function TMARSWebRequest.GetQueryParamIndex(const AName: string): Integer;
