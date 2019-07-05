@@ -27,6 +27,7 @@ type
     property Application;
     property AuthToken;
     property Client;
+    property CustomHeaders;
     property ContentType;
     property SpecificAccept;
     property SpecificClient;

@@ -25,6 +25,7 @@ type
     FApplication: TMARSClientApplication;
     FSpecificClient: TMARSCustomClient;
     FSpecificToken: string;
+    FCustomHeaders: TStrings;
     FPathParamsValues: TStrings;
     FQueryParams: TStrings;
     FSpecificAccept: string;
@@ -33,7 +34,9 @@ type
     FToken: TMARSClientCustomResource;
     procedure SetPathParamsValues(const Value: TStrings);
     procedure SetQueryParams(const Value: TStrings);
+    procedure SetCustomHeaders(const Value: TStrings);
   protected
+    procedure ApplyCustomHeaders;
     function GetClient: TMARSCustomClient; virtual;
     function GetPath: string; virtual;
     function GetURL: string; virtual;
@@ -119,6 +122,7 @@ type
     property Application: TMARSClientApplication read GetApplication write FApplication;
     property AuthToken: string read GetAuthToken;
     property Client: TMARSCustomClient read GetClient;
+    property CustomHeaders: TStrings read FCustomHeaders write SetCustomHeaders;
     property SpecificAccept: string read FSpecificAccept write FSpecificAccept;
     property SpecificClient: TMARSCustomClient read FSpecificClient write FSpecificClient;
     property SpecificContentType: string read FSpecificContentType write FSpecificContentType;
@@ -167,6 +171,11 @@ begin
 
 end;
 
+procedure TMARSClientCustomResource.ApplyCustomHeaders;
+begin
+  Client.ApplyCustomHeaders(CustomHeaders);
+end;
+
 procedure TMARSClientCustomResource.AssignTo(Dest: TPersistent);
 var
   LDestResource: TMARSClientCustomResource;
@@ -180,6 +189,7 @@ begin
   LDestResource.SpecificClient := SpecificClient;
   LDestResource.SpecificToken := SpecificToken;
   LDestResource.Resource := Resource;
+  LDestResource.CustomHeaders.Assign(CustomHeaders);
   LDestResource.PathParamsValues.Assign(PathParamsValues);
   LDestResource.QueryParams.Assign(QueryParams);
   LDestResource.Token := Token;
@@ -187,21 +197,25 @@ end;
 
 procedure TMARSClientCustomResource.BeforeDELETE(const AContent: TMemoryStream);
 begin
+  ApplyCustomHeaders;
 
 end;
 
 procedure TMARSClientCustomResource.BeforeGET;
 begin
+  ApplyCustomHeaders;
 
 end;
 
 procedure TMARSClientCustomResource.BeforePOST(const AContent: TMemoryStream);
 begin
+  ApplyCustomHeaders;
 
 end;
 
 procedure TMARSClientCustomResource.BeforePUT(const AContent: TMemoryStream);
 begin
+  ApplyCustomHeaders;
 
 end;
 
@@ -214,10 +228,11 @@ begin
     FApplication := TMARSComponentHelper.FindDefault<TMARSClientApplication>(Self);
     FToken := TMARSComponentHelper.FindDefault<TMARSClientToken>(Self);
   end;
-  FPathParamsValues := TStringList.Create;
-  FQueryParams := TStringList.Create;
   FSpecificAccept := TMediaType.WILDCARD;
   FSpecificContentType := '';
+  FCustomHeaders := TStringList.Create;
+  FPathParamsValues := TStringList.Create;
+  FQueryParams := TStringList.Create;
 end;
 
 function TMARSClientCustomResource.GetAuthToken: string;
@@ -443,6 +458,7 @@ end;
 
 destructor TMARSClientCustomResource.Destroy;
 begin
+  FCustomHeaders.Free;
   FQueryParams.Free;
   FPathParamsValues.Free;
   inherited;
@@ -883,6 +899,11 @@ begin
   end;
 end;
 {$endif}
+
+procedure TMARSClientCustomResource.SetCustomHeaders(const Value: TStrings);
+begin
+  FCustomHeaders.Assign(Value);
+end;
 
 procedure TMARSClientCustomResource.SetPathParamsValues(const Value: TStrings);
 begin
