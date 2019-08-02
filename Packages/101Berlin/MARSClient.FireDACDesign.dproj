@@ -44,7 +44,7 @@
         <GenPackage>true</GenPackage>
         <SanitizedProjectName>MARSClient_FireDACDesign</SanitizedProjectName>
         <GenDll>true</GenDll>
-        <DCC_DcuOutput>..\..\Lib250\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcuOutput>..\..\Lib240\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
@@ -143,7 +143,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\..\..\..\Bpl\MARSClient.FireDACDesign250.bpl" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="..\..\..\..\Bpl\MARSClient.FireDACDesign240.bpl" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MARSClient_FireDACDesign.bpl</RemoteName>
                         <Overwrite>true</Overwrite>

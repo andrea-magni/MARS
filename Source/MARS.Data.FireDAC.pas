@@ -11,7 +11,6 @@ interface
 
 uses
     System.Classes, System.SysUtils, Generics.Collections, Rtti
-
   , Data.DB
 // *** BEWARE ***
 // if your Delphi edition/license does not include FireDAC,
@@ -688,5 +687,8 @@ begin
   inherited;
   FApplyUpdatesRes.AddError(ARow, AException, ARequest);
 end;
+
+initialization
+  FDManager.SilentMode := True;
 
 end.

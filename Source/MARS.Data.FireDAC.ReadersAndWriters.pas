@@ -108,7 +108,12 @@ var
 begin
   LDataset := AValue.AsType<TFDDataSet>;
 
-  if AMediaType.Matches(TMediaType.APPLICATION_XML_FIREDAC) then
+  if AMediaType.IsWildcard then
+  begin
+    TDataSetWriterJSON.WriteDataSet(LDataSet, AMediaType, AOutputStream, AActivation);
+    AActivation.Response.ContentType := TMediaType.APPLICATION_JSON;
+  end
+  else if AMediaType.Matches(TMediaType.APPLICATION_XML_FIREDAC) then
     LDataSet.SaveToStream(AOutputStream, sfXML)
   else if AMediaType.Matches(TMediaType.APPLICATION_JSON_FireDAC) then
     TArrayFDDataSetWriter.WriteDataSet(LDataSet, AMediaType, AOutputStream, AActivation)

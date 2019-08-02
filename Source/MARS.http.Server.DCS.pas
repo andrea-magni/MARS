@@ -30,6 +30,7 @@ type
     function GetCookieParamIndex(const AName: string): Integer;
     function GetCookieParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamValue(const AName: string): string; overload;
+    function GetCookieParamCount: Integer;
     function GetFilesCount: Integer;
     function GetFormParamCount: Integer;
     function GetFormParamIndex(const AName: string): Integer;
@@ -47,6 +48,7 @@ type
     function GetPort: Integer;
     function GetQueryParamIndex(const AName: string): Integer;
     function GetQueryParamValue(const AIndex: Integer): string;
+    function GetQueryParamCount: Integer;
     function GetQueryString: string;
     function GetRawContent: TBytes;
     function GetRawPath: string;
@@ -214,6 +216,11 @@ function TMARSDCSRequest.GetContent: string;
 begin
 //AM TODO
   Result := '';
+end;
+
+function TMARSDCSRequest.GetCookieParamCount: Integer;
+begin
+  Result := FDCSRequest.Cookies.Count;
 end;
 
 function TMARSDCSRequest.GetCookieParamIndex(const AName: string): Integer;
@@ -436,6 +443,11 @@ end;
 function TMARSDCSRequest.GetPort: Integer;
 begin
   Result := FDCSRequest.HostPort;
+end;
+
+function TMARSDCSRequest.GetQueryParamCount: Integer;
+begin
+  Result := FDCSRequest.Query.Count;
 end;
 
 function TMARSDCSRequest.GetQueryParamIndex(const AName: string): Integer;

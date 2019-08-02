@@ -45,6 +45,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    procedure ApplyCustomHeaders(const AHeaders: TStrings); override;
+
     procedure Delete(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Get(const AURL: string; AResponseContent: TStream;
@@ -85,6 +87,15 @@ uses
 ;
 
 { TMARSNetClient }
+
+procedure TMARSNetClient.ApplyCustomHeaders(const AHeaders: TStrings);
+var
+  LIndex: Integer;
+begin
+  inherited;
+  for LIndex := 0 to AHeaders.Count-1 do
+    HttpClient.CustomHeaders[AHeaders.Names[LIndex]] := AHeaders.ValueFromIndex[LIndex];
+end;
 
 procedure TMARSNetClient.ApplyProxyConfig;
 begin
