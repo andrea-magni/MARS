@@ -10,6 +10,9 @@ uses
 , VirtualTable
 ;
 
+const
+  APPLICATION_JSON_UniDAC = 'application/json-unidac';
+
 type
   TMARSUniApplyUpdatesRes = record
     dataset: string;
@@ -85,7 +88,7 @@ begin
   // Get Binary representation
   LBinStream := TMemoryStream.Create;
   try
-    ADataSet.SaveToXML(LBinStream);
+    ADataSet.SaveToStream(LBinStream, True, True);
 
     // Zip
     LZippedStream := TMemoryStream.Create;
@@ -146,7 +149,7 @@ begin
   end;
 end;
 
-class function TuniDataSets.ToJSON(const ADataSets: TValue): TJSONObject;
+class function TUniDataSets.ToJSON(const ADataSets: TValue): TJSONObject;
 var
   LIndex: Integer;
 begin

@@ -36,8 +36,7 @@ requires
   MARS.Core,
   MARS.ReadersAndWriters,
   unidac260,
-  dac260,
-  ibprovider260;
+  dac260;
 
 contains
   MARS.Data.UniDAC.InjectionService in '..\..\Source\MARS.Data.UniDAC.InjectionService.pas',

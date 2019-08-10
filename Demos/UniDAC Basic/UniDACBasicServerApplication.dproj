@@ -3,7 +3,7 @@
         <ProjectGuid>{0A5E1DDC-90B4-4B41-A7DC-2B0FC45D4349}</ProjectGuid>
         <MainSource>UniDACBasicServerApplication.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>

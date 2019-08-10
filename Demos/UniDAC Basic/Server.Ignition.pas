@@ -36,8 +36,11 @@ uses
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
   {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC {$ENDIF}
+  {$IFDEF MARS_UNIDAC} , MARS.Data.UniDAC {$ENDIF}
   {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
   , Server.Resources
+
+  , InterBaseUniProvider  // UniDAC provider for Interbase & FirebirdSQL
   ;
 
 { TServerEngine }

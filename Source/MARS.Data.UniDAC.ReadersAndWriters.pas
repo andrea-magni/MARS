@@ -24,11 +24,13 @@ uses
   , MARS.Core.MessageBodyWriter
   , MARS.Core.MessageBodyReader
   , MARS.Core.Utils
-  , MARS.Data.Utils;
+  , MARS.Data.Utils
+  , MARS.Data.UniDAC.Utils
+;
 
 type
   // --- READERS ---
-  [ Consumes(TMediaType.APPLICATION_JSON_FIREDAC) ]  // might be better to change APPLICATION_JSON_FIREDAC -> APPLICATION_JSON_DAC or something -Ertan
+  [Consumes(APPLICATION_JSON_UniDAC)]
   TArrayUniMemTableReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
@@ -40,7 +42,7 @@ type
 
   // --- WRITERS ---
   [ Produces(TMediaType.APPLICATION_XML)
-  , Produces(TMediaType.APPLICATION_JSON_FIREDAC)
+  , Produces(APPLICATION_JSON_UniDAC)
   , Produces(TMediaType.APPLICATION_OCTET_STREAM)
   ]
   TUniDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
@@ -48,7 +50,7 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
-  [ Produces(TMediaType.APPLICATION_JSON_FIREDAC) ]
+  [Produces(APPLICATION_JSON_UniDAC)]
   TArrayUniDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -66,7 +68,7 @@ uses
   , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
   {$ifdef DelphiXE7_UP}, System.JSON {$endif}
   , MARS.Core.Exceptions
-  , MARS.Rtti.Utils, MARS.Data.UniDAC.Utils
+  , MARS.Rtti.Utils
 ;
 
 { TArrayFDDataSetWriter }
@@ -108,13 +110,14 @@ begin
   LDataset := AValue.AsType<TVirtualTable>;
 
   if AMediaType.Matches(TMediaType.APPLICATION_XML) then
-    LDataSet.SaveToStream(AOutputStream)
-  else if AMediaType.Matches(TMediaType.APPLICATION_JSON_FireDAC) then
-    TArrayUniDataSetWriter.WriteDataSets(TValue.From<TArray<TVirtualTable>>([LDataSet]),
-      AMediaType, AOutputStream, AActivation)
-// I believe UniDAC does not have a binary format. Only XML -Ertan
-//  else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
-//    LDataSet.SaveToStream(AOutputStream, sfBinary)
+    LDataSet.SaveToXML(AOutputStream)
+  else if AMediaType.Matches(APPLICATION_JSON_UniDAC) then
+    TArrayUniDataSetWriter.WriteDataSets(
+      TValue.From<TArray<TVirtualTable>>([LDataSet])
+    , AMediaType, AOutputStream, AActivation
+    )
+  else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
+    LDataSet.SaveToStream(AOutputStream, True, True)
   else
     raise EMARSException.CreateFmt('Unsupported media type: %s', [AMediaType.ToString]);
 end;
