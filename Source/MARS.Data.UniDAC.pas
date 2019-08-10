@@ -17,9 +17,6 @@ uses
   , UniProvider
 //  , MemDS                 // not sure if needed  -Ertan
   , VirtualTable          // TVirtualTable
-//  , SQLServerUniProvider  // Microsoft SQL Server
-  , InterBaseUniProvider  // Interbase & FirebirdSQL
-//  , PostgreSQLUniProvider // PostgreSQL
 
   , MARS.Core.Application
   , MARS.Core.Attributes

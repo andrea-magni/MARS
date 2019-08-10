@@ -103,7 +103,6 @@
         <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
         <DCCReference Include="unidac260.dcp"/>
         <DCCReference Include="dac260.dcp"/>
-        <DCCReference Include="ibprovider260.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.ReadersAndWriters.pas"/>
@@ -139,9 +138,9 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\20.0\Bpl\Linux64\bplMARS_UniDAC.so" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Linux64">
-                        <RemoteName>bplMARS_UniDAC.so</RemoteName>
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\20.0\Bpl\MARS_UniDAC.bpl" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>MARS_UniDAC.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -176,9 +175,9 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\20.0\Bpl\MARS_UniDAC.bpl" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>MARS_UniDAC.bpl</RemoteName>
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\20.0\Bpl\Linux64\bplMARS_UniDAC.so" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Linux64">
+                        <RemoteName>bplMARS_UniDAC.so</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
