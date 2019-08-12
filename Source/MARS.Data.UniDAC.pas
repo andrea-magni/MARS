@@ -39,11 +39,11 @@ type
 
   ConnectionAttribute = class(MARSUniDACAttribute)
   private
-    FConnectString: string;
+    FConnectionDefName: string;
     FExpandMacros: Boolean;
   public
-    constructor Create(AConnectString: string; const AExpandMacros: Boolean = False);
-    property ConnectString: string read FConnectString;
+    constructor Create(AConnectionDefName: string; const AExpandMacros: Boolean = False);
+    property ConnectionDefName: string read FConnectionDefName;
     property ExpandMacros: Boolean read FExpandMacros;
   end;
 
@@ -76,13 +76,13 @@ type
 
   TMARSUniDAC = class
   private
-    FConnectString: string;
+    FConnectionDefName: string;
     FConnection: TUniConnection;
     FActivation: IMARSActivation;
   protected
     procedure DoUpdateError(DataSet: TDataSet; E: EDatabaseError;
   UpdateKind: TUpdateKind; var UpdateAction: TUpdateAction);
-    procedure SetConnectString(const Value: string); virtual;
+    procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TUniConnection; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
   public
@@ -103,7 +103,7 @@ type
     procedure InjectMacroAndParamValues(const ACommand: TUniSQL; const AOnlyIfEmpty: Boolean = True); overload;
     procedure InjectMacroAndParamValues(const ACommand: TUniQuery; const AOnlyIfEmpty: Boolean = True); overload;
 
-    constructor Create(const AConnectString: string;
+    constructor Create(const AConnectionDefName: string;
       const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
@@ -147,12 +147,14 @@ type
     procedure InTransaction(const ADoSomething: TProc<TUniTransaction>);
 
     property Connection: TUniConnection read GetConnection;
-    property ConnectString: string read FConnectString write SetConnectString;
+    property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
     property Activation: IMARSActivation read FActivation;
 
     class function LoadConnectionDefs(const AParameters: TMARSParameters;
       const ASliceName: string = ''): TArray<string>;
     class procedure CloseConnectionDefs(const AConnectionDefNames: TArray<string>);
+    class function CreateConnectionByDefName(const AConnectionDefName: string;
+      const AActivation: IMARSActivation): TUniConnection;
     class function CreateConnectionByConnectString(const AConnectString: string): TUniConnection;
 
     class constructor CreateClass;
@@ -303,12 +305,55 @@ begin
   end;
 end;
 
+class function TMARSUniDAC.CreateConnectionByDefName(
+  const AConnectionDefName: string; const AActivation: IMARSActivation): TUniConnection;
+var
+  LConnectionParams: TMARSParameters;
+  LParams: TStrings;
+  LUniDACParameters: TMARSParameters;
+  LConnectString: string;
+begin
+  Result := nil;
+
+  LUniDACParameters := TMARSParameters.Create('UniDAC');
+  try
+    LUniDACParameters.CopyFrom(AActivation.Engine.Parameters, 'UniDAC');
+
+    if LUniDACParameters.ContainsSlice(AConnectionDefName) then
+    begin
+      LConnectionParams := TMARSParameters.Create(AConnectionDefName);
+      try
+        LConnectionParams.CopyFrom(LUniDACParameters, AConnectionDefName);
+
+        LConnectString := LConnectionParams.ByNameText('ConnectString', '').AsString;
+        if LConnectString <> '' then
+          Result := CreateConnectionByConnectString(LConnectString)
+        else
+        begin
+          LParams := GetAsTStrings(LConnectionParams);
+          try
+            LParams.Delimiter := ';';
+            LParams.QuoteChar := #0;
+            Result := CreateConnectionByConnectString(LParams.DelimitedText);
+          finally
+            LParams.Free;
+          end;
+        end;
+      finally
+        LConnectionParams.Free;
+      end;
+    end;
+  finally
+    LUniDACParameters.Free;
+  end;
+end;
+
 { ConnectionAttribute }
 
-constructor ConnectionAttribute.Create(AConnectString: string; const AExpandMacros: Boolean = False);
+constructor ConnectionAttribute.Create(AConnectionDefName: string; const AExpandMacros: Boolean = False);
 begin
   inherited Create;
-  FConnectString := AConnectString;
+  FConnectionDefName := AConnectionDefName;
   FExpandMacros := AExpandMacros;
 end;
 
@@ -432,11 +477,11 @@ begin
 //    FDManager.CloseConnectionDef(LConnectionDefName);
 end;
 
-constructor TMARSUniDAC.Create(const AConnectString: string;
+constructor TMARSUniDAC.Create(const AConnectionDefName: string;
   const AActivation: IMARSActivation);
 begin
   inherited Create();
-  ConnectString := AConnectString;
+  ConnectionDefName := AConnectionDefName;
   FActivation := AActivation;
 end;
 
@@ -525,7 +570,7 @@ end;
 function TMARSUniDAC.GetConnection: TUniConnection;
 begin
   if not Assigned(FConnection) then
-    FConnection := CreateConnectionByConnectString(ConnectString);
+    FConnection := CreateConnectionByDefName(ConnectionDefName, Activation);
   Result := FConnection;
 end;
 
@@ -679,12 +724,12 @@ begin
   end;
 end;
 
-procedure TMARSUniDAC.SetConnectString(const Value: string);
+procedure TMARSUniDAC.SetConnectionDefName(const Value: string);
 begin
-  if FConnectString <> Value then
+  if FConnectionDefName <> Value then
   begin
     FreeAndNil(FConnection);
-    FConnectString := Value;
+    FConnectionDefName := Value;
   end;
 end;
 

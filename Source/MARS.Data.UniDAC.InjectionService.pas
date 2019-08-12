@@ -20,15 +20,15 @@ uses
 type
   TMARSUniDACInjectionService = class(TInterfacedObject, IMARSInjectionService)
   protected
-    function GetConnectString(const ADestination: TRttiObject;
+    function GetConnectionDefName(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): string;
   public
     procedure GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation; out AValue: TInjectionValue);
 
-    const UniDAC_ConnectString_PARAM = 'UniDAC.ConnectString';
+    const UniDAC_ConnectionDefName_PARAM = 'UniDAC.ConnectionDefName';
     const UniDAC_ConnectionExpandMacros_PARAM = 'UniDAC.ConnectionExpandMacros';
-    const UniDAC_ConnectString_PARAM_DEFAULT = 'MAIN_DB';
+    const UniDAC_ConnectionDefName_PARAM_DEFAULT = 'MAIN_DB';
     const UniDAC_ConnectionExpandMacros_PARAM_DEFAULT = False;
   end;
 
@@ -45,50 +45,50 @@ uses
 
 { TMARSUniDACInjectionService }
 
-function TMARSUniDACInjectionService.GetConnectString(
+function TMARSUniDACInjectionService.GetConnectionDefName(
   const ADestination: TRttiObject;
   const AActivation: IMARSActivation): string;
 var
-  LConnectString: string;
+  LConnectionDefName: string;
   LExpandMacros: Boolean;
 begin
-  LConnectString := '';
+  LConnectionDefName := '';
   LExpandMacros := False;
 
   // field, property or method param annotation
   ADestination.HasAttribute<ConnectionAttribute>(
     procedure (AAttrib: ConnectionAttribute)
     begin
-      LConnectString := AAttrib.ConnectString;
+      LConnectionDefName := AAttrib.ConnectionDefName;
       LExpandMacros := AAttrib.ExpandMacros;
     end
   );
 
   // second chance: method annotation
-  if (LConnectString = '') then
+  if (LConnectionDefName = '') then
     AActivation.Method.HasAttribute<ConnectionAttribute>(
       procedure (AAttrib: ConnectionAttribute)
       begin
-        LConnectString := AAttrib.ConnectString;
+        LConnectionDefName := AAttrib.ConnectionDefName;
         LExpandMacros := AAttrib.ExpandMacros;
       end
     );
 
   // third chance: resource annotation
-  if (LConnectString = '') then
+  if (LConnectionDefName = '') then
     AActivation.Resource.HasAttribute<ConnectionAttribute>(
       procedure (AAttrib: ConnectionAttribute)
       begin
-        LConnectString := AAttrib.ConnectString;
+        LConnectionDefName := AAttrib.ConnectionDefName;
         LExpandMacros := AAttrib.ExpandMacros;
       end
     );
 
   // last chance: application parameters
-  if (LConnectString = '') then
+  if (LConnectionDefName = '') then
   begin
-    LConnectString := AActivation.Application.Parameters.ByName(
-      UniDAC_ConnectString_PARAM, UniDAC_ConnectString_PARAM_DEFAULT
+    LConnectionDefName := AActivation.Application.Parameters.ByName(
+      UniDAC_ConnectionDefName_PARAM, UniDAC_ConnectionDefName_PARAM_DEFAULT
     ).AsString;
     LExpandMacros := AActivation.Application.Parameters.ByName(
       UniDAC_ConnectionExpandMacros_PARAM, UniDAC_ConnectionExpandMacros_PARAM_DEFAULT
@@ -96,9 +96,9 @@ begin
   end;
 
   if LExpandMacros then
-    LConnectString := TMARSUniDAC.GetContextValue(LConnectString, AActivation, ftString).AsString;
+    LConnectionDefName := TMARSUniDAC.GetContextValue(LConnectionDefName, AActivation, ftString).AsString;
 
-  Result := LConnectString;
+  Result := LConnectionDefName;
 end;
 
 procedure TMARSUniDACInjectionService.GetValue(const ADestination: TRttiObject;
@@ -106,11 +106,11 @@ procedure TMARSUniDACInjectionService.GetValue(const ADestination: TRttiObject;
 begin
   if ADestination.GetRttiType.IsObjectOfType(TUniConnection) then
     AValue := TInjectionValue.Create(
-      TMARSUniDAC.CreateConnectionByConnectString(GetConnectString(ADestination, AActivation))
+      TMARSUniDAC.CreateConnectionByDefName(GetConnectionDefName(ADestination, AActivation), AActivation)
     )
   else if ADestination.GetRttiType.IsObjectOfType(TMARSUniDAC) then
     AValue := TInjectionValue.Create(
-      TMARSUniDAC.Create(GetConnectString(ADestination, AActivation), AActivation)
+      TMARSUniDAC.Create(GetConnectionDefName(ADestination, AActivation), AActivation)
     );
 end;
 
