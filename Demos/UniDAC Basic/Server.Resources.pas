@@ -18,6 +18,8 @@ uses
   // UniDAC
   , Uni, VirtualTable
   , MARS.Data.UniDAC, MARS.Data.UniDAC.Utils
+
+  , FireDAC.Comp.Client, MARS.Data.FireDAC
 ;
 
 type
@@ -30,10 +32,14 @@ type
   THelloWorldResource = class
   protected
     [Context] UD: TMARSUniDAC;
+    [Context] FD: TMARSFireDAC;
     [Context, Connection('MY_SQLITE')] UDSQLite: TMARSUniDAC;
   public
     [GET, Path('query/{tablename}')]
     function GetEmployee: TUniQuery;
+    [GET, Path('queryFD/{tablename}')]
+    function GetEmployeeFD: TFDQuery;
+
     [GET, Path('querySQLite/{tablename}')]
     function GetTable1: TUniQuery;
     [GET, Path('queries')]
@@ -60,6 +66,11 @@ begin
   Result := UD.Query('select * from &PathParam_tablename');
 end;
 
+
+function THelloWorldResource.GetEmployeeFD: TFDQuery;
+begin
+  Result := FD.Query('select * from &PathParam_tablename');
+end;
 
 function THelloWorldResource.GetQueries: TArray<TUniQuery>;
 begin
