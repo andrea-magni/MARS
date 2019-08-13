@@ -10,12 +10,10 @@ unit MARS.Data.UniDAC.ReadersAndWriters;
 interface
 
 uses
-  Classes, SysUtils, Rtti
-
-//  , MemDS        // not sure if needed
-  , VirtualTable
-  , DB
-
+  Classes, SysUtils, Rtti, DB
+  // Devart UniDAC
+  , MemDS, VirtualTable
+  // MARS
   , MARS.Core.Attributes
   , MARS.Core.Activation.Interfaces
   , MARS.Core.Declarations
@@ -105,19 +103,19 @@ end;
 procedure TUniDataSetWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
-  LDataset: TVirtualTable;
+  LDataset: TMemDataSet;
 begin
-  LDataset := AValue.AsType<TVirtualTable>;
+  LDataset := AValue.AsType<TMemDataSet>;
 
   if AMediaType.Matches(TMediaType.APPLICATION_XML) then
     LDataSet.SaveToXML(AOutputStream)
   else if AMediaType.Matches(APPLICATION_JSON_UniDAC) then
     TArrayUniDataSetWriter.WriteDataSets(
-      TValue.From<TArray<TVirtualTable>>([LDataSet])
+      TValue.From<TArray<TMemDataSet>>([LDataSet])
     , AMediaType, AOutputStream, AActivation
     )
   else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
-    LDataSet.SaveToStream(AOutputStream, True, True)
+    LDataSet.SaveToXML(AOutputStream)
   else
     raise EMARSException.CreateFmt('Unsupported media type: %s', [AMediaType.ToString]);
 end;
@@ -138,7 +136,7 @@ begin
   if not Assigned(LJSON) then
     Exit;
   try
-    Result := TValue.From<TArray<TVirtualTable>>(TUniDataSets.FromJSON(LJSON));
+    Result := TValue.From<TArray<TMemDataSet>>(TUniDataSets.FromJSON(LJSON));
   finally
     LJSON.Free;
   end;
@@ -146,13 +144,13 @@ end;
 
 procedure RegisterReadersAndWriters;
 begin
-  TMARSMessageBodyRegistry.Instance.RegisterWriter<TVirtualTable>(TUniDataSetWriter);
+  TMARSMessageBodyRegistry.Instance.RegisterWriter<TMemDataSet>(TUniDataSetWriter);
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
     TArrayUniDataSetWriter
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
     begin
-      Result := Assigned(AType) and AType.IsDynamicArrayOf<TVirtualTable>;
+      Result := Assigned(AType) and AType.IsDynamicArrayOf<TMemDataSet>;
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
@@ -164,7 +162,7 @@ begin
     TArrayUniMemTableReader
   , function(AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
     begin
-      Result := Assigned(AType) and AType.IsDynamicArrayOf<TVirtualTable>;
+      Result := Assigned(AType) and AType.IsDynamicArrayOf<TMemDataSet>;
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin

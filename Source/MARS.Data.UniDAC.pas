@@ -10,14 +10,10 @@ unit MARS.Data.UniDAC;
 interface
 
 uses
-    System.Classes, System.SysUtils, Generics.Collections, Rtti
-
-  , Data.DB
-  , Uni                   // TUniConnection
-  , UniProvider
-//  , MemDS                 // not sure if needed  -Ertan
-  , VirtualTable          // TVirtualTable
-
+    System.Classes, System.SysUtils, Generics.Collections, Rtti, Data.DB
+  // Devart UniDAC
+  , Uni, UniProvider, VirtualTable
+  // MARS
   , MARS.Core.Application
   , MARS.Core.Attributes
   , MARS.Core.Classes
@@ -60,8 +56,6 @@ type
   TContextValueProviderProc = reference to procedure (const AActivation: IMARSActivation;
     const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
 
-
-  // I am not good at these update stuff at all
   TMARSUniMemTable = class(TVirtualTable)
   private
     FApplyUpdatesRes: TMARSUniApplyUpdatesRes;
@@ -79,6 +73,7 @@ type
     FConnectionDefName: string;
     FConnection: TUniConnection;
     FActivation: IMARSActivation;
+    class var FConnectionDefs: TDictionary<string, string>;
   protected
     procedure DoUpdateError(DataSet: TDataSet; E: EDatabaseError;
   UpdateKind: TUpdateKind; var UpdateAction: TUpdateAction);
@@ -158,16 +153,14 @@ type
     class function CreateConnectionByConnectString(const AConnectString: string): TUniConnection;
 
     class constructor CreateClass;
+    class destructor DestroyClass;
     class procedure AddContextValueProvider(const AContextValueProviderProc: TContextValueProviderProc);
   end;
-
-  // not sure if that apply to UniDAC macros does not have DataType in UniDAC -Ertan
-  //function MacroDataTypeToFieldType(const AMacroDataType: TUniMacro): TFieldType;
 
 implementation
 
 uses
-  StrUtils, Variants
+  StrUtils, Variants, DBAccess
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , MARS.Data.Utils
@@ -175,26 +168,6 @@ uses
   , MARS.Data.UniDAC.InjectionService
   , MARS.Data.UniDAC.ReadersAndWriters
 ;
-
-
-//function MacroDataTypeToFieldType(const AMacroDataType: TUniMacro): TFieldType;
-//begin
-//  case AMacroDataType of
-//    mdUnknown: Result := ftUnknown;
-//    mdString: Result := ftString;
-//    mdIdentifier: Result := ftString; // !!!
-//    mdInteger: Result := ftInteger;
-//    mdBoolean: Result := ftBoolean;
-//    mdFloat: Result := ftFloat;
-//    mdDate: Result := ftDate;
-//    mdTime: Result := ftTime;
-//    mdDateTime: Result := ftDateTime;
-//    mdRaw: Result := ftUnknown;   // ???
-//    else
-//      Result := ftUnknown;
-//  end;
-//end;
-
 
 function GetAsTStrings(const AParameters: TMARSParameters): TStrings;
 var
@@ -217,6 +190,7 @@ var
   LConnectionDefNames: TArray<string>;
   LConnectionDefName: string;
   LParams: TStrings;
+  LConnectString: string;
 begin
   Result := [];
   LData := TMARSParameters.Create('');
@@ -231,8 +205,16 @@ begin
         LConnectionParams.CopyFrom(LData, LConnectionDefName);
         LParams := GetAsTStrings(LConnectionParams);
         try
-          // I am not sure if there is such a thing "FDManager" in UniDAC -Ertan
-//          FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
+          LConnectString := LConnectionParams.ByNameText('ConnectString', '').AsString;
+          if LConnectString = '' then
+          begin
+            LParams.Delimiter := ';';
+            LParams.QuoteChar := #0;
+            LConnectString := LParams.DelimitedText;
+          end;
+
+          FConnectionDefs.AddOrSetValue(LConnectionDefName, LConnectString);
+
           Result := Result + [LConnectionDefName];
         finally
           LParams.Free;
@@ -308,44 +290,14 @@ end;
 class function TMARSUniDAC.CreateConnectionByDefName(
   const AConnectionDefName: string; const AActivation: IMARSActivation): TUniConnection;
 var
-  LConnectionParams: TMARSParameters;
-  LParams: TStrings;
-  LUniDACParameters: TMARSParameters;
   LConnectString: string;
 begin
+  //AM TDictionary is not thread-safe but connection definitions are not supposed
+  // to change during server execution. A monitor object would be a safer choice, if
+  // errors should arise.
   Result := nil;
-
-  LUniDACParameters := TMARSParameters.Create('UniDAC');
-  try
-    LUniDACParameters.CopyFrom(AActivation.Engine.Parameters, 'UniDAC');
-
-    if LUniDACParameters.ContainsSlice(AConnectionDefName) then
-    begin
-      LConnectionParams := TMARSParameters.Create(AConnectionDefName);
-      try
-        LConnectionParams.CopyFrom(LUniDACParameters, AConnectionDefName);
-
-        LConnectString := LConnectionParams.ByNameText('ConnectString', '').AsString;
-        if LConnectString <> '' then
-          Result := CreateConnectionByConnectString(LConnectString)
-        else
-        begin
-          LParams := GetAsTStrings(LConnectionParams);
-          try
-            LParams.Delimiter := ';';
-            LParams.QuoteChar := #0;
-            Result := CreateConnectionByConnectString(LParams.DelimitedText);
-          finally
-            LParams.Free;
-          end;
-        end;
-      finally
-        LConnectionParams.Free;
-      end;
-    end;
-  finally
-    LUniDACParameters.Free;
-  end;
+  if FConnectionDefs.TryGetValue(AConnectionDefName, LConnectString) then
+    Result := CreateConnectionByConnectString(LConnectString)
 end;
 
 { ConnectionAttribute }
@@ -469,12 +421,8 @@ end;
 
 class procedure TMARSUniDAC.CloseConnectionDefs(
   const AConnectionDefNames: TArray<string>);
-var
-  LConnectionDefName: string;
 begin
-  for LConnectionDefName in AConnectionDefNames do
-  // Need to understand what is FDManager here. Does it kind of TArray<TFDConnection) That seems what we need here?  -Ertan
-//    FDManager.CloseConnectionDef(LConnectionDefName);
+  FConnectionDefs.Clear;
 end;
 
 constructor TMARSUniDAC.Create(const AConnectionDefName: string;
@@ -488,6 +436,7 @@ end;
 class constructor TMARSUniDAC.CreateClass;
 begin
   FContextValueProviders := [];
+  FConnectionDefs := TDictionary<string, string>.Create();
 end;
 
 function TMARSUniDAC.CreateCommand(const ASQL: string;
@@ -542,6 +491,11 @@ destructor TMARSUniDAC.Destroy;
 begin
   FreeAndNil(FConnection);
   inherited;
+end;
+
+class destructor TMARSUniDAC.DestroyClass;
+begin
+  FreeAndNil(FConnectionDefs);
 end;
 
 procedure TMARSUniDAC.DoUpdateError(DataSet: TDataSet; E: EDatabaseError;
@@ -653,12 +607,12 @@ end;
 procedure TMARSUniDAC.InjectMacroValues(const ACommand: TUniSQL; const AOnlyIfEmpty: Boolean);
 var
   LIndex: Integer;
-  LMacro: TUniMacro;
+  LMacro: TMacro;
 begin
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
-    LMacro := TUniMacro(ACommand.Macros[LIndex]);  // This typecasting here maybe wrong -Ertan
-    if (not AOnlyIfEmpty) then
+    LMacro := ACommand.Macros[LIndex];
+    if (not AOnlyIfEmpty) or (LMacro.Value = '') then
       LMacro.Value := GetContextValue(LMacro.Name, Activation).AsVariant;
   end;
 end;
@@ -666,12 +620,12 @@ end;
 procedure TMARSUniDAC.InjectMacroValues(const ACommand: TUniQuery; const AOnlyIfEmpty: Boolean);
 var
   LIndex: Integer;
-  LMacro: TUniMacro;
+  LMacro: TMacro;
 begin
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
-    LMacro := TUniMacro(ACommand.Macros[LIndex]);  // This typecasting here maybe wrong -Ertan
-    if (not AOnlyIfEmpty) then
+    LMacro := ACommand.Macros[LIndex];
+    if (not AOnlyIfEmpty) or (LMacro.Value = '') then
       LMacro.Value := GetContextValue(LMacro.Name, Activation).AsVariant;
   end;
 end;

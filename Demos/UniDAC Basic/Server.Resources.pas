@@ -30,12 +30,17 @@ type
   THelloWorldResource = class
   protected
     [Context] UD: TMARSUniDAC;
+    [Context, Connection('MY_SQLITE')] UDSQLite: TMARSUniDAC;
   public
-    [GET, Path('query')]
+    [GET, Path('query/{tablename}')]
     function GetEmployee: TUniQuery;
+    [GET, Path('querySQLite/{tablename}')]
+    function GetTable1: TUniQuery;
+    [GET, Path('queries')]
+    function GetQueries: TArray<TUniQuery>;
+
     [GET, Path('virtualtable')]
     function GetVirtualTable: TVirtualTable;
-
   end;
 
   [Path('token')]
@@ -52,9 +57,22 @@ uses
 
 function THelloWorldResource.GetEmployee: TUniQuery;
 begin
-  Result := UD.Query('select * from EMPLOYEE');
+  Result := UD.Query('select * from &PathParam_tablename');
 end;
 
+
+function THelloWorldResource.GetQueries: TArray<TUniQuery>;
+begin
+  Result := [
+    UD.SetName<TUniQuery>(UD.Query('select * from EMPLOYEE'), 'Employees')
+  , UDSQLite.SetName<TUniQuery>( UDSQLite.Query('select * from MYTABLE1'), 'MyTable1')
+  ];
+end;
+
+function THelloWorldResource.GetTable1: TUniQuery;
+begin
+  Result := UDSQLite.Query('select * from &PathParam_tablename');
+end;
 
 function THelloWorldResource.GetVirtualTable: TVirtualTable;
 begin
