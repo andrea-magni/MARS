@@ -3,11 +3,11 @@ unit MARS.Data.UniDAC.Utils;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections, Rtti, System.JSON
-, MARS.Core.JSON
-, Data.DB
-//, MemDS // not sure if needed
-, VirtualTable
+  Classes, SysUtils, Generics.Collections, Rtti, System.JSON, Data.DB
+  // Devart UniDAC
+  , MemDS, VirtualTable
+  // MARS
+  , MARS.Core.JSON
 ;
 
 const
@@ -28,25 +28,25 @@ type
   TUniDataSets = class
   private
   protected
-    class procedure WriteDataSet(const ADest: TJSONObject; const ADataSet: TVirtualTable;
+    class procedure WriteDataSet(const ADest: TJSONObject; const ADataSet: TMemDataSet;
       const ADefaultName: string);
   public
     // Base64(Zip(binary format))
-    class function DataSetToEncodedBinaryString(const ADataSet: TVirtualTable): string;
+    class function DataSetToEncodedBinaryString(const ADataSet: TMemDataSet): string;
     class procedure EncodedBinaryStringToDataSet(const AString: string; const ADataSet: TVirtualTable);
 
     class function ToJSON(const ADataSets: TValue): TJSONObject; overload;
     class procedure ToJSON(const ADataSets: TValue; const AStream: TStream;
       const AEncoding: TEncoding = nil); overload;
 
-    class function ToJSON(const ADataSets: TArray<TVirtualTable>): TJSONObject; overload;
-    class procedure ToJSON(const ADataSets: TArray<TVirtualTable>; const AStream: TStream;
+    class function ToJSON(const ADataSets: TArray<TMemDataSet>): TJSONObject; overload;
+    class procedure ToJSON(const ADataSets: TArray<TMemDataSet>; const AStream: TStream;
       const AEncoding: TEncoding = nil); overload;
 
-    class function FromJSON(const AJSON: TJSONObject): TArray<TVirtualTable>; overload;
-    class function FromJSON(const AStream: TStream; const AEncoding: TEncoding = nil): TArray<TVirtualTable>; overload;
+    class function FromJSON(const AJSON: TJSONObject): TArray<TMemDataSet>; overload;
+    class function FromJSON(const AStream: TStream; const AEncoding: TEncoding = nil): TArray<TMemDataSet>; overload;
 
-    class procedure FreeAll(var ADataSets: TArray<TVirtualTable>); overload;
+    class procedure FreeAll(var ADataSets: TArray<TMemDataSet>); overload;
 //    class procedure FreeAll(var ADataSets: TArray<TVirtualTable>); overload;
   end;
 
@@ -56,7 +56,7 @@ uses
   MARS.Core.Utils, MARS.Core.Exceptions
 ;
 
-class function TUniDataSets.ToJSON(const ADataSets: TArray<TVirtualTable>): TJSONObject;
+class function TUniDataSets.ToJSON(const ADataSets: TArray<TMemDataSet>): TJSONObject;
 var
   LIndex: Integer;
 begin
@@ -70,9 +70,9 @@ begin
   end;
 end;
 
-class procedure TUniDataSets.FreeAll(var ADataSets: TArray<TVirtualTable>);
+class procedure TUniDataSets.FreeAll(var ADataSets: TArray<TMemDataSet>);
 var
-  LDataSet: TVirtualTable;
+  LDataSet: TMemDataSet;
 begin
   for LDataSet in ADataSets do
     LDataSet.DisposeOf;
@@ -80,7 +80,7 @@ begin
 end;
 
 class function TUniDataSets.DataSetToEncodedBinaryString(
-  const ADataSet: TVirtualTable): string;
+  const ADataSet: TMemDataSet): string;
 var
   LBinStream, LZippedStream: TMemoryStream;
 begin
@@ -88,7 +88,7 @@ begin
   // Get Binary representation
   LBinStream := TMemoryStream.Create;
   try
-    ADataSet.SaveToStream(LBinStream, True, True);
+    ADataSet.SaveToXML(LBinStream);
 
     // Zip
     LZippedStream := TMemoryStream.Create;
@@ -121,6 +121,7 @@ begin
       UnzipStream(LZippedStream, LStream);
       LStream.Position := 0;
 
+
       ADataSet.LoadFromStream(LStream);
     finally
       LStream.Free;
@@ -137,7 +138,7 @@ end;
 //end;
 
 class function TUniDataSets.FromJSON(const AStream: TStream;
-  const AEncoding: TEncoding): TArray<TVirtualTable>;
+  const AEncoding: TEncoding): TArray<TMemDataSet>;
 var
   LJSONObject: TJSONObject;
 begin
@@ -158,7 +159,7 @@ begin
   Result := TJSONObject.Create;
   try
     for LIndex := 0 to ADataSets.GetArrayLength-1 do
-      WriteDataSet(Result, ADataSets.GetArrayElement(LIndex).AsObject as TVirtualTable
+      WriteDataSet(Result, ADataSets.GetArrayElement(LIndex).AsObject as TMemDataSet
         , 'DataSet' + LIndex.ToString);
   except
     Result.Free;
@@ -166,7 +167,7 @@ begin
   end;
 end;
 
-class function TUniDataSets.FromJSON(const AJSON: TJSONObject): TArray<TVirtualTable>;
+class function TUniDataSets.FromJSON(const AJSON: TJSONObject): TArray<TMemDataSet>;
 var
   LPair: TJSONPair;
   LMemTable: TVirtualTable;
@@ -190,7 +191,7 @@ begin
 end;
 
 
-class procedure TUniDataSets.ToJSON(const ADataSets: TArray<TVirtualTable>;
+class procedure TUniDataSets.ToJSON(const ADataSets: TArray<TMemDataSet>;
   const AStream: TStream; const AEncoding: TEncoding);
 var
   LJSONObject: TJSONObject;
@@ -216,7 +217,7 @@ begin
   end;
 end;
 
-class procedure TUniDataSets.WriteDataSet(const ADest: TJSONObject; const ADataSet: TVirtualTable;
+class procedure TUniDataSets.WriteDataSet(const ADest: TJSONObject; const ADataSet: TMemDataSet;
   const ADefaultName: string);
 var
   LName: string;

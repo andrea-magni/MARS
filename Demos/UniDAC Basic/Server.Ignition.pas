@@ -18,7 +18,7 @@ type
   TServerEngine=class
   private
     class var FEngine: TMARSEngine;
-{$IFDEF MARS_FIREDAC}
+{$IF Defined(MARS_FIREDAC) or Defined(MARS_UNIDAC)}
     class var FAvailableConnectionDefs: TArray<string>;
 {$ENDIF}
   public
@@ -41,6 +41,7 @@ uses
   , Server.Resources
 
   , InterBaseUniProvider  // UniDAC provider for Interbase & FirebirdSQL
+  , SQLiteUniProvider // UniDAC provider for SQLite
   ;
 
 { TServerEngine }
@@ -57,6 +58,10 @@ begin
 {$IFDEF MARS_FIREDAC}
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
+{$IFDEF MARS_UNIDAC}
+    FAvailableConnectionDefs := TMARSUniDAC.LoadConnectionDefs(FEngine.Parameters, 'UniDAC');
+{$ENDIF}
+
 {$REGION 'BeforeHandleRequest example'}
 (*
     FEngine.BeforeHandleRequest :=
@@ -129,6 +134,10 @@ begin
 {$IFDEF MARS_FIREDAC}
   TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
 {$ENDIF}
+{$IFDEF MARS_UNIDAC}
+  TMARSUniDAC.CloseConnectionDefs(FAvailableConnectionDefs);
+{$ENDIF}
+
   FreeAndNil(FEngine);
 end;
 
