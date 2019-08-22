@@ -1,7 +1,5 @@
-// *** BEWARE ***
-// if your Delphi edition/license does not include FireDAC,
-// remove the following MARS_FIREDAC definition!
-{$define MARS_FIREDAC}
+{$define MARS_FIREDAC} // To enable MARS FireDAC support
+{.$define MARS_UNIDAC} // To enable MARS Devart UniDAC support
 
 {$if compilerversion = 22}
   {$define DelphiXE}
