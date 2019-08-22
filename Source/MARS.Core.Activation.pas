@@ -10,7 +10,7 @@ unit MARS.Core.Activation;
 interface
 
 uses
-  SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
+  SysUtils, Classes, Generics.Collections, Rtti, Diagnostics, StrUtils, ZLib
 
 , MARS.Core.Classes, MARS.Core.URL, MARS.Core.MediaType
 , MARS.Core.Application, MARS.Core.Engine, MARS.Core.Token
@@ -441,7 +441,7 @@ end;
 procedure TMARSActivation.WriteToResponse(const AValue: TValue;
   const AValueContentType: string; const AOriginalContentType: string);
 var
-  LStream: TBytesStream;
+  LStream, LOutputStream: TBytesStream;
 begin
   // 1 - TMARSResponse (override)
   if (not AValue.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
@@ -461,7 +461,25 @@ begin
         try
           FWriter.WriteTo(AValue, FWriterMediaType, LStream, Self);
           LStream.Position := 0;
-          Response.ContentStream := LStream;
+
+          if FEngine.Parameters.ByName('Compression.Enabled').AsBoolean and
+            ContainsText(Request.GetHeaderParamValue('Accept-Encoding'), 'gzip') then
+          begin
+            LOutputStream := TBytesStream.Create(nil);
+            try
+              ZipStream(LStream, LOutputStream, 15 + 16);
+              Response.ContentStream := LOutputStream;
+              Response.SetHeader('Content-Encoding', 'gzip');
+              LStream.Free;
+            except
+              LOutputStream.Free;
+              LStream.Free;
+              raise;
+            end;
+          end
+          else
+            Response.ContentStream := LStream;
+
         except
           LStream.Free;
           raise;
