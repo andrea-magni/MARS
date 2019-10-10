@@ -40,7 +40,7 @@ type
     [GET, Path('metadata/bootstrap'), Produces(TMediaType.TEXT_HTML)]
     function MetadataBootstrap([Context] Metadata: TMARSApplicationMetadata): string;
 
-    [GET, Path('metadata/swagger'), Produces(TMediaType.APPLICATION_JSON)]
+    [GET, Path('metadata/swagger'), Produces(TMediaType.APPLICATION_JSON), MetaVisible(False)]
     function MetadataSwagger([Context] Metadata: TMARSEngineMetadata): TMARSResponse;
 
     [GET, Path('metadata/json'), Produces(TMediaType.APPLICATION_JSON)]
@@ -71,6 +71,7 @@ begin
   Result := TMARSResponse.Create;
   Result.ContentType := 'application/json';
   Result.Content := mustache.RenderTemplateWithJSON('swagger.json', Metadata.ToJSON, True);
+  Result.StatusCode := 200;
 end;
 
 function THelloWorldResource.MetadataBootstrap(

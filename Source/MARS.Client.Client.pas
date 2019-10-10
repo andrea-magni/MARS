@@ -78,6 +78,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    procedure ApplyCustomHeaders(const AHeaders: TStrings); virtual;
     procedure DoError(const AResource: TObject; const AException: Exception;
       const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
 
@@ -189,6 +190,11 @@ begin
 end;
 
 { TMARSCustomClient }
+
+procedure TMARSCustomClient.ApplyCustomHeaders(const AHeaders: TStrings);
+begin
+  // to be implemented in inherited classes
+end;
 
 procedure TMARSCustomClient.ApplyProxyConfig;
 begin

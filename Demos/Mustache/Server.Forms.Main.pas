@@ -68,7 +68,14 @@ begin
       begin
         Result := False;
         Handled := True;
-      end
+      end;
+
+      // Handle CORS and PreFlight
+      if SameText(ARequest.Method, 'OPTIONS') then
+      begin
+        Handled := True;
+        Result := False;
+      end;
     end;
 
   StartServerAction.Execute;
@@ -109,3 +116,4 @@ begin
 end;
 
 end.
+
