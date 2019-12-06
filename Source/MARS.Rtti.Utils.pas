@@ -239,7 +239,11 @@ begin
           end;
         end
         else
-          Result := StrToFloatDef(AString, 0.0);
+        begin
+          Result := StrToFloatDef(AString
+            , StrToFloatDef(AString, 0.0, TFormatSettings.Create('en')) // second chance
+          );
+        end;
       end;
 
   {$ifdef DelphiXE7_UP}
