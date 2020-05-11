@@ -1,0 +1,96 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MARSTemplateServerDCSApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSTemplateServerDCSFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSTemplateServerDCSService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSTemplateServerDCSConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSTemplateServerDCSDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSTemplateClientDCS.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MARSTemplateServerDCSApplication">
+        <MSBuild Projects="MARSTemplateServerDCSApplication.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSApplication:Clean">
+        <MSBuild Projects="MARSTemplateServerDCSApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSApplication:Make">
+        <MSBuild Projects="MARSTemplateServerDCSApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSFMXApplication">
+        <MSBuild Projects="MARSTemplateServerDCSFMXApplication.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSFMXApplication:Clean">
+        <MSBuild Projects="MARSTemplateServerDCSFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSFMXApplication:Make">
+        <MSBuild Projects="MARSTemplateServerDCSFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSService">
+        <MSBuild Projects="MARSTemplateServerDCSService.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSService:Clean">
+        <MSBuild Projects="MARSTemplateServerDCSService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSService:Make">
+        <MSBuild Projects="MARSTemplateServerDCSService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSConsoleApplication">
+        <MSBuild Projects="MARSTemplateServerDCSConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSConsoleApplication:Clean">
+        <MSBuild Projects="MARSTemplateServerDCSConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSConsoleApplication:Make">
+        <MSBuild Projects="MARSTemplateServerDCSConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSDaemon">
+        <MSBuild Projects="MARSTemplateServerDCSDaemon.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSDaemon:Clean">
+        <MSBuild Projects="MARSTemplateServerDCSDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateServerDCSDaemon:Make">
+        <MSBuild Projects="MARSTemplateServerDCSDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSTemplateClientDCS">
+        <MSBuild Projects="MARSTemplateClientDCS.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateClientDCS:Clean">
+        <MSBuild Projects="MARSTemplateClientDCS.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateClientDCS:Make">
+        <MSBuild Projects="MARSTemplateClientDCS.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MARSTemplateServerDCSApplication;MARSTemplateServerDCSFMXApplication;MARSTemplateServerDCSService;MARSTemplateServerDCSConsoleApplication;MARSTemplateServerDCSDaemon;MARSTemplateClientDCS"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MARSTemplateServerDCSApplication:Clean;MARSTemplateServerDCSFMXApplication:Clean;MARSTemplateServerDCSService:Clean;MARSTemplateServerDCSConsoleApplication:Clean;MARSTemplateServerDCSDaemon:Clean;MARSTemplateClientDCS:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MARSTemplateServerDCSApplication:Make;MARSTemplateServerDCSFMXApplication:Make;MARSTemplateServerDCSService:Make;MARSTemplateServerDCSConsoleApplication:Make;MARSTemplateServerDCSDaemon:Make;MARSTemplateClientDCS:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
