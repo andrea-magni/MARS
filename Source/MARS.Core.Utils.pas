@@ -109,10 +109,10 @@ begin
   if AEncoding = TEncoding.ANSI then Result := 'ANSI'
   else if AEncoding = TEncoding.ASCII then Result := 'ASCII'
   else if AEncoding = TEncoding.BigEndianUnicode then Result :='BigEndianUnicode'
-  else if AEncoding = TEncoding.Default then Result :='Default'
   else if AEncoding = TEncoding.Unicode then Result :='Unicode'
   else if AEncoding = TEncoding.UTF7 then Result :='UTF7'
-  else if AEncoding = TEncoding.UTF8 then Result :='UTF8';
+  else if AEncoding = TEncoding.UTF8 then Result :='UTF8'
+  else if AEncoding = TEncoding.Default then Result :='Default';
 end;
 
 
