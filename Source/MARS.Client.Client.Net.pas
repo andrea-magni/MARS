@@ -40,11 +40,12 @@ type
 
     procedure EndorseAuthorization; override;
     procedure CheckLastCmdSuccess; virtual;
-    procedure ApplyCustomHeaders(const AHeaders: TStrings); override;
     procedure ApplyProxyConfig; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure ApplyCustomHeaders(const AHeaders: TStrings); override;
 
     procedure Delete(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
