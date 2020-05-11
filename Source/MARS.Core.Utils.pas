@@ -83,8 +83,8 @@ type
   function GuessTValueFromString(const AString: string): TValue;
   function TValueToString(const AValue: TValue; const ARecursion: Integer = 0): string;
 
-  procedure ZipStream(const ASource: TStream; const ADest: TStream);
-  procedure UnzipStream(const ASource: TStream; const ADest: TStream);
+  procedure ZipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
+  procedure UnzipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
   function StreamToBase64(const AStream: TStream): string;
   procedure Base64ToStream(const ABase64: string; const ADestStream: TStream);
 
@@ -124,14 +124,14 @@ begin
     raise Exception.Create('Unable to copy all content to TBytes');
 end;
 
-procedure ZipStream(const ASource: TStream; const ADest: TStream);
+procedure ZipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
 var
   LZipStream: TZCompressionStream;
 begin
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
 
-  LZipStream := TZCompressionStream.Create(clDefault, ADest);
+  LZipStream := TZCompressionStream.Create(ADest, TZCompressionLevel.zcDefault, WindowBits);
   try
     ASource.Position := 0;
     LZipStream.CopyFrom(ASource, ASource.Size);
@@ -140,14 +140,14 @@ begin
   end;
 end;
 
-procedure UnzipStream(const ASource: TStream; const ADest: TStream);
+procedure UnzipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
 var
   LZipStream: TZDecompressionStream;
 begin
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
 
-  LZipStream := TZDecompressionStream.Create(ASource);
+  LZipStream := TZDecompressionStream.Create(ASource, WindowBits);
   try
     ASource.Position := 0;
     ADest.CopyFrom(LZipStream, LZipStream.Size);
