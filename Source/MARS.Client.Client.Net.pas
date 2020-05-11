@@ -40,6 +40,7 @@ type
 
     procedure EndorseAuthorization; override;
     procedure CheckLastCmdSuccess; virtual;
+    procedure ApplyCustomHeaders(const AHeaders: TStrings); override;
     procedure ApplyProxyConfig; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -85,6 +86,15 @@ uses
 ;
 
 { TMARSNetClient }
+
+procedure TMARSNetClient.ApplyCustomHeaders(const AHeaders: TStrings);
+var
+  LIndex: Integer;
+begin
+  inherited;
+  for LIndex := 0 to AHeaders.Count-1 do
+    HttpClient.CustomHeaders[AHeaders.Names[LIndex]] := AHeaders.ValueFromIndex[LIndex];
+end;
 
 procedure TMARSNetClient.ApplyProxyConfig;
 begin
