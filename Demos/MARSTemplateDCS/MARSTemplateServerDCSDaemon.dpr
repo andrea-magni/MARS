@@ -7,9 +7,7 @@ program MARSTemplateServerDCSDaemon;
 uses
   Classes,
   SysUtils,
-  {$IFDEF LINUX}
-  MARS.Linux.Daemon in '..\..\Source\MARS.Linux.Daemon.pas',
-  {$ENDIF}
+  {$ENDIF }
   Server.Ignition in 'Server.Ignition.pas',
   Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule};
 

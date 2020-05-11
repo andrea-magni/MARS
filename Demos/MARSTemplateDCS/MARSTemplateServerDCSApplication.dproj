@@ -131,7 +131,6 @@
         <DCCReference Include="Server.DCS.Forms.Main.pas">
             <Form>MainForm</Form>
         </DCCReference>
-        <DCCReference Include="..\..\Source\MARS.Core.RequestAndResponse.Interfaces.pas"/>
         <DCCReference Include="Server.Ignition.pas"/>
         <DCCReference Include="Server.Resources.pas"/>
         <BuildConfiguration Include="Release">

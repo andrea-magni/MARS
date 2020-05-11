@@ -201,7 +201,6 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="..\..\Source\MARS.Linux.Daemon.pas"/>
         <DCCReference Include="Server.Ignition.pas"/>
         <DCCReference Include="Server.WebModule.pas">
             <Form>ServerWebModule</Form>
