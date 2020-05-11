@@ -1,7 +1,7 @@
 program MARSTemplateServerDCSApplication;
 
 uses
-  FastMM4,
+  //FastMM4,
   Vcl.Forms,
   Server.DCS.Forms.Main in 'Server.DCS.Forms.Main.pas' {MainForm},
   MARS.Core.RequestAndResponse.Interfaces in '..\..\Source\MARS.Core.RequestAndResponse.Interfaces.pas',

@@ -10,8 +10,18 @@ unit Server.Service;
 interface
 
 uses
+{$ifdef DelphiXE3_UP}
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, Vcl.Graphics
 , Vcl.Controls, Vcl.SvcMgr, Vcl.Dialogs
+//, IPPeerServer, IPPeerAPI
+, IdHTTPWebBrokerBridge, Web.WebReq, Web.WebBroker
+{$else}
+  Windows, Messages, SysUtils, Classes, Graphics
+, Controls, SvcMgr, Dialogs
+//, IPPeerServer, IPPeerAPI
+, IdHTTPWebBrokerBridge, WebReq, WebBroker
+{$endif}
+, IdContext
 , MARS.http.Server.DCS
 ;
 
@@ -72,7 +82,7 @@ var
 begin
   if WebRequestHandler <> nil then
     WebRequestHandler.WebModuleClass := WebModuleClass;
-  xxx
+
   FServer := TIdHTTPWebBrokerBridge.Create(nil);
   try
     FServer.DefaultPort := TServerEngine.Default.Port;
