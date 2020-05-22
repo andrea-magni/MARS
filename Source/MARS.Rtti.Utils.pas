@@ -117,7 +117,8 @@ function ExecuteMethod(const AInstance: TValue; AMethod: TRttiMethod; const AArg
   const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
 
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
-procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: Integer);
+
+procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: PNativeInt);
 
 function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
 
@@ -262,8 +263,7 @@ begin
   end;
 end;
 
-
-procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: Integer);
+procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: PNativeInt);
 begin
   if AArrayType is TRttiArrayType then
   begin
@@ -271,7 +271,7 @@ begin
     { TODO -oAndrea : probably not needed }
   end
   else if AArrayType is TRttiDynamicArrayType then
-    DynArraySetLength(PPointer(AArray.GetReferenceToRawData)^, AArrayType.Handle, 1, @ANewSize);
+    DynArraySetLength(PPointer(AArray.GetReferenceToRawData)^, AArrayType.Handle, 1, ANewSize);
 end;
 
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;

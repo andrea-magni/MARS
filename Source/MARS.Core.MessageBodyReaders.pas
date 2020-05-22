@@ -10,8 +10,7 @@ unit MARS.Core.MessageBodyReaders;
 interface
 
 uses
-  Classes, SysUtils, Rtti
-
+  Classes, SysUtils, Rtti, Generics.Collections
 , MARS.Core.Attributes, MARS.Core.Activation.Interfaces, MARS.Core.Declarations
 , MARS.Core.MediaType, MARS.Core.MessageBodyReader
 , MARS.Core.RequestAndResponse.Interfaces
@@ -143,7 +142,7 @@ type
 implementation
 
 uses
-  StrUtils, NetEncoding, Generics.Collections
+  StrUtils, NetEncoding
 {$ifdef DelphiXE7_UP}, System.JSON {$endif}
 , Xml.XMLIntf, XMLDoc
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
@@ -291,6 +290,7 @@ var
   LArray: TValue;
   LArrayType: TRttiType;
   LIndex: Integer;
+  LNewLength: NativeInt;
 begin
   Result := TValue.Empty;
   LArrayType := ADestination.GetRttiType;
@@ -309,8 +309,9 @@ begin
       if LJSONValue is TJSONArray then
       begin
         LJSONArray := TJSONArray(LJSONValue);
-
-        SetArrayLength(LArray, LArrayType, LJSONArray.Count);
+        LNewLength := LJSONArray.Count;
+        SetArrayLength(LArray, LArrayType, @LNewLength);
+        //------------------------
         for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
         begin
           LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
@@ -326,7 +327,9 @@ begin
       end
       else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
       begin
-        SetArrayLength(LArray, LArrayType, 1);
+        LNewLength := 1;
+        SetArrayLength(LArray, LArrayType, @LNewLength);
+        //------------------------
         LArray.SetArrayElement(
             0
           , TJSONObject.JSONToObject(
@@ -358,6 +361,7 @@ var
   LArray: TValue;
   LArrayType: TRttiType;
   LIndex: Integer;
+  LNewLength: NativeInt;
 begin
   Result := TValue.Empty;
   LArrayType := ADestination.GetRttiType;
@@ -373,8 +377,9 @@ begin
       if LJSONValue is TJSONArray then
       begin
         LJSONArray := TJSONArray(LJSONValue);
-
-        SetArrayLength(LArray, LArrayType, LJSONArray.Count);
+        LNewLength := LJSONArray.Count;
+        SetArrayLength(LArray, LArrayType, @LNewLength);
+        //------------------------
         for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
         begin
           LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
@@ -384,7 +389,9 @@ begin
       end
       else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
       begin
-        SetArrayLength(LArray, LArrayType, 1);
+        LNewLength := 1;
+        SetArrayLength(LArray, LArrayType, @LNewLength);
+        //------------------------
         LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LElementType));
       end;
 
