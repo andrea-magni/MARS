@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="RemoteMicServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RemoteMicServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RemoteMicServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RemoteMicServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RemoteMicServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RemoteMicServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RemoteMicServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RemoteMicClient.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="RemoteMicServerApplication">
+        <MSBuild Projects="RemoteMicServerApplication.dproj"/>
+    </Target>
+    <Target Name="RemoteMicServerApplication:Clean">
+        <MSBuild Projects="RemoteMicServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicServerApplication:Make">
+        <MSBuild Projects="RemoteMicServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RemoteMicServerFMXApplication">
+        <MSBuild Projects="RemoteMicServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="RemoteMicServerFMXApplication:Clean">
+        <MSBuild Projects="RemoteMicServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicServerFMXApplication:Make">
+        <MSBuild Projects="RemoteMicServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RemoteMicServerService">
+        <MSBuild Projects="RemoteMicServerService.dproj"/>
+    </Target>
+    <Target Name="RemoteMicServerService:Clean">
+        <MSBuild Projects="RemoteMicServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicServerService:Make">
+        <MSBuild Projects="RemoteMicServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RemoteMicServerConsoleApplication">
+        <MSBuild Projects="RemoteMicServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="RemoteMicServerConsoleApplication:Clean">
+        <MSBuild Projects="RemoteMicServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicServerConsoleApplication:Make">
+        <MSBuild Projects="RemoteMicServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RemoteMicServerDaemon">
+        <MSBuild Projects="RemoteMicServerDaemon.dproj"/>
+    </Target>
+    <Target Name="RemoteMicServerDaemon:Clean">
+        <MSBuild Projects="RemoteMicServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicServerDaemon:Make">
+        <MSBuild Projects="RemoteMicServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RemoteMicServerApacheModule">
+        <MSBuild Projects="RemoteMicServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="RemoteMicServerApacheModule:Clean">
+        <MSBuild Projects="RemoteMicServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicServerApacheModule:Make">
+        <MSBuild Projects="RemoteMicServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RemoteMicServerISAPI">
+        <MSBuild Projects="RemoteMicServerISAPI.dproj"/>
+    </Target>
+    <Target Name="RemoteMicServerISAPI:Clean">
+        <MSBuild Projects="RemoteMicServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicServerISAPI:Make">
+        <MSBuild Projects="RemoteMicServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RemoteMicClient">
+        <MSBuild Projects="RemoteMicClient.dproj"/>
+    </Target>
+    <Target Name="RemoteMicClient:Clean">
+        <MSBuild Projects="RemoteMicClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RemoteMicClient:Make">
+        <MSBuild Projects="RemoteMicClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="RemoteMicServerApplication;RemoteMicServerFMXApplication;RemoteMicServerService;RemoteMicServerConsoleApplication;RemoteMicServerDaemon;RemoteMicServerApacheModule;RemoteMicServerISAPI;RemoteMicClient"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="RemoteMicServerApplication:Clean;RemoteMicServerFMXApplication:Clean;RemoteMicServerService:Clean;RemoteMicServerConsoleApplication:Clean;RemoteMicServerDaemon:Clean;RemoteMicServerApacheModule:Clean;RemoteMicServerISAPI:Clean;RemoteMicClient:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="RemoteMicServerApplication:Make;RemoteMicServerFMXApplication:Make;RemoteMicServerService:Make;RemoteMicServerConsoleApplication:Make;RemoteMicServerDaemon:Make;RemoteMicServerApacheModule:Make;RemoteMicServerISAPI:Make;RemoteMicClient:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
