@@ -11,11 +11,11 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
+  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client,  MARS.Utils.Parameters
 
   // Net
   , System.Net.URLClient, System.Net.HttpClient, System.Net.HttpClientComponent
-  , System.Net.Mime
+, System.Net.Mime
   ;
 
 type
@@ -38,7 +38,6 @@ type
 
     function CreateMultipartFormData(AFormData: TArray<TFormParam>): TMultipartFormData;
 
-
     procedure EndorseAuthorization; override;
     procedure CheckLastCmdSuccess; virtual;
     procedure ApplyProxyConfig; override;
@@ -56,6 +55,9 @@ type
     procedure Post(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
+    procedure Post(const AURL: string; const AFormUrlEncoded: TMARSParameters;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
 
@@ -254,10 +256,8 @@ end;
 
 function TMARSNetClient.LastCmdSuccess: Boolean;
 begin
-  if assigned(FLastResponse) then
-    Result := (FLastResponse.StatusCode >= 200) and (FLastResponse.StatusCode < 300)
-  else
-    Result := FALSE;
+  Result := Assigned(FLastResponse)
+    and ((FLastResponse.StatusCode >= 200) and (FLastResponse.StatusCode < 300));
 end;
 
 procedure TMARSNetClient.Post(const AURL: string; AContent, AResponse: TStream;
@@ -284,18 +284,16 @@ end;
 
 function TMARSNetClient.ResponseStatusCode: Integer;
 begin
-  if assigned(FLastResponse) then
-    Result := FLastResponse.StatusCode
-  else
-    Result := -1;
+  Result := -1;
+  if Assigned(FLastResponse) then
+    Result := FLastResponse.StatusCode;
 end;
 
 function TMARSNetClient.ResponseText: string;
 begin
-  if assigned(FLastResponse) then
-    Result := FLastResponse.StatusText
-  else
-    Result := '';
+  Result := '';
+  if Assigned(FLastResponse) then
+    Result := FLastResponse.StatusText;
 end;
 
 procedure TMARSNetClient.SetConnectTimeout(const Value: Integer);
@@ -345,6 +343,24 @@ begin
   end;
 end;
 
+procedure TMARSNetClient.Post(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
+  const AAuthToken, AAccept, AContentType: string);
+var
+  LFormUrlEncoded: TStrings;
+begin
+  inherited;
+
+  FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
+  LFormUrlEncoded := AFormUrlEncoded.AsStrings;
+  try
+    FLastResponse := FHttpClient.Post(AURL, LFormUrlEncoded, AResponse);
+    CheckLastCmdSuccess;
+  finally
+    LFormUrlEncoded.Free;
+  end;
+end;
+
 procedure TMARSNetClient.Put(const AURL: string;
   const AFormData: System.TArray<TFormParam>; const AResponse: TStream;
   const AAuthToken, AAccept: string; const AContentType: string);
@@ -367,6 +383,5 @@ begin
     LFormData.Free;
   end;
 end;
-
 
 end.

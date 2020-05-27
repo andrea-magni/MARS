@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {  Delphi JOSE Library                                                         }
-{  Copyright (c) 2015 Paolo Rossi                                              }
+{  Copyright (c) 2015-2017 Paolo Rossi                                         }
 {  https://github.com/paolo-rossi/delphi-jose-jwt                              }
 {                                                                              }
 {******************************************************************************}
@@ -31,22 +31,31 @@ uses
   SysUtils,
   Generics.Collections,
   JOSE.Types.Bytes,
+  JOSE.Core.JWA,
   JOSE.Core.JWT;
 
 type
   TJOSEParts = class
   protected
-    FParts: TList<TSuperBytes>;
+    FParts: TList<TJOSEBytes>;
     FToken: TJWT;
-    function GetCompactToken: TSuperBytes; virtual; abstract;
-    procedure SetCompactToken(const Value: TSuperBytes); virtual; abstract;
+    FSkipKeyValidation: Boolean;
+    function GetCompactToken: TJOSEBytes; virtual; abstract;
+    procedure SetCompactToken(const Value: TJOSEBytes); virtual; abstract;
+
+    function GetHeaderAlgorithm: string;
   public
     constructor Create(AToken: TJWT); virtual;
     destructor Destroy; override;
 
+    procedure SetHeaderAlgorithm(const AAlg: string); overload;
+    procedure SetHeaderAlgorithm(AAlg: TJOSEAlgorithmId); overload;
+
     procedure Clear;
     procedure Empty;
-    property CompactToken: TSuperBytes read GetCompactToken write SetCompactToken;
+    property CompactToken: TJOSEBytes read GetCompactToken write SetCompactToken;
+    property HeaderAlgorithm: string read GetHeaderAlgorithm;
+    property SkipKeyValidation: Boolean read FSkipKeyValidation write FSkipKeyValidation;
   end;
 
 implementation
@@ -61,7 +70,7 @@ end;
 constructor TJOSEParts.Create(AToken: TJWT);
 begin
   FToken := AToken;
-  FParts := TList<TSuperBytes>.Create;
+  FParts := TList<TJOSEBytes>.Create;
 end;
 
 destructor TJOSEParts.Destroy;
@@ -75,7 +84,22 @@ var
   LIndex: Integer;
 begin
   for LIndex := 0 to FParts.Count - 1 do
-    FParts[LIndex] := TSuperBytes.Empty;
+    FParts[LIndex] := TJOSEBytes.Empty;
+end;
+
+function TJOSEParts.GetHeaderAlgorithm: string;
+begin
+  Result := FToken.Header.Algorithm;
+end;
+
+procedure TJOSEParts.SetHeaderAlgorithm(AAlg: TJOSEAlgorithmId);
+begin
+  FToken.Header.Algorithm := AAlg.AsString;
+end;
+
+procedure TJOSEParts.SetHeaderAlgorithm(const AAlg: string);
+begin
+  FToken.Header.Algorithm := AAlg;
 end;
 
 end.

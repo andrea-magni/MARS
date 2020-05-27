@@ -35,6 +35,7 @@ uses
   , MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
+  , MARS.Core.RequestAndResponse.Interfaces
   {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC {$ENDIF}
   {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
   , MARS.Core.URL, Web.HttpApp
@@ -58,8 +59,8 @@ begin
 {$REGION 'BeforeHandleRequest example'}
 
     FEngine.BeforeHandleRequest :=
-      function (const AEngine: TMARSEngine; const AURL: TMARSURL;
-        const ARequest: TWebRequest; const AResponse: TWebResponse;
+      function (const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
         var Handled: Boolean): Boolean
       begin
         Result := True;

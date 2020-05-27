@@ -10,19 +10,13 @@ unit MARS.Data.FireDAC.ReadersAndWriters;
 interface
 
 uses
-  Classes, SysUtils, Rtti
+  Classes, SysUtils, Rtti, DB
 
-  , DB
-
-  , MARS.Core.Attributes
-  , MARS.Core.Activation.Interfaces
-  , MARS.Core.Declarations
-  , MARS.Core.MediaType
-  , MARS.Core.Classes
-  , MARS.Core.MessageBodyWriter
-  , MARS.Core.MessageBodyReader
-  , MARS.Core.Utils
-  , MARS.Data.Utils;
+, MARS.Core.Attributes, MARS.Core.Activation.Interfaces, MARS.Core.Declarations
+, MARS.Core.MediaType, MARS.Core.Classes
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyReader
+, MARS.Core.Utils, MARS.Data.Utils
+;
 
 type
   // --- READERS ---
@@ -37,10 +31,9 @@ type
   end;
 
   // --- WRITERS ---
-  [ Produces(TMediaType.APPLICATION_XML)
-  , Produces(TMediaType.APPLICATION_JSON_FIREDAC)
-  , Produces(TMediaType.APPLICATION_OCTET_STREAM)
-  ]
+  [ Produces(TMediaType.APPLICATION_JSON_FIREDAC)
+  , Produces(TMediaType.APPLICATION_XML_FIREDAC)
+  , Produces(TMediaType.APPLICATION_OCTET_STREAM) ]
   TFDDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
@@ -50,6 +43,8 @@ type
   TArrayFDDataSetWriter = class(TInterfacedObject, IMessageBodyWriter)
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
+    class procedure WriteDataSet(const ADataSet: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
     class procedure WriteDataSets(const ADataSets: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
@@ -58,22 +53,24 @@ type
 implementation
 
 uses
-    Generics.Collections
-  , FireDAC.Comp.Client, FireDAC.Comp.DataSet
-  , FireDAC.Stan.Intf
+  Generics.Collections
+, FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Intf
+, FireDAC.Stan.StorageBIN, FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageXML
 
-  , FireDAC.Stan.StorageBIN
-  , FireDAC.Stan.StorageJSON
-  , FireDAC.Stan.StorageXML
-
-  , MARS.Core.JSON
-  , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
-  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
-  , MARS.Core.Exceptions
-  , MARS.Rtti.Utils, MARS.Data.FireDAC.Utils
+, MARS.Core.JSON {$ifdef DelphiXE7_UP}, System.JSON {$endif}
+, MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
+, MARS.Core.Exceptions, MARS.Rtti.Utils, MARS.Data.FireDAC.Utils
 ;
 
 { TArrayFDDataSetWriter }
+
+class procedure TArrayFDDataSetWriter.WriteDataSet(const ADataSet: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+begin
+  WriteDataSets(TValue.From<TArray<TFDDataSet>>([ADataSet.AsType<TFDDataSet>])
+  , AMediaType, AOutputStream, AActivation);
+end;
 
 class procedure TArrayFDDataSetWriter.WriteDataSets(const ADataSets: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
@@ -111,11 +108,15 @@ var
 begin
   LDataset := AValue.AsType<TFDDataSet>;
 
-  if AMediaType.Matches(TMediaType.APPLICATION_XML) then
+  if AMediaType.IsWildcard then
+  begin
+    TDataSetWriterJSON.WriteDataSet(LDataSet, AMediaType, AOutputStream, AActivation);
+    AActivation.Response.ContentType := TMediaType.APPLICATION_JSON;
+  end
+  else if AMediaType.Matches(TMediaType.APPLICATION_XML_FIREDAC) then
     LDataSet.SaveToStream(AOutputStream, sfXML)
   else if AMediaType.Matches(TMediaType.APPLICATION_JSON_FireDAC) then
-    TArrayFDDataSetWriter.WriteDataSets(TValue.From<TArray<TFDDataSet>>([LDataSet]),
-      AMediaType, AOutputStream, AActivation)
+    TArrayFDDataSetWriter.WriteDataSet(LDataSet, AMediaType, AOutputStream, AActivation)
   else if AMediaType.Matches(TMediaType.APPLICATION_OCTET_STREAM) then
     LDataSet.SaveToStream(AOutputStream, sfBinary)
   else

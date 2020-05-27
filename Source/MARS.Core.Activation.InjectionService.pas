@@ -10,11 +10,9 @@ unit MARS.Core.Activation.InjectionService;
 interface
 
 uses
-  Classes, SysUtils, Rtti
-  , MARS.Core.Injection
-  , MARS.Core.Injection.Interfaces
-  , MARS.Core.Injection.Types
-  , MARS.Core.Activation.Interfaces
+  Classes, SysUtils, System.Rtti, System.TypInfo
+, MARS.Core.Injection, MARS.Core.Injection.Interfaces, MARS.Core.Injection.Types
+, MARS.Core.Activation.Interfaces
 ;
 
 type
@@ -27,13 +25,9 @@ type
 implementation
 
 uses
-    MARS.Rtti.Utils
-  , MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Attributes
-{$ifdef DelphiXE6_UP}
-  , Web.HttpApp
-{$else}
-  , HttpApp
-{$endif}
+  MARS.Rtti.Utils
+, MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Attributes
+, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 { TMARSActivationInjectionService }
@@ -63,10 +57,10 @@ begin
     end
   ) then
     AValue := LValue
-  else if (LType.IsObjectOfType(TWebRequest)) then
-    AValue := TInjectionValue.Create(AActivation.Request, True)
-  else if (LType.IsObjectOfType(TWebResponse)) then
-    AValue := TInjectionValue.Create(AActivation.Response, True)
+  else if (LType is TRttiInterfaceType) and (LType.Handle = TypeInfo(IMARSRequest)) then
+    AValue := TInjectionValue.Create(TValue.From<IMARSRequest>(AActivation.Request), True)
+  else if (LType is TRttiInterfaceType) and (LType.Handle = TypeInfo(IMARSResponse)) then
+    AValue := TInjectionValue.Create(TValue.From<IMARSResponse>(AActivation.Response), True)
   else if (LType.IsObjectOfType(TMARSURL)) then
     AValue := TInjectionValue.Create(AActivation.URL, True)
   else if (LType.IsObjectOfType(TMARSEngine)) then
@@ -96,8 +90,8 @@ begin
         Result :=
           ADestination.HasAttribute<RequestParamAttribute>
           or ADestination.HasAttribute<ConfigParamAttribute>
-          or LType.IsObjectOfType(TWebRequest)
-          or LType.IsObjectOfType(TWebResponse)
+          or (LType.Handle = TypeInfo(IMARSRequest))
+          or (LType.Handle = TypeInfo(IMARSResponse))
           or LType.IsObjectOfType(TMARSURL)
           or LType.IsObjectOfType(TMARSEngine)
           or LType.IsObjectOfType(TMARSApplication)

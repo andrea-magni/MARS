@@ -571,7 +571,7 @@ function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault
 begin
   Result := ADefault;
   if Assigned(Self) then
-    Result := JSONToDate(ReadStringValue(AName), AReturnUTC);
+    Result := JSONToDate(ReadStringValue(AName), AReturnUTC, ADefault);
 end;
 
 function TJSONObjectHelper.ReadDoubleValue(const AName: string;
@@ -764,6 +764,7 @@ var
   LJSONArray: TJSONArray;
   LJSONElement: TJSONValue;
   LIndex: Integer;
+  LNewLength: NativeInt;
 begin
 {$ifdef Delphi10Berlin_UP}
   if AValue is TJSONBool then // Boolean
@@ -819,7 +820,9 @@ begin
     if ADesiredType.IsArray(LElementType) then
     begin
       TValue.Make(nil, ADesiredType.Handle, LArray);
-      SetArrayLength(LArray, ADesiredType, LJSONArray.Count);
+      LNewLength := LJSONArray.Count;
+      SetArrayLength(LArray, ADesiredType, @LNewLength);
+      //------------------------
       for LIndex := 0 to LJSONArray.Count-1 do
       begin
         LJSONElement := LJSONArray.Items[LIndex];

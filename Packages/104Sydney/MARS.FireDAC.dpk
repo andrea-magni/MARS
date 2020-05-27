@@ -1,0 +1,59 @@
+package MARS.FireDAC;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
+{$LIBSUFFIX '270'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  FireDAC,
+  FireDACCommonDriver,
+  FireDACCommon,
+  inet,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  dsnap,
+  MARS.Core,
+  MARS.ReadersAndWriters;
+
+contains
+  MARS.Data.FireDAC.DataModule in '..\..\Source\MARS.Data.FireDAC.DataModule.pas' {MARSFDDataModuleResource: TDataModule},
+  MARS.Data.FireDAC.ReadersAndWriters in '..\..\Source\MARS.Data.FireDAC.ReadersAndWriters.pas',
+  MARS.Data.FireDAC in '..\..\Source\MARS.Data.FireDAC.pas',
+  MARS.Data.FireDAC.InjectionService in '..\..\Source\MARS.Data.FireDAC.InjectionService.pas',
+  MARS.Data.FireDAC.Resources in '..\..\Source\MARS.Data.FireDAC.Resources.pas',
+  MARS.Data.FireDAC.Utils in '..\..\Source\MARS.Data.FireDAC.Utils.pas';
+
+end.
+
+
+
+
