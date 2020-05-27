@@ -10,7 +10,7 @@ unit MARS.Core.MessageBodyReaders;
 interface
 
 uses
-  Classes, SysUtils, Rtti
+  Classes, SysUtils, System.Rtti, System.TypInfo
 
 , MARS.Core.Attributes, MARS.Core.Activation.Interfaces, MARS.Core.Declarations
 , MARS.Core.MediaType, MARS.Core.MessageBodyReader

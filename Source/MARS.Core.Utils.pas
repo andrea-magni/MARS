@@ -10,7 +10,7 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes, RTTI, SyncObjs, REST.JSON
+  SysUtils, Classes, RTTI, SyncObjs, REST.JSON, System.JSON
 , MARS.Core.JSON, MARS.Core.RequestAndResponse.Interfaces
 ;
 

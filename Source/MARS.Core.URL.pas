@@ -13,7 +13,7 @@ unit MARS.Core.URL;
 interface
 
 uses
-  Classes, SysUtils
+  Classes, SysUtils, System.JSON
 , MARS.Core.JSON, MARS.Core.RequestAndResponse.Interfaces
 , Generics.Collections
 ;

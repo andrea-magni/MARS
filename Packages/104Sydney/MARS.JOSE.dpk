@@ -1,0 +1,70 @@
+package MARS.JOSE;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
+{$LIBSUFFIX '270'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  MARS.Utils,
+  MARS.Core;
+
+contains
+  MARS.JOSEJWT.Token in '..\..\Source\MARS.JOSEJWT.Token.pas',
+  MARS.JOSEJWT.Token.InjectionService in '..\..\Source\MARS.JOSEJWT.Token.InjectionService.pas',
+  JOSE.Builder in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Builder.pas',
+  JOSE.Consumer in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Consumer.pas',
+  JOSE.Consumer.Validators in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Consumer.Validators.pas',
+  JOSE.Context in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Context.pas',
+  JOSE.Core.Base in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas',
+  JOSE.Core.Builder in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas',
+  JOSE.Core.JWA.Compression in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Compression.pas',
+  JOSE.Core.JWA.Encryption in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Encryption.pas',
+  JOSE.Core.JWA.Factory in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Factory.pas',
+  JOSE.Core.JWA in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas',
+  JOSE.Core.JWA.Signing in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Signing.pas',
+  JOSE.Core.JWE in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWE.pas',
+  JOSE.Core.JWK in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWK.pas',
+  JOSE.Core.JWS in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWS.pas',
+  JOSE.Core.JWT in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWT.pas',
+  JOSE.Core.Parts in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Parts.pas',
+  JOSE.Encoding.Base64 in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas',
+  JOSE.Hashing.HMAC in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas',
+  JOSE.Signing.RSA in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Signing.RSA.pas',
+  JOSE.Types.Arrays in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Arrays.pas',
+  JOSE.Types.Bytes in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas',
+  JOSE.Types.JSON in '..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.JSON.pas';
+
+end.
+
+
+

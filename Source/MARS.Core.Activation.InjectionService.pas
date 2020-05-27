@@ -10,11 +10,9 @@ unit MARS.Core.Activation.InjectionService;
 interface
 
 uses
-  Classes, SysUtils, Rtti
-  , MARS.Core.Injection
-  , MARS.Core.Injection.Interfaces
-  , MARS.Core.Injection.Types
-  , MARS.Core.Activation.Interfaces
+  Classes, SysUtils, System.Rtti, System.TypInfo
+, MARS.Core.Injection, MARS.Core.Injection.Interfaces, MARS.Core.Injection.Types
+, MARS.Core.Activation.Interfaces
 ;
 
 type
