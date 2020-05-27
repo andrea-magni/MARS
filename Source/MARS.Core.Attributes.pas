@@ -10,7 +10,7 @@ unit MARS.Core.Attributes;
 interface
 
 uses
-  Classes, SysUtils, RTTI, Generics.Collections
+  Classes, SysUtils, System.Rtti, System.TypInfo, Generics.Collections
 , Web.ReqMulti
 , MARS.Core.Declarations, MARS.Core.Utils, MARS.Core.URL, MARS.Core.JSON
 , MARS.Core.Activation.Interfaces, MARS.Core.RequestAndResponse.Interfaces

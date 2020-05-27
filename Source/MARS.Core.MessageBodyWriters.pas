@@ -97,7 +97,7 @@ type
 implementation
 
 uses
-  System.TypInfo, Xml.XMLIntf
+  System.TypInfo, Xml.XMLIntf, System.JSON
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
 ;
 
