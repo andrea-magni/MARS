@@ -47,7 +47,8 @@ type
     function GetMethod: string;
     function GetPort: Integer;
     function GetQueryParamIndex(const AName: string): Integer;
-    function GetQueryParamValue(const AIndex: Integer): string;
+    function GetQueryParamValue(const AIndex: Integer): string; overload;
+    function GetQueryParamValue(const AName: string): string; overload;
     function GetQueryParamCount: Integer;
     function GetQueryString: string;
     function GetRawContent: TBytes;
@@ -463,6 +464,16 @@ begin
       Break;
     end;
   end;
+end;
+
+function TMARSDCSRequest.GetQueryParamValue(const AName: string): string;
+var
+  LValue: string;
+begin
+  if FDCSRequest.Query.GetParamValue(AName, LValue) then
+    Result := LValue
+  else
+    Result := '';
 end;
 
 function TMARSDCSRequest.GetQueryParamValue(const AIndex: Integer): string;

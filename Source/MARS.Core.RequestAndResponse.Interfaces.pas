@@ -10,7 +10,8 @@ type
     function GetRawContent: TBytes;
     function GetContent: string;
     function GetQueryParamIndex(const AName: string): Integer;
-    function GetQueryParamValue(const AIndex: Integer): string;
+    function GetQueryParamValue(const AIndex: Integer): string; overload;
+    function GetQueryParamValue(const AName: string): string; overload;
     function GetQueryParamCount: Integer;
     function GetFormParamIndex(const AName: string): Integer;
     function GetFormParamName(const AIndex: Integer): string;
