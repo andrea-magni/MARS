@@ -126,6 +126,7 @@
         <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.Indy.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.FormData.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormUrlEncoded.pas"/>
         <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
