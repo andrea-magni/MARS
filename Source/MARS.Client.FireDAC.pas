@@ -92,6 +92,7 @@ type
   protected
     procedure SetDataSet(const Value: TFDMemTable);
 
+    procedure AssignTo(Dest: TPersistent); override;
     procedure BeforeGET; override;
     procedure AfterGET(const AContent: TStream); override;
 
@@ -474,6 +475,22 @@ begin
   finally
     TFDDataSets.FreeAll(LDataSets);
   end;
+end;
+
+procedure TMARSFDDataSetResource.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSFDDataSetResource;
+begin
+  inherited AssignTo(Dest);
+
+  LDest := Dest as TMARSFDDataSetResource;
+
+  LDest.Filter := Filter;
+  LDest.Sort := Sort;
+  LDest.DataSet := DataSet;
+  LDest.Synchronize := Synchronize;
+  LDest.SendDelta := SendDelta;
+// ApplyUpdatesResult
 end;
 
 procedure TMARSFDDataSetResource.BeforeGET;
