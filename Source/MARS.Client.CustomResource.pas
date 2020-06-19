@@ -418,6 +418,8 @@ begin
                   ABeforeExecute
                 , procedure (AStream: TStream)
                   begin
+                    Assign(LResource);
+
                     if Assigned(ACompletionHandler) then
                     begin
                       if ASynchronize then
@@ -601,6 +603,8 @@ begin
               LResource.GET(nil
                 , procedure (AStream: TStream)
                   begin
+                    Assign(LResource);
+
                     if Assigned(ACompletionHandler) then
                     begin
                       if ASynchronize then
@@ -732,6 +736,8 @@ begin
                 ABeforeExecute
               , procedure (AStream: TStream)
                 begin
+                  Assign(LResource);
+
                   if Assigned(ACompletionHandler) then
                   begin
                     if ASynchronize then
@@ -863,6 +869,8 @@ begin
                 ABeforeExecute
               , procedure (AStream: TStream)
                 begin
+                  Assign(LResource);
+
                   if Assigned(ACompletionHandler) then
                   begin
                     if ASynchronize then

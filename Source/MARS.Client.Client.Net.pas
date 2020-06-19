@@ -193,6 +193,9 @@ begin
 end;
 
 procedure TMARSNetClient.EndorseAuthorization;
+var
+  LCookie: TCookie;
+  LFound: Boolean;
 begin
   if AuthEndorsement = AuthorizationBearer then
   begin
@@ -200,7 +203,27 @@ begin
       FHttpClient.CustomHeaders['Authorization'] := 'Bearer ' + AuthToken
     else
       FHttpClient.CustomHeaders['Authorization'] := '';
+  end
+  else if AuthEndorsement = Cookie then
+  begin
+    if not (AuthToken = '') then
+    begin
+      LFound := False;
+      for LCookie in FHttpClient.CookieManager.Cookies do
+      begin
+        if SameText(LCookie.Name, AuthCookieName) then
+        begin
+          LFound := True;
+          Break;
+        end;
+      end;
+
+      if not LFound then
+        FHttpClient.CookieManager.AddServerCookie(AuthCookieName + '=' + AuthToken, MARSEngineURL);
+    end;
   end;
+
+
 end;
 
 function TMARSNetClient.CreateMultipartFormData(

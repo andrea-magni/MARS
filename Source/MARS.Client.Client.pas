@@ -57,6 +57,7 @@ type
     FAuthEndorsement: TMARSAuthEndorsement;
     FProxyConfig: TMARSProxyConfig;
     FAuthToken: string;
+    FAuthCookieName: string;
     procedure SetProxyConfig(const Value: TMARSProxyConfig);
   protected
     class var FBeforeExecuteProcs: TArray<TMARSClientBeforeExecuteProc>;
@@ -170,6 +171,7 @@ type
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
     property AuthEndorsement: TMARSAuthEndorsement read FAuthEndorsement write SetAuthEndorsement default TMARSAuthEndorsement.Cookie;
+    property AuthCookieName: string read FAuthCookieName write FAuthCookieName;
     property ProxyConfig: TMARSProxyConfig read FProxyConfig write SetProxyConfig;
   end;
 
@@ -249,6 +251,7 @@ begin
   inherited;
   FProxyConfig := TMARSProxyConfig.Create;
   FAuthEndorsement := Cookie;
+  FAuthCookieName := 'access_token';
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
 
