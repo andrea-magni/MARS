@@ -42,7 +42,7 @@ type
     destructor Destroy; override;
 
     procedure Clear; virtual;
-    procedure SetData(const AJSON: TJSONObject; const ABecomeOwner: Boolean = False); virtual;
+    procedure SetData(const AJSON: TJSONObject); virtual;
     function SaveToBytes: TBytes; virtual;
     procedure LoadFromBytes(const ABytes: TBytes); virtual;
     procedure SaveToStream(const AStream: TStream); virtual;
@@ -77,19 +77,19 @@ uses
 procedure TMARSClientToken.AfterDELETE(const AContent: TStream);
 begin
   inherited;
-  SetData(StreamToJSONValue(AContent) as TJSONObject, True);
+  SetData(StreamToJSONValue(AContent) as TJSONObject);
 end;
 
 procedure TMARSClientToken.AfterGET(const AContent: TStream);
 begin
   inherited;
-  SetData(StreamToJSONValue(AContent) as TJSONObject, True);
+  SetData(StreamToJSONValue(AContent) as TJSONObject);
 end;
 
 procedure TMARSClientToken.AfterPOST(const AContent: TStream);
 begin
   inherited;
-  SetData(StreamToJSONValue(AContent) as TJSONObject, True);
+  SetData(StreamToJSONValue(AContent) as TJSONObject);
 end;
 
 procedure TMARSClientToken.AssignTo(Dest: TPersistent);
@@ -113,7 +113,15 @@ end;
 
 procedure TMARSClientToken.Clear;
 begin
-  SetData(nil);
+  FToken := '';
+  FIsVerified := False;
+
+  FClaims.Clear;
+
+  FIssuedAt := 0.0;
+  FExpiration := 0.0;
+  FUserName := '';
+  FUserRoles.Clear;
 end;
 
 constructor TMARSClientToken.Create(AOwner: TComponent);
@@ -173,7 +181,7 @@ end;
 
 procedure TMARSClientToken.LoadFromStream(const AStream: TStream);
 begin
-  SetData(StreamToJSONValue(AStream) as TJSONObject, True);
+  SetData(StreamToJSONValue(AStream) as TJSONObject);
 end;
 
 procedure TMARSClientToken.ParseData;
@@ -239,21 +247,16 @@ begin
   JSONValueToStream(FData, AStream);
 end;
 
-procedure TMARSClientToken.SetData(const AJSON: TJSONObject; const ABecomeOwner: Boolean);
+procedure TMARSClientToken.SetData(const AJSON: TJSONObject);
 begin
   FreeAndNil(FData);
-
   if Assigned(AJSON) then
   begin
-    if ABecomeOwner then
-      FData := AJSON
-    else
-      FData := AJSON.Clone as TJSONObject;
+    FData := AJSON;
+    ParseData;
   end
   else
-    FData := TJSONObject.Create;
-
-  ParseData;
+    Clear;
 end;
 
 end.

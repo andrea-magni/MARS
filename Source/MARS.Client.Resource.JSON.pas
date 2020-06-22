@@ -21,7 +21,6 @@ type
   TMARSClientResourceJSON = class(TMARSClientResource, IRESTResponseJSON)
   private
     FResponse: TJSONValue;
-    FHasResponse: Boolean;
     FNotifyList: TList<TNotifyEvent>;
   protected
     procedure AfterGET(const AContent: TStream); override;
@@ -153,8 +152,7 @@ end;
 constructor TMARSClientResourceJSON.Create(AOwner: TComponent);
 begin
   inherited;
-  FResponse := TJSONObject.Create;
-  FHasResponse := False;
+  FResponse := nil;
   SpecificAccept := TMediaType.APPLICATION_JSON;
   SpecificContentType := TMediaType.APPLICATION_JSON;
   FNotifyList := TList<TNotifyEvent>.Create;
@@ -162,7 +160,7 @@ end;
 
 destructor TMARSClientResourceJSON.Destroy;
 begin
-  FResponse.Free;
+  FreeAndNil(FResponse);
   FreeAndNil(FNotifyList);
   inherited;
 end;
@@ -190,12 +188,12 @@ end;
 
 function TMARSClientResourceJSON.HasJSONResponse: Boolean;
 begin
-  Result := FHasResponse;
+  Result := Assigned(FResponse);
 end;
 
 function TMARSClientResourceJSON.HasResponseContent: Boolean;
 begin
-  Result := FHasResponse;
+  Result := Assigned(FResponse);
 end;
 
 procedure TMARSClientResourceJSON.POST(const AJSONValue: TJSONValue;
@@ -385,12 +383,7 @@ var
 begin
   FreeAndNil(FResponse);
   if Assigned(AContent) then
-  begin
-    FResponse := AContent.Clone as TJSONValue;
-    FHasResponse := True;
-  end
-  else
-    FHasResponse := False;
+    FResponse := AContent;
 
   for LSubscriber in FNotifyList do
     LSubscriber(Self);
