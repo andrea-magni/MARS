@@ -231,13 +231,19 @@ begin
   begin
     if not (AuthToken = '') then
     begin
-      if (FHttpClient.CookieManager.CookieCollection.GetCookieIndex(AuthCookieName) = -1) then
+      if FHttpClient.AllowCookies then
       begin
-        LURI := TIdURI.Create(MARSEngineURL);
-        try
-          FHttpClient.CookieManager.AddServerCookie(AuthCookieName + '=' + AuthToken, LURI);
-        finally
-          LURI.Free;
+        if not Assigned(FHttpClient.CookieManager) then
+          FHttpClient.CookieManager := TIdCookieManager.Create(FHttpClient);
+
+        if (FHttpClient.CookieManager.CookieCollection.GetCookieIndex(AuthCookieName) = -1) then
+        begin
+          LURI := TIdURI.Create(MARSEngineURL);
+          try
+            FHttpClient.CookieManager.AddServerCookie(AuthCookieName + '=' + AuthToken, LURI);
+          finally
+            LURI.Free;
+          end;
         end;
       end;
     end;
