@@ -15,7 +15,7 @@ uses
 
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP, IdMultipartFormData
-  , IdCookie, IdCookieManager
+  , IdCookie, IdCookieManager, IdURI
   ;
 
 type
@@ -214,6 +214,8 @@ begin
 end;
 
 procedure TMARSIndyClient.EndorseAuthorization;
+var
+  LURI: TIdURI;
 begin
   if AuthEndorsement = AuthorizationBearer then
   begin
@@ -224,7 +226,29 @@ begin
     end
     else
       FHttpClient.Request.CustomHeaders.Values['Authorization'] := '';
+  end
+  else if AuthEndorsement = Cookie then
+  begin
+    if not (AuthToken = '') then
+    begin
+      if FHttpClient.AllowCookies then
+      begin
+        if not Assigned(FHttpClient.CookieManager) then
+          FHttpClient.CookieManager := TIdCookieManager.Create(FHttpClient);
+
+        if (FHttpClient.CookieManager.CookieCollection.GetCookieIndex(AuthCookieName) = -1) then
+        begin
+          LURI := TIdURI.Create(MARSEngineURL);
+          try
+            FHttpClient.CookieManager.AddServerCookie(AuthCookieName + '=' + AuthToken, LURI);
+          finally
+            LURI.Free;
+          end;
+        end;
+      end;
+    end;
   end;
+
 end;
 
 procedure TMARSIndyClient.Get(const AURL: string; AResponseContent: TStream;

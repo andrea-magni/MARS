@@ -79,6 +79,9 @@ procedure TServerService.ServiceCreate(Sender: TObject);
 var
   LScheduler: TIdSchedulerOfThreadPool;
 begin
+  Name := TServerEngine.Default.Parameters.ByNameText('ServiceName', Name).AsString;
+  DisplayName := TServerEngine.Default.Parameters.ByNameText('ServiceDisplayName', DisplayName).AsString;
+
   if WebRequestHandler <> nil then
     WebRequestHandler.WebModuleClass := WebModuleClass;
 

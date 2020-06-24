@@ -10,8 +10,8 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes, RTTI, SyncObjs, Web.HttpApp, REST.JSON
-, MARS.Core.JSON
+  SysUtils, Classes, RTTI, SyncObjs, REST.JSON, System.JSON
+, MARS.Core.JSON, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -21,8 +21,8 @@ type
     Bytes: TBytes;
     ContentType: string;
     procedure Clear;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFileIndex: Integer); overload;
     constructor Create(const AFieldName: string; const AFileName: string; const ABytes: TBytes; const AContentType: string);
     function ToString: string;
   end;
@@ -33,8 +33,8 @@ type
     function IsFile: Boolean;
     function AsFile: TFormParamFile;
     procedure Clear;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string); overload;
-    constructor CreateFromRequest(const ARequest: TWebRequest; const AFileIndex: Integer); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFieldName: string); overload;
+    constructor CreateFromRequest(const ARequest: IMARSRequest; const AFileIndex: Integer); overload;
     constructor Create(const AFieldName: string; const AValue: TValue);
     constructor CreateFile(const AFieldName: string; const AFileName: string; const ABytes: TBytes = nil; const AContentType: string = '');
     function ToString: string;
@@ -42,7 +42,7 @@ type
 
   TDump = class
   public
-    class procedure Request(const ARequest: TWebRequest; const AFileName: string); overload; virtual;
+    class procedure Request(const ARequest: IMARSRequest; const AFileName: string); overload; virtual;
   end;
 
 
@@ -75,7 +75,7 @@ type
 {$endif}
 
   function DateToJSON(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
-  function JSONToDate(const ADate: string; AReturnUTC: Boolean = False): TDateTime;
+  function JSONToDate(const ADate: string; AReturnUTC: Boolean = False; const ADefault: TDateTime = 0.0): TDateTime;
 
   function IsMask(const AString: string): Boolean;
   function MatchesMask(const AString, AMask: string): Boolean;
@@ -83,12 +83,14 @@ type
   function GuessTValueFromString(const AString: string): TValue;
   function TValueToString(const AValue: TValue; const ARecursion: Integer = 0): string;
 
-  procedure ZipStream(const ASource: TStream; const ADest: TStream);
-  procedure UnzipStream(const ASource: TStream; const ADest: TStream);
+  procedure ZipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
+  procedure UnzipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
   function StreamToBase64(const AStream: TStream): string;
   procedure Base64ToStream(const ABase64: string; const ADestStream: TStream);
 
   function StreamToBytes(const ASource: TStream): TBytes;
+
+  function GetEncodingName(const AEncoding: TEncoding): string;
 
 implementation
 
@@ -100,6 +102,20 @@ uses
   , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
 ;
 
+function GetEncodingName(const AEncoding: TEncoding): string;
+begin
+  Result := '';
+
+  if AEncoding = TEncoding.ANSI then Result := 'ANSI'
+  else if AEncoding = TEncoding.ASCII then Result := 'ASCII'
+  else if AEncoding = TEncoding.BigEndianUnicode then Result :='BigEndianUnicode'
+  else if AEncoding = TEncoding.Unicode then Result :='Unicode'
+  else if AEncoding = TEncoding.UTF7 then Result :='UTF7'
+  else if AEncoding = TEncoding.UTF8 then Result :='UTF8'
+  else if AEncoding = TEncoding.Default then Result :='Default';
+end;
+
+
 function StreamToBytes(const ASource: TStream): TBytes;
 begin
   SetLength(Result, ASource.Size);
@@ -108,14 +124,14 @@ begin
     raise Exception.Create('Unable to copy all content to TBytes');
 end;
 
-procedure ZipStream(const ASource: TStream; const ADest: TStream);
+procedure ZipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
 var
   LZipStream: TZCompressionStream;
 begin
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
 
-  LZipStream := TZCompressionStream.Create(clDefault, ADest);
+  LZipStream := TZCompressionStream.Create(ADest, TZCompressionLevel.zcDefault, WindowBits);
   try
     ASource.Position := 0;
     LZipStream.CopyFrom(ASource, ASource.Size);
@@ -124,14 +140,14 @@ begin
   end;
 end;
 
-procedure UnzipStream(const ASource: TStream; const ADest: TStream);
+procedure UnzipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
 var
   LZipStream: TZDecompressionStream;
 begin
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
 
-  LZipStream := TZDecompressionStream.Create(ASource);
+  LZipStream := TZDecompressionStream.Create(ASource, WindowBits);
   try
     ASource.Position := 0;
     ADest.CopyFrom(LZipStream, LZipStream.Size);
@@ -315,9 +331,9 @@ begin
     Result := DateToISO8601(ADate, AInputIsUTC);
 end;
 
-function JSONToDate(const ADate: string; AReturnUTC: Boolean = False): TDateTime;
+function JSONToDate(const ADate: string; AReturnUTC: Boolean = False; const ADefault: TDateTime = 0.0): TDateTime;
 begin
-  Result := 0.0;
+  Result := ADefault;
   if ADate<>'' then
     Result := ISO8601ToDate(ADate, AReturnUTC);
 end;
@@ -474,24 +490,9 @@ begin
   ContentType := '';
 end;
 
-constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest; const AFieldName: string);
-var
-  LIndex, LFileIndex: Integer;
-  LFile: TAbstractWebRequestFile;
+constructor TFormParamFile.CreateFromRequest(const ARequest: IMARSRequest; const AFieldName: string);
 begin
-  Clear;
-  LFileIndex := -1;
-  for LIndex := 0 to ARequest.Files.Count - 1 do
-  begin
-    LFile := ARequest.Files[LIndex];
-    if SameText(LFile.FieldName, AFieldName) then
-    begin
-      LFileIndex := LIndex;
-      Break;
-    end;
-  end;
-
-  CreateFromRequest(ARequest, LFileIndex);
+  CreateFromRequest(ARequest, ARequest.GetFormFileParamIndex(AFieldName));
 end;
 
 constructor TFormParamFile.Create(const AFieldName, AFileName: string;
@@ -503,18 +504,16 @@ begin
   ContentType := AContentType;
 end;
 
-constructor TFormParamFile.CreateFromRequest(const ARequest: TWebRequest;
+constructor TFormParamFile.CreateFromRequest(const ARequest: IMARSRequest;
   const AFileIndex: Integer);
 var
-  LFile: TAbstractWebRequestFile;
+  LFieldName, LFileName, LContentType: string;
+  LBytes: TBytes;
 begin
-  Clear;
-  if (AFileIndex >= 0) and (AFileIndex < ARequest.Files.Count) then
-  begin
-    LFile := ARequest.Files[AFileIndex];
-
-    Create(LFile.FieldName, LFile.FileName, StreamToBytes(LFile.Stream), LFile.ContentType);
-   end;
+  if ARequest.GetFormFileParam(AFileIndex, LFieldName, LFileName, LBytes, LContentType) then
+    Create(LFieldName, LFileName, LBytes, LContentType)
+  else
+    raise Exception.CreateFmt('Unable to extract data for file form param index %d', [AFileIndex]);
 end;
 
 function TFormParamFile.ToString: string;
@@ -552,7 +551,7 @@ begin
   );
 end;
 
-constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+constructor TFormParam.CreateFromRequest(const ARequest: IMARSRequest;
   const AFileIndex: Integer);
 var
   LValue: TFormParamFile;
@@ -563,17 +562,17 @@ begin
   FieldName := LValue.FieldName;
 end;
 
-constructor TFormParam.CreateFromRequest(const ARequest: TWebRequest;
+constructor TFormParam.CreateFromRequest(const ARequest: IMARSRequest;
   const AFieldName: string);
 var
   LIndex: Integer;
 begin
   Clear;
-  LIndex := ARequest.ContentFields.IndexOfName(AFieldName);
+  LIndex := ARequest.GetFormParamIndex(AFieldName);
   if LIndex <> -1 then
   begin
     FieldName := AFieldName;
-    Value := ARequest.ContentFields.ValueFromIndex[LIndex];
+    Value := ARequest.GetFormParamValue(LIndex);
   end
   else
   begin
@@ -599,7 +598,7 @@ end;
 
 { TDump }
 
-class procedure TDump.Request(const ARequest: TWebRequest;
+class procedure TDump.Request(const ARequest: IMARSRequest;
   const AFileName: string);
 var
   LSS: TStringStream;
@@ -634,24 +633,23 @@ begin
     end;
 
     LHeaders := string.join(sLineBreak, [
-      'PathInfo: ' + ARequest.PathInfo
+      'RawPath: ' + ARequest.RawPath
     , 'Method: ' + ARequest.Method
-    , 'ProtocolVersion: ' + ARequest.ProtocolVersion
     , 'Authorization: ' + ARequest.Authorization
     , 'Accept: ' + ARequest.Accept
 
-    , 'ContentFields: ' + ARequest.ContentFields.CommaText
-    , 'CookieFields: ' + ARequest.CookieFields.CommaText
-    , 'QueryFields: ' + ARequest.QueryFields.CommaText
+//    , 'ContentFields: ' + ARequest.ContentFields.CommaText
+//    , 'CookieFields: ' + ARequest.CookieFields.CommaText
+//    , 'QueryFields: ' + ARequest.QueryFields.CommaText
 
-    , 'ContentType: ' + ARequest.ContentType
-    , 'ContentEncoding: ' + ARequest.ContentEncoding
-    , 'ContentLength: ' + ARequest.ContentLength.ToString
-    , 'ContentVersion: ' + ARequest.ContentVersion
+//    , 'ContentType: ' + ARequest.ContentType
+//    , 'ContentEncoding: ' + ARequest.ContentEncoding
+//    , 'ContentLength: ' + ARequest.ContentLength.ToString
+//    , 'ContentVersion: ' + ARequest.ContentVersion
 
-    , 'RemoteAddr: ' + ARequest.RemoteAddr
-    , 'RemoteHost: ' + ARequest.RemoteHost
-    , 'RemoteIP: ' + ARequest.RemoteIP
+//    , 'RemoteAddr: ' + ARequest.RemoteAddr
+//    , 'RemoteHost: ' + ARequest.RemoteHost
+//    , 'RemoteIP: ' + ARequest.RemoteIP
     ]);
 
     LSS := TStringStream.Create(LHeaders + sLineBreak + sLineBreak + LRawString);

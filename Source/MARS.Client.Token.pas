@@ -42,6 +42,9 @@ type
     destructor Destroy; override;
 
     procedure Clear; virtual;
+    procedure SetData(const AJSON: TJSONObject); virtual;
+    function SaveToBytes: TBytes; virtual;
+    procedure LoadFromBytes(const ABytes: TBytes); virtual;
     procedure SaveToStream(const AStream: TStream); virtual;
     procedure LoadFromStream(const AStream: TStream); virtual;
     procedure SaveToFile(const AFilename: string); virtual;
@@ -74,29 +77,19 @@ uses
 procedure TMARSClientToken.AfterDELETE(const AContent: TStream);
 begin
   inherited;
-  if Assigned(FData) then
-    FData.Free;
-  FData := StreamToJSONValue(AContent) as TJSONObject;
-  ParseData;
+  SetData(StreamToJSONValue(AContent) as TJSONObject);
 end;
 
 procedure TMARSClientToken.AfterGET(const AContent: TStream);
 begin
   inherited;
-  if Assigned(FData) then
-    FData.Free;
-  FData := StreamToJSONValue(AContent) as TJSONObject;
-  ParseData;
+  SetData(StreamToJSONValue(AContent) as TJSONObject);
 end;
 
 procedure TMARSClientToken.AfterPOST(const AContent: TStream);
 begin
   inherited;
-
-  if Assigned(FData) then
-    FData.Free;
-  FData := StreamToJSONValue(AContent) as TJSONObject;
-  ParseData;
+  SetData(StreamToJSONValue(AContent) as TJSONObject);
 end;
 
 procedure TMARSClientToken.AssignTo(Dest: TPersistent);
@@ -105,6 +98,8 @@ var
 begin
   inherited AssignTo(Dest);
   LDest := Dest as TMARSClientToken;
+
+  LDest.LoadFromBytes(SaveToBytes);
 
   LDest.UserName := UserName;
   LDest.Password := Password;
@@ -118,10 +113,15 @@ end;
 
 procedure TMARSClientToken.Clear;
 begin
-  if Assigned(FData) then
-    FreeAndNil(FData);
-  FData := TJSONObject.Create;
-  ParseData;
+  FToken := '';
+  FIsVerified := False;
+
+  FClaims.Clear;
+
+  FIssuedAt := 0.0;
+  FExpiration := 0.0;
+  FUserName := '';
+  FUserRoles.Clear;
 end;
 
 constructor TMARSClientToken.Create(AOwner: TComponent);
@@ -137,9 +137,9 @@ end;
 
 destructor TMARSClientToken.Destroy;
 begin
-  FClaims.Free;
-  FUserRoles.Free;
-  FData.Free;
+  FreeAndNil(FClaims);
+  FreeAndNil(FUserRoles);
+  FreeAndNil(FData);
 
   inherited;
 end;
@@ -152,6 +152,19 @@ end;
 function TMARSClientToken.GetIsExpired: Boolean;
 begin
   Result := Expiration < Now;
+end;
+
+procedure TMARSClientToken.LoadFromBytes(const ABytes: TBytes);
+var
+  LStream: TBytesStream;
+begin
+  LStream := TBytesStream.Create(ABytes);
+  try
+    LStream.Position := 0;
+    LoadFromStream(LStream);
+  finally
+    LStream.Free;
+  end;
 end;
 
 procedure TMARSClientToken.LoadFromFile(const AFilename: string);
@@ -168,16 +181,15 @@ end;
 
 procedure TMARSClientToken.LoadFromStream(const AStream: TStream);
 begin
-  if Assigned(FData) then
-    FData.Free;
-  FData := StreamToJSONValue(AStream) as TJSONObject;
-  ParseData;
+  SetData(StreamToJSONValue(AStream) as TJSONObject);
 end;
 
 procedure TMARSClientToken.ParseData;
 var
   LClaims: TJSONObject;
 begin
+  Assert(Assigned(FData));
+
   FToken := FData.ReadStringValue('Token');
   FIsVerified := FData.ReadBoolValue('IsVerified');
 
@@ -203,6 +215,21 @@ begin
   end;
 end;
 
+function TMARSClientToken.SaveToBytes: TBytes;
+var
+  LStream: TBytesStream;
+begin
+  LStream := TBytesStream.Create;
+  try
+    JSONValueToStream(FData, LStream);
+    LStream.Position := 0;
+    SetLength(Result, LStream.Size);
+    LStream.Read(Result, Length(Result));
+  finally
+    LStream.Free;
+  end;
+end;
+
 procedure TMARSClientToken.SaveToFile(const AFilename: string);
 var
   LFileStream: TFileStream;
@@ -218,6 +245,18 @@ end;
 procedure TMARSClientToken.SaveToStream(const AStream: TStream);
 begin
   JSONValueToStream(FData, AStream);
+end;
+
+procedure TMARSClientToken.SetData(const AJSON: TJSONObject);
+begin
+  FreeAndNil(FData);
+  if Assigned(AJSON) then
+  begin
+    FData := AJSON;
+    ParseData;
+  end
+  else
+    Clear;
 end;
 
 end.

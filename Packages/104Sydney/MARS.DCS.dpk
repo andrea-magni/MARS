@@ -1,0 +1,57 @@
+package MARS.DCS;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library - DelphiCrossSocket support'}
+{$LIBSUFFIX '270'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  MARS.Utils,
+  MARS.Core;
+
+contains
+  MARS.http.Server.DCS in '..\..\Source\MARS.http.Server.DCS.pas',
+  Net.CrossHttpMiddleware in '..\..\ThirdParty\DCS\Net\Net.CrossHttpMiddleware.pas',
+  Net.CrossHttpParams in '..\..\ThirdParty\DCS\Net\Net.CrossHttpParams.pas',
+  Net.CrossHttpRouter in '..\..\ThirdParty\DCS\Net\Net.CrossHttpRouter.pas',
+  Net.CrossHttpServer in '..\..\ThirdParty\DCS\Net\Net.CrossHttpServer.pas',
+  Net.CrossHttpUtils in '..\..\ThirdParty\DCS\Net\Net.CrossHttpUtils.pas',
+  Net.CrossServer in '..\..\ThirdParty\DCS\Net\Net.CrossServer.pas',
+  Net.CrossSocket.Iocp in '..\..\ThirdParty\DCS\Net\Net.CrossSocket.Iocp.pas',
+  Net.CrossSocket in '..\..\ThirdParty\DCS\Net\Net.CrossSocket.pas',
+  Net.SocketAPI in '..\..\ThirdParty\DCS\Net\Net.SocketAPI.pas',
+  Net.Winsock2 in '..\..\ThirdParty\DCS\Net\Net.Winsock2.pas',
+  Net.Wship6 in '..\..\ThirdParty\DCS\Net\Net.Wship6.pas',
+  Net.CrossSocket.Base in '..\..\ThirdParty\DCS\Net\Net.CrossSocket.Base.pas',
+  Utils.DateTime in '..\..\ThirdParty\DCS\Utils\Utils.DateTime.pas',
+  Utils.Logger in '..\..\ThirdParty\DCS\Utils\Utils.Logger.pas',
+  Utils.RegEx in '..\..\ThirdParty\DCS\Utils\Utils.RegEx.pas',
+  Utils.Utils in '..\..\ThirdParty\DCS\Utils\Utils.Utils.pas';
+
+end.

@@ -70,6 +70,7 @@ type
     const TEXT_XML = 'text/xml';
     const TEXT_HTML = 'text/html';
     const APPLICATION_XML = 'application/xml';
+    const APPLICATION_XML_FireDAC = 'application/xml-firedac';
     const APPLICATION_JSON = 'application/json';
     const APPLICATION_JSON_FireDAC = 'application/json-firedac';
     const APPLICATION_XHTML_XML = 'application/xhtml+xml';
@@ -390,7 +391,7 @@ var
 begin
   Result := 0.0;
   for LItem in Self do
-    if LItem.ToString = AMediaType then
+    if (LItem.ToString = AMediaType) or (LItem.IsWildcard) then
     begin
       Result := LItem.QFactor;
       Break;
@@ -402,14 +403,12 @@ class function TMediaTypeList.Intersect(const AList1: TArray<string>;
 var
   LMediaType: string;
 begin
-  SetLength(Result, 0);
+  Result := [];
+
   for LMediaType in AList1 do
   begin
-    if AList2.Contains(LMediaType) then
-    begin
-      SetLength(Result, Length(Result) + 1);
-      Result[Length(Result) -1 ] := LMediaType;
-    end;
+    if (LMediaType = TMediaType.WILDCARD) or AList2.Contains(LMediaType) then
+      Result := Result + [LMediaType];
   end;
 end;
 

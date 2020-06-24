@@ -10,12 +10,12 @@ unit MARS.Core.Activation;
 interface
 
 uses
-  SysUtils, Classes, Generics.Collections, Rtti, Diagnostics, HTTPApp
+  SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
 
 , MARS.Core.Classes, MARS.Core.URL, MARS.Core.MediaType
 , MARS.Core.Application, MARS.Core.Engine, MARS.Core.Token
 , MARS.Core.Registry.Utils, MARS.Core.Injection.Types, MARS.Core.Activation.Interfaces
-, MARS.Core.MessageBodyWriter
+, MARS.Core.MessageBodyWriter, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -23,7 +23,7 @@ type
 
   TMARSActivationFactoryFunc = reference to function (const AEngine: TMARSEngine;
     const AApplication: TMARSApplication;
-    const ARequest: TWebRequest; const AResponse: TWebResponse;
+    const ARequest: IMARSRequest; const AResponse: IMARSResponse;
     const AURL: TMARSURL
   ): IMARSActivation;
 
@@ -43,8 +43,8 @@ type
 
   TMARSActivation = class(TInterfacedObject, IMARSActivation)
   private
-    FRequest: TWebRequest;
-    FResponse: TWebResponse;
+    FRequest: IMARSRequest;
+    FResponse: IMARSResponse;
     class var FBeforeInvokeProcs: TArray<TMARSBeforeInvokeProc>;
     class var FAfterInvokeProcs: TArray<TMARSAfterInvokeProc>;
     class var FInvokeErrorProcs: TArray<TMARSInvokeErrorProc>;
@@ -97,7 +97,7 @@ type
     procedure CheckAuthorization; virtual;
   public
     constructor Create(const AEngine: TMARSEngine; const AApplication: TMARSApplication;
-      const ARequest: TWebRequest; const AResponse: TWebResponse; const AURL: TMARSURL); virtual;
+      const ARequest: IMARSRequest; const AResponse: IMARSResponse; const AURL: TMARSURL); virtual;
     destructor Destroy; override;
 
     // --- IMARSActivation implementation --------------
@@ -116,11 +116,11 @@ type
     function GetMethodArguments: TArray<TValue>; inline;
     function GetMethodAttributes: TArray<TCustomAttribute>; inline;
     function GetMethodResult: TValue; inline;
-    function GetRequest: TWebRequest; inline;
+    function GetRequest: IMARSRequest; inline;
     function GetResource: TRttiType; inline;
     function GetResourceAttributes: TArray<TCustomAttribute>; inline;
     function GetResourceInstance: TObject; inline;
-    function GetResponse: TWebResponse; inline;
+    function GetResponse: IMARSResponse; inline;
     function GetURL: TMARSURL; inline;
     function GetURLPrototype: TMARSURL; inline;
     function GetToken: TMARSToken; inline;
@@ -131,10 +131,10 @@ type
     property InvocationTime: TStopwatch read FInvocationTime;
     property Method: TRttiMethod read FMethod;
     property MethodArguments: TArray<TValue> read FMethodArguments;
-    property Request: TWebRequest read FRequest;
+    property Request: IMARSRequest read FRequest;
     property Resource: TRttiType read FResource;
     property ResourceInstance: TObject read FResourceInstance;
-    property Response: TWebResponse read FResponse;
+    property Response: IMARSResponse read FResponse;
     property URL: TMARSURL read FURL;
     property URLPrototype: TMARSURL read FURLPrototype;
     property Token: TMARSToken read GetToken;
@@ -152,7 +152,7 @@ type
     class var CreateActivationFunc: TMARSActivationFactoryFunc;
     class function CreateActivation(const AEngine: TMARSEngine;
       const AApplication: TMARSApplication;
-      const ARequest: TWebRequest; const AResponse: TWebResponse;
+      const ARequest: IMARSRequest; const AResponse: IMARSResponse;
       const AURL: TMARSURL): IMARSActivation;
   end;
 
@@ -208,7 +208,7 @@ begin
   Result := FMethodReturnType;
 end;
 
-function TMARSActivation.GetRequest: TWebRequest;
+function TMARSActivation.GetRequest: IMARSRequest;
 begin
   Result := FRequest;
 end;
@@ -228,7 +228,7 @@ begin
   Result := FResourceInstance;
 end;
 
-function TMARSActivation.GetResponse: TWebResponse;
+function TMARSActivation.GetResponse: IMARSResponse;
 begin
   Result := FResponse;
 end;
@@ -563,7 +563,7 @@ begin
   LCustomAtributeProcessor :=
     procedure (ACustomHeader: CustomHeaderAttribute)
     begin
-      Response.CustomHeaders.Values[ACustomHeader.HeaderName] := ACustomHeader.Value;
+      Response.SetHeader(ACustomHeader.HeaderName, ACustomHeader.Value);
     end;
   TRttiHelper.ForEachAttribute<CustomHeaderAttribute>(FResourceAttributes, LCustomAtributeProcessor);
   TRttiHelper.ForEachAttribute<CustomHeaderAttribute>(FMethodAttributes, LCustomAtributeProcessor);
@@ -606,7 +606,7 @@ procedure TMARSActivation.Invoke;
 begin
   try
     try
-      Request.ReadTotalContent; // workaround for https://quality.embarcadero.com/browse/RSP-14674
+      Request.CheckWorkaroundForISAPI;
 
       // setup phase
       FSetupTime := TStopWatch.StartNew;
@@ -741,7 +741,7 @@ end;
 
 constructor TMARSActivation.Create(const AEngine: TMARSEngine;
   const AApplication: TMARSApplication;
-  const ARequest: TWebRequest; const AResponse: TWebResponse;
+  const ARequest: IMARSRequest; const AResponse: IMARSResponse;
   const AURL: TMARSURL);
 begin
   inherited Create;
@@ -775,8 +775,8 @@ begin
 end;
 
 class function TMARSActivation.CreateActivation(const AEngine: TMARSEngine;
-  const AApplication: TMARSApplication; const ARequest: TWebRequest;
-  const AResponse: TWebResponse; const AURL: TMARSURL): IMARSActivation;
+  const AApplication: TMARSApplication; const ARequest: IMARSRequest;
+  const AResponse: IMARSResponse; const AURL: TMARSURL): IMARSActivation;
 begin
   if Assigned(CreateActivationFunc) then
     Result := CreateActivationFunc(AEngine, AApplication, ARequest, AResponse, AURL)

@@ -9,8 +9,7 @@ interface
 
 uses
   SysUtils, Classes
-  , HTTPApp
-  , MARS.Core.MediaType;
+, MARS.Core.RequestAndResponse.Interfaces, MARS.Core.MediaType;
 
 
 type
@@ -23,7 +22,7 @@ type
     FContentStream: TStream;
     FFreeContentStream: Boolean;
   public
-    procedure CopyTo(AWebResponse: TWebResponse);
+    procedure CopyTo(AResponse: IMARSResponse);
     destructor Destroy; override;
 
     property Content: string read FContent write FContent;
@@ -40,19 +39,19 @@ implementation
 
 { TMARSResponse }
 
-procedure TMARSResponse.CopyTo(AWebResponse: TWebResponse);
+procedure TMARSResponse.CopyTo(AResponse: IMARSResponse);
 begin
   if Assigned(ContentStream) then
   begin
-    AWebResponse.ContentStream := ContentStream;
+    AResponse.ContentStream := ContentStream;
     FreeContentStream := False;
   end
   else
-    AWebResponse.Content := Content;
+    AResponse.Content := Content;
 
-  AWebResponse.ContentType := ContentType;
-  AWebResponse.ContentEncoding := ContentEncoding;
-  AWebResponse.StatusCode := StatusCode;
+  AResponse.ContentType := ContentType;
+  AResponse.ContentEncoding := ContentEncoding;
+  AResponse.StatusCode := StatusCode;
 end;
 
 destructor TMARSResponse.Destroy;

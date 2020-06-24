@@ -15,6 +15,7 @@ uses
 , MARS.Core.Utils
 , MARS.Core.MediaType
 , MARS.Client.Utils
+, MARS.Utils.Parameters
 ;
 
 type
@@ -56,6 +57,7 @@ type
     FAuthEndorsement: TMARSAuthEndorsement;
     FProxyConfig: TMARSProxyConfig;
     FAuthToken: string;
+    FAuthCookieName: string;
     procedure SetProxyConfig(const Value: TMARSProxyConfig);
   protected
     class var FBeforeExecuteProcs: TArray<TMARSClientBeforeExecuteProc>;
@@ -91,9 +93,15 @@ type
     procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
+    procedure Post(const AURL: string; const AFormUrlEncoded: TMARSParameters;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
     procedure Put(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
     procedure Put(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
+    procedure Put(const AURL: string; const AFormUrlEncoded: TMARSParameters;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
 
@@ -163,6 +171,7 @@ type
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;
     property OnError: TMARSClientErrorEvent read FOnError write FOnError;
     property AuthEndorsement: TMARSAuthEndorsement read FAuthEndorsement write SetAuthEndorsement default TMARSAuthEndorsement.Cookie;
+    property AuthCookieName: string read FAuthCookieName write FAuthCookieName;
     property ProxyConfig: TMARSProxyConfig read FProxyConfig write SetProxyConfig;
   end;
 
@@ -242,6 +251,7 @@ begin
   inherited;
   FProxyConfig := TMARSProxyConfig.Create;
   FAuthEndorsement := Cookie;
+  FAuthCookieName := 'access_token';
   FMARSEngineURL := 'http://localhost:8080/rest';
 end;
 
@@ -612,6 +622,13 @@ begin
   FireBeforeExecute(AURL, Self);
 end;
 
+procedure TMARSCustomClient.Post(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
+  const AAuthToken, AAccept, AContentType: string);
+begin
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+end;
+
 class function TMARSCustomClient.PostJSON(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>; const AQueryParams: TStrings;
   const AContent: TJSONValue; const ACompletionHandler: TProc<TJSONValue>; const AToken: string
@@ -794,6 +811,12 @@ begin
   end;
 end;
 
+procedure TMARSCustomClient.Put(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
+  const AAuthToken, AAccept, AContentType: string);
+begin
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+end;
 
 procedure TMARSCustomClient.Put(const AURL: string;
   const AFormData: TArray<TFormParam>; const AResponse: TStream;

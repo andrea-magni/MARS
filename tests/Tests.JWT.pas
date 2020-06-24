@@ -16,7 +16,7 @@ type
     procedure Duration(const ASeconds: Int64);
     function GetTokenForVerifyOne: string; virtual;
   public
-    const DUMMY_SECRET = 'dummy_secret';
+    const DUMMY_SECRET = '12345678901234567890123456789012';
 
     [Test] procedure BuildOne;
     [Test] procedure VerifyOne;
@@ -142,9 +142,10 @@ end;
 function TMARSJWT<T>.GetTokenForVerifyOne: string;
 begin
   // beware: will expire one million days after Nov 15th, 2017 that is somewhere around Thu, 13 Oct 4755 :-D
-  Result := 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.'
-          + 'eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0.'
-          + '2DAhF5DWfTCPK13EYSkdlT2LRUA9kmHJcO9v-Gs0x6E';
+  Result :=
+   'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'
+  +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0'
+  +'.HpiUlC0d-a-oA4rZRFOpQsHxML55B0vXL5BbtEQNnLI';
 end;
 
 procedure TMARSJWT<T>.VerifyOne;

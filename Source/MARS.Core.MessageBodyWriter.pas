@@ -61,7 +61,11 @@ type
       const AGetAffinity: TGetAffinityFunction = nil); overload;
 
     procedure FindWriter(const AActivation: IMARSActivation;
-      out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
+      out AWriter: IMessageBodyWriter; out AMediaType: TMediaType); overload;
+    procedure FindWriter(const AActivation: IMARSActivation;
+      const AAccept: string;
+      out AWriter: IMessageBodyWriter; out AMediaType: TMediaType); overload;
+
 
     procedure Enumerate(const AProc: TProc<TEntryInfo>);
 
@@ -76,8 +80,16 @@ type
     const AFFINITY_ZERO = 0;
   end;
 
-function GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
-function GetEncodingName(const AEncoding: TEncoding): string;
+  TMARSMessageBodyWriter = class
+  private
+  protected
+  public
+    class procedure WriteWith<T: class, constructor, IMessageBodyWriter>(
+      const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation); inline;
+    class function GetDesiredEncoding(const AActivation: IMARSActivation;
+      var AEncoding: TEncoding): Boolean;
+  end;
 
 implementation
 
@@ -85,7 +97,7 @@ uses
   MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions, MARS.Core.Attributes
 ;
 
-function GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
+class function TMARSMessageBodyWriter.GetDesiredEncoding(const AActivation: IMARSActivation; var AEncoding: TEncoding): Boolean;
 var
   LEncoding: TEncoding;
   LFound: Boolean;
@@ -125,18 +137,18 @@ begin
   end;
 end;
 
-function GetEncodingName(const AEncoding: TEncoding): string;
-begin
-  Result := '';
+{ TMARSMessageBodyWriter }
 
-  if AEncoding = TEncoding.ANSI then Result := 'ANSI'
-  else if AEncoding = TEncoding.ASCII then Result := 'ASCII'
-  else if AEncoding = TEncoding.BigEndianUnicode then Result :='BigEndianUnicode'
-  else if AEncoding = TEncoding.Default then Result :='Default'
-  else if AEncoding = TEncoding.Unicode then Result :='Unicode'
-  else if AEncoding = TEncoding.UTF7 then Result :='UTF7'
-  else if AEncoding = TEncoding.UTF8 then Result :='UTF8';
+class procedure TMARSMessageBodyWriter.WriteWith<T>(const AValue: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+var
+  LMBWriter: IMessageBodyWriter;
+begin
+  LMBWriter := T.Create;
+  LMBWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
 end;
+
 
 { TMARSMessageBodyRegistry }
 
@@ -170,6 +182,13 @@ end;
 
 procedure TMARSMessageBodyRegistry.FindWriter(const AActivation: IMARSActivation;
   out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
+begin
+  FindWriter(AActivation, AActivation.Request.Accept, AWriter, AMediaType);
+end;
+
+procedure TMARSMessageBodyRegistry.FindWriter(
+  const AActivation: IMARSActivation; const AAccept: string;
+  out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 var
   LWriterEntry: TEntryInfo;
   LFound: Boolean;
@@ -185,11 +204,10 @@ var
   LMediaType: string;
   LCandidateMediaType: string;
   LCandidateQualityFactor: Double;
-  LAccept: string;
   LMethodReturnType: TRttiType;
   LMethodAttributes: TArray<TCustomAttribute>;
+  LAffinity: Integer;
 begin
-  LAccept := AActivation.Request.Accept;
   LMethodReturnType := AActivation.MethodReturnType;
   LMethodAttributes := AActivation.MethodAttributes;
 
@@ -204,7 +222,7 @@ begin
     Exit; // no serialization (it's a procedure!)
 
   // consider client's Accept
-  LAcceptParser := TAcceptParser.Create(LAccept);
+  LAcceptParser := TAcceptParser.Create(AAccept);
   try
     LAcceptMediaTypes := LAcceptParser.MediaTypeList;
 
@@ -241,12 +259,15 @@ begin
             else
               LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LWriterMediaTypes);
             for LMediaType in LMediaTypes do
+            begin
+              LAffinity := LWriterEntry.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType);
               if LWriterEntry.IsWritable(LMethodReturnType, LMethodAttributes, LMediaType) then
               begin
                 if not LFound
+                   or (LCandidateAffinity < LAffinity)
                    or (
-                     (LCandidateAffinity < LWriterEntry.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType))
-                     or (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
+                     (LCandidateAffinity = LAffinity)
+                     and (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
                    )
                 then
                 begin
@@ -257,6 +278,7 @@ begin
                   LFound := True;
                 end;
               end;
+            end;
           finally
             LWriterMediaTypes.Free;
           end;
