@@ -36,6 +36,7 @@ type
     function GetHostName: string;
     function GetPort: Integer;
     function GetRawPath: string;
+    function GetDate: TDateTime;
 
     function AsObject: TObject;
     procedure CheckWorkaroundForISAPI;
