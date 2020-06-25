@@ -51,6 +51,7 @@ type
     function GetMethod: string; inline;
     function GetPort: Integer; inline;
     function GetQueryParamIndex(const AName: string): Integer; inline;
+    function GetQueryParamName(const AIndex: Integer): string;
     function GetQueryParamValue(const AIndex: Integer): string; overload; inline;
     function GetQueryParamValue(const AName: string): string; overload; inline;
     function GetQueryParamCount: Integer;
@@ -415,6 +416,11 @@ end;
 function TMARSWebRequest.GetQueryParamIndex(const AName: string): Integer;
 begin
   Result := FWebRequest.QueryFields.IndexOfName(AName);
+end;
+
+function TMARSWebRequest.GetQueryParamName(const AIndex: Integer): string;
+begin
+  result := FWebRequest.QueryFields.Names[AIndex];
 end;
 
 function TMARSWebRequest.GetQueryParamValue(const AName: string): string;
