@@ -50,7 +50,9 @@ type
     function GetHostName: string; inline;
     function GetMethod: string; inline;
     function GetPort: Integer; inline;
+    function GetDate: TDateTime; inline;
     function GetQueryParamIndex(const AName: string): Integer; inline;
+    function GetQueryParamName(const AIndex: Integer): string; inline;
     function GetQueryParamValue(const AIndex: Integer): string; overload; inline;
     function GetQueryParamValue(const AName: string): string; overload; inline;
     function GetQueryParamCount: Integer;
@@ -314,6 +316,11 @@ begin
   Result := FWebRequest.CookieFields.Values[AName];
 end;
 
+function TMARSWebRequest.GetDate: TDateTime;
+begin
+  result := FWebRequest.Date;
+end;
+
 function TMARSWebRequest.GetCookieParamValue(const AIndex: Integer): string;
 begin
   Result := FWebRequest.CookieFields.ValueFromIndex[AIndex];
@@ -415,6 +422,11 @@ end;
 function TMARSWebRequest.GetQueryParamIndex(const AName: string): Integer;
 begin
   Result := FWebRequest.QueryFields.IndexOfName(AName);
+end;
+
+function TMARSWebRequest.GetQueryParamName(const AIndex: Integer): string;
+begin
+  result := FWebRequest.QueryFields.Names[AIndex];
 end;
 
 function TMARSWebRequest.GetQueryParamValue(const AName: string): string;

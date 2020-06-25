@@ -10,6 +10,7 @@ type
     function GetRawContent: TBytes;
     function GetContent: string;
     function GetQueryParamIndex(const AName: string): Integer;
+    function GetQueryParamName(const AIndex: integer): string;
     function GetQueryParamValue(const AIndex: Integer): string; overload;
     function GetQueryParamValue(const AName: string): string; overload;
     function GetQueryParamCount: Integer;
@@ -35,6 +36,7 @@ type
     function GetHostName: string;
     function GetPort: Integer;
     function GetRawPath: string;
+    function GetDate: TDateTime;
 
     function AsObject: TObject;
     procedure CheckWorkaroundForISAPI;

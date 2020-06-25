@@ -64,3 +64,4 @@ Android
 .DS_Store
 *.res
 *_nonshared.a
+update_from_MARS.bat
