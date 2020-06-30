@@ -407,7 +407,7 @@ end;
 
 function TMARSWebRequest.GetHeaderParamValue(const AHeaderName: string): string;
 begin
-  if FWebRequest is TMARSIdHTTPAppRequest then
+  if (FWebRequest is TMARSIdHTTPAppRequest) or (FWebRequest is TIdHTTPAppRequest) then
     Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.Values[AHeaderName]
   else
     Result := FWebRequest.GetFieldByName(AHeaderName);
@@ -415,7 +415,7 @@ end;
 
 function TMARSWebRequest.GetHeaderParamValue(const AIndex: Integer): string;
 begin
-  if FWebRequest is TMARSIdHTTPAppRequest then
+  if (FWebRequest is TMARSIdHTTPAppRequest) or (FWebRequest is TIdHTTPAppRequest) then
     Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.ValueFromIndex[AIndex]
   else
     raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamValue by Index');
@@ -478,7 +478,7 @@ end;
 
 function TMARSWebRequest.GetHeaderParamCount: Integer;
 begin
-  if FWebRequest is TMARSIdHTTPAppRequest then
+  if (FWebRequest is TMARSIdHTTPAppRequest) or (FWebRequest is TIdHTTPAppRequest) then
     Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.Count
   else
     raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamCount by Index');
@@ -486,7 +486,7 @@ end;
 
 function TMARSWebRequest.GetHeaderParamIndex(const AName: string): Integer;
 begin
-  if FWebRequest is TMARSIdHTTPAppRequest then
+  if (FWebRequest is TMARSIdHTTPAppRequest) or (FWebRequest is TIdHTTPAppRequest) then
     Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.IndexOfName(AName)
   else
     raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamIndex by Index');
