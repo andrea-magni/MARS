@@ -42,7 +42,10 @@ type
       out AFileName: string; out ABytes: System.TArray<System.Byte>;
       out AContentType: string): Boolean;
     function GetFormParams: string;
-    function GetHeaderParamValue(const AHeaderName: string): string;
+    function GetHeaderParamCount: Integer; inline;
+    function GetHeaderParamIndex(const AName: string): Integer; inline;
+    function GetHeaderParamValue(const AHeaderName: string): string; overload; inline;
+    function GetHeaderParamValue(const AIndex: Integer): string; overload; inline;
     function GetHostName: string;
     function GetMethod: string;
     function GetPort: Integer;
@@ -438,6 +441,11 @@ begin
   FDCSRequest.Header.GetParamValue(AHeaderName, Result);
 end;
 
+function TMARSDCSRequest.GetHeaderParamValue(const AIndex: Integer): string;
+begin
+  Result := FDCSRequest.Header.Items[AIndex].Value;
+end;
+
 function TMARSDCSRequest.GetHostName: string;
 begin
   Result := FDCSRequest.HostName;
@@ -514,6 +522,28 @@ function TMARSDCSRequest.GetRawPath: string;
 begin
 //AM TODO controllare RawPathAndParams?
   Result := FDCSRequest.Path;
+end;
+
+function TMARSDCSRequest.GetHeaderParamCount: Integer;
+begin
+  Result := FDCSRequest.Header.Count;
+end;
+
+function TMARSDCSRequest.GetHeaderParamIndex(const AName: string): Integer;
+var
+  LIndex: Integer;
+  LParam: TNameValue;
+begin
+  Result := -1;
+  for LIndex := 0 to FDCSRequest.Header.Count-1 do
+  begin
+    LParam := FDCSRequest.Header.Items[LIndex];
+    if SameText(LParam.Name, AName) then
+    begin
+      Result := LIndex;
+      Break;
+    end;
+  end;
 end;
 
 { TMARSDCSResponse }

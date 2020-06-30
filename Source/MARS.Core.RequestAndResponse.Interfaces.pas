@@ -22,7 +22,10 @@ type
     function GetFormFileParam(const AIndex: Integer; out AFieldName, AFileName: string;
       out ABytes: TBytes; out AContentType: string): Boolean;
     function GetFormParamCount: Integer;
-    function GetHeaderParamValue(const AHeaderName: string): string;
+    function GetHeaderParamCount: Integer;
+    function GetHeaderParamIndex(const AName: string): Integer;
+    function GetHeaderParamValue(const AHeaderName: string): string; overload;
+    function GetHeaderParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamIndex(const AName: string): Integer;
     function GetCookieParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamValue(const AName: string): string; overload;

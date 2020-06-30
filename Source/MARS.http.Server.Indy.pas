@@ -46,7 +46,10 @@ type
     function GetFormFileParam(const AIndex: Integer; out AFieldName, AFileName: string;
       out ABytes: TBytes; out AContentType: string): Boolean;
     function GetFormParams: string; inline;
-    function GetHeaderParamValue(const AHeaderName: string): string; inline;
+    function GetHeaderParamCount: Integer; inline;
+    function GetHeaderParamIndex(const AName: string): Integer; inline;
+    function GetHeaderParamValue(const AHeaderName: string): string; overload; inline;
+    function GetHeaderParamValue(const AIndex: Integer): string; overload; inline;
     function GetHostName: string; inline;
     function GetMethod: string; inline;
     function GetPort: Integer; inline;
@@ -87,6 +90,14 @@ type
     constructor Create(AWebResponse: TWebResponse); virtual;
   end;
 
+  TMARSIdHTTPAppRequest = class(TIdHTTPAppRequest)
+  private
+    function GetRequestInfo: TIdHTTPRequestInfo;
+    function GetResponseInfo: TIdHTTPResponseInfo;
+  public
+    property RequestInfo: TIdHTTPRequestInfo read GetRequestInfo;
+    property ResponseInfo: TIdHTTPResponseInfo read GetResponseInfo;
+  end;
 
   TMARShttpServerIndy = class(TIdCustomHTTPServer)
   private
@@ -149,7 +160,7 @@ begin
     if not FBeforeCommandGet(AContext, ARequestInfo, AResponseInfo) then
       Exit;
 
-  LRequest := TIdHTTPAppRequest.Create(AContext, ARequestInfo, AResponseInfo);
+  LRequest := TMARSIdHTTPAppRequest.Create(AContext, ARequestInfo, AResponseInfo);
   try
     LResponse := TIdHTTPAppResponse.Create(LRequest, AContext, ARequestInfo, AResponseInfo);
     try
@@ -396,7 +407,18 @@ end;
 
 function TMARSWebRequest.GetHeaderParamValue(const AHeaderName: string): string;
 begin
-  Result := FWebRequest.GetFieldByName(AHeaderName);
+  if FWebRequest is TMARSIdHTTPAppRequest then
+    Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.Values[AHeaderName]
+  else
+    Result := FWebRequest.GetFieldByName(AHeaderName);
+end;
+
+function TMARSWebRequest.GetHeaderParamValue(const AIndex: Integer): string;
+begin
+  if FWebRequest is TMARSIdHTTPAppRequest then
+    Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.ValueFromIndex[AIndex]
+  else
+    raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamValue by Index');
 end;
 
 function TMARSWebRequest.GetHostName: string;
@@ -452,6 +474,22 @@ end;
 function TMARSWebRequest.GetRawPath: string;
 begin
   Result := FWebRequest.RawPathInfo;
+end;
+
+function TMARSWebRequest.GetHeaderParamCount: Integer;
+begin
+  if FWebRequest is TMARSIdHTTPAppRequest then
+    Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.Count
+  else
+    raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamCount by Index');
+end;
+
+function TMARSWebRequest.GetHeaderParamIndex(const AName: string): Integer;
+begin
+  if FWebRequest is TMARSIdHTTPAppRequest then
+    Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.IndexOfName(AName)
+  else
+    raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamIndex by Index');
 end;
 
 { TMARSWebResponse }
@@ -529,6 +567,18 @@ end;
 procedure TMARSWebResponse.SetStatusCode(const AStatusCode: Integer);
 begin
   FWebResponse.StatusCode := AStatusCode;
+end;
+
+{ TMARSIdHTTPAppRequest }
+
+function TMARSIdHTTPAppRequest.GetRequestInfo: TIdHTTPRequestInfo;
+begin
+  Result := FRequestInfo;
+end;
+
+function TMARSIdHTTPAppRequest.GetResponseInfo: TIdHTTPResponseInfo;
+begin
+  Result := FResponseInfo;
 end;
 
 end.
