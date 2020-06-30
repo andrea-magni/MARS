@@ -46,12 +46,14 @@ type
     function GetHostName: string;
     function GetMethod: string;
     function GetPort: Integer;
-    function GetQueryParamIndex(const AName: string): Integer;
-    function GetQueryParamValue(const AIndex: Integer): string; overload;
-    function GetQueryParamValue(const AName: string): string; overload;
-    function GetQueryParamCount: Integer;
-    function GetQueryString: string;
-    function GetRawContent: TBytes;
+    function GetDate: TDateTime; inline;
+    function GetQueryParamIndex(const AName: string): Integer; inline;
+    function GetQueryParamValue(const AIndex: Integer): string; overload; inline;
+    function GetQueryParamValue(const AName: string): string; overload; inline;
+    function GetQueryParamName(const AIndex: Integer): string; inline;
+    function GetQueryParamCount: Integer; inline;
+    function GetQueryString: string; inline;
+    function GetRawContent: TBytes; inline;
     function GetRawPath: string;
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
@@ -254,6 +256,11 @@ begin
       Break;
     end;
   end;
+end;
+
+function TMARSDCSRequest.GetDate: TDateTime;
+begin
+  Result := TCrossHttpUtils.RFC1123_StrToDate(GetHeaderParamValue('Date'));
 end;
 
 function TMARSDCSRequest.GetCookieParamValue(const AIndex: Integer): string;
@@ -464,6 +471,11 @@ begin
       Break;
     end;
   end;
+end;
+
+function TMARSDCSRequest.GetQueryParamName(const AIndex: Integer): string;
+begin
+  Result := FDCSRequest.Query.Items[AIndex].Name;
 end;
 
 function TMARSDCSRequest.GetQueryParamValue(const AName: string): string;
