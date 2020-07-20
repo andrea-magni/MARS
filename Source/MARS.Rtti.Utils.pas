@@ -89,7 +89,7 @@ type
     class function FindParameterLessConstructor(const AClass: TClass): TRttiMethod;
   end;
 
-  TRecord<R: record> = class
+  TRecord<R{: record}> = class
   public
     class procedure ToDataSet(const ARecord: R; const ADataSet: TDataSet; const AAppend: Boolean = False);
     class procedure FromDataSet(var ARecord: R; const ADataSet: TDataSet);

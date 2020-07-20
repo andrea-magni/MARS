@@ -60,8 +60,8 @@ type
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
 
     function ResponseAsJSON: TJSONValue;
-    function ResponseAs<T: record>: T;
-    function ResponseAsArray<T: record>: TArray<T>;
+    function ResponseAs<T{: record}>: T;
+    function ResponseAsArray<T{: record}>: TArray<T>;
   published
     property FormUrlEncoded: TMARSParameters read FFormUrlEncoded write FFormUrlEncoded;
     property Response: TMemoryStream read FResponse;
