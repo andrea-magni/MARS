@@ -50,12 +50,12 @@ type
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
 
-    procedure POST<R: record>(const ARecord: R;
+    procedure POST<R{: record}>(const ARecord: R;
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
 
-    procedure POST<R: record>(const AArrayOfRecord: TArray<R>;
+    procedure POST<R{: record}>(const AArrayOfRecord: TArray<R>;
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
@@ -71,12 +71,12 @@ type
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
 
-    procedure PUT<R: record>(const ARecord: R;
+    procedure PUT<R{: record}>(const ARecord: R;
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
 
-    procedure PUT<R: record>(const AArrayOfRecord: TArray<R>;
+    procedure PUT<R{: record}>(const AArrayOfRecord: TArray<R>;
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
@@ -87,8 +87,8 @@ type
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const ASynchronize: Boolean = True); overload;
 
-    function ResponseAs<T: record>: T;
-    function ResponseAsArray<T: record>: TArray<T>;
+    function ResponseAs<T{: record}>: T;
+    function ResponseAsArray<T{: record}>: TArray<T>;
   published
     property Response: TJSONValue read FResponse write FResponse;
     property ResponseAsString;

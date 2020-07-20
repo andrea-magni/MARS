@@ -66,8 +66,8 @@ type
       const ASynchronize: Boolean = True); overload; virtual;
 
     function ResponseAsJSON: TJSONValue;
-    function ResponseAs<T: record>: T;
-    function ResponseAsArray<T: record>: TArray<T>;
+    function ResponseAs<T{: record}>: T;
+    function ResponseAsArray<T{: record}>: TArray<T>;
   published
     property FormData: TArray<TFormParam> read FFormData write FFormData;
     property Response: TMemoryStream read FResponse;

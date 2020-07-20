@@ -84,7 +84,7 @@ type
     {$endif}
   public
     function ToArrayOfRecord<T{: record}>(): TArray<T>;
-    procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
+    procedure FromArrayOfRecord<T{: record}>(const AArray: TArray<T>;
       const AFilterProc: TToJSONFilterProc = nil);
     procedure FromArrayOfObject<T: class>(const AArray: TArray<T>;
       const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]);
@@ -97,7 +97,7 @@ type
     property Items[const Index: Integer]: TJSONValue read GetValue;
     {$endif}
 
-    class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil): TJSONArray;
+    class function ArrayOfRecordToJSON<T{: record}>(const AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil): TJSONArray;
     class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>): TJSONArray;
   end;
 
@@ -124,7 +124,7 @@ type
     function ReadValue(const AName: string; const ADesiredType: TRttiType;
       const ANameCaseSensitive: Boolean; out AValue: TValue): Boolean; overload;
     function ReadArrayValue(const AName: string): TJSONArray; overload; inline;
-    function ReadArrayValue<T: record>(const AName: string): TArray<T>; overload; inline;
+    function ReadArrayValue<T{: record}>(const AName: string): TArray<T>; overload; inline;
 
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
@@ -136,9 +136,9 @@ type
     procedure WriteUnixTimeValue(const AName: string; const AValue: TDateTime);
     procedure WriteTValue(const AName: string; const AValue: TValue);
     procedure WriteArrayValue(const AName: string; const AArray: TJSONArray); overload; inline;
-    procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>); overload; inline;
+    procedure WriteArrayValue<T{: record}>(const AName: string; const AArray: TArray<T>); overload; inline;
 
-    procedure FromRecord<T: record>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil); overload;
+    procedure FromRecord<T{: record}>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil); overload;
     function ToRecord<T{: record}>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToRecord(const ARecordType: TRttiType;
@@ -158,12 +158,12 @@ type
     class function JSONToObject(const AClassType: TClass; const AJSON: TJSONObject;
       const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TObject; overload;
 
-    class function RecordToJSON<T: record>(ARecord: T;
+    class function RecordToJSON<T{: record}>(ARecord: T;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
     class function RecordToJSON(const ARecord: TValue;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
 
-    class function JSONToRecord<T: record>(const AJSON: TJSONObject;
+    class function JSONToRecord<T{: record}>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
     class function JSONToRecord(const ARecordType: TRttiType; const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
