@@ -83,7 +83,7 @@ type
     function GetValue(const Index: Integer): TJSONValue; inline;
     {$endif}
   public
-    function ToArrayOfRecord<T: record>(): TArray<T>;
+    function ToArrayOfRecord<T{: record}>(): TArray<T>;
     procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
       const AFilterProc: TToJSONFilterProc = nil);
     procedure FromArrayOfObject<T: class>(const AArray: TArray<T>;
@@ -140,7 +140,7 @@ type
 
     procedure FromRecord<T: record>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil); overload;
-    function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    function ToRecord<T{: record}>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToRecord(const ARecordType: TRttiType;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
