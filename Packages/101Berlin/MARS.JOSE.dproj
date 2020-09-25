@@ -136,20 +136,30 @@
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
         <DCCReference Include="MARS.Core.dcp"/>
+        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.InjectionService.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Builder.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Consumer.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Consumer.Validators.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Context.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Compression.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Encryption.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Factory.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Signing.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWE.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWK.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWS.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWT.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Parts.pas"/>
-        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Cryptography.RSA.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Signing.RSA.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Arrays.pas"/>
         <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas"/>
-        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.pas"/>
-        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.InjectionService.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.JSON.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -199,16 +209,13 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployClass Name="DependencyModule">
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\18.0\Bpl\MARS.JOSE240.bpl" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <Operation>0</Operation>
-                        <Extensions>.dll;.bpl</Extensions>
+                        <RemoteName>MARS_JOSE.bpl</RemoteName>
+                        <Overwrite>true</Overwrite>
                     </Platform>
-                    <Platform Name="OSX32">
-                        <Operation>1</Operation>
-                        <Extensions>.dylib</Extensions>
-                    </Platform>
-                </DeployClass>
+                </DeployFile>
+                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
                 <DeployClass Name="ProjectOSXResource">
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\Resources</RemoteDir>
@@ -548,7 +555,16 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
+                <DeployClass Name="DependencyModule">
+                    <Platform Name="Win32">
+                        <Operation>0</Operation>
+                        <Extensions>.dll;.bpl</Extensions>
+                    </Platform>
+                    <Platform Name="OSX32">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                </DeployClass>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
