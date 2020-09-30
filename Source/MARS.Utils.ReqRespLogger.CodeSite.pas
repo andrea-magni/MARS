@@ -3,20 +3,79 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
+{$M+}
 unit MARS.Utils.ReqRespLogger.CodeSite;
 
 interface
 
 uses
-  Classes, SysUtils, Diagnostics, Rtti
-  , MARS.Core.Classes
-  , MARS.Core.Activation
-  , MARS.Core.Activation.Interfaces, MARS.Utils.ReqRespLogger.Interfaces
-  , Web.HttpApp
-;
+  System.Classes,
+  System.SysUtils,
+  System.Diagnostics,
+  System.Rtti,
+  MARS.Core.Classes,
+  MARS.Core.Activation,
+  MARS.Core.Activation.Interfaces,
+  MARS.Utils.ReqRespLogger.Interfaces,
+  MARS.Core.RequestAndResponse.Interfaces,
+  //MARS.http.Server.DCS,
+  MARS.http.Server.Indy,
+  CodeSiteLogging;
 
 type
-  TMARSReqRespLoggerCodeSite=class(TInterfacedObject, IMARSReqRespLogger)
+
+  TMARSRequestLogCodeSite = class
+  private
+    FAccept: String;
+    FAcceptEncoding: String;
+    FPathInfo: String;
+    FAuthorization: String;
+    FContentEncoding: String;
+    FContentType: String;
+    FContentLength: String;
+    FContent: String;
+    FUserAgent: String;
+    FPort: Integer;
+    FRemoteAddr: String;
+    FHostName: String;
+    FMethod: String;
+    FQueryString: String;
+    FCookies: String;
+  public
+    constructor Create(ARequest: IMARSRequest);
+  published
+    property Accept: String read FAccept;
+    property AcceptEncoding: String read FAcceptEncoding;
+    property Authorization: String read FAuthorization;
+    property HostName: String read FHostName;
+    property Port: Integer read FPort;
+    property PathInfo: String read FPathInfo;
+    property Method: String read FMethod;
+    property QueryString: String read FQueryString;
+    property Cookies: String read FCookies;
+    property ContentEncoding: String read FContentEncoding;
+    property ContentType: String read FContentType;
+    property ContentLength: String read FContentLength;
+    property Content: String read FContent;
+    property UserAgent: String read FUserAgent;
+    property RemoteAddr: String read FRemoteAddr;
+  end;
+
+  TMARSResponseLogCodeSite = class
+  private
+    FStatusCode: Integer;
+    FContentType: String;
+    FContentEncoding: String;
+  public
+    constructor Create(AResponse: IMARSResponse);
+  published
+    property StatusCode: Integer read FStatusCode;
+    property ContentType: String read FContentType;
+    property ContentEncoding: String read FContentEncoding;
+  end;
+
+  TMARSReqRespLoggerCodeSite = class(TInterfacedObject, IMARSReqRespLogger)
   private
     class var _Instance: TMARSReqRespLoggerCodeSite;
   public
@@ -26,28 +85,15 @@ type
     // IMARSReqRespLogger
     procedure Clear;
     function GetLogBuffer: TValue;
-    procedure Log(const AMessage: string);
+    procedure Log(const AMessage: String; const ALogEntry: TObject);
 
     class function Instance: TMARSReqRespLoggerCodeSite;
     class constructor ClassCreate;
     class destructor ClassDestroy;
   end;
 
-  TWebRequestHelper = class helper for TWebRequest
-  public
-    function ToLogString: string;
-  end;
-
-  TWebResponseHelper = class helper for TWebResponse
-  public
-    function ToLogString: string;
-  end;
 
 implementation
-
-uses
-  CodeSiteLogging
-;
 
 const
   LOGFIELD_SEPARATOR = ' | ';
@@ -58,34 +104,46 @@ class constructor TMARSReqRespLoggerCodeSite.ClassCreate;
 begin
   TMARSActivation.RegisterBeforeInvoke(
     procedure (const AR: IMARSActivation; out AIsAllowed: Boolean)
+    var
+      LRequest: TMARSRequestLogCodeSite;
     begin
+      if not AR.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
+        Exit;
+
+      LRequest := TMARSRequestLogCodeSite.Create(AR.Request);
       TMARSReqRespLoggerCodeSite.Instance.Log(
-        string.Join(LOGFIELD_SEPARATOR
-        , [
-           'Incoming'
-          , AR.Request.ToLogString
-          , 'Engine: ' + AR.Engine.Name
-          , 'Application: ' + AR.Application.Name
+        String.Join(LOGFIELD_SEPARATOR,
+          [
+           'Incoming',
+           'Engine: ' + AR.Engine.Name,
+           'Application: ' + AR.Application.Name
           ]
-        )
+        ), LRequest
       );
+      LRequest.Free;
     end
   );
 
   TMARSActivation.RegisterAfterInvoke(
     procedure (const AR: IMARSActivation)
+    var
+      LResponse: TMARSResponseLogCodeSite;
     begin
+      if not AR.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
+        Exit;
+
+      LResponse := TMARSResponseLogCodeSite.Create(AR.Response);
       TMARSReqRespLoggerCodeSite.Instance.Log(
         string.Join(LOGFIELD_SEPARATOR
         , [
             'Outgoing'
-          , AR.Response.ToLogString
           , 'Time: ' + AR.InvocationTime.ElapsedMilliseconds.ToString + ' ms'
           , 'Engine: ' + AR.Engine.Name
           , 'Application: ' + AR.Application.Name
           ]
-        )
+        ), LResponse
       );
+      LResponse.Free;
     end
   );
 end;
@@ -125,54 +183,51 @@ begin
   Result := _Instance;
 end;
 
-procedure TMARSReqRespLoggerCodeSite.Log(const AMessage: string);
+procedure TMARSReqRespLoggerCodeSite.Log(const AMessage: String; const ALogEntry: TObject);
 begin
-  CodeSite.SendMsg(AMessage);
+  CodeSite.Send(AMessage, ALogEntry);
 end;
 
-{ TWebRequestHelper }
+{ TMARSRequestLoggerCodeSite }
 
-function TWebRequestHelper.ToLogString: string;
-begin
-  Result := string.Join(LOGFIELD_SEPARATOR
-  , [
-        Method
-      , PathInfo
-      , 'Content: [' + Content + ']'
-      , 'Cookie: ['  + CookieFields.Text  + ']'
-      , 'Query: ['   + QueryFields.Text   + ']'
-      , 'Length: '  + Length(Content).ToString
-      , 'RemoteIP: ' + RemoteIP
-      , 'RemoteAddress: ' + RemoteAddr
-      , 'RemoteHost: ' + RemoteHost
-    ]
-  );
-end;
-
-{ TWebResponseHelper }
-
-function TWebResponseHelper.ToLogString: string;
+constructor TMARSRequestLogCodeSite.Create(ARequest: IMARSRequest);
 var
-  LContentSize: Int64;
+  LRequest: TMARSWebRequest;
 begin
-  if Assigned(ContentStream) then
-    LContentSize := ContentStream.Size
-  else
-    LContentSize := 0;
+  //IMARSRequest
+  FAccept := ARequest.Accept;
+  FAuthorization := ARequest.Authorization;
+  FHostName := ARequest.HostName;
+  FPort := ARequest.Port;
+  FMethod := ARequest.Method;
+  FPathInfo := ARequest.RawPath;
+  FQueryString := ARequest.QueryString;
+  FContent := ARequest.Content;
+  FCookies := ARequest.GetHeaderParamValue('Cookie');
+  FAcceptEncoding := ARequest.GetHeaderParamValue('Accept-Encoding');
+  FUserAgent := ARequest.GetHeaderParamValue('User-Agent');
+  FContentType := ARequest.GetHeaderParamValue('Content-Type');
+  FContentEncoding := ARequest.GetHeaderParamValue('Content-Encoding');
+  FContentLength := ARequest.GetHeaderParamValue('Content-Length');
 
-
-  Result := string.Join(LOGFIELD_SEPARATOR
-    , [
-        HTTPRequest.Method
-      , HTTPRequest.PathInfo
-      , 'StatusCode: ' + StatusCode.ToString
-      , 'ReasonString: ' + ReasonString
-      , 'ContentType: ' + ContentType
-      , 'Content.Size: ' + LContentSize.ToString
-      , 'Content: [' + Content + ']'
-      , 'Cookies.Count: '  + Cookies.Count.ToString
-    ]
-  );
+  if ARequest.AsObject is TMARSWebRequest then
+  begin
+    //TWebRequest
+    LRequest := TMARSWebRequest(ARequest.AsObject);
+    FRemoteAddr := LRequest.WebRequest.RemoteAddr;
+  end;
 end;
+
+{ TMARSResponseLoggerCodeSite }
+
+constructor TMARSResponseLogCodeSite.Create(AResponse: IMARSResponse);
+begin
+  FStatusCode := AResponse.StatusCode;
+  FContentEncoding := AResponse.ContentEncoding;
+  FContentType := AResponse.ContentType;
+end;
+
+initialization
+  TMARSReqRespLoggerCodeSite.Instance;
 
 end.
