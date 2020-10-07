@@ -122,9 +122,9 @@ type
       const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TFDQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TFDTransaction; virtual;
 
-    procedure ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
+    function ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
       const ABeforeExecute: TProc<TFDCommand> = nil;
-      const AAfterExecute: TProc<TFDCommand> = nil); virtual;
+      const AAfterExecute: TProc<TFDCommand> = nil): Integer; virtual;
 
     function Query(const ASQL: string): TFDQuery; overload; virtual;
 
@@ -503,8 +503,8 @@ begin
 
 end;
 
-procedure TMARSFireDAC.ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction;
-  const ABeforeExecute, AAfterExecute: TProc<TFDCommand>);
+function TMARSFireDAC.ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction;
+  const ABeforeExecute, AAfterExecute: TProc<TFDCommand>): Integer;
 var
   LCommand: TFDCommand;
 begin
@@ -512,7 +512,8 @@ begin
   try
     if Assigned(ABeforeExecute) then
       ABeforeExecute(LCommand);
-    LCommand.Execute();
+    LCommand.Execute;
+    Result := LCommand.RowsAffected;
     if Assigned(AAfterExecute) then
       AAfterExecute(LCommand);
   finally
