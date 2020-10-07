@@ -111,7 +111,7 @@ implementation
 
 uses
     StrUtils
-
+  , System.NetEncoding
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , IdURI
@@ -367,7 +367,8 @@ begin
 
   if FQuery <> '' then
   begin
-    LQuery := URLDecode(FQuery);
+    //LQuery := URLDecode(FQuery);
+    LQuery := FQuery;
     while StartsStr(LQuery, URL_QUERY_PREFIX) do
       LQuery := RightStr(LQuery, Length(LQuery) - Length(URL_QUERY_PREFIX));
 
@@ -377,7 +378,7 @@ begin
       LStrings.StrictDelimiter := True;
       LStrings.DelimitedText := LQuery;
       for LIndex := 0 to LStrings.Count - 1 do
-        FQueryTokens.Add(LStrings.Names[LIndex], LStrings.ValueFromIndex[LIndex]);
+        FQueryTokens.Add(URLDecode(LStrings.Names[LIndex]), URLDecode(LStrings.ValueFromIndex[LIndex]));
     finally
       LStrings.Free;
     end;
@@ -508,8 +509,8 @@ end;
 
 class function TMARSURL.URLDecode(const AString: string): string;
 begin
-//  Result := TNetEncoding.URL.Decode(AString);
-  Result := TIdURI.URLDecode(AString);
+  Result := TNetEncoding.URL.Decode(AString);
+  //Result := TIdURI.URLDecode(AString);
 end;
 
 class function TMARSURL.URLDecode(const AStrings: TArray<string>): TArray<string>;
@@ -525,8 +526,8 @@ end;
 
 class function TMARSURL.URLEncode(const AString: string): string;
 begin
-//  Result := TNetEncoding.URL.Encode(AString);
-  Result := TIdURI.PathEncode(AString);
+  Result := TNetEncoding.URL.EncodeQuery(AString, [Ord('&')]);
+  //Result := TIdURI.PathEncode(AString);
 end;
 
 class function TMARSURL.URLEncode(const AStrings: TArray<string>): TArray<string>;
