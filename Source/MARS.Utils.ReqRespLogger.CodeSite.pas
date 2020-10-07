@@ -19,8 +19,6 @@ uses
   MARS.Core.Activation.Interfaces,
   MARS.Utils.ReqRespLogger.Interfaces,
   MARS.Core.RequestAndResponse.Interfaces,
-  //MARS.http.Server.DCS,
-  MARS.http.Server.Indy,
   CodeSiteLogging;
 
 type
@@ -191,10 +189,7 @@ end;
 { TMARSRequestLoggerCodeSite }
 
 constructor TMARSRequestLogCodeSite.Create(ARequest: IMARSRequest);
-var
-  LRequest: TMARSWebRequest;
 begin
-  //IMARSRequest
   FAccept := ARequest.Accept;
   FAuthorization := ARequest.Authorization;
   FHostName := ARequest.HostName;
@@ -209,13 +204,6 @@ begin
   FContentType := ARequest.GetHeaderParamValue('Content-Type');
   FContentEncoding := ARequest.GetHeaderParamValue('Content-Encoding');
   FContentLength := ARequest.GetHeaderParamValue('Content-Length');
-
-  if ARequest.AsObject is TMARSWebRequest then
-  begin
-    //TWebRequest
-    LRequest := TMARSWebRequest(ARequest.AsObject);
-    FRemoteAddr := LRequest.WebRequest.RemoteAddr;
-  end;
 end;
 
 { TMARSResponseLoggerCodeSite }
