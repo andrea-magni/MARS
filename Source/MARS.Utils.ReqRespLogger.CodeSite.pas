@@ -109,16 +109,19 @@ begin
         Exit;
 
       LRequest := TMARSRequestLogCodeSite.Create(AR.Request);
-      TMARSReqRespLoggerCodeSite.Instance.Log(
-        String.Join(LOGFIELD_SEPARATOR,
-          [
-           'Incoming',
-           'Engine: ' + AR.Engine.Name,
-           'Application: ' + AR.Application.Name
-          ]
-        ), LRequest
-      );
-      LRequest.Free;
+      try
+        TMARSReqRespLoggerCodeSite.Instance.Log(
+          String.Join(LOGFIELD_SEPARATOR,
+            [
+             'Incoming',
+             'Engine: ' + AR.Engine.Name,
+             'Application: ' + AR.Application.Name
+            ]
+          ), LRequest
+        );
+      finally
+        LRequest.Free;
+      end;
     end
   );
 
@@ -131,17 +134,20 @@ begin
         Exit;
 
       LResponse := TMARSResponseLogCodeSite.Create(AR.Response);
-      TMARSReqRespLoggerCodeSite.Instance.Log(
-        string.Join(LOGFIELD_SEPARATOR
-        , [
-            'Outgoing'
-          , 'Time: ' + AR.InvocationTime.ElapsedMilliseconds.ToString + ' ms'
-          , 'Engine: ' + AR.Engine.Name
-          , 'Application: ' + AR.Application.Name
-          ]
-        ), LResponse
-      );
-      LResponse.Free;
+      try
+        TMARSReqRespLoggerCodeSite.Instance.Log(
+          string.Join(LOGFIELD_SEPARATOR
+          , [
+              'Outgoing'
+            , 'Time: ' + AR.InvocationTime.ElapsedMilliseconds.ToString + ' ms'
+            , 'Engine: ' + AR.Engine.Name
+            , 'Application: ' + AR.Application.Name
+            ]
+          ), LResponse
+        );
+      finally
+        LResponse.Free;
+      end;
     end
   );
 end;
