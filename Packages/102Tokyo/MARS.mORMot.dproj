@@ -143,6 +143,7 @@
         <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynEcc.pas"/>
         <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynLZ.pas"/>
         <DCCReference Include="..\..\Source\MARS.mORMotJWT.Token.InjectionService.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynTable.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -186,6 +187,12 @@
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx32\libcgsqlite3.dylib" Class="DependencyModule">
                     <Platform Name="OSX32">
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\19.0\Bpl\MARS.mORMot250.bpl" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>MARS_mORMot.bpl</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

@@ -42,6 +42,9 @@ type
     function CopyFrom(const ASource: TMARSParametersSlice;
       const ASliceName: string = ''): Integer;
     function ToString: string; override;
+    procedure AsStrings(var AStrings: TStrings; const AClearBefore: Boolean = True); overload;
+    function AsStrings: TStrings; overload;
+    function AsStringArray(const ANameValueSeparator: string = '='): TArray<string>;
 
     property Count: Integer read GetCount;
     property IsEmpty: Boolean read GetIsEmpty;
@@ -85,6 +88,33 @@ begin
   FItems.Clear;
   for LItem in ASource do
     Fitems.Add(LItem.Key, LItem.Value);
+end;
+
+function TMARSParametersSlice.AsStringArray(
+  const ANameValueSeparator: string): TArray<string>;
+var
+  LItem: TPair<string, TValue>;
+begin
+  Result := [];
+  for LItem in FItems do
+  begin
+    Result := Result + [LItem.Key + ANameValueSeparator + LItem.Value.ToString];
+  end;
+end;
+
+procedure TMARSParametersSlice.AsStrings(var AStrings: TStrings;
+  const AClearBefore: Boolean);
+begin
+  if AClearBefore then
+    AStrings.Clear;
+
+  AStrings.AddStrings(AsStringArray(AStrings.NameValueSeparator));
+end;
+
+function TMARSParametersSlice.AsStrings: TStrings;
+begin
+  Result := TStringList.Create;
+  AsStrings(Result);
 end;
 
 function TMARSParametersSlice.ByName(const AName: string;
@@ -289,16 +319,8 @@ begin
 end;
 
 function TMARSParametersSlice.ToString: string;
-var
-  LItem: TPair<string, TValue>;
 begin
-  Result := '';
-  for LItem in FItems do
-  begin
-    if Result <> '' then
-      Result := Result + sLineBreak;
-    Result := Result + LItem.Key +': ' + LItem.Value.ToString;
-  end;
+  Result := string.Join(sLineBreak, AsStringArray(': '));
 end;
 
 end.

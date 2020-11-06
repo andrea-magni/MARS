@@ -1,3 +1,7 @@
+![](https://img.shields.io/github/v/release/andrea-magni/MARS)
+![](https://img.shields.io/github/release-date/andrea-magni/MARS)
+![](https://img.shields.io/github/commits-since/andrea-magni/MARS/v1.4)
+
 ![MARS-curiosity logo](media/logo-small-MARS.png)
 
 # Delphi REST Library

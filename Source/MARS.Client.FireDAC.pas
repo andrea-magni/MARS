@@ -19,6 +19,8 @@ uses
 ;
 
 type
+  TMARSFDResourceDatasets = class;
+
   TMARSFDResourceDatasetsItem = class(TCollectionItem)
   private
     FDataSet: TFDMemTable;
@@ -26,6 +28,7 @@ type
     FSendDelta: Boolean;
     FSynchronize: Boolean;
     procedure SetDataSet(const Value: TFDMemTable);
+    function Collection: TMARSFDResourceDatasets;
   protected
     procedure AssignTo(Dest: TPersistent); override;
     function GetDisplayName: string; override;
@@ -40,6 +43,7 @@ type
 
   TMARSFDResourceDatasets = class(TCollection)
   private
+    FOwnerComponent: TComponent;
     function GetItem(Index: Integer): TMARSFDResourceDatasetsItem;
   public
     function Add: TMARSFDResourceDatasetsItem;
@@ -92,6 +96,7 @@ type
   protected
     procedure SetDataSet(const Value: TFDMemTable);
 
+    procedure AssignTo(Dest: TPersistent); override;
     procedure BeforeGET; override;
     procedure AfterGET(const AContent: TStream); override;
 
@@ -303,6 +308,7 @@ constructor TMARSFDResource.Create(AOwner: TComponent);
 begin
   inherited;
   FResourceDataSets := TMARSFDResourceDatasets.Create(TMARSFDResourceDatasetsItem);
+  FResourceDataSets.FOwnerComponent := Self;
   SpecificAccept := TMediaType.APPLICATION_JSON_FireDAC + ',' + TMediaType.APPLICATION_JSON;
   SpecificContentType := TMediaType.APPLICATION_JSON_FireDAC;
 end;
@@ -408,6 +414,11 @@ begin
   LDest.Synchronize := Synchronize;
 end;
 
+function TMARSFDResourceDatasetsItem.Collection: TMARSFDResourceDatasets;
+begin
+  Result := inherited Collection as TMARSFDResourceDatasets;
+end;
+
 constructor TMARSFDResourceDatasetsItem.Create(Collection: TCollection);
 begin
   inherited;
@@ -426,9 +437,12 @@ procedure TMARSFDResourceDatasetsItem.SetDataSet(const Value: TFDMemTable);
 begin
   if FDataSet <> Value then
   begin
+    if Assigned(FDataSet) then
+      FDataSet.RemoveFreeNotification(Collection.FOwnerComponent);
     FDataSet := Value;
     if Assigned(FDataSet) then
     begin
+      FDataSet.FreeNotification(Collection.FOwnerComponent);
       if SendDelta then
         FDataSet.CachedUpdates := True;
       FDataSet.ActiveStoredUsage := [];
@@ -474,6 +488,22 @@ begin
   finally
     TFDDataSets.FreeAll(LDataSets);
   end;
+end;
+
+procedure TMARSFDDataSetResource.AssignTo(Dest: TPersistent);
+var
+  LDest: TMARSFDDataSetResource;
+begin
+  inherited AssignTo(Dest);
+
+  LDest := Dest as TMARSFDDataSetResource;
+
+  LDest.Filter := Filter;
+  LDest.Sort := Sort;
+  LDest.DataSet := DataSet;
+  LDest.Synchronize := Synchronize;
+  LDest.SendDelta := SendDelta;
+// ApplyUpdatesResult
 end;
 
 procedure TMARSFDDataSetResource.BeforeGET;

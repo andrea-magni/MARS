@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {  Delphi JOSE Library                                                         }
-{  Copyright (c) 2015 Paolo Rossi                                              }
+{  Copyright (c) 2015-2017 Paolo Rossi                                         }
 {  https://github.com/paolo-rossi/delphi-jose-jwt                              }
 {                                                                              }
 {******************************************************************************}
@@ -33,22 +33,23 @@ interface
 uses
   SysUtils,
   JOSE.Types.Bytes,
-  JOSE.Core.Base;
+  JOSE.Core.Base,
+  JOSE.Encoding.Base64;
 
 type
   TJWK = class(TJOSEBase)
   private
-    FKey: TSuperBytes;
+    FKey: TJOSEBytes;
   public
-    constructor Create(AKey: TSuperBytes);
-    property Key: TSuperBytes read FKey write FKey;
+    constructor Create(AKey: TJOSEBytes);
+    property Key: TJOSEBytes read FKey write FKey;
   end;
 
 implementation
 
 { TJWK }
 
-constructor TJWK.Create(AKey: TSuperBytes);
+constructor TJWK.Create(AKey: TJOSEBytes);
 begin
   inherited Create;
   FKey := AKey;

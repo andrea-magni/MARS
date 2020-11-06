@@ -13,10 +13,9 @@ unit MARS.Core.URL;
 interface
 
 uses
-    Classes, SysUtils
-  , MARS.Core.JSON
-  , HTTPApp
-  , Generics.Collections
+  Classes, SysUtils, System.JSON
+, MARS.Core.JSON, MARS.Core.RequestAndResponse.Interfaces
+, Generics.Collections
 ;
 
 type
@@ -61,7 +60,7 @@ type
     constructor Create(const AURL: string); overload; virtual;
     constructor CreateDummy(const APath: string; const ABaseURL: string = DUMMY_URL); overload; virtual;
     constructor CreateDummy(const APaths: array of string; const ABaseURL: string = DUMMY_URL); overload; virtual;
-    constructor Create(AWebRequest: TWebRequest); overload; virtual;
+    constructor Create(ARequest: IMARSRequest); overload; virtual;
     destructor Destroy; override;
 
     function MatchPath(AOtherURL: TMARSURL; const ACaseSensitive: Boolean = False): Boolean; overload; virtual;
@@ -112,7 +111,7 @@ implementation
 
 uses
     StrUtils
-
+  , System.NetEncoding
   , MARS.Core.Utils
   , MARS.Core.Exceptions
   , IdURI
@@ -202,16 +201,16 @@ begin
     Result := EnsureLastPathDelimiter(Result);
 end;
 
-constructor TMARSURL.Create(AWebRequest: TWebRequest);
+constructor TMARSURL.Create(ARequest: IMARSRequest);
 var
   LQuery: string;
 begin
-  LQuery := string(AWebRequest.Query);
+  LQuery := ARequest.QueryString;
   if LQuery <> '' then
     LQuery := URL_QUERY_PREFIX + LQuery;
 
   // Add the protocol in order to make Parse work.
-  Create('http://' + string(AWebRequest.Host) + ':' + IntToStr(AWebRequest.ServerPort) + string(AWebRequest.RawPathInfo) + LQuery);
+  Create('http://' + ARequest.HostName + ':' + ARequest.Port.ToString + ARequest.RawPath + LQuery);
 end;
 
 constructor TMARSURL.CreateDummy(const APaths: array of string; const ABaseURL: string);
@@ -368,7 +367,8 @@ begin
 
   if FQuery <> '' then
   begin
-    LQuery := URLDecode(FQuery);
+    //LQuery := URLDecode(FQuery);
+    LQuery := FQuery;
     while StartsStr(LQuery, URL_QUERY_PREFIX) do
       LQuery := RightStr(LQuery, Length(LQuery) - Length(URL_QUERY_PREFIX));
 
@@ -378,7 +378,7 @@ begin
       LStrings.StrictDelimiter := True;
       LStrings.DelimitedText := LQuery;
       for LIndex := 0 to LStrings.Count - 1 do
-        FQueryTokens.Add(LStrings.Names[LIndex], LStrings.ValueFromIndex[LIndex]);
+        FQueryTokens.Add(URLDecode(LStrings.Names[LIndex]), URLDecode(LStrings.ValueFromIndex[LIndex]));
     finally
       LStrings.Free;
     end;
@@ -509,8 +509,8 @@ end;
 
 class function TMARSURL.URLDecode(const AString: string): string;
 begin
-//  Result := TNetEncoding.URL.Decode(AString);
-  Result := TIdURI.URLDecode(AString);
+  Result := TNetEncoding.URL.Decode(AString);
+  //Result := TIdURI.URLDecode(AString);
 end;
 
 class function TMARSURL.URLDecode(const AStrings: TArray<string>): TArray<string>;
@@ -526,8 +526,8 @@ end;
 
 class function TMARSURL.URLEncode(const AString: string): string;
 begin
-//  Result := TNetEncoding.URL.Encode(AString);
-  Result := TIdURI.PathEncode(AString);
+  Result := TNetEncoding.URL.EncodeQuery(AString, [Ord('&')]);
+  //Result := TIdURI.PathEncode(AString);
 end;
 
 class function TMARSURL.URLEncode(const AStrings: TArray<string>): TArray<string>;

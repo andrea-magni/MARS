@@ -11,7 +11,6 @@ interface
 
 uses
     System.Classes, System.SysUtils, Generics.Collections, Rtti
-
   , Data.DB
 // *** BEWARE ***
 // if your Delphi edition/license does not include FireDAC,
@@ -123,9 +122,9 @@ type
       const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TFDQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TFDTransaction; virtual;
 
-    procedure ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
+    function ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
       const ABeforeExecute: TProc<TFDCommand> = nil;
-      const AAfterExecute: TProc<TFDCommand> = nil); virtual;
+      const AAfterExecute: TProc<TFDCommand> = nil): Integer; virtual;
 
     function Query(const ASQL: string): TFDQuery; overload; virtual;
 
@@ -229,8 +228,11 @@ begin
         LConnectionParams.CopyFrom(LData, LConnectionDefName);
         LParams := GetAsTStrings(LConnectionParams);
         try
-          FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
-          Result := Result + [LConnectionDefName];
+          if FDManager.ConnectionDefs.FindConnectionDef(LConnectionDefName) = nil then
+          begin
+            FDManager.AddConnectionDef(LConnectionDefName, LParams.Values['DriverID'], LParams);
+            Result := Result + [LConnectionDefName];
+          end;
         finally
           LParams.Free;
         end;
@@ -501,8 +503,8 @@ begin
 
 end;
 
-procedure TMARSFireDAC.ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction;
-  const ABeforeExecute, AAfterExecute: TProc<TFDCommand>);
+function TMARSFireDAC.ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction;
+  const ABeforeExecute, AAfterExecute: TProc<TFDCommand>): Integer;
 var
   LCommand: TFDCommand;
 begin
@@ -510,7 +512,8 @@ begin
   try
     if Assigned(ABeforeExecute) then
       ABeforeExecute(LCommand);
-    LCommand.Execute();
+    LCommand.Execute;
+    Result := LCommand.RowsAffected;
     if Assigned(AAfterExecute) then
       AAfterExecute(LCommand);
   finally
@@ -573,9 +576,9 @@ begin
   else if SameText(LFirstToken, 'QueryParam') then
     Result := AActivation.URL.QueryTokenByName(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'FormParam') then
-    Result := AActivation.Request.ContentFields.Values[LSecondTokenAndAll]
+    Result := AActivation.Request.GetFormParamValue(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'Request') then
-    Result := ReadPropertyValue(AActivation.Request, LSecondTokenAndAll)
+    Result := ReadPropertyValue(AActivation.Request.AsObject, LSecondTokenAndAll)
 //  else if SameText(LFirstToken, 'Response') then
 //    Result := ReadPropertyValue(AActivation.Response, LSecondToken)
   else if SameText(LFirstToken, 'URL') then
@@ -599,6 +602,9 @@ var
   LIndex: Integer;
   LMacro: TFDMacro;
 begin
+  if not Assigned(ACommand) then
+    Exit;
+
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
@@ -612,6 +618,8 @@ var
   LIndex: Integer;
   LParam: TFDParam;
 begin
+  if not Assigned(ACommand) then
+    Exit;
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
@@ -680,5 +688,8 @@ begin
   inherited;
   FApplyUpdatesRes.AddError(ARow, AException, ARequest);
 end;
+
+initialization
+  FDManager.SilentMode := True;
 
 end.

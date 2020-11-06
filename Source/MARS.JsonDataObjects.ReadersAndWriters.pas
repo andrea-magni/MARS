@@ -50,7 +50,7 @@ var
   LJsonBO: TJsonBaseObject;
   LEncoding: TEncoding;
 begin
-  if not GetDesiredEncoding(AActivation, LEncoding) then
+  if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8;
 
   LJsonBO := AValue.AsObject as TJsonBaseObject;
@@ -87,5 +87,3 @@ initialization
   RegisterReadersAndWriters;
 
 end.
-
-

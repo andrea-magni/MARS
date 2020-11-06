@@ -10,9 +10,12 @@ unit Server.Ignition;
 interface
 
 uses
-  Classes, SysUtils, Rtti
-  , MARS.Core.Engine
-;
+  System.Classes,
+  System.SysUtils,
+  System.RTTI,
+  System.ZLib,
+  System.StrUtils,
+  MARS.Core.Engine;
 
 type
   TServerEngine=class
@@ -33,6 +36,7 @@ implementation
 uses
     MARS.Core.Activation, MARS.Core.Activation.Interfaces
   , MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
+  , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
   {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC {$ENDIF}
@@ -58,7 +62,7 @@ begin
 (*
     FEngine.BeforeHandleRequest :=
       function (const AEngine: TMARSEngine;
-        const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
         var Handled: Boolean
       ): Boolean
       begin
@@ -94,15 +98,28 @@ begin
 *)
 {$ENDREGION}
 {$REGION 'Global AfterInvoke handler example'}
-(*
-    // to execute something after each activation
-    TMARSActivation.RegisterAfterInvoke(
-      procedure (const AActivation: IMARSActivation)
-      begin
-
-      end
-    );
-*)
+    // Compression
+    if FEngine.Parameters.ByName('Compression.Enabled').AsBoolean then
+      TMARSActivation.RegisterAfterInvoke(
+        procedure (const AActivation: IMARSActivation)
+        var
+          LOutputStream: TBytesStream;
+        begin
+          if ContainsText(AActivation.Request.GetHeaderParamValue('Accept-Encoding'), 'gzip')  then
+          begin
+            LOutputStream := TBytesStream.Create(nil);
+            try
+              ZipStream(AActivation.Response.ContentStream, LOutputStream, 15 + 16);
+              AActivation.Response.ContentStream.Free;
+              AActivation.Response.ContentStream := LOutputStream;
+              AActivation.Response.ContentEncoding := 'gzip';
+            except
+              LOutputStream.Free;
+              raise;
+            end;
+          end;
+        end
+      );
 {$ENDREGION}
 {$REGION 'Global InvokeError handler example'}
 (*

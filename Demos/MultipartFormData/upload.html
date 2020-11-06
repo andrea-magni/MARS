@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>File Upload to MARS Demo</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style type="text/css">
+        #txtjson {
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="container">
+        <main>
+            <h1>MARS REST API</h1>
+            <h2>Multipart Form Upload Demo</h2>
+            <form method="POST" enctype="multipart/form-data" action="http://localhost:8080/rest/default/helloworld/2" >
+                <div class="form-group form-row">
+                    <label for="json">JSON Data</label>
+                    <input type="text" name="json" class="form-control-sm" id="txtjson">
+                </div>
+                <div class="form-group form-row">
+                    <label for="image">File:</label>
+                    <input type="file" name="image" class="form-control-sm" id="image">
+                </div>
+                <input type="submit" class="btn btn-primary" value="Send File">            
+            </form>
+        </main>
+    </div>
+
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+$(document).ready(function () {
+
+    const obj = {
+        name: "DOE, John",
+        age: 32
+    }
+
+    $("#txtjson").val(JSON.stringify(obj));
+
+});
+</script>
+
+</body>
+</html>

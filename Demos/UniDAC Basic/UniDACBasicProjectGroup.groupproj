@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="UniDACBasicServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACBasicServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACBasicServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACBasicServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACBasicServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACBasicServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACBasicServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACBasicClient.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="UniDACBasicServerApplication">
+        <MSBuild Projects="UniDACBasicServerApplication.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicServerApplication:Clean">
+        <MSBuild Projects="UniDACBasicServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicServerApplication:Make">
+        <MSBuild Projects="UniDACBasicServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACBasicServerFMXApplication">
+        <MSBuild Projects="UniDACBasicServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicServerFMXApplication:Clean">
+        <MSBuild Projects="UniDACBasicServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicServerFMXApplication:Make">
+        <MSBuild Projects="UniDACBasicServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACBasicServerService">
+        <MSBuild Projects="UniDACBasicServerService.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicServerService:Clean">
+        <MSBuild Projects="UniDACBasicServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicServerService:Make">
+        <MSBuild Projects="UniDACBasicServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACBasicServerConsoleApplication">
+        <MSBuild Projects="UniDACBasicServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicServerConsoleApplication:Clean">
+        <MSBuild Projects="UniDACBasicServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicServerConsoleApplication:Make">
+        <MSBuild Projects="UniDACBasicServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACBasicServerDaemon">
+        <MSBuild Projects="UniDACBasicServerDaemon.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicServerDaemon:Clean">
+        <MSBuild Projects="UniDACBasicServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicServerDaemon:Make">
+        <MSBuild Projects="UniDACBasicServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACBasicServerApacheModule">
+        <MSBuild Projects="UniDACBasicServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicServerApacheModule:Clean">
+        <MSBuild Projects="UniDACBasicServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicServerApacheModule:Make">
+        <MSBuild Projects="UniDACBasicServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACBasicServerISAPI">
+        <MSBuild Projects="UniDACBasicServerISAPI.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicServerISAPI:Clean">
+        <MSBuild Projects="UniDACBasicServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicServerISAPI:Make">
+        <MSBuild Projects="UniDACBasicServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACBasicClient">
+        <MSBuild Projects="UniDACBasicClient.dproj"/>
+    </Target>
+    <Target Name="UniDACBasicClient:Clean">
+        <MSBuild Projects="UniDACBasicClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACBasicClient:Make">
+        <MSBuild Projects="UniDACBasicClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="UniDACBasicServerApplication;UniDACBasicServerFMXApplication;UniDACBasicServerService;UniDACBasicServerConsoleApplication;UniDACBasicServerDaemon;UniDACBasicServerApacheModule;UniDACBasicServerISAPI;UniDACBasicClient"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="UniDACBasicServerApplication:Clean;UniDACBasicServerFMXApplication:Clean;UniDACBasicServerService:Clean;UniDACBasicServerConsoleApplication:Clean;UniDACBasicServerDaemon:Clean;UniDACBasicServerApacheModule:Clean;UniDACBasicServerISAPI:Clean;UniDACBasicClient:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="UniDACBasicServerApplication:Make;UniDACBasicServerFMXApplication:Make;UniDACBasicServerService:Make;UniDACBasicServerConsoleApplication:Make;UniDACBasicServerDaemon:Make;UniDACBasicServerApacheModule:Make;UniDACBasicServerISAPI:Make;UniDACBasicClient:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

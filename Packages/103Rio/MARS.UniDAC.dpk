@@ -1,0 +1,47 @@
+package MARS.UniDAC;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
+{$LIBSUFFIX '260'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  MARS.Core,
+  MARS.ReadersAndWriters,
+  unidac260,
+  dac260;
+
+contains
+  MARS.Data.UniDAC.InjectionService in '..\..\Source\MARS.Data.UniDAC.InjectionService.pas',
+  MARS.Data.UniDAC in '..\..\Source\MARS.Data.UniDAC.pas',
+  MARS.Data.UniDAC.ReadersAndWriters in '..\..\Source\MARS.Data.UniDAC.ReadersAndWriters.pas',
+  MARS.Data.UniDAC.Utils in '..\..\Source\MARS.Data.UniDAC.Utils.pas';
+
+end.
