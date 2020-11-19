@@ -80,6 +80,7 @@ type
     procedure SetHeader(const AName: string; const AValue: string);
     procedure SetStatusCode(const AStatusCode: Integer);
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(ADCSResponse: ICrossHttpResponse); virtual;
   end;
@@ -580,6 +581,11 @@ end;
 function TMARSDCSResponse.GetStatusCode: Integer;
 begin
   Result := FDCSResponse.StatusCode;
+end;
+
+procedure TMARSDCSResponse.RedirectTo(const AURL: string);
+begin
+  FDCSResponse.Redirect(AURL);
 end;
 
 procedure TMARSDCSResponse.SetContent(const AContent: string);
