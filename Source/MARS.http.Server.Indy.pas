@@ -86,6 +86,7 @@ type
     procedure SetHeader(const AName: string; const AValue: string); inline;
     procedure SetStatusCode(const AStatusCode: Integer); inline;
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); inline;
+    procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(AWebResponse: TWebResponse); virtual;
   end;
@@ -523,6 +524,12 @@ end;
 function TMARSWebResponse.GetStatusCode: Integer;
 begin
   Result := FWebResponse.StatusCode;
+end;
+
+procedure TMARSWebResponse.RedirectTo(const AURL: string);
+begin
+  FWebResponse.SendRedirect(AURL);
+  FWebResponse.SendResponse;
 end;
 
 procedure TMARSWebResponse.SetContent(const AContent: string);

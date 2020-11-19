@@ -68,6 +68,7 @@ type
     procedure SetContent(const AContent: string);
     procedure SetHeader(const AName, AValue: string);
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    procedure RedirectTo(const AURL: string);
 
     property Content: string read GetContent write SetContent;
     property ContentStream: TStream read GetContentStream write SetContentStream;
