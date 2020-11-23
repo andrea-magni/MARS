@@ -62,6 +62,11 @@ type
     function GetQueryString: string; inline;
     function GetRawContent: TBytes; inline;
     function GetRawPath: string; inline;
+    function GetContentFields: TArray<string>;
+    function GetQueryFields: TArray<string>;
+    function GetRemoteIP: string;
+    function GetUserAgent: string;
+
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(AWebRequest: TWebRequest); virtual;
@@ -313,6 +318,11 @@ begin
   Result := FWebRequest.Content;
 end;
 
+function TMARSWebRequest.GetContentFields: TArray<string>;
+begin
+  Result := FWebRequest.ContentFields.ToStringArray;
+end;
+
 function TMARSWebRequest.GetCookieParamCount: Integer;
 begin
   Result := FWebRequest.CookieFields.Count;
@@ -437,6 +447,11 @@ begin
   Result := FWebRequest.ServerPort;
 end;
 
+function TMARSWebRequest.GetQueryFields: TArray<string>;
+begin
+  Result := FWebRequest.QueryFields.ToStringArray;
+end;
+
 function TMARSWebRequest.GetQueryParamCount: Integer;
 begin
   Result := FWebRequest.QueryFields.Count;
@@ -475,6 +490,16 @@ end;
 function TMARSWebRequest.GetRawPath: string;
 begin
   Result := FWebRequest.RawPathInfo;
+end;
+
+function TMARSWebRequest.GetRemoteIP: string;
+begin
+  Result := FWebRequest.RemoteIP;
+end;
+
+function TMARSWebRequest.GetUserAgent: string;
+begin
+  Result := FWebRequest.UserAgent;
 end;
 
 function TMARSWebRequest.GetHeaderParamCount: Integer;

@@ -40,6 +40,10 @@ type
     function GetPort: Integer;
     function GetRawPath: string;
     function GetDate: TDateTime;
+    function GetContentFields: TArray<string>;
+    function GetQueryFields: TArray<string>;
+    function GetRemoteIP: string;
+    function GetUserAgent: string;
 
     function AsObject: TObject;
     procedure CheckWorkaroundForISAPI;
@@ -53,6 +57,10 @@ type
     property HostName: string read GetHostName;
     property Port: Integer read GetPort;
     property RawPath: string read GetRawPath;
+    property ContentFields: TArray<string> read GetContentFields;
+    property QueryFields: TArray<string> read GetQueryFields;
+    property RemoteIP: string read GetRemoteIP;
+    property UserAgent: string read GetUserAgent;
   end;
 
   IMARSResponse = interface
