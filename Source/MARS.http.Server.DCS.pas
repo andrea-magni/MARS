@@ -58,6 +58,10 @@ type
     function GetQueryString: string; inline;
     function GetRawContent: TBytes; inline;
     function GetRawPath: string;
+    function GetContentFields: TArray<string>;
+    function GetQueryFields: TArray<string>;
+    function GetRemoteIP: string;
+    function GetUserAgent: string;
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(ADCSRequest: ICrossHttpRequest); virtual;
@@ -223,6 +227,40 @@ function TMARSDCSRequest.GetContent: string;
 begin
 //AM TODO
   Result := '';
+end;
+
+function TMARSDCSRequest.GetContentFields: TArray<string>;
+var
+  LHeader: TNameValue;
+  LMultiPartBody: THttpMultiPartFormData;
+  LIndex: Integer;
+  LFormField: TFormField;
+  LURLParamsBody: THttpUrlParams;
+  LParam: TNameValue;
+begin
+  Result := [];
+
+  if FDCSRequest.BodyType = btMultiPart then
+  begin
+    LMultiPartBody := FDCSRequest.Body as THttpMultiPartFormData;
+
+    for LIndex := 0 to LMultiPartBody.Count - 1 do
+    begin
+      LFormField := LMultiPartBody.Items[LIndex];
+
+      Result := Result + [LFormField.AsString];
+    end;
+  end
+  else if FDCSRequest.BodyType = btUrlEncoded then
+  begin
+    LURLParamsBody := FDCSRequest.Body as THttpUrlParams;
+
+    for LIndex := 0 to LURLParamsBody.Count-1 do
+    begin
+      LParam := LURLParamsBody.Items[LIndex];
+      Result := Result + [LParam.Name + '=' + LParam.Value];
+    end;
+  end;
 end;
 
 function TMARSDCSRequest.GetCookieParamCount: Integer;
@@ -462,6 +500,15 @@ begin
   Result := FDCSRequest.HostPort;
 end;
 
+function TMARSDCSRequest.GetQueryFields: TArray<string>;
+var
+  LQuery: TNameValue;
+begin
+  Result := [];
+  for LQuery in FDCSRequest.Query do
+    Result := Result + [LQuery.Name + '=' + LQuery.Value];
+end;
+
 function TMARSDCSRequest.GetQueryParamCount: Integer;
 begin
   Result := FDCSRequest.Query.Count;
@@ -523,6 +570,16 @@ function TMARSDCSRequest.GetRawPath: string;
 begin
 //AM TODO controllare RawPathAndParams?
   Result := FDCSRequest.Path;
+end;
+
+function TMARSDCSRequest.GetRemoteIP: string;
+begin
+  Result := FDCSRequest.Connection.PeerAddr;
+end;
+
+function TMARSDCSRequest.GetUserAgent: string;
+begin
+  Result := FDCSRequest.UserAgent;
 end;
 
 function TMARSDCSRequest.GetHeaderParamCount: Integer;
