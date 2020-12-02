@@ -100,6 +100,7 @@ type
     class function FromStrings(const AStrings: TStrings): R;
     class procedure ToStrings(const ARecord: R; var AStrings: TStrings; const AClear: Boolean = True);
     class function ToArrayOfString(const ARecord: R): TArray<string>;
+    class procedure Clear(var ARecord: R);
   end;
   TOnGetRecordFieldValueProc = reference to procedure (const AName: string; const AField: TRttiField; var AValue: TValue);
 
@@ -855,6 +856,17 @@ end;
 
 
 { TRecord }
+
+class procedure TRecord<R>.Clear(var ARecord: R);
+var
+  LRecordType: TRttiType;
+  LField: TRttiField;
+begin
+  LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
+
+  for LField in LRecordType.GetFields do
+    LField.SetValue(@ARecord, TValue.Empty);
+end;
 
 class function TRecord<R>.DataSetToArray(const ADataSet: TDataSet): TArray<R>;
 var
