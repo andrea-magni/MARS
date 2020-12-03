@@ -18,6 +18,76 @@ uses
   ;
 
 type
+{$REGION 'Fluent scaffolding'}
+  TMARSClientCustomResource = class;
+
+  // Abstract base for fluent interfaces
+  IMARSClientBaseParams = interface
+    ['{19AC2FA4-A913-42AA-9955-53A55193EBB8}']
+    function BeforeExecute(const AHandler: TProc<TMemoryStream>): IMARSClientBaseParams;
+    function OnException(const AHandler: TMARSClientExecptionProc): IMARSClientBaseParams;
+    procedure Go;
+  end;
+
+  // Abstract base for fluent interface implementors
+  TMARSClientBaseParams = class abstract(TInterfacedObject, IMARSClientBaseParams)
+  public
+    // You can set these but the preferred way is to use the fluent calls below.
+    BeforeExecuteHandler: TProc<TMemoryStream>;
+    OnExceptionHandler: TMARSClientExecptionProc;
+  public
+    // IMARSClientBaseParams
+    function BeforeExecute(const AHandler: TProc<TMemoryStream>): IMARSClientBaseParams;
+    function OnException(const AHandler: TMARSClientExecptionProc): IMARSClientBaseParams;
+    procedure Go; virtual; abstract;
+  end;
+
+  // Interface for fluent sync calls
+  IMARSClientSyncParams = interface(IMARSClientBaseParams)
+    ['{19AC2FA4-A913-42AA-9955-53A55193EBB8}']
+    function AfterExecute(const AHandler: TMARSClientResponseProc): IMARSClientSyncParams;
+  end;
+
+  // Implements fluent sync calls
+  TMARSClientSyncParams = class(TMARSClientBaseParams, IMARSClientSyncParams)
+  private
+    FGoHandler: TProc<TMARSClientSyncParams>;
+  public
+    // You can set this but the preferred way is to use the fluent call below.
+    AfterExecuteHandler: TMARSClientResponseProc;
+  public
+    constructor Create(const AGoHandler: TProc<TMARSClientSyncParams>);
+    // IMARSClientSyncParams
+    function AfterExecute(const AHandler: TMARSClientResponseProc): IMARSClientSyncParams;
+    procedure Go; override;
+  end;
+
+  // Interface for fluent async calls
+  IMARSClientAsyncParams = interface(IMARSClientBaseParams)
+    ['{E12D7ACB-1225-48C8-A8B9-5B98F3F60568}']
+    function OnCompletion(const AHandler: TProc<TMARSClientCustomResource>): IMARSClientAsyncParams;
+    function NoSynchronize: IMARSClientAsyncParams;
+  end;
+
+  // Implements fluent async calls
+  TMARSClientAsyncParams = class(TMARSClientBaseParams, IMARSClientAsyncParams)
+  private
+    FGoHandler: TProc<TMARSClientAsyncParams>;
+  public
+    // You can set these but the preferred way is to use the fluent calls below.
+    OnCompletionHandler: TProc<TMARSClientCustomResource>;
+    Synchronize: Boolean;
+  public
+    constructor Create(const AGoHandler: TProc<TMARSClientAsyncParams>);
+    procedure AfterConstruction; override;
+    // IMARSClientAsyncParams
+    function OnCompletion(const AHandler: TProc<TMARSClientCustomResource>): IMARSClientAsyncParams;
+    function NoSynchronize: IMARSClientAsyncParams;
+    procedure Go; override;
+  end;
+
+{$ENDREGION}
+
   [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSClientCustomResource = class(TComponent)
   private
@@ -923,4 +993,82 @@ begin
   FQueryParams.Assign(Value);
 end;
 
+{$REGION 'Fluent scaffolding implementation'}
+{ TMARSClientBaseParams }
+
+function TMARSClientBaseParams.BeforeExecute(
+  const AHandler: TProc<TMemoryStream>): IMARSClientBaseParams;
+begin
+  BeforeExecuteHandler := AHandler;
+  Result := Self;
+end;
+
+function TMARSClientBaseParams.OnException(
+  const AHandler: TMARSClientExecptionProc): IMARSClientBaseParams;
+begin
+  OnExceptionHandler := AHandler;
+  Result := Self;
+end;
+
+{ TMARSClientParams }
+
+function TMARSClientSyncParams.AfterExecute(
+  const AHandler: TMARSClientResponseProc): IMARSClientSyncParams;
+begin
+  AfterExecuteHandler := AHandler;
+  Result := Self;
+end;
+
+{ TMARSClientAsyncParams }
+
+procedure TMARSClientAsyncParams.AfterConstruction;
+begin
+  inherited;
+  Synchronize := True;
+end;
+
+function TMARSClientAsyncParams.OnCompletion(
+  const AHandler: TProc<TMARSClientCustomResource>): IMARSClientAsyncParams;
+begin
+  OnCompletionHandler := AHandler;
+  Result := Self;
+end;
+
+constructor TMARSClientAsyncParams.Create(
+  const AGoHandler: TProc<TMARSClientAsyncParams>);
+begin
+  inherited Create;
+  FGoHandler := AGoHandler;
+end;
+
+procedure TMARSClientAsyncParams.Go;
+begin
+  Assert(Assigned(FGoHandler));
+
+  FGoHandler(Self);
+end;
+
+function TMARSClientAsyncParams.NoSynchronize: IMARSClientAsyncParams;
+begin
+  Synchronize := False;
+  Result := Self;
+end;
+
+constructor TMARSClientSyncParams.Create(
+  const AGoHandler: TProc<TMARSClientSyncParams>);
+begin
+  inherited Create;
+  FGoHandler := AGoHandler;
+end;
+
+procedure TMARSClientSyncParams.Go;
+begin
+  Assert(Assigned(FGoHandler));
+
+  FGoHandler(Self);
+end;
+
+{$ENDREGION}
+
 end.
+
