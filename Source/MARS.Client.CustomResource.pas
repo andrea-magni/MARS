@@ -466,14 +466,16 @@ var
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
-    LClient.Assign(Client);
+    LClient.CloneSetup(Client);
+
     LApplication := TMARSClientApplication.Create(nil);
     try
-      LApplication.Assign(Application);
+      LApplication.CloneSetup(Application);
       LApplication.Client := LClient;
+
       LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
       try
-        LResource.Assign(Self);
+        LResource.CloneSetup(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
 
@@ -483,8 +485,8 @@ begin
             LOnException: TProc<Exception>;
           begin
             try
+              LOnException := nil;
               if Assigned(AOnException) then
-              begin
                 LOnException :=
                   procedure (AException: Exception)
                   begin
@@ -498,15 +500,12 @@ begin
                     else
                       AOnException(AException);
                   end;
-              end
-              else
-                LOnException := nil;
 
               LResource.DELETE(
                   ABeforeExecute
                 , procedure (AStream: TStream)
                   begin
-                    Assign(LResource);
+                    CloneStatus(LResource);
 
                     if Assigned(ACompletionHandler) then
                     begin
@@ -916,14 +915,16 @@ var
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
-    LClient.Assign(Client);
+    LClient.CloneSetup(Client);
+
     LApplication := TMARSClientApplication.Create(nil);
     try
-      LApplication.Assign(Application);
+      LApplication.CloneSetup(Application);
       LApplication.Client := LClient;
+
       LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
       try
-        LResource.Assign(Self);
+        LResource.CloneSetup(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
 
@@ -933,8 +934,8 @@ begin
             LOnException: TProc<Exception>;
           begin
             try
+              LOnException := nil;
               if Assigned(AOnException) then
-              begin
                 LOnException :=
                   procedure (AException: Exception)
                   begin
@@ -948,15 +949,12 @@ begin
                     else
                       AOnException(AException);
                   end;
-              end
-              else
-                LOnException := nil;
 
               LResource.PUT(
                 ABeforeExecute
               , procedure (AStream: TStream)
                 begin
-                  Assign(LResource);
+                  CloneStatus(LResource);
 
                   if Assigned(ACompletionHandler) then
                   begin
@@ -974,9 +972,9 @@ begin
               , LOnException
               );
             finally
-              LResource.Free;
-              LApplication.Free;
-              LClient.Free;
+              FreeAndNil(LResource);
+              FreeAndNil(LApplication);
+              FreeAndNil(LClient);
             end;
           end
         );
