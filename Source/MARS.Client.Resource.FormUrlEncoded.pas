@@ -113,7 +113,7 @@ begin
   if Assigned(LSource) then
   begin
     Response.Size := 0; // empty
-    Response.CopyFrom(LSource.Response);
+    Response.CopyFrom(LSource.Response, 0);
   end;
 end;
 
