@@ -180,6 +180,7 @@ type
 
     function ResponseAs<T: record>: T;
     function ResponseAsArray<T: record>: TArray<T>;
+    procedure CloneStatus(const ASource: TMARSClientCustomResource); override;
   published
     property Response: TJSONValue read FResponse write FResponse;
     property ResponseAsString;
@@ -233,12 +234,36 @@ var
 begin
   inherited AssignTo(Dest);
   LDest := Dest as TMARSClientResourceJSON;
-  LDest.FNotifyList.Clear;
-  for LNotifyEvent in FNotifyList do
-    LDest.FNotifyList.Add(LNotifyEvent);
+  if Assigned(LDest) then
+  begin
+    LDest.FNotifyList.Clear;
+    for LNotifyEvent in FNotifyList do
+      LDest.FNotifyList.Add(LNotifyEvent);
 
-  LDest.RefreshResponse(FResponse);
+    LDest.RefreshResponse(FResponse);
+  end;
 end;
+
+procedure TMARSClientResourceJSON.CloneStatus(
+  const ASource: TMARSClientCustomResource);
+var
+  LSource: TMARSClientResourceJSON;
+begin
+  inherited;
+  LSource := ASource as TMARSClientResourceJSON;
+  if Assigned(LSource) then
+  begin
+    if Assigned(LSource.Response) then
+    begin
+      FResponse := LSource.Response.Clone as TJSONValue;
+      FResponse.Owned := False;
+//      RefreshResponse(LSource.Response.Clone as TJSONValue)
+    end
+    else
+      RefreshResponse(TJSONValue(nil));
+  end;
+end;
+
 
 constructor TMARSClientResourceJSON.Create(AOwner: TComponent);
 begin
@@ -587,7 +612,10 @@ var
 begin
   FreeAndNil(FResponse);
   if Assigned(AContent) then
+  begin
     FResponse := AContent;
+    FResponse.Owned := False;
+  end;
 
   for LSubscriber in FNotifyList do
     LSubscriber(Self);

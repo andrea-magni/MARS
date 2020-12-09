@@ -136,6 +136,9 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    procedure CloneSetup(const ASource: TMARSClientCustomResource); virtual;
+    procedure CloneStatus(const ASource: TMARSClientCustomResource); virtual;
+
     // http verbs
     procedure GET(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
@@ -258,6 +261,7 @@ begin
   LDestResource.SpecificContentType := SpecificContentType;
   LDestResource.SpecificClient := SpecificClient;
   LDestResource.SpecificToken := SpecificToken;
+  LDestResource.SpecificURL := SpecificURL;
   LDestResource.Resource := Resource;
   LDestResource.CustomHeaders.Assign(CustomHeaders);
   LDestResource.PathParamsValues.Assign(PathParamsValues);
@@ -287,6 +291,20 @@ procedure TMARSClientCustomResource.BeforePUT(const AContent: TMemoryStream);
 begin
   ApplyCustomHeaders;
 
+end;
+
+procedure TMARSClientCustomResource.CloneSetup(
+  const ASource: TMARSClientCustomResource);
+begin
+  if not Assigned(ASource) then
+    Exit;
+
+  Assign(ASource);
+end;
+
+procedure TMARSClientCustomResource.CloneStatus(
+  const ASource: TMARSClientCustomResource);
+begin
 end;
 
 constructor TMARSClientCustomResource.Create(AOwner: TComponent);
@@ -766,14 +784,16 @@ var
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
-    LClient.Assign(Client);
+    LClient.CloneSetup(Client);
+
     LApplication := TMARSClientApplication.Create(nil);
     try
-      LApplication.Assign(Application);
+      LApplication.CloneSetup(Application);
       LApplication.Client := LClient;
+
       LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
       try
-        LResource.Assign(Self);
+        LResource.CloneSetup(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
 
@@ -806,7 +826,7 @@ begin
                 ABeforeExecute
               , procedure (AStream: TStream)
                 begin
-                  Assign(LResource);
+                  CloneStatus(LResource);
 
                   if Assigned(ACompletionHandler) then
                   begin

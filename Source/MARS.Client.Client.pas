@@ -75,10 +75,14 @@ type
     procedure EndorseAuthorization; virtual;
     procedure AuthEndorsementChanged; virtual;
     procedure BeforeExecute; virtual;
+
     property AuthToken: string read FAuthToken;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure CloneSetup(const ASource: TMARSCustomClient); virtual;
+//    procedure CloneStatus(const ASource: TMARSClientCustomClient); virtual;
 
     procedure ApplyCustomHeaders(const AHeaders: TStrings); virtual;
     procedure DoError(const AResource: TObject; const AException: Exception;
@@ -219,12 +223,12 @@ begin
 
   if Assigned(LDestClient) then
   begin
+    LDestClient.AuthCookieName := AuthCookieName;
     LDestClient.AuthEndorsement := AuthEndorsement;
     LDestClient.MARSEngineURL := MARSEngineURL;
     LDestClient.ConnectTimeout := ConnectTimeout;
     LDestClient.ReadTimeout := ReadTimeout;
     LDestClient.OnError := OnError;
-
     LDestClient.ProxyConfig.Assign(ProxyConfig);
   end;
 end;
@@ -244,6 +248,14 @@ end;
 class procedure TMARSCustomClient.ClearBeforeExecute;
 begin
   FBeforeExecuteProcs := [];
+end;
+
+procedure TMARSCustomClient.CloneSetup(const ASource: TMARSCustomClient);
+begin
+  if not Assigned(ASource) then
+    Exit;
+
+  Assign(ASource);
 end;
 
 constructor TMARSCustomClient.Create(AOwner: TComponent);
