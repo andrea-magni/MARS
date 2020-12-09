@@ -106,10 +106,10 @@ end;
 procedure TMARSClientResourceFormUrlEncoded.CloneStatus(
   const ASource: TMARSClientCustomResource);
 var
-  LSource: TMARSClientResourceFormData;
+  LSource: TMARSClientResourceFormUrlEncoded;
 begin
   inherited;
-  LSource := ASource as TMARSClientResourceFormData;
+  LSource := ASource as TMARSClientResourceFormUrlEncoded;
   if Assigned(LSource) then
   begin
     Response.Size := 0; // empty
