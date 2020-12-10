@@ -37,11 +37,15 @@ type
       const AArgument: T): IMARSClientSyncParams;
   public
     function POST(const AJSONValue: TJSONValue): IMARSClientSyncParams; overload;
+{$ifdef Delphi10Tokyo_UP}
     function POST<R: record>(const ARecord: R): IMARSClientSyncParams; overload;
     function POST<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientSyncParams; overload;
+{$endif}
     function PUT(const AJSONValue: TJSONValue): IMARSClientSyncParams; overload;
+{$ifdef Delphi10Tokyo_UP}
     function PUT<R: record>(const ARecord: R): IMARSClientSyncParams; overload;
     function PUT<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientSyncParams; overload;
+{$endif}
   end;
 
   // A namespace for async fluent calls to a JSON resource.
@@ -62,11 +66,15 @@ type
       const AArgument: T): IMARSClientAsyncParams;
   public
     function POST(const AJSONValue: TJSONValue): IMARSClientAsyncParams; overload;
+{$ifdef Delphi10Tokyo_UP}
     function POST<R: record>(const ARecord: R): IMARSClientAsyncParams; overload;
     function POST<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientAsyncParams; overload;
+{$endif}
     function PUT(const AJSONValue: TJSONValue): IMARSClientAsyncParams; overload;
+{$ifdef Delphi10Tokyo_UP}
     function PUT<R: record>(const ARecord: R): IMARSClientAsyncParams; overload;
     function PUT<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientAsyncParams; overload;
+{$endif}
   end;
 
 {$ENDREGION}
@@ -675,6 +683,7 @@ begin
   Result := Call<TJSONValue>(LResource.POSTAsync, AJSONValue);
 end;
 
+{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONAsync.POST<R>(const ARecord: R): IMARSClientAsyncParams;
 var
   LResource: TMARSClientResourceJSON;
@@ -703,6 +712,7 @@ begin
         AParams.Synchronize);
     end);
 end;
+{$endif}
 
 function TMARSClientResourceJSONAsync.PUT(
   const AJSONValue: TJSONValue): IMARSClientAsyncParams;
@@ -715,6 +725,7 @@ begin
   Result := Call<TJSONValue>(LResource.PUTAsync, AJSONValue);
 end;
 
+{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONAsync.PUT<R>(
   const ARecord: R): IMARSClientAsyncParams;
 var
@@ -744,6 +755,7 @@ begin
         AParams.Synchronize);
     end);
 end;
+{$endif}
 
 { TMARSClientResourceJSONSync }
 
@@ -773,6 +785,7 @@ begin
   Result := Call<TJSONValue>(LResource.POST, AJSONValue);
 end;
 
+{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONSync.POST<R>(
   const AArrayOfRecord: TArray<R>): IMARSClientSyncParams;
 var
@@ -790,6 +803,7 @@ begin
         AParams.OnExceptionHandler);
     end);
 end;
+{$endif}
 
 function TMARSClientResourceJSONSync.PUT(
   const AJSONValue: TJSONValue): IMARSClientSyncParams;
@@ -802,6 +816,7 @@ begin
   Result := Call<TJSONValue>(LResource.PUT, AJSONValue);
 end;
 
+{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONSync.PUT<R>(
   const ARecord: R): IMARSClientSyncParams;
 var
@@ -841,7 +856,7 @@ begin
   LResource := FResource;
   Result := Call<R>(LResource.POST<R>, ARecord);
 end;
+{$endif}
 {$ENDREGION}
 
 end.
-
