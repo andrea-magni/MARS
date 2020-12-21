@@ -78,11 +78,13 @@ type
     function GetContentEncoding: string; inline;
     function GetContentStream: TStream; inline;
     function GetContentType: string; inline;
+    function GetContentLength: Integer; inline;
     function GetStatusCode: Integer; inline;
     procedure SetContent(const AContent: string); inline;
     procedure SetContentEncoding(const AContentEncoding: string); inline;
     procedure SetContentStream(const AContentStream: TStream); inline;
     procedure SetContentType(const AContentType: string); inline;
+    procedure SetContentLength(const ALength: Integer); inline;
     procedure SetHeader(const AName: string; const AValue: string); inline;
     procedure SetStatusCode(const AStatusCode: Integer); inline;
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); inline;
@@ -510,6 +512,11 @@ begin
   Result := FWebResponse.ContentEncoding;
 end;
 
+function TMARSWebResponse.GetContentLength: Integer;
+begin
+  Result := FWebResponse.ContentLength;
+end;
+
 function TMARSWebResponse.GetContentStream: TStream;
 begin
   Result := FWebResponse.ContentStream;
@@ -533,6 +540,11 @@ end;
 procedure TMARSWebResponse.SetContentEncoding(const AContentEncoding: string);
 begin
   FWebResponse.ContentEncoding := AContentEncoding;
+end;
+
+procedure TMARSWebResponse.SetContentLength(const ALength: Integer);
+begin
+  FWebResponse.ContentLength := ALength;
 end;
 
 procedure TMARSWebResponse.SetContentStream(const AContentStream: TStream);
