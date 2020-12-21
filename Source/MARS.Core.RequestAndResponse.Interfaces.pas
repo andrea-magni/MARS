@@ -68,6 +68,8 @@ type
     procedure SetContentStream(const AContentStream: TStream);
     function GetContentType: string;
     procedure SetContentType(const AContentType: string);
+    function GetContentLength: Integer;
+    procedure SetContentLength(const ALength: Integer);
     function GetContentEncoding: string;
     procedure SetContentEncoding(const AContentEncoding: string);
     function GetStatusCode: Integer;
@@ -81,6 +83,7 @@ type
     property Content: string read GetContent write SetContent;
     property ContentStream: TStream read GetContentStream write SetContentStream;
     property ContentType: string read GetContentType write SetContentType;
+    property ContentLength: Integer read GetContentLength write SetContentLength;
     property ContentEncoding: string read GetContentEncoding write SetContentEncoding;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
   end;

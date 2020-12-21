@@ -120,10 +120,11 @@ implementation
 
 uses
   IOUTils
-  , MARS.Core.Utils
-  , MARS.Core.Exceptions
-  , MARS.Rtti.Utils
-  , MARS.DelphiRazor.InjectionService
+, MARS.Core.Utils
+, MARS.Core.Exceptions
+, MARS.Rtti.Utils
+, MARS.DelphiRazor.InjectionService
+, MARS.Core.RequestAndResponse.Interfaces, MARS.http.Server.Indy
 ;
 
   { TMARSDelphiRazor }
@@ -339,9 +340,12 @@ end;
 function TMARSDelphiRazor.ProcessRequest(const AErrorIfNotFound: Boolean = True): string;
 var
   LFound: Boolean;
+  LMARSWebRequest: TMARSWebRequest;
 begin
   LFound := False;
-  Result := RazorEngine.ProcessRequest(Activation.Request
+  LMARSWebRequest := Activation.Request.AsObject as TMARSWebRequest;
+
+  Result := RazorEngine.ProcessRequest(LMARSWebRequest.WebRequest
     , LFound
     , UserLoggedIn
     , UserLanguageID
