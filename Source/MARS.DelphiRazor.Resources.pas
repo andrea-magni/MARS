@@ -21,7 +21,7 @@ uses
 
 
   , Web.HttpApp
-  , RlxRazor
+  , RlxRazorMARS
   ;
 type
   RazorAttribute = class(MARSAttribute);

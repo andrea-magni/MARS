@@ -24,7 +24,7 @@ uses
   , MARS.Utils.Parameters
   , MARS.Core.Activation.Interfaces
 
-  , RlxRazor
+  , RlxRazorMARS
 ;
 
 type
@@ -62,6 +62,7 @@ type
   private
     FActivation: IMARSActivation;
     FRazorEngine: TRlxRazorEngine;
+    FRazorProc: TRlxRazorProcessor;
     FName: string;
     FApplication: TMARSApplication;
     FParameters: TMARSParameters;
@@ -161,6 +162,7 @@ end;
 
 destructor TMARSDelphiRazor.Destroy;
 begin
+  FreeAndNil(FRazorProc);
   FreeAndNil(FParameters);
   FreeAndNil(FRazorEngine);
   inherited;
@@ -170,6 +172,9 @@ function TMARSDelphiRazor.DoBlock(const AContent: string; const AEncoding: TEnco
 var
   LRazorProc: TRlxRazorProcessor;
 begin
+//  if not Assigned(FRazorProc) then
+//    FRazorProc := TRlxRazorProcessor.Create(nil);
+//  LRazorProc := FRazorProc;
   LRazorProc := TRlxRazorProcessor.Create(nil);
   try
     LRazorProc.RazorEngine := RazorEngine;
@@ -185,7 +190,7 @@ begin
 //    ConnectObjectForPath (execData);
 //    LRazorProc.Request := Request; // passed manually
 //    Result := LRazorProc.Content;
-    Result := LRazorProc.DoBlock(AContent, AEncoding)
+    Result := LRazorProc.DoBlock(RawByteString(AContent), AEncoding)
   finally
     LRazorProc.Free;
   end;
