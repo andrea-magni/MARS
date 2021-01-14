@@ -341,9 +341,15 @@ function TMARSDelphiRazor.ProcessRequest(const AErrorIfNotFound: Boolean = True)
 var
   LFound: Boolean;
   LMARSWebRequest: TMARSWebRequest;
+  LRequest: IMARSRequest;
+  LResponse: IMARSResponse;
 begin
   LFound := False;
-  LMARSWebRequest := Activation.Request.AsObject as TMARSWebRequest;
+
+  LRequest := Activation.Request;
+  LMARSWebRequest := LRequest.AsObject as TMARSWebRequest;
+
+  LResponse := Activation.Response;
 
   Result := RazorEngine.ProcessRequest(LMARSWebRequest.WebRequest
     , LFound
@@ -352,6 +358,16 @@ begin
     , ''
     , UserRoles
   );
+
+  if LRequest.RawPath.EndsWith('.html', True) or LRequest.RawPath.EndsWith('.htm', True) then
+    LResponse.ContentType := TMediaType.TEXT_HTML
+  else if LRequest.RawPath.EndsWith('.js', True) then
+    LResponse.ContentType := 'application/javascript'
+  else
+    LResponse.ContentType := '*/*';
+
+  LResponse.Content := Result;
+
   if (not LFound) and AErrorIfNotFound then
     raise EMARSHttpException.Create('File not found', 404);
 end;
