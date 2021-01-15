@@ -348,13 +348,14 @@ begin
   LAdded := [];
   for LIndex := Low(LMediaArray) to High(LMediaArray) do
   begin
-    LMediaStr := LMediaArray[LIndex];
+    LMediaStr := Trim(LMediaArray[LIndex]);
 
     if IndexText(LMediaStr, LAdded) = -1 then
     begin
       LMediaType := TMediaType.Create(LMediaStr);
       LMediaType.PFactor := LLength - LIndex;
       FMediaTypeList.Add(LMediaType);
+      LAdded := LAdded + [LMediaStr];
     end
     else LLength := LLength - 1;
   end;
