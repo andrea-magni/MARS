@@ -74,11 +74,13 @@ type
     // IMARSResponse -----------------------------------------------------------
     function GetContent: string;
     function GetContentEncoding: string;
+    function GetContentLength: Integer;
     function GetContentStream: TStream;
     function GetContentType: string;
     function GetStatusCode: Integer;
     procedure SetContent(const AContent: string);
     procedure SetContentEncoding(const AContentEncoding: string);
+    procedure SetContentLength(const ALength: Integer);
     procedure SetContentStream(const AContentStream: TStream);
     procedure SetContentType(const AContentType: string);
     procedure SetHeader(const AName: string; const AValue: string);
@@ -231,7 +233,6 @@ end;
 
 function TMARSDCSRequest.GetContentFields: TArray<string>;
 var
-  LHeader: TNameValue;
   LMultiPartBody: THttpMultiPartFormData;
   LIndex: Integer;
   LFormField: TFormField;
@@ -624,6 +625,11 @@ begin
   Result := '';
 end;
 
+function TMARSDCSResponse.GetContentLength: Integer;
+begin
+  Result := -1;
+end;
+
 function TMARSDCSResponse.GetContentStream: TStream;
 begin
 //AM TODO
@@ -653,6 +659,11 @@ end;
 procedure TMARSDCSResponse.SetContentEncoding(const AContentEncoding: string);
 begin
 //AM TODO
+end;
+
+procedure TMARSDCSResponse.SetContentLength(const ALength: Integer);
+begin
+  // unsupported
 end;
 
 procedure TMARSDCSResponse.SetContentStream(const AContentStream: TStream);
