@@ -10,12 +10,9 @@ unit Server.Ignition;
 interface
 
 uses
-  System.Classes,
-  System.SysUtils,
-  System.RTTI,
-  System.ZLib,
-  System.StrUtils,
-  MARS.Core.Engine;
+  System.Classes, System.SysUtils, System.RTTI, System.StrUtils, System.ZLib
+, MARS.Core.Engine
+;
 
 type
   TServerEngine=class

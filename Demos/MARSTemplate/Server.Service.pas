@@ -13,15 +13,12 @@ uses
 {$ifdef DelphiXE3_UP}
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, Vcl.Graphics
 , Vcl.Controls, Vcl.SvcMgr, Vcl.Dialogs
-//, IPPeerServer, IPPeerAPI
-, IdHTTPWebBrokerBridge, Web.WebReq, Web.WebBroker
+, MARS.http.Server.Indy
 {$else}
   Windows, Messages, SysUtils, Classes, Graphics
 , Controls, SvcMgr, Dialogs
-//, IPPeerServer, IPPeerAPI
-, IdHTTPWebBrokerBridge, WebReq, WebBroker
+, MARS.http.Server.Indy
 {$endif}
-, IdContext
 ;
 
 type
@@ -31,16 +28,9 @@ type
     procedure ServiceStart(Sender: TService; var Started: Boolean);
     procedure ServiceStop(Sender: TService; var Stopped: Boolean);
   private
-    FServer: TIdHTTPWebBrokerBridge;
-
-    procedure ParseAuthenticationHandler(AContext: TIdContext;
-      const AAuthType, AAuthData: String; var VUsername, VPassword: String;
-      var VHandled: Boolean); virtual;
-
+    FServer: TMARShttpServerIndy;
   public
     function GetServiceController: TServiceController; override;
-
-    const DEFAULT_PORT = 8080;
   end;
 
 var
@@ -66,15 +56,6 @@ begin
   Result := ServiceController;
 end;
 
-procedure TServerService.ParseAuthenticationHandler(AContext: TIdContext;
-  const AAuthType, AAuthData: String; var VUsername, VPassword: String;
-  var VHandled: Boolean);
-begin
-  // Allow JWT Bearer authentication's scheme
-  if SameText(AAuthType, 'Bearer') then
-    VHandled := True;
-end;
-
 procedure TServerService.ServiceCreate(Sender: TObject);
 var
   LScheduler: TIdSchedulerOfThreadPool;
@@ -82,24 +63,23 @@ begin
   Name := TServerEngine.Default.Parameters.ByNameText('ServiceName', Name).AsString;
   DisplayName := TServerEngine.Default.Parameters.ByNameText('ServiceDisplayName', DisplayName).AsString;
 
-  if WebRequestHandler <> nil then
-    WebRequestHandler.WebModuleClass := WebModuleClass;
-
-  FServer := TIdHTTPWebBrokerBridge.Create(nil);
+  FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    FServer.DefaultPort := TServerEngine.Default.Port;
+    // to enable Indy standalone SSL -----------------------------------------------
+    //------------------------------------------------------------------------------
+    // Set the following Engine parameters:
+    //     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+    //     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+    //     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+    // change default port and setup a proper IOHandler, SSL enabled
+//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
+//    LServer.SetupSSLIOHandler();
+    // if needed, setup additional event handlers or properties
+//        FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//        FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//        FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+    //------------------------------------------------------------------------------
 
-    LScheduler := TIdSchedulerOfThreadPool.Create(FServer);
-    try
-      LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
-      FServer.Scheduler := LScheduler;
-      FServer.MaxConnections := LScheduler.PoolSize;
-      FServer.OnParseAuthentication := ParseAuthenticationHandler;
-    except
-      FServer.Scheduler.Free;
-      FServer.Scheduler := nil;
-      raise;
-    end;
   except
     FServer.Free;
     raise;

@@ -10,13 +10,15 @@ unit MARS.http.Server.Indy;
 interface
 
 uses
-  Classes, SysUtils, TimeSpan, SyncObjs
-
-  , IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
-  , IdSchedulerOfThreadPool
-  , idHTTPWebBrokerBridge
-  , Web.HttpApp
-  , MARS.Core.Engine, MARS.Core.Token, MARS.Core.RequestAndResponse.Interfaces
+  Classes, SysUtils, TimeSpan, SyncObjs, Web.HttpApp
+// Indy
+, IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
+, IdSchedulerOfThreadPool
+, idHTTPWebBrokerBridge
+// to enable standalone SSL
+, IdBaseComponent, IdComponent, IdServerIOHandler, IdSSL, IdSSLOpenSSL
+// MARS
+, MARS.Core.Engine, MARS.Core.Token, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -114,6 +116,7 @@ type
     FStoppedAt: TDateTime;
     FBeforeCommandGet: TBeforeCommandGetFunc;
     function GetUpTime: TTimeSpan;
+    function GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
   protected
     procedure SetCookies(const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse); virtual;
     procedure Startup; override;
@@ -130,10 +133,17 @@ type
     procedure SetupThreadPooling(const APoolSize: Integer = 25);
   public
     constructor Create(AEngine: TMARSEngine); virtual;
+
+    procedure SetupSSLIOHandler(
+      const ASSLVersion: TIdSSLVersion = sslvSSLv23;
+      const AMode: TIdSSLMode = sslmServer
+    );
+
     property Engine: TMARSEngine read FEngine;
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
+    property SSLIOHandler: TIdServerIOHandlerSSLOpenSSL read GetSSLIOHandler;
 
     property BeforeCommandGet: TBeforeCommandGetFunc read FBeforeCommandGet write FBeforeCommandGet;
   end;
@@ -206,6 +216,11 @@ begin
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
 end;
 
+function TMARShttpServerIndy.GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
+begin
+  Result := IOHandler as TIdServerIOHandlerSSLOpenSSL;
+end;
+
 function TMARShttpServerIndy.GetUpTime: TTimeSpan;
 begin
   if Active then
@@ -249,6 +264,34 @@ begin
     LIdCookie.Value := LCookie.Value;
     LIdCookie.HttpOnly := True;
   end;
+end;
+
+procedure TMARShttpServerIndy.SetupSSLIOHandler(
+  const ASSLVersion: TIdSSLVersion = sslvSSLv23;
+  const AMode: TIdSSLMode = sslmServer
+);
+var
+  LIOHandler: TIdServerIOHandlerSSLOpenSSL;
+begin
+  LIOHandler := TIdServerIOHandlerSSLOpenSSL.Create(self);
+  try
+    LIOHandler.SSLOptions.RootCertFile := FEngine.Parameters.ByName('Indy.SSL.RootCertFile', 'localhost.pem').AsString;
+    LIOHandler.SSLOptions.CertFile := FEngine.Parameters.ByName('Indy.SSL.CertFile', 'localhost.crt').AsString;
+    LIOHandler.SSLOptions.KeyFile := FEngine.Parameters.ByName('Indy.SSL.KeyFile', 'localhost.key').AsString;
+
+    LIOHandler.SSLOptions.Method := ASSLVersion;
+    LIOHandler.SSLOptions.Mode := AMode;
+
+//    LIOHandler.SSLOptions.VerifyDepth := 1;
+//    LIOHandler.SSLOptions.VerifyMode := [sslvrfPeer,sslvrfFailIfNoPeerCert,sslvrfClientOnce];
+//    LIOHandler.OnGetPassword := OnGetPassword;
+//    LIOHandler.OnVerifyPeer := OnVerifyPeer;
+  except
+    LIOHandler.Free;
+    raise;
+  end;
+
+  IOHandler := LIOHandler;
 end;
 
 procedure TMARShttpServerIndy.SetupThreadPooling(const APoolSize: Integer);

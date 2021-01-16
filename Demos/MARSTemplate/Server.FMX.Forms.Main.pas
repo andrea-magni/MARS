@@ -11,7 +11,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
   FMX.Controls.Presentation, FMX.Edit, FMX.Layouts, System.Actions, FMX.ActnList
-  , MARS.http.Server.Indy
+, MARS.http.Server.Indy
 ;
 
 type
@@ -70,7 +70,20 @@ begin
   // http server implementation
   FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    FServer.DefaultPort := TServerEngine.Default.Port;
+// to enable Indy standalone SSL -----------------------------------------------
+//------------------------------------------------------------------------------
+// Set the following Engine parameters:
+//     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+//     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+//     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+// change default port and setup a proper IOHandler, SSL enabled
+//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
+//    FServer.SetupSSLIOHandler();
+// if needed, setup additional event handlers or properties
+//    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//    FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+//------------------------------------------------------------------------------
     FServer.Active := True;
   except
     FServer.Free;

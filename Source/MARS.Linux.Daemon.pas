@@ -14,15 +14,13 @@ interface
 uses
   Classes, SysUtils
 , Posix.Stdlib, Posix.SysStat, Posix.SysTypes, Posix.Unistd, Posix.Signal, Posix.Fcntl
-, IdHTTPWebBrokerBridge, IdSchedulerOfThreadPool, IdContext
+, MARS.http.Server.Indy
 ;
 
 const EXIT_CODE_SUCCESS = 0;
 const EXIT_CODE_FAILURE = 1;
 
 type
-  TDummyIndyServer = class; // fwd
-
   TLinuxDaemon = class
   private
     FTerminated: Boolean;
@@ -45,9 +43,7 @@ type
   private
     FName: string;
   protected
-    FServer: TIdHTTPWebBrokerBridge;
-    FDummyIndy: TDummyIndyServer;
-    FScheduler: TIdSchedulerOfThreadPool;
+    FServer: TMARShttpServerIndy;
 
     procedure DoExecute; override;
     procedure DoLog(const AMsg: string); override;
@@ -67,21 +63,13 @@ type
     class constructor ClassCreate;
   end;
 
-  TDummyIndyServer = class
-  public
-    procedure ParseAuthenticationHandler(AContext: TIdContext;
-      const AAuthType, AAuthData: String; var VUsername, VPassword: String;
-      var VHandled: Boolean); virtual;
-  end;
-
   procedure SignalsHandler(ASigNum: Integer); cdecl;
 
 implementation
 
 uses
   Types, StrUtils
-, WebReq, WebBroker
-, Server.Ignition, Server.WebModule
+, Server.Ignition
 ;
 
 procedure SignalsHandler(ASigNum: Integer); cdecl;
@@ -199,25 +187,28 @@ end;
 procedure TMARSDaemon.DoExecute;
 begin
   inherited;
-  if WebRequestHandler <> nil then
-    WebRequestHandler.WebModuleClass := WebModuleClass;
-
-  FDummyIndy := TDummyIndyServer.Create;
+  FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    FServer := TIdHTTPWebBrokerBridge.Create(nil);
-    try
-      FServer.OnParseAuthentication := FDummyIndy.ParseAuthenticationHandler;
+    // to enable Indy standalone SSL -----------------------------------------------
+    //------------------------------------------------------------------------------
+    // Set the following Engine parameters:
+    //     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+    //     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+    //     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+    // change default port and setup a proper IOHandler, SSL enabled
+//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
+//    FServer.SetupSSLIOHandler();
+    // if needed, setup additional event handlers or properties
+//        FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//        FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//        FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+    //------------------------------------------------------------------------------
 
-//      SetupThreadScheduler;
-      StartServer;
+    StartServer;
 
-      IdleCycle;
-
-    finally
-      FServer.Free;
-    end;
+    IdleCycle;
   finally
-    FDummyIndy.Free;
+    FServer.Free;
   end;
 end;
 
@@ -255,20 +246,6 @@ begin
   DoLog(AMsg);
 end;
 
-procedure TMARSDaemon.SetupThreadScheduler;
-begin
-  FScheduler := TIdSchedulerOfThreadPool.Create(FServer);
-  try
-    FScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
-    FServer.Scheduler := FScheduler;
-    FServer.MaxConnections := FScheduler.PoolSize;
-  except
-    FServer.Scheduler.Free;
-    FServer.Scheduler := nil;
-    raise;
-  end;
-end;
-
 procedure TMARSDaemon.Start;
 begin
   Log('Starting...');
@@ -277,24 +254,12 @@ end;
 
 procedure TMARSDaemon.StartServer;
 begin
-  FServer.DefaultPort := TServerEngine.Default.Port;
   FServer.Active := True;
 end;
 
 procedure TMARSDaemon.StopServer;
 begin
   FServer.Active := False;
-end;
-
-{ TDummyIndyServer }
-
-procedure TDummyIndyServer.ParseAuthenticationHandler(AContext: TIdContext;
-  const AAuthType, AAuthData: String; var VUsername, VPassword: String;
-  var VHandled: Boolean);
-begin
-  // Allow JWT Bearer authentication's scheme
-  if SameText(AAuthType, 'Bearer') then
-    VHandled := True;
 end;
 
 {$ENDIF}
