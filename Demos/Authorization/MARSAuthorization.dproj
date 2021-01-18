@@ -7,7 +7,7 @@
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-        <ProjectVersion>18.5</ProjectVersion>
+        <ProjectVersion>19.1</ProjectVersion>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>1</TargetedPlatforms>
     </PropertyGroup>
@@ -51,7 +51,7 @@
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <DCC_NameSpace>Web;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Soap;Winapi;$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace)</DCC_NameSpace>
+        <DCC_NameSpace>Web;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Soap;Winapi;$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace);$(DCC_NameSpace)</DCC_NameSpace>
         <DCC_E>false</DCC_E>
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <DCC_F>false</DCC_F>

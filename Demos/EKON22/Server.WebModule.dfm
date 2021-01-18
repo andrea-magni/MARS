@@ -1,4 +1,4 @@
-﻿object ServerWebModule: TServerWebModule
+object ServerWebModule: TServerWebModule
   OldCreateOrder = False
   Actions = <
     item

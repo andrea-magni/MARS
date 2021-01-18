@@ -9,9 +9,9 @@ unit Server.Forms.Main;
 
 interface
 
-uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
-  , System.Actions
-  , MARS.http.Server.Indy
+uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls,
+  System.Actions
+, MARS.http.Server.Indy
 ;
 
 type
@@ -47,10 +47,10 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils, Web.HttpApp
-  , MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
-  , MARS.Core.Registry.Utils
-  , Server.Ignition
+  StrUtils, IOUtils
+, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
+, MARS.Core.Registry.Utils
+, Server.Ignition
 ;
 
 procedure TMainForm.RenderEngines(const ATreeView: TTreeView);
@@ -107,8 +107,8 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   PortNumberEdit.Text := IntToStr(TServerEngine.Default.Port);
-  RenderEngines(MainTreeView);
   StartServerAction.Execute;
+  RenderEngines(MainTreeView);
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);
@@ -121,7 +121,20 @@ begin
   // http server implementation
   FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    FServer.DefaultPort := TServerEngine.Default.Port;
+// to enable Indy standalone SSL -----------------------------------------------
+//------------------------------------------------------------------------------
+// Set the following Engine parameters:
+//     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+//     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+//     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+// change default port and setup a proper IOHandler, SSL enabled
+//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
+//    FServer.SetupSSLIOHandler();
+// if needed, setup additional event handlers or properties
+//    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//    FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+//------------------------------------------------------------------------------
     FServer.Active := True;
   except
     FServer.Free;
@@ -146,3 +159,4 @@ begin
 end;
 
 end.
+
