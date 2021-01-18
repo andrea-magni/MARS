@@ -10,8 +10,7 @@ interface
 uses
   System.SysUtils, System.Classes, MARS.Client.CustomResource,
   MARS.Client.Resource, MARS.Client.Resource.JSON, MARS.Client.Application,
-  MARS.Client.Client, MARS.Client.SubResource, MARS.Client.SubResource.JSON,
-  MARS.Client.Messaging.Resource, System.JSON, MARS.Metadata, MARS.Metadata.JSON,
+  MARS.Client.Client, System.JSON, MARS.Metadata, MARS.Metadata.JSON,
   MARS.Client.Client.Indy
 ;
 
