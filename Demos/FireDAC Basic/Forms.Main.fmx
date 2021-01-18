@@ -23,8 +23,8 @@ object Form1: TForm1
     TabOrder = 4
     RowHeight = 21.000000000000000000
     RowCount = 42
-    Viewport.Width = 637.000000000000000000
-    Viewport.Height = 410.000000000000000000
+    Viewport.Width = 621.000000000000000000
+    Viewport.Height = 394.000000000000000000
   end
   object Layout1: TLayout
     Align = Top
@@ -69,15 +69,18 @@ object Form1: TForm1
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 0
     ReadTimeout = -1
+    AuthCookieName = 'access_token'
+    ProxyConfig.Enabled = False
+    ProxyConfig.Port = 0
     ProtocolVersion = pv1_1
-    HttpClient.AllowCookies = True
     HttpClient.ProxyParams.BasicAuthentication = False
     HttpClient.ProxyParams.ProxyPort = 0
     HttpClient.Request.ContentLength = -1
     HttpClient.Request.ContentRangeEnd = -1
     HttpClient.Request.ContentRangeStart = -1
     HttpClient.Request.ContentRangeInstanceLength = -1
-    HttpClient.Request.Accept = 'application/json-firedac'
+    HttpClient.Request.ContentType = 'application/json-firedac'
+    HttpClient.Request.Accept = 'application/json-firedac,application/json'
     HttpClient.Request.BasicAuthentication = False
     HttpClient.Request.Host = 'localhost:8080'
     HttpClient.Request.UserAgent = 'Mozilla/3.0 (compatible; Indy Library)'
@@ -89,7 +92,7 @@ object Form1: TForm1
   end
   object MARSClientApplication1: TMARSClientApplication
     DefaultMediaType = 'application/json'
-    AppName = 'default'
+    DefaultContentType = 'application/json'
     Client = MARSClient1
     Left = 688
     Top = 120
@@ -97,6 +100,7 @@ object Form1: TForm1
   object MARSFDResource1: TMARSFDResource
     Application = MARSClientApplication1
     SpecificAccept = 'application/json-firedac,application/json'
+    SpecificContentType = 'application/json-firedac'
     Resource = 'maindata'
     ResourceDataSets = <
       item
@@ -111,6 +115,7 @@ object Form1: TForm1
   end
   object employee1: TFDMemTable
     ActiveStoredUsage = []
+    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll

@@ -8,25 +8,15 @@
 interface
 
 uses
-  Classes, SysUtils
+  Classes, SysUtils, System.Rtti, Data.DB
 
-  , System.Rtti
+, FireDAC.Phys.FB, FireDAC.Comp.Client, FireDAC.Comp.DataSet
 
-  , MARS.Core.JSON
-  , MARS.Core.Registry
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-
-  , MARS.Core.Token
-  , MARS.Core.Token.Resource
-
-  , MARS.Data.MessageBodyWriters
-
-  , MARS.Data.FireDAC, MARS.Data.FireDAC.Resources
-  , FireDAC.Phys.FB, FireDAC.Comp.Client, FireDAC.Comp.DataSet
-
-  , Data.DB
-  ;
+, MARS.Core.JSON, MARS.Core.Registry, MARS.Core.Attributes, MARS.Core.MediaType
+, MARS.Core.Token, MARS.Core.Token.Resource
+, MARS.Data.MessageBodyWriters
+, MARS.Data.FireDAC, MARS.Data.FireDAC.Resources
+;
 
 type
   [  Connection('MAIN_DB'), Path('fdresource')
@@ -38,8 +28,7 @@ type
   [Path('fdsimple')]
   TSimpleResource = class
   protected
-    [Context]
-    FD: TMARSFireDAC;
+    [Context] FD: TMARSFireDAC;
   public
     [GET]
     function GetData: TArray<TFDDataSet>;

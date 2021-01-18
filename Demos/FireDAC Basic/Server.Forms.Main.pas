@@ -10,21 +10,15 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, System.Actions, Vcl.ActnList,
-  Vcl.StdCtrls, Vcl.ExtCtrls
+  Vcl.StdCtrls, Vcl.ExtCtrls, System.Diagnostics, IdContext
 
-  , System.Diagnostics
-  , IdContext
-
-  , MARS.Core.Engine
-  , MARS.http.Server.Indy
-  {$IFDEF MSWINDOWS}
-  , MARS.mORMotJWT.Token
-  {$ELSE}
-  , MARS.JOSEJWT.Token
-  {$ENDIF}
-
-  , MARS.Core.Application
-  ;
+, MARS.Core.Engine, MARS.Core.Application, MARS.http.Server.Indy
+{$IFDEF MSWINDOWS}
+, MARS.mORMotJWT.Token
+{$ELSE}
+, MARS.JOSEJWT.Token
+{$ENDIF}
+;
 
 type
   TMainForm = class(TForm)
@@ -58,12 +52,11 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
-  , MARS.Data.MessageBodyWriters
-  , MARS.Data.FireDAC, MARS.Data.FireDAC.ReadersAndWriters
-  , MARS.Utils.Parameters
-  , MARS.Utils.Parameters.IniFile
-  ;
+  MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
+, MARS.Data.MessageBodyWriters
+, MARS.Data.FireDAC, MARS.Data.FireDAC.ReadersAndWriters
+, MARS.Utils.Parameters, MARS.Utils.Parameters.IniFile
+;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
