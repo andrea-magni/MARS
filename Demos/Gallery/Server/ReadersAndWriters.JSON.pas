@@ -3,13 +3,10 @@ unit ReadersAndWriters.JSON;
 interface
 
 uses
-    Classes, SysUtils, Rtti
-  , MARS.Core.Classes
-  , MARS.Core.Attributes
-  , MARS.Core.MessageBodyWriter
-  , MARS.Core.MediaType
-  , MARS.Core.Activation.Interfaces
-  ;
+  Classes, SysUtils, Rtti
+, MARS.Core.Classes, MARS.Core.Attributes, MARS.Core.MessageBodyWriter
+, MARS.Core.MediaType, MARS.Core.Activation.Interfaces
+;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -29,12 +26,9 @@ type
 implementation
 
 uses
-    MARS.Rtti.Utils
-  , MARS.Core.JSON
-  , MARS.Core.Declarations
-  , Gallery.Model
-  , Rest.JSON
-  , Gallery.Model.JSON;
+  MARS.Rtti.Utils, MARS.Core.JSON, MARS.Core.Declarations, Gallery.Model
+, Rest.JSON, Gallery.Model.JSON
+;
 
 { TCategoryWriter }
 
