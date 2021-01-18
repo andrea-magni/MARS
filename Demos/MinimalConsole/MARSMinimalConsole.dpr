@@ -5,12 +5,8 @@
 {$R *.res}
 
 uses
-  Scalemm2,
-  System.SysUtils,
-  SyncObjs,
-  Windows,
-  DateUtils,
-  StrUtils,
+//  Scalemm2,
+  System.SysUtils, SyncObjs, Windows, DateUtils, StrUtils,
   MARS.Core.Engine,
   MARS.http.Server.Indy,
   MARS.mORMotJWT.Token,
@@ -112,42 +108,51 @@ begin
   // ----------------------------------
   // Build and configure the engine and server
   FEngine := TMARSEngine.Create;
-  FEngine.BasePath := '/rest';
-  FEngine. ThreadPoolSize := 20;
-  FEngine.Port := 8080;
-  FEngine.AddApplication('DefaultAPI', '/default', ['*.THelloWorldResource']);
-  FServer := TMARShttpServerIndy.Create(FEngine);
-  // ----------------------------------
-  // Logging
-  FRequestCount := 0;
-  FSetupTime := 0;
-  FInvocationTime := 0;
-  TMARSActivation.RegisterAfterInvoke(
-    procedure(const AActivation: IMARSActivation)
-    begin
-      TInterlocked.Increment(FRequestCount);
-      TInterlocked.Add(FSetupTime, AActivation.SetupTime.ElapsedMilliseconds);
-      TInterlocked.Add(FInvocationTime, AActivation.InvocationTime.ElapsedMilliseconds);
-    end
-  );
-  // ----------------------------------
-  // Run REST server
-  FServer.Active := True;
-  Writeln('HelloWorld resource URL:');
-  Writeln('  http://localhost:8080/rest/default/helloworld/');
-  ExecuteUntilEnterKeyPressed(
-    procedure
-    begin
+  try
+    FEngine.BasePath := '/rest';
+    FEngine. ThreadPoolSize := 20;
+    FEngine.Port := 8080;
+    FEngine.AddApplication('DefaultAPI', '/default', ['*.THelloWorldResource']);
+
+    FServer := TMARShttpServerIndy.Create(FEngine);
+    try
+      // ----------------------------------
+      // Logging
+      FRequestCount := 0;
+      FSetupTime := 0;
+      FInvocationTime := 0;
+
+      TMARSActivation.RegisterAfterInvoke(
+        procedure(const AActivation: IMARSActivation)
+        begin
+          TInterlocked.Increment(FRequestCount);
+          TInterlocked.Add(FSetupTime, AActivation.SetupTime.ElapsedMilliseconds);
+          TInterlocked.Add(FInvocationTime, AActivation.InvocationTime.ElapsedMilliseconds);
+        end
+      );
+
+      // ----------------------------------
+      // Run REST server
+      FServer.Active := True;
+      Writeln('HelloWorld resource URL:');
+      Writeln('  http://localhost:8080/rest/default/helloworld/');
+      ExecuteUntilEnterKeyPressed(
+        procedure
+        begin
+          PrintStats();
+        end
+      );
+      Readln;
+      // ----------------------------------
+      // Close the server
+      FServer.Active := False;
       PrintStats();
-    end
-  );
-  Readln;
-  // ----------------------------------
-  // Close the server
-  FServer.Active := False;
-  PrintStats();
-  FreeAndNil(FServer);
-  FreeAndNil(FEngine);
+    finally
+      FreeAndNil(FServer);
+    end;
+  finally
+    FreeAndNil(FEngine);
+  end;
   WriteLn('Press any key to quit');
   ReadLN;
 end.
