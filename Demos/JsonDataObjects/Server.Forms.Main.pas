@@ -43,9 +43,9 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils, Web.HttpApp
-  , MARS.Core.URL, MARS.Core.Engine
-  , Server.Ignition;
+  StrUtils, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.URL, MARS.Core.Engine
+, Server.Ignition;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -58,10 +58,9 @@ begin
 
   // skip favicon requests (browser)
   TServerEngine.Default.BeforeHandleRequest :=
-    function (const AEngine: TMARSEngine;
-      const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
-      var Handled: Boolean
-    ): Boolean
+    function(const AEngine: TMARSEngine;
+      const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      var Handled: Boolean): Boolean
     begin
       Result := True;
       if SameText(AURL.Document, 'favicon.ico') then

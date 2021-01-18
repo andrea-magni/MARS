@@ -10,13 +10,11 @@ interface
 uses
   SysUtils, Classes
 
-, MARS.Core.Attributes
-, MARS.Core.MediaType
-, MARS.Core.Response
-
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Response
 , MARS.Core.Token.Resource
 
-, JsonDataObjects, MARS.JsonDataObjects.ReadersAndWriters
+, JsonDataObjects // https://github.com/ahausladen/JsonDataObjects
+, MARS.JsonDataObjects.ReadersAndWriters
 ;
 
 type
