@@ -266,6 +266,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="Server.Ignition.pas"/>
+        <DCCReference Include="Server.Resources.pas"/>
+        <DCCReference Include="ServerConst.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

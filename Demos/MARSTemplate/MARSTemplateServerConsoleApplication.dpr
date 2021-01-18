@@ -9,14 +9,13 @@ program MARSTemplateServerConsoleApplication;
 {$I MARS.inc}
 
 uses
-  {$ifdef DelphiXE3_UP}
-  System.SysUtils
-  {$else}
-  SysUtils, StrUtils, Types
-  {$endif }
-, MARS.http.Server.Indy,
-  ServerConst in 'ServerConst.pas',
-  Server.Ignition in 'Server.Ignition.pas';
+  SysUtils,
+  StrUtils,
+  Types,
+  MARS.http.Server.Indy,
+  Server.Ignition in 'Server.Ignition.pas',
+  Server.Resources in 'Server.Resources.pas',
+  ServerConst in 'ServerConst.pas';
 
 {$R *.res}
 
