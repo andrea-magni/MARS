@@ -34,6 +34,7 @@ type
     StopServerAction: TAction;
     PortNumberEdit: TEdit;
     Label1: TLabel;
+    NavigateButton: TButton;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -42,6 +43,7 @@ type
     procedure PortNumberEditChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
+    procedure NavigateButtonClick(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
     FEngine: TMARSEngine;
@@ -56,12 +58,12 @@ implementation
 {$R *.dfm}
 
 uses
-  Web.HttpApp
-  , MARS.Core.URL
-  , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
-  , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyReaders
-  , MARS.Utils.Parameters.IniFile
-  ;
+  Windows, ShellAPI
+, MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
+, MARS.Core.MessageBodyReader, MARS.Core.MessageBodyReaders
+, MARS.Utils.Parameters.IniFile
+;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -79,10 +81,9 @@ begin
 
     // skip favicon requests (browser)
     FEngine.BeforeHandleRequest :=
-      function (const AEngine: TMARSEngine;
-        const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
-        var Handled: Boolean
-      ): Boolean
+      function(const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+        var Handled: Boolean): Boolean
       begin
         Result := True;
         if SameText(AURL.Document, 'favicon.ico') then
@@ -102,6 +103,11 @@ end;
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FEngine);
+end;
+
+procedure TMainForm.NavigateButtonClick(Sender: TObject);
+begin
+  ShellExecute(0, nil, 'http://localhost:8080/rest/default/helloworld', nil, nil, SW_SHOW);
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);

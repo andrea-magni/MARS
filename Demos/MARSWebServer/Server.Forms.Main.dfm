@@ -59,6 +59,15 @@ object MainForm: TMainForm
       OnChange = PortNumberEditChange
     end
   end
+  object NavigateButton: TButton
+    Left = 56
+    Top = 112
+    Width = 329
+    Height = 25
+    Caption = 'Navigate C:\Temp folder via web'
+    TabOrder = 1
+    OnClick = NavigateButtonClick
+  end
   object MainActionList: TActionList
     Left = 384
     Top = 24
