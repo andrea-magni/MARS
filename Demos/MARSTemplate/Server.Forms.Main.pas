@@ -47,7 +47,7 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils, Web.HttpApp, IOUtils
+  StrUtils, Web.HttpApp, IOUtils, IdSSLOpenSSL
 , MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
 , MARS.Core.Registry.Utils
 , Server.Ignition
@@ -127,9 +127,15 @@ begin
 //     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
 //     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
 //     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
-// change default port and setup a proper IOHandler, SSL enabled
-//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
-//    FServer.SetupSSLIOHandler();
+// define bindings and setup a proper IOHandler, SSL enabled
+//    FServer.Bindings.Add.Port := 8080;
+//    FServer.Bindings.Add.Port := 8443;
+//    FServer.SetupSSLIOHandler(TidSSLVersion.sslvTLSv1_1, sslmServer
+//    , function (APort: UInt16) : Boolean // function to enable SSL on specific port
+//      begin
+//        Result := APort = 8443;
+//      end
+//    );
 // if needed, setup additional event handlers or properties
 //    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
 //    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;

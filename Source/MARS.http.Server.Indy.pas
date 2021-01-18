@@ -14,7 +14,7 @@ uses
 // Indy
 , IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
 , IdSchedulerOfThreadPool
-, idHTTPWebBrokerBridge
+, idHTTPWebBrokerBridge, idGlobal
 // to enable standalone SSL
 , IdBaseComponent, IdComponent, IdServerIOHandler, IdSSL, IdSSLOpenSSL
 // MARS
@@ -115,6 +115,7 @@ type
     FStartedAt: TDateTime;
     FStoppedAt: TDateTime;
     FBeforeCommandGet: TBeforeCommandGetFunc;
+    FQuerySSQLPortFunc: TFunc<UInt16, Boolean>;
     function GetUpTime: TTimeSpan;
     function GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
   protected
@@ -131,12 +132,14 @@ type
       var VHandled: Boolean); virtual;
 
     procedure SetupThreadPooling(const APoolSize: Integer = 25);
+    function DoQuerySSLPort(APort: TIdPort): Boolean; override;
   public
     constructor Create(AEngine: TMARSEngine); virtual;
 
     procedure SetupSSLIOHandler(
       const ASSLVersion: TIdSSLVersion = sslvSSLv23;
-      const AMode: TIdSSLMode = sslmServer
+      const AMode: TIdSSLMode = sslmServer;
+      const AQuerySSQLPortFunc: TFunc<UInt16, Boolean> = nil
     );
 
     property Engine: TMARSEngine read FEngine;
@@ -216,6 +219,14 @@ begin
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
 end;
 
+function TMARShttpServerIndy.DoQuerySSLPort(APort: TIdPort): Boolean;
+begin
+  if Assigned(FQuerySSQLPortFunc) then
+    Result := FQuerySSQLPortFunc(APort)
+  else
+    Result := inherited DoQuerySSLPort(APort);
+end;
+
 function TMARShttpServerIndy.GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
 begin
   Result := IOHandler as TIdServerIOHandlerSSLOpenSSL;
@@ -268,11 +279,20 @@ end;
 
 procedure TMARShttpServerIndy.SetupSSLIOHandler(
   const ASSLVersion: TIdSSLVersion = sslvSSLv23;
-  const AMode: TIdSSLMode = sslmServer
+  const AMode: TIdSSLMode = sslmServer;
+  const AQuerySSQLPortFunc: TFunc<UInt16, Boolean> = nil
 );
 var
   LIOHandler: TIdServerIOHandlerSSLOpenSSL;
 begin
+  FQuerySSQLPortFunc := AQuerySSQLPortFunc;
+  if not Assigned(FQuerySSQLPortFunc) then // default
+    FQuerySSQLPortFunc :=
+      function (APort: UInt16) : Boolean
+      begin
+        Result := APort = 443;
+      end;
+
   LIOHandler := TIdServerIOHandlerSSLOpenSSL.Create(self);
   try
     LIOHandler.SSLOptions.RootCertFile := FEngine.Parameters.ByName('Indy.SSL.RootCertFile', 'localhost.pem').AsString;
@@ -319,7 +339,6 @@ end;
 
 procedure TMARShttpServerIndy.Startup;
 begin
-  Bindings.Clear;
   DefaultPort := FEngine.Port;
   AutoStartSession := False;
   SessionState := False;
