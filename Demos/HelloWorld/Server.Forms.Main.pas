@@ -11,20 +11,15 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, StdCtrls, ExtCtrls
-  , ActnList
+  Controls, Forms, Dialogs, StdCtrls, ExtCtrls, ActnList, Diagnostics
+, System.Actions
 
-  , Diagnostics
-
-  , MARS.Core.Engine
-  , MARS.http.Server.Indy
-  {$IFDEF MSWINDOWS}
-  , MARS.mORMotJWT.Token
-  {$ELSE}
-  , MARS.JOSEJWT.Token
-  {$ENDIF}
-  , MARS.Core.Application, System.Actions
-
+, MARS.Core.Engine, MARS.Core.Application, MARS.http.Server.Indy
+{$IFDEF MSWINDOWS}
+, MARS.mORMotJWT.Token
+{$ELSE}
+, MARS.JOSEJWT.Token
+{$ENDIF}
 ;
 
 type
@@ -59,10 +54,9 @@ implementation
 {$R *.dfm}
 
 uses
-    MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
-  , MARS.Core.URL
-  , MARS.Utils.Parameters.IniFile
-  ;
+  MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
+, MARS.Core.URL, MARS.Utils.Parameters.IniFile
+;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
