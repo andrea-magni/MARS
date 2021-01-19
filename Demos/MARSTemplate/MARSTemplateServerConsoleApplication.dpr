@@ -90,21 +90,26 @@ begin
 
   LServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    // to enable Indy standalone SSL -----------------------------------------------
-    //------------------------------------------------------------------------------
-    // Set the following Engine parameters:
-    //     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
-    //     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
-    //     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
-    // change default port and setup a proper IOHandler, SSL enabled
-//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
-//    LServer.SetupSSLIOHandler();
-    // if needed, setup additional event handlers or properties
-//        FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
-//        FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
-//        FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
-    //------------------------------------------------------------------------------
-
+// to enable Indy standalone SSL -----------------------------------------------
+//------------------------------------------------------------------------------
+// Set the following Engine parameters:
+//     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+//     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+//     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+// define bindings and setup a proper IOHandler, SSL enabled
+//    FServer.Bindings.Add.Port := 8080;
+//    FServer.Bindings.Add.Port := 8443;
+//    FServer.SetupSSLIOHandler(TidSSLVersion.sslvTLSv1_1, sslmServer
+//    , function (APort: UInt16) : Boolean // function to enable SSL on specific port
+//      begin
+//        Result := APort = 8443;
+//      end
+//    );
+// if needed, setup additional event handlers or properties
+//    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//    FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+//------------------------------------------------------------------------------
     while True do
     begin
       Readln(LResponse);

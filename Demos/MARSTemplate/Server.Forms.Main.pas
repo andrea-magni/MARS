@@ -108,7 +108,6 @@ procedure TMainForm.FormCreate(Sender: TObject);
 begin
   PortNumberEdit.Text := IntToStr(TServerEngine.Default.Port);
   StartServerAction.Execute;
-  RenderEngines(MainTreeView);
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);
@@ -146,6 +145,8 @@ begin
     FServer.Free;
     raise;
   end;
+
+  RenderEngines(MainTreeView);
 end;
 
 procedure TMainForm.StartServerActionUpdate(Sender: TObject);
