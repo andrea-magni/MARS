@@ -44,9 +44,9 @@ implementation
 {$R *.fmx}
 
 uses
-  Web.HttpApp
-  , MARS.Core.URL, MARS.Core.Engine
-  , Server.Ignition;
+  IdSSLOpenSSL
+, MARS.Core.URL, MARS.Core.Engine
+, Server.Ignition;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -70,21 +70,19 @@ begin
   // http server implementation
   FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
+    // http port, default is 8080, set 0 to disable http
+    // you can specify 'Port' parameter or hard-code value here
+//    FServer.Engine.Port := 80;
+
 // to enable Indy standalone SSL -----------------------------------------------
 //------------------------------------------------------------------------------
-// Set the following Engine parameters:
+//    default https port value is 0, use PortSSL parameter or hard-code value here
+//    FServer.Engine.PortSSL := 443;
+// Available parameters:
+//     'PortSSL', default: 0 (disabled)
 //     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
 //     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
 //     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
-// define bindings and setup a proper IOHandler, SSL enabled
-//    FServer.Bindings.Add.Port := 8080;
-//    FServer.Bindings.Add.Port := 8443;
-//    FServer.SetupSSLIOHandler(TidSSLVersion.sslvTLSv1_1, sslmServer
-//    , function (APort: UInt16) : Boolean // function to enable SSL on specific port
-//      begin
-//        Result := APort = 8443;
-//      end
-//    );
 // if needed, setup additional event handlers or properties
 //    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
 //    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;

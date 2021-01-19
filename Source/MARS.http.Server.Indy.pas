@@ -115,7 +115,7 @@ type
     FStartedAt: TDateTime;
     FStoppedAt: TDateTime;
     FBeforeCommandGet: TBeforeCommandGetFunc;
-    FQuerySSQLPortFunc: TFunc<UInt16, Boolean>;
+    FQuerySSLPortFunc: TFunc<UInt16, Boolean>;
     function GetUpTime: TTimeSpan;
     function GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
   protected
@@ -132,21 +132,17 @@ type
       var VHandled: Boolean); virtual;
 
     procedure SetupThreadPooling(const APoolSize: Integer = 25);
+    procedure SetupSSLIOHandler(); virtual;
     function DoQuerySSLPort(APort: TIdPort): Boolean; override;
   public
     constructor Create(AEngine: TMARSEngine); virtual;
-
-    procedure SetupSSLIOHandler(
-      const ASSLVersion: TIdSSLVersion = sslvSSLv23;
-      const AMode: TIdSSLMode = sslmServer;
-      const AQuerySSQLPortFunc: TFunc<UInt16, Boolean> = nil
-    );
 
     property Engine: TMARSEngine read FEngine;
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
     property SSLIOHandler: TIdServerIOHandlerSSLOpenSSL read GetSSLIOHandler;
+    property QuerySSLPortFunc: TFunc<UInt16, Boolean> read FQuerySSLPortFunc write FQuerySSLPortFunc;
 
     property BeforeCommandGet: TBeforeCommandGetFunc read FBeforeCommandGet write FBeforeCommandGet;
   end;
@@ -154,9 +150,9 @@ type
 implementation
 
 uses
-  StrUtils, DateUtils
+  StrUtils, DateUtils, System.Rtti
 , IdCookie
-, MARS.Core.Utils
+, MARS.Core.Utils, MARS.Utils.Parameters
 ;
 
 { TMARShttpServerIndy }
@@ -221,14 +217,16 @@ end;
 
 function TMARShttpServerIndy.DoQuerySSLPort(APort: TIdPort): Boolean;
 begin
-  if Assigned(FQuerySSQLPortFunc) then
-    Result := FQuerySSQLPortFunc(APort)
+  if Assigned(QuerySSLPortFunc) then
+    Result := QuerySSLPortFunc(APort)
   else
-    Result := inherited DoQuerySSLPort(APort);
+    Result := Assigned(FEngine) and (APort = FEngine.PortSSL);
 end;
 
 function TMARShttpServerIndy.GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
 begin
+  if not Assigned(IOHandler) then
+    IOHandler := TIdServerIOHandlerSSLOpenSSL.Create(Self);
   Result := IOHandler as TIdServerIOHandlerSSLOpenSSL;
 end;
 
@@ -277,41 +275,19 @@ begin
   end;
 end;
 
-procedure TMARShttpServerIndy.SetupSSLIOHandler(
-  const ASSLVersion: TIdSSLVersion = sslvSSLv23;
-  const AMode: TIdSSLMode = sslmServer;
-  const AQuerySSQLPortFunc: TFunc<UInt16, Boolean> = nil
-);
+procedure TMARShttpServerIndy.SetupSSLIOHandler();
 var
-  LIOHandler: TIdServerIOHandlerSSLOpenSSL;
+  LParams: TMARSParameters;
 begin
-  FQuerySSQLPortFunc := AQuerySSQLPortFunc;
-  if not Assigned(FQuerySSQLPortFunc) then // default
-    FQuerySSQLPortFunc :=
-      function (APort: UInt16) : Boolean
-      begin
-        Result := APort = 443;
-      end;
+  LParams := FEngine.Parameters;
+  SSLIOHandler.SSLOptions.RootCertFile := LParams.ByNameText('Indy.SSL.RootCertFile', 'localhost.pem').AsString;
+  SSLIOHandler.SSLOptions.CertFile := LParams.ByNameText('Indy.SSL.CertFile', 'localhost.crt').AsString;
+  SSLIOHandler.SSLOptions.KeyFile := LParams.ByNameText('Indy.SSL.KeyFile', 'localhost.key').AsString;
+  SSLIOHandler.SSLOptions.Method := TRttiEnumerationType.GetValue<TIdSSLVersion>(
+    LParams.ByNameText('Indy.SSL.Version', 'sslvTLSv1_2').AsString);
 
-  LIOHandler := TIdServerIOHandlerSSLOpenSSL.Create(self);
-  try
-    LIOHandler.SSLOptions.RootCertFile := FEngine.Parameters.ByName('Indy.SSL.RootCertFile', 'localhost.pem').AsString;
-    LIOHandler.SSLOptions.CertFile := FEngine.Parameters.ByName('Indy.SSL.CertFile', 'localhost.crt').AsString;
-    LIOHandler.SSLOptions.KeyFile := FEngine.Parameters.ByName('Indy.SSL.KeyFile', 'localhost.key').AsString;
-
-    LIOHandler.SSLOptions.Method := ASSLVersion;
-    LIOHandler.SSLOptions.Mode := AMode;
-
-//    LIOHandler.SSLOptions.VerifyDepth := 1;
-//    LIOHandler.SSLOptions.VerifyMode := [sslvrfPeer,sslvrfFailIfNoPeerCert,sslvrfClientOnce];
-//    LIOHandler.OnGetPassword := OnGetPassword;
-//    LIOHandler.OnVerifyPeer := OnVerifyPeer;
-  except
-    LIOHandler.Free;
-    raise;
-  end;
-
-  IOHandler := LIOHandler;
+  SSLIOHandler.SSLOptions.Mode := TRttiEnumerationType.GetValue<TIdSSLMode>(
+    FEngine.Parameters.ByNameText('Indy.SSL.Mode', 'sslmServer').AsString);
 end;
 
 procedure TMARShttpServerIndy.SetupThreadPooling(const APoolSize: Integer);
@@ -334,12 +310,25 @@ procedure TMARShttpServerIndy.Shutdown;
 begin
   inherited;
   Bindings.Clear;
+  if Assigned(IOHandler) then
+  begin
+    IOHandler.Free;
+    IOHandler := nil;
+  end;
   FStoppedAt := Now;
 end;
 
 procedure TMARShttpServerIndy.Startup;
 begin
-  DefaultPort := FEngine.Port;
+  if FEngine.Port <> 0 then
+    Bindings.Add.Port := FEngine.Port;
+
+  if (FEngine.PortSSL <> 0) then
+  begin
+    SetupSSLIOHandler();
+    Bindings.Add.Port := FEngine.PortSSL;
+  end;
+
   AutoStartSession := False;
   SessionState := False;
   SetupThreadPooling(FEngine.ThreadPoolSize);

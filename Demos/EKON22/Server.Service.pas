@@ -65,21 +65,24 @@ begin
 
   FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    // to enable Indy standalone SSL -----------------------------------------------
-    //------------------------------------------------------------------------------
-    // Set the following Engine parameters:
-    //     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
-    //     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
-    //     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
-    // change default port and setup a proper IOHandler, SSL enabled
-//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
-//    LServer.SetupSSLIOHandler();
-    // if needed, setup additional event handlers or properties
-//        FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
-//        FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
-//        FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
-    //------------------------------------------------------------------------------
+    // http port, default is 8080, set 0 to disable http
+    // you can specify 'Port' parameter or hard-code value here
+//    FServer.Engine.Port := 80;
 
+// to enable Indy standalone SSL -----------------------------------------------
+//------------------------------------------------------------------------------
+//    default https port value is 0, use PortSSL parameter or hard-code value here
+//    FServer.Engine.PortSSL := 443;
+// Available parameters:
+//     'PortSSL', default: 0 (disabled)
+//     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+//     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+//     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+// if needed, setup additional event handlers or properties
+//    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//    FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+//------------------------------------------------------------------------------
   except
     FServer.Free;
     raise;

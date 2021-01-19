@@ -44,9 +44,11 @@ type
   protected
     function GetBasePath: string; virtual;
     function GetPort: Integer; virtual;
+    function GetPortSSL: Integer; virtual;
     function GetThreadPoolSize: Integer; virtual;
     procedure SetBasePath(const Value: string); virtual;
     procedure SetPort(const Value: Integer); virtual;
+    procedure SetPortSSL(const Value: Integer); virtual;
     procedure SetThreadPoolSize(const Value: Integer); virtual;
     procedure PatchCORS(const ARequest: IMARSRequest; const AResponse: IMARSResponse); virtual;
   public
@@ -66,6 +68,7 @@ type
     property BasePath: string read GetBasePath write SetBasePath;
     property Name: string read FName;
     property Port: Integer read GetPort write SetPort;
+    property PortSSL: Integer read GetPortSSL write SetPortSSL;
     property ThreadPoolSize: Integer read GetThreadPoolSize write SetThreadPoolSize;
 
     property BeforeHandleRequest: TBeforeHandleRequestProc read FBeforeHandleRequest write FBeforeHandleRequest;
@@ -153,6 +156,7 @@ begin
 
   // default parameters
   Parameters.Values['Port'] := 8080;
+  Parameters.Values['PortSSL'] := 0;
   Parameters.Values['ThreadPoolSize'] := 75;
   Parameters.Values['BasePath'] := '/rest';
 
@@ -268,6 +272,11 @@ begin
   Parameters['Port'] := Value;
 end;
 
+procedure TMARSEngine.SetPortSSL(const Value: Integer);
+begin
+  Parameters['PortSSL'] := Value;
+end;
+
 procedure TMARSEngine.SetThreadPoolSize(const Value: Integer);
 begin
   Parameters['ThreadPoolSize'] := Value;
@@ -276,6 +285,11 @@ end;
 function TMARSEngine.GetPort: Integer;
 begin
   Result := Parameters['Port'].AsInteger;
+end;
+
+function TMARSEngine.GetPortSSL: Integer;
+begin
+  Result := Parameters['PortSSL'].AsInteger;
 end;
 
 function TMARSEngine.GetThreadPoolSize: Integer;
