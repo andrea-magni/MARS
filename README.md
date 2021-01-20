@@ -107,6 +107,11 @@ It would be great if you would like to support this project. It's quite easy and
 
 Most of the code has been written by the author (Andrea Magni) with some significant contributions by Nando Dessena, Stefan Glienke and Davide Rossi. Some of my customers actually act as beta testers and early adopters. I want to thank them all for the trust and effort.
 
+# Related Links
+Embarcadero Delphi is a modern, powerful and effective language and development tool. Learn more about it at the following links:
+ * https://www.embarcadero.com/
+ * https://learndelphi.org/
+
 # COPYRIGHTS
 
 * The Delphi stylized helmet icon is trademark of Embarcadero Technologies.
