@@ -3,7 +3,8 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-program MARSTemplateClient;
+
+program MARSTemplateClient;
 
 uses
   System.StartUpCopy,
