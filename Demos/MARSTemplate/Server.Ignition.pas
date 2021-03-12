@@ -52,6 +52,18 @@ begin
 
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
+{$REGION 'OnGetApplication example'}
+(*
+    FEngine.OnGetApplication :=
+      procedure (const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+        var AApplication: TMARSApplication)
+      begin
+        if AApplication = nil then
+          AApplication := FEngine.ApplicationByName('DefaultApp');
+      end;
+*)
+{$ENDREGION}
 {$IFDEF MARS_FIREDAC}
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
