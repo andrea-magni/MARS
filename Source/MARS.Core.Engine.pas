@@ -32,6 +32,9 @@ type
   TAfterHandleRequestProc = reference to procedure(const AEngine: TMARSEngine;
     const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
     var Handled: Boolean);
+  TGetApplicationProc = reference to procedure (const AEngine: TMARSEngine;
+    const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+    var AApplication: TMARSApplication);
 
   TMARSEngine = class
   private
@@ -41,6 +44,7 @@ type
     FName: string;
     FBeforeHandleRequest: TBeforeHandleRequestProc;
     FAfterHandleRequest: TAfterHandleRequestProc;
+    FOnGetApplication: TGetApplicationProc;
   protected
     function GetBasePath: string; virtual;
     function GetPort: Integer; virtual;
@@ -58,7 +62,10 @@ type
     function HandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean; virtual;
 
     function AddApplication(const AName, ABasePath: string;
-      const AResources: array of string; const AParametersSliceName: string = ''): TMARSApplication; virtual;
+      const AResources: array of string; const AParametersSliceName: string = '';
+      const ADefaultResourcePath: string = ''): TMARSApplication; virtual;
+    function ApplicationByName(const AName: string): TMARSApplication; virtual;
+    function ApplicationByBasePath(const ABasePath: string): TMARSApplication; virtual;
 
     procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>); virtual;
 
@@ -73,6 +80,7 @@ type
 
     property BeforeHandleRequest: TBeforeHandleRequestProc read FBeforeHandleRequest write FBeforeHandleRequest;
     property AfterHandleRequest: TAfterHandleRequestProc read FAfterHandleRequest write FAfterHandleRequest;
+    property OnGetApplication: TGetApplicationProc read FOnGetApplication write FOnGetApplication;
   end;
 
   TMARSEngineRegistry=class
@@ -113,7 +121,8 @@ uses
   ;
 
 function TMARSEngine.AddApplication(const AName, ABasePath: string;
-  const AResources: array of string; const AParametersSliceName: string): TMARSApplication;
+  const AResources: array of string; const AParametersSliceName: string;
+  const ADefaultResourcePath: string): TMARSApplication;
 var
   LResource: string;
   LParametersSliceName: string;
@@ -121,6 +130,7 @@ begin
   Result := TMARSApplication.Create(AName);
   try
     Result.BasePath := ABasePath;
+    Result.DefaultResourcePath := ADefaultResourcePath;
     for LResource in AResources do
       Result.AddResource(LResource);
 
@@ -144,6 +154,23 @@ begin
   end;
 end;
 
+function TMARSEngine.ApplicationByBasePath(
+  const ABasePath: string): TMARSApplication;
+begin
+  if not FApplications.TryGetValue(ABasePath, Result) then
+    Result := nil;
+end;
+
+function TMARSEngine.ApplicationByName(const AName: string): TMARSApplication;
+var
+  LApplication: TMARSApplication;
+begin
+  Result := nil;
+  for LApplication in FApplications.Values.ToArray do
+    if LApplication.Name = AName then
+      Exit(LApplication);
+end;
+
 constructor TMARSEngine.Create(const AName: string);
 begin
   inherited Create;
@@ -153,6 +180,10 @@ begin
   FApplications := TMARSApplicationDictionary.Create([doOwnsValues]);
   FCriticalSection := TCriticalSection.Create;
   FParameters := TMARSParameters.Create(FName);
+
+  FBeforeHandleRequest := nil;
+  FAfterHandleRequest := nil;
+  FOnGetApplication := nil;
 
   // default parameters
   Parameters.Values['Port'] := 8080;
@@ -223,9 +254,17 @@ begin
     end;
 
     if not FApplications.TryGetValue(LApplicationPath.ToLower, LApplication) then
+      LApplication := nil;
+
+    if Assigned(FOnGetApplication) then
+      FOnGetApplication(Self, LURL, ARequest, AResponse, LApplication);
+
+    if not Assigned(LApplication) then
       raise EMARSEngineException.Create(Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath]), 404);
 
+    LApplicationPath := TMARSURL.CombinePath([BasePath, LApplication.BasePath]);
     LURL.BasePath := LApplicationPath;
+
     LActivation := TMARSActivation.CreateActivation(Self, LApplication, ARequest, AResponse, LURL);
     if Assigned(LActivation) then
     begin

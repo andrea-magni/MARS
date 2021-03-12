@@ -63,6 +63,7 @@ type
     FResource: TRttiType;
     FResourceMethods: TArray<TRttiMethod>;
     FResourceAttributes: TArray<TCustomAttribute>;
+    FResourcePath: string;
     FResourceInstance: TObject;
     FMethodArguments: TArray<TValue>;
     FMethodResult: TValue;
@@ -302,27 +303,15 @@ end;
 procedure TMARSActivation.FindMethodToInvoke;
 var
   LMethod: TRttiMethod;
-  LResourcePath: string;
   LAttribute: TCustomAttribute;
   LPathMatches: Boolean;
   LHttpMethodMatches: Boolean;
   LMethodPath: string;
 begin
-  FResource := FRttiContext.GetType(FConstructorInfo.TypeTClass);
-  FResourceAttributes := FResource.GetAllAttributes(True);
-  FResourceMethods := FResource.GetMethods;
   FMethod := nil;
   FMethodReturnType := nil;
   FMethodAttributes := [];
   FreeAndNil(FURLPrototype);
-
-  LResourcePath := '';
-  FResource.HasAttribute<PathAttribute>(
-    procedure (APathAttribute: PathAttribute)
-    begin
-      LResourcePath := APathAttribute.Value;
-    end
-  );
 
   for LMethod in FResourceMethods do
   begin
@@ -347,7 +336,7 @@ begin
 
     if LHttpMethodMatches then
     begin
-      FURLPrototype := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, LResourcePath, LMethodPath]);
+      FURLPrototype := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, URL.Resource, LMethodPath]);
       try
         LPathMatches := FURLPrototype.MatchPath(URL);
         if LPathMatches and LHttpMethodMatches then
@@ -680,9 +669,28 @@ begin
 end;
 
 procedure TMARSActivation.CheckResource;
+var
+  LFound: Boolean;
 begin
-  if not Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo) then
+  LFound := Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo);
+
+  // second attempt, if DefaultResourcePath is not empty
+  if (not LFound) and (Application.DefaultResourcePath <> '') then
+    LFound := Application.Resources.TryGetValue(Application.DefaultResourcePath, FConstructorInfo);
+
+  if not LFound then
     raise EMARSResourceNotFoundException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
+
+  FResource := FRttiContext.GetType(FConstructorInfo.TypeTClass);
+  FResourceAttributes := FResource.GetAllAttributes(True);
+  FResourceMethods := FResource.GetMethods;
+  FResourcePath := '';
+  FResource.HasAttribute<PathAttribute>(
+    procedure (APathAttribute: PathAttribute)
+    begin
+      FResourcePath := APathAttribute.Value;
+    end
+  );
 end;
 
 procedure TMARSActivation.AddToContext(AValue: TValue);
@@ -764,6 +772,7 @@ begin
   FMethodResult := TValue.Empty;
 
   FResource := nil;
+  FResourcePath := '';
   FResourceMethods := [];
   FResourceAttributes := [];
   FResourceInstance := nil;
