@@ -48,7 +48,6 @@ type
     procedure DoExecute; override;
     procedure DoLog(const AMsg: string); override;
 
-    procedure SetupThreadScheduler;
     procedure StartServer; virtual;
     procedure StopServer; virtual;
     procedure IdleCycle;
