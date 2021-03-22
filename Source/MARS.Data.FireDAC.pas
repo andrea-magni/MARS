@@ -91,6 +91,7 @@ type
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TFDConnection; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
+    class var FAfterCreateConnection: TProc<TFDConnection>;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
 
@@ -157,6 +158,7 @@ type
 
     class constructor CreateClass;
     class procedure AddContextValueProvider(const AContextValueProviderProc: TContextValueProviderProc);
+    class property AfterCreateConnection: TProc<TFDConnection> read FAfterCreateConnection write FAfterCreateConnection;
   end;
 
   function MacroDataTypeToFieldType(const AMacroDataType: TFDMacroDataType): TFieldType;
@@ -298,6 +300,9 @@ begin
   Result := TFDConnection.Create(nil);
   try
     Result.ConnectionDefName := AConnectionDefName;
+
+    if Assigned(FAfterCreateConnection) then
+      FAfterCreateConnection(Result);
   except
     Result.Free;
     raise;
@@ -388,6 +393,7 @@ begin
   end;
 end;
 
+
 function TMARSFireDAC.ApplyUpdates(ADataSets: TArray<TFDDataSet>;
   ADeltas: TArray<TFDMemTable>;
   AOnBeforeApplyUpdates: TProc<TFDDataSet, TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
@@ -440,6 +446,7 @@ end;
 class constructor TMARSFireDAC.CreateClass;
 begin
   FContextValueProviders := [];
+  FAfterCreateConnection := nil;
 end;
 
 function TMARSFireDAC.CreateCommand(const ASQL: string;

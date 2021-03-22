@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{6C99E06F-43C9-4B46-8028-E64BFB955D5B}</ProjectGuid>
-        <ProjectVersion>19.1</ProjectVersion>
+        <ProjectVersion>19.2</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <MainSource>FireDACBasicServer.dpr</MainSource>
         <Base>True</Base>
@@ -40,7 +40,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <DCC_UnitSearchPath>../../Source/Core;../../Source/Extensions;../../Source/Data;../../Source/Data/FireDAC;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>../../Source;../../ThirdParty/delphi-jose-jwt/Source;../../ThirdParty/mORMot/Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_Locale>1040</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
@@ -129,8 +129,9 @@
                     <Source Name="MainSource">FireDACBasicServer.dpr</Source>
                 </Source>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k240.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp240.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dcloffice2k270.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\dclofficexp270.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+                    <Excluded_Packages Name="C:\Program Files (x86)\FastReports\LibD27\dclfrxtee27.bpl">FastReport 6.0 Tee Components</Excluded_Packages>
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="3">
@@ -278,6 +279,16 @@
                     </Platform>
                     <Platform Name="Android64">
                         <RemoteDir>res\drawable-xxhdpi</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                </DeployClass>
+                <DeployClass Name="Android_LauncherIcon192">
+                    <Platform Name="Android">
+                        <RemoteDir>res\drawable-xxxhdpi</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                    <Platform Name="Android64">
+                        <RemoteDir>res\drawable-xxxhdpi</RemoteDir>
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>

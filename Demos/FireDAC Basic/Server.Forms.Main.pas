@@ -3,7 +3,8 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit Server.Forms.Main;
+
+unit Server.Forms.Main;
 
 interface
 
@@ -56,6 +57,7 @@ uses
 , MARS.Data.MessageBodyWriters
 , MARS.Data.FireDAC, MARS.Data.FireDAC.ReadersAndWriters
 , MARS.Utils.Parameters, MARS.Utils.Parameters.IniFile
+, FireDAC.Comp.Client, FireDAC.Stan.Option, System.Rtti
 ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -72,6 +74,16 @@ begin
     FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
     PortNumberEdit.Text := FEngine.Port.ToString;
     TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+
+    TMARSFireDAC.AfterCreateConnection :=
+      procedure (Conn: TFDConnection)
+      begin
+        Conn.TxOptions.Isolation :=
+          FEngine.Parameters
+          .ByNameTextEnum<TFDTxIsolation>(
+            'FireDAC.' + Conn.ConnectionDefName + '.TxOptions.Isolation'
+            , TFDTxIsolation.xiReadCommitted);
+      end;
 
     StartServerAction.Execute;
   except

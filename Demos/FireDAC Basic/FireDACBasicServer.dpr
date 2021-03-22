@@ -3,7 +3,8 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-program FireDACBasicServer;
+
+program FireDACBasicServer;
 
 uses
   Vcl.Forms,
