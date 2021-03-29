@@ -10,19 +10,13 @@ interface
 uses
   SysUtils, Classes, Generics.Collections
 
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-  , MARS.Core.URL
-  , MARS.Core.Response
-  , MARS.Core.Token
-  , MARS.Core.Classes
-  , MARS.Core.Engine
-  , MARS.Core.Application
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL, MARS.Core.Response
+, MARS.Core.Token, MARS.Core.Classes, MARS.Core.Engine, MARS.Core.Application
+, MARS.Core.RequestAndResponse.Interfaces
 
+, RlxRazor
+;
 
-  , Web.HttpApp
-  , RlxRazor
-  ;
 type
   RazorAttribute = class(MARSAttribute);
 
@@ -56,8 +50,8 @@ type
   protected
     [Context] URL: TMARSURL;
     [Context] Token: TMARSToken;
-    [Context] Request: TWebRequest;
-    [Context] Response: TWebResponse;
+    [Context] Request: IMARSRequest;
+    [Context] Response: IMARSResponse;
 
     function GetRazorAttributeValue<T: RazorSingleValueAttribute>(const AInstance: TObject; const ADefault: string = ''): string;
     function ContentTypeFromFileExt(const AFileExt: string): string; virtual;
@@ -79,8 +73,8 @@ type
     constructor Create; virtual;
     destructor Destroy; override;
 
-    [GET, Path('/{*}'), Produces(TMediaType.WILDCARD)]
-    function GetDocument():string; virtual;
+    [GET, Path('/{*}')]
+    procedure GetDocument(); virtual;
   end;
 
 
@@ -88,11 +82,9 @@ type
 implementation
 
 uses
-    IOUtils, DateUtils
-  , MARS.Core.Registry
-  , MARS.Core.Exceptions
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils
+  IOUtils, DateUtils, Web.HttpApp
+, MARS.Core.Registry, MARS.Core.Exceptions, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.http.Server.Indy
 ;
 
 { TRazorResource }
@@ -160,14 +152,14 @@ begin
   Result := [TContextEntry.Create('resource', Self, False)];
 end;
 
-function TRazorResource.GetDocument: string;
+procedure TRazorResource.GetDocument;
 var
   LFound: Boolean;
 begin
   RazorEngine.BasePath := URL.BasePath + URL.Resource;
 
-  Result := RazorEngine.ProcessRequest(
-      Request
+  Response.Content := RazorEngine.ProcessRequest(
+      (Request.AsObject as TMARSWebRequest).WebRequest
     , LFound
     , Token.IsVerified
     , Token.Claims['LanguageID'].AsInteger

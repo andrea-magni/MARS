@@ -62,6 +62,7 @@ type
     function ResponseAsJSON: TJSONValue;
     function ResponseAs<T: record>: T;
     function ResponseAsArray<T: record>: TArray<T>;
+    procedure CloneStatus(const ASource: TMARSClientCustomResource); override;
   published
     property FormUrlEncoded: TMARSParameters read FFormUrlEncoded write FFormUrlEncoded;
     property Response: TMemoryStream read FResponse;
@@ -100,6 +101,20 @@ begin
   inherited;
   if Dest is TMARSClientResourceFormUrlEncoded then
     TMARSClientResourceFormUrlEncoded(Dest).FFormUrlEncoded := FFormUrlEncoded;
+end;
+
+procedure TMARSClientResourceFormUrlEncoded.CloneStatus(
+  const ASource: TMARSClientCustomResource);
+var
+  LSource: TMARSClientResourceFormUrlEncoded;
+begin
+  inherited;
+  LSource := ASource as TMARSClientResourceFormUrlEncoded;
+  if Assigned(LSource) then
+  begin
+    Response.Size := 0; // empty
+    Response.CopyFrom(LSource.Response, 0);
+  end;
 end;
 
 constructor TMARSClientResourceFormUrlEncoded.Create(AOwner: TComponent);

@@ -3,7 +3,8 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit Server.MainData;
+
+unit Server.MainData;
 
 interface
 
@@ -23,7 +24,6 @@ uses
 type
   [Path('/maindata')]
   TMainDataResource = class(TMARSFDDataModuleResource)
-    FDConnection1: TFDConnection;
     employee: TFDQuery;
     FDGUIxWaitCursor1: TFDGUIxWaitCursor;
   private

@@ -10,11 +10,7 @@ interface
 uses
   SysUtils, Classes, Generics.Collections
 
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-  , MARS.Core.URL
-  , MARS.Core.Response
-
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL, MARS.Core.Response
 ;
 
 type

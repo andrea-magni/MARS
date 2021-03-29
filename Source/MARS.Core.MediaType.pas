@@ -339,17 +339,25 @@ var
   LMediaStr: string;
   LMediaType: TMediaType;
   LIndex, LLength: Integer;
+  LAdded: Tarray<string>;
 begin
   Clear;
   LMediaArray := TArray<string>(SplitString(FAccept, DELIM_ACCEPT));
   LLength := Length(LMediaArray);
 
+  LAdded := [];
   for LIndex := Low(LMediaArray) to High(LMediaArray) do
   begin
-    LMediaStr := LMediaArray[LIndex];
-    LMediaType := TMediaType.Create(LMediaStr);
-    LMediaType.PFactor := LLength - LIndex;
-    FMediaTypeList.Add(LMediaType);
+    LMediaStr := Trim(LMediaArray[LIndex]);
+
+    if IndexText(LMediaStr, LAdded) = -1 then
+    begin
+      LMediaType := TMediaType.Create(LMediaStr);
+      LMediaType.PFactor := LLength - LIndex;
+      FMediaTypeList.Add(LMediaType);
+      LAdded := LAdded + [LMediaStr];
+    end
+    else LLength := LLength - 1;
   end;
 
   if FMediaTypeList.Count = 0 then

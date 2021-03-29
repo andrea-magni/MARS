@@ -24,7 +24,7 @@ uses
   , MARS.Utils.Parameters
   , MARS.Core.Activation.Interfaces
 
-  , RlxRazor
+  , RlxRazorMARS
 ;
 
 type
@@ -62,6 +62,7 @@ type
   private
     FActivation: IMARSActivation;
     FRazorEngine: TRlxRazorEngine;
+    FRazorProc: TRlxRazorProcessor;
     FName: string;
     FApplication: TMARSApplication;
     FParameters: TMARSParameters;
@@ -119,10 +120,11 @@ implementation
 
 uses
   IOUTils
-  , MARS.Core.Utils
-  , MARS.Core.Exceptions
-  , MARS.Rtti.Utils
-  , MARS.DelphiRazor.InjectionService
+, MARS.Core.Utils
+, MARS.Core.Exceptions
+, MARS.Rtti.Utils
+, MARS.DelphiRazor.InjectionService
+, MARS.Core.RequestAndResponse.Interfaces, MARS.http.Server.Indy
 ;
 
   { TMARSDelphiRazor }
@@ -161,6 +163,7 @@ end;
 
 destructor TMARSDelphiRazor.Destroy;
 begin
+  FreeAndNil(FRazorProc);
   FreeAndNil(FParameters);
   FreeAndNil(FRazorEngine);
   inherited;
@@ -170,6 +173,9 @@ function TMARSDelphiRazor.DoBlock(const AContent: string; const AEncoding: TEnco
 var
   LRazorProc: TRlxRazorProcessor;
 begin
+//  if not Assigned(FRazorProc) then
+//    FRazorProc := TRlxRazorProcessor.Create(nil);
+//  LRazorProc := FRazorProc;
   LRazorProc := TRlxRazorProcessor.Create(nil);
   try
     LRazorProc.RazorEngine := RazorEngine;
@@ -185,7 +191,7 @@ begin
 //    ConnectObjectForPath (execData);
 //    LRazorProc.Request := Request; // passed manually
 //    Result := LRazorProc.Content;
-    Result := LRazorProc.DoBlock(AContent, AEncoding)
+    Result := LRazorProc.DoBlock(RawByteString(AContent), AEncoding)
   finally
     LRazorProc.Free;
   end;
@@ -334,15 +340,34 @@ end;
 function TMARSDelphiRazor.ProcessRequest(const AErrorIfNotFound: Boolean = True): string;
 var
   LFound: Boolean;
+  LMARSWebRequest: TMARSWebRequest;
+  LRequest: IMARSRequest;
+  LResponse: IMARSResponse;
 begin
   LFound := False;
-  Result := RazorEngine.ProcessRequest(Activation.Request
+
+  LRequest := Activation.Request;
+  LMARSWebRequest := LRequest.AsObject as TMARSWebRequest;
+
+  LResponse := Activation.Response;
+
+  Result := RazorEngine.ProcessRequest(LMARSWebRequest.WebRequest
     , LFound
     , UserLoggedIn
     , UserLanguageID
     , ''
     , UserRoles
   );
+
+  if LRequest.RawPath.EndsWith('.html', True) or LRequest.RawPath.EndsWith('.htm', True) then
+    LResponse.ContentType := TMediaType.TEXT_HTML
+  else if LRequest.RawPath.EndsWith('.js', True) then
+    LResponse.ContentType := 'application/javascript'
+  else
+    LResponse.ContentType := '*/*';
+
+  LResponse.Content := Result;
+
   if (not LFound) and AErrorIfNotFound then
     raise EMARSHttpException.Create('File not found', 404);
 end;

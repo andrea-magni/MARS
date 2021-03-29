@@ -225,7 +225,7 @@ begin
     if not Assigned(LStream) then
       Exit;
 
-    if AMediaType.Matches('data:image/png;base64') then
+    if (not AMediaType.IsWildcard) and AMediaType.Matches('data:image/png;base64') then
       StringToStream(AOutputStream, StreamToBase64(LStream), TEncoding.ASCII)
     else
       AOutputStream.CopyFrom(LStream, LStream.Size);

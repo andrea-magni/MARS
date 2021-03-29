@@ -1,4 +1,4 @@
-﻿object ServerService: TServerService
+object ServerService: TServerService
   OldCreateOrder = False
   OnCreate = ServiceCreate
   OnDestroy = ServiceDestroy

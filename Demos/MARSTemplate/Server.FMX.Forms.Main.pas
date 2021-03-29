@@ -11,7 +11,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
   FMX.Controls.Presentation, FMX.Edit, FMX.Layouts, System.Actions, FMX.ActnList
-  , MARS.http.Server.Indy
+, MARS.http.Server.Indy
 ;
 
 type
@@ -44,9 +44,9 @@ implementation
 {$R *.fmx}
 
 uses
-  Web.HttpApp
-  , MARS.Core.URL, MARS.Core.Engine
-  , Server.Ignition;
+  IdSSLOpenSSL
+, MARS.Core.URL, MARS.Core.Engine
+, Server.Ignition;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -70,7 +70,24 @@ begin
   // http server implementation
   FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    FServer.DefaultPort := TServerEngine.Default.Port;
+    // http port, default is 8080, set 0 to disable http
+    // you can specify 'Port' parameter or hard-code value here
+//    FServer.Engine.Port := 80;
+
+// to enable Indy standalone SSL -----------------------------------------------
+//------------------------------------------------------------------------------
+//    default https port value is 0, use PortSSL parameter or hard-code value here
+//    FServer.Engine.PortSSL := 443;
+// Available parameters:
+//     'PortSSL', default: 0 (disabled)
+//     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+//     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+//     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+// if needed, setup additional event handlers or properties
+//    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//    FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+//------------------------------------------------------------------------------
     FServer.Active := True;
   except
     FServer.Free;

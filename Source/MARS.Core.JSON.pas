@@ -174,6 +174,8 @@ type
 
   function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
   function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
+  function IntegerArrayToJsonArray(const AIntegerArray: TArray<Integer>): TJSONArray;
+  function JsonArrayToIntegerArray(const AJSONArray: TJSONArray): TArray<Integer>;
 
 implementation
 
@@ -277,6 +279,38 @@ begin
       Result[LIndex] := LElement.ToString;
   end;
 end;
+
+function IntegerArrayToJsonArray(const AIntegerArray: TArray<Integer>): TJSONArray;
+var
+  LIndex: Integer;
+begin
+  Result := TJSONArray.Create;
+  try
+    for LIndex := Low(AIntegerArray) to High(AIntegerArray) do
+      Result.Add(AIntegerArray[LIndex]);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function JsonArrayToIntegerArray(const AJSONArray: TJSONArray): TArray<Integer>;
+var
+  LElement: TJSONValue;
+  LIndex: Integer;
+begin
+  SetLength(Result, AJSONArray.Count);
+
+  for LIndex := 0 to AJSONArray.Count-1 do
+  begin
+    LElement := AJSONArray.Items[LIndex];
+    if LElement is TJSONNumber then
+      Result[LIndex] := TJSONNumber(LElement).AsInt
+    else
+      Result[LIndex] := StrToInt(LElement.ToString);
+  end;
+end;
+
 
 { TJSONValueHelper }
 {$ifndef DelphiXE7_UP}

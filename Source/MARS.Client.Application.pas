@@ -33,6 +33,9 @@ type
     constructor Create(AOwner: TComponent); override;
     procedure DoError(const AResource: TObject; const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
 
+    procedure CloneSetup(const ASource: TMARSClientApplication); virtual;
+//    procedure CloneStatus(const ASource: TMARSClientApplication); virtual;
+
     const DEFAULT_APPNAME = 'default';
   published
     property DefaultMediaType: string read FDefaultMediaType write FDefaultMediaType;
@@ -59,11 +62,23 @@ begin
 //  inherited;
   LDestApp := Dest as TMARSClientApplication;
 
-  LDestApp.DefaultMediaType := DefaultMediaType;
-  LDestApp.DefaultContentType := DefaultContentType;
-  LDestApp.AppName := AppName;
-  LDestApp.Client := Client;
-  LDestApp.OnError := OnError;
+  if Assigned(LDestApp) then
+  begin
+    LDestApp.DefaultMediaType := DefaultMediaType;
+    LDestApp.DefaultContentType := DefaultContentType;
+    LDestApp.AppName := AppName;
+    LDestApp.Client := Client;
+    LDestApp.OnError := OnError;
+  end;
+end;
+
+procedure TMARSClientApplication.CloneSetup(
+  const ASource: TMARSClientApplication);
+begin
+  if not Assigned(ASource) then
+    Exit;
+
+  Assign(ASource);
 end;
 
 constructor TMARSClientApplication.Create(AOwner: TComponent);

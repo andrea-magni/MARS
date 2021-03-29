@@ -68,6 +68,7 @@ type
     function ResponseAsJSON: TJSONValue;
     function ResponseAs<T: record>: T;
     function ResponseAsArray<T: record>: TArray<T>;
+    procedure CloneStatus(const ASource: TMARSClientCustomResource); override;
   published
     property FormData: TArray<TFormParam> read FFormData write FFormData;
     property Response: TMemoryStream read FResponse;
@@ -105,6 +106,20 @@ begin
     TMARSClientResourceFormData(Dest).FormData := FFormData;
 end;
 
+procedure TMARSClientResourceFormData.CloneStatus(
+  const ASource: TMARSClientCustomResource);
+var
+  LSource: TMARSClientResourceFormData;
+begin
+  inherited;
+  LSource := ASource as TMARSClientResourceFormData;
+  if Assigned(LSource) then
+  begin
+    Response.Size := 0; // empty
+    Response.CopyFrom(LSource.Response, 0);
+  end;
+end;
+
 constructor TMARSClientResourceFormData.Create(AOwner: TComponent);
 begin
   inherited;
@@ -115,7 +130,7 @@ end;
 
 destructor TMARSClientResourceFormData.Destroy;
 begin
-  FResponse.Free;
+  FreeAndNil(FResponse);
   FFormData := [];
   inherited;
 end;

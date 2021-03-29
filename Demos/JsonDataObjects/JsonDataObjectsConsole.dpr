@@ -9,30 +9,17 @@ program JsonDataObjectsConsole;
 {$I MARS.inc}
 
 uses
-{$ifdef DelphiXE3_UP}
   System.SysUtils,
+  System.StrUtils,
   System.Types,
-  IPPeerServer,
-  IPPeerAPI,
-  IdHTTPWebBrokerBridge,
-  IdSchedulerOfThreadPool,
-  Web.WebReq,
-  Web.WebBroker,
-{$else}
-  SysUtils, StrUtils,
-  Types,
-  IdHTTPWebBrokerBridge,
-  IdSchedulerOfThreadPool,
-  WebReq,
-  WebBroker,
-{$endif}
-  ServerConst in 'ServerConst.pas',
-  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
-  Server.Ignition in 'Server.Ignition.pas';
+  MARS.http.Server.Indy,
+  Server.Ignition in 'Server.Ignition.pas',
+  Server.Resources in 'Server.Resources.pas',
+  ServerConst in 'ServerConst.pas';
 
 {$R *.res}
 
-procedure StartServer(const AServer: TIdHTTPWebBrokerBridge);
+procedure StartServer(const AServer: TMARShttpServerIndy);
 begin
   if not (AServer.Active) then
   begin
@@ -45,7 +32,7 @@ begin
   Write(cArrow);
 end;
 
-procedure StopServer(const AServer: TIdHTTPWebBrokerBridge);
+procedure StopServer(const AServer: TMARShttpServerIndy);
 begin
   if AServer.Active  then
   begin
@@ -58,7 +45,7 @@ begin
   Write(cArrow);
 end;
 
-procedure SetPort(const AServer: TIdHTTPWebBrokerBridge; const APort: string);
+procedure SetPort(const AServer: TMARShttpServerIndy; const APort: string);
 var
   LPort: Integer;
   LWasActive: Boolean;
@@ -86,7 +73,7 @@ begin
   Write(cArrow);
 end;
 
-procedure  WriteStatus(const AServer: TIdHTTPWebBrokerBridge);
+procedure  WriteStatus(const AServer: TMARShttpServerIndy);
 begin
   Writeln(sIndyVersion + AServer.SessionList.Version);
   Writeln(sActive + BoolToStr(AServer.Active, True));
@@ -96,27 +83,27 @@ end;
 
 procedure RunServer();
 var
-  LServer: TIdHTTPWebBrokerBridge;
-  LScheduler: TIdSchedulerOfThreadPool;
+  LServer: TMARShttpServerIndy;
   LResponse: string;
 begin
   WriteCommands;
-  LServer := TIdHTTPWebBrokerBridge.Create(nil);
+
+  LServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    LServer.DefaultPort := TServerEngine.Default.Port;
-
-    LScheduler := TIdSchedulerOfThreadPool.Create(LServer);
-    try
-      LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
-      LServer.Scheduler := LScheduler;
-      LServer.MaxConnections := LScheduler.PoolSize;
-    except
-      LServer.Scheduler.Free;
-      LServer.Scheduler := nil;
-      raise;
-    end;
-
-
+    // to enable Indy standalone SSL -----------------------------------------------
+    //------------------------------------------------------------------------------
+    // Set the following Engine parameters:
+    //     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+    //     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+    //     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+    // change default port and setup a proper IOHandler, SSL enabled
+//    TServerEngine.Default.Port := 443; // default HTTPS port is 443
+//    LServer.SetupSSLIOHandler();
+    // if needed, setup additional event handlers or properties
+//        FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//        FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//        FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+    //------------------------------------------------------------------------------
 
     while True do
     begin
@@ -128,13 +115,13 @@ begin
         WriteStatus(LServer)
       else if sametext(LResponse, cCommandStop) then
         StopServer(LServer)
-{$ifdef DelphiXE3_UP}
+    {$ifdef DelphiXE3_UP}
       else if LResponse.StartsWith(cCommandSetPort, True) then
         SetPort(LServer, LResponse.Split([' '])[2])
-{$else}
+    {$else}
       else if AnsiStartsText(cCommandSetPort, LResponse) then
         SetPort(LServer, Copy(LResponse, Length(cCommandSetPort)+1, MAXINT))
-{$endif}
+    {$endif}
 
       else if sametext(LResponse, cCommandHelp) then
         WriteCommands
@@ -159,11 +146,10 @@ end;
 
 begin
   try
-  if WebRequestHandler <> nil then
-    WebRequestHandler.WebModuleClass := WebModuleClass;
     RunServer();
   except
     on E: Exception do
       Writeln(E.ClassName, ': ', E.Message);
   end
 end.
+

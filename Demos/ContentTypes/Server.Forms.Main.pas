@@ -56,10 +56,10 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils, Web.HttpApp
+  StrUtils
   , MARS.Core.URL
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
-  , MARS.Data.MessageBodyWriters
+  , MARS.Data.MessageBodyWriters, MARS.Core.RequestAndResponse.Interfaces
 
 {$ifdef DelphiXE3_UP}
   , MARS.Data.FireDAC.ReadersAndWriters // remove this line if you do not have FireDAC installed
@@ -85,10 +85,9 @@ begin
 
     // skip favicon requests (browser)
     FEngine.BeforeHandleRequest :=
-      function (const AEngine: TMARSEngine;
-        const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
-        var Handled: Boolean
-      ): Boolean
+      function(const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+        var Handled: Boolean): Boolean
       begin
         Result := True;
         if SameText(AURL.Document, 'favicon.ico') then

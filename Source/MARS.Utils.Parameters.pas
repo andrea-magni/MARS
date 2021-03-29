@@ -34,6 +34,7 @@ type
     function GetQualifiedParamName(const AParamName: string): string;
     function ByNameText(const AName: string): TValue; overload;
     function ByNameText(const AName: string; const ADefault: TValue): TValue; overload;
+    function ByNameTextEnum<T {:enum}>(const AName: string; const ADefault: T): T; overload;
     function ByName(const AName: string): TValue; overload;
     function ByName(const AName: string; const ADefault: TValue): TValue; overload;
     procedure Clear;
@@ -150,6 +151,17 @@ begin
   end;
 
   Result := ByName(LName, ADefault);
+end;
+
+function TMARSParametersSlice.ByNameTextEnum<T>(const AName: string;
+  const ADefault: T): T;
+var
+  LDefaultName: string;
+  LValueName: string;
+begin
+  LDefaultName := TRttiEnumerationType.GetName<T>(ADefault);
+  LValueName := ByNameText(AName, LDefaultName).AsString;
+  Result := TRttiEnumerationType.GetValue<T>(LValueName);
 end;
 
 procedure TMARSParametersSlice.Clear;

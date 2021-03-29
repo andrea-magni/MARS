@@ -58,6 +58,10 @@ type
     function GetQueryString: string; inline;
     function GetRawContent: TBytes; inline;
     function GetRawPath: string;
+    function GetContentFields: TArray<string>;
+    function GetQueryFields: TArray<string>;
+    function GetRemoteIP: string;
+    function GetUserAgent: string;
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(ADCSRequest: ICrossHttpRequest); virtual;
@@ -70,16 +74,19 @@ type
     // IMARSResponse -----------------------------------------------------------
     function GetContent: string;
     function GetContentEncoding: string;
+    function GetContentLength: Integer;
     function GetContentStream: TStream;
     function GetContentType: string;
     function GetStatusCode: Integer;
     procedure SetContent(const AContent: string);
     procedure SetContentEncoding(const AContentEncoding: string);
+    procedure SetContentLength(const ALength: Integer);
     procedure SetContentStream(const AContentStream: TStream);
     procedure SetContentType(const AContentType: string);
     procedure SetHeader(const AName: string; const AValue: string);
     procedure SetStatusCode(const AStatusCode: Integer);
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(ADCSResponse: ICrossHttpResponse); virtual;
   end;
@@ -222,6 +229,39 @@ function TMARSDCSRequest.GetContent: string;
 begin
 //AM TODO
   Result := '';
+end;
+
+function TMARSDCSRequest.GetContentFields: TArray<string>;
+var
+  LMultiPartBody: THttpMultiPartFormData;
+  LIndex: Integer;
+  LFormField: TFormField;
+  LURLParamsBody: THttpUrlParams;
+  LParam: TNameValue;
+begin
+  Result := [];
+
+  if FDCSRequest.BodyType = btMultiPart then
+  begin
+    LMultiPartBody := FDCSRequest.Body as THttpMultiPartFormData;
+
+    for LIndex := 0 to LMultiPartBody.Count - 1 do
+    begin
+      LFormField := LMultiPartBody.Items[LIndex];
+
+      Result := Result + [LFormField.AsString];
+    end;
+  end
+  else if FDCSRequest.BodyType = btUrlEncoded then
+  begin
+    LURLParamsBody := FDCSRequest.Body as THttpUrlParams;
+
+    for LIndex := 0 to LURLParamsBody.Count-1 do
+    begin
+      LParam := LURLParamsBody.Items[LIndex];
+      Result := Result + [LParam.Name + '=' + LParam.Value];
+    end;
+  end;
 end;
 
 function TMARSDCSRequest.GetCookieParamCount: Integer;
@@ -461,6 +501,15 @@ begin
   Result := FDCSRequest.HostPort;
 end;
 
+function TMARSDCSRequest.GetQueryFields: TArray<string>;
+var
+  LQuery: TNameValue;
+begin
+  Result := [];
+  for LQuery in FDCSRequest.Query do
+    Result := Result + [LQuery.Name + '=' + LQuery.Value];
+end;
+
 function TMARSDCSRequest.GetQueryParamCount: Integer;
 begin
   Result := FDCSRequest.Query.Count;
@@ -524,6 +573,16 @@ begin
   Result := FDCSRequest.Path;
 end;
 
+function TMARSDCSRequest.GetRemoteIP: string;
+begin
+  Result := FDCSRequest.Connection.PeerAddr;
+end;
+
+function TMARSDCSRequest.GetUserAgent: string;
+begin
+  Result := FDCSRequest.UserAgent;
+end;
+
 function TMARSDCSRequest.GetHeaderParamCount: Integer;
 begin
   Result := FDCSRequest.Header.Count;
@@ -566,6 +625,11 @@ begin
   Result := '';
 end;
 
+function TMARSDCSResponse.GetContentLength: Integer;
+begin
+  Result := -1;
+end;
+
 function TMARSDCSResponse.GetContentStream: TStream;
 begin
 //AM TODO
@@ -582,6 +646,11 @@ begin
   Result := FDCSResponse.StatusCode;
 end;
 
+procedure TMARSDCSResponse.RedirectTo(const AURL: string);
+begin
+  FDCSResponse.Redirect(AURL);
+end;
+
 procedure TMARSDCSResponse.SetContent(const AContent: string);
 begin
   FDCSResponse.Send(AContent);
@@ -590,6 +659,11 @@ end;
 procedure TMARSDCSResponse.SetContentEncoding(const AContentEncoding: string);
 begin
 //AM TODO
+end;
+
+procedure TMARSDCSResponse.SetContentLength(const ALength: Integer);
+begin
+  // unsupported
 end;
 
 procedure TMARSDCSResponse.SetContentStream(const AContentStream: TStream);

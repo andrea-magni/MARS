@@ -28,9 +28,16 @@ object MainForm: TMainForm
     object Label1: TLabel
       Left = 28
       Top = 17
-      Width = 63
+      Width = 24
       Height = 13
-      Caption = 'Port number:'
+      Caption = 'Port:'
+    end
+    object Label2: TLabel
+      Left = 244
+      Top = 17
+      Width = 41
+      Height = 13
+      Caption = 'PortSSL:'
     end
     object StartButton: TButton
       Left = 16
@@ -49,12 +56,20 @@ object MainForm: TMainForm
       TabOrder = 1
     end
     object PortNumberEdit: TEdit
-      Left = 97
+      Left = 57
       Top = 14
       Width = 82
       Height = 21
       TabOrder = 2
       OnChange = PortNumberEditChange
+    end
+    object PortSSLNumerEdit: TEdit
+      Left = 289
+      Top = 14
+      Width = 82
+      Height = 21
+      TabOrder = 3
+      OnChange = PortSSLNumerEditChange
     end
   end
   object MainTreeView: TTreeView
@@ -65,6 +80,7 @@ object MainForm: TMainForm
     Align = alClient
     Indent = 19
     TabOrder = 1
+    OnClick = MainTreeViewClick
   end
   object MainActionList: TActionList
     Left = 384

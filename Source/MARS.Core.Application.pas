@@ -30,6 +30,7 @@ type
     FName: string;
     FSystem: Boolean;
     FParameters: TMARSParameters;
+    FDefaultResourcePath: string;
   protected
   public
     constructor Create(const AName: string); virtual;
@@ -40,12 +41,16 @@ type
 
     property Name: string read FName;
     property BasePath: string read FBasePath write FBasePath;
+    property DefaultResourcePath: string read FDefaultResourcePath write FDefaultResourcePath;
     property System: Boolean read FSystem write FSystem;
     property Resources: TObjectDictionary<string, TMARSConstructorInfo> read FResourceRegistry;
     property Parameters: TMARSParameters read FParameters;
   end;
 
   TMARSApplicationDictionary = class(TObjectDictionary<string, TMARSApplication>)
+  private
+  protected
+  public
   end;
 
 implementation
@@ -124,6 +129,8 @@ constructor TMARSApplication.Create(const AName: string);
 begin
   inherited Create;
   FName := AName;
+  FBasePath := '';
+  FDefaultResourcePath := '';
   FRttiContext := TRttiContext.Create;
   FResourceRegistry := TObjectDictionary<string, TMARSConstructorInfo>.Create([doOwnsValues]);
   FParameters := TMARSParameters.Create(AName);
@@ -145,5 +152,6 @@ begin
     for LPair in FResourceRegistry do
       ADoSomething(LPair.Key, LPair.Value);
 end;
+
 
 end.

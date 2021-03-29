@@ -33,6 +33,7 @@ implementation
 uses
     MARS.Core.Activation, MARS.Core.Activation.Interfaces
   , MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
+  , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
   {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC {$ENDIF}
@@ -51,6 +52,18 @@ begin
 
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
+{$REGION 'OnGetApplication example'}
+(*
+    FEngine.OnGetApplication :=
+      procedure (const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+        var AApplication: TMARSApplication)
+      begin
+        if AApplication = nil then
+          AApplication := FEngine.ApplicationByName('DefaultApp');
+      end;
+*)
+{$ENDREGION}
 {$IFDEF MARS_FIREDAC}
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}

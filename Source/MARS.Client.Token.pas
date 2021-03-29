@@ -11,7 +11,8 @@ interface
 
 uses
   SysUtils, Classes
-, MARS.Core.JSON, MARS.Client.Resource, MARS.Client.Utils
+, MARS.Core.JSON, MARS.Client.Resource, MARS.Client.CustomResource
+, MARS.Client.Utils
 , MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
 ;
 
@@ -49,6 +50,7 @@ type
     procedure LoadFromStream(const AStream: TStream); virtual;
     procedure SaveToFile(const AFilename: string); virtual;
     procedure LoadFromFile(const AFilename: string); virtual;
+    procedure CloneStatus(const ASource: TMARSClientCustomResource); override;
   published
     property Data: TJSONObject read FData;
 
@@ -98,11 +100,12 @@ var
 begin
   inherited AssignTo(Dest);
   LDest := Dest as TMARSClientToken;
-
-  LDest.LoadFromBytes(SaveToBytes);
-
-  LDest.UserName := UserName;
-  LDest.Password := Password;
+  if Assigned(LDest) then
+  begin
+    LDest.LoadFromBytes(SaveToBytes);
+    LDest.UserName := UserName;
+    LDest.Password := Password;
+  end;
 end;
 
 procedure TMARSClientToken.BeforePOST(const AContent: TMemoryStream);
@@ -122,6 +125,22 @@ begin
   FExpiration := 0.0;
   FUserName := '';
   FUserRoles.Clear;
+end;
+
+procedure TMARSClientToken.CloneStatus(
+  const ASource: TMARSClientCustomResource);
+var
+  LSource: TMARSClientToken;
+begin
+  inherited;
+  LSource := ASource as TMARSClientToken;
+  if Assigned(LSource) then
+  begin
+    if Assigned(LSource.Data) then
+      SetData(LSource.Data.Clone as TJSONObject)
+    else
+      SetData(nil);
+  end;
 end;
 
 constructor TMARSClientToken.Create(AOwner: TComponent);

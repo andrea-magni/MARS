@@ -31,6 +31,8 @@ type
     StartButton: TButton;
     StopButton: TButton;
     PortNumberEdit: TEdit;
+    GalleryCategoryButton: TButton;
+    RazorButton: TButton;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -39,6 +41,8 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
     procedure PortNumberEditChange(Sender: TObject);
+    procedure GalleryCategoryButtonClick(Sender: TObject);
+    procedure RazorButtonClick(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
     FEngine: TMARSEngine;
@@ -53,12 +57,17 @@ implementation
 {$R *.dfm}
 
 uses
-  Web.HttpApp
-  , MARS.Core.URL
-  , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
-  , MARS.Core.MessageBodyReader, MARS.Core.MessageBodyReaders
-  , MARS.Utils.Parameters.IniFile
-  ;
+  Windows, ShellAPI
+, MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
+, MARS.Core.MessageBodyReader, MARS.Core.MessageBodyReaders
+, MARS.Utils.Parameters.IniFile
+;
+
+procedure TMainForm.GalleryCategoryButtonClick(Sender: TObject);
+begin
+  ShellExecute(0, nil, 'http://localhost:8080/gallery/category/', nil, nil, SW_SHOW);
+end;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -77,10 +86,9 @@ begin
 
     // skip favicon requests (browser)
     FEngine.BeforeHandleRequest :=
-      function (const AEngine: TMARSEngine;
-        const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
-        var Handled: Boolean
-      ): Boolean
+      function(const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+        var Handled: Boolean): Boolean
       begin
         Result := True;
         if SameText(AURL.Document, 'favicon.ico') then
@@ -105,6 +113,11 @@ end;
 procedure TMainForm.PortNumberEditChange(Sender: TObject);
 begin
   FEngine.Port := StrToInt(PortNumberEdit.Text);
+end;
+
+procedure TMainForm.RazorButtonClick(Sender: TObject);
+begin
+  ShellExecute(0, nil, 'http://localhost:8080/gallery/razor/categories.htm', nil, nil, SW_SHOW);
 end;
 
 procedure TMainForm.StartServerActionExecute(Sender: TObject);

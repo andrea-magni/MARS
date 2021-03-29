@@ -59,6 +59,24 @@ object MainForm: TMainForm
       OnChange = PortNumberEditChange
     end
   end
+  object GalleryCategoryButton: TButton
+    Left = 40
+    Top = 105
+    Width = 289
+    Height = 25
+    Caption = '/gallery/category/ RESOURCE'
+    TabOrder = 1
+    OnClick = GalleryCategoryButtonClick
+  end
+  object RazorButton: TButton
+    Left = 40
+    Top = 136
+    Width = 289
+    Height = 25
+    Caption = 'Razor RESOURCE'
+    TabOrder = 2
+    OnClick = RazorButtonClick
+  end
   object MainActionList: TActionList
     Left = 384
     Top = 24

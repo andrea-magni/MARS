@@ -40,6 +40,10 @@ type
     function GetPort: Integer;
     function GetRawPath: string;
     function GetDate: TDateTime;
+    function GetContentFields: TArray<string>;
+    function GetQueryFields: TArray<string>;
+    function GetRemoteIP: string;
+    function GetUserAgent: string;
 
     function AsObject: TObject;
     procedure CheckWorkaroundForISAPI;
@@ -53,6 +57,10 @@ type
     property HostName: string read GetHostName;
     property Port: Integer read GetPort;
     property RawPath: string read GetRawPath;
+    property ContentFields: TArray<string> read GetContentFields;
+    property QueryFields: TArray<string> read GetQueryFields;
+    property RemoteIP: string read GetRemoteIP;
+    property UserAgent: string read GetUserAgent;
   end;
 
   IMARSResponse = interface
@@ -60,6 +68,8 @@ type
     procedure SetContentStream(const AContentStream: TStream);
     function GetContentType: string;
     procedure SetContentType(const AContentType: string);
+    function GetContentLength: Integer;
+    procedure SetContentLength(const ALength: Integer);
     function GetContentEncoding: string;
     procedure SetContentEncoding(const AContentEncoding: string);
     function GetStatusCode: Integer;
@@ -68,10 +78,12 @@ type
     procedure SetContent(const AContent: string);
     procedure SetHeader(const AName, AValue: string);
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    procedure RedirectTo(const AURL: string);
 
     property Content: string read GetContent write SetContent;
     property ContentStream: TStream read GetContentStream write SetContentStream;
     property ContentType: string read GetContentType write SetContentType;
+    property ContentLength: Integer read GetContentLength write SetContentLength;
     property ContentEncoding: string read GetContentEncoding write SetContentEncoding;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
   end;

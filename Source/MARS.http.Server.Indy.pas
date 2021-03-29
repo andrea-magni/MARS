@@ -10,13 +10,15 @@ unit MARS.http.Server.Indy;
 interface
 
 uses
-  Classes, SysUtils, TimeSpan, SyncObjs
-
-  , IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
-  , IdSchedulerOfThreadPool
-  , idHTTPWebBrokerBridge
-  , Web.HttpApp
-  , MARS.Core.Engine, MARS.Core.Token, MARS.Core.RequestAndResponse.Interfaces
+  Classes, SysUtils, TimeSpan, SyncObjs, Web.HttpApp
+// Indy
+, IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
+, IdSchedulerOfThreadPool
+, idHTTPWebBrokerBridge, idGlobal
+// to enable standalone SSL
+, IdBaseComponent, IdComponent, IdServerIOHandler, IdSSL, IdSSLOpenSSL
+// MARS
+, MARS.Core.Engine, MARS.Core.Token, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -62,6 +64,11 @@ type
     function GetQueryString: string; inline;
     function GetRawContent: TBytes; inline;
     function GetRawPath: string; inline;
+    function GetContentFields: TArray<string>;
+    function GetQueryFields: TArray<string>;
+    function GetRemoteIP: string;
+    function GetUserAgent: string;
+
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(AWebRequest: TWebRequest); virtual;
@@ -78,14 +85,17 @@ type
     function GetContentEncoding: string; inline;
     function GetContentStream: TStream; inline;
     function GetContentType: string; inline;
+    function GetContentLength: Integer; inline;
     function GetStatusCode: Integer; inline;
     procedure SetContent(const AContent: string); inline;
     procedure SetContentEncoding(const AContentEncoding: string); inline;
     procedure SetContentStream(const AContentStream: TStream); inline;
     procedure SetContentType(const AContentType: string); inline;
+    procedure SetContentLength(const ALength: Integer); inline;
     procedure SetHeader(const AName: string; const AValue: string); inline;
     procedure SetStatusCode(const AStatusCode: Integer); inline;
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); inline;
+    procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(AWebResponse: TWebResponse); virtual;
   end;
@@ -105,7 +115,9 @@ type
     FStartedAt: TDateTime;
     FStoppedAt: TDateTime;
     FBeforeCommandGet: TBeforeCommandGetFunc;
+    FQuerySSLPortFunc: TFunc<UInt16, Boolean>;
     function GetUpTime: TTimeSpan;
+    function GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
   protected
     procedure SetCookies(const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse); virtual;
     procedure Startup; override;
@@ -120,12 +132,17 @@ type
       var VHandled: Boolean); virtual;
 
     procedure SetupThreadPooling(const APoolSize: Integer = 25);
+    procedure SetupSSLIOHandler(); virtual;
+    function DoQuerySSLPort(APort: TIdPort): Boolean; override;
   public
     constructor Create(AEngine: TMARSEngine); virtual;
+
     property Engine: TMARSEngine read FEngine;
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
+    property SSLIOHandler: TIdServerIOHandlerSSLOpenSSL read GetSSLIOHandler;
+    property QuerySSLPortFunc: TFunc<UInt16, Boolean> read FQuerySSLPortFunc write FQuerySSLPortFunc;
 
     property BeforeCommandGet: TBeforeCommandGetFunc read FBeforeCommandGet write FBeforeCommandGet;
   end;
@@ -133,9 +150,9 @@ type
 implementation
 
 uses
-  StrUtils, DateUtils
+  StrUtils, DateUtils, System.Rtti
 , IdCookie
-, MARS.Core.Utils
+, MARS.Core.Utils, MARS.Utils.Parameters
 ;
 
 { TMARShttpServerIndy }
@@ -198,6 +215,21 @@ begin
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
 end;
 
+function TMARShttpServerIndy.DoQuerySSLPort(APort: TIdPort): Boolean;
+begin
+  if Assigned(QuerySSLPortFunc) then
+    Result := QuerySSLPortFunc(APort)
+  else
+    Result := Assigned(FEngine) and (APort = FEngine.PortSSL);
+end;
+
+function TMARShttpServerIndy.GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
+begin
+  if not Assigned(IOHandler) then
+    IOHandler := TIdServerIOHandlerSSLOpenSSL.Create(Self);
+  Result := IOHandler as TIdServerIOHandlerSSLOpenSSL;
+end;
+
 function TMARShttpServerIndy.GetUpTime: TTimeSpan;
 begin
   if Active then
@@ -243,6 +275,21 @@ begin
   end;
 end;
 
+procedure TMARShttpServerIndy.SetupSSLIOHandler();
+var
+  LParams: TMARSParameters;
+begin
+  LParams := FEngine.Parameters;
+  SSLIOHandler.SSLOptions.RootCertFile := LParams.ByNameText('Indy.SSL.RootCertFile', 'localhost.pem').AsString;
+  SSLIOHandler.SSLOptions.CertFile := LParams.ByNameText('Indy.SSL.CertFile', 'localhost.crt').AsString;
+  SSLIOHandler.SSLOptions.KeyFile := LParams.ByNameText('Indy.SSL.KeyFile', 'localhost.key').AsString;
+  SSLIOHandler.SSLOptions.Method := TRttiEnumerationType.GetValue<TIdSSLVersion>(
+    LParams.ByNameText('Indy.SSL.Version', 'sslvTLSv1_2').AsString);
+
+  SSLIOHandler.SSLOptions.Mode := TRttiEnumerationType.GetValue<TIdSSLMode>(
+    FEngine.Parameters.ByNameText('Indy.SSL.Mode', 'sslmServer').AsString);
+end;
+
 procedure TMARShttpServerIndy.SetupThreadPooling(const APoolSize: Integer);
 var
   LScheduler: TIdSchedulerOfThreadPool;
@@ -263,13 +310,25 @@ procedure TMARShttpServerIndy.Shutdown;
 begin
   inherited;
   Bindings.Clear;
+  if Assigned(IOHandler) then
+  begin
+    IOHandler.Free;
+    IOHandler := nil;
+  end;
   FStoppedAt := Now;
 end;
 
 procedure TMARShttpServerIndy.Startup;
 begin
-  Bindings.Clear;
-  DefaultPort := FEngine.Port;
+  if FEngine.Port <> 0 then
+    Bindings.Add.Port := FEngine.Port;
+
+  if (FEngine.PortSSL <> 0) then
+  begin
+    SetupSSLIOHandler();
+    Bindings.Add.Port := FEngine.PortSSL;
+  end;
+
   AutoStartSession := False;
   SessionState := False;
   SetupThreadPooling(FEngine.ThreadPoolSize);
@@ -310,6 +369,11 @@ end;
 function TMARSWebRequest.GetContent: string;
 begin
   Result := FWebRequest.Content;
+end;
+
+function TMARSWebRequest.GetContentFields: TArray<string>;
+begin
+  Result := FWebRequest.ContentFields.ToStringArray;
 end;
 
 function TMARSWebRequest.GetCookieParamCount: Integer;
@@ -436,6 +500,11 @@ begin
   Result := FWebRequest.ServerPort;
 end;
 
+function TMARSWebRequest.GetQueryFields: TArray<string>;
+begin
+  Result := FWebRequest.QueryFields.ToStringArray;
+end;
+
 function TMARSWebRequest.GetQueryParamCount: Integer;
 begin
   Result := FWebRequest.QueryFields.Count;
@@ -476,6 +545,16 @@ begin
   Result := FWebRequest.RawPathInfo;
 end;
 
+function TMARSWebRequest.GetRemoteIP: string;
+begin
+  Result := FWebRequest.RemoteIP;
+end;
+
+function TMARSWebRequest.GetUserAgent: string;
+begin
+  Result := FWebRequest.UserAgent;
+end;
+
 function TMARSWebRequest.GetHeaderParamCount: Integer;
 begin
   if (FWebRequest is TMARSIdHTTPAppRequest) or (FWebRequest is TIdHTTPAppRequest) then
@@ -510,6 +589,11 @@ begin
   Result := FWebResponse.ContentEncoding;
 end;
 
+function TMARSWebResponse.GetContentLength: Integer;
+begin
+  Result := FWebResponse.ContentLength;
+end;
+
 function TMARSWebResponse.GetContentStream: TStream;
 begin
   Result := FWebResponse.ContentStream;
@@ -525,6 +609,12 @@ begin
   Result := FWebResponse.StatusCode;
 end;
 
+procedure TMARSWebResponse.RedirectTo(const AURL: string);
+begin
+  FWebResponse.SendRedirect(AURL);
+  FWebResponse.SendResponse;
+end;
+
 procedure TMARSWebResponse.SetContent(const AContent: string);
 begin
   FWebResponse.Content := AContent;
@@ -533,6 +623,11 @@ end;
 procedure TMARSWebResponse.SetContentEncoding(const AContentEncoding: string);
 begin
   FWebResponse.ContentEncoding := AContentEncoding;
+end;
+
+procedure TMARSWebResponse.SetContentLength(const ALength: Integer);
+begin
+  FWebResponse.ContentLength := ALength;
 end;
 
 procedure TMARSWebResponse.SetContentStream(const AContentStream: TStream);

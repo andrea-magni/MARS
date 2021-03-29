@@ -83,6 +83,7 @@ var
   LIncludeDefault: Boolean;
   LDataSet: TFDDataSet;
   LDataSets: TArray<TFDDataSet>;
+  LRDBMSDataSet: TFDRdbmsDataSet;
 begin
   // determine default behavior
   LIncludeDefault := True;
@@ -112,6 +113,13 @@ begin
 
   for LDataSet in LDataSets do
   begin
+    if LDataSet is TFDRdbmsDataSet then
+    begin
+      LRDBMSDataSet := TFDRdbmsDataSet(LDataSet);
+      if SameText(LRDBMSDataSet.ConnectionName, FD.ConnectionDefName) and not Assigned(LRDBMSDataSet.Connection) then
+        LRDBMSDataSet.Connection := FD.Connection;
+    end;
+
     if LDataSet is TFDAdaptedDataSet then
     begin
       FD.InjectMacroValues(TFDAdaptedDataSet(LDataSet).Command);

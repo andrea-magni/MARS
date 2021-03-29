@@ -3,13 +3,10 @@ unit ReadersAndWriters.HTML;
 interface
 
 uses
-    Classes, SysUtils, Rtti
-  , MARS.Core.Classes
-  , MARS.Core.Attributes
-  , MARS.Core.MessageBodyWriter
-  , MARS.Core.MediaType
-  , MARS.Core.Activation.Interfaces
-  ;
+  Classes, SysUtils, Rtti
+, MARS.Core.Classes, MARS.Core.Attributes, MARS.Core.MessageBodyWriter
+, MARS.Core.MediaType, MARS.Core.Activation.Interfaces
+;
 
 type
   [Produces(TMediaType.TEXT_HTML)]
@@ -29,9 +26,8 @@ type
 implementation
 
 uses
-    HttpApp, NetEncoding
-  , MARS.Rtti.Utils
-  , Gallery.Model
+  HttpApp, NetEncoding
+, MARS.Rtti.Utils, Gallery.Model
 ;
 
 const

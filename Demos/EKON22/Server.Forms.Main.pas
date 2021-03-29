@@ -9,9 +9,9 @@ unit Server.Forms.Main;
 
 interface
 
-uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
-  , System.Actions
-  , MARS.http.Server.Indy
+uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls,
+  System.Actions
+, MARS.http.Server.Indy
 ;
 
 type
@@ -47,10 +47,10 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils, Web.HttpApp
-  , MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
-  , MARS.Core.Registry.Utils
-  , Server.Ignition
+  StrUtils, IOUtils
+, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
+, MARS.Core.Registry.Utils
+, Server.Ignition
 ;
 
 procedure TMainForm.RenderEngines(const ATreeView: TTreeView);
@@ -107,8 +107,8 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   PortNumberEdit.Text := IntToStr(TServerEngine.Default.Port);
-  RenderEngines(MainTreeView);
   StartServerAction.Execute;
+  RenderEngines(MainTreeView);
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);
@@ -121,7 +121,24 @@ begin
   // http server implementation
   FServer := TMARShttpServerIndy.Create(TServerEngine.Default);
   try
-    FServer.DefaultPort := TServerEngine.Default.Port;
+    // http port, default is 8080, set 0 to disable http
+    // you can specify 'Port' parameter or hard-code value here
+//    FServer.Engine.Port := 80;
+
+// to enable Indy standalone SSL -----------------------------------------------
+//------------------------------------------------------------------------------
+//    default https port value is 0, use PortSSL parameter or hard-code value here
+//    FServer.Engine.PortSSL := 443;
+// Available parameters:
+//     'PortSSL', default: 0 (disabled)
+//     'Indy.SSL.RootCertFile', default: 'localhost.pem' (bin folder)
+//     'Indy.SSL.CertFile', default: 'localhost.crt' (bin folder)
+//     'Indy.SSL.KeyFile', default: 'localhost.key' (bin folder)
+// if needed, setup additional event handlers or properties
+//    FServer.SSLIOHandler.OnGetPassword := YourGetPasswordHandler;
+//    FServer.SSLIOHandler.OnVerifyPeer := YourVerifyPeerHandler;
+//    FServer.SSLIOHandler.SSLOptions.VerifyDepth := 1;
+//------------------------------------------------------------------------------
     FServer.Active := True;
   except
     FServer.Free;
@@ -146,3 +163,4 @@ begin
 end;
 
 end.
+

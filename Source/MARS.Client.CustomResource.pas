@@ -18,6 +18,76 @@ uses
   ;
 
 type
+{$REGION 'Fluent scaffolding'}
+  TMARSClientCustomResource = class;
+
+  // Abstract base for fluent interfaces
+  IMARSClientBaseParams = interface
+    ['{19AC2FA4-A913-42AA-9955-53A55193EBB8}']
+    function BeforeExecute(const AHandler: TProc<TMemoryStream>): IMARSClientBaseParams;
+    function OnException(const AHandler: TMARSClientExecptionProc): IMARSClientBaseParams;
+    procedure Go;
+  end;
+
+  // Abstract base for fluent interface implementors
+  TMARSClientBaseParams = class abstract(TInterfacedObject, IMARSClientBaseParams)
+  public
+    // You can set these but the preferred way is to use the fluent calls below.
+    BeforeExecuteHandler: TProc<TMemoryStream>;
+    OnExceptionHandler: TMARSClientExecptionProc;
+  public
+    // IMARSClientBaseParams
+    function BeforeExecute(const AHandler: TProc<TMemoryStream>): IMARSClientBaseParams;
+    function OnException(const AHandler: TMARSClientExecptionProc): IMARSClientBaseParams;
+    procedure Go; virtual; abstract;
+  end;
+
+  // Interface for fluent sync calls
+  IMARSClientSyncParams = interface(IMARSClientBaseParams)
+    ['{19AC2FA4-A913-42AA-9955-53A55193EBB8}']
+    function AfterExecute(const AHandler: TMARSClientResponseProc): IMARSClientSyncParams;
+  end;
+
+  // Implements fluent sync calls
+  TMARSClientSyncParams = class(TMARSClientBaseParams, IMARSClientSyncParams)
+  private
+    FGoHandler: TProc<TMARSClientSyncParams>;
+  public
+    // You can set this but the preferred way is to use the fluent call below.
+    AfterExecuteHandler: TMARSClientResponseProc;
+  public
+    constructor Create(const AGoHandler: TProc<TMARSClientSyncParams>);
+    // IMARSClientSyncParams
+    function AfterExecute(const AHandler: TMARSClientResponseProc): IMARSClientSyncParams;
+    procedure Go; override;
+  end;
+
+  // Interface for fluent async calls
+  IMARSClientAsyncParams = interface(IMARSClientBaseParams)
+    ['{E12D7ACB-1225-48C8-A8B9-5B98F3F60568}']
+    function OnCompletion(const AHandler: TProc<TMARSClientCustomResource>): IMARSClientAsyncParams;
+    function NoSynchronize: IMARSClientAsyncParams;
+  end;
+
+  // Implements fluent async calls
+  TMARSClientAsyncParams = class(TMARSClientBaseParams, IMARSClientAsyncParams)
+  private
+    FGoHandler: TProc<TMARSClientAsyncParams>;
+  public
+    // You can set these but the preferred way is to use the fluent calls below.
+    OnCompletionHandler: TProc<TMARSClientCustomResource>;
+    Synchronize: Boolean;
+  public
+    constructor Create(const AGoHandler: TProc<TMARSClientAsyncParams>);
+    procedure AfterConstruction; override;
+    // IMARSClientAsyncParams
+    function OnCompletion(const AHandler: TProc<TMARSClientCustomResource>): IMARSClientAsyncParams;
+    function NoSynchronize: IMARSClientAsyncParams;
+    procedure Go; override;
+  end;
+
+{$ENDREGION}
+
   [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSClientCustomResource = class(TComponent)
   private
@@ -65,6 +135,9 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
+    procedure CloneSetup(const ASource: TMARSClientCustomResource); virtual;
+    procedure CloneStatus(const ASource: TMARSClientCustomResource); virtual;
 
     // http verbs
     procedure GET(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
@@ -188,6 +261,7 @@ begin
   LDestResource.SpecificContentType := SpecificContentType;
   LDestResource.SpecificClient := SpecificClient;
   LDestResource.SpecificToken := SpecificToken;
+  LDestResource.SpecificURL := SpecificURL;
   LDestResource.Resource := Resource;
   LDestResource.CustomHeaders.Assign(CustomHeaders);
   LDestResource.PathParamsValues.Assign(PathParamsValues);
@@ -217,6 +291,20 @@ procedure TMARSClientCustomResource.BeforePUT(const AContent: TMemoryStream);
 begin
   ApplyCustomHeaders;
 
+end;
+
+procedure TMARSClientCustomResource.CloneSetup(
+  const ASource: TMARSClientCustomResource);
+begin
+  if not Assigned(ASource) then
+    Exit;
+
+  Assign(ASource);
+end;
+
+procedure TMARSClientCustomResource.CloneStatus(
+  const ASource: TMARSClientCustomResource);
+begin
 end;
 
 constructor TMARSClientCustomResource.Create(AOwner: TComponent);
@@ -378,14 +466,16 @@ var
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
-    LClient.Assign(Client);
+    LClient.CloneSetup(Client);
+
     LApplication := TMARSClientApplication.Create(nil);
     try
-      LApplication.Assign(Application);
+      LApplication.CloneSetup(Application);
       LApplication.Client := LClient;
+
       LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
       try
-        LResource.Assign(Self);
+        LResource.CloneSetup(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
 
@@ -395,8 +485,8 @@ begin
             LOnException: TProc<Exception>;
           begin
             try
+              LOnException := nil;
               if Assigned(AOnException) then
-              begin
                 LOnException :=
                   procedure (AException: Exception)
                   begin
@@ -410,15 +500,12 @@ begin
                     else
                       AOnException(AException);
                   end;
-              end
-              else
-                LOnException := nil;
 
               LResource.DELETE(
                   ABeforeExecute
                 , procedure (AStream: TStream)
                   begin
-                    Assign(LResource);
+                    CloneStatus(LResource);
 
                     if Assigned(ACompletionHandler) then
                     begin
@@ -564,14 +651,16 @@ var
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
-    LClient.Assign(Client);
+    LClient.CloneSetup(Client);
+
     LApplication := TMARSClientApplication.Create(nil);
     try
-      LApplication.Assign(Application);
+      LApplication.CloneSetup(Application);
       LApplication.Client := LClient;
+
       LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
       try
-        LResource.Assign(Self);
+        LResource.CloneSetup(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
 
@@ -581,8 +670,8 @@ begin
             LOnException: TProc<Exception>;
           begin
             try
+              LOnException := nil;
               if Assigned(AOnException) then
-              begin
                 LOnException :=
                   procedure (AException: Exception)
                   begin
@@ -596,14 +685,12 @@ begin
                     else
                       AOnException(AException);
                   end;
-              end
-              else
-                LOnException := nil;
 
-              LResource.GET(nil
+              LResource.GET(
+                  nil
                 , procedure (AStream: TStream)
                   begin
-                    Assign(LResource);
+                    CloneStatus(LResource);
 
                     if Assigned(ACompletionHandler) then
                     begin
@@ -621,9 +708,9 @@ begin
                 , LOnException
                 );
               finally
-                LResource.Free;
-                LApplication.Free;
-                LClient.Free;
+                FreeAndNil(LResource);
+                FreeAndNil(LApplication);
+                FreeAndNil(LClient);
               end;
           end
         );
@@ -696,14 +783,16 @@ var
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
-    LClient.Assign(Client);
+    LClient.CloneSetup(Client);
+
     LApplication := TMARSClientApplication.Create(nil);
     try
-      LApplication.Assign(Application);
+      LApplication.CloneSetup(Application);
       LApplication.Client := LClient;
+
       LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
       try
-        LResource.Assign(Self);
+        LResource.CloneSetup(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
 
@@ -713,8 +802,8 @@ begin
             LOnException: TProc<Exception>;
           begin
             try
+              LOnException := nil;
               if Assigned(AOnException) then
-              begin
                 LOnException :=
                   procedure (AException: Exception)
                   begin
@@ -728,15 +817,12 @@ begin
                     else
                       AOnException(AException);
                   end;
-              end
-              else
-                LOnException := nil;
 
               LResource.POST(
                 ABeforeExecute
               , procedure (AStream: TStream)
                 begin
-                  Assign(LResource);
+                  CloneStatus(LResource);
 
                   if Assigned(ACompletionHandler) then
                   begin
@@ -754,9 +840,9 @@ begin
               , LOnException
               );
             finally
-              LResource.Free;
-              LApplication.Free;
-              LClient.Free;
+              FreeAndNil(LResource);
+              FreeAndNil(LApplication);
+              FreeAndNil(LClient);
             end;
           end
         );
@@ -829,14 +915,16 @@ var
 begin
   LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
   try
-    LClient.Assign(Client);
+    LClient.CloneSetup(Client);
+
     LApplication := TMARSClientApplication.Create(nil);
     try
-      LApplication.Assign(Application);
+      LApplication.CloneSetup(Application);
       LApplication.Client := LClient;
+
       LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
       try
-        LResource.Assign(Self);
+        LResource.CloneSetup(Self);
         LResource.SpecificClient := nil;
         LResource.Application := LApplication;
 
@@ -846,8 +934,8 @@ begin
             LOnException: TProc<Exception>;
           begin
             try
+              LOnException := nil;
               if Assigned(AOnException) then
-              begin
                 LOnException :=
                   procedure (AException: Exception)
                   begin
@@ -861,15 +949,12 @@ begin
                     else
                       AOnException(AException);
                   end;
-              end
-              else
-                LOnException := nil;
 
               LResource.PUT(
                 ABeforeExecute
               , procedure (AStream: TStream)
                 begin
-                  Assign(LResource);
+                  CloneStatus(LResource);
 
                   if Assigned(ACompletionHandler) then
                   begin
@@ -887,9 +972,9 @@ begin
               , LOnException
               );
             finally
-              LResource.Free;
-              LApplication.Free;
-              LClient.Free;
+              FreeAndNil(LResource);
+              FreeAndNil(LApplication);
+              FreeAndNil(LClient);
             end;
           end
         );
@@ -923,4 +1008,82 @@ begin
   FQueryParams.Assign(Value);
 end;
 
+{$REGION 'Fluent scaffolding implementation'}
+{ TMARSClientBaseParams }
+
+function TMARSClientBaseParams.BeforeExecute(
+  const AHandler: TProc<TMemoryStream>): IMARSClientBaseParams;
+begin
+  BeforeExecuteHandler := AHandler;
+  Result := Self;
+end;
+
+function TMARSClientBaseParams.OnException(
+  const AHandler: TMARSClientExecptionProc): IMARSClientBaseParams;
+begin
+  OnExceptionHandler := AHandler;
+  Result := Self;
+end;
+
+{ TMARSClientParams }
+
+function TMARSClientSyncParams.AfterExecute(
+  const AHandler: TMARSClientResponseProc): IMARSClientSyncParams;
+begin
+  AfterExecuteHandler := AHandler;
+  Result := Self;
+end;
+
+{ TMARSClientAsyncParams }
+
+procedure TMARSClientAsyncParams.AfterConstruction;
+begin
+  inherited;
+  Synchronize := True;
+end;
+
+function TMARSClientAsyncParams.OnCompletion(
+  const AHandler: TProc<TMARSClientCustomResource>): IMARSClientAsyncParams;
+begin
+  OnCompletionHandler := AHandler;
+  Result := Self;
+end;
+
+constructor TMARSClientAsyncParams.Create(
+  const AGoHandler: TProc<TMARSClientAsyncParams>);
+begin
+  inherited Create;
+  FGoHandler := AGoHandler;
+end;
+
+procedure TMARSClientAsyncParams.Go;
+begin
+  Assert(Assigned(FGoHandler));
+
+  FGoHandler(Self);
+end;
+
+function TMARSClientAsyncParams.NoSynchronize: IMARSClientAsyncParams;
+begin
+  Synchronize := False;
+  Result := Self;
+end;
+
+constructor TMARSClientSyncParams.Create(
+  const AGoHandler: TProc<TMARSClientSyncParams>);
+begin
+  inherited Create;
+  FGoHandler := AGoHandler;
+end;
+
+procedure TMARSClientSyncParams.Go;
+begin
+  Assert(Assigned(FGoHandler));
+
+  FGoHandler(Self);
+end;
+
+{$ENDREGION}
+
 end.
+

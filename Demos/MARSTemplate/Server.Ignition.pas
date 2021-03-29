@@ -10,12 +10,9 @@ unit Server.Ignition;
 interface
 
 uses
-  System.Classes,
-  System.SysUtils,
-  System.RTTI,
-  System.ZLib,
-  System.StrUtils,
-  MARS.Core.Engine;
+  System.Classes, System.SysUtils, System.RTTI, System.StrUtils, System.ZLib
+, MARS.Core.Engine
+;
 
 type
   TServerEngine=class
@@ -39,7 +36,7 @@ uses
   , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
   , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
-  {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC {$ENDIF}
+  {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option {$ENDIF}
   {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
   , Server.Resources
   ;
@@ -55,9 +52,34 @@ begin
 
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
+{$REGION 'OnGetApplication example'}
+(*
+    FEngine.OnGetApplication :=
+      procedure (const AEngine: TMARSEngine;
+        const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+        var AApplication: TMARSApplication)
+      begin
+        if AApplication = nil then
+          AApplication := FEngine.ApplicationByName('DefaultApp');
+      end;
+*)
+{$ENDREGION}
 {$IFDEF MARS_FIREDAC}
     FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 {$ENDIF}
+{$REGION 'AfterCreateConnection example'}
+(*
+    TMARSFireDAC.AfterCreateConnection :=
+      procedure (Conn: TFDConnection)
+      begin
+        Conn.TxOptions.Isolation :=
+          FEngine.Parameters
+          .ByNameTextEnum<TFDTxIsolation>(
+            'FireDAC.' + Conn.ConnectionDefName + '.TxOptions.Isolation'
+            , TFDTxIsolation.xiUnspecified);
+      end;
+*)
+{$ENDREGION}
 {$REGION 'BeforeHandleRequest example'}
 (*
     FEngine.BeforeHandleRequest :=

@@ -8,20 +8,13 @@
 interface
 
 uses
-  SysUtils, Classes, Diagnostics
+  SysUtils, Classes, Diagnostics, System.Rtti
 
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-  , MARS.Core.Response
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Response
+, MARS.WebServer.Resources, MARS.Core.URL, MARS.Core.Classes
+, MARS.Core.Engine, MARS.Core.Application
 
-  , MARS.WebServer.Resources
-  , MARS.Core.URL
-
-  , MARS.Core.Classes
-  , MARS.Core.Engine
-  , MARS.Core.Application
-
-  , RlxRazor
+, RlxRazor  // see https://github.com/andrea-magni/DelphiRazor
 ;
 
 type
@@ -51,11 +44,9 @@ type
 
 implementation
 
-uses
-    IOUtils, DateUtils
-  , MARS.Core.Registry
-  , MARS.Core.Exceptions
-  ;
+uses IOUtils, DateUtils
+, MARS.Core.Registry, MARS.Core.Exceptions
+;
 
 { TRazorResource }
 
@@ -130,7 +121,7 @@ end;
 
 initialization
   TMARSResourceRegistry.Instance.RegisterResource<TRazorResource>(
-    function: TObject
+    function (const AContext: TValue): TObject
     begin
       Result := TRazorResource.Create;
     end

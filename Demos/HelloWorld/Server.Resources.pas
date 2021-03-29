@@ -10,13 +10,9 @@ interface
 uses
   Classes, SysUtils
 
-  , MARS.Core.Registry
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-  , MARS.Core.JSON
-  , MARS.Core.MessageBodyWriters
-  , MARS.Core.MessageBodyReaders
-  ;
+, MARS.Core.Registry, MARS.Core.Attributes, MARS.Core.MediaType
+, MARS.Core.JSON, MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
+;
 
 type
   [Path('/helloworld'), Produces(TMediaType.TEXT_PLAIN)]

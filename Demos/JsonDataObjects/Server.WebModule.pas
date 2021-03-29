@@ -37,14 +37,15 @@ implementation
 {$R *.dfm}
 
 uses
-  Server.Ignition;
+  MARS.http.Server.Indy
+, Server.Ignition;
 
 procedure TServerWebModule.ServerWebModuleDefaultHandlerAction(Sender: TObject;
   Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
 begin
   inherited;
 
-  if not TServerEngine.Default.HandleRequest(Request, Response) then
+  if not TServerEngine.Default.HandleRequest(TMARSWebRequest.Create(Request), TMARSWebResponse.Create(Response)) then
   begin
     Response.ContentType := 'application/json';
     Response.Content :=

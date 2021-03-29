@@ -5,7 +5,8 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
-  FMX.Controls.Presentation, FMX.StdCtrls, FrameStand, FMX.Layouts, FMX.Objects;
+  FMX.Controls.Presentation, FMX.StdCtrls, FrameStand, FMX.Layouts, FMX.Objects,
+  SubjectStand;
 
 type
   TMainForm = class(TForm)
@@ -38,7 +39,7 @@ uses Data.Main;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   FrameStand.CommonActions.Add('ca_Close',
-    procedure (AFrameInfo: TFrameInfo<TFrame>)
+    procedure (AFrameInfo: TSubjectInfo)
     begin
       AFrameInfo.Hide;
     end

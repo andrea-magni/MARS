@@ -11,7 +11,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
   FMX.Controls.Presentation, FMX.Edit, FMX.Layouts, System.Actions, FMX.ActnList
-  , MARS.http.Server.Indy
+, MARS.http.Server.Indy
 ;
 
 type
@@ -44,9 +44,9 @@ implementation
 {$R *.fmx}
 
 uses
-    Web.HTTPApp
-  , MARS.Core.URL, MARS.Core.Engine
-  , Server.Ignition;
+  MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.URL, MARS.Core.Engine
+, Server.Ignition;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -59,10 +59,9 @@ begin
 
   // skip favicon requests (browser)
   TServerEngine.Default.BeforeHandleRequest :=
-    function (const AEngine: TMARSEngine;
-      const AURL: TMARSURL; const ARequest: TWebRequest; const AResponse: TWebResponse;
-      var Handled: Boolean
-    ): Boolean
+    function(const AEngine: TMARSEngine;
+      const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      var Handled: Boolean): Boolean
     begin
       Result := True;
       if SameText(AURL.Document, 'favicon.ico') then

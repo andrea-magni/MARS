@@ -168,7 +168,7 @@ begin
   end;
 
   LURL := TMARSURL.Create(
-    'http://localhost:8080/rest/default/helloworld?first=One+Two+Three'
+    'http://localhost:8080/rest/default/helloworld?first=One%2BTwo%2BThree'
   );
   try
     Assert.AreEqual('One+Two+Three', LURL.QueryTokenByName('first', False, False), 'QueryParam with pluses');

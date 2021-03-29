@@ -6,8 +6,10 @@ object MainDataModule: TMainDataModule
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 0
     ReadTimeout = -1
+    AuthCookieName = 'access_token'
+    ProxyConfig.Enabled = False
+    ProxyConfig.Port = 0
     ProtocolVersion = pv1_1
-    HttpClient.AllowCookies = True
     HttpClient.ProxyParams.BasicAuthentication = False
     HttpClient.ProxyParams.ProxyPort = 0
     HttpClient.Request.ContentLength = -1
@@ -25,13 +27,15 @@ object MainDataModule: TMainDataModule
   end
   object DefaultApplication: TMARSClientApplication
     DefaultMediaType = 'application/json'
-    AppName = 'default'
+    DefaultContentType = 'application/json'
     Client = Client
     Left = 280
     Top = 72
   end
   object MetadataResource: TMARSClientResourceJSON
     Application = DefaultApplication
+    SpecificAccept = 'application/json'
+    SpecificContentType = 'application/json'
     Resource = 'metadata'
     Left = 280
     Top = 136
