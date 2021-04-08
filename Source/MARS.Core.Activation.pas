@@ -336,7 +336,7 @@ begin
 
     if LHttpMethodMatches then
     begin
-      FURLPrototype := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, URL.Resource, LMethodPath]);
+      FURLPrototype := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, FResourcePath, LMethodPath]);
       try
         LPathMatches := FURLPrototype.MatchPath(URL);
         if LPathMatches and LHttpMethodMatches then
