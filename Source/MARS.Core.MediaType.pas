@@ -20,6 +20,7 @@ type
     Text_Plain,
     Text_XML,
     Text_HTML,
+    Text_YAML,
     Application_XML,
     Application_JSON,
     Application_XHTML_XML,
@@ -27,6 +28,7 @@ type
     Application_Atom_XML,
     Application_Octet_Stream,
     Application_Form_Encoded,
+    Application_YAML,
     Multipart_Form_Data,
     Wildcard
   );
@@ -69,6 +71,7 @@ type
     const TEXT_PLAIN = 'text/plain';
     const TEXT_XML = 'text/xml';
     const TEXT_HTML = 'text/html';
+    const TEXT_YAML = 'text/yaml';
     const APPLICATION_XML = 'application/xml';
     const APPLICATION_XML_FireDAC = 'application/xml-firedac';
     const APPLICATION_JSON = 'application/json';
@@ -78,6 +81,7 @@ type
     const APPLICATION_ATOM_XML = 'application/atom+xml';
     const APPLICATION_OCTET_STREAM = 'application/octet-stream';
     const APPLICATION_FORM_URLENCODED_TYPE = 'application/x-www-form-urlencoded';
+    const APPLICATION_YAML = 'application/x-yaml';
     const MULTIPART_FORM_DATA = 'multipart/form-data';
     const WILDCARD = '*/*';
   public

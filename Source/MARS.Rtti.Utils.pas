@@ -17,6 +17,13 @@ uses
 type
   TRttiObjectHelper = class helper for TRttiObject
   public
+    function IsProperty: Boolean;
+    function AsProperty: TRttiProperty;
+    function IsField: Boolean;
+    function AsField: TRttiField;
+    function IsReadable: Boolean;
+    function GetValue(AInstance: Pointer): TValue;
+
     function GetRttiType: TRttiType;
     procedure SetValue(AInstance: Pointer; const AValue: TValue);
 
@@ -982,7 +989,7 @@ begin
   LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
   LField := LRecordType.GetField(AFieldName);
   if Assigned(LField) then
-    Result := LField.GetValue(@ARecord);
+    Result := LField.GetValue(@ARecord); // ARecord.GetReferenceToRawData?
 end;
 
 class procedure TRecord<R>.SetFieldByName(var ARecord: R;
@@ -1031,7 +1038,7 @@ begin
       LDataSetField := ADataSet.FindField(LRecordField.Name);
       if Assigned(LDataSetField) and not (AAppend and (LDataSetField.DataType = ftAutoInc)) then
       begin
-        LValue := LRecordField.GetValue(@ARecord);
+        LValue := LRecordField.GetValue(@ARecord); // ARecord.GetReferenceToRawData?
         if LValue.IsEmpty then
           LDataSetField.Clear
         else
@@ -1068,7 +1075,7 @@ begin
   for LField in LRecordType.GetFields do
   begin
     LFieldType := LField.FieldType;
-    LFieldValue := LField.GetValue(@ARecord);
+    LFieldValue := LField.GetValue(@ARecord); // ARecord.GetReferenceToRawData?
 
     if LFieldType.IsRecord then
     begin
@@ -1078,12 +1085,48 @@ begin
       else
       begin
         //AM TODO recursion using ToStrings here
-        AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;
+        AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;   // ARecord.GetReferenceToRawData?
       end;
     end
     else
-      AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;
+      AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString; // ARecord.GetReferenceToRawData?
   end;
+end;
+
+
+function TRttiObjectHelper.AsField: TRttiField;
+begin
+  Result := Self as TRttiField;
+end;
+
+function TRttiObjectHelper.AsProperty: TRttiProperty;
+begin
+  Result := Self as TRttiProperty;
+end;
+
+function TRttiObjectHelper.GetValue(AInstance: Pointer): TValue;
+begin
+  if IsProperty then
+    Result := AsProperty.GetValue(AInstance)
+  else if IsField then
+    Result := AsField.GetValue(AInstance)
+  else
+    raise Exception.Create('Neither a Field or a Property: ' + Self.ClassName);
+end;
+
+function TRttiObjectHelper.IsField: Boolean;
+begin
+  Result := Self is TRttiField;
+end;
+
+function TRttiObjectHelper.IsProperty: Boolean;
+begin
+  Result := Self is TRttiProperty;
+end;
+
+function TRttiObjectHelper.IsReadable: Boolean;
+begin
+  Result := IsField or (IsProperty and AsProperty.IsReadable);
 end;
 
 end.
