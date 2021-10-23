@@ -57,6 +57,7 @@ type
 
 
   TMARSYAML = class
+  private
   public
     procedure FromRecord<T: record>(ARecord: T; const AFilterProc: TToYAMLFilterProc = nil); overload; experimental;
     procedure FromRecord(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil); overload; experimental;
@@ -65,12 +66,14 @@ type
 
     class function ObjectToYAML(const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class procedure ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil); overload;
+    class function RecordToYAML(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class procedure RecordToYAML(const ARoot: TYamlNode; const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil); overload;
 
     function ToObject<T: class>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToObject(const AObjectType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
-    class procedure WriteTValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue);
+    class function TValueToYAML(const AValue: TValue): IYamlDocument; overload;
+    class procedure TValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue); overload;
   end;
 
 implementation
@@ -138,8 +141,15 @@ end;
 procedure TYAMLRecordWriter.WriteTo(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
+var
+  LYAML: IYamlDocument;
 begin
-
+  LYAML := TMARSYAML.RecordToYAML(AValue);
+  try
+    TYAMLValueWriter.WriteYAMLValue(LYAML.ToYaml, AMediaType, AOutputStream, AActivation);
+  finally
+    LYAML := nil;
+  end;
 end;
 
 { TYAMLArrayOfRecordWriter }
@@ -147,8 +157,18 @@ end;
 procedure TYAMLArrayOfRecordWriter.WriteTo(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
+var
+  LYAML: IYamlDocument;
 begin
+  if not AValue.IsArray then
+    Exit;
 
+  LYAML := TMARSYAML.TValueToYAML(AValue);
+  try
+    TYAMLValueWriter.WriteYAMLValue(LYAML.ToYaml, AMediaType, AOutputStream, AActivation);
+  finally
+    LYAML := nil;
+  end;
 end;
 
 { TMARSYAML }
@@ -158,19 +178,25 @@ class function TMARSYAML.ObjectToYAML(const AObject: TObject;
 var
   LStream: IYamlStream;
   LDocument: IYamlDocument;
-  LRoot: TYamlNode;
-
 begin
   LStream := TYamlStream.Create;
-  LDocument := LStream.AddMapping;
-  LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
+  try
+    LDocument := LStream.AddMapping;
+    try
+      LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
+      LDocument.Root.MappingStyle := TYamlMappingStyle.Block;
 
-  LRoot := LDocument.Root;
-  LRoot.MappingStyle := TYamlMappingStyle.Block;
+      ObjectToYAML(LDocument.Root, AObject, AFilterProc);
 
-  ObjectToYAML(LRoot, AObject, AFilterProc);
-
-  Result := LDocument;
+      Result := LDocument;
+    except
+      LDocument := nil;
+      raise;
+    end;
+  except
+    LStream := nil;
+    raise;
+  end;
 end;
 
 procedure TMARSYAML.FromRecord(const ARecord: TValue;
@@ -187,6 +213,23 @@ end;
 
 class procedure TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject;
   const AFilterProc: TToYAMLFilterProc = nil);
+
+  function GetObjectFilterProc(const AObjectType: TRttiType): TToYAMLFilterProc;
+  var
+    LMethod: TRttiMethod;
+  begin
+    Result := nil;
+    // looking for TMyClass.ToYAMLFilter(const AField: TRttiField; const AYAML: TYamlNode): Boolean;
+    LMethod := AObjectType.FindMethodFunc<TRttiField, TYamlNode, Boolean>('ToYAMLFilter');
+    if Assigned(LMethod) then
+      Result :=
+        procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
+        begin
+          AAccept := LMethod.Invoke(AObject, [AMember, TValue.From<TYamlNode>(AYAML)]).AsBoolean;
+        end;
+  end;
+
+
 var
   LType: TRttiType;
   LProperty: TRttiProperty;
@@ -200,8 +243,8 @@ begin
   LType := TRttiContext.Create.GetType(AObject.ClassType);
 
   LFilterProc := AFilterProc;
-//  if not Assigned(LFilterProc) then
-//    LFilterProc := TMARSYAML.GetObjectFilterProc(LType);
+  if not Assigned(LFilterProc) then
+    LFilterProc := GetObjectFilterProc(LType);
 
   for LProperty in LType.GetProperties do
   begin
@@ -215,16 +258,33 @@ begin
       Continue;
 
     LValue := LProperty.GetValue(AObject);
+    TValueToYaml(ARoot, LProperty.Name, LValue);
+  end;
+end;
 
-    if LProperty.PropertyType.IsDynamicArrayOf<TObject> then
-    begin
-      var LSequence := ARoot.AddOrSetSequence(LProperty.Name);
-      LSequence.SequenceStyle := TYamlSequenceStyle.Block;
-      for var LIndex := 0 to LValue.GetArrayLength-1 do
-        ObjectToYAML(LSequence.AddMapping, LValue.GetArrayElement(LIndex).AsObject);
-    end
-    else
-      WriteTValueToYaml(ARoot, LProperty.Name, LValue);
+class function TMARSYAML.RecordToYAML(const ARecord: TValue;
+  const AFilterProc: TToYAMLFilterProc): IYamlDocument;
+var
+  LStream: IYamlStream;
+  LDocument: IYamlDocument;
+begin
+  LStream := TYamlStream.Create;
+  try
+    LDocument := LStream.AddMapping;
+    try
+      LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
+      LDocument.Root.MappingStyle := TYamlMappingStyle.Block;
+
+      RecordToYAML(LDocument.Root, ARecord, AFilterProc);
+
+      Result := LDocument;
+    except
+      LDocument := nil;
+      raise;
+    end;
+  except
+    LStream := nil;
+    raise;
   end;
 end;
 
@@ -279,16 +339,7 @@ begin
       Continue;
 
     LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
-
-//    if LMember.GetRttiType.IsDynamicArrayOf<TObject> then
-//    begin
-//      var LSequence := ARoot.AddOrSetSequence(LMember.Name);
-//      LSequence.SequenceStyle := TYamlSequenceStyle.Block;
-//      for var LIndex := 0 to LValue.GetArrayLength-1 do
-//        ObjectToYAML(LSequence.AddMapping, LValue.GetArrayElement(LIndex).AsObject);
-//    end
-//    else
-    WriteTValueToYaml(ARoot, LMember.Name, LValue);
+    TValueToYaml(ARoot, LMember.Name, LValue);
   end;
 end;
 
@@ -314,7 +365,42 @@ begin
 
 end;
 
-class procedure TMARSYAML.WriteTValueToYaml(const ARoot: TYamlNode;
+
+class function TMARSYAML.TValueToYAML(const AValue: TValue): IYamlDocument;
+var
+  LStream: IYamlStream;
+  LDocument: IYamlDocument;
+begin
+  LStream := TYamlStream.Create;
+  try
+    if AValue.IsArray then
+    begin
+      LDocument := LStream.AddSequence;
+      LDocument.Root.SequenceStyle := TYamlSequenceStyle.Block;
+    end
+    else
+    begin
+      LDocument := LStream.AddMapping;
+      LDocument.Root.MappingStyle := TYamlMappingStyle.Flow;
+    end;
+    try
+      LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
+
+
+      TValueToYAML(LDocument.Root, '', AValue);
+
+      Result := LDocument;
+    except
+      LDocument := nil;
+      raise;
+    end;
+  except
+    LStream := nil;
+    raise;
+  end;
+end;
+
+class procedure TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
   const AKeyName: string; const AValue: TValue);
 begin
   if AValue.IsObjectInstance then
@@ -322,8 +408,15 @@ begin
 
   else if AValue.IsArray then
   begin
-    var LSequence := ARoot.AddOrSetSequence(AKeyName);
-    LSequence.SequenceStyle := TYamlSequenceStyle.Block;
+    var LSequence: TYamlNode;
+    if (ARoot.IsSequence) and (AKeyName = '') then
+      LSequence := ARoot
+    else begin
+      LSequence := ARoot.AddOrSetSequence(AKeyName);
+      LSequence.SequenceStyle := TYamlSequenceStyle.Block;
+    end;
+
+    Assert(LSequence.IsSequence);
 
     for var LIndex := 0 to AValue.GetArrayLength-1 do
     begin

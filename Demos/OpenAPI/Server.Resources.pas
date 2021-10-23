@@ -26,6 +26,13 @@ type
 
     [GET, Path('/invoice'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function ReturnInvoice: TInvoice;
+
+    [GET, Path('/vat'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function ReturnVAT: TVAT;
+
+
+    [GET, Path('/vatarray'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function ReturnVATArray: TArray<TVAT>;
   end;
 
   [Path('token')]
@@ -56,6 +63,19 @@ begin
 
   Result.Customer.AddAddress(TAddress.Create('Milan', 'Italy', 101));
   Result.Customer.AddAddress(TAddress.Create('Vedano al Lambro', 'Italy', 102));
+end;
+
+function THelloWorldResource.ReturnVAT: TVAT;
+begin
+  Result := TVAT.Create('12345678901', 'IT');
+end;
+
+function THelloWorldResource.ReturnVATArray: TArray<TVAT>;
+begin
+  Result := [
+    ReturnVAT,
+    TVAT.Create('10987654321', 'UK')
+  ];
 end;
 
 function THelloWorldResource.SayHelloWorld: string;
