@@ -59,18 +59,15 @@ type
   TMARSYAML = class
   private
   public
-    procedure FromRecord<T: record>(ARecord: T; const AFilterProc: TToYAMLFilterProc = nil); overload; experimental;
-    procedure FromRecord(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil); overload; experimental;
-    function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload; experimental;
-    function ToRecord(const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload; experimental;
-
     class function ObjectToYAML(const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class procedure ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil); overload;
     class function RecordToYAML(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class procedure RecordToYAML(const ARoot: TYamlNode; const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil); overload;
 
-    function ToObject<T: class>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
-    function ToObject(const AObjectType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
+//    class function YAMLToRecord<T: record>(const AYAML: TYamlNode; const AFilterProc: TToRecordFilterProc = nil): T; overload;
+//    class function YAMLToRecord(const AYAML: TYamlNode; const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
+//    class function YAMLToObject<T: class>(const AYAML: TYamlNode; const AFilterProc: TToRecordFilterProc = nil): T; overload;
+//    class function YAMLToObject(const AYAML: TYamlNode; const AObjectType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
     class function TValueToYAML(const AValue: TValue): IYamlDocument; overload;
     class procedure TValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue); overload;
@@ -132,8 +129,18 @@ end;
 procedure TYAMLArrayOfObjectWriter.WriteTo(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
+var
+  LYAML: IYamlDocument;
 begin
+  if not AValue.IsArray then
+    Exit;
 
+  LYAML := TMARSYAML.TValueToYAML(AValue);
+  try
+    TYAMLValueWriter.WriteYAMLValue(LYAML.ToYaml, AMediaType, AOutputStream, AActivation);
+  finally
+    LYAML := nil;
+  end;
 end;
 
 { TYAMLRecordWriter }
@@ -199,36 +206,24 @@ begin
   end;
 end;
 
-procedure TMARSYAML.FromRecord(const ARecord: TValue;
-  const AFilterProc: TToYAMLFilterProc);
-begin
-
-end;
-
-procedure TMARSYAML.FromRecord<T>(ARecord: T;
-  const AFilterProc: TToYAMLFilterProc);
-begin
-
-end;
 
 class procedure TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject;
   const AFilterProc: TToYAMLFilterProc = nil);
 
-  function GetObjectFilterProc(const AObjectType: TRttiType): TToYAMLFilterProc;
-  var
-    LMethod: TRttiMethod;
-  begin
-    Result := nil;
-    // looking for TMyClass.ToYAMLFilter(const AField: TRttiField; const AYAML: TYamlNode): Boolean;
-    LMethod := AObjectType.FindMethodFunc<TRttiField, TYamlNode, Boolean>('ToYAMLFilter');
-    if Assigned(LMethod) then
-      Result :=
-        procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
-        begin
-          AAccept := LMethod.Invoke(AObject, [AMember, TValue.From<TYamlNode>(AYAML)]).AsBoolean;
-        end;
-  end;
-
+    function GetObjectFilterProc(const AObjectType: TRttiType): TToYAMLFilterProc;
+    var
+      LMethod: TRttiMethod;
+    begin
+      Result := nil;
+      // looking for TMyClass.ToYAMLFilter(const AField: TRttiField; const AYAML: TYamlNode): Boolean;
+      LMethod := AObjectType.FindMethodFunc<TRttiField, TYamlNode, Boolean>('ToYAMLFilter');
+      if Assigned(LMethod) then
+        Result :=
+          procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
+          begin
+            AAccept := LMethod.Invoke(AObject, [AMember, TValue.From<TYamlNode>(AYAML)]).AsBoolean;
+          end;
+    end;
 
 var
   LType: TRttiType;
@@ -291,22 +286,20 @@ end;
 class procedure TMARSYAML.RecordToYAML(const ARoot: TYamlNode; const ARecord: TValue;
   const AFilterProc: TToYAMLFilterProc = nil);
 
-
-  function GetRecordFilterProc(const ARecordType: TRttiType): TToYAMLFilterProc;
-  var
-    LMethod: TRttiMethod;
-  begin
-    Result := nil;
-    // looking for TMyRecord.ToYAMLFilter(const AField: TRttiField; const AYAML: TYamlNode): Boolean;
-    LMethod := ARecordType.FindMethodFunc<TRttiField, TYamlNode, Boolean>('ToYAMLFilter');
-    if Assigned(LMethod) then
-      Result :=
-        procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
-        begin
-          AAccept := LMethod.Invoke(ARecord, [AMember, TValue.From<TYamlNode>(AYAML)]).AsBoolean;
-        end;
-  end;
-
+    function GetRecordFilterProc(const ARecordType: TRttiType): TToYAMLFilterProc;
+    var
+      LMethod: TRttiMethod;
+    begin
+      Result := nil;
+      // looking for TMyRecord.ToYAMLFilter(const AField: TRttiField; const AYAML: TYamlNode): Boolean;
+      LMethod := ARecordType.FindMethodFunc<TRttiField, TYamlNode, Boolean>('ToYAMLFilter');
+      if Assigned(LMethod) then
+        Result :=
+          procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
+          begin
+            AAccept := LMethod.Invoke(ARecord, [AMember, TValue.From<TYamlNode>(AYAML)]).AsBoolean;
+          end;
+    end;
 
 var
   LType: TRttiType;
@@ -341,28 +334,6 @@ begin
     LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
     TValueToYaml(ARoot, LMember.Name, LValue);
   end;
-end;
-
-function TMARSYAML.ToObject(const AObjectType: TRttiType;
-  const AFilterProc: TToRecordFilterProc): TValue;
-begin
-
-end;
-
-function TMARSYAML.ToObject<T>(const AFilterProc: TToRecordFilterProc): T;
-begin
-
-end;
-
-function TMARSYAML.ToRecord(const ARecordType: TRttiType;
-  const AFilterProc: TToRecordFilterProc): TValue;
-begin
-
-end;
-
-function TMARSYAML.ToRecord<T>(const AFilterProc: TToRecordFilterProc): T;
-begin
-
 end;
 
 
@@ -479,7 +450,7 @@ begin
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
+        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
       end
   );
 
@@ -492,7 +463,7 @@ begin
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
+        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
       end
   );
 

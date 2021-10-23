@@ -21,7 +21,7 @@ type
   THelloWorldResource = class
   protected
   public
-    [GET, Produces(TMediaType.TEXT_PLAIN)]
+    [GET, Produces(TMediaType.TEXT_PLAIN), Produces(TMediaType.APPLICATION_YAML)]
     function SayHelloWorld: string;
 
     [GET, Path('/invoice'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
@@ -33,6 +33,10 @@ type
 
     [GET, Path('/vatarray'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function ReturnVATArray: TArray<TVAT>;
+
+    [GET, Path('/addressarray'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function ReturnAddressArray: TArray<TAddress>;
+
   end;
 
   [Path('token')]
@@ -47,6 +51,14 @@ uses
 ;
 
 { THelloWorldResource }
+
+function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;
+begin
+  Result := [
+    TAddress.Create('Milan', 'Italy', 101)
+  , TAddress.Create('Vedano al Lambro', 'Italy', 102)
+  ];
+end;
 
 function THelloWorldResource.ReturnInvoice: TInvoice;
 begin
