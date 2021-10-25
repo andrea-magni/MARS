@@ -37,6 +37,17 @@ type
     [GET, Path('/addressarray'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function ReturnAddressArray: TArray<TAddress>;
 
+    [POST, Path('/countaddresses')
+     , Consumes(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_YAML)
+     , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function CountAddresses([BodyParam] AInvoice: TInvoice): Integer;
+
+    [POST, Path('/echoinvoice')
+     , Consumes(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_YAML)
+     , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function EchoInvoice([BodyParam] AInvoice: TInvoice): TInvoice;
+
+
   end;
 
   [Path('token')]
@@ -51,6 +62,19 @@ uses
 ;
 
 { THelloWorldResource }
+
+function THelloWorldResource.CountAddresses(AInvoice: TInvoice): Integer;
+begin
+  if Assigned(AInvoice) and Assigned(AInvoice.Customer) then
+    Result := Length(AInvoice.Customer.Addresses)
+  else
+    Result := -1;
+end;
+
+function THelloWorldResource.EchoInvoice(AInvoice: TInvoice): TInvoice;
+begin
+  Result := AInvoice;
+end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;
 begin

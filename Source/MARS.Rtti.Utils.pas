@@ -22,6 +22,8 @@ type
     function IsField: Boolean;
     function AsField: TRttiField;
     function IsReadable: Boolean;
+    function IsWritable: Boolean;
+
     function GetValue(AInstance: Pointer): TValue;
 
     function GetRttiType: TRttiType;
@@ -66,6 +68,8 @@ type
     function FindMethodFunc<A1,R>(const AName: string): TRttiMethod; overload;
 
     function FindMethodFunc<R>(const AName: string): TRttiMethod; overload;
+
+    function GetPropertiesAndFields: TArray<TRttiMember>;
   end;
 
   TRttiHelper = class
@@ -78,6 +82,9 @@ type
 
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject): Boolean; overload;
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TProc<T>): Boolean; overload;
+
+    class function IfHasAttribute<T: TCustomAttribute>(const AAttributes: TArray<TCustomAttribute>; const ADoSomething: TProc<T>;
+      const ACheckAllOccurences: Boolean = False): Boolean; overload;
 
     class function ForEachAttribute<T: TCustomAttribute>(const AInstance: TObject;
       const ADoSomething: TProc<T>): Integer; overload;
@@ -93,7 +100,8 @@ type
     class function ForEachFieldWithAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TFunc<TRttiField, T, Boolean>): Integer; overload;
     class function ForEachField(AInstance: TObject; const ADoSomething: TFunc<TRttiField, Boolean>): Integer;
 
-    class function FindParameterLessConstructor(const AClass: TClass): TRttiMethod;
+    class function FindParameterLessConstructor(const AClass: TClass): TRttiMethod; overload;
+    class function FindParameterLessConstructor(const AType: TRttiType): TRttiMethod; overload;
   end;
 
   TRecord<R: record> = class
@@ -575,6 +583,11 @@ begin
     Result := TRttiDynamicArrayType(Self).ElementType;
 end;
 
+function TRttiTypeHelper.GetPropertiesAndFields: TArray<TRttiMember>;
+begin
+  Result := TArray<TRttiMember>(GetProperties) + TArray<TRttiMember>(GetFields);
+end;
+
 function TRttiTypeHelper.IsArray: Boolean;
 begin
   Result := (Self is TRttiArrayType) or (Self is TRttiDynamicArrayType);
@@ -707,22 +720,8 @@ end;
 
 class function TRttiHelper.FindParameterLessConstructor(
   const AClass: TClass): TRttiMethod;
-var
-  LContext: TRttiContext;
-  LType: TRttiType;
-  LMethod: TRttiMethod;
 begin
-  Result := nil;
-  LType := LContext.GetType(AClass);
-
-  for LMethod in LType.GetMethods do
-  begin
-    if LMethod.IsConstructor and (Length(LMethod.GetParameters) = 0) then
-    begin
-      Result := LMethod;
-      Break;
-    end;
-  end;
+  Result := FindParameterLessConstructor(TRttiContext.Create.GetType(AClass));
 end;
 
 class function TRttiHelper.ForEachAttribute<T>(const AInstance: TObject;
@@ -735,6 +734,23 @@ begin
   LType := LContext.GetType(AInstance.ClassType);
   if Assigned(LType) then
     Result := LType.ForEachAttribute<T>(ADoSomething);
+end;
+
+class function TRttiHelper.FindParameterLessConstructor(
+  const AType: TRttiType): TRttiMethod;
+var
+  LMethod: TRttiMethod;
+begin
+  Result := nil;
+
+  for LMethod in AType.GetMethods do
+  begin
+    if LMethod.IsConstructor and (Length(LMethod.GetParameters) = 0) then
+    begin
+      Result := LMethod;
+      Break;
+    end;
+  end;
 end;
 
 class function TRttiHelper.ForEachAttribute<T>(const AAttributes: TArray<TCustomAttribute>;
@@ -1119,6 +1135,7 @@ begin
   Result := Self is TRttiField;
 end;
 
+
 function TRttiObjectHelper.IsProperty: Boolean;
 begin
   Result := Self is TRttiProperty;
@@ -1127,6 +1144,33 @@ end;
 function TRttiObjectHelper.IsReadable: Boolean;
 begin
   Result := IsField or (IsProperty and AsProperty.IsReadable);
+end;
+
+function TRttiObjectHelper.IsWritable: Boolean;
+begin
+  Result := IsField or (IsProperty and AsProperty.IsWritable);
+end;
+
+class function TRttiHelper.IfHasAttribute<T>(const AAttributes: TArray<TCustomAttribute>;
+  const ADoSomething: TProc<T>; const ACheckAllOccurences: Boolean): Boolean;
+var
+  LAttribute: TCustomAttribute;
+begin
+  Result := False;
+  for LAttribute in AAttributes do
+  begin
+    if LAttribute is T then
+    begin
+      Result := True;
+
+      if Assigned(ADoSomething) then
+        ADoSomething(LAttribute);
+
+      if not ACheckAllOccurences then
+        Break;
+
+    end;
+  end;
 end;
 
 end.

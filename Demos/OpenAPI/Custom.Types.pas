@@ -18,6 +18,7 @@ type
     FLangID: Integer;
     FCity: string;
   public
+    ZipCode: string;
     constructor Create(const ACity: string; const AState: string; const ALangID: Integer = 0);
 
     property City: string read FCity write FCity;
@@ -49,6 +50,7 @@ type
     FNumber: string;
     FAmount: Currency;
     FCustomer: TCustomer;
+    procedure SetNumber(const Value: string);
   protected
 
   public
@@ -56,7 +58,7 @@ type
     destructor Destroy; override;
 
 
-    property Number: string read FNumber write FNumber;
+    property Number: string read FNumber write SetNumber;
     property Date: TDate read FDate write FDate;
     property Company: string read FCompany write FCompany;
     property Amount: Currency read FAmount write FAmount;
@@ -67,6 +69,9 @@ type
   end;
 
 implementation
+
+uses
+  CodeSiteLogging;
 
 { TInvoice }
 
@@ -80,6 +85,11 @@ destructor TInvoice.Destroy;
 begin
   FCustomer.Free;
   inherited;
+end;
+
+procedure TInvoice.SetNumber(const Value: string);
+begin
+  FNumber := Value;
 end;
 
 { TCustomer }

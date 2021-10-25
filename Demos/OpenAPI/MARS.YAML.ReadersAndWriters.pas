@@ -215,8 +215,8 @@ class procedure TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AObject: TO
       LMethod: TRttiMethod;
     begin
       Result := nil;
-      // looking for TMyClass.ToYAMLFilter(const AField: TRttiField; const AYAML: TYamlNode): Boolean;
-      LMethod := AObjectType.FindMethodFunc<TRttiField, TYamlNode, Boolean>('ToYAMLFilter');
+      // looking for TMyClass.ToYAMLFilter(const AMember: TRttiMember; const AYAML: TYamlNode): Boolean;
+      LMethod := AObjectType.FindMethodFunc<TRttiMember, TYamlNode, Boolean>('ToYAMLFilter');
       if Assigned(LMethod) then
         Result :=
           procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
@@ -227,7 +227,7 @@ class procedure TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AObject: TO
 
 var
   LType: TRttiType;
-  LProperty: TRttiProperty;
+  LMember: TRttiMember;
   LValue: TValue;
   LAccept: Boolean;
   LFilterProc: TToYAMLFilterProc;
@@ -241,19 +241,19 @@ begin
   if not Assigned(LFilterProc) then
     LFilterProc := GetObjectFilterProc(LType);
 
-  for LProperty in LType.GetProperties do
+  for LMember in LType.GetPropertiesAndFields do
   begin
-    if (LProperty.Visibility < TMemberVisibility.mvPublic) or (not LProperty.IsReadable) then
+    if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
       Continue;
 
     LAccept := True;
     if Assigned(LFilterProc) then
-      LFilterProc(LProperty, AObject, ARoot, LAccept);
+      LFilterProc(LMember, AObject, ARoot, LAccept);
     if not LAccept then
       Continue;
 
-    LValue := LProperty.GetValue(AObject);
-    TValueToYaml(ARoot, LProperty.Name, LValue);
+    LValue := LMember.GetValue(AObject);
+    TValueToYaml(ARoot, LMember.Name, LValue);
   end;
 end;
 
@@ -291,8 +291,8 @@ class procedure TMARSYAML.RecordToYAML(const ARoot: TYamlNode; const ARecord: TV
       LMethod: TRttiMethod;
     begin
       Result := nil;
-      // looking for TMyRecord.ToYAMLFilter(const AField: TRttiField; const AYAML: TYamlNode): Boolean;
-      LMethod := ARecordType.FindMethodFunc<TRttiField, TYamlNode, Boolean>('ToYAMLFilter');
+      // looking for TMyRecord.ToYAMLFilter(const AMember: TRttiMember; const AYAML: TYamlNode): Boolean;
+      LMethod := ARecordType.FindMethodFunc<TRttiMember, TYamlNode, Boolean>('ToYAMLFilter');
       if Assigned(LMethod) then
         Result :=
           procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
@@ -307,7 +307,6 @@ var
   LValue: TValue;
   LFilterProc: TToYAMLFilterProc;
   LAccept: Boolean;
-  LMembers: TArray<TRttiMember>;
 begin
 //  if not Assigned(AObject) then
 //    Exit;
@@ -318,9 +317,7 @@ begin
   if not Assigned(LFilterProc) then
     LFilterProc := GetRecordFilterProc(LType);
 
-  LMembers := TArray<TRttiMember>(LType.GetProperties) + TArray<TRttiMember>(LType.GetFields);
-
-  for LMember in LMembers do
+  for LMember in LType.GetPropertiesAndFields do
   begin
     if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
       Continue;

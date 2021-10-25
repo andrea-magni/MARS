@@ -48,9 +48,6 @@ type
 
   function CreateCompactGuidStr: string;
 
-  function ObjectToJSON(const AObject: TObject;
-    const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; deprecated 'use MARS.Core.JSON.TJSONObject.ObjectToJSON';
-
   function BooleanToTJSON(AValue: Boolean): TJSONValue;
 
   function SmartConcat(const AArgs: array of string; const ADelimiter: string = ',';
@@ -473,11 +470,6 @@ begin
   LBytes := TGUID.NewGuid.ToByteArray();
   for LIndex := 0 to Length(LBytes)-1 do
     Result := Result + IntToHex(LBytes[LIndex], 2);
-end;
-
-function ObjectToJSON(const AObject: TObject; const AOptions: TJsonOptions): TJSONObject;
-begin
-  Result := TJSONObject.ObjectToJSON(AObject, AOptions);
 end;
 
 { TFormParamFile }
