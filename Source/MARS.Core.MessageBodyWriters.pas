@@ -485,7 +485,7 @@ begin
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM-1;
       end
   );
 
@@ -498,7 +498,7 @@ begin
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM-1;
       end
   );
 

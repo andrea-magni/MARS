@@ -38,7 +38,7 @@ type
 
     property Name: string read FName write FName;
     property VAT: TVAT read FVAT write FVAT;
-    property Addresses: TArray<TAddress> read FAddresses;
+    property Addresses: TArray<TAddress> read FAddresses write FAddresses;
   end;
 
   TInvoice = class
@@ -65,7 +65,7 @@ type
     property VAT: Currency read FVAT write FVAT;
     property Total: Currency read FTotal write FTotal;
 
-    property Customer: TCustomer read FCustomer;
+    property Customer: TCustomer read FCustomer write FCustomer;
   end;
 
 implementation

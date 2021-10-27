@@ -842,16 +842,16 @@ function TJSONObjectHelper.ReadValue(const AName: string;
   const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean;
   var AValue: TValue): Boolean;
 var
-  LValue: TJSONValue;
+  LJSONValue: TJSONValue;
   LName: string;
 begin
   LName := AName;
   if not ANameCaseSensitive then
     LName := GetExactPairName(LName);
 
-  Result := TryGetValue<TJSONValue>(LName, LValue);
+  Result := TryGetValue<TJSONValue>(LName, LJSONValue);
   if Result then
-    TJSONValueToTValue(LValue, ADesiredType, AValue);
+    TJSONValueToTValue(LJSONValue, ADesiredType, AValue);
 end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
@@ -891,10 +891,12 @@ class procedure TJSONObjectHelper.TJSONValueToTValue(
 var
   LArray: TValue;
   LElementType: TRttiType;
+  LElement: TValue;
   LJSONArray: TJSONArray;
   LJSONElement: TJSONValue;
   LIndex: Integer;
   LNewLength: NativeInt;
+  LInstance: TObject;
 begin
 {$ifdef Delphi10Berlin_UP}
   if AValue is TJSONBool then // Boolean
@@ -947,7 +949,13 @@ begin
     if ADesiredType.IsRecord then
       ATValue := TJSONObject(AValue).ToRecord(ADesiredType)
     else if ADesiredType.IsInstance then
-      TJSONObject(AValue).ToObject(ATValue.AsObject, ADesiredType)
+    begin
+      LInstance := ATValue.AsObject;
+      if Assigned(LInstance) then
+        TJSONObject(AValue).ToObject(LInstance, ADesiredType)
+      else
+        ATValue := TJSONObject.JSONToObject(ADesiredType.AsInstance.MetaclassType, TJSONObject(AValue));
+    end
     else
       raise Exception.Create('TJSONObjectHelper.TJSONValueToTValue: unkown type: ' + ADesiredType.Name);
   end
@@ -957,14 +965,18 @@ begin
     if ADesiredType.IsArray(LElementType) then
     begin
       TValue.Make(nil, ADesiredType.Handle, LArray);
+
       LNewLength := LJSONArray.Count;
       SetArrayLength(LArray, ADesiredType, @LNewLength);
       //------------------------
       for LIndex := 0 to LJSONArray.Count-1 do
       begin
         LJSONElement := LJSONArray.Items[LIndex];
-        TJSONValueToTValue(LJSONElement, LElementType, ATValue);
-        LArray.SetArrayElement(LIndex, ATValue);
+        if LElementType.IsRecord then
+          TJSONValueToTValue(LJSONElement, LElementType, LElement)
+        else
+          LElement := JSONToObject(LElementType.AsInstance.MetaclassType, LJSONElement as TJSONObject);
+        LArray.SetArrayElement(LIndex, LElement);
       end;
       ATValue := LArray;
     end;
@@ -978,7 +990,7 @@ procedure TJSONObjectHelper.ToObject(const AInstance: TObject; const AObjectType
 var
   LMember: TRttiMember;
   LValue: TValue;
-  LObjectInstance: Pointer;
+  LObjectInstance: TObject;
   LFilterProc: TToObjectFilterProc;
   LAccept: Boolean;
   LJSONName: string;
@@ -1001,6 +1013,7 @@ var
   end;
 
 begin
+  Assert(Assigned(AInstance));
   LObjectInstance := AInstance;
 
   LFilterProc := AFilterProc;
@@ -1016,7 +1029,7 @@ begin
 
   for LMember in AObjectType.GetPropertiesAndFields do
   begin
-    if (LMember.Visibility < TMemberVisibility.mvPublic) or (not (LMember.IsWritable or LMember.GetRttiType.IsInstance)) then
+    if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsWritable) then
       Continue;
 
     LAccept := True;
@@ -1037,8 +1050,7 @@ begin
         LValue := LMember.GetValue(LObjectInstance);
         if ReadValue(LJSONName, LMember.GetRttiType, True, LValue) then
         begin
-          if LMember.IsWritable then
-            LMember.SetValue(LObjectInstance, LValue);
+          LMember.SetValue(LObjectInstance, LValue);
           LAssignedValues := LAssignedValues + [LMember.Name];
         end
         else

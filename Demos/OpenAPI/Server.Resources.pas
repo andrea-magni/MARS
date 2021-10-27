@@ -46,8 +46,6 @@ type
      , Consumes(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_YAML)
      , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function EchoInvoice([BodyParam] AInvoice: TInvoice): TInvoice;
-
-
   end;
 
   [Path('token')]
