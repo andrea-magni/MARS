@@ -324,7 +324,7 @@ begin
       if (AType = LType) or (AType.IsObjectOfType<T>(False)) then
         Result := AFFINITY_HIGH
       else if AType.IsObjectOfType<T> then
-        Result := AFFINITY_MEDIUM;
+        Result := AFFINITY_MEDIUM + AFFINITY_LOW;
     end
 end;
 
