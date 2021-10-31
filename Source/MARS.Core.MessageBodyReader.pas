@@ -433,6 +433,12 @@ var
 begin
   LMBReader := T.Create;
   Result := LMBReader.ReadFrom(AInputData, ADestination, AMediaType, AActivation);
+  {$IFDEF DEBUG}
+  AActivation.Response.SetHeader(
+    'X-MARS-MBR-ReadWith'
+  , Format('%s, MediaType: %s', [T.ClassName, AMediaType.ToStringDebug])
+  );
+  {$ENDIF}
 end;
 
 end.

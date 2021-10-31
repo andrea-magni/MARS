@@ -312,7 +312,7 @@ end;
 
 function TMediaType.ToStringDebug: string;
 const
-  DEBUG_STR = '%s [QFactor:%f] [PFactor:%f] [Weight:%f]';
+  DEBUG_STR = '%s [QFactor:%f] [PFactor:%d] [Weight:%d]';
 begin
   Result := Format(DEBUG_STR, [ToString, QFactor, PFactor, Weight]);
 end;
