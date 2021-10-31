@@ -38,7 +38,8 @@ uses
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
   {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option {$ENDIF}
   {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
-  , Server.Resources, MARS.Metadata.Engine.Resource
+  , Server.Resources
+  , MARS.Metadata.Engine.Resource, MARS.Metadata.ReadersAndWriters
   ;
 
 { TServerEngine }
