@@ -43,8 +43,7 @@ implementation
 
 uses
   DB, DBClient
-, MARS.Core.JSON
-, MARS.Core.MessageBodyWriters
+, MARS.Core.JSON, MARS.Core.MessageBodyWriters, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Data.Utils, MARS.Rtti.Utils, MARS.Core.Utils
 ;
 
