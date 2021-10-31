@@ -431,7 +431,7 @@ begin
     TYAMLValueWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := (AType.Handle = TypeInfo(TYAMLRawString)) and (AMediaType = TMediaType.APPLICATION_YAML);
+        Result := (AType.Handle = TypeInfo(TYAMLRawString)) and AMediaType.Contains('yaml');
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
@@ -443,7 +443,7 @@ begin
     TYAMLObjectWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := AType.IsObjectOfType<TObject>;
+        Result := AType.IsObjectOfType<TObject> and AMediaType.Contains('yaml');
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
@@ -456,7 +456,7 @@ begin
     TYAMLArrayOfObjectWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := AType.IsDynamicArrayOf<TObject>;
+        Result := AType.IsDynamicArrayOf<TObject> and AMediaType.Contains('yaml');
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
@@ -468,7 +468,7 @@ begin
     TYAMLRecordWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := AType.IsRecord;
+        Result := AType.IsRecord and AMediaType.Contains('yaml');
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
@@ -480,7 +480,7 @@ begin
     TYAMLArrayOfRecordWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := AType.IsDynamicArrayOfRecord;
+        Result := AType.IsDynamicArrayOfRecord and AMediaType.Contains('yaml');
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin

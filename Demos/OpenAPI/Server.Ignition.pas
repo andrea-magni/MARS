@@ -34,11 +34,11 @@ uses
     MARS.Core.Activation, MARS.Core.Activation.Interfaces
   , MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
   , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
-  , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
+  , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters, MARS.YAML.ReadersAndWriters
   , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
   {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option {$ENDIF}
   {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
-  , Server.Resources
+  , Server.Resources, MARS.Metadata.Engine.Resource
   ;
 
 { TServerEngine }
@@ -51,7 +51,7 @@ begin
     FEngine.Parameters.LoadFromIniFile;
 
     // Application configuration
-    FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
+    FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*', 'MARS.Metadata.*']);
 {$REGION 'OnGetApplication example'}
 (*
     FEngine.OnGetApplication :=

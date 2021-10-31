@@ -414,7 +414,7 @@ begin
     CheckRequiredAttribute(ADestination);
 
   // 1 - MessageBodyReader mechanism (standard)
-  TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+  TMARSMessageBodyReaderRegistry.Instance.FindReader(AActivation, ADestination, LReader, LMediaType);
   if Assigned(LReader) then
     try
       Result := LReader.ReadFrom(AActivation.Request.RawContent, ADestination, LMediaType, AActivation);
@@ -592,7 +592,7 @@ begin
   else
   begin
     // 1 - MessageBodyReader mechanism (standard)
-    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(AActivation, ADestination, LReader, LMediaType);
     if Assigned(LReader) then
       try
         Result := LReader.ReadFrom(
@@ -636,7 +636,7 @@ begin
   else
   begin
     // 1 - MessageBodyReader mechanism (standard)
-    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(AActivation, ADestination, LReader, LMediaType);
     if Assigned(LReader) then
       try
         if LParamIndex <> -1 then
@@ -681,7 +681,7 @@ function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
       CheckRequiredAttribute(TheDestination);
 
     // 1 - MessageBodyReader mechanism (standard)
-    TMARSMessageBodyReaderRegistry.Instance.FindReader(TheDestination, LReader, LMediaType);
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(AActivation, TheDestination, LReader, LMediaType);
     if Assigned(LReader) then
       try
         Result := LReader.ReadFrom(
@@ -848,7 +848,7 @@ begin
   else
   begin
     // 1 - MessageBodyReader mechanism (standard)
-    TMARSMessageBodyReaderRegistry.Instance.FindReader(ADestination, LReader, LMediaType);
+    TMARSMessageBodyReaderRegistry.Instance.FindReader(AActivation, ADestination, LReader, LMediaType);
     if Assigned(LReader) then
       try
 

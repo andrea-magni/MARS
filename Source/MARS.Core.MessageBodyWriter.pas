@@ -288,6 +288,12 @@ begin
       begin
         AWriter := LCandidate.CreateInstance();
         AMediaType := TMediaType.Create(LCandidateMediaType);
+        {$IFDEF DEBUG}
+        AActivation.Response.SetHeader(
+          'X-MARS-MBW'
+        , Format('%s, Affinity: %d, MediaType: %s, QualityFactor: %.2f', [LCandidate.RttiName, LCandidateAffinity, LCandidateMediaType, LCandidateQualityFactor])
+        );
+        {$ENDIF}
       end;
     finally
       LMethodProducesMediaTypes.Free;

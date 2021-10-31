@@ -11,8 +11,7 @@ uses
   Server.Forms.Main in 'Server.Forms.Main.pas' {MainForm},
   Server.Resources in 'Server.Resources.pas',
   Server.Ignition in 'Server.Ignition.pas',
-  Custom.Types in 'Custom.Types.pas',
-  MARS.YAML.ReadersAndWriters in 'MARS.YAML.ReadersAndWriters.pas';
+  Custom.Types in 'Custom.Types.pas';
 
 {$R *.res}
 
