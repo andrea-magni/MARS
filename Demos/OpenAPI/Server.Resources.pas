@@ -13,7 +13,7 @@ uses
 , MARS.Core.URL
 //, MARS.Core.Token
 , MARS.Core.Token.Resource
-, Custom.Types
+, Custom.Types, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
 ;
 
 type
@@ -46,6 +46,9 @@ type
      , Consumes(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_YAML)
      , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function EchoInvoice([BodyParam] AInvoice: TInvoice): TInvoice;
+
+    [GET, Path('/openapi'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function OpenAPI: TOpenAPI;
   end;
 
   [Path('token')]
@@ -72,6 +75,11 @@ end;
 function THelloWorldResource.EchoInvoice(AInvoice: TInvoice): TInvoice;
 begin
   Result := AInvoice;
+end;
+
+function THelloWorldResource.OpenAPI: TOpenAPI;
+begin
+  Result := DemoAPI;
 end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;
