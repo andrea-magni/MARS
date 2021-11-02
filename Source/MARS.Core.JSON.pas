@@ -217,7 +217,7 @@ begin
     end;
   end
 
-  else if (AValue.Kind in [tkRecord]) then
+  else if (AValue.Kind in [tkRecord, tkMRecord]) then
     Result := TJSONObject.RecordToJSON(AValue)
 
   else if (AValue.IsType<Boolean>) then

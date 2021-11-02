@@ -237,7 +237,7 @@ begin
     end;
     Result := '[' + Result + ']';
   end
-  else if AValue.Kind = tkRecord then
+  else if AValue.Kind in [tkRecord, tkMRecord] then
   begin
     LRecordType := TRttiContext.Create.GetType(AValue.TypeInfo) as TRttiRecordType;
 

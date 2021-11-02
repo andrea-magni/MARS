@@ -59,6 +59,7 @@ type
   TMARSYAML = class
   private
   public
+    class procedure DictionaryToYAML(const ARoot: TYamlNode; const ADictionary: TObject);
     class function ObjectToYAML(const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class procedure ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil); overload;
     class function RecordToYAML(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
@@ -76,7 +77,7 @@ type
 implementation
 
 uses
-  System.TypInfo, DateUtils
+  System.TypInfo, DateUtils, Generics.Collections
 , MARS.Core.Utils, MARS.Rtti.Utils
 ;
 
@@ -206,6 +207,55 @@ begin
   end;
 end;
 
+class procedure TMARSYAML.DictionaryToYAML(const ARoot: TYamlNode;
+  const ADictionary: TObject);
+var
+  LDictionaryType, LEnumeratorType, LPairType: TRttiType;
+  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+  LKeyField, LValueField: TRttiField;
+  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue, LKeyValue, LValueValue: TValue;
+  LEnumeratorObj: TObject;
+  LPair: Pointer;
+  LElement: TYamlNode;
+begin
+  // highly inspired by https://en.delphipraxis.net/topic/2546-how-to-iterate-a-tdictionary-using-rtti-and-tvalue/
+  // Thanks to Remy Lebeau
+
+  LDictionaryType := TRttiContext.Create.GetType(ADictionary.ClassType);
+  LGetEnumeratorMethod := LDictionaryType.GetMethod('GetEnumerator');
+  LEnumeratorValue := LGetEnumeratorMethod.Invoke(ADictionary, []);
+  LEnumeratorObj := LEnumeratorValue.AsObject;
+  try
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+
+    LPairType := LEnumeratorCurrentProperty.PropertyType;
+    LKeyField := LPairType.GetField('Key');
+    LValueField := LPairType.GetField('Value');
+
+    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    while LEnumeratorCurrentValue.AsBoolean do
+    begin
+      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+      LPair := LCurrentValue.GetReferenceToRawData;
+      LKeyValue := LKeyField.GetValue(LPair);
+      LValueValue := LValueField.GetValue(LPair);
+
+      LElement := ARoot.AddOrSetMapping(LKeyValue.ToString);
+
+      if LValueValue.IsObject then
+        ObjectToYAML(LElement, LValueValue.AsObject)
+      else if LValueValue.Kind in [tkRecord, tkMRecord] then
+        RecordToYAML(LElement, LValueValue);
+
+      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    end;
+  finally
+    LEnumeratorObj.Free;
+  end;
+end;
 
 class procedure TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject;
   const AFilterProc: TToYAMLFilterProc = nil);
@@ -371,7 +421,10 @@ end;
 class procedure TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
   const AKeyName: string; const AValue: TValue);
 begin
-  if AValue.IsObjectInstance then
+  if string(AValue.TypeInfo^.Name).Contains('TDictionary<System.string,')   then
+    DictionaryToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)
+
+  else if AValue.IsObjectInstance then
     ObjectToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)
 
   else if AValue.IsArray then
@@ -391,12 +444,14 @@ begin
       var LElement := AValue.GetArrayElement(LIndex);
       if LElement.IsObject then
         ObjectToYAML(LSequence.AddMapping, LElement.AsObject)
-      else if LElement.Kind in [tkRecord] then
-        RecordToYAML(LSequence.AddMapping, LElement);
+      else if LElement.Kind in [tkRecord, tkMRecord] then
+        RecordToYAML(LSequence.AddMapping, LElement)
+      else if LElement.Kind in [tkString, tkShortString, tkWString, tkUString, tkChar, tkWChar] then
+        LSequence.Add(LElement.AsString); //AM TODO Numbers, Boolean, ...
     end;
   end
 
-  else if (AValue.Kind in [tkRecord]) then
+  else if (AValue.Kind in [tkRecord, tkMRecord]) then
     RecordToYaml(ARoot.AddOrSetMapping(AKeyName), AValue)
 
   else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then

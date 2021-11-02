@@ -32,16 +32,17 @@ type
     enum: TArray<string>;
     default: string; // required
     description: string;
+    constructor Create(const AEnum: TArray<string>; const ADefault: string; const ADescription: string);
   end;
-
-  TStringMap<T> = record
-  end;
-
 
   TServer = record
     url: string; // required
     description: string;
-    variables: TStringMap<TServerVariable>;
+    variables: TDictionary<string, TServerVariable>;
+
+    class operator Initialize(out ARecord: TServer);
+    class operator Finalize(var ARecord: TServer);
+    class operator Assign(var ADest: TServer; const [ref] ASource: TServer);
   end;
 
   TPaths = record
@@ -71,5 +72,39 @@ type
   end;
 
 implementation
+
+{ TServer }
+
+class operator TServer.Assign(var ADest: TServer; const [ref] ASource: TServer);
+begin
+  ADest.url := ASource.url;
+  ADest.description := ASource.description;
+  ADest.variables.Clear;
+  for var LVar in ASource.variables do
+    ADest.variables.Add(LVar.Key, LVar.Value);
+end;
+
+class operator TServer.Finalize(var ARecord: TServer);
+begin
+  ARecord.variables.Free;
+  ARecord.variables := nil;
+end;
+
+class operator TServer.Initialize(out ARecord: TServer);
+begin
+  ARecord.url := '';
+  ARecord.description := '';
+  ARecord.variables := TDictionary<string, TServerVariable>.Create();
+end;
+
+{ TServerVariable }
+
+constructor TServerVariable.Create(const AEnum: TArray<string>; const ADefault,
+  ADescription: string);
+begin
+  enum := AEnum;
+  default := ADefault;
+  description := ADescription;
+end;
 
 end.

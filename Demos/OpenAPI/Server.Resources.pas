@@ -49,6 +49,10 @@ type
 
     [GET, Path('/openapi'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function OpenAPI: TOpenAPI;
+
+    [GET, Path('/server'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function Server: TServer;
+
   end;
 
   [Path('token')]
@@ -123,6 +127,17 @@ end;
 function THelloWorldResource.SayHelloWorld: string;
 begin
   Result := 'Hello World!';
+end;
+
+function THelloWorldResource.Server: TServer;
+var
+  s: TServer;
+begin
+  s.url := 'http://andreamagni.eu';
+  s.description := 'Andrea Magni';
+  s.variables.Add('first', TServerVariable.Create(['A', 'B'], 'def1', 'Description 1'));
+  s.variables.Add('second', TServerVariable.Create(['C', 'D'], 'def2', 'Description 2'));
+  Result := s;
 end;
 
 initialization
