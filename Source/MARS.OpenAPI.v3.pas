@@ -6,19 +6,25 @@ uses
   Classes, SysUtils, Generics.Collections;
 
 type
-  TContact = record
+  TContact = class
+  public
     name: string;
     url: string;
     email: string;
   end;
 
-  TLicense = record
+  TLicense = class
+  public
     name: string; // required
     identifier: string;
     url: string;
   end;
 
-  TInfo = record
+  TInfo = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
     title: string; // required
     summary: string;
     description: string;
@@ -28,61 +34,74 @@ type
     version: string; // required
   end;
 
-  TServerVariable = record
+  TServerVariable = class
+  public
+    constructor Create(const AEnum: TArray<string>; const ADefault: string; const ADescription: string); virtual;
+  public
     enum: TArray<string>;
     default: string; // required
     description: string;
-    constructor Create(const AEnum: TArray<string>; const ADefault: string; const ADescription: string);
   end;
 
-  TServer = record
+  TServer = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
     url: string; // required
     description: string;
-    variables: TDictionary<string, TServerVariable>;
-
-    class operator Initialize(out ARecord: TServer);
-    class operator Finalize(var ARecord: TServer);
-    class operator Assign(var ADest: TServer; const [ref] ASource: TServer);
+    variables: TObjectDictionary<string, TServerVariable>;
   end;
 
-  TExternalDocumentation = record
+  TExternalDocumentation = class
+  public
   end;
 
-  TParameter = record
+  TParameter = class
+  public
   end;
 
-  TRequestBody = record
+
+  TRequestBody = class
+  public
   end;
 
-  TResponses = record
+  TResponses = class
+  public
   end;
 
-  TCallback = record
+  TCallback = class
+  public
   end;
 
-  TSecurityRequirement = record
+  TSecurityRequirement = class
+  public
   end;
 
-  TOperation = record
+  TOperation = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
     tags: TArray<string>;
     summary: string;
     description: string;
     externalDocs: TExternalDocumentation;
     operationId: string;
-    parameters: TArray<TParameter>;
+    parameters: TArray<TParameter>;  //AM TODO TObjectList<>
     requestBody: TRequestBody;
     responses: TResponses;
-    callbacks: TDictionary<string, TCallback>;
+    callbacks: TObjectDictionary<string, TCallback>;
     &deprecated: Boolean;
-    security: TArray<TSecurityRequirement>;
-    servers: TArray<TServer>;
-
-    class operator Initialize(out ARecord: TOperation);
-    class operator Finalize(var ARecord: TOperation);
-    class operator Assign(var ADest: TOperation; const [ref] ASource: TOperation);
+    security: TArray<TSecurityRequirement>; //AM TODO TObjectList<>
+    servers: TArray<TServer>; //AM TODO TObjectList<>
   end;
 
-  TPathItem = record
+  TPathItem = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
     ref: string; // $ref
     summary: string;
     description: string;
@@ -94,59 +113,54 @@ type
     head: TOperation;
     patch: TOperation;
     trace: TOperation;
-    servers: TArray<TServer>;
-    parameters: TArray<TParameter>;
+    servers: TArray<TServer>; //AM TODO TObjectList<>
+    parameters: TArray<TParameter>; //AM TODO TObjectList<>
   end;
 
-  TComponents = record
+  TComponents = class
+  public
   end;
 
-  TSecurity = record
+  TSecurity = class
+  public
   end;
 
-  TTag = record
+  TTag = class
+  public
   end;
 
-  TOpenAPI = record
+  TOpenAPI = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
     openapi: string; // required
     info: TInfo; // required
-    servers: TArray<TServer>;
-    paths: TDictionary<string, TPathItem>; // required
+    servers: TArray<TServer>; //AM TODO TObjectList<>
+    paths: TObjectDictionary<string, TPathItem>; // required
     components: TComponents;
-    security: TArray<TSecurity>;
-    tags: TArray<TTag>;
+    security: TArray<TSecurity>; //AM TODO TObjectList<>
+    tags: TArray<TTag>; //AM TODO TObjectList<>
     externalDocs: TExternalDocumentation;
-
-    class operator Initialize(out ARecord: TOpenAPI);
-    class operator Finalize(var ARecord: TOpenAPI);
-    class operator Assign(var ADest: TOpenAPI; const [ref] ASource: TOpenAPI);
   end;
 
 implementation
 
-{ TServer }
 
-class operator TServer.Assign(var ADest: TServer; const [ref] ASource: TServer);
+{ TInfo }
+
+constructor TInfo.Create;
 begin
-  ADest.url := ASource.url;
-  ADest.description := ASource.description;
-
-  ADest.variables.Clear;
-  for var LVar in ASource.variables do
-    ADest.variables.Add(LVar.Key, LVar.Value);
+  inherited Create;
+  contact := TContact.Create;
+  license := TLicense.Create;
 end;
 
-class operator TServer.Finalize(var ARecord: TServer);
+destructor TInfo.Destroy;
 begin
-  ARecord.variables.Free;
-  ARecord.variables := nil;
-end;
-
-class operator TServer.Initialize(out ARecord: TServer);
-begin
-  ARecord.url := '';
-  ARecord.description := '';
-  ARecord.variables := TDictionary<string, TServerVariable>.Create();
+  license.Free;
+  contact.Free;
+  inherited;
 end;
 
 { TServerVariable }
@@ -154,71 +168,96 @@ end;
 constructor TServerVariable.Create(const AEnum: TArray<string>; const ADefault,
   ADescription: string);
 begin
+  inherited Create;
   enum := AEnum;
   default := ADefault;
   description := ADescription;
 end;
 
+{ TServer }
+
+constructor TServer.Create;
+begin
+  inherited Create;
+  variables := TObjectDictionary<string, TServerVariable>.Create([doOwnsValues]);
+end;
+
+destructor TServer.Destroy;
+begin
+  variables.Free;
+  inherited;
+end;
+
 { TOperation }
 
-class operator TOperation.Assign(var ADest: TOperation; const [ref] ASource: TOperation);
+constructor TOperation.Create;
 begin
-  ADest.tags := ASource.tags;
-  ADest.summary := ASource.summary;
-  ADest.description := ASource.description;
-  ADest.externalDocs := ASource.externalDocs;
-  ADest.operationId := ASource.operationId;
-  ADest.parameters := ASource.parameters;
-  ADest.requestBody := ASource.requestBody;
-  ADest.responses := ASource.responses;
-
-  ADest.callbacks.Clear;
-  for var LVar in ASource.callbacks do
-    ADest.callbacks.Add(LVar.Key, LVar.Value);
-
-  ADest.&deprecated := ASource.deprecated;
-  ADest.security := ASource.security;
-  ADest.servers := ASource.servers;
+  inherited Create;
+  externalDocs := TExternalDocumentation.Create;
+  callbacks := TObjectDictionary<string, TCallback>.Create([doOwnsValues]);
+  requestBody := TRequestBody.Create;
+  responses := TResponses.Create;
 end;
 
-class operator TOperation.Initialize(out ARecord: TOperation);
+destructor TOperation.Destroy;
 begin
-  ARecord.callbacks := TDictionary<string, TCallback>.Create();
+  responses.Free;
+  requestBody.Free;
+  callbacks.Free;
+  externalDocs.Free;
+  inherited;
 end;
 
-class operator TOperation.Finalize(var ARecord: TOperation);
+{ TPathItem }
+
+constructor TPathItem.Create;
 begin
-  ARecord.callbacks.Free;
-  ARecord.callbacks := nil;
+  inherited Create;
+
+  get := TOperation.Create;
+  put := TOperation.Create;
+  post := TOperation.Create;
+  delete := TOperation.Create;
+  options := TOperation.Create;
+  head := TOperation.Create;
+  patch := TOperation.Create;
+  trace := TOperation.Create;
+end;
+
+destructor TPathItem.Destroy;
+begin
+  trace.Free;
+  patch.Free;
+  head.Free;
+  options.Free;
+  delete.Free;
+  post.Free;
+  put.Free;
+  get.Free;
+
+  inherited;
 end;
 
 { TOpenAPI }
 
-class operator TOpenAPI.Assign(var ADest: TOpenAPI; const [ref] ASource: TOpenAPI);
+constructor TOpenAPI.Create;
 begin
-  ADest.openapi := ASource.openapi;
-  ADest.info := ASource.info;
-  ADest.servers := ASource.servers;
+  inherited Create;
 
-  ADest.paths.Clear;
-  for var LVar in ASource.paths do
-    ADest.paths.Add(LVar.Key, LVar.Value);
-
-  ADest.components := ASource.components;
-  ADest.security := ASource.security;
-  ADest.tags := ASource.tags;
-  ADest.externalDocs := ASource.externalDocs;
+  info := TInfo.Create;
+  paths := TObjectDictionary<string, TPathItem>.Create([doOwnsValues]);
+  components := TComponents.Create;
+  externalDocs := TExternalDocumentation.Create;
 end;
 
-class operator TOpenAPI.Initialize(out ARecord: TOpenAPI);
+destructor TOpenAPI.Destroy;
 begin
-  ARecord.paths := TDictionary<string, TPathItem>.Create();
-end;
+  externalDocs.Free;
+  components.Free;
+  paths.Free;
+  info.Free;
 
-class operator TOpenAPI.Finalize(var ARecord: TOpenAPI);
-begin
-  ARecord.paths.Free;
-  ARecord.paths := nil;
+  inherited;
 end;
 
 end.

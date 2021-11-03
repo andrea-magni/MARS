@@ -84,8 +84,9 @@ end;
 function THelloWorldResource.OpenAPI: TOpenAPI;
 var
   server: TServer;
-  Lhelloworld: TPathItem;
+//  Lhelloworld: TPathItem;
 begin
+  Result := TOpenAPI.Create;
   Result.openapi := '3.0.2';
 
   Result.info.title := 'MARS OpenAPI App';
@@ -102,17 +103,19 @@ begin
 
   Result.info.version := '1.0.0';
 
-  server.url := 'http://localhost:8080/rest/default/';
+  server := TServer.Create;
+  server.url := '{protocol}://localhost:{port}/rest/default';
   server.description := 'Development server';
-//  server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '', 'Port number'));
+  server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'Port number'));
+  server.variables.Add('protocol', TServerVariable.Create(['http', 'https'], 'http', 'Protocol'));
 
   Result.servers := [server];
 
-  Lhelloworld.summary := 'HelloWorld resource';
-  Lhelloworld.description := 'HelloWorld resource';
-  Lhelloworld.get.description := 'GET request';
-
-  Result.paths.Add('/helloworld', Lhelloworld);
+//  Lhelloworld.summary := 'HelloWorld resource';
+//  Lhelloworld.description := 'HelloWorld resource';
+//  Lhelloworld.get.description := 'GET request';
+//
+//  Result.paths.Add('/helloworld', Lhelloworld);
 end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;
@@ -159,14 +162,12 @@ begin
 end;
 
 function THelloWorldResource.Server: TServer;
-var
-  s: TServer;
 begin
-  s.url := 'http://andreamagni.eu';
-  s.description := 'Andrea Magni';
-  s.variables.Add('first', TServerVariable.Create(['A', 'B'], 'def1', 'Description 1'));
-  s.variables.Add('second', TServerVariable.Create(['C', 'D'], 'def2', 'Description 2'));
-  Result := s;
+  Result := TServer.Create;
+  Result.url := 'http://andreamagni.eu';
+  Result.description := 'Andrea Magni';
+  Result.variables.Add('first', TServerVariable.Create(['A', 'B'], 'def1', 'Description 1'));
+  Result.variables.Add('second', TServerVariable.Create(['C', 'D'], 'def2', 'Description 2'));
 end;
 
 initialization

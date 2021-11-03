@@ -419,8 +419,12 @@ end;
 
 class procedure TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
   const AKeyName: string; const AValue: TValue);
+var
+  LTypeName: string;
 begin
-  if string(AValue.TypeInfo^.Name).Contains('TDictionary<System.string,')   then
+  LTypeName := AValue.TypeInfo^.Name;
+
+  if LTypeName.Contains('TDictionary<System.string,') or LTypeName.Contains('TObjectDictionary<System.string,')  then
     DictionaryToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)
 
   else if AValue.IsObjectInstance then
