@@ -155,6 +155,9 @@ type
     property Pairs[const Index: Integer]: TJSONPair read GetPair;
 {$endif}
 
+    class function DictionaryToJSON(const ADictionary: TObject;
+      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; overload;
+
     class function ObjectToJSON(const AObject: TObject;
       const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; overload;
 
@@ -202,6 +205,9 @@ begin
 
   else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
     Result := TJSONString.Create(AValue.AsString)
+
+  else if string(AValue.TypeInfo^.Name).Contains('TDictionary<System.string,')   then
+    Result := DictionaryToJSON(AValue.AsObject)
 
   else if AValue.IsArray then
   begin
@@ -637,6 +643,52 @@ begin
   Result := ADefault;
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsDouble;
+end;
+
+class function TJSONObjectHelper.DictionaryToJSON(const ADictionary: TObject;
+  const AOptions: TJsonOptions): TJSONObject;
+var
+  LDictionaryType, LEnumeratorType, LPairType: TRttiType;
+  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+  LKeyField, LValueField: TRttiField;
+  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue, LKeyValue, LValueValue: TValue;
+  LEnumeratorObj: TObject;
+  LPair: Pointer;
+begin
+  // highly inspired by https://en.delphipraxis.net/topic/2546-how-to-iterate-a-tdictionary-using-rtti-and-tvalue/
+  // Thanks to Remy Lebeau
+
+  Result := TJSONObject.Create;
+
+  LDictionaryType := TRttiContext.Create.GetType(ADictionary.ClassType);
+  LGetEnumeratorMethod := LDictionaryType.GetMethod('GetEnumerator');
+  LEnumeratorValue := LGetEnumeratorMethod.Invoke(ADictionary, []);
+  LEnumeratorObj := LEnumeratorValue.AsObject;
+  try
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+
+    LPairType := LEnumeratorCurrentProperty.PropertyType;
+    LKeyField := LPairType.GetField('Key');
+    LValueField := LPairType.GetField('Value');
+
+    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    while LEnumeratorCurrentValue.AsBoolean do
+    begin
+      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+      LPair := LCurrentValue.GetReferenceToRawData;
+      LKeyValue := LKeyField.GetValue(LPair);
+      LValueValue := LValueField.GetValue(LPair);
+
+      Result.AddPair(LKeyValue.ToString, TValueToJSONValue(LValueValue));
+
+      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    end;
+  finally
+    LEnumeratorObj.Free;
+  end;
 end;
 
 procedure TJSONObjectHelper.FromObject(const AObject: TObject;
@@ -1224,8 +1276,33 @@ end;
 
 procedure TJSONObjectHelper.WriteTValue(const AName: string;
   const AValue: TValue);
+var
+  LValue: TJSONValue;
 begin
-  AddPair(AName, TValueToJSONValue(AValue));
+  LValue := TValueToJSONValue(AValue);
+
+  // skip empty string
+  if Assigned(LValue) and (LValue is TJSONString) and (TJSONString(LValue).Value = '') then
+  begin
+    FreeAndNil(LValue);
+    Exit;
+  end;
+
+  // skip empty arrays
+  if Assigned(LValue) and (LValue is TJSONArray) and (TJSONArray(LValue).Count = 0) then
+  begin
+    FreeAndNil(LValue);
+    Exit;
+  end;
+
+  // skip empty objects
+  if Assigned(LValue) and (LValue is TJSONObject) and (TJSONObject(LValue).Count = 0) then
+  begin
+    FreeAndNil(LValue);
+    Exit;
+  end;
+
+  AddPair(AName, LValue);
 end;
 
 procedure TJSONObjectHelper.WriteUnixTimeValue(const AName: string;

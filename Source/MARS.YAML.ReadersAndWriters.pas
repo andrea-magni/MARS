@@ -404,7 +404,6 @@ begin
     try
       LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
 
-
       TValueToYAML(LDocument.Root, '', AValue);
 
       Result := LDocument;
@@ -455,7 +454,11 @@ begin
     RecordToYaml(ARoot.AddOrSetMapping(AKeyName), AValue)
 
   else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
-    ARoot.AddOrSetValue(AKeyName, AValue.AsString).ScalarStyle := TYamlScalarStyle.Plain
+  begin
+    var LString := AValue.AsString;
+    if LString <> '' then
+      ARoot.AddOrSetValue(AKeyName, LString).ScalarStyle := TYamlScalarStyle.Plain;
+  end
 
   else if (AValue.IsType<Boolean>) then
     ARoot.AddOrSetValue(AKeyName, AValue.AsType<Boolean>)
@@ -476,7 +479,11 @@ begin
     ARoot.AddOrSetValue(AKeyName, AValue.AsType<Double>)
 
   else
-    ARoot.AddOrSetValue(AKeyName,  AValue.ToString);
+  begin
+    var LString := AValue.ToString;
+    if LString <> '' then
+      ARoot.AddOrSetValue(AKeyName,  LString);
+  end;
 end;
 
 procedure RegisterWriters;

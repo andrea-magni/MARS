@@ -40,11 +40,13 @@ begin
   server2.description := 'User specific server';
   server2.variables.Add('username', TServerVariable.Create([], 'demo', 'this value is assigned by the service provider'));
 
-  server3.url := 'https://development.gigantic-server.com:{port}/';
+  server3.url := 'https://development.gigantic-server.com:{port}/{basepath}';
   server3.description := 'Port specific server';
-  server3.variables.Add('port', TServerVariable.Create(['8080', '8443'], 'port', ''));
+  server3.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'port number'));
+  server3.variables.Add('basepath', TServerVariable.Create([], 'v2', ''));
 
   demo.servers := [server1, server2, server3];
+
 
   Result := demo;
 end;

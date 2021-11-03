@@ -82,8 +82,37 @@ begin
 end;
 
 function THelloWorldResource.OpenAPI: TOpenAPI;
+var
+  server: TServer;
+  Lhelloworld: TPathItem;
 begin
-  Result := DemoAPI;
+  Result.openapi := '3.0.2';
+
+  Result.info.title := 'MARS OpenAPI App';
+//  Result.info.summary := 'A pet store manager.';
+  Result.info.description := 'This is a sample server.';
+  Result.info.termsOfService := 'http://localhost:8080/web/terms/';
+
+  Result.info.contact.name := 'Andrea Magni';
+  Result.info.contact.url := ' http://andreamagni.eu';
+  Result.info.contact.email := 'me@andreamagni.eu';
+
+  Result.info.license.name := 'Apache 2.0';
+  Result.info.license.url := 'https://www.apache.org/licenses/LICENSE-2.0.html';
+
+  Result.info.version := '1.0.0';
+
+  server.url := 'http://localhost:8080/rest/default/';
+  server.description := 'Development server';
+//  server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '', 'Port number'));
+
+  Result.servers := [server];
+
+  Lhelloworld.summary := 'HelloWorld resource';
+  Lhelloworld.description := 'HelloWorld resource';
+  Lhelloworld.get.description := 'GET request';
+
+  Result.paths.Add('/helloworld', Lhelloworld);
 end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;
