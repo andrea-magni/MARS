@@ -109,7 +109,7 @@ begin
   server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'Port number'));
   server.variables.Add('protocol', TServerVariable.Create(['http', 'https'], 'http', 'Protocol'));
 
-  Result.servers := [server];
+  Result.servers.Add(server);
 
 //  Lhelloworld.summary := 'HelloWorld resource';
 //  Lhelloworld.description := 'HelloWorld resource';

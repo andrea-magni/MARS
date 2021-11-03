@@ -88,13 +88,13 @@ type
     description: string;
     externalDocs: TExternalDocumentation;
     operationId: string;
-    parameters: TArray<TParameter>;  //AM TODO TObjectList<>
+    parameters: TObjectList<TParameter>;
     requestBody: TRequestBody;
     responses: TResponses;
     callbacks: TObjectDictionary<string, TCallback>;
     &deprecated: Boolean;
-    security: TArray<TSecurityRequirement>; //AM TODO TObjectList<>
-    servers: TArray<TServer>; //AM TODO TObjectList<>
+    security: TObjectList<TSecurityRequirement>;
+    servers: TObjectList<TServer>;
   end;
 
   TPathItem = class
@@ -113,8 +113,8 @@ type
     head: TOperation;
     patch: TOperation;
     trace: TOperation;
-    servers: TArray<TServer>; //AM TODO TObjectList<>
-    parameters: TArray<TParameter>; //AM TODO TObjectList<>
+    servers: TObjectList<TServer>;
+    parameters: TObjectList<TParameter>;
   end;
 
   TComponents = class
@@ -136,11 +136,11 @@ type
   public
     openapi: string; // required
     info: TInfo; // required
-    servers: TArray<TServer>; //AM TODO TObjectList<>
+    servers: TObjectList<TServer>;
     paths: TObjectDictionary<string, TPathItem>; // required
     components: TComponents;
-    security: TArray<TSecurity>; //AM TODO TObjectList<>
-    tags: TArray<TTag>; //AM TODO TObjectList<>
+    security: TObjectList<TSecurity>;
+    tags: TObjectList<TTag>;
     externalDocs: TExternalDocumentation;
   end;
 
@@ -197,10 +197,16 @@ begin
   callbacks := TObjectDictionary<string, TCallback>.Create([doOwnsValues]);
   requestBody := TRequestBody.Create;
   responses := TResponses.Create;
+  parameters := TObjectList<TParameter>.Create(True);
+  security := TObjectList<TSecurityRequirement>.Create(True);
+  servers := TObjectList<TServer>.Create(True);
 end;
 
 destructor TOperation.Destroy;
 begin
+  servers.Free;
+  security.Free;
+  parameters.Free;
   responses.Free;
   requestBody.Free;
   callbacks.Free;
@@ -213,7 +219,6 @@ end;
 constructor TPathItem.Create;
 begin
   inherited Create;
-
   get := TOperation.Create;
   put := TOperation.Create;
   post := TOperation.Create;
@@ -222,10 +227,14 @@ begin
   head := TOperation.Create;
   patch := TOperation.Create;
   trace := TOperation.Create;
+  parameters := TObjectList<TParameter>.Create(True);
+  servers := TObjectList<TServer>.Create(True);
 end;
 
 destructor TPathItem.Destroy;
 begin
+  servers.Free;
+  parameters.Free;
   trace.Free;
   patch.Free;
   head.Free;
@@ -234,7 +243,6 @@ begin
   post.Free;
   put.Free;
   get.Free;
-
   inherited;
 end;
 
@@ -243,20 +251,24 @@ end;
 constructor TOpenAPI.Create;
 begin
   inherited Create;
-
   info := TInfo.Create;
   paths := TObjectDictionary<string, TPathItem>.Create([doOwnsValues]);
   components := TComponents.Create;
   externalDocs := TExternalDocumentation.Create;
+  servers := TObjectList<TServer>.Create(True);
+  security := TObjectList<TSecurity>.Create(True);
+  tags := TObjectList<TTag>.Create(True);
 end;
 
 destructor TOpenAPI.Destroy;
 begin
+  tags.Free;
+  security.Free;
+  servers.Free;
   externalDocs.Free;
   components.Free;
   paths.Free;
   info.Free;
-
   inherited;
 end;
 

@@ -60,6 +60,7 @@ type
   private
   public
     class procedure DictionaryToYAML(const ARoot: TYamlNode; const ADictionary: TObject);
+    class procedure ObjectListToYAML(const ARoot: TYamlNode; const AObjectList: TObject);
     class function ObjectToYAML(const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class procedure ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil); overload;
     class function RecordToYAML(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
@@ -257,6 +258,46 @@ begin
   end;
 end;
 
+class procedure TMARSYAML.ObjectListToYAML(const ARoot: TYamlNode;
+  const AObjectList: TObject);
+var
+  LObjectListType, LEnumeratorType{, LElementType}: TRttiType;
+  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue: TValue;
+  LEnumeratorObj: TObject;
+  LElement: TYamlNode;
+begin
+  LObjectListType := TRttiContext.Create.GetType(AObjectList.ClassType);
+  LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
+  LEnumeratorValue := LGetEnumeratorMethod.Invoke(AObjectList, []);
+  LEnumeratorObj := LEnumeratorValue.AsObject;
+  try
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+
+//    LElementType := LEnumeratorCurrentProperty.PropertyType;
+
+    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    while LEnumeratorCurrentValue.AsBoolean do
+    begin
+      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+
+      LElement := ARoot.AddMapping;
+
+      if LCurrentValue.IsObject then
+        ObjectToYAML(LElement, LCurrentValue.AsObject)
+      else if LCurrentValue.Kind in [tkRecord, tkMRecord] then
+        RecordToYAML(LElement, LCurrentValue);
+
+      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    end;
+  finally
+    LEnumeratorObj.Free;
+  end;
+end;
+
 class procedure TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject;
   const AFilterProc: TToYAMLFilterProc = nil);
 
@@ -422,10 +463,13 @@ class procedure TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
 var
   LTypeName: string;
 begin
-  LTypeName := AValue.TypeInfo^.Name;
+  LTypeName := string(AValue.TypeInfo^.Name);
 
   if LTypeName.Contains('TDictionary<System.string,') or LTypeName.Contains('TObjectDictionary<System.string,')  then
     DictionaryToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)
+
+  else if LTypeName.Contains('TObjectList<') then
+    ObjectListToYaml(ARoot.AddOrSetSequence(AKeyName), AValue.AsObject)
 
   else if AValue.IsObjectInstance then
     ObjectToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)

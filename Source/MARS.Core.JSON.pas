@@ -158,6 +158,9 @@ type
     class function DictionaryToJSON(const ADictionary: TObject;
       const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; overload;
 
+    class function ObjectListToJSON(const AObjectList: TObject;
+      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONArray; overload;
+
     class function ObjectToJSON(const AObject: TObject;
       const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; overload;
 
@@ -201,7 +204,7 @@ var
   LIndex: Integer;
   LTypeName: string;
 begin
-  LTypeName := AValue.TypeInfo^.Name;
+  LTypeName := string(AValue.TypeInfo^.Name);
 
   if AValue.IsEmpty and not AValue.IsArray then
     Result := TJSONNull.Create
@@ -211,6 +214,9 @@ begin
 
   else if LTypeName.Contains('TDictionary<System.string,') or LTypeName.Contains('TObjectDictionary<System.string,')  then
     Result := DictionaryToJSON(AValue.AsObject)
+
+  else if LTypeName.Contains('TObjectList<') then
+    Result := ObjectListToJSON(AValue.AsObject)
 
   else if AValue.IsArray then
   begin
@@ -575,6 +581,42 @@ class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
 begin
   Assert(Assigned(AJSON));
   Result := AJSON.ToRecord<T>(AFilterProc);
+end;
+
+class function TJSONObjectHelper.ObjectListToJSON(const AObjectList: TObject;
+  const AOptions: TJsonOptions): TJSONArray;
+var
+  LObjectListType, LEnumeratorType{, LElementType}: TRttiType;
+  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue: TValue;
+  LEnumeratorObj: TObject;
+begin
+  Result := TJSONArray.Create;
+
+  LObjectListType := TRttiContext.Create.GetType(AObjectList.ClassType);
+  LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
+  LEnumeratorValue := LGetEnumeratorMethod.Invoke(AObjectList, []);
+  LEnumeratorObj := LEnumeratorValue.AsObject;
+  try
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+
+//    LElementType := LEnumeratorCurrentProperty.PropertyType;
+
+    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    while LEnumeratorCurrentValue.AsBoolean do
+    begin
+      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+
+      Result.AddElement(TValueToJSONValue(LCurrentValue));
+
+      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    end;
+  finally
+    LEnumeratorObj.Free;
+  end;
 end;
 
 class function TJSONObjectHelper.ObjectToJSON(const AObject: TObject;
