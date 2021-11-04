@@ -145,7 +145,7 @@ begin
               var
                 tag: TTag;
               begin
-                tag := LOpenAPI.AddTag(ARes.Name, ARes.Description);
+                tag := LOpenAPI.AddTag(ARes.Path, ARes.Description);
               end
             );
 
@@ -163,24 +163,33 @@ begin
 
                 if AMet.HttpMethod = 'GET' then
                 begin
+                  path.get.operationId := AMet.Name;
                   path.get.description := AMet.Description;
+                  path.get.tags := [ARes.Path];
                   var response := path.get.AddResponse('200');
                   response.description := 'Response for ' + AMet.Description;
-                  response.AddContent(AMet.Produces);
+                  for var LProduces in AMet.Produces.Split([',']) do
+                    response.AddContent(LProduces);
                 end
                 else if AMet.HttpMethod = 'POST' then
                 begin
+                  path.post.operationId := AMet.Name;
                   path.post.description := AMet.Description;
+                  path.post.tags := [ARes.Path];
                   var response := path.post.AddResponse('200');
                   response.description := 'Response for ' + AMet.Description;
-                  response.AddContent(AMet.Produces);
+                  for var LProduces in AMet.Produces.Split([',']) do
+                    response.AddContent(LProduces);
                 end
                 else if AMet.HttpMethod = 'PUT' then
                 begin
+                  path.put.operationId := AMet.Name;
                   path.put.description := AMet.Description;
+                  path.put.tags := [ARes.Path];
                   var response := path.put.AddResponse('200');
                   response.description := 'Response for ' + AMet.Description;
-                  response.AddContent(AMet.Produces);
+                  for var LProduces in AMet.Produces.Split([',']) do
+                    response.AddContent(LProduces);
                 end;
 
               end
