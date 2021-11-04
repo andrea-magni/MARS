@@ -21,7 +21,8 @@ implementation
 
 uses
   System.Rtti
-, MARS.Utils.Parameters
+, MARS.Utils.Parameters, MARS.Core.Registry.Utils
+, MARS.Metadata, MARS.Metadata.Reader
 ;
 
 { TOpenAPIHelper }
@@ -71,7 +72,9 @@ end;
 class function TOpenAPIHelper.BuildFrom(const AEngine: TMARSEngine;
   const AApplication: TMARSApplication): TOpenAPI;
 var
+  LOpenAPI: TOpenAPI;
   LEngineParams, LAppParams: TMARSParameters;
+  LReader: TMARSMetadataReader;
 
   function FromEngineParams(const AName: string; const ADefault: TValue): TValue;
   begin
@@ -84,44 +87,133 @@ begin
   LEngineParams := AEngine.Parameters;
   LAppParams := AApplication.Parameters;
 
-  Result := TOpenAPI.Create;
+  LOpenAPI := TOpenAPI.Create;
   try
-    Result.openapi := '3.0.2';
+    LOpenAPI.openapi := '3.0.2';
 
-    Result.info.title          := FromEngineParams('info.title', 'MARS ' + AEngine.Name).AsString;
-    Result.info.summary        := FromEngineParams('info.summary', 'A brief summary here.').AsString;
-    Result.info.description    := FromEngineParams('info.description', 'A description here.').AsString;
-    Result.info.termsOfService := FromEngineParams('info.termsOfService', 'https://dummy.org/termsOfService/').AsString;
+    LOpenAPI.info.title          := FromEngineParams('info.title', 'MARS ' + AEngine.Name).AsString;
+    LOpenAPI.info.summary        := FromEngineParams('info.summary', 'A brief summary here.').AsString;
+    LOpenAPI.info.description    := FromEngineParams('info.description', 'A description here.').AsString;
+    LOpenAPI.info.termsOfService := FromEngineParams('info.termsOfService', 'https://dummy.org/termsOfService/').AsString;
 
-    Result.info.contact.name   := FromEngineParams('info.contact.name', 'Martian Developer').AsString;
-    Result.info.contact.url    := FromEngineParams('info.contact.url', 'https://mars.space').AsString;
-    Result.info.contact.email  := FromEngineParams('info.contact.email', 'me@mars.space').AsString;
+    LOpenAPI.info.contact.name   := FromEngineParams('info.contact.name', 'Martian Developer').AsString;
+    LOpenAPI.info.contact.url    := FromEngineParams('info.contact.url', 'https://mars.space').AsString;
+    LOpenAPI.info.contact.email  := FromEngineParams('info.contact.email', 'me@mars.space').AsString;
 
-    Result.info.license.name       := FromEngineParams('info.license.name', '').AsString;
-    Result.info.license.identifier := FromEngineParams('info.license.identifier', '').AsString;
-    Result.info.license.url        := FromEngineParams('info.license.url', '').AsString;
+    LOpenAPI.info.license.name       := FromEngineParams('info.license.name', '').AsString;
+    LOpenAPI.info.license.identifier := FromEngineParams('info.license.identifier', '').AsString;
+    LOpenAPI.info.license.url        := FromEngineParams('info.license.url', '').AsString;
 
-    Result.info.version := FromEngineParams('info.version', '0.1.0').AsString;
-    xx
-    var server := Result.AddServer;
-    server.url := '{protocol}://localhost:{port}/rest/default';
-    server.description := 'Development server';
-    server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'Port number'));
-    server.variables.Add('protocol', TServerVariable.Create(['http', 'https'], 'http', 'Protocol'));
+    LOpenAPI.info.version := FromEngineParams('info.version', '0.1.0').AsString;
 
-    var path := Result.AddPath('/helloworld');
-    path.summary := 'HelloWorld resource';
-    path.description := 'HelloWorld resource';
-    path.get.description := 'GET request';
-    var response := path.get.AddResponse('200');
-    response.description := 'A greeting';
-    response.AddContent('text/plain');
+    var server := LOpenAPI.AddServer;
+               // '{protocol}://localhost:{port}/rest{application}'
+    server.url := '{protocol}://localhost:{port}' + AEngine.BasePath + '{application}';
+    server.description := AEngine.Name;
 
+    server.variables.Add('port'
+    , TServerVariable.Create([AEngine.Port.ToString, AEngine.PortSSL.ToString]
+      , AEngine.Port.ToString
+      , 'Port number'
+      )
+    );
+
+    server.variables.Add('protocol'
+    , TServerVariable.Create(['http', 'https']
+      , 'http'
+      , 'Protocol'
+      )
+    );
+
+    server.variables.Add('application'
+    , TServerVariable.Create([AApplication.BasePath]
+      , AApplication.BasePath
+      , 'Application'
+      )
+    );
+
+
+    LReader := TMARSMetadataReader.Create(AEngine);
+    try
+      LReader.Metadata.ForEachApplication(
+        procedure (AAppMD: TMARSApplicationMetadata)
+        begin
+          if AAppMD.Name = AApplication.Name then
+          begin
+            AAppMD.ForEachResource(
+              procedure (ARes: TMARSResourceMetadata)
+              var
+                tag: TTag;
+              begin
+                tag := LOpenAPI.AddTag(ARes.Name, ARes.Description);
+              end
+            );
+
+
+
+            AAppMD.ForEachMethod(
+              procedure (ARes: TMARSResourceMetadata; AMet: TMARSMethodMetadata)
+              var
+                path: TPathItem;
+              begin
+                path := LOpenAPI.GetPath('/' + ARes.Path + AMet.Path);
+
+                path.summary := ARes.Name + ' resource';
+                path.description := ARes.Description;
+
+                if AMet.HttpMethod = 'GET' then
+                begin
+                  path.get.description := AMet.Description;
+                  var response := path.get.AddResponse('200');
+                  response.description := 'Response for ' + AMet.Description;
+                  response.AddContent(AMet.Produces);
+                end
+                else if AMet.HttpMethod = 'POST' then
+                begin
+                  path.post.description := AMet.Description;
+                  var response := path.post.AddResponse('200');
+                  response.description := 'Response for ' + AMet.Description;
+                  response.AddContent(AMet.Produces);
+                end
+                else if AMet.HttpMethod = 'PUT' then
+                begin
+                  path.put.description := AMet.Description;
+                  var response := path.put.AddResponse('200');
+                  response.description := 'Response for ' + AMet.Description;
+                  response.AddContent(AMet.Produces);
+                end;
+
+              end
+            );
+          end;
+        end
+      );
+    finally
+      LReader.Free;
+    end;
+
+
+//    AApplication.EnumerateResources(
+//      procedure(AName: string; AInfo: TMARSConstructorInfo)
+//      begin
+//
+//        var path := LOpenAPI.AddPath('/' + AName);
+//        path.summary := AName + ' resource';
+//        path.description := AName + ' resource, implementor: ' + AInfo.TypeTClass.ClassName;
+//
+//        path.get.description := 'GET request';
+//        var response := path.get.AddResponse('200');
+//        response.description := 'A greeting';
+//        response.AddContent('text/plain');
+//      end
+//    );
 
   except
-    FreeAndNil(Result);
+    FreeAndNil(LOpenAPI);
     raise;
   end;
+
+  Result := LOpenAPI;
 end;
 
 class function TOpenAPIHelper.BuildFrom(

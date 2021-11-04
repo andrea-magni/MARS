@@ -160,6 +160,12 @@ type
 
   TTag = class
   public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
+    name: string;
+    description: string;
+    externalDocs: TExternalDocumentation;
   end;
 
   TOpenAPI = class
@@ -167,7 +173,8 @@ type
     constructor Create; virtual;
     destructor Destroy; override;
     function AddServer: TServer;
-    function AddPath(const APath: string): TPathItem;
+    function GetPath(const APath: string; const ACreateIfMissing: Boolean = True): TPathItem;
+    function AddTag(const AName: string; const ADescription: string = ''): TTag;
   public
     openapi: string; // required
     info: TInfo; // required
@@ -289,18 +296,27 @@ end;
 
 { TOpenAPI }
 
-function TOpenAPI.AddPath(const APath: string): TPathItem;
+function TOpenAPI.GetPath(const APath: string; const ACreateIfMissing: Boolean): TPathItem;
 begin
-  if paths.ContainsKey(APath) then
-    raise Exception.CreateFmt('Path [%s] already defined', [APath]);
-  Result := TPathItem.Create;
-  paths.Add(APath, Result);
+  if not paths.TryGetValue(APath, Result) then
+  begin
+    Result := TPathItem.Create;
+    paths.Add(APath, Result);
+  end;
 end;
 
 function TOpenAPI.AddServer: TServer;
 begin
   Result := TServer.Create;
   servers.Add(Result);
+end;
+
+function TOpenAPI.AddTag(const AName: string; const ADescription: string): TTag;
+begin
+  Result := TTag.Create;
+  Result.name := AName;
+  Result.description := ADescription;
+  tags.Add(Result);
 end;
 
 constructor TOpenAPI.Create;
@@ -348,6 +364,20 @@ begin
   links.Free;
   content.Free;
   headers.Free;
+  inherited;
+end;
+
+{ TTag }
+
+constructor TTag.Create;
+begin
+  inherited Create;
+  externalDocs := TExternalDocumentation.Create;
+end;
+
+destructor TTag.Destroy;
+begin
+  externalDocs.Free;
   inherited;
 end;
 

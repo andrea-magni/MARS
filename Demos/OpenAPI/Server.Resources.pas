@@ -20,7 +20,6 @@ type
   [Path('helloworld')]
   THelloWorldResource = class
   private
-    function Server: TServer;
   protected
   public
     [GET, Produces(TMediaType.TEXT_PLAIN), Produces(TMediaType.APPLICATION_YAML)]
@@ -113,7 +112,7 @@ begin
   server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'Port number'));
   server.variables.Add('protocol', TServerVariable.Create(['http', 'https'], 'http', 'Protocol'));
 
-  var path := Result.AddPath('/helloworld');
+  var path := Result.GetPath('/helloworld');
   path.summary := 'HelloWorld resource';
   path.description := 'HelloWorld resource';
   path.get.description := 'GET request';
@@ -163,15 +162,6 @@ end;
 function THelloWorldResource.SayHelloWorld: string;
 begin
   Result := 'Hello World!';
-end;
-
-function THelloWorldResource.Server: TServer;
-begin
-  Result := TServer.Create;
-  Result.url := 'http://andreamagni.eu';
-  Result.description := 'Andrea Magni';
-  Result.variables.Add('first', TServerVariable.Create(['A', 'B'], 'def1', 'Description 1'));
-  Result.variables.Add('second', TServerVariable.Create(['C', 'D'], 'def2', 'Description 2'));
 end;
 
 initialization
