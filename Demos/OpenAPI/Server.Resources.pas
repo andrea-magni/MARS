@@ -31,7 +31,6 @@ type
     [GET, Path('/vat'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function ReturnVAT: TVAT;
 
-
     [GET, Path('/vatarray'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function ReturnVATArray: TArray<TVAT>;
 
@@ -49,10 +48,7 @@ type
     function EchoInvoice([BodyParam] AInvoice: TInvoice): TInvoice;
 
     [GET, Path('/openapi'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
-    function OpenAPI: TOpenAPI;
-
-    [GET, Path('/injected'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
-    function InjectedOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
+    function OpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
 
   end;
 
@@ -82,43 +78,9 @@ begin
   Result := AInvoice;
 end;
 
-function THelloWorldResource.InjectedOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+function THelloWorldResource.OpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
 begin
   Result := AOpenAPI;
-end;
-
-function THelloWorldResource.OpenAPI: TOpenAPI;
-begin
-  Result := TOpenAPI.Create;
-  Result.openapi := '3.0.2';
-
-  Result.info.title := 'MARS OpenAPI App';
-//  Result.info.summary := 'A pet store manager.';
-  Result.info.description := 'This is a sample server.';
-  Result.info.termsOfService := 'http://localhost:8080/web/terms/';
-
-  Result.info.contact.name := 'Andrea Magni';
-  Result.info.contact.url := ' http://andreamagni.eu';
-  Result.info.contact.email := 'me@andreamagni.eu';
-
-  Result.info.license.name := 'Apache 2.0';
-  Result.info.license.url := 'https://www.apache.org/licenses/LICENSE-2.0.html';
-
-  Result.info.version := '1.0.0';
-
-  var server := Result.AddServer;
-  server.url := '{protocol}://localhost:{port}/rest/default';
-  server.description := 'Development server';
-  server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'Port number'));
-  server.variables.Add('protocol', TServerVariable.Create(['http', 'https'], 'http', 'Protocol'));
-
-  var path := Result.GetPath('/helloworld');
-  path.summary := 'HelloWorld resource';
-  path.description := 'HelloWorld resource';
-  path.get.description := 'GET request';
-  var response := path.get.AddResponse('200');
-  response.description := 'A greeting';
-  response.AddContent('text/plain');
 end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;

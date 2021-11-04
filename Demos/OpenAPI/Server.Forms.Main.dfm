@@ -24,6 +24,9 @@ object MainForm: TMainForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
+    DesignSize = (
+      576
+      113)
     object Label1: TLabel
       Left = 42
       Top = 26
@@ -94,6 +97,16 @@ object MainForm: TMainForm
       TabOrder = 3
       OnChange = PortSSLNumerEditChange
     end
+    object OpenAPIButton: TButton
+      Left = 482
+      Top = 68
+      Width = 75
+      Height = 25
+      Anchors = [akTop, akRight]
+      Caption = 'OpenAPI'
+      TabOrder = 4
+      OnClick = OpenAPIButtonClick
+    end
   end
   object MainTreeView: TTreeView
     Left = 0
@@ -104,9 +117,6 @@ object MainForm: TMainForm
     Indent = 19
     TabOrder = 1
     OnClick = MainTreeViewClick
-    ExplicitTop = 73
-    ExplicitWidth = 469
-    ExplicitHeight = 141
   end
   object MainActionList: TActionList
     Left = 384
