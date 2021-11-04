@@ -36,7 +36,7 @@ begin
   LType := ADestination.GetRttiType;
 
   if (LType.IsObjectOfType(TOpenAPI)) then
-    AValue := TInjectionValue.Create(TOpenAPI.BuildFromEngine(AActivation.Engine))
+    AValue := TInjectionValue.Create(TOpenAPI.BuildFrom(AActivation));
 end;
 
 
