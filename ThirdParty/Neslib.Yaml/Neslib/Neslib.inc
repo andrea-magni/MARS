@@ -1,0 +1,7 @@
+{$SCOPEDENUMS ON}
+
+{$IF Defined(IOS) or Defined(ANDROID)}
+  {$DEFINE MOBILE}
+{$ELSEIF Defined(MACOS)}
+  {$DEFINE MACOS_ONLY}  
+{$ENDIF}
