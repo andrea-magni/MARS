@@ -161,32 +161,30 @@ begin
                 path.summary := ARes.Name + ' resource';
                 path.description := ARes.Description;
 
-                if AMet.HttpMethod = 'GET' then
+                var LOperation: TOperation := nil;
+                if AMet.HttpMethodLowerCase = 'get' then
+                  LOperation := path.get
+                else if AMet.HttpMethodLowerCase = 'post' then
+                  LOperation := path.post
+                else if AMet.HttpMethodLowerCase = 'put' then
+                  LOperation := path.put
+                else if AMet.HttpMethodLowerCase = 'delete' then
+                  LOperation := path.delete
+                else if AMet.HttpMethodLowerCase = 'options' then
+                  LOperation := path.options
+                else if AMet.HttpMethodLowerCase = 'head' then
+                  LOperation := path.head
+                else if AMet.HttpMethodLowerCase = 'patch' then
+                  LOperation := path.patch
+                else if AMet.HttpMethodLowerCase = 'trace' then
+                  LOperation := path.trace;
+
+                if Assigned(LOperation) then
                 begin
-                  path.get.operationId := AMet.Name;
-                  path.get.description := AMet.Description;
-                  path.get.tags := [ARes.Path];
-                  var response := path.get.AddResponse('200');
-                  response.description := 'Response for ' + AMet.Description;
-                  for var LProduces in AMet.Produces.Split([',']) do
-                    response.AddContent(LProduces);
-                end
-                else if AMet.HttpMethod = 'POST' then
-                begin
-                  path.post.operationId := AMet.Name;
-                  path.post.description := AMet.Description;
-                  path.post.tags := [ARes.Path];
-                  var response := path.post.AddResponse('200');
-                  response.description := 'Response for ' + AMet.Description;
-                  for var LProduces in AMet.Produces.Split([',']) do
-                    response.AddContent(LProduces);
-                end
-                else if AMet.HttpMethod = 'PUT' then
-                begin
-                  path.put.operationId := AMet.Name;
-                  path.put.description := AMet.Description;
-                  path.put.tags := [ARes.Path];
-                  var response := path.put.AddResponse('200');
+                  LOperation.operationId := AMet.Name;
+                  LOperation.description := AMet.Description;
+                  LOperation.tags := [ARes.Path];
+                  var response := LOperation.AddResponse('200');
                   response.description := 'Response for ' + AMet.Description;
                   for var LProduces in AMet.Produces.Split([',']) do
                     response.AddContent(LProduces);
