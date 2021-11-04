@@ -59,12 +59,12 @@ type
   TMARSYAML = class
   private
   public
-    class procedure DictionaryToYAML(const ARoot: TYamlNode; const ADictionary: TObject);
-    class procedure ObjectListToYAML(const ARoot: TYamlNode; const AObjectList: TObject);
+    class function DictionaryToYAML(const ARoot: TYamlNode; const AName: string; const ADictionary: TObject): Boolean;
+    class function ObjectListToYAML(const ARoot: TYamlNode; const AName: string; const AObjectList: TObject): Boolean;
     class function ObjectToYAML(const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
-    class procedure ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil); overload;
+    class function ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): Boolean; overload;
     class function RecordToYAML(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
-    class procedure RecordToYAML(const ARoot: TYamlNode; const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil); overload;
+    class function RecordToYAML(const ARoot: TYamlNode; const AName: string; const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): Boolean; overload;
 
 //    class function YAMLToRecord<T: record>(const AYAML: TYamlNode; const AFilterProc: TToRecordFilterProc = nil): T; overload;
 //    class function YAMLToRecord(const AYAML: TYamlNode; const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
@@ -72,7 +72,7 @@ type
 //    class function YAMLToObject(const AYAML: TYamlNode; const AObjectType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
     class function TValueToYAML(const AValue: TValue): IYamlDocument; overload;
-    class procedure TValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue); overload;
+    class function TValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue): Boolean; overload;
   end;
 
 implementation
@@ -195,7 +195,7 @@ begin
       LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
       LDocument.Root.MappingStyle := TYamlMappingStyle.Block;
 
-      ObjectToYAML(LDocument.Root, AObject, AFilterProc);
+      ObjectToYAML(LDocument.Root, '', AObject, AFilterProc);
 
       Result := LDocument;
     except
@@ -208,8 +208,8 @@ begin
   end;
 end;
 
-class procedure TMARSYAML.DictionaryToYAML(const ARoot: TYamlNode;
-  const ADictionary: TObject);
+class function TMARSYAML.DictionaryToYAML(const ARoot: TYamlNode; const AName: string;
+  const ADictionary: TObject): Boolean;
 var
   LDictionaryType, LEnumeratorType, LPairType: TRttiType;
   LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
@@ -219,6 +219,7 @@ var
   LEnumeratorObj: TObject;
   LPair: Pointer;
   LElement: TYamlNode;
+  LNode: TYamlNode;
 begin
   // highly inspired by https://en.delphipraxis.net/topic/2546-how-to-iterate-a-tdictionary-using-rtti-and-tvalue/
   // Thanks to Remy Lebeau
@@ -235,7 +236,7 @@ begin
     LPairType := LEnumeratorCurrentProperty.PropertyType;
     LKeyField := LPairType.GetField('Key');
     LValueField := LPairType.GetField('Value');
-
+    Result := False;
     LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
     while LEnumeratorCurrentValue.AsBoolean do
     begin
@@ -244,12 +245,18 @@ begin
       LKeyValue := LKeyField.GetValue(LPair);
       LValueValue := LValueField.GetValue(LPair);
 
-      LElement := ARoot.AddOrSetMapping(LKeyValue.ToString);
+      if not Result then
+      begin
+        LNode := ARoot.AddOrSetMapping(AName);
+        Result := True;
+      end;
+
+      LElement := LNode.AddOrSetMapping(LKeyValue.ToString);
 
       if LValueValue.IsObject then
-        ObjectToYAML(LElement, LValueValue.AsObject)
+        ObjectToYAML(LElement, '', LValueValue.AsObject)
       else if LValueValue.Kind in [tkRecord, tkMRecord] then
-        RecordToYAML(LElement, LValueValue);
+        RecordToYAML(LElement, '', LValueValue);
 
       LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
     end;
@@ -258,15 +265,15 @@ begin
   end;
 end;
 
-class procedure TMARSYAML.ObjectListToYAML(const ARoot: TYamlNode;
-  const AObjectList: TObject);
+class function TMARSYAML.ObjectListToYAML(const ARoot: TYamlNode; const AName: string;
+  const AObjectList: TObject): Boolean;
 var
   LObjectListType, LEnumeratorType{, LElementType}: TRttiType;
   LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
   LEnumeratorCurrentProperty: TRttiProperty;
   LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue: TValue;
   LEnumeratorObj: TObject;
-  LElement: TYamlNode;
+  LNode: TYamlNode;
 begin
   LObjectListType := TRttiContext.Create.GetType(AObjectList.ClassType);
   LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
@@ -279,17 +286,22 @@ begin
 
 //    LElementType := LEnumeratorCurrentProperty.PropertyType;
 
+    Result := False;
     LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
     while LEnumeratorCurrentValue.AsBoolean do
     begin
       LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
 
-      LElement := ARoot.AddMapping;
+      if not Result then
+      begin
+        LNode := ARoot.AddOrSetSequence(AName);
+        Result := True;
+      end;
 
       if LCurrentValue.IsObject then
-        ObjectToYAML(LElement, LCurrentValue.AsObject)
+        ObjectToYAML(LNode, '', LCurrentValue.AsObject)
       else if LCurrentValue.Kind in [tkRecord, tkMRecord] then
-        RecordToYAML(LElement, LCurrentValue);
+        RecordToYAML(LNode, '', LCurrentValue);
 
       LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
     end;
@@ -298,8 +310,8 @@ begin
   end;
 end;
 
-class procedure TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AObject: TObject;
-  const AFilterProc: TToYAMLFilterProc = nil);
+class function TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject;
+  const AFilterProc: TToYAMLFilterProc = nil): Boolean;
 
     function GetObjectFilterProc(const AObjectType: TRttiType): TToYAMLFilterProc;
     var
@@ -322,7 +334,10 @@ var
   LValue: TValue;
   LAccept: Boolean;
   LFilterProc: TToYAMLFilterProc;
+  LNode: TYamlNode;
 begin
+  Result := False;
+
   if not Assigned(AObject) then
     Exit;
 
@@ -343,8 +358,17 @@ begin
     if not LAccept then
       Continue;
 
+    if not Result then
+    begin
+      if ARoot.IsSequence then
+        LNode := ARoot.AddMapping
+      else
+        LNode := ARoot;
+      Result := True;
+    end;
+
     LValue := LMember.GetValue(AObject);
-    TValueToYaml(ARoot, LMember.Name, LValue);
+    TValueToYaml(LNode, LMember.Name, LValue);
   end;
 end;
 
@@ -361,7 +385,7 @@ begin
       LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
       LDocument.Root.MappingStyle := TYamlMappingStyle.Block;
 
-      RecordToYAML(LDocument.Root, ARecord, AFilterProc);
+      RecordToYAML(LDocument.Root, '', ARecord, AFilterProc);
 
       Result := LDocument;
     except
@@ -374,8 +398,8 @@ begin
   end;
 end;
 
-class procedure TMARSYAML.RecordToYAML(const ARoot: TYamlNode; const ARecord: TValue;
-  const AFilterProc: TToYAMLFilterProc = nil);
+class function TMARSYAML.RecordToYAML(const ARoot: TYamlNode; const AName: string; const ARecord: TValue;
+  const AFilterProc: TToYAMLFilterProc = nil): Boolean;
 
     function GetRecordFilterProc(const ARecordType: TRttiType): TToYAMLFilterProc;
     var
@@ -398,9 +422,9 @@ var
   LValue: TValue;
   LFilterProc: TToYAMLFilterProc;
   LAccept: Boolean;
+  LNode: TYamlNode;
 begin
-//  if not Assigned(AObject) then
-//    Exit;
+  Result := False;
 
   LType := TRttiContext.Create.GetType(ARecord.TypeInfo);
 
@@ -419,8 +443,17 @@ begin
     if not LAccept then
       Continue;
 
+    if not Result then
+    begin
+      if ARoot.IsSequence then
+        LNode := ARoot.AddMapping
+      else
+        LNode := ARoot;
+      Result := True;
+    end;
+
     LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
-    TValueToYaml(ARoot, LMember.Name, LValue);
+    TValueToYaml(LNode, LMember.Name, LValue);
   end;
 end;
 
@@ -458,8 +491,8 @@ begin
   end;
 end;
 
-class procedure TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
-  const AKeyName: string; const AValue: TValue);
+class function TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
+  const AKeyName: string; const AValue: TValue): Boolean;
 var
   LTypeName: string;
   LBool: Boolean;
@@ -467,19 +500,22 @@ var
   LIndex: Integer;
   LSequence: TYamlNode;
 begin
+  Result := False;
   LTypeName := string(AValue.TypeInfo^.Name);
 
   if LTypeName.Contains('TDictionary<System.string,') or LTypeName.Contains('TObjectDictionary<System.string,')  then
-    DictionaryToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)
+    Result := DictionaryToYaml(ARoot, AKeyName, AValue.AsObject)
 
   else if LTypeName.Contains('TObjectList<') then
-    ObjectListToYaml(ARoot.AddOrSetSequence(AKeyName), AValue.AsObject)
+    Result := ObjectListToYaml(ARoot, AKeyName, AValue.AsObject)
 
   else if AValue.IsObjectInstance then
-    ObjectToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)
+    Result := ObjectToYaml(ARoot, AKeyName, AValue.AsObject)
 
   else if AValue.IsArray and (AValue.GetArrayLength > 0) then
   begin
+    Result := True;
+
     if (ARoot.IsSequence) and (AKeyName = '') then
       LSequence := ARoot
     else begin
@@ -493,51 +529,78 @@ begin
     begin
       var LElement := AValue.GetArrayElement(LIndex);
       if LElement.IsObject then
-        ObjectToYAML(LSequence.AddMapping, LElement.AsObject)
+        ObjectToYAML(LSequence, '', LElement.AsObject)
       else if LElement.Kind in [tkRecord, tkMRecord] then
-        RecordToYAML(LSequence.AddMapping, LElement)
+        RecordToYAML(LSequence, '', LElement)
       else if LElement.Kind in [tkString, tkShortString, tkWString, tkUString, tkChar, tkWChar] then
         LSequence.Add(LElement.AsString); //AM TODO Numbers, Boolean, ...
     end;
   end
 
   else if (AValue.Kind in [tkRecord, tkMRecord]) then
-    RecordToYaml(ARoot.AddOrSetMapping(AKeyName), AValue)
+    Result := RecordToYaml(ARoot, AKeyName, AValue)
 
   else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
   begin
     LString := AValue.AsString;
     if LString <> '' then
+    begin
       ARoot.AddOrSetValue(AKeyName, LString).ScalarStyle := TYamlScalarStyle.Plain;
+      Result := True;
+    end;
   end
 
   else if (AValue.IsType<Boolean>) then
   begin
     LBool := AValue.AsType<Boolean>;
     if LBool <> false then
+    begin
       ARoot.AddOrSetValue(AKeyName, LBool);
+      Result := True;
+    end;
   end
 
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
-    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TDateTime>, False))
+  begin
+    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TDateTime>, False));
+    Result := True;
+  end
   else if AValue.TypeInfo = TypeInfo(TDate) then
-    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TDate>, False))
+  begin
+    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TDate>, False));
+    Result := True;
+  end
   else if AValue.TypeInfo = TypeInfo(TTime) then
-    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TTime>, False))
+  begin
+    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TTime>, False));
+    Result := True;
+  end
 
   else if (AValue.Kind in [tkInt64]) then
-    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Int64>)
+  begin
+    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Int64>);
+    Result := True;
+  end
   else if (AValue.Kind in [tkInteger]) then
-    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Integer>)
+  begin
+    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Integer>);
+    Result := True;
+  end
 
   else if (AValue.Kind in [tkFloat]) then
-    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Double>)
+  begin
+    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Double>);
+    Result := True;
+  end
 
   else
   begin
     LString := AValue.ToString;
     if LString <> '' then
+    begin
       ARoot.AddOrSetValue(AKeyName,  LString);
+      Result := True;
+    end;
   end;
 end;
 
