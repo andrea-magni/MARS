@@ -82,9 +82,6 @@ begin
 end;
 
 function THelloWorldResource.OpenAPI: TOpenAPI;
-var
-  server: TServer;
-//  Lhelloworld: TPathItem;
 begin
   Result := TOpenAPI.Create;
   Result.openapi := '3.0.2';
@@ -103,19 +100,19 @@ begin
 
   Result.info.version := '1.0.0';
 
-  server := TServer.Create;
+  var server := Result.AddServer;
   server.url := '{protocol}://localhost:{port}/rest/default';
   server.description := 'Development server';
   server.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'Port number'));
   server.variables.Add('protocol', TServerVariable.Create(['http', 'https'], 'http', 'Protocol'));
 
-  Result.servers.Add(server);
-
-//  Lhelloworld.summary := 'HelloWorld resource';
-//  Lhelloworld.description := 'HelloWorld resource';
-//  Lhelloworld.get.description := 'GET request';
-//
-//  Result.paths.Add('/helloworld', Lhelloworld);
+  var path := Result.AddPath('/helloworld');
+  path.summary := 'HelloWorld resource';
+  path.description := 'HelloWorld resource';
+  path.get.description := 'GET request';
+  var response := path.get.AddResponse('200');
+  response.description := 'A greeting';
+  response.AddContent('text/plain');
 end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;

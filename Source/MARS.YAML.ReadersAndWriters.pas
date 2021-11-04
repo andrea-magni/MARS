@@ -462,6 +462,10 @@ class procedure TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
   const AKeyName: string; const AValue: TValue);
 var
   LTypeName: string;
+  LBool: Boolean;
+  LString: string;
+  LIndex: Integer;
+  LSequence: TYamlNode;
 begin
   LTypeName := string(AValue.TypeInfo^.Name);
 
@@ -474,9 +478,8 @@ begin
   else if AValue.IsObjectInstance then
     ObjectToYaml(ARoot.AddOrSetMapping(AKeyName), AValue.AsObject)
 
-  else if AValue.IsArray then
+  else if AValue.IsArray and (AValue.GetArrayLength > 0) then
   begin
-    var LSequence: TYamlNode;
     if (ARoot.IsSequence) and (AKeyName = '') then
       LSequence := ARoot
     else begin
@@ -486,7 +489,7 @@ begin
 
     Assert(LSequence.IsSequence);
 
-    for var LIndex := 0 to AValue.GetArrayLength-1 do
+    for LIndex := 0 to AValue.GetArrayLength-1 do
     begin
       var LElement := AValue.GetArrayElement(LIndex);
       if LElement.IsObject then
@@ -503,13 +506,17 @@ begin
 
   else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
   begin
-    var LString := AValue.AsString;
+    LString := AValue.AsString;
     if LString <> '' then
       ARoot.AddOrSetValue(AKeyName, LString).ScalarStyle := TYamlScalarStyle.Plain;
   end
 
   else if (AValue.IsType<Boolean>) then
-    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Boolean>)
+  begin
+    LBool := AValue.AsType<Boolean>;
+    if LBool <> false then
+      ARoot.AddOrSetValue(AKeyName, LBool);
+  end
 
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
     ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TDateTime>, False))
@@ -528,7 +535,7 @@ begin
 
   else
   begin
-    var LString := AValue.ToString;
+    LString := AValue.ToString;
     if LString <> '' then
       ARoot.AddOrSetValue(AKeyName,  LString);
   end;

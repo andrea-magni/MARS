@@ -66,8 +66,40 @@ type
   public
   end;
 
-  TResponses = class
+  THeader = class
   public
+//    constructor Create; virtual;
+//    destructor Destroy; override;
+  public
+    description: string;
+    required: boolean;
+    &deprecated: boolean;
+//    allowEmptyValue: boolean;
+    style: string;
+//    schema: TSchema;
+//    example: TExample;
+//    examples: TObjectDictionary<string, TExample>;
+  end;
+
+  TMediaTypeObj = class
+  public
+
+  end;
+
+  TLink = class
+  public
+  end;
+
+  TResponse = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+    function AddContent(const AMediaType: string): TMediaTypeObj;
+  public
+    description: string;
+    headers: TObjectDictionary<string, THeader>;
+    content: TObjectDictionary<string, TMediaTypeObj>;
+    links: TObjectDictionary<string, TLink>;
   end;
 
   TCallback = class
@@ -82,6 +114,7 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
+    function AddResponse(const AStatusCode: string): TResponse;
   public
     tags: TArray<string>;
     summary: string;
@@ -90,7 +123,7 @@ type
     operationId: string;
     parameters: TObjectList<TParameter>;
     requestBody: TRequestBody;
-    responses: TResponses;
+    responses: TObjectDictionary<string, TResponse>;
     callbacks: TObjectDictionary<string, TCallback>;
     &deprecated: Boolean;
     security: TObjectList<TSecurityRequirement>;
@@ -133,6 +166,8 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
+    function AddServer: TServer;
+    function AddPath(const APath: string): TPathItem;
   public
     openapi: string; // required
     info: TInfo; // required
@@ -190,13 +225,19 @@ end;
 
 { TOperation }
 
+function TOperation.AddResponse(const AStatusCode: string): TResponse;
+begin
+  Result := TResponse.Create;
+  responses.Add(AStatusCode, Result);
+end;
+
 constructor TOperation.Create;
 begin
   inherited Create;
   externalDocs := TExternalDocumentation.Create;
   callbacks := TObjectDictionary<string, TCallback>.Create([doOwnsValues]);
   requestBody := TRequestBody.Create;
-  responses := TResponses.Create;
+  responses := TObjectDictionary<string, TResponse>.Create([doOwnsValues]);
   parameters := TObjectList<TParameter>.Create(True);
   security := TObjectList<TSecurityRequirement>.Create(True);
   servers := TObjectList<TServer>.Create(True);
@@ -248,6 +289,20 @@ end;
 
 { TOpenAPI }
 
+function TOpenAPI.AddPath(const APath: string): TPathItem;
+begin
+  if paths.ContainsKey(APath) then
+    raise Exception.CreateFmt('Path [%s] already defined', [APath]);
+  Result := TPathItem.Create;
+  paths.Add(APath, Result);
+end;
+
+function TOpenAPI.AddServer: TServer;
+begin
+  Result := TServer.Create;
+  servers.Add(Result);
+end;
+
 constructor TOpenAPI.Create;
 begin
   inherited Create;
@@ -269,6 +324,30 @@ begin
   components.Free;
   paths.Free;
   info.Free;
+  inherited;
+end;
+
+{ TResponse }
+
+function TResponse.AddContent(const AMediaType: string): TMediaTypeObj;
+begin
+  Result := TMediaTypeObj.Create;
+  content.Add(AMediaType, Result);
+end;
+
+constructor TResponse.Create;
+begin
+  inherited Create;
+  headers := TObjectDictionary<string, THeader>.Create([doOwnsValues]);
+  content := TObjectDictionary<string, TMediaTypeObj>.Create([doOwnsValues]);
+  links := TObjectDictionary<string, TLink>.Create([doOwnsValues]);
+end;
+
+destructor TResponse.Destroy;
+begin
+  links.Free;
+  content.Free;
+  headers.Free;
   inherited;
 end;
 

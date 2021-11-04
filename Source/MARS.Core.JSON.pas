@@ -1333,6 +1333,13 @@ begin
     Exit;
   end;
 
+    // skip false boolean values
+  if Assigned(LValue) and (LValue is TJSONBool) and (TJSONBool(LValue).AsBoolean = false) then
+  begin
+    FreeAndNil(LValue);
+    Exit;
+  end;
+
   // skip empty arrays
   if Assigned(LValue) and (LValue is TJSONArray) and (TJSONArray(LValue).Count = 0) then
   begin
