@@ -3,15 +3,23 @@ unit MARS.OpenAPI.v3.Utils;
 interface
 
 uses
-//  Classes, SysUtils,
-  MARS.OpenAPI.v3
+  Classes, SysUtils
+, MARS.OpenAPI.v3, MARS.Core.Engine
 ;
 
-function DemoAPI: TOpenAPI;
+
+type
+  TOpenAPIHelper = class helper for TOpenAPI
+    class function BuildDemoAPI(): TOpenAPI;
+    class function BuildFromEngine(const AEngine: TMARSEngine): TOpenAPI;
+  end;
+
 
 implementation
 
-function DemoAPI: TOpenAPI;
+{ TOpenAPIHelper }
+
+class function TOpenAPIHelper.BuildDemoAPI: TOpenAPI;
 var
   server1, server2, server3: TServer;
 begin
@@ -51,6 +59,21 @@ begin
   Result.servers.Add(server1);
   Result.servers.Add(server2);
   Result.servers.Add(server3);
+end;
+
+class function TOpenAPIHelper.BuildFromEngine(
+  const AEngine: TMARSEngine): TOpenAPI;
+begin
+  Assert(Assigned(AEngine));
+
+  Result := TOpenAPI.Create;
+  try
+    Result.openapi := '3.0.2';
+    Result.info.title := 'MARS Engine ' + AEngine.Name;
+  except
+    FreeAndNil(Result);
+    raise;
+  end;
 end;
 
 end.

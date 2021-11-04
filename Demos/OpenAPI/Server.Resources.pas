@@ -19,6 +19,8 @@ uses
 type
   [Path('helloworld')]
   THelloWorldResource = class
+  private
+    function Server: TServer;
   protected
   public
     [GET, Produces(TMediaType.TEXT_PLAIN), Produces(TMediaType.APPLICATION_YAML)]
@@ -50,8 +52,8 @@ type
     [GET, Path('/openapi'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function OpenAPI: TOpenAPI;
 
-    [GET, Path('/server'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
-    function Server: TServer;
+    [GET, Path('/injected'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function InjectedOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
 
   end;
 
@@ -79,6 +81,11 @@ end;
 function THelloWorldResource.EchoInvoice(AInvoice: TInvoice): TInvoice;
 begin
   Result := AInvoice;
+end;
+
+function THelloWorldResource.InjectedOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+begin
+  Result := AOpenAPI;
 end;
 
 function THelloWorldResource.OpenAPI: TOpenAPI;

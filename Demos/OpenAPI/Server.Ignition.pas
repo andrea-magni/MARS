@@ -40,6 +40,7 @@ uses
   {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
   , Server.Resources
   , MARS.Metadata.Engine.Resource, MARS.Metadata.ReadersAndWriters
+  , MARS.OpenAPI.v3.InjectionService
   ;
 
 { TServerEngine }
