@@ -3,7 +3,7 @@ unit MARS.OpenAPI.v3.Utils;
 interface
 
 uses
-  Classes, SysUtils, System.Rtti
+  Classes, SysUtils, System.Rtti, System.TypInfo, MARS.Rtti.Utils
 , MARS.OpenAPI.v3
 , MARS.Core.Engine, MARS.Core.Application, MARS.Core.Activation.Interfaces
 ;
@@ -203,7 +203,7 @@ begin
                       begin
                         var LParam := LOperation.AddParameter(AParam.Name, LIn);
                         LParam.description := AParam.Description;
-                        LParam.schema.&type := LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType);
+                        LParam.schema.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType));
                       end;
                     end
                   );
@@ -218,7 +218,7 @@ begin
 
                       if LConsumes = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
                       begin
-                        LContent.schema.&type := 'object';
+                        LContent.schema.SetType('object');
 
                         AMet.ForEachParameter(
                           procedure (AParam: TMARSRequestParamMetadata)
@@ -228,7 +228,7 @@ begin
                             begin
                               var LProperty := LContent.schema.AddProperty(AParam.Name);
 //                              LParam.description := AParam.Description;
-                              LProperty.&type := LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType);
+                              LProperty.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType));
                             end;
                           end
                         );
@@ -241,7 +241,7 @@ begin
                           begin
                             var LIn := LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind);
                             if LIn = 'body' then
-                              LContent.schema.ref := LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType);
+                              LContent.schema.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType));
                           end
                         );
 
@@ -296,12 +296,37 @@ end;
 
 function TOpenAPIHelper.EnsureTypeInComponentsSchemas(
   const AType: TRttiType): Boolean;
+var
+  LSchema: TSchema;
+  LSchemaExists: Boolean;
 begin
+  Result := False;
+  LSchemaExists := components.HasSchema(AType.Name);
+  if not LSchemaExists then
+  begin
+    Result := True;
+    LSchema := components.AddSchema(AType.Name);
+    LSchema.SetType('object');
+    LSchema.description := 'Schema for type ' + AType.QualifiedName;
 
+    if (AType.IsInstance) or (AType.IsRecord) then
+    begin
+      for var LMember in AType.GetPropertiesAndFields do
+      begin
+        if LMember.Visibility < TMemberVisibility.mvPublic then
+          Continue;
+
+        var LProperty := LSchema.AddProperty(LMember.Name);
+        LProperty.SetType(MARSDataTypeToOpenAPIType(LMember.GetRttiType));
+      end;
+    end
+  end;
 end;
 
 function TOpenAPIHelper.MARSDataTypeToOpenAPIType(
   const AType: TRttiType; const ARefPrefix: string): string;
+var
+  LPrimitiveType: Boolean;
 begin
 {
   type    format
@@ -319,9 +344,19 @@ begin
   string	password	A hint to UIs to obscure input.
 }
 
-  Result := AType.Name.ToLower;
+  Result := AType.Name;
 
-  if (ARefPrefix <> '') and (IndexText(Result, ['string', 'integer', 'boolean', 'number']) = -1) then
+  if IndexStr(AType.QualifiedName, ['System.TDate', 'System.TDateTime', 'System.TTime']) <> -1 then
+    Result := 'string';
+  if IndexStr(AType.QualifiedName, ['System.Int64', 'System.UInt64', 'System.Int32', 'System.UInt32']) <> -1 then
+    Result := 'integer'; //AM TODO format !
+  if IndexStr(AType.QualifiedName, ['System.Currency', 'System.Single', 'System.Double', 'System.Extended']) <> -1 then
+    Result := 'number';
+
+  LPrimitiveType := IndexText(Result.ToLower, ['string', 'integer', 'boolean', 'number']) <> -1;
+  if LPrimitiveType then
+    Result := Result.ToLower
+  else if (ARefPrefix <> '') then
   begin
     Result := ARefPrefix + Result;
     EnsureTypeInComponentsSchemas(AType);

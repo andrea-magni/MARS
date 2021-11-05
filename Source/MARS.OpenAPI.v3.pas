@@ -3,7 +3,7 @@ unit MARS.OpenAPI.v3;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections;
+  Classes, SysUtils, Generics.Collections, MARS.Core.JSON;
 
 type
   TContact = class
@@ -62,6 +62,7 @@ type
     constructor Create; virtual;
     destructor Destroy; override;
     function AddProperty(const AName: string): TSchema;
+    procedure SetType(const AType: string);
   public
     [JSONName('$ref')] ref: string;
     title: string;
@@ -216,6 +217,7 @@ type
     destructor Destroy; override;
     function AddSchema(const AName: string): TSchema;
     function GetSchema(const AName: string; const ACreateIfMissing: Boolean = True): TSchema;
+    function HasSchema(const AName: string): Boolean;
   public
     schemas: TObjectDictionary<string,TSchema>;
   end;
@@ -523,6 +525,14 @@ begin
   inherited;
 end;
 
+procedure TSchema.SetType(const AType: string);
+begin
+  if AType.StartsWith('#') then
+    ref := AType
+  else
+    &type := AType;
+end;
+
 { TComponents }
 
 function TComponents.AddSchema(const AName: string): TSchema;
@@ -548,6 +558,11 @@ function TComponents.GetSchema(const AName: string;
 begin
   if not schemas.TryGetValue(AName, Result) then
     Result := AddSchema(AName);
+end;
+
+function TComponents.HasSchema(const AName: string): Boolean;
+begin
+  Result := schemas.ContainsKey(AName);
 end;
 
 end.
