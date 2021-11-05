@@ -13,7 +13,8 @@ uses
 , MARS.Core.URL
 //, MARS.Core.Token
 , MARS.Core.Token.Resource
-, Custom.Types, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
+, Custom.Types
+, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
 ;
 
 type
@@ -52,7 +53,7 @@ type
 
   end;
 
-  [Path('token')]
+  [Path('token'), Produces(TMediaType.APPLICATION_JSON)]
   TTokenResource = class(TMARSTokenResource)
   end;
 
@@ -81,6 +82,9 @@ end;
 function THelloWorldResource.OpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
 begin
   Result := AOpenAPI;
+
+  Result.info.description := 'Generated at ' + TimeToStr(Now);
+
 end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;

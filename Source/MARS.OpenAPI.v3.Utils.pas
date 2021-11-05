@@ -252,7 +252,10 @@ begin
                   var response := LOperation.AddResponse('200');
                   response.description := 'Successful response for ' + LMetDescription;
                   for var LProduces in AMet.Produces.Split([',']) do
-                    response.AddContent(LProduces);
+                  begin
+                    var LContent := response.AddContent(LProduces);
+                    LContent.schema.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AMet.DataTypeRttiType))
+                  end;
                 end;
 
               end

@@ -138,7 +138,10 @@ begin
 
     LMethodMetadata.DataType := '';
     if (AMethod.MethodKind in [mkFunction, mkClassFunction]) then
+    begin
       LMethodMetadata.DataType := AMethod.ReturnType.QualifiedName;
+      LMethodMetadata.DataTypeRttiType := AMethod.ReturnType;
+    end;
 
     AMethod.ForEachAttribute<HttpMethodAttribute>(
       procedure (Attribute: HttpMethodAttribute)
@@ -154,8 +157,9 @@ begin
       end
     );
     if LMethodMetadata.Produces.IsEmpty then
-      LMethodMetadata.Produces := AResourceMetadata.Produces;
-
+      LMethodMetadata.Produces := AResourceMetadata.Produces
+    else if not AResourceMetadata.Produces.IsEmpty then
+      LMethodMetadata.Produces := LMethodMetadata.Produces + ',' + AResourceMetadata.Produces;
 
     AMethod.ForEachAttribute<ConsumesAttribute>(
       procedure (Attribute: ConsumesAttribute)
@@ -164,7 +168,10 @@ begin
       end
     );
     if LMethodMetadata.Consumes.IsEmpty then
-      LMethodMetadata.Consumes := AResourceMetadata.Consumes;
+      LMethodMetadata.Consumes := AResourceMetadata.Consumes
+    else if not AResourceMetadata.Consumes.IsEmpty then
+      LMethodMetadata.Consumes := LMethodMetadata.Consumes + ',' + AResourceMetadata.Consumes;
+
 
      AMethod.ForEachAttribute<AuthorizationAttribute>(
       procedure (Attribute: AuthorizationAttribute)

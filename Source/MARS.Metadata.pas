@@ -75,6 +75,7 @@ type
   public
     HttpMethod: string;
     DataType: string;
+    DataTypeRttiType: TRttiType;
 
     constructor Create(const AParent: TMARSMetadata); override;
     destructor Destroy; override;
