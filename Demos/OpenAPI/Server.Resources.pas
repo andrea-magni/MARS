@@ -14,6 +14,7 @@ uses
 //, MARS.Core.Token
 , MARS.Core.Token.Resource
 , Custom.Types
+, MARS.Metadata.Attributes
 , MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
 ;
 
@@ -48,8 +49,18 @@ type
      , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function EchoInvoice([BodyParam] AInvoice: TInvoice): TInvoice;
 
-    [GET, Path('/openapi'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    [GET, Path('/openapi')
+    , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)
+    , MetaVisible(False)
+    ]
     function OpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
+
+    [GET, Path('/info')
+    , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML), IsReference
+    , MetaVisible(False)
+    ]
+    function Info([Context] AOpenAPI: TOpenAPI): TInfo;
+
 
   end;
 
@@ -79,12 +90,14 @@ begin
   Result := AInvoice;
 end;
 
+function THelloWorldResource.Info(AOpenAPI: TOpenAPI): TInfo;
+begin
+  Result := AOpenAPI.info;
+end;
+
 function THelloWorldResource.OpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
 begin
   Result := AOpenAPI;
-
-  Result.info.description := 'Generated at ' + TimeToStr(Now);
-
 end;
 
 function THelloWorldResource.ReturnAddressArray: TArray<TAddress>;

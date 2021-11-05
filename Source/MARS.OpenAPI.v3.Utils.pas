@@ -96,11 +96,11 @@ begin
     LOpenAPI.openapi := '3.0.2';
 
     LOpenAPI.info.title          := FromEngineParams('info.title', 'MARS ' + AEngine.Name).AsString;
-    LOpenAPI.info.summary        := FromEngineParams('info.summary', 'A brief summary here.').AsString;
-    LOpenAPI.info.description    := FromEngineParams('info.description', 'A description here.').AsString;
-    LOpenAPI.info.termsOfService := FromEngineParams('info.termsOfService', 'https://dummy.org/termsOfService/').AsString;
+    LOpenAPI.info.summary        := FromEngineParams('info.summary', '').AsString;
+    LOpenAPI.info.description    := FromEngineParams('info.description', '').AsString;
+    LOpenAPI.info.termsOfService := FromEngineParams('info.termsOfService', '').AsString;
 
-    LOpenAPI.info.contact.name   := FromEngineParams('info.contact.name', 'Martian Developer').AsString;
+    LOpenAPI.info.contact.name   := FromEngineParams('info.contact.name', 'MARS Developer').AsString;
     LOpenAPI.info.contact.url    := FromEngineParams('info.contact.url', 'https://mars.space').AsString;
     LOpenAPI.info.contact.email  := FromEngineParams('info.contact.email', 'me@mars.space').AsString;
 
@@ -161,6 +161,9 @@ begin
                 path: TPathItem;
                 LMetDescription: string;
               begin
+                if not AMet.Visible then
+                  Exit;
+
                 LMetDescription := AMet.Description;
                 if LMetDescription = '' then
                   LMetDescription := AMet.Name;
@@ -204,6 +207,8 @@ begin
                         var LParam := LOperation.AddParameter(AParam.Name, LIn);
                         LParam.description := AParam.Description;
                         LParam.schema.SetType(AParam.DataTypeRttiType, LOpenAPI);
+                        if LIn = 'path' then
+                          LParam.required := True;
                       end;
                     end
                   );

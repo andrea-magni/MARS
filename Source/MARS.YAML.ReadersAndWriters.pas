@@ -324,11 +324,10 @@ begin
     LValue := LMember.GetValue(AObject);
     LWritten := TValueToYaml(LNode, LMember.Name, LValue);
     if LWritten then
-      Result := True;
+      Result := True
+    else if LNode.IsMapping then
+      LNode.Remove(LMember.Name);
   end;
-
-//  if (not Result) and (LNode <> ARoot) and (ARoot.IsMapping) then
-//    ARoot.Remove(LNode); //AM TODO
 end;
 
 class function TMARSYAML.RecordToYAML(const ARecord: TValue;
