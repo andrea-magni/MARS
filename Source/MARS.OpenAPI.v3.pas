@@ -57,13 +57,77 @@ type
   public
   end;
 
+  TSchema = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+    function AddProperty(const AName: string): TSchema;
+  public
+    [JSONName('$ref')] ref: string;
+    title: string;
+    multipleOf: string;
+    maximum: string;
+    exclusiveMaximum: string;
+    minimum: string;
+    exclusiveMinimum: string;
+    maxLength: string;
+    minLength: string;
+    pattern: string; // (This string SHOULD be a valid regular expression, according to the ECMA 262 regular expression dialect)
+    maxItems: string;
+    minItems: string;
+    uniqueItems: string;
+    maxProperties: string;
+    minProperties: string;
+    required: boolean;
+    enum: string;
+
+    &type: string; // - Value MUST be a string. Multiple types via an array are not supported.
+    allOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
+    oneOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
+    anyOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
+    &not: string;  //  - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
+    items: string; // - Value MUST be an object and not an array. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. items MUST be present if the type is array.
+    properties: TObjectDictionary<string,TSchema>; // - Property definitions MUST be a Schema Object and not a standard JSON Schema (inline or referenced).
+    additionalProperties: string; // - Value can be boolean or object. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. Consistent with JSON Schema, additionalProperties defaults to true.
+    description: string; // - CommonMark syntax MAY be used for rich text representation.
+    format: string; // - See Data Type Formats for further details. While relying on JSON Schema's defined formats, the OAS offers a few additional predefined formats.
+    default: string; // - The default value represents what would be assumed by the consumer of the input as the value of the schema if one is not provided. Unlike JSON Schema, the value MUST conform to the defined type for the Schema Object defined at the same level. For example, if type is string, then default can be "foo" but cannot be 1.
+  end;
+
+
+  TMediaTypeObj = class
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
+    schema: TSchema;
+  end;
+
+
   TParameter = class
   public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  public
+    name: string; // required
+    &in: string; // query, header, path, cookie // required
+    description: string;
+    required: boolean;
+    &deprecated: boolean;
+    allowEmptyValue: boolean;
+    schema: TSchema;
   end;
 
 
   TRequestBody = class
   public
+    constructor Create; virtual;
+    destructor Destroy; override;
+    function AddContent(const AMediaType: string): TMediaTypeObj;
+  public
+    description: string;
+    content: TObjectDictionary<string, TMediaTypeObj>;
+    required: boolean;
   end;
 
   THeader = class
@@ -79,11 +143,6 @@ type
 //    schema: TSchema;
 //    example: TExample;
 //    examples: TObjectDictionary<string, TExample>;
-  end;
-
-  TMediaTypeObj = class
-  public
-
   end;
 
   TLink = class
@@ -115,6 +174,7 @@ type
     constructor Create; virtual;
     destructor Destroy; override;
     function AddResponse(const AStatusCode: string): TResponse;
+    function AddParameter(const AName: string; const AIn: string): TParameter;
   public
     tags: TArray<string>;
     summary: string;
@@ -152,6 +212,12 @@ type
 
   TComponents = class
   public
+    constructor Create; virtual;
+    destructor Destroy; override;
+    function AddSchema(const AName: string): TSchema;
+    function GetSchema(const AName: string; const ACreateIfMissing: Boolean = True): TSchema;
+  public
+    schemas: TObjectDictionary<string,TSchema>;
   end;
 
   TSecurity = class
@@ -231,6 +297,14 @@ begin
 end;
 
 { TOperation }
+
+function TOperation.AddParameter(const AName: string; const AIn: string): TParameter;
+begin
+  Result := TParameter.Create;
+  Result.name := AName;
+  Result.&in := AIn;
+  parameters.Add(Result);
+end;
 
 function TOperation.AddResponse(const AStatusCode: string): TResponse;
 begin
@@ -379,6 +453,101 @@ destructor TTag.Destroy;
 begin
   externalDocs.Free;
   inherited;
+end;
+
+{ TParameter }
+
+constructor TParameter.Create;
+begin
+  inherited Create;
+  schema := TSchema.Create;
+end;
+
+destructor TParameter.Destroy;
+begin
+  schema.Free;
+  inherited;
+end;
+
+{ TRequestBody }
+
+function TRequestBody.AddContent(const AMediaType: string): TMediaTypeObj;
+begin
+  Result := TMediaTypeObj.Create;
+  content.Add(AMediaType, Result);
+end;
+
+constructor TRequestBody.Create;
+begin
+  inherited Create;
+  content := TObjectDictionary<string,TMediaTypeObj>.Create([doOwnsValues]);
+end;
+
+destructor TRequestBody.Destroy;
+begin
+  content.Free;
+  inherited;
+end;
+
+{ TMediaTypeObj }
+
+constructor TMediaTypeObj.Create;
+begin
+  inherited Create;
+  schema := TSchema.Create;
+end;
+
+destructor TMediaTypeObj.Destroy;
+begin
+  schema.Free;
+  inherited;
+end;
+
+{ TSchema }
+
+function TSchema.AddProperty(const AName: string): TSchema;
+begin
+  Result := TSchema.Create;
+  properties.Add(AName, Result);
+end;
+
+constructor TSchema.Create;
+begin
+  inherited Create;
+  properties := TObjectDictionary<string, TSchema>.Create([doOwnsValues]);
+end;
+
+destructor TSchema.Destroy;
+begin
+  properties.Free;
+  inherited;
+end;
+
+{ TComponents }
+
+function TComponents.AddSchema(const AName: string): TSchema;
+begin
+  Result := TSchema.Create;
+  schemas.Add(AName, Result);
+end;
+
+constructor TComponents.Create;
+begin
+  inherited Create;
+  schemas := TObjectDictionary<string, TSchema>.Create([doOwnsValues]);
+end;
+
+destructor TComponents.Destroy;
+begin
+  schemas.Free;
+  inherited;
+end;
+
+function TComponents.GetSchema(const AName: string;
+  const ACreateIfMissing: Boolean): TSchema;
+begin
+  if not schemas.TryGetValue(AName, Result) then
+    Result := AddSchema(AName);
 end;
 
 end.

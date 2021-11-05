@@ -40,7 +40,7 @@ type
     [GET, IsReference]
     function GetCurrent: TMARSToken;
 
-    [POST, IsReference]
+    [POST, Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), IsReference]
     function DoLogin(
       [FormParam('username')] const AUsername: string;
       [FormParam('password')] const APassword: string): TMARSToken;

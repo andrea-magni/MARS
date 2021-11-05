@@ -335,6 +335,7 @@ var
   LAccept: Boolean;
   LFilterProc: TToYAMLFilterProc;
   LNode: TYamlNode;
+  LWritten: Boolean;
 begin
   Result := False;
 
@@ -347,6 +348,13 @@ begin
   if not Assigned(LFilterProc) then
     LFilterProc := GetObjectFilterProc(LType);
 
+  if ARoot.IsSequence then
+    LNode := ARoot.AddMapping
+  else if ARoot.IsMapping and (AName <> '') then
+    LNode := ARoot.AddOrSetMapping(AName)
+  else
+    LNode := ARoot;
+
   for LMember in LType.GetPropertiesAndFields do
   begin
     if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
@@ -358,18 +366,14 @@ begin
     if not LAccept then
       Continue;
 
-    if not Result then
-    begin
-      if ARoot.IsSequence then
-        LNode := ARoot.AddMapping
-      else
-        LNode := ARoot;
-      Result := True;
-    end;
-
     LValue := LMember.GetValue(AObject);
-    TValueToYaml(LNode, LMember.Name, LValue);
+    LWritten := TValueToYaml(LNode, LMember.Name, LValue);
+    if LWritten then
+      Result := True;
   end;
+
+//  if (not Result) and (LNode <> ARoot) and (ARoot.IsMapping) then
+//    ARoot.Remove(LNode); //AM TODO
 end;
 
 class function TMARSYAML.RecordToYAML(const ARecord: TValue;

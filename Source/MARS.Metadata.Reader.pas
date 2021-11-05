@@ -214,6 +214,7 @@ begin
         if LRequestParamMetadata.Name.IsEmpty then
           LRequestParamMetadata.Name := AParameter.Name;
         LRequestParamMetadata.DataType := AParameter.ParamType.QualifiedName;
+        LRequestParamMetadata.DataTypeRttiType := AParameter.ParamType;
       except
         LRequestParamMetadata.Free;
         raise;

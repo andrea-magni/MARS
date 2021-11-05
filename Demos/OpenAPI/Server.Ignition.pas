@@ -83,7 +83,7 @@ begin
 *)
 {$ENDREGION}
 {$REGION 'BeforeHandleRequest example'}
-(*
+
     FEngine.BeforeHandleRequest :=
       function (const AEngine: TMARSEngine;
         const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
@@ -99,16 +99,16 @@ begin
           Handled := True;
         end;
 }
-{
+
         // Handle CORS and PreFlight
         if SameText(ARequest.Method, 'OPTIONS') then
         begin
           Handled := True;
           Result := False;
         end;
-}
+
       end;
-*)
+
 {$ENDREGION}
 {$REGION 'Global BeforeInvoke handler example'}
 (*

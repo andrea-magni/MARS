@@ -3,7 +3,7 @@ unit MARS.OpenAPI.v3.Utils;
 interface
 
 uses
-  Classes, SysUtils
+  Classes, SysUtils, System.Rtti
 , MARS.OpenAPI.v3
 , MARS.Core.Engine, MARS.Core.Application, MARS.Core.Activation.Interfaces
 ;
@@ -11,6 +11,9 @@ uses
 
 type
   TOpenAPIHelper = class helper for TOpenAPI
+    function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
+    function MARSKindToOpenAPIKind(const AString: string): string;
+    function MARSDataTypeToOpenAPIType(const AType: TRttiType; const ARefPrefix: string = '#/components/schemas/'): string;
     class function BuildDemoAPI(): TOpenAPI;
     class function BuildFrom(const AEngine: TMARSEngine; const AApplication: TMARSApplication): TOpenAPI; overload;
     class function BuildFrom(const AActivation: IMARSActivation): TOpenAPI; overload;
@@ -20,9 +23,10 @@ type
 implementation
 
 uses
-  System.Rtti
-, MARS.Utils.Parameters, MARS.Core.Registry.Utils
+  StrUtils
+, MARS.Utils.Parameters, MARS.Core.Registry.Utils, MARS.Core.URL
 , MARS.Metadata, MARS.Metadata.Reader
+, MARS.Core.MediaType
 ;
 
 { TOpenAPIHelper }
@@ -142,10 +146,10 @@ begin
           begin
             AAppMD.ForEachResource(
               procedure (ARes: TMARSResourceMetadata)
-              var
-                tag: TTag;
+//              var
+//                tag: TTag;
               begin
-                tag := LOpenAPI.AddTag(ARes.Path, ARes.Description);
+                {tag := }LOpenAPI.AddTag(ARes.Path, ARes.Description);
               end
             );
 
@@ -155,8 +159,13 @@ begin
               procedure (ARes: TMARSResourceMetadata; AMet: TMARSMethodMetadata)
               var
                 path: TPathItem;
+                LMetDescription: string;
               begin
-                path := LOpenAPI.GetPath('/' + ARes.Path + AMet.Path);
+                LMetDescription := AMet.Description;
+                if LMetDescription = '' then
+                  LMetDescription := AMet.Name;
+
+                path := LOpenAPI.GetPath(TMARSURL.CombinePath([ARes.Path, AMet.Path], True, False));
 
                 path.summary := ARes.Name + ' resource';
                 path.description := ARes.Description;
@@ -182,10 +191,66 @@ begin
                 if Assigned(LOperation) then
                 begin
                   LOperation.operationId := AMet.Name;
-                  LOperation.description := AMet.Description;
+                  LOperation.description := LMetDescription;
+
                   LOperation.tags := [ARes.Path];
+
+                  AMet.ForEachParameter(
+                    procedure (AParam: TMARSRequestParamMetadata)
+                    begin
+                      var LIn := LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind);
+                      if IndexText(LIn, ['query', 'header', 'path', 'cookie']) <> -1 then
+                      begin
+                        var LParam := LOperation.AddParameter(AParam.Name, LIn);
+                        LParam.description := AParam.Description;
+                        LParam.schema.&type := LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType);
+                      end;
+                    end
+                  );
+
+                  if AMet.Consumes <> '' then
+                  begin
+                    var body := LOperation.requestBody;
+                    body.description := 'Body for ' + LMetDescription;
+                    for var LConsumes in AMet.Consumes.Split([',']) do
+                    begin
+                      var LContent := body.AddContent(LConsumes);
+
+                      if LConsumes = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
+                      begin
+                        LContent.schema.&type := 'object';
+
+                        AMet.ForEachParameter(
+                          procedure (AParam: TMARSRequestParamMetadata)
+                          begin
+                            var LIn := LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind);
+                            if LIn = 'form' then
+                            begin
+                              var LProperty := LContent.schema.AddProperty(AParam.Name);
+//                              LParam.description := AParam.Description;
+                              LProperty.&type := LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType);
+                            end;
+                          end
+                        );
+
+                      end
+                      else // non x-www-form-urlencoded
+                      begin
+                        AMet.ForEachParameter(
+                          procedure (AParam: TMARSRequestParamMetadata)
+                          begin
+                            var LIn := LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind);
+                            if LIn = 'body' then
+                              LContent.schema.ref := LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType);
+                          end
+                        );
+
+                      end;
+                    end;
+                  end;
+
                   var response := LOperation.AddResponse('200');
-                  response.description := 'Response for ' + AMet.Description;
+                  response.description := 'Successful response for ' + LMetDescription;
                   for var LProduces in AMet.Produces.Split([',']) do
                     response.AddContent(LProduces);
                 end;
@@ -227,6 +292,46 @@ class function TOpenAPIHelper.BuildFrom(
   const AActivation: IMARSActivation): TOpenAPI;
 begin
   Result := BuildFrom(AActivation.Engine, AActivation.Application);
+end;
+
+function TOpenAPIHelper.EnsureTypeInComponentsSchemas(
+  const AType: TRttiType): Boolean;
+begin
+
+end;
+
+function TOpenAPIHelper.MARSDataTypeToOpenAPIType(
+  const AType: TRttiType; const ARefPrefix: string): string;
+begin
+{
+  type    format
+  ------------------------------------------
+  integer	int32	signed 32 bits
+  integer	int64	signed 64 bits (a.k.a long)
+  number	float
+  number	double
+  string
+  string	byte	base64 encoded characters
+  string	binary	any sequence of octets
+  boolean
+  string	date	As defined by full-date - RFC3339
+  string	date-time	As defined by date-time - RFC3339
+  string	password	A hint to UIs to obscure input.
+}
+
+  Result := AType.Name.ToLower;
+
+  if (ARefPrefix <> '') and (IndexText(Result, ['string', 'integer', 'boolean', 'number']) = -1) then
+  begin
+    Result := ARefPrefix + Result;
+    EnsureTypeInComponentsSchemas(AType);
+  end;
+end;
+
+function TOpenAPIHelper.MARSKindToOpenAPIKind(
+  const AString: string): string;
+begin
+  Result := AString.Replace('Param', '').ToLower;
 end;
 
 end.

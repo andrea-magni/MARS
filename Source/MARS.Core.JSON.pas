@@ -627,7 +627,8 @@ begin
   {$ELSE}
   Result := TJSONObject.Create;
   try
-    Result.FromObject(AObject);
+    if Assigned(AObject) then
+      Result.FromObject(AObject);
   except
     Result.Free;
     raise;

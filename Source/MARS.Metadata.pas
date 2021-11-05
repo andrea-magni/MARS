@@ -8,7 +8,7 @@ unit MARS.Metadata;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections
+  Classes, SysUtils, Generics.Collections, System.Rtti
 ;
 
 type
@@ -57,6 +57,7 @@ type
     Kind: string;
     SwaggerKind: string;
     DataType: string;
+    DataTypeRttiType: TRttiType;
 
     constructor Create(const AParent: TMARSMetadata); override;
   end;
