@@ -266,6 +266,7 @@ begin
       begin
         LResourceMetadata.Produces := SmartConcat([LResourceMetadata.Produces, Attribute.Value]);
       end
+    , True
     );
 
     LResourceType.ForEachAttribute<ConsumesAttribute>(
@@ -273,6 +274,7 @@ begin
       begin
         LResourceMetadata.Consumes := SmartConcat([LResourceMetadata.Consumes, Attribute.Value]);
       end
+    , True
     );
 
     LResourceType.ForEachAttribute<AuthorizationAttribute>(
@@ -280,6 +282,7 @@ begin
       begin
         LResourceMetadata.Authorization := SmartConcat([LResourceMetadata.Authorization, Attribute.ToString]);
       end
+    , True
     );
 
     LResourceType.ForEachMethodWithAttribute<HttpMethodAttribute>(

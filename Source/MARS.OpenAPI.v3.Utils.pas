@@ -26,7 +26,7 @@ uses
   StrUtils
 , MARS.Utils.Parameters, MARS.Core.Registry.Utils, MARS.Core.URL
 , MARS.Metadata, MARS.Metadata.Reader
-, MARS.Core.MediaType
+, MARS.Core.MediaType, MARS.Core.JSON
 ;
 
 { TOpenAPIHelper }
@@ -203,7 +203,7 @@ begin
                       begin
                         var LParam := LOperation.AddParameter(AParam.Name, LIn);
                         LParam.description := AParam.Description;
-                        LParam.schema.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType));
+                        LParam.schema.SetType(AParam.DataTypeRttiType, LOpenAPI);
                       end;
                     end
                   );
@@ -219,32 +219,28 @@ begin
                       if LConsumes = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
                       begin
                         LContent.schema.SetType('object');
-
                         AMet.ForEachParameter(
                           procedure (AParam: TMARSRequestParamMetadata)
                           begin
-                            var LIn := LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind);
-                            if LIn = 'form' then
+                            if LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind) = 'form' then
                             begin
                               var LProperty := LContent.schema.AddProperty(AParam.Name);
-//                              LParam.description := AParam.Description;
-                              LProperty.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType));
+                              LProperty.description := AParam.Description;
+                              LProperty.SetType(AParam.DataTypeRttiType, LOpenAPI);
                             end;
                           end
                         );
 
                       end
-                      else // non x-www-form-urlencoded
+                      else // everything else from x-www-form-urlencoded
                       begin
                         AMet.ForEachParameter(
                           procedure (AParam: TMARSRequestParamMetadata)
                           begin
-                            var LIn := LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind);
-                            if LIn = 'body' then
-                              LContent.schema.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AParam.DataTypeRttiType));
+                            if LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind) = 'body' then
+                              LContent.schema.SetType(AParam.DataTypeRttiType, LOpenAPI);
                           end
                         );
-
                       end;
                     end;
                   end;
@@ -254,7 +250,7 @@ begin
                   for var LProduces in AMet.Produces.Split([',']) do
                   begin
                     var LContent := response.AddContent(LProduces);
-                    LContent.schema.SetType(LOpenAPI.MARSDataTypeToOpenAPIType(AMet.DataTypeRttiType))
+                    LContent.schema.SetType(AMet.DataTypeRttiType, LOpenAPI)
                   end;
                 end;
 
@@ -302,6 +298,7 @@ function TOpenAPIHelper.EnsureTypeInComponentsSchemas(
 var
   LSchema: TSchema;
   LSchemaExists: Boolean;
+  LJSONName: string;
 begin
   Result := False;
   LSchemaExists := components.HasSchema(AType.Name);
@@ -316,11 +313,21 @@ begin
     begin
       for var LMember in AType.GetPropertiesAndFields do
       begin
-        if LMember.Visibility < TMemberVisibility.mvPublic then
+        if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
           Continue;
 
-        var LProperty := LSchema.AddProperty(LMember.Name);
-        LProperty.SetType(MARSDataTypeToOpenAPIType(LMember.GetRttiType));
+        LJSONName := LMember.Name;
+        LMember.HasAttribute<JSONNameAttribute>(
+          procedure (AAttr: JSONNameAttribute)
+          begin
+            LJSONName := AAttr.Name;
+          end
+        );
+        if LJSONName <> '' then
+        begin
+          var LProperty := LSchema.AddProperty(LMember.Name);
+          LProperty.SetType(LMember.GetRttiType, Self);
+        end;
       end;
     end
   end;
@@ -330,7 +337,9 @@ function TOpenAPIHelper.MARSDataTypeToOpenAPIType(
   const AType: TRttiType; const ARefPrefix: string): string;
 var
   LPrimitiveType: Boolean;
+  LElementType: TRttiType;
 begin
+
 {
   type    format
   ------------------------------------------
@@ -354,7 +363,7 @@ begin
   if IndexStr(AType.QualifiedName, ['System.Int64', 'System.UInt64', 'System.Int32', 'System.UInt32']) <> -1 then
     Result := 'integer'; //AM TODO format !
   if IndexStr(AType.QualifiedName, ['System.Currency', 'System.Single', 'System.Double', 'System.Extended']) <> -1 then
-    Result := 'number';
+    Result := 'number'; //AM TODO format
 
   LPrimitiveType := IndexText(Result.ToLower, ['string', 'integer', 'boolean', 'number']) <> -1;
   if LPrimitiveType then
@@ -362,7 +371,14 @@ begin
   else if (ARefPrefix <> '') then
   begin
     Result := ARefPrefix + Result;
-    EnsureTypeInComponentsSchemas(AType);
+    if AType.IsArray(LElementType) then
+      EnsureTypeInComponentsSchemas(LElementType)
+    else if AType.IsDictionaryOfStringAndT(LElementType) then
+      EnsureTypeInComponentsSchemas(LElementType)
+    else if AType.IsObjectListOfT(LElementType) then
+      EnsureTypeInComponentsSchemas(LElementType)
+    else
+      EnsureTypeInComponentsSchemas(AType);
   end;
 end;
 

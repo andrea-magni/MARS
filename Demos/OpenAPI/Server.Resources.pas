@@ -53,7 +53,7 @@ type
 
   end;
 
-  [Path('token'), Produces(TMediaType.APPLICATION_JSON)]
+  [Path('token')]
   TTokenResource = class(TMARSTokenResource)
   end;
 

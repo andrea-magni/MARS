@@ -3,9 +3,18 @@ unit MARS.OpenAPI.v3;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections, MARS.Core.JSON;
+  Classes, SysUtils, Generics.Collections, System.Rtti, System.TypInfo
+, MARS.Core.JSON, MARS.Rtti.Utils
+;
 
 type
+  TOpenAPI = class; // fwd
+
+  TReferenceableType = class
+  public
+    [JSONName('$ref')] ref: string;
+  end;
+
   TContact = class
   public
     name: string;
@@ -57,14 +66,20 @@ type
   public
   end;
 
-  TSchema = class
+  TSchemaBase = class(TReferenceableType)
+  public
+    procedure SetType(const AType: string);
+  public
+    &type: string; // - Value MUST be a string. Multiple types via an array are not supported.
+  end;
+
+  TSchema = class(TSchemaBase)
   public
     constructor Create; virtual;
     destructor Destroy; override;
     function AddProperty(const AName: string): TSchema;
-    procedure SetType(const AType: string);
+    procedure SetType(const AType: TRttiType; const AOpenAPI: TOpenAPI); overload;
   public
-    [JSONName('$ref')] ref: string;
     title: string;
     multipleOf: string;
     maximum: string;
@@ -82,12 +97,11 @@ type
     required: boolean;
     enum: string;
 
-    &type: string; // - Value MUST be a string. Multiple types via an array are not supported.
     allOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
     oneOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
     anyOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
     &not: string;  //  - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
-    items: string; // - Value MUST be an object and not an array. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. items MUST be present if the type is array.
+    items: TSchemaBase; // - Value MUST be an object and not an array. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. items MUST be present if the type is array.
     properties: TObjectDictionary<string,TSchema>; // - Property definitions MUST be a Schema Object and not a standard JSON Schema (inline or referenced).
     additionalProperties: string; // - Value can be boolean or object. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. Consistent with JSON Schema, additionalProperties defaults to true.
     description: string; // - CommonMark syntax MAY be used for rich text representation.
@@ -191,12 +205,11 @@ type
     servers: TObjectList<TServer>;
   end;
 
-  TPathItem = class
+  TPathItem = class(TReferenceableType)
   public
     constructor Create; virtual;
     destructor Destroy; override;
   public
-    ref: string; // $ref
     summary: string;
     description: string;
     get: TOperation;
@@ -256,6 +269,9 @@ type
 
 implementation
 
+
+uses
+  MARS.OpenAPI.v3.Utils;
 
 { TInfo }
 
@@ -517,20 +533,37 @@ constructor TSchema.Create;
 begin
   inherited Create;
   properties := TObjectDictionary<string, TSchema>.Create([doOwnsValues]);
+  items := TSchemaBase.Create();
 end;
 
 destructor TSchema.Destroy;
 begin
+  items.Free;
   properties.Free;
   inherited;
 end;
 
-procedure TSchema.SetType(const AType: string);
+procedure TSchema.SetType(const AType: TRttiType; const AOpenAPI: TOpenAPI);
+var
+  LElementType: TRttiType;
 begin
-  if AType.StartsWith('#') then
-    ref := AType
+  if AType.IsArray(LElementType) then
+  begin
+    SetType('array');
+    items.SetType(AOpenAPI.MARSDataTypeToOpenAPIType(LElementType));
+  end
+  else if AType.IsDictionaryOfStringAndT(LElementType) then
+  begin
+    SetType('array');
+    items.SetType(AOpenAPI.MARSDataTypeToOpenAPIType(LElementType));
+  end
+  else if AType.IsObjectListOfT(LElementType) then
+  begin
+    SetType('array');
+    items.SetType(AOpenAPI.MARSDataTypeToOpenAPIType(LElementType));
+  end
   else
-    &type := AType;
+    SetType(AOpenAPI.MARSDataTypeToOpenAPIType(AType));
 end;
 
 { TComponents }
@@ -563,6 +596,22 @@ end;
 function TComponents.HasSchema(const AName: string): Boolean;
 begin
   Result := schemas.ContainsKey(AName);
+end;
+
+{ TSchemaBase }
+
+procedure TSchemaBase.SetType(const AType: string);
+begin
+  if AType.StartsWith('#') then
+  begin
+    ref := AType;
+    &type := '';
+  end
+  else
+  begin
+    ref := '';
+    &type := AType;
+  end;
 end;
 
 end.

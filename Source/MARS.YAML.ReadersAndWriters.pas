@@ -211,103 +211,58 @@ end;
 class function TMARSYAML.DictionaryToYAML(const ARoot: TYamlNode; const AName: string;
   const ADictionary: TObject): Boolean;
 var
-  LDictionaryType, LEnumeratorType, LPairType: TRttiType;
-  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
-  LEnumeratorCurrentProperty: TRttiProperty;
-  LKeyField, LValueField: TRttiField;
-  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue, LKeyValue, LValueValue: TValue;
-  LEnumeratorObj: TObject;
-  LPair: Pointer;
+  LResult: Boolean;
   LElement: TYamlNode;
   LNode: TYamlNode;
 begin
-  // highly inspired by https://en.delphipraxis.net/topic/2546-how-to-iterate-a-tdictionary-using-rtti-and-tvalue/
-  // Thanks to Remy Lebeau
+  LResult := False;
 
-  LDictionaryType := TRttiContext.Create.GetType(ADictionary.ClassType);
-  LGetEnumeratorMethod := LDictionaryType.GetMethod('GetEnumerator');
-  LEnumeratorValue := LGetEnumeratorMethod.Invoke(ADictionary, []);
-  LEnumeratorObj := LEnumeratorValue.AsObject;
-  try
-    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
-    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
-    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
-
-    LPairType := LEnumeratorCurrentProperty.PropertyType;
-    LKeyField := LPairType.GetField('Key');
-    LValueField := LPairType.GetField('Value');
-    Result := False;
-    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    while LEnumeratorCurrentValue.AsBoolean do
+  TRttiHelper.EnumerateDictionary(ADictionary
+  , procedure (AKey, AValue: TValue)
     begin
-      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
-      LPair := LCurrentValue.GetReferenceToRawData;
-      LKeyValue := LKeyField.GetValue(LPair);
-      LValueValue := LValueField.GetValue(LPair);
-
-      if not Result then
+      if not LResult then
       begin
         LNode := ARoot.AddOrSetMapping(AName);
-        Result := True;
+        LResult := True;
       end;
 
-      LElement := LNode.AddOrSetMapping(LKeyValue.ToString);
+      LElement := LNode.AddOrSetMapping(AKey.ToString);
 
-      if LValueValue.IsObject then
-        ObjectToYAML(LElement, '', LValueValue.AsObject)
-      else if LValueValue.Kind in [tkRecord, tkMRecord] then
-        RecordToYAML(LElement, '', LValueValue);
+      if AValue.IsObject then
+        ObjectToYAML(LElement, '', AValue.AsObject)
+      else if AValue.Kind in [tkRecord, tkMRecord] then
+        RecordToYAML(LElement, '', AValue);
+    end
+  );
 
-      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    end;
-  finally
-    LEnumeratorObj.Free;
-  end;
+  Result := LResult;
 end;
 
 class function TMARSYAML.ObjectListToYAML(const ARoot: TYamlNode; const AName: string;
   const AObjectList: TObject): Boolean;
 var
-  LObjectListType, LEnumeratorType{, LElementType}: TRttiType;
-  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
-  LEnumeratorCurrentProperty: TRttiProperty;
-  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue: TValue;
-  LEnumeratorObj: TObject;
   LNode: TYamlNode;
+  LResult: Boolean;
 begin
-  LObjectListType := TRttiContext.Create.GetType(AObjectList.ClassType);
-  LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
-  LEnumeratorValue := LGetEnumeratorMethod.Invoke(AObjectList, []);
-  LEnumeratorObj := LEnumeratorValue.AsObject;
-  try
-    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
-    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
-    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+  LResult := False;
 
-//    LElementType := LEnumeratorCurrentProperty.PropertyType;
-
-    Result := False;
-    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    while LEnumeratorCurrentValue.AsBoolean do
+  TRttiHelper.EnumerateObjectList(AObjectList
+  , procedure (AValue: TValue)
     begin
-      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
-
-      if not Result then
+      if not LResult then
       begin
         LNode := ARoot.AddOrSetSequence(AName);
-        Result := True;
+        LResult := True;
       end;
 
-      if LCurrentValue.IsObject then
-        ObjectToYAML(LNode, '', LCurrentValue.AsObject)
-      else if LCurrentValue.Kind in [tkRecord, tkMRecord] then
-        RecordToYAML(LNode, '', LCurrentValue);
+      if AValue.IsObject then
+        ObjectToYAML(LNode, '', AValue.AsObject)
+      else if AValue.Kind in [tkRecord, tkMRecord] then
+        RecordToYAML(LNode, '', AValue);
+    end
+  );
 
-      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    end;
-  finally
-    LEnumeratorObj.Free;
-  end;
+  Result := LResult;
 end;
 
 class function TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject;

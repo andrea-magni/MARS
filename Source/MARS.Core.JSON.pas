@@ -212,10 +212,10 @@ begin
   else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
     Result := TJSONString.Create(AValue.AsString)
 
-  else if LTypeName.Contains('TDictionary<System.string,') or LTypeName.Contains('TObjectDictionary<System.string,')  then
+  else if IsDictionaryOfStringAndT(LTypeName) then
     Result := DictionaryToJSON(AValue.AsObject)
 
-  else if LTypeName.Contains('TObjectList<') then
+  else if IsObjectListOfT(LTypeName) then
     Result := ObjectListToJSON(AValue.AsObject)
 
   else if AValue.IsArray then
@@ -586,37 +586,17 @@ end;
 class function TJSONObjectHelper.ObjectListToJSON(const AObjectList: TObject;
   const AOptions: TJsonOptions): TJSONArray;
 var
-  LObjectListType, LEnumeratorType{, LElementType}: TRttiType;
-  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
-  LEnumeratorCurrentProperty: TRttiProperty;
-  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue: TValue;
-  LEnumeratorObj: TObject;
+  LResult: TJSONArray;
 begin
-  Result := TJSONArray.Create;
-
-  LObjectListType := TRttiContext.Create.GetType(AObjectList.ClassType);
-  LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
-  LEnumeratorValue := LGetEnumeratorMethod.Invoke(AObjectList, []);
-  LEnumeratorObj := LEnumeratorValue.AsObject;
-  try
-    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
-    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
-    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
-
-//    LElementType := LEnumeratorCurrentProperty.PropertyType;
-
-    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    while LEnumeratorCurrentValue.AsBoolean do
+  LResult := TJSONArray.Create;
+  TRttiHelper.EnumerateObjectList(AObjectList,
+    procedure (AValue: TValue)
     begin
-      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+      LResult.AddElement(TValueToJSONValue(AValue));
+    end
+  );
 
-      Result.AddElement(TValueToJSONValue(LCurrentValue));
-
-      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    end;
-  finally
-    LEnumeratorObj.Free;
-  end;
+  Result := LResult;
 end;
 
 class function TJSONObjectHelper.ObjectToJSON(const AObject: TObject;
@@ -694,47 +674,18 @@ end;
 class function TJSONObjectHelper.DictionaryToJSON(const ADictionary: TObject;
   const AOptions: TJsonOptions): TJSONObject;
 var
-  LDictionaryType, LEnumeratorType, LPairType: TRttiType;
-  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
-  LEnumeratorCurrentProperty: TRttiProperty;
-  LKeyField, LValueField: TRttiField;
-  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue, LKeyValue, LValueValue: TValue;
-  LEnumeratorObj: TObject;
-  LPair: Pointer;
+  LResult: TJSONObject;
 begin
-  // highly inspired by https://en.delphipraxis.net/topic/2546-how-to-iterate-a-tdictionary-using-rtti-and-tvalue/
-  // Thanks to Remy Lebeau
+  LResult := TJSONObject.Create;
 
-  Result := TJSONObject.Create;
-
-  LDictionaryType := TRttiContext.Create.GetType(ADictionary.ClassType);
-  LGetEnumeratorMethod := LDictionaryType.GetMethod('GetEnumerator');
-  LEnumeratorValue := LGetEnumeratorMethod.Invoke(ADictionary, []);
-  LEnumeratorObj := LEnumeratorValue.AsObject;
-  try
-    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
-    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
-    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
-
-    LPairType := LEnumeratorCurrentProperty.PropertyType;
-    LKeyField := LPairType.GetField('Key');
-    LValueField := LPairType.GetField('Value');
-
-    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    while LEnumeratorCurrentValue.AsBoolean do
+  TRttiHelper.EnumerateDictionary(ADictionary,
+    procedure (AKey: TValue; AValue: TValue)
     begin
-      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
-      LPair := LCurrentValue.GetReferenceToRawData;
-      LKeyValue := LKeyField.GetValue(LPair);
-      LValueValue := LValueField.GetValue(LPair);
+      LResult.AddPair(AKey.ToString, TValueToJSONValue(AValue));
+    end
+  );
 
-      Result.AddPair(LKeyValue.ToString, TValueToJSONValue(LValueValue));
-
-      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
-    end;
-  finally
-    LEnumeratorObj.Free;
-  end;
+  Result := LResult;
 end;
 
 procedure TJSONObjectHelper.FromObject(const AObject: TObject;
