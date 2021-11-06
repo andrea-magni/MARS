@@ -180,9 +180,7 @@ type
   public
   end;
 
-  TSecurityRequirement = class
-  public
-  end;
+  TSecurityRequirement = TArray<string>;
 
   TOperation = class
   public
@@ -190,6 +188,7 @@ type
     destructor Destroy; override;
     function AddResponse(const AStatusCode: string): TResponse;
     function AddParameter(const AName: string; const AIn: string): TParameter;
+    procedure AddSecurityRequirement(const AName: string; const ARoles: TArray<string>);
   public
     tags: TArray<string>;
     summary: string;
@@ -201,7 +200,7 @@ type
     responses: TObjectDictionary<string, TResponse>;
     callbacks: TObjectDictionary<string, TCallback>;
     &deprecated: Boolean;
-    security: TObjectList<TSecurityRequirement>;
+    security: TObjectList<TDictionary<string,TSecurityRequirement>>;
     servers: TObjectList<TServer>;
   end;
 
@@ -251,10 +250,6 @@ type
     securitySchemes: TObjectDictionary<string,TSecurityScheme>;
   end;
 
-  TSecurity = class
-  public
-  end;
-
   TTag = class
   public
     constructor Create; virtual;
@@ -278,7 +273,7 @@ type
     servers: TObjectList<TServer>;
     paths: TObjectDictionary<string, TPathItem>; // required
     components: TComponents;
-    security: TObjectList<TSecurity>;
+    security: TObjectList<TDictionary<string, TSecurityRequirement>>;
     tags: TObjectList<TTag>;
     externalDocs: TExternalDocumentation;
   end;
@@ -346,6 +341,15 @@ begin
   responses.Add(AStatusCode, Result);
 end;
 
+procedure TOperation.AddSecurityRequirement(const AName: string; const ARoles: TArray<string>);
+var
+  LDict: TDictionary<string, TSecurityRequirement>;
+begin
+  LDict := TDictionary<string,TSecurityRequirement>.Create;
+  LDict.Add(AName, ARoles);
+  security.Add(LDict);
+end;
+
 constructor TOperation.Create;
 begin
   inherited Create;
@@ -354,7 +358,7 @@ begin
   requestBody := TRequestBody.Create;
   responses := TObjectDictionary<string, TResponse>.Create([doOwnsValues]);
   parameters := TObjectList<TParameter>.Create(True);
-  security := TObjectList<TSecurityRequirement>.Create(True);
+  security := TObjectList<TDictionary<string,TSecurityRequirement>>.Create(True);
   servers := TObjectList<TServer>.Create(True);
 end;
 
@@ -460,7 +464,7 @@ begin
   components := TComponents.Create;
   externalDocs := TExternalDocumentation.Create;
   servers := TObjectList<TServer>.Create(True);
-  security := TObjectList<TSecurity>.Create(True);
+  security := TObjectList<TDictionary<string,TSecurityRequirement>>.Create(True);
   tags := TObjectList<TTag>.Create(True);
 end;
 

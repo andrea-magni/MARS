@@ -228,10 +228,7 @@ begin
 
       LElement := LNode.AddOrSetMapping(AKey.ToString);
 
-      if AValue.IsObject then
-        ObjectToYAML(LElement, '', AValue.AsObject)
-      else if AValue.Kind in [tkRecord, tkMRecord] then
-        RecordToYAML(LElement, '', AValue);
+      TValueToYaml(LElement, '', AValue);
     end
   );
 
@@ -255,10 +252,7 @@ begin
         LResult := True;
       end;
 
-      if AValue.IsObject then
-        ObjectToYAML(LNode, '', AValue.AsObject)
-      else if AValue.Kind in [tkRecord, tkMRecord] then
-        RecordToYAML(LNode, '', AValue);
+      TValueToYaml(LNode, '', AValue);
     end
   );
 

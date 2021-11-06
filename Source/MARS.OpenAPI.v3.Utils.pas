@@ -13,6 +13,8 @@ uses
 type
   TOpenAPIHelper = class helper for TOpenAPI
   private
+    procedure ReadBearerSecurityScheme(const AParams: TMARSParameters);
+    procedure ReadCookieSecurityScheme(const AParams: TMARSParameters);
     procedure ReadInfoFromParams(const AParams: TMARSParameters);
     function AddServerFromEngine(const AEngine: TMARSEngine): TServer;
     procedure ReadApplication(const AAppMD: TMARSApplicationMetadata);
@@ -32,7 +34,7 @@ implementation
 
 uses
   StrUtils
-, MARS.Core.Registry.Utils, MARS.Core.URL
+, MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT
 , MARS.Metadata.Reader
 , MARS.Core.MediaType, MARS.Core.JSON
 ;
@@ -98,6 +100,11 @@ begin
     , TServerVariable.Create([AApplication.BasePath]
       , AApplication.BasePath, 'Application')
     );
+
+    if AApplication.Parameters.ByNameText(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString <> '' then
+      LOpenAPI.ReadBearerSecurityScheme(AApplication.Parameters);
+    if AApplication.Parameters.ByNameText(JWT_COOKIEENABLED_PARAM, JWT_COOKIEENABLED_PARAM_DEFAULT).AsBoolean then
+      LOpenAPI.ReadCookieSecurityScheme(AApplication.Parameters);
 
     LReader := TMARSMetadataReader.Create(AEngine);
     try
@@ -221,30 +228,55 @@ begin
   AAppMD.ForEachResource(
     procedure (ARes: TMARSResourceMetadata)
     begin
-      AddTag(ARes.Path, ARes.Description);
-    end
-  );
-
-  AAppMD.ForEachMethod(
-    procedure (ARes: TMARSResourceMetadata; AMet: TMARSMethodMetadata)
-    var
-      LPath: TPathItem;
-      LOperation: TOperation;
-    begin
-      if not AMet.Visible then
+      if not ARes.Visible then
         Exit;
 
-      LPath := GetPath(TMARSURL.CombinePath([ARes.Path, AMet.Path], True, False));
+      AddTag(ARes.Path, ARes.Description);
 
-      LPath.summary := ARes.Name + ' resource';
-      LPath.description := ARes.Description;
+      ARes.ForEachMethod(
+        procedure (AMet: TMARSMethodMetadata)
+        var
+          LPath: TPathItem;
+          LOperation: TOperation;
+        begin
+          if not AMet.Visible then
+            Exit;
 
-      LOperation := LPath.OperationByHttpMethod(AMet.HttpMethodLowerCase);
-      if Assigned(LOperation) then
-        ReadOperation(LOperation, ARes, AMet);
+          LPath := GetPath(TMARSURL.CombinePath([ARes.Path, AMet.Path], True, False));
+
+          LPath.summary := ARes.Name + ' resource';
+          LPath.description := ARes.Description;
+
+          LOperation := LPath.OperationByHttpMethod(AMet.HttpMethodLowerCase);
+          if Assigned(LOperation) then
+            ReadOperation(LOperation, ARes, AMet);
+        end
+      );
+
     end
   );
+end;
 
+procedure TOpenAPIHelper.ReadBearerSecurityScheme(
+  const AParams: TMARSParameters);
+var
+  LSchema: TSecurityScheme;
+begin
+  LSchema := components.AddSecurityScheme('JWT_bearer', 'http');
+  LSchema.scheme := 'bearer';
+  LSchema.bearerFormat := 'JWT';
+  LSchema.description := AParams.ByNameText(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
+end;
+
+procedure TOpenAPIHelper.ReadCookieSecurityScheme(
+  const AParams: TMARSParameters);
+var
+  LSchema: TSecurityScheme;
+begin
+  LSchema := components.AddSecurityScheme('JWT_cookie', 'apiKey');
+  LSchema.&in := 'cookie';
+  LSchema.name := AParams.ByNameText(JWT_COOKIENAME_PARAM, JWT_COOKIENAME_PARAM_DEFAULT).AsString;
+  LSchema.description := AParams.ByNameText(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
 end;
 
 procedure TOpenAPIHelper.ReadInfoFromParams(const AParams: TMARSParameters);
@@ -345,6 +377,8 @@ begin
       .schema.SetType(AMet.DataTypeRttiType, Self)
   end;
 
+  if AMet.Authorization <> '' then
+    AOperation.AddSecurityRequirement('JWT_bearer', AMet.Authorization.Split([',']));
 end;
 
 function TOpenAPIHelper.AddServerFromEngine(const AEngine: TMARSEngine): TServer;

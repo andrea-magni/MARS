@@ -392,9 +392,9 @@ end;
 
 function RolesAllowedAttribute.ToString: string;
 begin
-  Result := inherited ToString;
+  Result := '';
   if Roles.Count > 0 then
-    Result := Result + ': ' + Roles.CommaText;
+    Result := Roles.CommaText;
 end;
 
 { BodyParamAttribute }

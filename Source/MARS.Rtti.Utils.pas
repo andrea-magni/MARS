@@ -159,14 +159,14 @@ uses
 function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
 begin
   //AM TODO Improve this function. For example: check if it is a nested type...
-  Result := ATypeName.Contains('TDictionary<System.string,')
-         or ATypeName.Contains('TObjectDictionary<System.string,');
+  Result := ATypeName.StartsWith('TDictionary<System.string,')
+         or ATypeName.StartsWith('TObjectDictionary<System.string,');
 end;
 
 function IsObjectListOfT(const ATypeName: string): Boolean;
 begin
   //AM TODO Improve this function. For example: check if it is a nested type...
-  Result := ATypeName.Contains('TObjectList<');
+  Result := ATypeName.StartsWith('TObjectList<');
 end;
 
 
