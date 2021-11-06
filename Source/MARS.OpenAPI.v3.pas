@@ -276,6 +276,8 @@ type
     security: TObjectList<TDictionary<string, TSecurityRequirement>>;
     tags: TObjectList<TTag>;
     externalDocs: TExternalDocumentation;
+    [JSONName('')] FBearerSecurityConfigured: Boolean;
+    [JSONName('')] FCookieSecurityConfigured: Boolean;
   end;
 
 implementation

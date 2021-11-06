@@ -13,8 +13,8 @@ uses
 type
   TOpenAPIHelper = class helper for TOpenAPI
   private
-    procedure ReadBearerSecurityScheme(const AParams: TMARSParameters);
-    procedure ReadCookieSecurityScheme(const AParams: TMARSParameters);
+    procedure ReadBearerSecurityScheme(const AName: string; const AParams: TMARSParameters);
+    procedure ReadCookieSecurityScheme(const AName: string; const AParams: TMARSParameters);
     procedure ReadInfoFromParams(const AParams: TMARSParameters);
     function AddServerFromEngine(const AEngine: TMARSEngine): TServer;
     procedure ReadApplication(const AAppMD: TMARSApplicationMetadata);
@@ -102,9 +102,9 @@ begin
     );
 
     if AApplication.Parameters.ByNameText(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString <> '' then
-      LOpenAPI.ReadBearerSecurityScheme(AApplication.Parameters);
+      LOpenAPI.ReadBearerSecurityScheme('JWT_bearer', AApplication.Parameters);
     if AApplication.Parameters.ByNameText(JWT_COOKIEENABLED_PARAM, JWT_COOKIEENABLED_PARAM_DEFAULT).AsBoolean then
-      LOpenAPI.ReadCookieSecurityScheme(AApplication.Parameters);
+      LOpenAPI.ReadCookieSecurityScheme('JWT_cookie', AApplication.Parameters);
 
     LReader := TMARSMetadataReader.Create(AEngine);
     try
@@ -257,26 +257,28 @@ begin
   );
 end;
 
-procedure TOpenAPIHelper.ReadBearerSecurityScheme(
+procedure TOpenAPIHelper.ReadBearerSecurityScheme(const AName: string;
   const AParams: TMARSParameters);
 var
   LSchema: TSecurityScheme;
 begin
-  LSchema := components.AddSecurityScheme('JWT_bearer', 'http');
+  LSchema := components.AddSecurityScheme(AName, 'http');
   LSchema.scheme := 'bearer';
   LSchema.bearerFormat := 'JWT';
   LSchema.description := AParams.ByNameText(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
+  FBearerSecurityConfigured := True;
 end;
 
-procedure TOpenAPIHelper.ReadCookieSecurityScheme(
+procedure TOpenAPIHelper.ReadCookieSecurityScheme(const AName: string;
   const AParams: TMARSParameters);
 var
   LSchema: TSecurityScheme;
 begin
-  LSchema := components.AddSecurityScheme('JWT_cookie', 'apiKey');
+  LSchema := components.AddSecurityScheme(AName, 'apiKey');
   LSchema.&in := 'cookie';
   LSchema.name := AParams.ByNameText(JWT_COOKIENAME_PARAM, JWT_COOKIENAME_PARAM_DEFAULT).AsString;
   LSchema.description := AParams.ByNameText(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
+  FCookieSecurityConfigured := True;
 end;
 
 procedure TOpenAPIHelper.ReadInfoFromParams(const AParams: TMARSParameters);
@@ -377,10 +379,12 @@ begin
       .schema.SetType(AMet.DataTypeRttiType, Self)
   end;
 
-  if AMet.Authorization <> '' then
+  if AMet.Authorization <> '' then //AM TODO Check what happens with Deny DenyAll etc
   begin
-    AOperation.AddSecurityRequirement('JWT_bearer', AMet.Authorization.Split([',']));
-    AOperation.AddSecurityRequirement('JWT_cookie', AMet.Authorization.Split([',']));
+    if FBearerSecurityConfigured then
+      AOperation.AddSecurityRequirement('JWT_bearer', AMet.Authorization.Split([',']));
+    if FCookieSecurityConfigured then
+      AOperation.AddSecurityRequirement('JWT_cookie', AMet.Authorization.Split([',']));
   end;
 end;
 
