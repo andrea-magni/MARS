@@ -5,12 +5,20 @@ interface
 uses
   Classes, SysUtils, System.Rtti, System.TypInfo, MARS.Rtti.Utils
 , MARS.OpenAPI.v3
-, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Activation.Interfaces
+, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Activation.Interfaces, MARS.Utils.Parameters
+, MARS.Metadata
 ;
 
 
 type
   TOpenAPIHelper = class helper for TOpenAPI
+  private
+    procedure ReadInfoFromParams(const AParams: TMARSParameters);
+    function AddServerFromEngine(const AEngine: TMARSEngine): TServer;
+    procedure ReadApplication(const AAppMD: TMARSApplicationMetadata);
+    procedure ReadOperation(const AOperation: TOperation; const ARes: TMARSResourceMetadata;
+      const AMet: TMARSMethodMetadata);
+  public
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
     function MARSKindToOpenAPIKind(const AString: string): string;
     function MARSDataTypeToOpenAPIType(const AType: TRttiType; const ARefPrefix: string = '#/components/schemas/'): string;
@@ -24,8 +32,8 @@ implementation
 
 uses
   StrUtils
-, MARS.Utils.Parameters, MARS.Core.Registry.Utils, MARS.Core.URL
-, MARS.Metadata, MARS.Metadata.Reader
+, MARS.Core.Registry.Utils, MARS.Core.URL
+, MARS.Metadata.Reader
 , MARS.Core.MediaType, MARS.Core.JSON
 ;
 
@@ -77,212 +85,26 @@ class function TOpenAPIHelper.BuildFrom(const AEngine: TMARSEngine;
   const AApplication: TMARSApplication): TOpenAPI;
 var
   LOpenAPI: TOpenAPI;
-  LEngineParams, LAppParams: TMARSParameters;
   LReader: TMARSMetadataReader;
-
-  function FromEngineParams(const AName: string; const ADefault: TValue): TValue;
-  begin
-    Result := LEngineParams.ByNameText('OpenAPI.' + AName, ADefault);
-  end;
-
 begin
   Assert(Assigned(AEngine));
-
-  LEngineParams := AEngine.Parameters;
-  LAppParams := AApplication.Parameters;
 
   LOpenAPI := TOpenAPI.Create;
   try
     LOpenAPI.openapi := '3.0.2';
-
-    LOpenAPI.info.title          := FromEngineParams('info.title', 'MARS ' + AEngine.Name).AsString;
-    LOpenAPI.info.summary        := FromEngineParams('info.summary', '').AsString;
-    LOpenAPI.info.description    := FromEngineParams('info.description', '').AsString;
-    LOpenAPI.info.termsOfService := FromEngineParams('info.termsOfService', '').AsString;
-
-    LOpenAPI.info.contact.name   := FromEngineParams('info.contact.name', 'MARS Developer').AsString;
-    LOpenAPI.info.contact.url    := FromEngineParams('info.contact.url', 'https://mars.space').AsString;
-    LOpenAPI.info.contact.email  := FromEngineParams('info.contact.email', 'me@mars.space').AsString;
-
-    LOpenAPI.info.license.name       := FromEngineParams('info.license.name', '').AsString;
-    LOpenAPI.info.license.identifier := FromEngineParams('info.license.identifier', '').AsString;
-    LOpenAPI.info.license.url        := FromEngineParams('info.license.url', '').AsString;
-
-    LOpenAPI.info.version := FromEngineParams('info.version', '0.1.0').AsString;
-
-    var server := LOpenAPI.AddServer;
-               // '{protocol}://localhost:{port}/rest{application}'
-    server.url := '{protocol}://localhost:{port}' + AEngine.BasePath + '{application}';
-    server.description := AEngine.Name;
-
-    server.variables.Add('port'
-    , TServerVariable.Create([AEngine.Port.ToString, AEngine.PortSSL.ToString]
-      , AEngine.Port.ToString
-      , 'Port number'
-      )
-    );
-
-    server.variables.Add('protocol'
-    , TServerVariable.Create(['http', 'https']
-      , 'http'
-      , 'Protocol'
-      )
-    );
-
-    server.variables.Add('application'
+    LOpenAPI.ReadInfoFromParams(AEngine.Parameters);
+    LOpenAPI.AddServerFromEngine(AEngine)
+    .variables.Add('application'
     , TServerVariable.Create([AApplication.BasePath]
-      , AApplication.BasePath
-      , 'Application'
-      )
+      , AApplication.BasePath, 'Application')
     );
-
 
     LReader := TMARSMetadataReader.Create(AEngine);
     try
-      LReader.Metadata.ForEachApplication(
-        procedure (AAppMD: TMARSApplicationMetadata)
-        begin
-          if AAppMD.Name = AApplication.Name then
-          begin
-            AAppMD.ForEachResource(
-              procedure (ARes: TMARSResourceMetadata)
-//              var
-//                tag: TTag;
-              begin
-                {tag := }LOpenAPI.AddTag(ARes.Path, ARes.Description);
-              end
-            );
-
-
-
-            AAppMD.ForEachMethod(
-              procedure (ARes: TMARSResourceMetadata; AMet: TMARSMethodMetadata)
-              var
-                path: TPathItem;
-                LMetDescription: string;
-              begin
-                if not AMet.Visible then
-                  Exit;
-
-                LMetDescription := AMet.Description;
-                if LMetDescription = '' then
-                  LMetDescription := AMet.Name;
-
-                path := LOpenAPI.GetPath(TMARSURL.CombinePath([ARes.Path, AMet.Path], True, False));
-
-                path.summary := ARes.Name + ' resource';
-                path.description := ARes.Description;
-
-                var LOperation: TOperation := nil;
-                if AMet.HttpMethodLowerCase = 'get' then
-                  LOperation := path.get
-                else if AMet.HttpMethodLowerCase = 'post' then
-                  LOperation := path.post
-                else if AMet.HttpMethodLowerCase = 'put' then
-                  LOperation := path.put
-                else if AMet.HttpMethodLowerCase = 'delete' then
-                  LOperation := path.delete
-                else if AMet.HttpMethodLowerCase = 'options' then
-                  LOperation := path.options
-                else if AMet.HttpMethodLowerCase = 'head' then
-                  LOperation := path.head
-                else if AMet.HttpMethodLowerCase = 'patch' then
-                  LOperation := path.patch
-                else if AMet.HttpMethodLowerCase = 'trace' then
-                  LOperation := path.trace;
-
-                if Assigned(LOperation) then
-                begin
-                  LOperation.operationId := AMet.Name;
-                  LOperation.description := LMetDescription;
-
-                  LOperation.tags := [ARes.Path];
-
-                  AMet.ForEachParameter(
-                    procedure (AParam: TMARSRequestParamMetadata)
-                    begin
-                      var LIn := LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind);
-                      if IndexText(LIn, ['query', 'header', 'path', 'cookie']) <> -1 then
-                      begin
-                        var LParam := LOperation.AddParameter(AParam.Name, LIn);
-                        LParam.description := AParam.Description;
-                        LParam.schema.SetType(AParam.DataTypeRttiType, LOpenAPI);
-                        if LIn = 'path' then
-                          LParam.required := True;
-                      end;
-                    end
-                  );
-
-                  if AMet.Consumes <> '' then
-                  begin
-                    var body := LOperation.requestBody;
-                    body.description := 'Body for ' + LMetDescription;
-                    for var LConsumes in AMet.Consumes.Split([',']) do
-                    begin
-                      var LContent := body.AddContent(LConsumes);
-
-                      if LConsumes = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
-                      begin
-                        LContent.schema.SetType('object');
-                        AMet.ForEachParameter(
-                          procedure (AParam: TMARSRequestParamMetadata)
-                          begin
-                            if LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind) = 'form' then
-                            begin
-                              var LProperty := LContent.schema.AddProperty(AParam.Name);
-                              LProperty.description := AParam.Description;
-                              LProperty.SetType(AParam.DataTypeRttiType, LOpenAPI);
-                            end;
-                          end
-                        );
-
-                      end
-                      else // everything else from x-www-form-urlencoded
-                      begin
-                        AMet.ForEachParameter(
-                          procedure (AParam: TMARSRequestParamMetadata)
-                          begin
-                            if LOpenAPI.MARSKindToOpenAPIKind(AParam.Kind) = 'body' then
-                              LContent.schema.SetType(AParam.DataTypeRttiType, LOpenAPI);
-                          end
-                        );
-                      end;
-                    end;
-                  end;
-
-                  var response := LOperation.AddResponse('200');
-                  response.description := 'Successful response for ' + LMetDescription;
-                  for var LProduces in AMet.Produces.Split([',']) do
-                  begin
-                    var LContent := response.AddContent(LProduces);
-                    LContent.schema.SetType(AMet.DataTypeRttiType, LOpenAPI)
-                  end;
-                end;
-
-              end
-            );
-          end;
-        end
-      );
+      LOpenAPI.ReadApplication(LReader.Metadata.ApplicationByName(AApplication.Name));
     finally
       LReader.Free;
     end;
-
-
-//    AApplication.EnumerateResources(
-//      procedure(AName: string; AInfo: TMARSConstructorInfo)
-//      begin
-//
-//        var path := LOpenAPI.AddPath('/' + AName);
-//        path.summary := AName + ' resource';
-//        path.description := AName + ' resource, implementor: ' + AInfo.TypeTClass.ClassName;
-//
-//        path.get.description := 'GET request';
-//        var response := path.get.AddResponse('200');
-//        response.description := 'A greeting';
-//        response.AddContent('text/plain');
-//      end
-//    );
 
   except
     FreeAndNil(LOpenAPI);
@@ -391,6 +213,156 @@ function TOpenAPIHelper.MARSKindToOpenAPIKind(
   const AString: string): string;
 begin
   Result := AString.Replace('Param', '').ToLower;
+end;
+
+procedure TOpenAPIHelper.ReadApplication(
+  const AAppMD: TMARSApplicationMetadata);
+begin
+  AAppMD.ForEachResource(
+    procedure (ARes: TMARSResourceMetadata)
+    begin
+      AddTag(ARes.Path, ARes.Description);
+    end
+  );
+
+  AAppMD.ForEachMethod(
+    procedure (ARes: TMARSResourceMetadata; AMet: TMARSMethodMetadata)
+    var
+      LPath: TPathItem;
+      LOperation: TOperation;
+    begin
+      if not AMet.Visible then
+        Exit;
+
+      LPath := GetPath(TMARSURL.CombinePath([ARes.Path, AMet.Path], True, False));
+
+      LPath.summary := ARes.Name + ' resource';
+      LPath.description := ARes.Description;
+
+      LOperation := LPath.OperationByHttpMethod(AMet.HttpMethodLowerCase);
+      if Assigned(LOperation) then
+        ReadOperation(LOperation, ARes, AMet);
+    end
+  );
+
+end;
+
+procedure TOpenAPIHelper.ReadInfoFromParams(const AParams: TMARSParameters);
+
+  function FromParams(const AName: string; const ADefault: TValue): TValue;
+  begin
+    Result := AParams.ByNameText('OpenAPI.' + AName, ADefault);
+  end;
+
+begin
+  info.title          := FromParams('info.title', 'MARS API').AsString;
+  info.summary        := FromParams('info.summary', '').AsString;
+  info.description    := FromParams('info.description', '').AsString;
+  info.termsOfService := FromParams('info.termsOfService', '').AsString;
+
+  info.contact.name   := FromParams('info.contact.name', 'MARS Developer').AsString;
+  info.contact.url    := FromParams('info.contact.url', 'https://mars.space').AsString;
+  info.contact.email  := FromParams('info.contact.email', 'me@mars.space').AsString;
+
+  info.license.name       := FromParams('info.license.name', '').AsString;
+  info.license.identifier := FromParams('info.license.identifier', '').AsString;
+  info.license.url        := FromParams('info.license.url', '').AsString;
+
+  info.version := FromParams('info.version', '0.1.0').AsString;
+end;
+
+procedure TOpenAPIHelper.ReadOperation(const AOperation: TOperation;
+  const ARes: TMARSResourceMetadata; const AMet: TMARSMethodMetadata);
+var
+  LMetDescription: string;
+  LParamMD: TMARSRequestParamMetadata;
+  LParam: TParameter;
+  LRequestBody: TRequestBody;
+  LContent: TMediaTypeObj;
+  LProperty: TSchema;
+  LMediaType: string;
+begin
+  LMetDescription := AMet.Description;
+  if LMetDescription = '' then
+    LMetDescription := AMet.Name;
+
+  AOperation.operationId := AMet.Name;
+  AOperation.description := LMetDescription;
+  AOperation.tags := [ARes.Path];
+
+  // PARAMETERS
+  AMet.ForEachParameter(
+    procedure (AParam: TMARSRequestParamMetadata)
+    var
+      LIn: string;
+    begin
+      LIn := MARSKindToOpenAPIKind(AParam.Kind);
+      if IndexText(LIn, ['query', 'header', 'path', 'cookie']) <> -1 then
+      begin
+        LParam := AOperation.AddParameter(AParam.Name, LIn);
+        LParam.description := AParam.Description;
+        LParam.schema.SetType(AParam.DataTypeRttiType, Self);
+        if LIn = 'path' then
+          LParam.required := True;
+      end;
+    end
+  );
+
+  // REQUEST BODY
+  if AMet.Consumes <> '' then
+  begin
+    LRequestBody := AOperation.requestBody;
+    LRequestBody.description := 'Body for ' + LMetDescription;
+    for LMediaType in AMet.Consumes.Split([',']) do
+    begin
+      LContent := LRequestBody.AddContent(LMediaType);
+
+      // x-www-form-urlencoded
+      if LMediaType = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
+      begin
+        LContent.schema.SetType('object');
+        for LParamMD in AMet.ParametersByKind('FormParam') do
+        begin
+          LProperty := LContent.schema.AddProperty(LParamMD.Name);
+          LProperty.description := LParamMD.Description;
+          LProperty.SetType(LParamMD.DataTypeRttiType, Self);
+        end;
+      end
+      else // all other request LRequestBody types
+      begin
+        LParamMD := AMet.ParameterByKind('BodyParam');
+        if Assigned(LParamMD) then
+          LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
+      end;
+    end;
+  end;
+
+  var response := AOperation.AddResponse('200');
+  response.description := 'Successful response for ' + LMetDescription;
+  for LMediaType in AMet.Produces.Split([',']) do
+  begin
+    response.AddContent(LMediaType)
+      .schema.SetType(AMet.DataTypeRttiType, Self)
+  end;
+
+end;
+
+function TOpenAPIHelper.AddServerFromEngine(const AEngine: TMARSEngine): TServer;
+begin
+  Result := AddServer;
+             // '{protocol}://localhost:{port}/rest{application}'
+  Result.url := '{protocol}://localhost:{port}' + AEngine.BasePath + '{application}';
+  Result.description := AEngine.Name;
+
+  Result.variables.Add('port'
+  , TServerVariable.Create([AEngine.Port.ToString, AEngine.PortSSL.ToString]
+    , AEngine.Port.ToString, 'Port number')
+  );
+
+  Result.variables.Add('protocol'
+  , TServerVariable.Create(['http', 'https']
+    , 'http', 'Protocol')
+  );
 end;
 
 end.

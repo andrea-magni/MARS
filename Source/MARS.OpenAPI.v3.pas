@@ -209,6 +209,7 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
+    function OperationByHttpMethod(const AHttpMethod: string): TOperation;
   public
     summary: string;
     description: string;
@@ -224,15 +225,30 @@ type
     parameters: TObjectList<TParameter>;
   end;
 
+  TSecurityScheme = class(TReferenceableType)
+  public
+    &type: string; // required
+    description: string;
+    name: string; // apiKey required
+    &in: string; // apiKey required
+    scheme: string; // http required
+    bearerFormat: string; // http bearer
+    flows: string; // oauth2
+    openIdConnectUrl: string; //openIdConnect
+  end;
+
   TComponents = class
   public
     constructor Create; virtual;
     destructor Destroy; override;
+
     function AddSchema(const AName: string): TSchema;
     function GetSchema(const AName: string; const ACreateIfMissing: Boolean = True): TSchema;
     function HasSchema(const AName: string): Boolean;
+    function AddSecurityScheme(const AName: string; const AType: string): TSecurityScheme;
   public
     schemas: TObjectDictionary<string,TSchema>;
+    securitySchemes: TObjectDictionary<string,TSecurityScheme>;
   end;
 
   TSecurity = class
@@ -384,6 +400,31 @@ begin
   put.Free;
   get.Free;
   inherited;
+end;
+
+function TPathItem.OperationByHttpMethod(const AHttpMethod: string): TOperation;
+var
+  LHttpMethod: string;
+begin
+  LHttpMethod := AHttpMethod.ToLower;
+
+  Result := nil;
+  if LHttpMethod = 'get' then
+    Result := get
+  else if LHttpMethod = 'post' then
+    Result := post
+  else if LHttpMethod = 'put' then
+    Result := put
+  else if LHttpMethod = 'delete' then
+    Result := delete
+  else if LHttpMethod = 'options' then
+    Result := options
+  else if LHttpMethod = 'head' then
+    Result := head
+  else if LHttpMethod = 'patch' then
+    Result := patch
+  else if LHttpMethod = 'trace' then
+    Result := trace;
 end;
 
 { TOpenAPI }
@@ -574,14 +615,24 @@ begin
   schemas.Add(AName, Result);
 end;
 
+function TComponents.AddSecurityScheme(const AName: string; const AType: string): TSecurityScheme;
+begin
+  Result := TSecurityScheme.Create;
+  Result.&type := AType;
+  Result.name := AName;
+  securitySchemes.Add(AName, Result);
+end;
+
 constructor TComponents.Create;
 begin
   inherited Create;
   schemas := TObjectDictionary<string, TSchema>.Create([doOwnsValues]);
+  securitySchemes := TObjectDictionary<string,TSecurityScheme>.Create([doOwnsValues]);
 end;
 
 destructor TComponents.Destroy;
 begin
+  securitySchemes.Free;
   schemas.Free;
   inherited;
 end;

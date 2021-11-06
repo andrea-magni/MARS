@@ -86,6 +86,8 @@ type
     property ResourceFullPath: string read GetResourceFullPath;
     property HttpMethodLowerCase: string read GetHttpMethodLowerCase;
     function ForEachParameter(const ADoSomething: TProc<TMARSRequestParamMetadata>): Integer;
+    function ParameterByKind(const AKind: string): TMARSRequestParamMetadata;
+    function ParametersByKind(const AKind: string): TArray<TMARSRequestParamMetadata>;
   end;
 
   TMARSPathMetadata=class(TMARSMetadata)
@@ -146,6 +148,7 @@ type
 
     property Applications: TMARSMetadataList read FApplications;
     function ForEachApplication(const ADoSomething: TProc<TMARSApplicationMetadata>): Integer;
+    function ApplicationByName(const AName: string): TMARSApplicationMetadata;
   end;
 
 implementation
@@ -330,7 +333,51 @@ begin
     Result := Resource.Path;
 end;
 
+function TMARSMethodMetadata.ParameterByKind(
+  const AKind: string): TMARSRequestParamMetadata;
+var
+  LParams: TArray<TMARSRequestParamMetadata>;
+begin
+  Result := nil;
+  LParams := ParametersByKind(AKind);
+  if Length(LParams) > 0 then
+    Result := LParams[0];
+end;
+
+function TMARSMethodMetadata.ParametersByKind(
+  const AKind: string): TArray<TMARSRequestParamMetadata>;
+var
+  LResult: TArray<TMARSRequestParamMetadata>;
+begin
+  LResult := [];
+  ForEachParameter(
+    procedure (AParam: TMARSRequestParamMetadata)
+    begin
+      if SameText(AParam.Kind, AKind) then
+        LResult := LResult + [AParam];
+    end
+  );
+  Result := LResult;
+end;
+
 { TMARSEngineMetadata }
+
+function TMARSEngineMetadata.ApplicationByName(
+  const AName: string): TMARSApplicationMetadata;
+var
+  LResult: TMARSApplicationMetadata;
+begin
+  LResult := nil;
+  ForEachApplication(
+    procedure (AAppMD: TMARSApplicationMetadata)
+    begin
+      if AAppMD.Name = AName then
+        LResult := AAppMD;
+    end
+  );
+
+  Result := LResult;
+end;
 
 constructor TMARSEngineMetadata.Create(const AParent: TMARSMetadata);
 begin
