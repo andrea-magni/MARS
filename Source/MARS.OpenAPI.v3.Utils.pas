@@ -378,7 +378,10 @@ begin
   end;
 
   if AMet.Authorization <> '' then
+  begin
     AOperation.AddSecurityRequirement('JWT_bearer', AMet.Authorization.Split([',']));
+    AOperation.AddSecurityRequirement('JWT_cookie', AMet.Authorization.Split([',']));
+  end;
 end;
 
 function TOpenAPIHelper.AddServerFromEngine(const AEngine: TMARSEngine): TServer;
