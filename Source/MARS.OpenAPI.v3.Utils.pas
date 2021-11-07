@@ -265,6 +265,7 @@ begin
   LSchema := components.AddSecurityScheme(AName, 'http');
   LSchema.scheme := 'bearer';
   LSchema.bearerFormat := 'JWT';
+  LSchema.name := ''; // name is not required for http bearer schema and would raise a warning
   LSchema.description := AParams.ByNameText(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
   FBearerSecurityConfigured := True;
 end;
@@ -315,6 +316,7 @@ var
   LContent: TMediaTypeObj;
   LProperty: TSchema;
   LMediaType: string;
+  LMetAuthorization: string;
 begin
   LMetDescription := AMet.Description;
   if LMetDescription = '' then
@@ -379,12 +381,13 @@ begin
       .schema.SetType(AMet.DataTypeRttiType, Self)
   end;
 
-  if AMet.Authorization <> '' then //AM TODO Check what happens with Deny DenyAll etc
+  LMetAuthorization := AMet.FullAuthorization;
+  if LMetAuthorization <> '' then //AM TODO Check what happens with Deny DenyAll etc
   begin
     if FBearerSecurityConfigured then
-      AOperation.AddSecurityRequirement('JWT_bearer', AMet.Authorization.Split([',']));
+      AOperation.AddSecurityRequirement('JWT_bearer', LMetAuthorization.Split([',']));
     if FCookieSecurityConfigured then
-      AOperation.AddSecurityRequirement('JWT_cookie', AMet.Authorization.Split([',']));
+      AOperation.AddSecurityRequirement('JWT_cookie', LMetAuthorization.Split([',']));
   end;
 end;
 

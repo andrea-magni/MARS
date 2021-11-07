@@ -179,8 +179,6 @@ begin
         LMethodMetadata.Authorization :=  SmartConcat([LMethodMetadata.Authorization, Attribute.ToString]);
       end
     );
-    if LMethodMetadata.Authorization.IsEmpty then
-      LMethodMetadata.Authorization := AResourceMetadata.Authorization;
 
     LParameters := AMethod.GetParameters;
     for LParameter in LParameters do

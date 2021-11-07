@@ -33,6 +33,8 @@ type
   end;
 
   TMARSPathItemMetadata=class(TMARSMetadata)
+  private
+    function GetFullAuthorization: string;
   protected
     function GetFullPath: string; virtual;
   public
@@ -45,6 +47,7 @@ type
     Authorization: string;
 
     property FullPath: string read GetFullPath;
+    property FullAuthorization: string read GetFullAuthorization;
   end;
 
   TMARSRequestParamMetadata = class(TMARSMetadata)
@@ -154,8 +157,8 @@ type
 implementation
 
 uses
-    MARS.Core.URL
-  , MARS.Metadata.InjectionService
+  MARS.Core.URL, MARS.Core.Utils
+, MARS.Metadata.InjectionService
 ;
 
 { TMARSApplicationMetadata }
@@ -398,6 +401,13 @@ begin
 end;
 
 { TMARSPathItemMetadata }
+
+function TMARSPathItemMetadata.GetFullAuthorization: string;
+begin
+  Result := Authorization;
+  if Assigned(Parent) and (Parent is TMARSPathItemMetadata) then
+    Result := SmartConcat([TMARSPathItemMetadata(Parent).FullAuthorization, Result]);
+end;
 
 function TMARSPathItemMetadata.GetFullPath: string;
 begin
