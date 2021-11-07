@@ -1051,7 +1051,7 @@ var
     LMethod: TRttiMethod;
   begin
     Result := nil;
-    // looking for TMyRecord.ToRecordFilter(const AMember: TRttiMember; const AObj: TJSONObject): Boolean;
+    // looking for TMyClass.ToObjectFilter(const AMember: TRttiMember; const AObj: TJSONObject): Boolean;
     LMethod := AObjectType.FindMethodFunc<TRttiMember, TJSONObject, Boolean>('ToObjectFilter');
     if Assigned(LMethod) then
       Result :=
