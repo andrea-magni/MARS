@@ -31,7 +31,7 @@ type
     function ReturnInvoice: TInvoice;
 
     [GET, Path('/vat'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)
-    , RolesAllowed('admin')
+
     ]
     function ReturnVAT: TVAT;
 
@@ -62,8 +62,16 @@ type
     , MetaVisible(False)
     ]
     function Info([Context] AOpenAPI: TOpenAPI): TInfo;
+  end;
 
+  [Path('store'), RolesAllowed('one')]
+  TStoreResource = class
+  public
+    [GET, Path('one')]
+    function TestOne: string;
 
+    [GET, Path('two'), RolesAllowed('two')]
+    function TestTwo: string;
   end;
 
   [Path('token')]
@@ -145,7 +153,24 @@ begin
   Result := 'Hello World!';
 end;
 
+{ TStoreResource }
+
+function TStoreResource.TestOne: string;
+begin
+  Result := 'One';
+end;
+
+function TStoreResource.TestTwo: string;
+begin
+  Result := 'Two';
+end;
+
 initialization
-  TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
-  TMARSResourceRegistry.Instance.RegisterResource<TTokenResource>;
+//  TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
+//  TMARSResourceRegistry.Instance.RegisterResource<TTokenResource>;
+//  TMARSResourceRegistry.Instance.RegisterResource<TStoreResource>;
+
+  TMARSResourceRegistry.Instance
+  .RegisterResources([THelloWorldResource, TTokenResource, TStoreResource]);
+
 end.
