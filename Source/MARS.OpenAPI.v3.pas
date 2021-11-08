@@ -4,7 +4,7 @@ interface
 
 uses
   Classes, SysUtils, Generics.Collections, System.Rtti, System.TypInfo
-, MARS.Core.JSON, MARS.Rtti.Utils
+, MARS.Core.JSON, MARS.YAML.ReadersAndWriters, MARS.Rtti.Utils
 ;
 
 type
@@ -12,7 +12,7 @@ type
 
   TReferenceableType = class
   public
-    [JSONName('$ref')] ref: string;
+    [JSONName('$ref'), YAMLName('$ref')] ref: string;
   end;
 
   TContact = class
@@ -48,7 +48,7 @@ type
     contact: TContact;
     license: TLicense;
     version: string; // required
-    [JSONName('x-logo')] x_logo: TXLogo;
+    [JSONName('x-logo'), YAMLName('x-logo')] x_logo: TXLogo;
   end;
 
   TServerVariable = class
@@ -103,7 +103,7 @@ type
     maxProperties: string;
     minProperties: string;
     required: boolean;
-    enum: string;
+    enum: TArray<string>;
 
     allOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
     oneOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
@@ -284,8 +284,8 @@ type
     security: TObjectList<TDictionary<string, TSecurityRequirement>>;
     tags: TObjectList<TTag>;
     externalDocs: TExternalDocumentation;
-    [JSONName('')] FBearerSecurityConfigured: Boolean;
-    [JSONName('')] FCookieSecurityConfigured: Boolean;
+    [JSONName(''), YAMLName('')] FBearerSecurityConfigured: Boolean;
+    [JSONName(''), YAMLName('')] FCookieSecurityConfigured: Boolean;
   end;
 
 implementation

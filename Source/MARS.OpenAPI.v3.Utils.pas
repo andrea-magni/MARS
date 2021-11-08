@@ -35,7 +35,7 @@ uses
   StrUtils
 , MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT
 , MARS.Metadata.Reader
-, MARS.Core.MediaType, MARS.Core.JSON
+, MARS.Core.MediaType, MARS.Core.JSON, MARS.YAML.ReadersAndWriters
 ;
 
 { TOpenAPIHelper }
@@ -89,7 +89,9 @@ function TOpenAPIHelper.EnsureTypeInComponentsSchemas(
 var
   LSchema: TSchema;
   LSchemaExists: Boolean;
-  LJSONName: string;
+  LMember: TRttiMember;
+  LJSONName, LYAMLName: string;
+  LProperty: TSchema;
 begin
   Result := False;
   LSchemaExists := components.HasSchema(AType.Name);
@@ -97,12 +99,13 @@ begin
   begin
     Result := True;
     LSchema := components.AddSchema(AType.Name);
-    LSchema.SetType('object');
-    LSchema.description := 'Schema for type ' + AType.QualifiedName;
 
     if (AType.IsInstance) or (AType.IsRecord) then
     begin
-      for var LMember in AType.GetPropertiesAndFields do
+      LSchema.SetType('object');
+      LSchema.description := 'Schema for type ' + AType.QualifiedName;
+
+      for LMember in AType.GetPropertiesAndFields do
       begin
         if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
           Continue;
@@ -114,13 +117,27 @@ begin
             LJSONName := AAttr.Name;
           end
         );
-        if LJSONName <> '' then
-        begin
-          var LProperty := LSchema.AddProperty(LMember.Name);
-          LProperty.SetType(LMember.GetRttiType, Self);
-        end;
+        LYAMLName := LMember.Name;
+        LMember.HasAttribute<YAMLNameAttribute>(
+          procedure (AAttr: YAMLNameAttribute)
+          begin
+            LYAMLName := AAttr.Name;
+          end
+        );
+        if (LJSONName = '') and (LYAMLName = '') then
+          Continue;
+
+        LProperty := LSchema.AddProperty(LJSONName);
+        LProperty.SetType(LMember.GetRttiType, Self);
       end;
     end
+    else if AType is TRttiEnumerationType then
+    begin
+      LSchema.SetType('string');
+      LSchema.description := 'Schema for type ' + AType.QualifiedName;
+      LSchema.enum := TRttiEnumerationType(AType).GetNames;
+    end;
+
   end;
 end;
 

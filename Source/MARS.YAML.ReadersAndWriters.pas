@@ -54,6 +54,13 @@ type
   TToYAMLFilterProc = reference to procedure (const AMember: TRttiMember;
     const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean);
 
+  YAMLNameAttribute = class(TCustomAttribute)
+  private
+    FName: string;
+  public
+    constructor Create(const AName: string);
+    property Name: string read FName;
+  end;
 
   TMARSYAML = class
   private
@@ -284,6 +291,7 @@ var
   LFilterProc: TToYAMLFilterProc;
   LNode: TYamlNode;
   LWritten: Boolean;
+  LYAMLName: string;
 begin
   Result := False;
 
@@ -314,12 +322,22 @@ begin
     if not LAccept then
       Continue;
 
+    LYAMLName := LMember.Name;
+    LMember.HasAttribute<YAMLNameAttribute>(
+      procedure (AAttr: YAMLNameAttribute)
+      begin
+        LYAMLName := AAttr.Name;
+      end
+    );
+    if LYAMLName = '' then
+      Continue;
+
     LValue := LMember.GetValue(AObject);
-    LWritten := TValueToYaml(LNode, LMember.Name, LValue);
+    LWritten := TValueToYaml(LNode, LYAMLName, LValue);
     if LWritten then
       Result := True
     else if LNode.IsMapping then
-      LNode.Remove(LMember.Name);
+      LNode.Remove(LYAMLName);
   end;
 end;
 
@@ -375,6 +393,7 @@ var
   LAccept: Boolean;
   LNode: TYamlNode;
   LWritten: Boolean;
+  LYAMLName: string;
 begin
   Result := False;
 
@@ -395,6 +414,16 @@ begin
     if not LAccept then
       Continue;
 
+    LYAMLName := LMember.Name;
+    LMember.HasAttribute<YAMLNameAttribute>(
+      procedure (AAttr: YAMLNameAttribute)
+      begin
+        LYAMLName := AAttr.Name;
+      end
+    );
+    if LYAMLName = '' then
+      Continue;
+
     if not Result then
     begin
       if ARoot.IsSequence then
@@ -407,11 +436,11 @@ begin
     end;
 
     LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
-    LWritten := TValueToYaml(LNode, LMember.Name, LValue);
+    LWritten := TValueToYaml(LNode, LYAMLName, LValue);
     if LWritten then
       Result := True
     else if LNode.IsMapping then
-      LNode.Remove(LMember.Name);
+      LNode.Remove(LYAMLName);
   end;
 end;
 
@@ -627,6 +656,14 @@ begin
   );
 end;
 
+
+{ YAMLNameAttribute }
+
+constructor YAMLNameAttribute.Create(const AName: string);
+begin
+  inherited Create;
+  FName := AName;
+end;
 
 initialization
   RegisterWriters;
