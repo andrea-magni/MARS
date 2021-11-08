@@ -374,6 +374,7 @@ var
   LFilterProc: TToYAMLFilterProc;
   LAccept: Boolean;
   LNode: TYamlNode;
+  LWritten: Boolean;
 begin
   Result := False;
 
@@ -398,13 +399,19 @@ begin
     begin
       if ARoot.IsSequence then
         LNode := ARoot.AddMapping
+      else if ARoot.IsMapping and (AName <> '') then
+        LNode := ARoot.AddOrSetMapping(AName)
       else
         LNode := ARoot;
       Result := True;
     end;
 
     LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
-    TValueToYaml(LNode, LMember.Name, LValue);
+    LWritten := TValueToYaml(LNode, LMember.Name, LValue);
+    if LWritten then
+      Result := True
+    else if LNode.IsMapping then
+      LNode.Remove(LMember.Name);
   end;
 end;
 
