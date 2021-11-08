@@ -15,7 +15,7 @@ uses
 , MARS.Core.Token.Resource
 , Custom.Types
 , MARS.Metadata.Attributes
-, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
+, MARS.OpenAPI.v3
 ;
 
 type

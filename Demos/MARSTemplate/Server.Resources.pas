@@ -13,6 +13,7 @@ uses
 , MARS.Core.URL
 //, MARS.Core.Token
 , MARS.Core.Token.Resource
+, MARS.OpenAPI.v3, MARS.Metadata.Attributes
 ;
 
 type
@@ -22,6 +23,14 @@ type
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
+
+    [ GET
+    , Path('/openapi')
+    , Produces(TMediaType.APPLICATION_JSON)
+    , Produces(TMediaType.APPLICATION_YAML)
+    // prevents the method itself being part of the OpenAPI specification
+    , MetaVisible(False)]
+    function GetOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
   end;
 
   [Path('token')]
@@ -35,6 +44,11 @@ uses
 ;
 
 { THelloWorldResource }
+
+function THelloWorldResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+begin
+  Result := AOpenAPI;
+end;
 
 function THelloWorldResource.SayHelloWorld: string;
 begin

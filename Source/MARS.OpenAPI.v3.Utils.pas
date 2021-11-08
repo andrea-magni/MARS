@@ -24,7 +24,6 @@ type
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
     function MARSKindToOpenAPIKind(const AString: string): string;
     function MARSDataTypeToOpenAPIType(const AType: TRttiType; const ARefPrefix: string = '#/components/schemas/'): string;
-    class function BuildDemoAPI(): TOpenAPI;
     class function BuildFrom(const AEngine: TMARSEngine; const AApplication: TMARSApplication): TOpenAPI; overload;
     class function BuildFrom(const AActivation: IMARSActivation): TOpenAPI; overload;
   end;
@@ -40,48 +39,6 @@ uses
 ;
 
 { TOpenAPIHelper }
-
-class function TOpenAPIHelper.BuildDemoAPI: TOpenAPI;
-var
-  server1, server2, server3: TServer;
-begin
-  Result := TOpenAPI.Create;
-  Result.openapi := '3.0.2';
-
-  Result.info.title := 'Sample Pet Store App';
-//  Result.info.summary := 'A pet store manager.';
-  Result.info.description := 'This is a sample server for a pet store.';
-  Result.info.termsOfService := 'https://example.com/terms/';
-
-  Result.info.contact.name := 'API Support';
-  Result.info.contact.url := ' https://www.example.com/support';
-  Result.info.contact.email := 'support@example.com';
-
-  Result.info.license.name := 'Apache 2.0';
-  Result.info.license.url := 'https://www.apache.org/licenses/LICENSE-2.0.html';
-
-  Result.info.version := '1.0.1';
-
-  server1 := TServer.Create;
-  server1.url := 'https://development.gigantic-server.com/';
-  server1.description := 'Development server';
-  server1.variables.Add('test', TServerVariable.Create(['One', 'Two'], 'def1', 'Andrea Magni'));
-
-  server2 := TServer.Create;
-  server2.url := 'https://{username}.gigantic-server.com/';
-  server2.description := 'User specific server';
-  server2.variables.Add('username', TServerVariable.Create([], 'demo', 'this value is assigned by the service provider'));
-
-  server3 := TServer.Create;
-  server3.url := 'https://development.gigantic-server.com:{port}/{basepath}';
-  server3.description := 'Port specific server';
-  server3.variables.Add('port', TServerVariable.Create(['8080', '8443'], '8080', 'port number'));
-  server3.variables.Add('basepath', TServerVariable.Create([], 'v2', ''));
-
-  Result.servers.Add(server1);
-  Result.servers.Add(server2);
-  Result.servers.Add(server3);
-end;
 
 class function TOpenAPIHelper.BuildFrom(const AEngine: TMARSEngine;
   const AApplication: TMARSApplication): TOpenAPI;
@@ -302,6 +259,11 @@ begin
   info.license.name       := FromParams('info.license.name', '').AsString;
   info.license.identifier := FromParams('info.license.identifier', '').AsString;
   info.license.url        := FromParams('info.license.url', '').AsString;
+
+  info.x_logo.url := FromParams('info.x-logo.url', 'https://andreamagni.eu/images/MARS-Curiosity-d.png').AsString;
+  info.x_logo.backgroundColor := FromParams('info.x-logo.backgroundColor', '#FFFFFF').AsString;
+  info.x_logo.altText := FromParams('info.x-logo.altText', 'Powered by MARS-Curiosity REST library').AsString;
+  info.x_logo.href := FromParams('info.x-logo.href', 'https://github.com/andrea-magni/MARS').AsString;
 
   info.version := FromParams('info.version', '0.1.0').AsString;
 end;

@@ -41,7 +41,6 @@ uses
   , Server.Resources
 
   , MARS.YAML.ReadersAndWriters
-  , MARS.Metadata.Engine.Resource, MARS.Metadata.ReadersAndWriters
   , MARS.OpenAPI.v3.InjectionService
   ;
 

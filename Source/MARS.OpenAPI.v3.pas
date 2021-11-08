@@ -29,6 +29,13 @@ type
     url: string;
   end;
 
+  TXLogo = record
+    url: string;
+    backgroundColor: string;
+    altText: string;
+    href: string;
+  end;
+
   TInfo = class
   public
     constructor Create; virtual;
@@ -41,6 +48,7 @@ type
     contact: TContact;
     license: TLicense;
     version: string; // required
+    [JSONName('x-logo')] x_logo: TXLogo;
   end;
 
   TServerVariable = class

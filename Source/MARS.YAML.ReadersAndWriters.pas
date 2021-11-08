@@ -4,10 +4,9 @@ interface
 
 uses
   Classes, SysUtils, Rtti
-  , MARS.Core.Attributes, MARS.Core.Declarations, MARS.Core.MediaType
-  , MARS.Core.MessageBodyWriter, MARS.Core.Activation.Interfaces
-
-  , Neslib.Yaml, Neslib.SysUtils, Neslib.Utf8
+, MARS.Core.Attributes, MARS.Core.Declarations, MARS.Core.MediaType
+, MARS.Core.MessageBodyWriter, MARS.Core.Activation.Interfaces
+, Neslib.Yaml, Neslib.SysUtils, Neslib.Utf8
 ;
 
 type
