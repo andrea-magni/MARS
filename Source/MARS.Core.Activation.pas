@@ -632,6 +632,7 @@ begin
     FTeardownTime := TStopwatch.StartNew;
     if Assigned(FResourceInstance) then
       FResourceInstance.Free;
+    FMethodArguments := [];
     FreeContext;
     FTeardownTime.Stop;
   end;
