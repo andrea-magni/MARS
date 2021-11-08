@@ -11,15 +11,9 @@ interface
 
 uses
   Classes, SysUtils
-
-  , MARS.Core.Registry
-  , MARS.Core.Classes
-  , MARS.Core.Application
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-  , MARS.Core.Token.ReadersAndWriters
-  , MARS.Core.Token
-  , MARS.Core.URL
+, MARS.Core.Registry, MARS.Core.Classes, MARS.Core.Application, MARS.Core.Attributes
+, MARS.Core.MediaType, MARS.Core.Token.ReadersAndWriters, MARS.Core.Token
+, MARS.Core.URL, MARS.Metadata.Attributes
 ;
 
 type

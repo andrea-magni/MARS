@@ -17,6 +17,14 @@ type
 
   end;
 
+  MetaSummaryAttribute = class(MetadataAttribute)
+  private
+    FText: string;
+  public
+    constructor Create(AText: string);
+    property Text: string read FText;
+  end;
+
   MetaDescriptionAttribute = class(MetadataAttribute)
   private
     FText: string;
@@ -54,6 +62,14 @@ constructor MetaVisibleAttribute.Create(AValue: Boolean);
 begin
   inherited Create;
   FValue := AValue;
+end;
+
+{ MetaSummaryAttribute }
+
+constructor MetaSummaryAttribute.Create(AText: string);
+begin
+  inherited Create;
+  FText := AText;
 end;
 
 end.

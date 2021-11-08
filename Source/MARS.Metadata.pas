@@ -22,6 +22,7 @@ type
     FParent: TMARSMetadata;
     property Parent: TMARSMetadata read FParent;
   public
+    Summary: string;
     Description: string;
     Visible: Boolean;
     constructor Create(const AParent: TMARSMetadata); virtual;
@@ -423,6 +424,7 @@ begin
   inherited Create;
   FParent := AParent;
   Description := '';
+  Summary := '';
   Visible := True;
 end;
 

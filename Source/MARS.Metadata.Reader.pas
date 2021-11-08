@@ -120,6 +120,14 @@ begin
       end
     );
 
+    LMethodMetadata.Summary := '';
+    AMethod.HasAttribute<MetaSummaryAttribute>(
+      procedure (Attribute: MetaSummaryAttribute)
+      begin
+        LMethodMetadata.Summary := Attribute.Text;
+      end
+    );
+
     LMethodMetadata.Description := '';
     AMethod.HasAttribute<MetaDescriptionAttribute>(
       procedure (Attribute: MetaDescriptionAttribute)
@@ -204,6 +212,14 @@ begin
     begin
       LRequestParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
       try
+        LRequestParamMetadata.Summary := '';
+        AMethod.HasAttribute<MetaSummaryAttribute>(
+          procedure (Attribute: MetaSummaryAttribute)
+          begin
+            LRequestParamMetadata.Summary := Attribute.Text;
+          end
+        );
+
         LRequestParamMetadata.Description := '';
         AParameter.HasAttribute<MetaDescriptionAttribute>(
           procedure (Attribute: MetaDescriptionAttribute)

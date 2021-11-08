@@ -288,7 +288,7 @@ end;
 procedure TOpenAPIHelper.ReadOperation(const AOperation: TOperation;
   const ARes: TMARSResourceMetadata; const AMet: TMARSMethodMetadata);
 var
-  LMetDescription: string;
+  LMethodSummary: string;
   LParamMD: TMARSRequestParamMetadata;
   LParam: TParameter;
   LRequestBody: TRequestBody;
@@ -297,12 +297,15 @@ var
   LMediaType: string;
   LMetAuthorization: string;
 begin
-  LMetDescription := AMet.Description;
-  if LMetDescription = '' then
-    LMetDescription := AMet.Name;
+  LMethodSummary := AMet.Summary;
+  if LMethodSummary = '' then
+    LMethodSummary := AMet.Description;
+  if LMethodSummary = '' then
+    LMethodSummary := AMet.Name;
 
   AOperation.operationId := AMet.Name;
-  AOperation.description := LMetDescription;
+  AOperation.summary := LMethodSummary;
+  AOperation.description := AMet.Description;
   AOperation.tags := [ARes.Path];
 
   // PARAMETERS
@@ -327,7 +330,7 @@ begin
   if AMet.Consumes <> '' then
   begin
     LRequestBody := AOperation.requestBody;
-    LRequestBody.description := 'Body for ' + LMetDescription;
+    LRequestBody.description := 'Request body';
     for LMediaType in AMet.Consumes.Split([',']) do
     begin
       LContent := LRequestBody.AddContent(LMediaType);
@@ -343,22 +346,27 @@ begin
           LProperty.SetType(LParamMD.DataTypeRttiType, Self);
         end;
       end
-      else // all other request LRequestBody types
+      else // all other request body types
       begin
         LParamMD := AMet.ParameterByKind('BodyParam');
         if Assigned(LParamMD) then
+        begin
           LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
+          LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
+        end;
       end;
     end;
   end;
 
   var response := AOperation.AddResponse('200');
-  response.description := 'Successful response for ' + LMetDescription;
+  response.description := 'Successful response';
   for LMediaType in AMet.Produces.Split([',']) do
   begin
     response.AddContent(LMediaType)
       .schema.SetType(AMet.DataTypeRttiType, Self)
   end;
+
+  AOperation.AddResponse('500').description := 'Internal server error';
 
   LMetAuthorization := AMet.FullAuthorization;
   if LMetAuthorization <> '' then //AM TODO Check what happens with Deny DenyAll etc
@@ -367,6 +375,9 @@ begin
       AOperation.AddSecurityRequirement('JWT_bearer', LMetAuthorization.Split([',']));
     if FCookieSecurityConfigured then
       AOperation.AddSecurityRequirement('JWT_cookie', LMetAuthorization.Split([',']));
+
+    if FBearerSecurityConfigured or FCookieSecurityConfigured then
+      AOperation.AddResponse('403').description := 'Token missing, not valid or expired';
   end;
 end;
 
