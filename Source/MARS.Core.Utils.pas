@@ -54,6 +54,8 @@ type
     const AAvoidDuplicateDelimiter: Boolean = True; const ATrim: Boolean = True;
     const ACaseInsensitive: Boolean = True): string;
 
+  function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;
+
   function EnsurePrefix(const AString, APrefix: string; const AIgnoreCase: Boolean = True): string;
   function EnsureSuffix(const AString, ASuffix: string; const AIgnoreCase: Boolean = True): string;
 
@@ -98,6 +100,23 @@ uses
 {$endif}
   , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
 ;
+
+function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;
+var
+  LIndex: Integer;
+begin
+  Result := '';
+
+  for LIndex := 0 to Length(AStrings)-1 do
+  begin
+    Result := AStrings[LIndex];
+    if Result <> '' then
+      Break;
+  end;
+
+  if Result = '' then
+    Result := ADefault;
+end;
 
 function GetEncodingName(const AEncoding: TEncoding): string;
 begin

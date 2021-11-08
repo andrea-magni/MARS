@@ -33,7 +33,7 @@ implementation
 
 uses
   StrUtils
-, MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT
+, MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT, MARS.Core.Utils
 , MARS.Metadata.Reader
 , MARS.Core.MediaType, MARS.Core.JSON, MARS.YAML.ReadersAndWriters
 ;
@@ -45,6 +45,7 @@ class function TOpenAPIHelper.BuildFrom(const AEngine: TMARSEngine;
 var
   LOpenAPI: TOpenAPI;
   LReader: TMARSMetadataReader;
+  LServer: TServer;
 begin
   Assert(Assigned(AEngine));
 
@@ -52,11 +53,11 @@ begin
   try
     LOpenAPI.openapi := '3.0.2';
     LOpenAPI.ReadInfoFromParams(AEngine.Parameters);
-    LOpenAPI.AddServerFromEngine(AEngine)
-    .variables.Add('application'
-    , TServerVariable.Create([AApplication.BasePath]
-      , AApplication.BasePath, 'Application')
-    );
+
+    LServer := LOpenAPI.AddServerFromEngine(AEngine);
+
+    LServer.variables.Add('application'
+      , TServerVariable.Create([], TMARSURL.EnsureFirstPathDelimiter(AApplication.BasePath), 'Application'));
 
     if AApplication.Parameters.ByNameText(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString <> '' then
       LOpenAPI.ReadBearerSecurityScheme('JWT_bearer', AApplication.Parameters);
@@ -205,7 +206,7 @@ begin
       if not ARes.Visible then
         Exit;
 
-      AddTag(ARes.Path, ARes.Description);
+      AddTag(ARes.Path, StringFallback([ARes.Summary, ARes.Description, ARes.Name]));
 
       ARes.ForEachMethod(
         procedure (AMet: TMARSMethodMetadata)
@@ -297,11 +298,7 @@ var
   LMediaType: string;
   LMetAuthorization: string;
 begin
-  LMethodSummary := AMet.Summary;
-  if LMethodSummary = '' then
-    LMethodSummary := AMet.Description;
-  if LMethodSummary = '' then
-    LMethodSummary := AMet.Name;
+  LMethodSummary := StringFallback([AMet.Summary, AMet.Description, AMet.Name]);
 
   AOperation.operationId := AMet.Name;
   AOperation.summary := LMethodSummary;
@@ -384,19 +381,22 @@ end;
 function TOpenAPIHelper.AddServerFromEngine(const AEngine: TMARSEngine): TServer;
 begin
   Result := AddServer;
-             // '{protocol}://localhost:{port}/rest{application}'
-  Result.url := '{protocol}://localhost:{port}' + AEngine.BasePath + '{application}';
+             // '{protocol}://localhost:{port}{engine}{application}'
+  Result.url := '{protocol}://{hostname}:{port}{engine}{application}';
   Result.description := AEngine.Name;
+
+  Result.variables.Add('hostname'
+  , TServerVariable.Create([], 'localhost', 'Host name'));
+
+  Result.variables.Add('engine'
+  , TServerVariable.Create([], TMARSURL.EnsureFirstPathDelimiter(AEngine.BasePath), 'Engine base path'));
 
   Result.variables.Add('port'
   , TServerVariable.Create([AEngine.Port.ToString, AEngine.PortSSL.ToString]
-    , AEngine.Port.ToString, 'Port number')
-  );
+    , AEngine.Port.ToString, 'Port number'));
 
   Result.variables.Add('protocol'
-  , TServerVariable.Create(['http', 'https']
-    , 'http', 'Protocol')
-  );
+  , TServerVariable.Create(['http', 'https'], 'http', 'Protocol'));
 end;
 
 end.
