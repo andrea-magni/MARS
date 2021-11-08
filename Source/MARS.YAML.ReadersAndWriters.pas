@@ -120,13 +120,21 @@ var
   LYAMLString: string;
   LContentBytes: TBytes;
   LEncoding: TEncoding;
+  LYAML: IYamlDocument;
 begin
   if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
 
   LYAMLString := '';
   if AValue.IsType<string> then
-    LYAMLString := AValue.AsType<string>;
+    LYAMLString := AValue.AsType<string>
+  else
+  begin
+    LYAML := TMARSYAML.TValueToYAML(AValue);
+    LYAMLString := LYAML.ToYaml;
+  end;
+  if LYAMLString = '' then
+    Exit;
 
   LContentBytes := LEncoding.GetBytes(LYAMLString);
   AOutputStream.Write(LContentBytes, Length(LContentBytes));
@@ -607,6 +615,22 @@ begin
   );
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TYAMLValueWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
+          tkString, tkSet, tkWChar, tkLString, tkWString,
+          tkVariant, tkArray, tkRecord, tkMRecord, tkInt64, tkDynArray, tkUString]);
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW;
+      end
+  );
+
+
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
     TYAMLObjectWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
@@ -617,7 +641,6 @@ begin
         Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
       end
   );
-
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
     TYAMLArrayOfObjectWriter
