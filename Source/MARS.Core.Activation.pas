@@ -409,6 +409,7 @@ end;
 procedure TMARSActivation.FreeContext;
 var
   LDestroyed: TList<TObject>;
+  LIndex: Integer;
   LValue: TValue;
 begin
   if FContext.Count = 0 then
@@ -418,9 +419,10 @@ begin
   try
     while FContext.Count > 0 do
     begin
-      LValue := FContext[0];
+      LIndex := FContext.Count-1; // last one first
+      LValue := FContext[LIndex];
       CleanupGarbage(LValue, LDestroyed);
-      FContext.Delete(0);
+      FContext.Delete(LIndex);
     end;
   finally
     LDestroyed.Free;
