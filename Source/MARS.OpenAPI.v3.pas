@@ -86,7 +86,7 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
-    function AddProperty(const AName: string): TSchema;
+    function GetProperty(const AName: string): TSchema;
     procedure SetType(const AType: TRttiType; const AOpenAPI: TOpenAPI); overload;
   public
     title: string;
@@ -578,10 +578,13 @@ end;
 
 { TSchema }
 
-function TSchema.AddProperty(const AName: string): TSchema;
+function TSchema.GetProperty(const AName: string): TSchema;
 begin
-  Result := TSchema.Create;
-  properties.Add(AName, Result);
+  if not properties.TryGetValue(AName, Result) then
+  begin
+    Result := TSchema.Create;
+    properties.Add(AName, Result);
+  end;
 end;
 
 constructor TSchema.Create;

@@ -94,6 +94,9 @@ var
   LJSONName, LYAMLName: string;
   LProperty: TSchema;
 begin
+  //AM TODO Add some mechanism to deal with special types
+  // (i.e. TDataset descendants, TStream descendants, TJSONValue descendants, TYamlNode descendants...)
+
   Result := False;
   LSchemaExists := components.HasSchema(AType.Name);
   if not LSchemaExists then
@@ -128,7 +131,7 @@ begin
         if (LJSONName = '') and (LYAMLName = '') then
           Continue;
 
-        LProperty := LSchema.AddProperty(LJSONName);
+        LProperty := LSchema.GetProperty(LJSONName);
         LProperty.SetType(LMember.GetRttiType, Self);
       end;
     end
@@ -169,7 +172,10 @@ begin
 
   if IndexStr(AType.QualifiedName, ['System.TDate', 'System.TDateTime', 'System.TTime']) <> -1 then
     Result := 'string';
-  if IndexStr(AType.QualifiedName, ['System.Int64', 'System.UInt64', 'System.Int32', 'System.UInt32']) <> -1 then
+  if IndexStr(AType.QualifiedName, [
+      'System.Integer', 'System.Int64', 'System.UInt64', 'System.Int32', 'System.UInt32'
+    ,  'System.SmallInt', 'System.LongInt', 'System.Word', 'System.LongWord'
+    ]) <> -1 then
     Result := 'integer'; //AM TODO format !
   if IndexStr(AType.QualifiedName, ['System.Currency', 'System.Single', 'System.Double', 'System.Extended']) <> -1 then
     Result := 'number'; //AM TODO format
@@ -338,7 +344,7 @@ begin
         LContent.schema.SetType('object');
         for LParamMD in AMet.ParametersByKind('FormParam') do
         begin
-          LProperty := LContent.schema.AddProperty(LParamMD.Name);
+          LProperty := LContent.schema.GetProperty(LParamMD.Name);
           LProperty.description := LParamMD.Description;
           LProperty.SetType(LParamMD.DataTypeRttiType, Self);
         end;
@@ -362,6 +368,9 @@ begin
     response.AddContent(LMediaType)
       .schema.SetType(AMet.DataTypeRttiType, Self)
   end;
+  if response.content.Count = 0 then
+    response.AddContent('*/*')
+        .schema.SetType(AMet.DataTypeRttiType, Self);
 
   AOperation.AddResponse('500').description := 'Internal server error';
 

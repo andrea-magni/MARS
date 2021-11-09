@@ -460,22 +460,19 @@ begin
     begin
       LDocument := LStream.AddSequence;
       LDocument.Root.SequenceStyle := TYamlSequenceStyle.Block;
+      TValueToYAML(LDocument.Root, '', AValue);
     end
-    else
+    else if AValue.IsObject or TRttiContext.Create.GetType(AValue.TypeInfo).IsRecord then
     begin
       LDocument := LStream.AddMapping;
       LDocument.Root.MappingStyle := TYamlMappingStyle.Flow;
-    end;
-    try
-      LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
-
       TValueToYAML(LDocument.Root, '', AValue);
+    end
+    else
+      LDocument := LStream.AddScalar(AValue.ToString);
 
-      Result := LDocument;
-    except
-      LDocument := nil;
-      raise;
-    end;
+    LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
+    Result := LDocument;
   except
     LStream := nil;
     raise;
