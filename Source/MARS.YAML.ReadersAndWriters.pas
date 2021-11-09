@@ -326,7 +326,7 @@ begin
 
     LAccept := True;
     if Assigned(LFilterProc) then
-      LFilterProc(LMember, AObject, ARoot, LAccept);
+      LFilterProc(LMember, AObject, LNode, LAccept);
     if not LAccept then
       Continue;
 
@@ -411,15 +411,16 @@ begin
   if not Assigned(LFilterProc) then
     LFilterProc := GetRecordFilterProc(LType);
 
+  if ARoot.IsSequence then
+    LNode := ARoot.AddMapping
+  else if ARoot.IsMapping and (AName <> '') then
+    LNode := ARoot.AddOrSetMapping(AName)
+  else
+    LNode := ARoot;
+
   for LMember in LType.GetPropertiesAndFields do
   begin
     if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
-      Continue;
-
-    LAccept := True;
-    if Assigned(LFilterProc) then
-      LFilterProc(LMember, ARecord, ARoot, LAccept);
-    if not LAccept then
       Continue;
 
     LYAMLName := LMember.Name;
@@ -432,16 +433,11 @@ begin
     if LYAMLName = '' then
       Continue;
 
-    if not Result then
-    begin
-      if ARoot.IsSequence then
-        LNode := ARoot.AddMapping
-      else if ARoot.IsMapping and (AName <> '') then
-        LNode := ARoot.AddOrSetMapping(AName)
-      else
-        LNode := ARoot;
-      Result := True;
-    end;
+    LAccept := True;
+    if Assigned(LFilterProc) then
+      LFilterProc(LMember, ARecord, LNode, LAccept);
+    if not LAccept then
+      Continue;
 
     LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
     LWritten := TValueToYaml(LNode, LYAMLName, LValue);
