@@ -794,7 +794,7 @@ begin
 
   for LMember in LType.GetPropertiesAndFields do
   begin
-    if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsWritable) then
+    if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
       Continue;
 
     LAccept := True;
