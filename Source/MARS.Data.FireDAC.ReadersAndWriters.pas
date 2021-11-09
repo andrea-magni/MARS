@@ -59,7 +59,8 @@ uses
 
 , MARS.Core.JSON {$ifdef DelphiXE7_UP}, System.JSON {$endif}
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
-, MARS.Core.Exceptions, MARS.Rtti.Utils, MARS.Data.FireDAC.Utils
+, MARS.Core.Exceptions, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Rtti.Utils, MARS.Data.FireDAC.Utils
 ;
 
 { TArrayFDDataSetWriter }

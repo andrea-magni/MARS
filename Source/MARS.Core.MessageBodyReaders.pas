@@ -262,15 +262,14 @@ var
 begin
   Result := TValue.Empty;
 
-  LJSON := TJSONValueReader.ReadJSONValue(
-    AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
+  LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
   if Assigned(LJSON) then
     try
       if (LJSON is TJSONObject) and (ADestination.GetRttiType is TRttiInstanceType) then
         Result := TJSONObject.JSONToObject(
-            TRttiInstanceType(ADestination.GetRttiType).MetaclassType
+          TRttiInstanceType(ADestination.GetRttiType).MetaclassType
           , TJSONObject(LJSON)
-        );
+          );
     finally
       LJSON.Free;
     end;

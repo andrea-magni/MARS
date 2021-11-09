@@ -43,8 +43,7 @@ implementation
 
 uses
   DB, DBClient
-, MARS.Core.JSON
-, MARS.Core.MessageBodyWriters
+, MARS.Core.JSON, MARS.Core.MessageBodyWriters, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Data.Utils, MARS.Rtti.Utils, MARS.Core.Utils
 ;
 
@@ -138,7 +137,7 @@ begin
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TDataSet>(TDataSetWriterJSON
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_LOW;
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
     end
   );
 
@@ -149,7 +148,7 @@ begin
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_LOW
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
     end
   );
 
@@ -160,7 +159,7 @@ begin
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_LOW;
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
     end
   );
 end;

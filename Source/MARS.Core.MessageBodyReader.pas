@@ -72,7 +72,7 @@ type
 
     procedure RegisterReader<T>(const AReaderClass: TClass); overload;
 
-    procedure FindReader(const ADestination: TRttiObject;
+    procedure FindReader(const AActivation: IMARSActivation; const ADestination: TRttiObject;
       out AReader: IMessageBodyReader; out AMediaType: TMediaType);
 
     procedure Enumerate(const AProc: TProc<TReaderEntryInfo>);
@@ -140,8 +140,8 @@ begin
     AProc(LEntry);
 end;
 
-procedure TMARSMessageBodyReaderRegistry.FindReader(const ADestination: TRttiObject;
-  out AReader: IMessageBodyReader; out AMediaType: TMediaType);
+procedure TMARSMessageBodyReaderRegistry.FindReader(const AActivation: IMARSActivation;
+  const ADestination: TRttiObject; out AReader: IMessageBodyReader; out AMediaType: TMediaType);
 var
   LMethod: TRttiMethod;
   LReaderEntry: TReaderEntryInfo;
@@ -244,6 +244,12 @@ begin
       begin
         AReader := LCandidate.CreateInstance();
         AMediaType := TMediaType.Create(LCandidateMediaType);
+        {$IFDEF DEBUG}
+        AActivation.Response.SetHeader(
+          'X-MARS-MBR'
+        , Format('%s, Affinity: %d, MediaType: %s'{ + ', QualityFactor: %.2f'}, [LCandidate.RttiName, LCandidateAffinity, LCandidateMediaType{, LCandidateQualityFactor}])
+        );
+        {$ENDIF}
       end;
   finally
     LConsumesMediaTypes.Free;
@@ -427,6 +433,12 @@ var
 begin
   LMBReader := T.Create;
   Result := LMBReader.ReadFrom(AInputData, ADestination, AMediaType, AActivation);
+  {$IFDEF DEBUG}
+  AActivation.Response.SetHeader(
+    'X-MARS-MBR-ReadWith'
+  , Format('%s, MediaType: %s', [T.ClassName, AMediaType.ToStringDebug])
+  );
+  {$ENDIF}
 end;
 
 end.

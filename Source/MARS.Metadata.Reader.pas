@@ -120,6 +120,14 @@ begin
       end
     );
 
+    LMethodMetadata.Summary := '';
+    AMethod.HasAttribute<MetaSummaryAttribute>(
+      procedure (Attribute: MetaSummaryAttribute)
+      begin
+        LMethodMetadata.Summary := Attribute.Text;
+      end
+    );
+
     LMethodMetadata.Description := '';
     AMethod.HasAttribute<MetaDescriptionAttribute>(
       procedure (Attribute: MetaDescriptionAttribute)
@@ -138,7 +146,10 @@ begin
 
     LMethodMetadata.DataType := '';
     if (AMethod.MethodKind in [mkFunction, mkClassFunction]) then
+    begin
       LMethodMetadata.DataType := AMethod.ReturnType.QualifiedName;
+      LMethodMetadata.DataTypeRttiType := AMethod.ReturnType;
+    end;
 
     AMethod.ForEachAttribute<HttpMethodAttribute>(
       procedure (Attribute: HttpMethodAttribute)
@@ -154,8 +165,9 @@ begin
       end
     );
     if LMethodMetadata.Produces.IsEmpty then
-      LMethodMetadata.Produces := AResourceMetadata.Produces;
-
+      LMethodMetadata.Produces := AResourceMetadata.Produces
+    else if not AResourceMetadata.Produces.IsEmpty then
+      LMethodMetadata.Produces := LMethodMetadata.Produces + ',' + AResourceMetadata.Produces;
 
     AMethod.ForEachAttribute<ConsumesAttribute>(
       procedure (Attribute: ConsumesAttribute)
@@ -164,7 +176,10 @@ begin
       end
     );
     if LMethodMetadata.Consumes.IsEmpty then
-      LMethodMetadata.Consumes := AResourceMetadata.Consumes;
+      LMethodMetadata.Consumes := AResourceMetadata.Consumes
+    else if not AResourceMetadata.Consumes.IsEmpty then
+      LMethodMetadata.Consumes := LMethodMetadata.Consumes + ',' + AResourceMetadata.Consumes;
+
 
      AMethod.ForEachAttribute<AuthorizationAttribute>(
       procedure (Attribute: AuthorizationAttribute)
@@ -172,8 +187,6 @@ begin
         LMethodMetadata.Authorization :=  SmartConcat([LMethodMetadata.Authorization, Attribute.ToString]);
       end
     );
-    if LMethodMetadata.Authorization.IsEmpty then
-      LMethodMetadata.Authorization := AResourceMetadata.Authorization;
 
     LParameters := AMethod.GetParameters;
     for LParameter in LParameters do
@@ -199,6 +212,14 @@ begin
     begin
       LRequestParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
       try
+        LRequestParamMetadata.Summary := '';
+        AMethod.HasAttribute<MetaSummaryAttribute>(
+          procedure (Attribute: MetaSummaryAttribute)
+          begin
+            LRequestParamMetadata.Summary := Attribute.Text;
+          end
+        );
+
         LRequestParamMetadata.Description := '';
         AParameter.HasAttribute<MetaDescriptionAttribute>(
           procedure (Attribute: MetaDescriptionAttribute)
@@ -214,6 +235,7 @@ begin
         if LRequestParamMetadata.Name.IsEmpty then
           LRequestParamMetadata.Name := AParameter.Name;
         LRequestParamMetadata.DataType := AParameter.ParamType.QualifiedName;
+        LRequestParamMetadata.DataTypeRttiType := AParameter.ParamType;
       except
         LRequestParamMetadata.Free;
         raise;
@@ -258,6 +280,7 @@ begin
       begin
         LResourceMetadata.Produces := SmartConcat([LResourceMetadata.Produces, Attribute.Value]);
       end
+    , True
     );
 
     LResourceType.ForEachAttribute<ConsumesAttribute>(
@@ -265,6 +288,7 @@ begin
       begin
         LResourceMetadata.Consumes := SmartConcat([LResourceMetadata.Consumes, Attribute.Value]);
       end
+    , True
     );
 
     LResourceType.ForEachAttribute<AuthorizationAttribute>(
@@ -272,6 +296,7 @@ begin
       begin
         LResourceMetadata.Authorization := SmartConcat([LResourceMetadata.Authorization, Attribute.ToString]);
       end
+    , True
     );
 
     LResourceType.ForEachMethodWithAttribute<HttpMethodAttribute>(

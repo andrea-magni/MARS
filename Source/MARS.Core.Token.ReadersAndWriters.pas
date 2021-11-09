@@ -39,14 +39,11 @@ type
 implementation
 
 uses
-    Generics.Collections
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils
-  , MARS.Core.Token
-  , MARS.Core.JSON
-  , MARS.Core.MessageBodyWriters
-  , MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
-  ;
+  Generics.Collections
+, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.Token, MARS.Core.JSON, MARS.Core.MessageBodyWriters, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
+;
 
 
 { TMARSTokenWriterJSON }

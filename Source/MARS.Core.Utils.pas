@@ -48,14 +48,13 @@ type
 
   function CreateCompactGuidStr: string;
 
-  function ObjectToJSON(const AObject: TObject;
-    const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; deprecated 'use MARS.Core.JSON.TJSONObject.ObjectToJSON';
-
   function BooleanToTJSON(AValue: Boolean): TJSONValue;
 
   function SmartConcat(const AArgs: array of string; const ADelimiter: string = ',';
     const AAvoidDuplicateDelimiter: Boolean = True; const ATrim: Boolean = True;
     const ACaseInsensitive: Boolean = True): string;
+
+  function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;
 
   function EnsurePrefix(const AString, APrefix: string; const AIgnoreCase: Boolean = True): string;
   function EnsureSuffix(const AString, ASuffix: string; const AIgnoreCase: Boolean = True): string;
@@ -101,6 +100,23 @@ uses
 {$endif}
   , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
 ;
+
+function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;
+var
+  LIndex: Integer;
+begin
+  Result := '';
+
+  for LIndex := 0 to Length(AStrings)-1 do
+  begin
+    Result := AStrings[LIndex];
+    if Result <> '' then
+      Break;
+  end;
+
+  if Result = '' then
+    Result := ADefault;
+end;
 
 function GetEncodingName(const AEncoding: TEncoding): string;
 begin
@@ -240,7 +256,7 @@ begin
     end;
     Result := '[' + Result + ']';
   end
-  else if AValue.Kind = tkRecord then
+  else if AValue.Kind in [tkRecord, tkMRecord] then
   begin
     LRecordType := TRttiContext.Create.GetType(AValue.TypeInfo) as TRttiRecordType;
 
@@ -473,11 +489,6 @@ begin
   LBytes := TGUID.NewGuid.ToByteArray();
   for LIndex := 0 to Length(LBytes)-1 do
     Result := Result + IntToHex(LBytes[LIndex], 2);
-end;
-
-function ObjectToJSON(const AObject: TObject; const AOptions: TJsonOptions): TJSONObject;
-begin
-  Result := TJSONObject.ObjectToJSON(AObject, AOptions);
 end;
 
 { TFormParamFile }

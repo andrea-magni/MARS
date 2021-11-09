@@ -3,7 +3,8 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-program EKON22ServerApplication;
+
+program EKON22ServerApplication;
 
 uses
   Forms,

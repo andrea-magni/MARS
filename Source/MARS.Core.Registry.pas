@@ -23,6 +23,9 @@ type
     class function GetInstance: TMARSResourceRegistry; static;
   public
     constructor Create; virtual;
+    procedure RegisterResources(const AClasses: TArray<TClass>);
+    function RegisterResource(const AClass: TClass;
+      const AConstructorFunc: TMARSConstructorFunc): TMARSConstructorInfo; overload;
     function RegisterResource<T: class>: TMARSConstructorInfo; overload;
     function RegisterResource<T: class>(const AConstructorFunc: TMARSConstructorFunc): TMARSConstructorInfo; overload;
 
@@ -73,11 +76,26 @@ begin
   Result := RegisterResource<T>(nil);
 end;
 
+function TMARSResourceRegistry.RegisterResource(const AClass: TClass;
+  const AConstructorFunc: TMARSConstructorFunc): TMARSConstructorInfo;
+begin
+  Result := TMARSConstructorInfo.Create(AClass, AConstructorFunc);
+  Self.Add(AClass.QualifiedClassName.ToLower, Result);
+end;
+
 function TMARSResourceRegistry.RegisterResource<T>(
   const AConstructorFunc: TMARSConstructorFunc): TMARSConstructorInfo;
 begin
-  Result := TMARSConstructorInfo.Create(TClass(T), AConstructorFunc);
-  Self.Add(T.QualifiedClassName.ToLower, Result);
+  Result := RegisterResource(TClass(T), AConstructorFunc);
+end;
+
+procedure TMARSResourceRegistry.RegisterResources(
+  const AClasses: TArray<TClass>);
+var
+  LClass: TClass;
+begin
+  for LClass in AClasses do
+    RegisterResource(LClass, nil);
 end;
 
 class destructor TMARSResourceRegistry.ClassDestroy;

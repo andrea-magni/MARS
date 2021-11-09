@@ -51,6 +51,7 @@ type
   private
   protected
   public
+    function AllBasePaths: TArray<string>;
   end;
 
 implementation
@@ -153,5 +154,14 @@ begin
       ADoSomething(LPair.Key, LPair.Value);
 end;
 
+
+{ TMARSApplicationDictionary }
+
+function TMARSApplicationDictionary.AllBasePaths: TArray<string>;
+begin
+  Result := [];
+  for var LApplication in Values.ToArray do
+    Result := Result + [LApplication.BasePath];
+end;
 
 end.
