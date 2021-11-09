@@ -3,24 +3,25 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit Server.Resources;
+
+unit Server.Resources;
 
 {$I MARS.inc}
 
 interface
 
 uses
-  SysUtils, Classes, DB, HttpApp
-
+  SysUtils, Classes, DB
 {$ifdef DelphiXE3_UP}
   , FireDAC.Comp.Client // remove this line if you do not have FireDAC installed
 {$endif}
-
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-
-  , MARS.Core.JSON
-  ;
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.JSON
+, MARS.Metadata, MARS.Metadata.Attributes
+, MARS.OpenAPI.v3.InjectionService, MARS.OpenAPI.v3
+, MARS.YAML.ReadersAndWriters
+, MARS.Data.MessageBodyWriters
+;
 
 type
   [Path('helloworld')]
@@ -59,7 +60,7 @@ type
     function PdfDocument: TStream;
 
     [GET, Path('/stream'), Produces(TMediaType.APPLICATION_OCTET_STREAM)]
-    function GetStream([Context] Response: TWebResponse): TStream;
+    function GetStream([Context] Response: IMARSResponse): TStream;
 
     [
      GET
@@ -85,6 +86,11 @@ type
     function DataSet3: TDataset;
 {$endif}
 
+    [ GET
+    , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)
+    , Path('/openapi'), IsReference, MetaVisible(False)
+    ]
+    function GetOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
   end;
 
 implementation
@@ -139,10 +145,15 @@ begin
   Result.WriteStringValue('echo', AllStrings);
 end;
 
-function THelloWorldResource.GetStream(Response: TWebResponse): TStream;
+function THelloWorldResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+begin
+  Result := AOpenAPI;
+end;
+
+function THelloWorldResource.GetStream(Response: IMARSResponse): TStream;
 begin
   Result := TFileStream.Create(ParamStr(0), fmOpenRead or fmShareDenyNone);
-  Response.CustomHeaders.Values['Content-Disposition'] := 'attachment; filename="ThisIsMyServer.exe"';
+  Response.SetHeader('Content-Disposition', 'attachment; filename="ThisIsMyServer.exe"');
 end;
 
 function THelloWorldResource.GetStreamAsAttachment: TStream;
