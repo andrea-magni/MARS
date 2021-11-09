@@ -137,7 +137,7 @@ begin
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TDataSet>(TDataSetWriterJSON
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM + TMARSMessageBodyRegistry.AFFINITY_LOW;
     end
   );
 
@@ -148,7 +148,7 @@ begin
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM + TMARSMessageBodyRegistry.AFFINITY_LOW;
     end
   );
 
@@ -159,7 +159,7 @@ begin
     end
   , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
     begin
-      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+      Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM + TMARSMessageBodyRegistry.AFFINITY_LOW;
     end
   );
 end;
