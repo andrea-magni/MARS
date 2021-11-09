@@ -602,6 +602,8 @@ procedure TSchema.SetType(const AType: TRttiType; const AOpenAPI: TOpenAPI);
 var
   LElementType: TRttiType;
 begin
+  if not Assigned(AType) then
+    Exit;
   if AType.IsArray(LElementType) then
   begin
     SetType('array');
