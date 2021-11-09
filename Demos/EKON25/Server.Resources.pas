@@ -79,7 +79,7 @@ type
   protected
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
-    function SayHelloWorld: string;
+    function SayHelloWorld([QueryParam] who: string): string;
 
     [ GET
     , Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)
@@ -166,9 +166,12 @@ begin
   Result.SetDateOfBirth(EncodeDate(1982, 5, 24));
 end;
 
-function TEKONConferenceResource.SayHelloWorld: string;
+function TEKONConferenceResource.SayHelloWorld([QueryParam] who: string): string;
 begin
-  Result := 'Hello World!';
+  if who = '' then
+    Result := 'Hello World!'
+  else
+    Result := 'Hello, ' + who + '!';
 end;
 
 { TSpeaker }
