@@ -165,6 +165,8 @@ type
     function GetActualName(const ADestination: TRttiObject): string; virtual;
     procedure CheckRequiredAttribute(const ADestination: TRttiObject); virtual;
   public
+    function IsRequired(const ADestination: TRttiObject): Boolean; virtual;
+
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; virtual;
     property Kind: string read GetKind;
@@ -197,6 +199,7 @@ type
       const APrototypeURL: TMARSURL): Integer;
     function GetSwaggerKind: string; override;
   public
+    function IsRequired(const ADestination: TRttiObject): Boolean; override;
     property ParamIndex: Integer read FParamIndex write FParamIndex;
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
@@ -540,7 +543,7 @@ end;
 
 procedure RequestParamAttribute.CheckRequiredAttribute(const ADestination: TRttiObject);
 begin
-  if ADestination.HasAttribute<RequiredAttribute> then
+  if IsRequired(ADestination) then
     raise ERequiredException.CreateFmt('Required %s parameter missing: %s', [Self.GetSwaggerKind, GetActualName(ADestination)]);
 end;
 
@@ -570,6 +573,12 @@ function RequestParamAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 begin
   Result := TValue.Empty;
+end;
+
+function RequestParamAttribute.IsRequired(
+  const ADestination: TRttiObject): Boolean;
+begin
+  Result := ADestination.HasAttribute<RequiredAttribute>;
 end;
 
 { QueryParamAttribute }
@@ -794,6 +803,12 @@ begin
   end
   else
     CheckRequiredAttribute(ADestination);
+end;
+
+function PathParamAttribute.IsRequired(
+  const ADestination: TRttiObject): Boolean;
+begin
+  Result := True;
 end;
 
 { AuthorizationAttribute }

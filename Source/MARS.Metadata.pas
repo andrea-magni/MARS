@@ -62,6 +62,7 @@ type
     SwaggerKind: string;
     DataType: string;
     DataTypeRttiType: TRttiType;
+    Required: Boolean;
 
     constructor Create(const AParent: TMARSMetadata); override;
   end;

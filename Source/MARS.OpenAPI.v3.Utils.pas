@@ -323,8 +323,7 @@ begin
         LParam := AOperation.AddParameter(AParam.Name, LIn);
         LParam.description := AParam.Description;
         LParam.schema.SetType(AParam.DataTypeRttiType, Self);
-        if LIn = 'path' then
-          LParam.required := True;
+        LParam.required := AParam.Required;
       end;
     end
   );

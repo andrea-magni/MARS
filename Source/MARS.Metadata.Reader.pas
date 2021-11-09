@@ -236,6 +236,7 @@ begin
           LRequestParamMetadata.Name := AParameter.Name;
         LRequestParamMetadata.DataType := AParameter.ParamType.QualifiedName;
         LRequestParamMetadata.DataTypeRttiType := AParameter.ParamType;
+        LRequestParamMetadata.Required := AAttribute.IsRequired(AParameter);
       except
         LRequestParamMetadata.Free;
         raise;

@@ -30,7 +30,7 @@ type
   protected
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
-    function SayHelloWorld: string;
+    function SayHelloWorld([QueryParam, Required] toWho: string): string;
 
     [GET, Path('/html'), Produces(TMediaType.TEXT_HTML)]
     function HtmlDocument: string;
@@ -190,9 +190,12 @@ begin
   Result := TFileStream.Create('..\..\SampleData\Sample.pdf', fmOpenRead or fmShareDenyWrite);
 end;
 
-function THelloWorldResource.SayHelloWorld: string;
+function THelloWorldResource.SayHelloWorld(toWho: string): string;
 begin
-  Result := 'Hello World!';
+  if toWho <> '' then
+    Result := 'Hello ' + toWho+ '!'
+  else
+    Result := 'Hello World!';
 end;
 
 function THelloWorldResource.TestBool: Boolean;
