@@ -1,16 +1,16 @@
 object RemoteData: TRemoteData
-  OldCreateOrder = False
   OnCreate = DataModuleCreate
   Height = 296
   Width = 441
+  PixelsPerInch = 96
   object MARSClient: TMARSClient
     MARSEngineURL = 'http://localhost:8080/'
     ConnectTimeout = 0
     ReadTimeout = -1
+    AuthCookieName = 'access_token'
     ProxyConfig.Enabled = False
     ProxyConfig.Port = 0
     ProtocolVersion = pv1_1
-    HttpClient.AllowCookies = True
     HttpClient.ProxyParams.BasicAuthentication = False
     HttpClient.ProxyParams.ProxyPort = 0
     HttpClient.Request.ContentLength = -1

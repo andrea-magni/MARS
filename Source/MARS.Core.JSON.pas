@@ -203,6 +203,7 @@ var
   LArray: TJSONArray;
   LIndex: Integer;
   LTypeName: string;
+  LVariantValue: Variant;
 begin
   LTypeName := string(AValue.TypeInfo^.Name);
 
@@ -235,7 +236,7 @@ begin
   else if (AValue.Kind in [tkRecord, tkMRecord]) then
     Result := TJSONObject.RecordToJSON(AValue)
 
-  else if (AValue.IsType<Boolean>) then
+  else if (LTypeName = 'Boolean') then // before I was using TypeInfo(Boolean) but it caused Variants to match (?!), using type name now
     Result := BooleanToTJSON(AValue.AsType<Boolean>)
 
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
@@ -254,8 +255,28 @@ begin
     Result := TJSONNumber.Create( AValue.AsType<Double> )
 
   else if (AValue.Kind in [tkVariant]) then
-    Result := TValueToJSONValue( TValue.FromVariant(AValue.AsVariant) )
-
+  begin
+    LVariantValue := AValue.AsVariant;
+    case VarType(LVariantValue) of
+      varSmallint, varInteger, varShortInt, varByte, varWord, varUInt32, varUInt64:
+        Result := TValueToJSONValue(StrToInt(VarToStr(LVariantValue)));
+      varSingle, varDouble:
+        Result := TValueToJSONValue(StrToFloat(VarToStr(LVariantValue)));
+      varCurrency:
+        Result := TValueToJSONValue(StrToCurr(VarToStr(LVariantValue)));
+      varBoolean:
+        Result := TValueToJSONValue(LVariantValue = True);
+      varNull:
+        Result := TJSONNull.Create();
+      varDate:
+        Result := TValueToJSONValue(TDateTime(LVariantValue));
+      varString, varUString:
+        Result := TValueToJSONValue(VarToStr(LVariantValue));
+      else
+        Result := TValueToJSONValue(VarToStrDef(LVariantValue, VarTypeAsText(VarType(LVariantValue))));
+    end;
+//    Result := TValueToJSONValue( TValue.FromVariant(AValue.AsVariant) )
+  end
   else if (AValue.IsInstanceOf(TObject)) then
     Result := ObjectToJSON(AValue.AsObject)
 

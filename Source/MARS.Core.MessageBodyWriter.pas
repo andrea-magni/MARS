@@ -148,10 +148,11 @@ begin
   LMBWriter := T.Create;
   LMBWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
   {$IFDEF DEBUG}
-  AActivation.Response.SetHeader(
-    'X-MARS-MBW-WriteWith'
-  , Format('%s, MediaType: %s', [T.ClassName, AMediaType.ToStringDebug])
-  );
+  if Assigned(AActivation) then
+    AActivation.Response.SetHeader(
+      'X-MARS-MBW-WriteWith'
+    , Format('%s, MediaType: %s', [T.ClassName, AMediaType.ToStringDebug])
+    );
   {$ENDIF}
 end;
 

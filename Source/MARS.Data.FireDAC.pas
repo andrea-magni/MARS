@@ -605,7 +605,7 @@ end;
 class function TMARSFireDAC.GetFDConnectionClass: TFDConnectionClass;
 begin
   Result := TFDConnection;
-  if not Assigned(FCustomFDConnectionClass) then
+  if Assigned(FCustomFDConnectionClass) then
     Result := FCustomFDConnectionClass;
 end;
 

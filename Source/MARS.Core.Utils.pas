@@ -146,7 +146,10 @@ var
 begin
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
-
+  {$IFDEF Delphi11Alexandria}
+  // *** WORKAROUND ISSUE RSP-35516 on D11 ***
+  try
+  {$ENDIF}
   LZipStream := TZCompressionStream.Create(ADest, TZCompressionLevel.zcDefault, WindowBits);
   try
     ASource.Position := 0;
@@ -154,6 +157,11 @@ begin
   finally
     LZipStream.Free;
   end;
+  {$IFDEF Delphi11Alexandria}
+  except
+    // https://quality.embarcadero.com/projects/RSP/issues/RSP-35516 (Delphi 11 Alexandria will throw exception here)
+  end;
+  {$ENDIF}
 end;
 
 procedure UnzipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);

@@ -533,7 +533,8 @@ begin
         LFinalURL := LResource.URL;
         LResource.SpecificToken := AToken;
         LResource.GETAsync(
-          procedure (AResource: TMARSClientCustomResource)
+          nil
+        , procedure (AResource: TMARSClientCustomResource)
           begin
             try
               if Assigned(ACompletionHandler) then
