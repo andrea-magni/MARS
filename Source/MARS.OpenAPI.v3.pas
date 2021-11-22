@@ -112,7 +112,7 @@ type
     &not: string;  //  - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
     items: TSchemaBase; // - Value MUST be an object and not an array. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. items MUST be present if the type is array.
     properties: TObjectDictionary<string,TSchema>; // - Property definitions MUST be a Schema Object and not a standard JSON Schema (inline or referenced).
-    additionalProperties: string; // - Value can be boolean or object. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. Consistent with JSON Schema, additionalProperties defaults to true.
+    additionalProperties: Boolean; // - Value can be boolean or object. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. Consistent with JSON Schema, additionalProperties defaults to true.
     format: string; // - See Data Type Formats for further details. While relying on JSON Schema's defined formats, the OAS offers a few additional predefined formats.
     default: string; // - The default value represents what would be assumed by the consumer of the input as the value of the schema if one is not provided. Unlike JSON Schema, the value MUST conform to the defined type for the Schema Object defined at the same level. For example, if type is string, then default can be "foo" but cannot be 1.
   end;

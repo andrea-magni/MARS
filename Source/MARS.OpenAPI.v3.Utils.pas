@@ -341,12 +341,27 @@ begin
       if LMediaType = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
       begin
         LContent.schema.SetType('object');
+        var LHasFormParams := False;
         for LParamMD in AMet.ParametersByKind('FormParam') do
         begin
           LProperty := LContent.schema.GetProperty(LParamMD.Name);
           LProperty.description := LParamMD.Description;
           LProperty.SetType(LParamMD.DataTypeRttiType, Self);
+          LHasFormParams := True;
         end;
+        if not LHasFormParams then
+          for LParamMD in AMet.ParametersByKind('BodyParam') do
+          begin
+//            if LParamMD.DataTypeRttiType.Name = 'TArray<MARS.Core.Utils.TFormParam>' then
+//            begin
+//              LContent.schema.SetType('');
+//              LContent.schema.additionalProperties := True;
+//            end
+//            else begin
+              LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
+              LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
+//            end;
+          end;
       end
       else // all other request body types
       begin
