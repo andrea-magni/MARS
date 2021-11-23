@@ -69,6 +69,9 @@ Field1=Test1&Field2=Test2&Person=Andrea%20Magni&Age=39
     function CollectDataAsRecord([BodyParam] ARecord: TMyRecord): TMyRecord;
 
 
+    [GET, Path('html'), Produces(TMediaType.TEXT_HTML)]
+    function GetHtmlPage: string;
+
     [ GET
     , Path('/openapi')
     , Produces(TMediaType.APPLICATION_JSON)
@@ -86,7 +89,7 @@ implementation
 
 uses
   MARS.Core.Registry
-, System.Messaging
+, System.Messaging, IOUtils
 , Utils.MessageTypes;
 
 { THelloWorldResource }
@@ -115,6 +118,15 @@ begin
 
   LogToUI(ARecord.ToString);
 end;
+
+function THelloWorldResource.GetHtmlPage: string;
+var
+  LFileName: string;
+begin
+  LFileName := TPath.Combine( ExtractFilePath(ParamStr(0)), 'html\formPage.html' );
+  Result := TFile.ReadAllText(LFileName, TEncoding.UTF8);
+end;
+
 
 function THelloWorldResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
 begin
