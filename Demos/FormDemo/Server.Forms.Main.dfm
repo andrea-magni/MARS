@@ -41,6 +41,9 @@ object MainForm: TMainForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
+    DesignSize = (
+      698
+      110)
     object Label1: TLabel
       Left = 42
       Top = 26
@@ -111,6 +114,32 @@ object MainForm: TMainForm
       TabOrder = 3
       OnChange = PortSSLNumerEditChange
     end
+    object Button1: TButton
+      Left = 536
+      Top = 63
+      Width = 144
+      Height = 37
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      Action = OpenBrowserAction
+      Anchors = [akTop, akRight]
+      TabOrder = 4
+    end
+    object Button2: TButton
+      Left = 382
+      Top = 63
+      Width = 144
+      Height = 37
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      Action = OpenAPIAction
+      Anchors = [akTop, akRight]
+      TabOrder = 5
+    end
   end
   object MainTreeView: TTreeView
     Left = 0
@@ -154,6 +183,16 @@ object MainForm: TMainForm
       Caption = 'Stop Server'
       OnExecute = StopServerActionExecute
       OnUpdate = StopServerActionUpdate
+    end
+    object OpenBrowserAction: TAction
+      Caption = 'Open Browser'
+      OnExecute = OpenBrowserActionExecute
+      OnUpdate = OpenBrowserActionUpdate
+    end
+    object OpenAPIAction: TAction
+      Caption = 'OpenAPI'
+      OnExecute = OpenAPIActionExecute
+      OnUpdate = OpenAPIActionUpdate
     end
   end
 end

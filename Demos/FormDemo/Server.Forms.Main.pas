@@ -29,6 +29,10 @@ type
     Label2: TLabel;
     LogMemo: TMemo;
     Splitter1: TSplitter;
+    Button1: TButton;
+    OpenBrowserAction: TAction;
+    OpenAPIAction: TAction;
+    Button2: TButton;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -38,6 +42,10 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure PortSSLNumerEditChange(Sender: TObject);
     procedure MainTreeViewClick(Sender: TObject);
+    procedure OpenBrowserActionUpdate(Sender: TObject);
+    procedure OpenBrowserActionExecute(Sender: TObject);
+    procedure OpenAPIActionUpdate(Sender: TObject);
+    procedure OpenAPIActionExecute(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
   protected
@@ -168,6 +176,29 @@ begin
   if Assigned(LItem) and StartsText('http', LItem.Text) then
     ShellExecute(0, nil, PWideChar(LItem.Text), nil, nil, SW_SHOW);
 
+end;
+
+procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
+var
+  LSwaggerUIIndex: string;
+begin
+  LSwaggerUIIndex := '..\..\..\www\swagger-ui-3.52.5-dist\index.html';
+  ShellExecute(0, nil, PWideChar(LSwaggerUIIndex), nil, nil, SW_SHOW);
+end;
+
+procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
+begin
+  OpenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
+end;
+
+procedure TMainForm.OpenBrowserActionExecute(Sender: TObject);
+begin
+  ShellExecute(0, nil, 'http://localhost:8080/rest/default/helloworld/html', nil, nil, SW_SHOW);
+end;
+
+procedure TMainForm.OpenBrowserActionUpdate(Sender: TObject);
+begin
+  OpenBrowserAction.Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);
