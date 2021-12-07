@@ -11,7 +11,7 @@ uses
   SysUtils, Classes
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON, MARS.Core.Response
 , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
-//, MARS.Core.Token
+, MARS.Core.Token, MARS.Core.Application
 , MARS.Core.Token.Resource
 , MARS.OpenAPI.v3, MARS.Metadata.Attributes
 , Model.UserData
@@ -48,10 +48,32 @@ type
     function AllUsers(): TArray<TUserData>;
   end;
 
+  TMyUserKind = (Admin, Standard, Both);
+  TMyUserKinds = set of TMyUserKind;
+
+  TMyUser = record
+    username: string;
+    password: string;
+    description: string;
+    kind: TMyUserKinds;
+  end;
+
   [Path('token')]
-  TTokenResource = class(TMARSTokenResource)
+  TTokenResource = class
   protected
-    function Authenticate(const AUserName: string; const APassword: string): Boolean; override;
+    [Context] Token: TMARSToken;
+    [Context] App: TMARSApplication;
+
+    function Authenticate(const AUserName: string; const APassword: string; out ADisplayName: string): Boolean;
+  public
+    [GET, IsReference]
+    function GetCurrent: TMARSToken;
+
+    [POST, Consumes(TMediaType.APPLICATION_JSON)]
+    function DoLogin([BodyParam] AUser: TMyUser): TMARSToken;
+
+    [DELETE, IsReference]
+    function Logout: boolean;
   end;
 
   [Path('web')]
@@ -67,7 +89,7 @@ type
 implementation
 
 uses
-  IOUtils, StrUtils
+  IOUtils, StrUtils, MARS.Utils.JWT
 , MARS.Core.Registry, MARS.Core.Exceptions
 ;
 
@@ -115,7 +137,7 @@ end;
 { TTokenResource }
 
 function TTokenResource.Authenticate(const AUserName,
-  APassword: string): Boolean;
+  APassword: string; out ADisplayName: string): Boolean;
 var
   LFound: Boolean;
   LData: TUserData;
@@ -124,12 +146,44 @@ begin
 
   LFound := US.Retrieve(AUserName, LData);
   Result := LFound and LData.passwordHashMatches(APassword);
-
+  ADisplayName := '';
   if Result then
   begin
     Token.UserName := LData.username;
     Token.Roles := LData.roles;
+    ADisplayName := LData.displayName;
   end;
+end;
+
+function TTokenResource.DoLogin(AUser: TMyUser): TMARSToken;
+var
+  LDisplayName: string;
+begin
+  if Authenticate(AUser.username, AUser.password, LDisplayName) then
+  begin
+    Token.Claims.Values['displayName'] := LDisplayName;
+    Token.Build(
+      App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
+    );
+
+    Result := Token;
+  end
+  else
+  begin
+    Token.Clear;
+    Result := Token;
+  end;
+end;
+
+function TTokenResource.GetCurrent: TMARSToken;
+begin
+  Result := Token;
+end;
+
+function TTokenResource.Logout: boolean;
+begin
+  Token.Clear;
+  Result := True;
 end;
 
 { TWebResource }

@@ -51,6 +51,7 @@ begin
   try
     // Engine configuration
     FEngine.Parameters.LoadFromIniFile;
+    FEngine.Parameters.Values['CORS.Enabled'] := True;
 
     // Application configuration
     FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);

@@ -21,7 +21,9 @@ function doLogin(credentials, onSuccess) {
     $.ajax({
         url: `${baseURL}token`,
         type: 'POST',
-        data: credentials,
+        data: JSON.stringify(credentials),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
         success: onSuccess,
         error: function (content) { doError(content); }
     });
@@ -83,12 +85,14 @@ function updateAuthState(data) {
         $('.notLoggedIn').hide();
         $('.admin').toggle(isAdmin());
         $('.userdata.username').html(authData.UserName);
+        $('.userdata.displayName').html(authData.Claims.displayName);
         $('.userdata.isAdmin').html((isAdmin() ? 'Yes' : 'No'));
     } else {
         $('.loggedIn').hide();
         $('.notLoggedIn').show();
         $('.admin').hide();
         $('.userdata.username').html('N/A');
+        $('.userdata.displayName').html('N/A');
     }
 }
 
