@@ -64,7 +64,7 @@ type
     [Context] Token: TMARSToken;
     [Context] App: TMARSApplication;
 
-    function Authenticate(const AUserName: string; const APassword: string; out ADisplayName: string): Boolean;
+    function Authenticate(const AUserName: string; const APassword: string; out AUserData: TUserData): Boolean;
   public
     [GET, IsReference]
     function GetCurrent: TMARSToken;
@@ -137,7 +137,7 @@ end;
 { TTokenResource }
 
 function TTokenResource.Authenticate(const AUserName,
-  APassword: string; out ADisplayName: string): Boolean;
+  APassword: string; out AUserData: TUserData): Boolean;
 var
   LFound: Boolean;
   LData: TUserData;
@@ -146,22 +146,21 @@ begin
 
   LFound := US.Retrieve(AUserName, LData);
   Result := LFound and LData.passwordHashMatches(APassword);
-  ADisplayName := '';
   if Result then
   begin
     Token.UserName := LData.username;
     Token.Roles := LData.roles;
-    ADisplayName := LData.displayName;
+    AUserData := LData;
   end;
 end;
 
 function TTokenResource.DoLogin(AUser: TMyUser): TMARSToken;
 var
-  LDisplayName: string;
+  LUserData: TUserData;
 begin
-  if Authenticate(AUser.username, AUser.password, LDisplayName) then
+  if Authenticate(AUser.username, AUser.password, LUserData) then
   begin
-    Token.Claims.Values['displayName'] := LDisplayName;
+    Token.Claims.Values['displayName'] := LUserData.displayName;
     Token.Build(
       App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
     );

@@ -1,4 +1,4 @@
-let baseURL = 'http://localhost:8080/rest/default/';
+let baseURL = '/rest/default/';
 let authData = {"IsVerified": false};
 let allUsersData = [];
 
@@ -50,6 +50,19 @@ function doRetrieveAllUsers(onSuccess){
     });
 }
 
+function doRetrieveUser(username, onSuccess){
+    $.ajax({
+        url: `${baseURL}user/${username}`,
+        type: 'GET',
+        beforeSend: function (xhr) {
+            xhr.setRequestHeader('Authorization', `Bearer ${authData.Token}`);
+        },
+        success: onSuccess,
+        error: function (content) { doError(content); }
+    });
+}
+
+
 function doDeleteUser(userData, onSuccess){
     $.ajax({
         url: `${baseURL}user/${userData.username}`,
@@ -91,24 +104,39 @@ function updateAuthState(data) {
         $('.loggedIn').hide();
         $('.notLoggedIn').show();
         $('.admin').hide();
-        $('.userdata.username').html('N/A');
-        $('.userdata.displayName').html('N/A');
+        $('.userdata.username').html('');
+        $('.userdata.displayName').html('');
     }
 }
 
 function renderAllUsers(){
     $('#userList').html('');
     $.each(allUsersData, function (index, element) {
+        let lastUpdate = new Date(element.lastUpdateAt);
+        let created = new Date(element.createdAt);
         $('#userList').append(
-            `<li class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="ms-2 me-auto">
-                    <div class="fw-bold">${element.username}</div>
-                    ${element.displayName}
+            `<li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold">${index + 1}. ${element.displayName} (${element.username}) <i class="admin fas fa-users-cog ${ (element.roles || []).includes('admin') ? "" : "collapse" }"></i></div>
+                        
+                        <div class="badge bg-secondary">Created: ${created.toLocaleDateString()} ${created.toLocaleTimeString()}</div>
+                        <div class="badge bg-secondary">Updated: ${lastUpdate.toLocaleDateString()} ${lastUpdate.toLocaleTimeString()}</div>
+                    </div>
+                    
+                    <div class="">
+                        <a href="#" class="btn btn-danger deleteUserButton" username="${element.username}">Delete <i class="fas fa-trash-alt"></i></a>
+                        <a href="#" class="btn btn-secondary editUserButton" username="${element.username}">Edit <i class="fas fa-edit-alt"></i></a>
+                    </div>
+                    
                 </div>
-                <span class="badge bg-primary rounded-pill">${element.lastUpdateAt}</span>
+               
             </li>`
         );
-    })
+    });
+
+    bindUIElements();
 }
 
 function refreshUserList(){
@@ -129,7 +157,22 @@ function isLoggedIn(){
 function bindUIElements(){
     clearError();
 
-    $('#loginButton').bind('click', function(e) {
+    $('.form-signin').submit(function (e) {
+        let authCredentials = {};
+        authCredentials.username = $('#authUsername').val();
+        authCredentials.password = $('#authPassword').val();
+
+        doLogin(
+            authCredentials
+            , function(result) {
+                updateAuthState(result);
+                if (isAdmin()) { refreshUserList(); }
+                (isLoggedIn() ? clearError() : doError('Login failed'));
+            }
+        );
+    });
+
+    $('#loginButton').off('click').bind('click', function(e) {
         let authCredentials = {};
         authCredentials.username = $('#authentication.row input#authUsername').val();
         authCredentials.password = $('#authentication.row input#authPassword').val();
@@ -144,7 +187,7 @@ function bindUIElements(){
         );
     });
 
-    $('#logoutButton').bind('click', function(e) {
+    $('#logoutButton').off('click').bind('click', function(e) {
         doLogout(
             function(result) {
                 updateAuthState(result);
@@ -155,11 +198,12 @@ function bindUIElements(){
 
     // ------------------------------------------------------------------------------------------------------
 
-    $('#createUserButton').bind('click', function(e) {
+    $('#createUserButton').off('click').bind('click', function(e) {
         let userData = {};
         userData.username = $('#createUser input#username').val();
         userData.password = $('#createUser input#password').val();
         userData.displayName = $('#createUser input#displayName').val();
+        userData.roles = [$('#createUser select#role').val()];
 
         doCreateUser(
             userData
@@ -170,9 +214,9 @@ function bindUIElements(){
         );
     });
 
-    $('#deleteUserButton').bind('click', function(e) {
+    $('.deleteUserButton').off('click').bind('click', function(e) {
         let userData = {};
-        userData.username = $('#deleteUser input#username').val();
+        userData.username = $(this).attr('username');
 
         doDeleteUser(
             userData
@@ -183,7 +227,23 @@ function bindUIElements(){
         );
     });
 
-    $('#allUsersButton').bind('click', function(e) {
+    $('.editUserButton').off('click').bind('click', function(e) {
+        let userData = {};
+        userData.username = $(this).attr('username');
+        doRetrieveUser($(this).attr('username'), function(userData){
+            $('#createUser input#username').val(userData.username);
+            $('#createUser input#password').val('');
+            $('#createUser input#displayName').val(userData.displayName);
+            $('#createUser select#role').val(userData.roles);
+
+            clearError();
+            $('#createUser input#username').focus();
+        });
+
+    });
+
+
+    $('#allUsersButton').off('click').bind('click', function(e) {
         refreshUserList();
     })
 

@@ -9,115 +9,111 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous">
 </head>
 <body>
-    
+    <nav class="navbar navbar-dark bg-dark mb-3">
+
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <a href="https://github.com/andrea-magni/MARS" target="_blank"><img src="./media/MARS.png" height="40" width="40" alt=""></a> MARS-Curiosity REST library
+            </span>
+
+            <ul class="navbar-nav">
+                <li class="nav-item text-light loggedIn">
+                    <span class="userdata displayName"></span> (<span class="userdata username"></span>)
+                    <i class="admin fas fa-users-cog collapse"></i>
+                    <span class="loggedIn ml-3 collapse"><a href="#" id="logoutButton">Logout</a></span>
+                </li>
+            </ul>
+
+        </div>
+    </nav>
+
+
     <div class="container">
-        <main>
-            <h1>MARS-Curiosity AuthDemo</h1>
+        <div id="error"></div>
 
-            <div id="error"></div>
+        <form class="form-signin text-center m-auto notLoggedIn" style="max-width: 400px">
+            <img class="mb-4" src="./media/MARS.png" alt="" width="165" height="165">
+            <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
 
-            <div class="row mb-3" id="authentication">
-                <h2>Authentication</h2>
+            <label for="authUsername" class="sr-only">Email address</label>
+            <input type="text" id="authUsername" class="form-control" placeholder="Username" required="" autofocus="">
 
-                <div class="card mb-3 loggedIn" id="userInfo">
-                    <div class="card-body">
-                        <h5 class="card-title">Logged in as <span class="userdata username"></span></h5>
-                        <p class="card-text">
-                            DisplayName: <span class="userdata displayName"></span><br/>
-                            Administrative role: <span class="userdata isAdmin"></span>
-                        </p>
+            <label for="authPassword" class="sr-only">Password</label>
+            <input type="password" id="authPassword" class="form-control" placeholder="Password" required="">
 
-                        <a href="#" class="btn btn-primary btn-md" id="logoutButton">Logout <i class="fas fa-angle-double-left"></i></a>
-                    </div>
-                </div>
+            <button class="btn btn-lg btn-primary btn-block mt-3" type="submit">Sign in</button>
 
-                <div class="card mb-3 notLoggedIn" id="login">
-                    <div class="card-body">
-                        <h5 class="card-title">Login</h5>
-                        <p class="card-text">
-                            <form class="form-login">
-                                <div class="mb-3">
-                                    <input type="text" id="authUsername" class="form-control input-sm chat-input" placeholder="username" />
-                                    <div id="authUsernameHelp" class="form-text">Username to authenticate with the server</div>
-                                </div>
+            <p class="mt-5 mb-3 text-muted">Powered by <a href="https://www.embarcadero.com/products/delphi" target="_blank">Embarcadero Delphi</a> and <a href="https://github.com/andrea-magni/MARS" target="_blank">MARS-Curiosity</a></p>
+        </form>
 
-                                <div class="mb-3">
-                                    <input type="password" id="authPassword" class="form-control input-sm chat-input" placeholder="password" />
-                                    <div id="authPasswordHelp" class="form-text">Password to authenticate with the server</div>
-                                </div>
-                            </form>
-                        </p>
+        <div class="row mb-3 admin collapse" id="userManagement">
 
-                        <a href="#" class="btn btn-primary btn-md" id="loginButton">Login <i class="fas fa-angle-double-right"></i></a>
-                    </div>
+            <div class="card mb-3" id="allUsers">
+                <div class="card-body">
+                    <h5 class="card-title d-flex justify-content-between">
+                        <span>Users</span>
+                        <a href="#" class="btn btn-primary" id="allUsersButton"> <i class="fas fa-redo"></i></a>
+                    </h5>
+                    <p class="card-text">
+                        <ol class="list-group mb-3" id="userList"></ol>
+                    </p>
                 </div>
             </div>
 
-            <div class="row mb-3 admin" id="userManagement">
 
-                <h2>User management</h2>
+            <div class="card p-3" id="createUser">
 
-                <div class="card mb-3" id="allUsers">
-                    <div class="card-body">
-                        <h5 class="card-title">Users</h5>
-                        <p class="card-text">
+                <form class="needs-validation" novalidate="">
 
-                        <ol class="list-group list-group-numbered mb-3" id="userList">
-
-                        </ol>
-
-                        <a href="#" class="btn btn-primary btn-md" id="allUsersButton">Refresh <i class="fas fa-redo"></i></a>
-                        </p>
-                    </div>
-                </div>
-
-
-                <div class="card mb-3" id="createUser">
-                    <div class="card-body">
-                        <h5 class="card-title">Create new user</h5>
-                        <p class="card-text">
-                            <form class="form-createUser">
-                                <div class="mb-3">
-                                    <input type="text" id="username" class="form-control input-sm chat-input" placeholder="user123" />
-                                    <div id="usernameHelp" class="form-text">Username of the user to be created</div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="username">Username</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-user-alt"></i>&nbsp;</span>
                                 </div>
-
-                                <div class="mb-3">
-                                    <input type="text" id="displayName" class="form-control input-sm chat-input" placeholder="Name Surname" />
-                                    <div id="displayNameHelp" class="form-text">Username of the user to be created</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <input type="password" id="password" class="form-control input-sm chat-input" placeholder="password" />
-                                    <div id="passwordHelp" class="form-text">Password of the user to be created</div>
-                                </div>
-
-                                <a href="#" class="btn btn-primary btn-md" id="createUserButton">Create user <i class="fas fa-angle-double-right"></i></a>
-                            </form>
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card mb-3" id="deleteUser">
-                    <div class="card-body">
-                        <h5 class="card-title">Delete user</h5>
-                        <p class="card-text">
-                        <form class="form-deleteUser">
-                            <div class="mb-3">
-                                <input type="text" id="username" class="form-control input-sm chat-input" placeholder="user123" />
-                                <div id="usernameHelp" class="form-text">Username of the user to be deleted</div>
+                                <input type="text" class="form-control" id="username" placeholder="Username" required="">
+                                <div class="invalid-feedback" style="width: 100%;">Username is required.</div>
                             </div>
-
-                            <a href="#" class="btn btn-primary btn-md" id="deleteUserButton">Delete user <i class="fas fa-angle-double-right"></i></a>
-                        </form>
-                        </p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="displayName">Display name</label>
+                            <input type="text" class="form-control" id="displayName" placeholder="John Doe" value="" required="">
+                            <div class="invalid-feedback">Valid display name is required.</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="password">Password</label>
+                            <input type="password" class="form-control" id="password" placeholder="">
+                            <div class="invalid-feedback">Please enter a valid password.</div>
+                        </div>
                     </div>
-                </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="role">Role</label>
+
+                            <select class="form-select" aria-label="Role" id="role">
+                                <option value="" selected></option>
+                                <option value="admin">Admin</option>
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3 text-center">
+                            <a href="#" class="btn btn-danger" id="createUserButton">Create/update user <i class="fas fa-user-alt"></i></a>
+                        </div>
+                    </div>
+
+                </form>
 
             </div>
 
+            <p class="mt-5 mb-3 text-muted text-center">Powered by <a href="https://www.embarcadero.com/products/delphi" target="_blank">Embarcadero Delphi</a> and <a href="https://github.com/andrea-magni/MARS" target="_blank">MARS-Curiosity</a></p>
 
-        </main>
+        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
@@ -125,7 +121,7 @@
 
     <script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
 
-    <script src="js\index.js"></script>
+    <script src="js/index.js"></script>
 
     <script type="text/javascript">
     $(document).ready(function () {

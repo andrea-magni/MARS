@@ -161,13 +161,27 @@ begin
 end;
 
 function TUserDataStorage.Store(const AUserData: TUserData): TUserData;
+var
+  LUserData: TUserData;
+  LFound: Boolean;
 begin
+  LFound := FData.TryGetValue(AUserData.username, LUserData);
+
   Result := AUserData;
+
   Result.passwordHash := SaltAndHash(Result.password);
   Result.password := ''; // no need to store password here
-  Result.lastUpdateAt := Now;
-  if Result.createdAt <  Result.lastUpdateAt then
-    Result.createdAt := Result.lastUpdateAt;
+
+  if LFound then
+  begin
+    Result.createdAt := LUserData.createdAt;
+    Result.lastUpdateAt := Now;
+  end
+  else
+  begin
+    Result.createdAt := Now;
+    Result.lastUpdateAt := Result.createdAt;
+  end;
 
   FData.AddOrSetValue(AUserData.username, Result);
 end;
