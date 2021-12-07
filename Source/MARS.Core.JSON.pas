@@ -65,8 +65,25 @@ type
 
   TJSONRawString = type string;
 
+  TMARSJSONDateFormat = (UNIX, ISO8601);
   TMARSJSONSerializationOptions = record
     SkipEmptyValues: Boolean;
+//    joIgnoreEmptyStrings
+//    joIgnoreEmptyArrays
+    DateIsUTC: Boolean;
+    DateFormat: TMARSJSONDateFormat;
+//    joDateFormatUnix
+//    joDateFormatISO8601
+//    joDateFormatMongo
+//    joDateFormatParse
+//
+//    joBytesFormatArray
+//    joBytesFormatBase64,
+//
+//    joIndentCaseCamel
+//    joIndentCaseLower
+//    joIndentCaseUpper
+//    joIndentCasePreserve
   end;
 
 
@@ -92,9 +109,12 @@ type
   public
     function ToArrayOfRecord<T: record>(): TArray<T>;
     procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
+      const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil);
+
     procedure FromArrayOfObject<T: class>(const AArray: TArray<T>;
-      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]);
+      const AOptions: TMARSJSONSerializationOptions); overload;
+    procedure FromArrayOfObject<T: class>(const AArray: TArray<T>); overload;
     function ForEach<T: TJSONValue>(const AFunc: TFunc<T,Boolean>): Integer;
 
     {$ifndef DelphiXE6_UP}
@@ -104,8 +124,14 @@ type
     property Items[const Index: Integer]: TJSONValue read GetValue;
     {$endif}
 
-    class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>; const AFilterProc: TToJSONFilterProc = nil): TJSONArray;
-    class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>): TJSONArray;
+    class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>;
+      const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
+    class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>;
+      const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
+
+    class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>): TJSONArray; overload;
+    class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>;
+      const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
   end;
 
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
@@ -123,8 +149,9 @@ type
 {$endif}
     function ReadDoubleValue(const AName: string; const ADefault: Double = 0.0): Double;
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
-    function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0;
-      const AReturnUTC: Boolean = False): TDateTime;
+    function ReadDateTimeValue(const AName: string; const ADefault: TDateTime;
+      const AOptions: TMARSJSONSerializationOptions): TDateTime; overload;
+    function ReadDateTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime; overload;
     function ReadUnixTimeValue(const AName: string; const ADefault: TDateTime = 0.0): TDateTime;
     function ReadValue(const AName: string; const ADefault: TValue;
       const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue; overload;
@@ -139,20 +166,27 @@ type
     procedure WriteDoubleValue(const AName: string; const AValue: Double);
     procedure WriteBoolValue(const AName: string; const AValue: Boolean);
     procedure WriteDateTimeValue(const AName: string; const AValue: TDateTime;
-      const AInputIsUTC: Boolean = False);
+      const AOptions: TMARSJSONSerializationOptions); overload;
+    procedure WriteDateTimeValue(const AName: string; const AValue: TDateTime); overload;
     procedure WriteUnixTimeValue(const AName: string; const AValue: TDateTime);
-    procedure WriteTValue(const AName: string; const AValue: TValue; const AOptions: TMARSJSONSerializationOptions); overload;
+    procedure WriteTValue(const AName: string; const AValue: TValue;
+      const AOptions: TMARSJSONSerializationOptions); overload;
     procedure WriteTValue(const AName: string; const AValue: TValue); overload;
     procedure WriteArrayValue(const AName: string; const AArray: TJSONArray); overload; inline;
+    procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>;
+      const AOptions: TMARSJSONSerializationOptions); overload; inline;
     procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>); overload; inline;
+
 
     procedure FromObject(const AObject: TObject; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromObject<T: class>(const AObject: T; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure ToObject<T: class>(const AInstance: TObject; const AFilterProc: TToObjectFilterProc = nil); overload;
     procedure ToObject(const AInstance: TObject; const AObjectType: TRttiType; const AFilterProc: TToObjectFilterProc = nil); overload;
 
-    procedure FromRecord<T: record>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil); overload;
-    procedure FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil); overload;
+    procedure FromRecord<T: record>(ARecord: T;
+      const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
+    procedure FromRecord(const ARecord: TValue;
+      const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
     function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToRecord(const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
@@ -162,24 +196,38 @@ type
 {$endif}
 
     class function DictionaryToJSON(const ADictionary: TObject;
-      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; overload;
+      const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
+    class function DictionaryToJSON(const ADictionary: TObject): TJSONObject; overload;
 
     class function ObjectListToJSON(const AObjectList: TObject;
-      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONArray; overload;
+      const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
+    class function ObjectListToJSON(const AObjectList: TObject): TJSONArray; overload;
 
     class function ObjectToJSON(const AObject: TObject;
-      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TJSONObject; overload;
+      const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
+    class function ObjectToJSON(const AObject: TObject): TJSONObject; overload;
 
     class function JSONToObject<T: class, constructor>(const AJSON: TJSONObject;
-      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): T; overload;
+      const AOptions: TMARSJSONSerializationOptions): T; overload;
+    class function JSONToObject<T: class, constructor>(const AJSON: TJSONObject): T; overload;
+
 
     class function JSONToObject(const AClassType: TClass; const AJSON: TJSONObject;
-      const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): TObject; overload;
+      const AOptions: TMARSJSONSerializationOptions): TObject; overload;
+    class function JSONToObject(const AClassType: TClass; const AJSON: TJSONObject): TObject; overload;
 
     class function RecordToJSON<T: record>(ARecord: T;
+      const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
+    class function RecordToJSON<T: record>(ARecord: T;
+      const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
+
+    class function RecordToJSON(const ARecord: TValue;
+      const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
     class function RecordToJSON(const ARecord: TValue;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
+
 
     class function JSONToRecord<T: record>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
@@ -197,7 +245,9 @@ type
   function JsonArrayToIntegerArray(const AJSONArray: TJSONArray): TArray<Integer>;
 
   var DefaultMARSJSONSerializationOptions: TMARSJSONSerializationOptions = (
-    SkipEmptyValues: True
+    SkipEmptyValues: True;
+    DateIsUTC: True;
+    DateFormat: ISO8601;
   );
 
 
@@ -438,12 +488,17 @@ begin
     Result := Result + [(LElement as TJSONObject).ToRecord<T>()]
 end;
 
-class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(
-  const AArray: TArray<T>): TJSONArray;
+class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(const AArray: TArray<T>): TJSONArray;
+begin
+  Result := ArrayOfObjectToJSON<T>(AArray);
+end;
+
+class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(const AArray: TArray<T>;
+  const AOptions: TMARSJSONSerializationOptions): TJSONArray;
 begin
   Result := TJSONArray.Create;
   try
-    Result.FromArrayOfObject<T>(AArray);
+    Result.FromArrayOfObject<T>(AArray, AOptions);
   except
     Result.Free;
     raise;
@@ -453,9 +508,15 @@ end;
 class function TJSONArrayHelper.ArrayOfRecordToJSON<T>(const AArray: TArray<T>;
   const AFilterProc: TToJSONFilterProc): TJSONArray;
 begin
+  Result := ArrayOfRecordToJSON<T>(AArray, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TJSONArrayHelper.ArrayOfRecordToJSON<T>(const AArray: TArray<T>;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc): TJSONArray;
+begin
   Result := TJSONArray.Create;
   try
-    Result.FromArrayOfRecord<T>(AArray, AFilterProc);
+    Result.FromArrayOfRecord<T>(AArray, AOptions, AFilterProc);
   except
     Result.Free;
     raise;
@@ -482,8 +543,13 @@ begin
   end;
 end;
 
+procedure TJSONArrayHelper.FromArrayOfObject<T>(const AArray: TArray<T>);
+begin
+  FromArrayOfObject<T>(AArray, DefaultMARSJSONSerializationOptions);
+end;
+
 procedure TJSONArrayHelper.FromArrayOfObject<T>(const AArray: TArray<T>;
-  const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]);
+  const AOptions: TMARSJSONSerializationOptions);
 var
   LObject: T;
   LObj: TJSONObject;
@@ -497,7 +563,7 @@ begin
 end;
 
 procedure TJSONArrayHelper.FromArrayOfRecord<T>(const AArray: TArray<T>;
-  const AFilterProc: TToJSONFilterProc);
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc);
 var
   LRecord: T;
   LObj: TJSONObject;
@@ -510,7 +576,7 @@ begin
   begin
     LObj := TJSONObject.Create;
     try
-      LObj.FromRecord<T>(LRecord, AFilterProc);
+      LObj.FromRecord<T>(LRecord, AOptions, AFilterProc);
       AddElement(LObj);
     except
       LObj.Free;
@@ -572,7 +638,13 @@ end;
 
 
 class function TJSONObjectHelper.JSONToObject(const AClassType: TClass;
-  const AJSON: TJSONObject; const AOptions: TJsonOptions): TObject;
+  const AJSON: TJSONObject): TObject;
+begin
+  Result := JSONToObject(AClassType, AJSON, DefaultMARSJSONSerializationOptions);
+end;
+
+class function TJSONObjectHelper.JSONToObject(const AClassType: TClass;
+  const AJSON: TJSONObject; const AOptions: TMARSJSONSerializationOptions): TObject;
 var
   LConstructor: TRttiMethod;
   LType: TRttiType;
@@ -596,10 +668,34 @@ begin
   end;
 end;
 
-class function TJSONObjectHelper.JSONToObject<T>(const AJSON: TJSONObject;
-  const AOptions: TJsonOptions = [joDateIsUTC, joDateFormatISO8601]): T;
+class function TJSONObjectHelper.JSONToObject<T>(const AJSON: TJSONObject): T;
 begin
+  Result := JSONToObject<T>(AJSON, DefaultMARSJSONSerializationOptions);
+end;
+
+class function TJSONObjectHelper.JSONToObject<T>(const AJSON: TJSONObject;
+  const AOptions: TMARSJSONSerializationOptions): T;
+var
+  LConstructor: TRttiMethod;
+  LType: TRttiType;
+begin
+  {$IFDEF MARS_JSON_LEGACY}
   Result := TJSON.JsonToObject<T>(AJSON, AOptions);
+  {$ELSE}
+  Result := nil;
+  LType := TRttiContext.Create.GetType(TypeInfo(T));
+  LConstructor := TRTTIHelper.FindParameterLessConstructor(LType);
+  if not Assigned(LConstructor) then
+    Exit;
+
+  Result := LConstructor.Invoke((LType as TRttiInstanceType).MetaclassType, []).AsObject as T;
+  try
+    AJSON.ToObject(Result, LType);
+  except
+    Result.Free;
+    raise;
+  end;
+  {$ENDIF}
 end;
 
 class function TJSONObjectHelper.JSONToRecord(const ARecordType: TRttiType;
@@ -616,8 +712,13 @@ begin
   Result := AJSON.ToRecord<T>(AFilterProc);
 end;
 
+class function TJSONObjectHelper.ObjectListToJSON(const AObjectList: TObject): TJSONArray;
+begin
+  Result := ObjectListToJSON(AObjectList, DefaultMARSJSONSerializationOptions);
+end;
+
 class function TJSONObjectHelper.ObjectListToJSON(const AObjectList: TObject;
-  const AOptions: TJsonOptions): TJSONArray;
+  const AOptions: TMARSJSONSerializationOptions): TJSONArray;
 var
   LResult: TJSONArray;
 begin
@@ -632,8 +733,14 @@ begin
   Result := LResult;
 end;
 
+
+class function TJSONObjectHelper.ObjectToJSON(const AObject: TObject): TJSONObject;
+begin
+  Result := ObjectToJSON(AObject, DefaultMARSJSONSerializationOptions);
+end;
+
 class function TJSONObjectHelper.ObjectToJSON(const AObject: TObject;
-  const AOptions: TJsonOptions): TJSONObject;
+  const AOptions: TMARSJSONSerializationOptions): TJSONObject;
 begin
   {$IFDEF MARS_JSON_LEGACY}
   Result := TJSON.ObjectToJsonObject(AObject, AOptions);
@@ -686,12 +793,17 @@ end;
 {$endif}
 
 
+function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault: TDateTime): TDateTime;
+begin
+  Result := ReadDateTimeValue(AName, ADefault, DefaultMARSJSONSerializationOptions);
+end;
+
 function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault: TDateTime;
-  const AReturnUTC: Boolean): TDateTime;
+  const AOptions: TMARSJSONSerializationOptions): TDateTime;
 begin
   Result := ADefault;
   if Assigned(Self) then
-    Result := JSONToDate(ReadStringValue(AName), AReturnUTC, ADefault);
+    Result := JSONToDate(ReadStringValue(AName), AOptions, ADefault);
 end;
 
 function TJSONObjectHelper.ReadDoubleValue(const AName: string;
@@ -704,8 +816,13 @@ begin
     Result := LValue.AsDouble;
 end;
 
+class function TJSONObjectHelper.DictionaryToJSON(const ADictionary: TObject): TJSONObject;
+begin
+  Result := DictionaryToJSON(ADictionary, DefaultMARSJSONSerializationOptions);
+end;
+
 class function TJSONObjectHelper.DictionaryToJSON(const ADictionary: TObject;
-  const AOptions: TJsonOptions): TJSONObject;
+  const AOptions: TMARSJSONSerializationOptions): TJSONObject;
 var
   LResult: TJSONObject;
 begin
@@ -794,7 +911,9 @@ begin
   FromObject(AObject as TObject, AFilterProc);
 end;
 
-procedure TJSONObjectHelper.FromRecord(const ARecord: TValue; const AFilterProc: TToJSONFilterProc = nil);
+procedure TJSONObjectHelper.FromRecord(const ARecord: TValue;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil
+);
 
   function GetRecordFilterProc(const ARecordType: TRttiType): TToJSONFilterProc;
   var
@@ -860,9 +979,10 @@ begin
   end;
 end;
 
-procedure TJSONObjectHelper.FromRecord<T>(ARecord: T; const AFilterProc: TToJSONFilterProc = nil);
+procedure TJSONObjectHelper.FromRecord<T>(ARecord: T;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil);
 begin
-  FromRecord(TValue.From<T>(ARecord), AFilterProc);
+  FromRecord(TValue.From<T>(ARecord), AOptions, AFilterProc);
 end;
 
 {$ifdef DelphiXE6_UP}
@@ -947,9 +1067,16 @@ end;
 class function TJSONObjectHelper.RecordToJSON(const ARecord: TValue;
   const AFilterProc: TToJSONFilterProc): TJSONObject;
 begin
+  Result := RecordToJSON(ARecord, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TJSONObjectHelper.RecordToJSON(const ARecord: TValue;
+  const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToJSONFilterProc): TJSONObject;
+begin
   Result := TJSONObject.Create;
   try
-    Result.FromRecord(ARecord, AFilterProc);
+    Result.FromRecord(ARecord, AOptions, AFilterProc);
   except
     Result.Free;
     raise;
@@ -959,9 +1086,16 @@ end;
 class function TJSONObjectHelper.RecordToJSON<T>(ARecord: T;
   const AFilterProc: TToJSONFilterProc): TJSONObject;
 begin
+  Result := RecordToJSON<T>(ARecord, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TJSONObjectHelper.RecordToJSON<T>(ARecord: T;
+  const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToJSONFilterProc): TJSONObject;
+begin
   Result := TJSONObject.Create;
   try
-    Result.FromRecord<T>(ARecord, AFilterProc);
+    Result.FromRecord<T>(ARecord, AOptions, AFilterProc);
   except
     Result.Free;
     raise;
@@ -1237,7 +1371,13 @@ end;
 procedure TJSONObjectHelper.WriteArrayValue<T>(const AName: string;
   const AArray: TArray<T>);
 begin
-  WriteArrayValue(AName, TJSONArray.ArrayOfRecordToJSON<T>(AArray));
+  WriteArrayValue<T>(AName, AArray, DefaultMARSJSONSerializationOptions);
+end;
+
+procedure TJSONObjectHelper.WriteArrayValue<T>(const AName: string;
+  const AArray: TArray<T>; const AOptions: TMARSJSONSerializationOptions);
+begin
+  WriteArrayValue(AName, TJSONArray.ArrayOfRecordToJSON<T>(AArray, AOptions));
 end;
 
 procedure TJSONObjectHelper.WriteBoolValue(const AName: string;
@@ -1252,9 +1392,15 @@ begin
 end;
 
 procedure TJSONObjectHelper.WriteDateTimeValue(const AName: string;
-  const AValue: TDateTime; const AInputIsUTC: Boolean);
+  const AValue: TDateTime);
 begin
-  WriteStringValue(AName, DateToJSON(AValue, AInputIsUTC));
+  WriteDateTimeValue(AName, AValue, DefaultMARSJSONSerializationOptions);
+end;
+
+procedure TJSONObjectHelper.WriteDateTimeValue(const AName: string;
+  const AValue: TDateTime; const AOptions: TMARSJSONSerializationOptions);
+begin
+  WriteStringValue(AName, DateToJSON(AValue, AOptions));
 end;
 
 procedure TJSONObjectHelper.WriteDoubleValue(const AName: string;
