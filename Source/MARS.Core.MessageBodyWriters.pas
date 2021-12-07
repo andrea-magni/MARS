@@ -544,7 +544,7 @@ begin
       begin
         Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
           tkString, tkSet, tkWChar, tkLString, tkWString,
-          tkVariant, tkArray, tkRecord, tkMRecord, tkInt64, tkDynArray, tkUString]);
+          tkVariant, tkArray, tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}, tkInt64, tkDynArray, tkUString]);
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin

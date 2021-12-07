@@ -518,14 +518,14 @@ begin
       var LElement := AValue.GetArrayElement(LIndex);
       if LElement.IsObject then
         ObjectToYAML(LSequence, '', LElement.AsObject)
-      else if LElement.Kind in [tkRecord, tkMRecord] then
+      else if LElement.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}] then
         RecordToYAML(LSequence, '', LElement)
       else if LElement.Kind in [tkString, tkShortString, tkWString, tkUString, tkChar, tkWChar] then
         LSequence.Add(LElement.AsString); //AM TODO Numbers, Boolean, ...
     end;
   end
 
-  else if (AValue.Kind in [tkRecord, tkMRecord]) then
+  else if (AValue.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}]) then
     Result := RecordToYaml(ARoot, AKeyName, AValue)
 
   else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
@@ -613,7 +613,7 @@ begin
       begin
         Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
           tkString, tkSet, tkWChar, tkLString, tkWString,
-          tkVariant, tkArray, tkRecord, tkMRecord, tkInt64, tkDynArray, tkUString]);
+          tkVariant, tkArray, tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}, tkInt64, tkDynArray, tkUString]);
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin

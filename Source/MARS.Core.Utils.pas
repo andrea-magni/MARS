@@ -264,7 +264,7 @@ begin
     end;
     Result := '[' + Result + ']';
   end
-  else if AValue.Kind in [tkRecord, tkMRecord] then
+  else if AValue.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}] then
   begin
     LRecordType := TRttiContext.Create.GetType(AValue.TypeInfo) as TRttiRecordType;
 

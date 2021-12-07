@@ -233,7 +233,7 @@ begin
     end;
   end
 
-  else if (AValue.Kind in [tkRecord, tkMRecord]) then
+  else if (AValue.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}]) then
     Result := TJSONObject.RecordToJSON(AValue)
 
   else if (LTypeName = 'Boolean') then // before I was using TypeInfo(Boolean) but it caused Variants to match (?!), using type name now
