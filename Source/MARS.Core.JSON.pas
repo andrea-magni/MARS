@@ -1042,10 +1042,7 @@ begin
       for LIndex := 0 to LJSONArray.Count-1 do
       begin
         LJSONElement := LJSONArray.Items[LIndex];
-        if LElementType.IsRecord then
-          TJSONValueToTValue(LJSONElement, LElementType, LElement)
-        else
-          LElement := JSONToObject(LElementType.AsInstance.MetaclassType, LJSONElement as TJSONObject);
+        TJSONObject.TJSONValueToTValue(LJSONElement, LElementType, LElement);
         LArray.SetArrayElement(LIndex, LElement);
       end;
       ATValue := LArray;

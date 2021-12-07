@@ -23,13 +23,13 @@ type
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
+  end;
 
-    [ GET
-    , Path('/openapi')
-    , Produces(TMediaType.APPLICATION_JSON)
-    , Produces(TMediaType.APPLICATION_YAML)
-    // prevents the method itself being part of the OpenAPI specification
-    , MetaVisible(False)]
+  [Path('openapi'), MetaVisible(False)]
+  TOpenAPIResource = class
+  protected
+  public
+    [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function GetOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
   end;
 
@@ -45,14 +45,16 @@ uses
 
 { THelloWorldResource }
 
-function THelloWorldResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
-begin
-  Result := AOpenAPI;
-end;
-
 function THelloWorldResource.SayHelloWorld: string;
 begin
   Result := 'Hello World!';
+end;
+
+{ TOpenAPIResource }
+
+function TOpenAPIResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+begin
+  Result := AOpenAPI;
 end;
 
 initialization

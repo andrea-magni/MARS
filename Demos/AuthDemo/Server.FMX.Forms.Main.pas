@@ -1,4 +1,4 @@
-(*
+﻿(*
   Copyright 2016, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
@@ -51,7 +51,7 @@ uses
   IdSSLOpenSSL
 , MARS.Core.URL, MARS.Core.Engine
 , Server.Ignition
-{$IFDEF MSWINDOWS}, Windows, ShellAPI, NetEncoding {$ENDIF}
+{$IFDEF MSWINDOWS}, Windows, ShellAPI {$ENDIF}
 ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -67,30 +67,14 @@ begin
 end;
 
 procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
-{$IFDEF MSWINDOWS}
-const
-  OPENAPI_URL = 'http://localhost:8080/rest/default/openapi';
 var
   LSwaggerUIIndex: string;
-  LDefaultHTMLApp: array [0..MAX_PATH] of WideChar;
 begin
-  ZeroMemory(@LDefaultHTMLApp, SizeOf(LDefaultHTMLApp));
-
-  LSwaggerUIIndex := ExpandFileName('..\..\..\www\swagger-ui-3.52.5-dist\index.html');
-
-  var LErrorCode := FindExecutable(PWideChar(LSwaggerUIIndex), nil, LDefaultHTMLApp);
-  if LErrorCode < 32 then
-    raise Exception.CreateFmt('Default application to open HTML files not found [Error: %d]', [LErrorCode]);
-
-  LSwaggerUIIndex := 'file:///' + LSwaggerUIIndex.Replace('\', '/')
-    + '?openAPIURL=' + TURLEncoding.URL.Encode(OPENAPI_URL);
-
-  ShellExecute(0, nil, @LDefaultHTMLApp[0], PWideChar(LSwaggerUIIndex), nil, SW_SHOWDEFAULT);
-end;
-{$ELSE}
-begin
-end;
+{$IFDEF MSWINDOWS}
+  LSwaggerUIIndex := '..\..\..\www\swagger-ui-3.52.5-dist\index.html';
+  ShellExecute(0, nil, PWideChar(LSwaggerUIIndex), nil, nil, SW_SHOW);
 {$ENDIF}
+end;
 
 procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
 begin
