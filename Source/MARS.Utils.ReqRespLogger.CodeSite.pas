@@ -13,8 +13,10 @@ uses
   System.Classes,
   System.SysUtils,
   System.Diagnostics,
+  System.StrUtils,
   System.Rtti,
   MARS.Core.Classes,
+  MARS.Core.MediaType,
   MARS.Core.Activation,
   MARS.Core.Activation.Interfaces,
   MARS.Utils.ReqRespLogger.Interfaces,
@@ -32,14 +34,15 @@ type
     FContentEncoding: String;
     FContentType: String;
     FContentLength: String;
-    FContent: String;
     FUserAgent: String;
     FPort: Integer;
-    FRemoteAddr: String;
+    FRemoteIP: String;
     FHostName: String;
     FMethod: String;
     FQueryString: String;
     FCookies: String;
+    FQueryFields: String;
+    FContentFields: String;
   public
     constructor Create(ARequest: IMARSRequest);
   published
@@ -55,9 +58,10 @@ type
     property ContentEncoding: String read FContentEncoding;
     property ContentType: String read FContentType;
     property ContentLength: String read FContentLength;
-    property Content: String read FContent;
     property UserAgent: String read FUserAgent;
-    property RemoteAddr: String read FRemoteAddr;
+    property RemoteIP: String read FRemoteIP;
+    property QueryFields: String read FQueryFields;
+    property ContentFields: String read FContentFields;
   end;
 
   TMARSResponseLogCodeSite = class
@@ -65,12 +69,14 @@ type
     FStatusCode: Integer;
     FContentType: String;
     FContentEncoding: String;
+    FContentLength: Integer;
   public
     constructor Create(AResponse: IMARSResponse);
   published
     property StatusCode: Integer read FStatusCode;
     property ContentType: String read FContentType;
     property ContentEncoding: String read FContentEncoding;
+    property ContentLength: Integer read FContentLength;
   end;
 
   TMARSReqRespLoggerCodeSite = class(TInterfacedObject, IMARSReqRespLogger)
@@ -83,7 +89,8 @@ type
     // IMARSReqRespLogger
     procedure Clear;
     function GetLogBuffer: TValue;
-    procedure Log(const AMessage: String; const ALogEntry: TObject);
+    procedure Log(const AMessage: String; const ALogEntry: TObject); overload;
+    procedure Log(const AMsgType: Integer; const ACategory, AMessage: String; const ALogEntry: TObject); overload;
 
     class function Instance: TMARSReqRespLoggerCodeSite;
     class constructor ClassCreate;
@@ -110,14 +117,15 @@ begin
 
       LRequest := TMARSRequestLogCodeSite.Create(AR.Request);
       try
-        TMARSReqRespLoggerCodeSite.Instance.Log(
+        TMARSReqRespLoggerCodeSite.Instance.Log(csmOrange, 'Request',
           String.Join(LOGFIELD_SEPARATOR,
-            [
-             'Incoming',
-             'Engine: ' + AR.Engine.Name,
-             'Application: ' + AR.Application.Name
-            ]
-          ), LRequest
+          [
+            'Incoming',
+            'Engine: ' + AR.Engine.Name,
+            'Application: ' + AR.Application.Name,
+            'Verb: ' + AR.Request.Method,
+            'Path: ' + AR.URL.Path
+          ]), LRequest
         );
       finally
         LRequest.Free;
@@ -135,19 +143,29 @@ begin
 
       LResponse := TMARSResponseLogCodeSite.Create(AR.Response);
       try
-        TMARSReqRespLoggerCodeSite.Instance.Log(
-          string.Join(LOGFIELD_SEPARATOR
-          , [
-              'Outgoing'
-            , 'Time: ' + AR.InvocationTime.ElapsedMilliseconds.ToString + ' ms'
-            , 'Engine: ' + AR.Engine.Name
-            , 'Application: ' + AR.Application.Name
+        TMARSReqRespLoggerCodeSite.Instance.Log(csmGreen, 'Response',
+          String.Join(LOGFIELD_SEPARATOR,
+          [
+            'Outgoing',
+            'Time: ' + AR.InvocationTime.ElapsedMilliseconds.ToString + ' ms',
+            'Engine: ' + AR.Engine.Name,
+            'Application: ' + AR.Application.Name,
+            'Resource: ' + IfThen(Assigned(AR.ResourceInstance), AR.ResourceInstance.ClassName, 'Unknown'),
+            'Method: ' + IfThen(Assigned(AR.Method), AR.Method.Name, 'Unknown')
             ]
           ), LResponse
         );
       finally
         LResponse.Free;
       end;
+    end
+  );
+
+  TMARSActivation.RegisterInvokeError(
+    procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
+    begin
+      CodeSite.Category := '';
+      CodeSite.SendException(AException);
     end
   );
 end;
@@ -166,12 +184,14 @@ end;
 constructor TMARSReqRespLoggerCodeSite.Create;
 begin
   inherited Create;
-  CodeSite.SendMsg('Logger started');
+  CodeSite.Category := '';
+  CodeSite.Send(csmCheckPoint, 'Logger started');
 end;
 
 destructor TMARSReqRespLoggerCodeSite.Destroy;
 begin
-  CodeSite.SendMsg('Logger stopped');
+  CodeSite.Category := '';
+  CodeSite.Send(csmCheckPoint, 'Logger stopped');
   inherited;
 end;
 
@@ -187,9 +207,16 @@ begin
   Result := _Instance;
 end;
 
+procedure TMARSReqRespLoggerCodeSite.Log(const AMsgType: Integer; const ACategory, AMessage: String;
+  const ALogEntry: TObject);
+begin
+  CodeSite.Category := ACategory;
+  CodeSite.Send(AMsgType, AMessage, ALogEntry);
+end;
+
 procedure TMARSReqRespLoggerCodeSite.Log(const AMessage: String; const ALogEntry: TObject);
 begin
-  CodeSite.Send(AMessage, ALogEntry);
+  Log(csmInfo, '', AMessage, ALogEntry);
 end;
 
 { TMARSRequestLoggerCodeSite }
@@ -203,13 +230,17 @@ begin
   FMethod := ARequest.Method;
   FPathInfo := ARequest.RawPath;
   FQueryString := ARequest.QueryString;
-  FContent := ARequest.Content;
   FCookies := ARequest.GetHeaderParamValue('Cookie');
   FAcceptEncoding := ARequest.GetHeaderParamValue('Accept-Encoding');
   FUserAgent := ARequest.GetHeaderParamValue('User-Agent');
   FContentType := ARequest.GetHeaderParamValue('Content-Type');
   FContentEncoding := ARequest.GetHeaderParamValue('Content-Encoding');
   FContentLength := ARequest.GetHeaderParamValue('Content-Length');
+  FQueryFields := String.Join(',', ARequest.QueryFields);
+  FRemoteIP := ARequest.RemoteIP;
+  if FContentType.StartsWith(TMediaType.MULTIPART_FORM_DATA, True) or
+     FContentType.StartsWith(TMediaType.APPLICATION_FORM_URLENCODED_TYPE, True) then
+    FContentFields := String.Join(',', ARequest.ContentFields);
 end;
 
 { TMARSResponseLoggerCodeSite }
@@ -219,6 +250,7 @@ begin
   FStatusCode := AResponse.StatusCode;
   FContentEncoding := AResponse.ContentEncoding;
   FContentType := AResponse.ContentType;
+  FContentLength := AResponse.ContentLength;
 end;
 
 initialization
