@@ -65,6 +65,11 @@ type
 
   TJSONRawString = type string;
 
+  TMARSJSONSerializationOptions = record
+    SkipEmptyValues: Boolean;
+  end;
+
+
 {$ifndef DelphiXE6_UP}
   TJSONArrayEnumerator = class
   private
@@ -136,7 +141,8 @@ type
     procedure WriteDateTimeValue(const AName: string; const AValue: TDateTime;
       const AInputIsUTC: Boolean = False);
     procedure WriteUnixTimeValue(const AName: string; const AValue: TDateTime);
-    procedure WriteTValue(const AName: string; const AValue: TValue);
+    procedure WriteTValue(const AName: string; const AValue: TValue; const AOptions: TMARSJSONSerializationOptions); overload;
+    procedure WriteTValue(const AName: string; const AValue: TValue); overload;
     procedure WriteArrayValue(const AName: string; const AArray: TJSONArray); overload; inline;
     procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>); overload; inline;
 
@@ -184,10 +190,16 @@ type
     class procedure TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType; var ATValue: TValue);
   end;
 
+
   function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
   function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
   function IntegerArrayToJsonArray(const AIntegerArray: TArray<Integer>): TJSONArray;
   function JsonArrayToIntegerArray(const AJSONArray: TJSONArray): TArray<Integer>;
+
+  var DefaultMARSJSONSerializationOptions: TMARSJSONSerializationOptions = (
+    SkipEmptyValues: True
+  );
+
 
 implementation
 
@@ -1291,37 +1303,46 @@ end;
 
 procedure TJSONObjectHelper.WriteTValue(const AName: string;
   const AValue: TValue);
+begin
+  WriteTValue(AName, AValue, DefaultMARSJSONSerializationOptions);
+end;
+
+procedure TJSONObjectHelper.WriteTValue(const AName: string;
+  const AValue: TValue; const AOptions: TMARSJSONSerializationOptions);
 var
   LValue: TJSONValue;
 begin
   LValue := TValueToJSONValue(AValue);
 
-  // skip empty string
-  if Assigned(LValue) and (LValue is TJSONString) and (TJSONString(LValue).Value = '') then
+  if AOptions.SkipEmptyValues then
   begin
-    FreeAndNil(LValue);
-    Exit;
-  end;
+    // skip empty string
+    if Assigned(LValue) and (LValue is TJSONString) and (TJSONString(LValue).Value = '') then
+    begin
+      FreeAndNil(LValue);
+      Exit;
+    end;
 
-    // skip false boolean values
-  if Assigned(LValue) and (LValue is TJSONBool) and (TJSONBool(LValue).AsBoolean = false) then
-  begin
-    FreeAndNil(LValue);
-    Exit;
-  end;
+      // skip false boolean values
+    if Assigned(LValue) and (LValue is TJSONBool) and (TJSONBool(LValue).AsBoolean = false) then
+    begin
+      FreeAndNil(LValue);
+      Exit;
+    end;
 
-  // skip empty arrays
-  if Assigned(LValue) and (LValue is TJSONArray) and (TJSONArray(LValue).Count = 0) then
-  begin
-    FreeAndNil(LValue);
-    Exit;
-  end;
+    // skip empty arrays
+    if Assigned(LValue) and (LValue is TJSONArray) and (TJSONArray(LValue).Count = 0) then
+    begin
+      FreeAndNil(LValue);
+      Exit;
+    end;
 
-  // skip empty objects
-  if Assigned(LValue) and (LValue is TJSONObject) and (TJSONObject(LValue).Count = 0) then
-  begin
-    FreeAndNil(LValue);
-    Exit;
+    // skip empty objects
+    if Assigned(LValue) and (LValue is TJSONObject) and (TJSONObject(LValue).Count = 0) then
+    begin
+      FreeAndNil(LValue);
+      Exit;
+    end;
   end;
 
   AddPair(AName, LValue);
