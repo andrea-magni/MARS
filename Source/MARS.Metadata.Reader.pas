@@ -167,7 +167,8 @@ begin
     if LMethodMetadata.Produces.IsEmpty then
       LMethodMetadata.Produces := AResourceMetadata.Produces
     else if not AResourceMetadata.Produces.IsEmpty then
-      LMethodMetadata.Produces := LMethodMetadata.Produces + ',' + AResourceMetadata.Produces;
+      LMethodMetadata.Produces := SmartConcat([LMethodMetadata.Produces, AResourceMetadata.Produces]);
+    LMethodMetadata.Produces := SmartConcat(LMethodMetadata.Produces.Split([',']).RemoveDuplicates, ',');
 
     AMethod.ForEachAttribute<ConsumesAttribute>(
       procedure (Attribute: ConsumesAttribute)
@@ -178,8 +179,8 @@ begin
     if LMethodMetadata.Consumes.IsEmpty then
       LMethodMetadata.Consumes := AResourceMetadata.Consumes
     else if not AResourceMetadata.Consumes.IsEmpty then
-      LMethodMetadata.Consumes := LMethodMetadata.Consumes + ',' + AResourceMetadata.Consumes;
-
+      LMethodMetadata.Consumes := SmartConcat([LMethodMetadata.Consumes, AResourceMetadata.Consumes]);
+    LMethodMetadata.Consumes := SmartConcat(LMethodMetadata.Consumes.Split([',']).RemoveDuplicates, ',');
 
      AMethod.ForEachAttribute<AuthorizationAttribute>(
       procedure (Attribute: AuthorizationAttribute)
@@ -279,10 +280,11 @@ begin
     LResourceType.ForEachAttribute<ProducesAttribute>(
       procedure (Attribute: ProducesAttribute)
       begin
-        LResourceMetadata.Produces := SmartConcat([LResourceMetadata.Produces, Attribute.Value]);
+        LResourceMetadata.Produces := SmartConcat([LResourceMetadata.Produces, Attribute.Value], ',');
       end
     , True
     );
+    LResourceMetadata.Produces := SmartConcat(LResourceMetadata.Produces.Split([',']).RemoveDuplicates, ',');
 
     LResourceType.ForEachAttribute<ConsumesAttribute>(
       procedure (Attribute: ConsumesAttribute)
@@ -291,6 +293,7 @@ begin
       end
     , True
     );
+    LResourceMetadata.Consumes := SmartConcat(LResourceMetadata.Consumes.Split([',']).RemoveDuplicates, ',');
 
     LResourceType.ForEachAttribute<AuthorizationAttribute>(
       procedure (Attribute: AuthorizationAttribute)

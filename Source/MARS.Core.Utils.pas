@@ -15,6 +15,10 @@ uses
 ;
 
 type
+  TStringArrayHelper = record helper for TArray<string>
+    function RemoveDuplicates: TArray<string>;
+  end;
+
   TFormParamFile = record
     FieldName: string;
     FileName: string;
@@ -706,6 +710,23 @@ begin
       end;
     end;
     // no exceptions allowed outside here
+  end;
+end;
+
+{ TStringArrayHelper }
+
+function TStringArrayHelper.RemoveDuplicates: TArray<string>;
+var
+  LStringList: TStringList;
+begin
+  LStringList := TStringList.Create;
+  try
+    LStringList.Sorted := True;
+    LStringList.Duplicates := dupIgnore;
+    LStringList.AddStrings(Self);
+    Result := LStringList.ToStringArray;
+  finally
+    LStringList.Free;
   end;
 end;
 
