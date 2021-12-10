@@ -381,15 +381,17 @@ class function TMARSYAML.RecordToYAML(const ARoot: TYamlNode; const AName: strin
     function GetRecordFilterProc(const ARecordType: TRttiType): TToYAMLFilterProc;
     var
       LMethod: TRttiMethod;
+      LRecord: TValue;
     begin
       Result := nil;
+      LRecord := ARecord;
       // looking for TMyRecord.ToYAMLFilter(const AMember: TRttiMember; const AYAML: TYamlNode): Boolean;
       LMethod := ARecordType.FindMethodFunc<TRttiMember, TYamlNode, Boolean>('ToYAMLFilter');
       if Assigned(LMethod) then
         Result :=
           procedure (const AMember: TRttiMember; const AValue: TValue; const AYAML: TYamlNode; var AAccept: Boolean)
           begin
-            AAccept := LMethod.Invoke(ARecord, [AMember, TValue.From<TYamlNode>(AYAML)]).AsBoolean;
+            AAccept := LMethod.Invoke(LRecord, [AMember, TValue.From<TYamlNode>(AYAML)]).AsBoolean;
           end;
     end;
 
@@ -487,6 +489,7 @@ var
   LString: string;
   LIndex: Integer;
   LSequence: TYamlNode;
+  LElement: TValue;
 begin
   Result := False;
   LTypeName := string(AValue.TypeInfo^.Name);
@@ -515,7 +518,7 @@ begin
 
     for LIndex := 0 to AValue.GetArrayLength-1 do
     begin
-      var LElement := AValue.GetArrayElement(LIndex);
+      LElement := AValue.GetArrayElement(LIndex);
       if LElement.IsObject then
         ObjectToYAML(LSequence, '', LElement.AsObject)
       else if LElement.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}] then

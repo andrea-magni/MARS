@@ -81,7 +81,7 @@ end;
 
 class function TOpenAPIHelper.BuildFrom(
   const AActivation: IMARSActivation): TOpenAPI;
-begin
+ begin
   Result := BuildFrom(AActivation.Engine, AActivation.Application);
 end;
 
@@ -303,6 +303,8 @@ var
   LProperty: TSchema;
   LMediaType: string;
   LMetAuthorization: string;
+  LHasFormParams: Boolean;
+  response: TResponse;
 begin
   LMethodSummary := StringFallback([AMet.Summary, AMet.Description, AMet.Name]);
 
@@ -341,7 +343,7 @@ begin
       if LMediaType = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
       begin
         LContent.schema.SetType('object');
-        var LHasFormParams := False;
+        LHasFormParams := False;
         for LParamMD in AMet.ParametersByKind('FormParam') do
         begin
           LProperty := LContent.schema.GetProperty(LParamMD.Name);
@@ -375,7 +377,7 @@ begin
     end;
   end;
 
-  var response := AOperation.AddResponse('200');
+  response := AOperation.AddResponse('200');
   response.description := 'Successful response';
   for LMediaType in AMet.Produces.Split([',']) do
   begin

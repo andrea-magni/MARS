@@ -918,15 +918,17 @@ procedure TJSONObjectHelper.FromRecord(const ARecord: TValue;
   function GetRecordFilterProc(const ARecordType: TRttiType): TToJSONFilterProc;
   var
     LMethod: TRttiMethod;
+    LRecord: TValue;
   begin
     Result := nil;
+    LRecord := ARecord;
     // looking for TMyRecord.ToJSONFilter(const AMember: TRttiMember; const AObj: TJSONObject): Boolean;
     LMethod := ARecordType.FindMethodFunc<TRttiMember, TJSONObject, Boolean>('ToJSONFilter');
     if Assigned(LMethod) then
       Result :=
         procedure (const AMember: TRttiMember; const AValue: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean)
         begin
-          AAccept := LMethod.Invoke(ARecord, [AMember, AJSONObject]).AsBoolean;
+          AAccept := LMethod.Invoke(LRecord, [AMember, AJSONObject]).AsBoolean;
         end;
   end;
 

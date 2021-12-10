@@ -158,9 +158,10 @@ end;
 { TMARSApplicationDictionary }
 
 function TMARSApplicationDictionary.AllBasePaths: TArray<string>;
+var LApplication: TMARSApplication;
 begin
   Result := [];
-  for var LApplication in Values.ToArray do
+  for LApplication in Values.ToArray do
     Result := Result + [LApplication.BasePath];
 end;
 
