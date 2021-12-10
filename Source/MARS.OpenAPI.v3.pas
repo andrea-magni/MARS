@@ -347,8 +347,11 @@ end;
 
 function TOperation.AddResponse(const AStatusCode: string): TResponse;
 begin
-  Result := TResponse.Create;
-  responses.Add(AStatusCode, Result);
+  if not responses.TryGetValue(AStatusCode, Result) then
+  begin
+    Result := TResponse.Create;
+    responses.Add(AStatusCode, Result);
+  end;
 end;
 
 procedure TOperation.AddSecurityRequirement(const AName: string; const ARoles: TArray<string>);
@@ -494,8 +497,11 @@ end;
 
 function TResponse.AddContent(const AMediaType: string): TMediaTypeObj;
 begin
-  Result := TMediaTypeObj.Create;
-  content.Add(AMediaType, Result);
+  if not content.TryGetValue(AMediaType, Result) then
+  begin
+    Result := TMediaTypeObj.Create;
+    content.Add(AMediaType, Result);
+  end;
 end;
 
 constructor TResponse.Create;
