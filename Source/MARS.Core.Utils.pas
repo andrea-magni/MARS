@@ -248,7 +248,12 @@ begin
     else if TryStrToBool(AString, LValueBool) then
       Result := LValueBool
     else if (AString.CountChar('-') >= 2) and Integer.TryParse(AString.SubString(0, 4), LDummy)
+{$IFDEF MARS_JSON_LEGACY}
+      and TryISO8601ToDate(AString.DeQuotedString('"'), LValueDateTime, joDateIsUTC in AOptions)
+{$ELSE}
       and TryISO8601ToDate(AString.DeQuotedString('"'), LValueDateTime, AOptions.DateIsUTC)
+{$ENDIF}
+
     then
       Result := LValueDateTime
     else
@@ -370,7 +375,11 @@ function DateToJSON(const ADate: TDateTime; const AOptions: TMARSJSONSerializati
 begin
   Result := '';
   if ADate <> 0 then
+{$IFDEF MARS_JSON_LEGACY}
+    Result := DateToISO8601(ADate, joDateIsUTC in AOptions);
+{$ELSE}
     Result := DateToISO8601(ADate, AOptions.DateIsUTC);
+{$ENDIF}
 end;
 
 function JSONToDate(const ADate: string; const ADefault: TDateTime = 0.0): TDateTime;
@@ -382,7 +391,12 @@ function JSONToDate(const ADate: string; const AOptions: TMARSJSONSerializationO
 begin
   Result := ADefault;
   if ADate<>'' then
+{$IFDEF MARS_JSON_LEGACY}
+    Result := ISO8601ToDate(ADate, joDateIsUTC in AOptions);
+{$ELSE}
     Result := ISO8601ToDate(ADate, AOptions.DateIsUTC);
+{$ENDIF}
+
 end;
 
 {$ifndef DelphiXE6_UP}

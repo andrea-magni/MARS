@@ -66,6 +66,10 @@ type
   TJSONRawString = type string;
 
   TMARSJSONDateFormat = (UNIX, ISO8601);
+
+  {$IFDEF MARS_JSON_LEGACY}
+  TMARSJSONSerializationOptions = TJsonOptions;
+  {$ELSE}
   TMARSJSONSerializationOptions = record
     SkipEmptyValues: Boolean;
 //    joIgnoreEmptyStrings
@@ -85,7 +89,7 @@ type
 //    joIndentCaseUpper
 //    joIndentCasePreserve
   end;
-
+  {$ENDIF}
 
 {$ifndef DelphiXE6_UP}
   TJSONArrayEnumerator = class
@@ -244,12 +248,16 @@ type
   function IntegerArrayToJsonArray(const AIntegerArray: TArray<Integer>): TJSONArray;
   function JsonArrayToIntegerArray(const AJSONArray: TJSONArray): TArray<Integer>;
 
+
+  {$IFDEF MARS_JSON_LEGACY}
+  var DefaultMARSJSONSerializationOptions: TJSONOptions = [joDateIsUTC, joDateFormatISO8601, joBytesFormatArray, joIndentCaseCamel];
+  {$ELSE}
   var DefaultMARSJSONSerializationOptions: TMARSJSONSerializationOptions = (
     SkipEmptyValues: True;
     DateIsUTC: True;
     DateFormat: ISO8601;
   );
-
+  {$ENDIF}
 
 implementation
 
@@ -1462,6 +1470,7 @@ var
 begin
   LValue := TValueToJSONValue(AValue);
 
+{$IFNDEF MARS_JSON_LEGACY}
   if AOptions.SkipEmptyValues then
   begin
     // skip empty string
@@ -1492,6 +1501,7 @@ begin
       Exit;
     end;
   end;
+{$ENDIF}
 
   AddPair(AName, LValue);
 end;
