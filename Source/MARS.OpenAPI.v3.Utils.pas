@@ -304,7 +304,7 @@ var
   LMediaType: string;
   LMetAuthorization: string;
   LHasFormParams: Boolean;
-  response: TResponse;
+  LResponse: TResponse;
 begin
   LMethodSummary := StringFallback([AMet.Summary, AMet.Description, AMet.Name]);
 
@@ -313,7 +313,6 @@ begin
   AOperation.description := AMet.Description;
   AOperation.tags := [ARes.Path];
 
-  // PARAMETERS
   AMet.ForEachParameter(
     procedure (AParam: TMARSRequestParamMetadata)
     var
@@ -327,8 +326,7 @@ begin
         LParam.schema.SetType(AParam.DataTypeRttiType, Self);
         LParam.required := AParam.Required;
       end;
-    end
-  );
+    end);
 
   // REQUEST BODY
   if AMet.Consumes <> '' then
@@ -377,15 +375,15 @@ begin
     end;
   end;
 
-  response := AOperation.AddResponse('200');
-  response.description := 'Successful response';
+  LResponse := AOperation.AddResponse('200');
+  LResponse.description := 'Successful response';
   for LMediaType in AMet.Produces.Split([',']) do
   begin
-    response.AddContent(LMediaType)
+    LResponse.AddContent(LMediaType)
       .schema.SetType(AMet.DataTypeRttiType, Self)
   end;
-  if response.content.Count = 0 then
-    response.AddContent('*/*')
+  if LResponse.content.Count = 0 then
+    LResponse.AddContent('*/*')
         .schema.SetType(AMet.DataTypeRttiType, Self);
 
   AOperation.AddResponse('500').description := 'Internal server error';

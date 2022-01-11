@@ -259,6 +259,7 @@ begin
   inherited Create(AParent);
   if Assigned(Application) then
     Application.Resources.Add(Self);
+
   FMethods := TMARSMetadataList.Create;
 end;
 

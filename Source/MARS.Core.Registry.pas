@@ -45,6 +45,8 @@ type
 
 implementation
 
+uses MARS.Core.Attributes;
+
 {$ifdef DelphiXE}
 class function TObjectHelper.QualifiedClassName: string;
 var
@@ -78,8 +80,18 @@ end;
 
 function TMARSResourceRegistry.RegisterResource(const AClass: TClass;
   const AConstructorFunc: TMARSConstructorFunc): TMARSConstructorInfo;
+var
+  LPath: string;
 begin
-  Result := TMARSConstructorInfo.Create(AClass, AConstructorFunc);
+  LPath := '';
+  TRttiContext.Create.GetType(AClass).HasAttribute<PathAttribute>(
+    procedure (APathAttr: PathAttribute)
+    begin
+      LPath := APathAttr.Value;
+    end
+  , True
+  );
+  Result := TMARSConstructorInfo.Create(AClass, AConstructorFunc, LPath);
   Self.Add(AClass.QualifiedClassName.ToLower, Result);
 end;
 

@@ -8,8 +8,8 @@ unit MARS.Metadata.Reader;
 interface
 
 uses
-    Classes, SysUtils, Rtti, TypInfo
-  , MARS.Metadata, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry.Utils
+  Classes, SysUtils, Rtti, TypInfo
+, MARS.Metadata, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry.Utils
 ;
 
 type
@@ -40,11 +40,8 @@ type
 implementation
 
 uses
-    MARS.Core.Utils, MARS.Core.URL
-  , MARS.Rtti.Utils
-  , MARS.Core.Attributes
-  , MARS.Core.Exceptions
-  , MARS.Metadata.Attributes
+  MARS.Core.Utils, MARS.Core.URL, MARS.Rtti.Utils, MARS.Core.Attributes
+, MARS.Core.Exceptions, MARS.Metadata.Attributes
 ;
 
 
@@ -109,40 +106,17 @@ var
   LParameters: TArray<TRttiParameter>;
   LParameter: TRttiParameter;
   LPathFullPath: string;
+  LResPathParams: TArray<string>;
+  LResPathParam: string;
+  LResPathParamMetadata: TMARSRequestParamMetadata;
 begin
   LMethodMetadata := TMARSMethodMetadata.Create(AResourceMetadata);
   try
     LMethodMetadata.Name := AMethod.Name;
-    AMethod.HasAttribute<PathAttribute>(
-      procedure (Attribute: PathAttribute)
-      begin
-        LMethodMetadata.Path := Attribute.Value;
-      end
-    );
-
-    LMethodMetadata.Summary := '';
-    AMethod.HasAttribute<MetaSummaryAttribute>(
-      procedure (Attribute: MetaSummaryAttribute)
-      begin
-        LMethodMetadata.Summary := Attribute.Text;
-      end
-    );
-
-    LMethodMetadata.Description := '';
-    AMethod.HasAttribute<MetaDescriptionAttribute>(
-      procedure (Attribute: MetaDescriptionAttribute)
-      begin
-        LMethodMetadata.Description := Attribute.Text;
-      end
-    );
-
-    LMethodMetadata.Visible := True;
-    AMethod.HasAttribute<MetaVisibleAttribute>(
-      procedure (Attribute: MetaVisibleAttribute)
-      begin
-        LMethodMetadata.Visible := Attribute.Value;
-      end
-    );
+    LMethodMetadata.Path := PathAttribute.RetrieveValue(AMethod);
+    LMethodMetadata.Summary := MetaSummaryAttribute.RetrieveText(AMethod);
+    LMethodMetadata.Description := MetaDescriptionAttribute.RetrieveText(AMethod);
+    LMethodMetadata.Visible := MetaVisibleAttribute.RetrieveValue(AMethod, True);
 
     LMethodMetadata.DataType := '';
     if (AMethod.MethodKind in [mkFunction, mkClassFunction]) then
@@ -155,15 +129,13 @@ begin
       procedure (Attribute: HttpMethodAttribute)
       begin
         LMethodMetadata.HttpMethod := SmartConcat([LMethodMetadata.HttpMethod, Attribute.HttpMethodName]);
-      end
-    );
+      end);
 
     AMethod.ForEachAttribute<ProducesAttribute>(
       procedure (Attribute: ProducesAttribute)
       begin
         LMethodMetadata.Produces := SmartConcat([LMethodMetadata.Produces, Attribute.Value]);
-      end
-    );
+      end);
     if LMethodMetadata.Produces.IsEmpty then
       LMethodMetadata.Produces := AResourceMetadata.Produces
     else if not AResourceMetadata.Produces.IsEmpty then
@@ -174,8 +146,7 @@ begin
       procedure (Attribute: ConsumesAttribute)
       begin
         LMethodMetadata.Consumes := SmartConcat([LMethodMetadata.Consumes, Attribute.Value]);
-      end
-    );
+      end);
     if LMethodMetadata.Consumes.IsEmpty then
       LMethodMetadata.Consumes := AResourceMetadata.Consumes
     else if not AResourceMetadata.Consumes.IsEmpty then
@@ -186,9 +157,29 @@ begin
       procedure (Attribute: AuthorizationAttribute)
       begin
         LMethodMetadata.Authorization :=  SmartConcat([LMethodMetadata.Authorization, Attribute.ToString]);
-      end
-    );
+      end);
 
+    // Path params due to resource URL prototype
+    LResPathParams := TMARSURL.ExtractPathParams(AResourceMetadata.Path);
+    for LResPathParam in LResPathParams do
+    begin
+      LResPathParamMetadata := TMARSRequestParamMetadata.Create(LMethodMetadata);
+      try
+//        LResPathParamMetadata.Summary := '';
+//        LResPathParamMetadata.Description := '';
+        LResPathParamMetadata.Kind := 'PathParam';
+        LResPathParamMetadata.SwaggerKind := 'path';
+        LResPathParamMetadata.Name := LResPathParam;
+        LResPathParamMetadata.DataType := 'string';
+        LResPathParamMetadata.DataTypeRttiType := TRttiContext.Create.GetType(TypeInfo(string));
+        LResPathParamMetadata.Required := true;
+      except
+        LResPathParamMetadata.Free;
+        raise;
+      end;
+    end;
+
+    // params due to method's parameters (annotated with attributes)
     LParameters := AMethod.GetParameters;
     for LParameter in LParameters do
       ReadParameter(AResourceMetadata, LMethodMetadata, LParameter, AMethod);
@@ -258,7 +249,7 @@ begin
 
   LResourceMetadata := TMARSResourceMetadata.Create(AApplicationMetadata);
   try
-    LResourceMetadata.Path := AResourcePath;
+    LResourceMetadata.Path := AResourceInfo.Path;
     LResourceMetadata.Name := LResourceType.Name;
 
     LResourceMetadata.Description := '';
@@ -266,24 +257,21 @@ begin
       procedure (Attribute: MetaDescriptionAttribute)
       begin
         LResourceMetadata.Description := Attribute.Text;
-      end
-    );
+      end);
 
     LResourceMetadata.Visible := True;
     LResourceType.HasAttribute<MetaVisibleAttribute>(
       procedure (Attribute: MetaVisibleAttribute)
       begin
         LResourceMetadata.Visible := Attribute.Value;
-      end
-    );
+      end);
 
     LResourceType.ForEachAttribute<ProducesAttribute>(
       procedure (Attribute: ProducesAttribute)
       begin
         LResourceMetadata.Produces := SmartConcat([LResourceMetadata.Produces, Attribute.Value], ',');
       end
-    , True
-    );
+    , True);
     LResourceMetadata.Produces := SmartConcat(LResourceMetadata.Produces.Split([',']).RemoveDuplicates, ',');
 
     LResourceType.ForEachAttribute<ConsumesAttribute>(
@@ -291,8 +279,7 @@ begin
       begin
         LResourceMetadata.Consumes := SmartConcat([LResourceMetadata.Consumes, Attribute.Value]);
       end
-    , True
-    );
+    , True);
     LResourceMetadata.Consumes := SmartConcat(LResourceMetadata.Consumes.Split([',']).RemoveDuplicates, ',');
 
     LResourceType.ForEachAttribute<AuthorizationAttribute>(
@@ -300,17 +287,14 @@ begin
       begin
         LResourceMetadata.Authorization := SmartConcat([LResourceMetadata.Authorization, Attribute.ToString]);
       end
-    , True
-    );
+    , True);
 
     LResourceType.ForEachMethodWithAttribute<HttpMethodAttribute>(
       function (AMethod: TRttiMethod; AHttpMethodAttribute: HttpMethodAttribute): Boolean
       begin
         Result := True;
-
         ReadMethod(LResourceMetadata, AMethod);
-      end
-    );
+      end);
   except
     LResourceMetadata.Free;
     raise;

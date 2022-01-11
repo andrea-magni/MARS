@@ -26,6 +26,7 @@ type
   public
     constructor Create(const AValue: string);
     property Value: string read FValue write FValue;
+    class function RetrieveValue(const ARttiObject: TRttiObject; const ADefault: string = ''): string;
   end;
 
   HttpMethodAttribute = class(MARSAttribute)
@@ -337,6 +338,20 @@ constructor PathAttribute.Create(const AValue: string);
 begin
   inherited Create;
   FValue := AValue;
+end;
+
+class function PathAttribute.RetrieveValue(const ARttiObject: TRttiObject;
+  const ADefault: string): string;
+var
+  LResult: string;
+begin
+  LResult := ADefault;
+  ARttiObject.HasAttribute<PathAttribute>(
+    procedure (Attribute: PathAttribute)
+    begin
+      LResult := Attribute.Value;
+    end);
+  Result := LResult;
 end;
 
 { ConsumesAttribute }
