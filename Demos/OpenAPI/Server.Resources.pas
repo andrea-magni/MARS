@@ -11,7 +11,7 @@ uses
   SysUtils, Classes
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON, MARS.Core.Response
 , MARS.Core.URL
-//, MARS.Core.Token
+, MARS.Core.Token
 , MARS.Core.Token.Resource
 , Custom.Types
 , MARS.Metadata.Attributes
@@ -19,11 +19,15 @@ uses
 ;
 
 type
-  [Path('helloworld')]
+  [Path('helloworld/{DB}'), Produces(TMediaType.TEXT_PLAIN)]
   THelloWorldResource = class
   private
   protected
   public
+    [GET, Path('/hito/{name}'), Produces(TMediaType.TEXT_PLAIN), Produces(TMediaType.APPLICATION_YAML), Produces(TMediaType.APPLICATION_JSON)]
+    function SayHelloWorldTo([PathParam] name: string): string;
+
+
     [GET, Produces(TMediaType.TEXT_PLAIN), Produces(TMediaType.APPLICATION_YAML)]
     function SayHelloWorld: string;
 
@@ -76,6 +80,12 @@ type
 
   [Path('token')]
   TTokenResource = class(TMARSTokenResource)
+  public
+    [POST, IsReference]
+    function DoLogin(
+      [FormParam('username')] AUserName: string;
+      [FormParam('password')] APassword: string;
+      [FormParam('iduser')] AIdSoftwareEsterno: string ): TMARSToken;
   end;
 
 implementation
@@ -153,6 +163,11 @@ begin
   Result := 'Hello World!';
 end;
 
+function THelloWorldResource.SayHelloWorldTo(name: string): string;
+begin
+  Result := 'Hello, ' + name + '.';
+end;
+
 { TStoreResource }
 
 function TStoreResource.TestOne: string;
@@ -163,6 +178,14 @@ end;
 function TStoreResource.TestTwo: string;
 begin
   Result := 'Two';
+end;
+
+{ TTokenResource }
+
+function TTokenResource.DoLogin(AUserName, APassword,
+  AIdSoftwareEsterno: string): TMARSToken;
+begin
+  Result := inherited DoLogin(AUserName, APassword);
 end;
 
 initialization

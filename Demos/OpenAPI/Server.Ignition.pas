@@ -31,18 +31,17 @@ type
 implementation
 
 uses
-    MARS.Core.Activation, MARS.Core.Activation.Interfaces
-  , MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
-  , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
-  , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
-  , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
-  {$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option {$ENDIF}
-  {$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
-  , Server.Resources
-
-  , MARS.YAML.ReadersAndWriters
-  , MARS.OpenAPI.v3.InjectionService
-  ;
+  MARS.Core.Activation, MARS.Core.Activation.Interfaces
+, MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
+, MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
+, MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
+{$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option {$ENDIF}
+{$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
+{$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
+, MARS.OpenAPI.v3.InjectionService
+, Server.Resources
+;
 
 { TServerEngine }
 
@@ -54,7 +53,7 @@ begin
     FEngine.Parameters.LoadFromIniFile;
 
     // Application configuration
-    FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*', 'MARS.Metadata.*']);
+    FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
 {$REGION 'OnGetApplication example'}
 (*
     FEngine.OnGetApplication :=
@@ -92,20 +91,22 @@ begin
       ): Boolean
       begin
         Result := True;
-{
+
         // skip favicon requests (browser)
         if SameText(AURL.Document, 'favicon.ico') then
         begin
           Result := False;
           Handled := True;
         end;
-}
 
-        // Handle CORS and PreFlight
-        if SameText(ARequest.Method, 'OPTIONS') then
+        if FEngine.IsCORSEnabled then
         begin
-          Handled := True;
-          Result := False;
+          // Handle CORS and PreFlight
+          if SameText(ARequest.Method, 'OPTIONS') then
+          begin
+            Handled := True;
+            Result := False;
+          end;
         end;
 
       end;

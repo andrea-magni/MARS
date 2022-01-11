@@ -55,7 +55,7 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils, Web.HttpApp, IOUtils, Windows, ShellAPI
+  StrUtils, Web.HttpApp, IOUtils, Windows, ShellAPI, NetEncoding
 , MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
 , MARS.Core.Registry.Utils, MARS.Core.Utils
 , Server.Ignition
@@ -116,9 +116,9 @@ begin
                 LResourceItem := ATreeview.Items.AddChild(LApplicationItem, AInfo.TypeTClass.ClassName);
 
                 if LApplicationHttpPath <> '' then
-                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpPath + AName);
+                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpPath + AInfo.Path);
                 if LApplicationHttpsPath <> '' then
-                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpsPath + AName);
+                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpsPath + AInfo.Path);
               end
             );
           end
@@ -156,16 +156,29 @@ begin
 end;
 
 procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
+const
+  OPENAPI_URL = 'http://localhost:8080/rest/default/openapi';
 var
   LSwaggerUIIndex: string;
+  LDefaultHTMLApp: array [0..MAX_PATH] of WideChar;
 begin
-  LSwaggerUIIndex := '..\..\..\www\swagger-ui-3.52.5-dist\index.html';
-  ShellExecute(0, nil, PWideChar(LSwaggerUIIndex), nil, nil, SW_SHOW);
+  ZeroMemory(@LDefaultHTMLApp, SizeOf(LDefaultHTMLApp));
+
+  LSwaggerUIIndex := ExpandFileName('..\..\..\www\swagger-ui-3.52.5-dist\index.html');
+
+  var LErrorCode := FindExecutable(PWideChar(LSwaggerUIIndex), nil, LDefaultHTMLApp);
+  if LErrorCode < 32 then
+    raise Exception.CreateFmt('Default application to open HTML files not found [Error: %d]', [LErrorCode]);
+
+  LSwaggerUIIndex := 'file:///' + LSwaggerUIIndex.Replace('\', '/')
+    + '?openAPIURL=' + TURLEncoding.URL.Encode(OPENAPI_URL);
+
+  ShellExecute(0, nil, @LDefaultHTMLApp[0], PWideChar(LSwaggerUIIndex), nil, SW_SHOWDEFAULT);
 end;
 
 procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
 begin
-  OPenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
+  OpenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);

@@ -116,9 +116,9 @@ begin
                 LResourceItem := ATreeview.Items.AddChild(LApplicationItem, AInfo.TypeTClass.ClassName);
 
                 if LApplicationHttpPath <> '' then
-                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpPath + AName);
+                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpPath + AInfo.Path);
                 if LApplicationHttpsPath <> '' then
-                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpsPath + AName);
+                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpsPath + AInfo.Path);
               end
             );
           end
