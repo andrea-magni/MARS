@@ -58,6 +58,6 @@ begin
 end;
 
 initialization
-  TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
-  TMARSResourceRegistry.Instance.RegisterResource<TTokenResource>;
+  TMARSResourceRegistry.Instance.RegisterResources([THelloWorldResource, TTokenResource, TOpenAPIResource]);
+
 end.
