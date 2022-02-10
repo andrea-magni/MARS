@@ -32,12 +32,9 @@ type
 implementation
 
 uses
-    MARS.Core.Utils
-  , MARS.Core.MessageBodyWriters
-  , MARS.Metadata
-  , MARS.Metadata.JSON
-  , MARS.Metadata.Reader
-  ;
+  MARS.Core.Utils, MARS.Core.MessageBodyWriters, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Metadata, MARS.Metadata.JSON, MARS.Metadata.Reader
+;
 
 { TMARSMetadataJSONWriter }
 

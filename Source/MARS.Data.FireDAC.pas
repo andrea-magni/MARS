@@ -80,6 +80,8 @@ type
     property ApplyUpdatesRes: TMARSFDApplyUpdatesRes read FApplyUpdatesRes;
   end;
 
+  TFDConnectionClass = class of TFDConnection;
+
   TMARSFireDAC = class
   private
     FConnectionDefName: string;
@@ -92,6 +94,7 @@ type
     function GetConnection: TFDConnection; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
     class var FAfterCreateConnection: TProc<TFDConnection>;
+    class var FCustomFDConnectionClass: TFDConnectionClass;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
 
@@ -155,6 +158,7 @@ type
       const ASliceName: string = ''): TArray<string>;
     class procedure CloseConnectionDefs(const AConnectionDefNames: TArray<string>);
     class function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
+    class function GetFDConnectionClass: TFDConnectionClass;
 
     class constructor CreateClass;
     class procedure AddContextValueProvider(const AContextValueProviderProc: TContextValueProviderProc);
@@ -297,7 +301,7 @@ end;
 
 class function TMARSFireDAC.CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
 begin
-  Result := TFDConnection.Create(nil);
+  Result := GetFDConnectionClass.Create(nil);
   try
     Result.ConnectionDefName := AConnectionDefName;
 
@@ -447,6 +451,7 @@ class constructor TMARSFireDAC.CreateClass;
 begin
   FContextValueProviders := [];
   FAfterCreateConnection := nil;
+  FCustomFDConnectionClass := nil;
 end;
 
 function TMARSFireDAC.CreateCommand(const ASQL: string;
@@ -595,6 +600,13 @@ begin
   else // last chance, custom injection
     for LCustomProvider in FContextValueProviders do
       LCustomProvider(AActivation, AName, ADesiredType, Result);
+end;
+
+class function TMARSFireDAC.GetFDConnectionClass: TFDConnectionClass;
+begin
+  Result := TFDConnection;
+  if Assigned(FCustomFDConnectionClass) then
+    Result := FCustomFDConnectionClass;
 end;
 
 procedure TMARSFireDAC.InjectMacroAndParamValues(

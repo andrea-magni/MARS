@@ -73,7 +73,7 @@ end;
 
 procedure TRemoteData.GetCategories(const AOnSuccess: TJSONArrayProc);
 begin
-  CategoriesResource.GETAsync(
+  CategoriesResource.GETAsync(nil,
     procedure (AResource: TMARSClientCustomResource)
     var
       LResponse: TJSONValue;
@@ -92,7 +92,7 @@ begin
   ItemSubResource.PathParamsValues.Clear;
   ItemSubResource.PathParamsValues.Add(ACategory);
   ItemSubResource.PathParamsValues.Add(AItem);
-  ItemSubResource.GETAsync(
+  ItemSubResource.GETAsync(nil,
     procedure (AResource: TMARSClientCustomResource)
     var
       LResponse: TStream;
@@ -107,7 +107,7 @@ end;
 procedure TRemoteData.GetItems(const ACategory: string; const AOnSuccess: TJSONArrayProc);
 begin
   CategoryItemsSubResource.Resource := 'category/' + ACategory;
-  CategoryItemsSubResource.GETAsync(
+  CategoryItemsSubResource.GETAsync(nil,
     procedure (AResource: TMARSClientCustomResource)
     var
       LResponse: TJSONValue;

@@ -68,6 +68,7 @@ type
     function ApplicationByBasePath(const ABasePath: string): TMARSApplication; virtual;
 
     procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>); virtual;
+    function IsCORSEnabled: Boolean; virtual;
 
     property Applications: TMARSApplicationDictionary read FApplications;
     property Parameters: TMARSParameters read FParameters;
@@ -279,6 +280,11 @@ begin
   end;
 end;
 
+function TMARSEngine.IsCORSEnabled: Boolean;
+begin
+  Result := Parameters.ByName('CORS.Enabled').AsBoolean;
+end;
+
 procedure TMARSEngine.PatchCORS(const ARequest: IMARSRequest;
   const AResponse: IMARSResponse);
 
@@ -288,12 +294,12 @@ procedure TMARSEngine.PatchCORS(const ARequest: IMARSRequest;
   end;
 
 begin
-  if Parameters.ByName('CORS.Enabled').AsBoolean then
-  begin
-    SetHeaderFromParameter('Access-Control-Allow-Origin', 'CORS.Origin', '*');
-    SetHeaderFromParameter('Access-Control-Allow-Methods', 'CORS.Methods', 'HEAD,GET,PUT,POST,DELETE,OPTIONS');
-    SetHeaderFromParameter('Access-Control-Allow-Headers', 'CORS.Headers', 'X-Requested-With,Content-Type,Authorization');
-  end;
+  if not IsCORSEnabled then
+    Exit;
+
+  SetHeaderFromParameter('Access-Control-Allow-Origin', 'CORS.Origin', '*');
+  SetHeaderFromParameter('Access-Control-Allow-Methods', 'CORS.Methods', 'HEAD,GET,PUT,POST,DELETE,OPTIONS');
+  SetHeaderFromParameter('Access-Control-Allow-Headers', 'CORS.Headers', 'X-Requested-With,Content-Type,Authorization');
 end;
 
 function TMARSEngine.GetBasePath: string;

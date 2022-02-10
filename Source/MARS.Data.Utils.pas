@@ -61,7 +61,7 @@ begin
 end;
 
 
-function DateFieldToJSON(const AField: TField; const AInputIsUTC: Boolean = False): string;
+function DateFieldToJSON(const AField: TField; const AOptions: TMARSJSONSerializationOptions): string; overload;
 var
   LDisplayFormat: string;
 begin
@@ -74,8 +74,14 @@ begin
   if LDisplayFormat <> '' then
     Result := AField.DisplayText
   else
-    Result := DateToJSON(AField.AsDateTime, AInputIsUTC);
+    Result := DateToJSON(AField.AsDateTime, AOptions);
 end;
+
+function DateFieldToJSON(const AField: TField): string; overload;
+begin
+  Result := DateFieldToJSON(AField, DefaultMARSJSONSerializationOptions);
+end;
+
 
 function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string = ''): TJSONObject;
 var

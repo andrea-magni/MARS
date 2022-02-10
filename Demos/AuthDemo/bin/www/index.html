@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>MARS-Curiosity AuthDemo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-3">
+
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <a href="https://github.com/andrea-magni/MARS" target="_blank"><img src="./media/MARS.png" height="40" width="40" alt=""></a> MARS-Curiosity REST library
+            </span>
+
+            <ul class="navbar-nav">
+                <li class="nav-item text-light loggedIn">
+                    <span class="userdata displayName"></span> (<span class="userdata username"></span>)
+                    <i class="admin fas fa-users-cog collapse"></i>
+                    <span class="loggedIn ml-3 collapse"><a href="#" id="logoutButton">Logout</a></span>
+                </li>
+            </ul>
+
+        </div>
+    </nav>
+
+
+    <div class="container">
+        <div id="error"></div>
+
+        <form class="form-signin text-center m-auto notLoggedIn" style="max-width: 400px">
+            <img class="mb-4" src="./media/MARS.png" alt="" width="165" height="165">
+            <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+
+            <label for="authUsername" class="sr-only">Email address</label>
+            <input type="text" id="authUsername" class="form-control" placeholder="Username" required="" autofocus="">
+
+            <label for="authPassword" class="sr-only">Password</label>
+            <input type="password" id="authPassword" class="form-control" placeholder="Password" required="">
+
+            <button class="btn btn-lg btn-primary btn-block mt-3" type="submit">Sign in</button>
+
+            <p class="mt-5 mb-3 text-muted">Powered by <a href="https://www.embarcadero.com/products/delphi" target="_blank">Embarcadero Delphi</a> and <a href="https://github.com/andrea-magni/MARS" target="_blank">MARS-Curiosity</a></p>
+        </form>
+
+        <div class="row mb-3 admin collapse" id="userManagement">
+
+            <div class="card mb-3" id="allUsers">
+                <div class="card-body">
+                    <h5 class="card-title d-flex justify-content-between">
+                        <span>Users</span>
+                        <a href="#" class="btn btn-primary" id="allUsersButton"> <i class="fas fa-redo"></i></a>
+                    </h5>
+                    <p class="card-text">
+                        <ol class="list-group mb-3" id="userList"></ol>
+                    </p>
+                </div>
+            </div>
+
+
+            <div class="card p-3" id="createUser">
+
+                <form class="needs-validation" novalidate="">
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="username">Username</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-user-alt"></i>&nbsp;</span>
+                                </div>
+                                <input type="text" class="form-control" id="username" placeholder="Username" required="">
+                                <div class="invalid-feedback" style="width: 100%;">Username is required.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="displayName">Display name</label>
+                            <input type="text" class="form-control" id="displayName" placeholder="John Doe" value="" required="">
+                            <div class="invalid-feedback">Valid display name is required.</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="password">Password</label>
+                            <input type="password" class="form-control" id="password" placeholder="">
+                            <div class="invalid-feedback">Please enter a valid password.</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="role">Role</label>
+
+                            <select class="form-select" aria-label="Role" id="role">
+                                <option value="" selected></option>
+                                <option value="admin">Admin</option>
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3 text-center">
+                            <a href="#" class="btn btn-danger" id="createUserButton">Create/update user <i class="fas fa-user-alt"></i></a>
+                        </div>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <p class="mt-5 mb-3 text-muted text-center">Powered by <a href="https://www.embarcadero.com/products/delphi" target="_blank">Embarcadero Delphi</a> and <a href="https://github.com/andrea-magni/MARS" target="_blank">MARS-Curiosity</a></p>
+
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+
+    <script src="js/index.js"></script>
+
+    <script type="text/javascript">
+    $(document).ready(function () {
+        bindUIElements();
+        updateAuthState(authData);
+    });
+    </script>
+
+</body>
+</html>

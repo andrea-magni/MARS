@@ -3,7 +3,8 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-program EKON22Client;
+
+program EKON22Client;
 
 uses
   System.StartUpCopy,

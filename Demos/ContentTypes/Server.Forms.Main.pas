@@ -9,20 +9,14 @@ unit Server.Forms.Main;
 
 interface
 
-uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
+uses
+  Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls
+, Diagnostics
 
-  , Diagnostics
-
-  , MARS.Core.Engine
-  , MARS.http.Server.Indy
-  {$IFDEF MSWINDOWS}
-  , MARS.mORMotJWT.Token
-  {$ELSE}
-  , MARS.JOSEJWT.Token
-  {$ENDIF}
-
-  , MARS.Core.Application, System.Actions
-  ;
+, MARS.Core.Engine, MARS.http.Server.Indy
+{$IFDEF MSWINDOWS}, MARS.mORMotJWT.Token{$ELSE}, MARS.JOSEJWT.Token{$ENDIF}
+, MARS.Core.Application, System.Actions
+;
 
 type
   TMainForm = class(TForm)
@@ -80,6 +74,7 @@ begin
   FEngine := TMARSEngine.Create;
   try
     FEngine.Parameters.LoadFromIniFile;
+    FEngine.Parameters.Values['CORS.Enabled'] := True;
     FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
     PortNumberEdit.Text := IntToStr(FEngine.Port);
 

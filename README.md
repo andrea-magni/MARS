@@ -11,6 +11,7 @@
 1. 100% RESTful Web Service
 1. Delphi-like
 1. Advanced dataset support with FireDAC
+1. OpenAPI 3 support 
 
 [More features ...](./docs/MainFeatures.md)
 

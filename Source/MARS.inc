@@ -1,6 +1,8 @@
 {$define MARS_FIREDAC} // To enable MARS FireDAC support
 {.$define MARS_UNIDAC} // To enable MARS Devart UniDAC support
 
+{.$define MARS_JSON_LEGACY} // To revert to Rest.JSON serializer/deserializer for JSON and TObject descendants
+
 {$if compilerversion = 22}
   {$define DelphiXE}
 {$ENDIF}
@@ -51,6 +53,10 @@
 
 {$if compilerversion = 34}
   {$define Delphi10Sydney}
+{$ENDIF}
+
+{$if compilerversion = 35}
+  {$define Delphi11Alexandria}
 {$ENDIF}
 
 {$if compilerversion >= 22}
@@ -181,4 +187,21 @@
   {$define Delphi10Tokyo_UP}
   {$define Delphi10Rio_UP}
   {$define Delphi10Sydney_UP}
+{$ENDIF}
+
+{$if compilerversion >= 35}
+  {$define DelphiXE_UP}
+  {$define DelphiXE2_UP}
+  {$define DelphiXE3_UP}
+  {$define DelphiXE4_UP}
+  {$define DelphiXE5_UP}
+  {$define DelphiXE6_UP}
+  {$define DelphiXE7_UP}
+  {$define DelphiXE8_UP}
+  {$define Delphi10Seattle_UP}
+  {$define Delphi10Berlin_UP}
+  {$define Delphi10Tokyo_UP}
+  {$define Delphi10Rio_UP}
+  {$define Delphi10Sydney_UP}
+  {$define Delphi11Alexandria_UP}  
 {$ENDIF}

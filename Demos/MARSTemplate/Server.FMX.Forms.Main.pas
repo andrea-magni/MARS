@@ -24,6 +24,8 @@ type
     Label1: TLabel;
     StartButton: TButton;
     StopButton: TButton;
+    OpenAPIAction: TAction;
+    Button1: TButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure StartServerActionExecute(Sender: TObject);
@@ -31,6 +33,8 @@ type
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionUpdate(Sender: TObject);
     procedure PortNumberEditChange(Sender: TObject);
+    procedure OpenAPIActionUpdate(Sender: TObject);
+    procedure OpenAPIActionExecute(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
   public
@@ -46,7 +50,9 @@ implementation
 uses
   IdSSLOpenSSL
 , MARS.Core.URL, MARS.Core.Engine
-, Server.Ignition;
+, Server.Ignition
+{$IFDEF MSWINDOWS}, Windows, ShellAPI, NetEncoding {$ENDIF}
+;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -58,6 +64,37 @@ begin
   PortNumberEdit.Text := TServerEngine.Default.Port.ToString;
 
   StartServerAction.Execute;
+end;
+
+procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
+{$IFDEF MSWINDOWS}
+const
+  OPENAPI_URL = 'http://localhost:8080/rest/default/openapi';
+var
+  LSwaggerUIIndex: string;
+  LDefaultHTMLApp: array [0..MAX_PATH] of WideChar;
+begin
+  ZeroMemory(@LDefaultHTMLApp, SizeOf(LDefaultHTMLApp));
+
+  LSwaggerUIIndex := ExpandFileName('..\..\..\www\swagger-ui-3.52.5-dist\index.html');
+
+  var LErrorCode := FindExecutable(PWideChar(LSwaggerUIIndex), nil, LDefaultHTMLApp);
+  if LErrorCode < 32 then
+    raise Exception.CreateFmt('Default application to open HTML files not found [Error: %d]', [LErrorCode]);
+
+  LSwaggerUIIndex := 'file:///' + LSwaggerUIIndex.Replace('\', '/')
+    + '?openAPIURL=' + TURLEncoding.URL.Encode(OPENAPI_URL);
+
+  ShellExecute(0, nil, @LDefaultHTMLApp[0], PWideChar(LSwaggerUIIndex), nil, SW_SHOWDEFAULT);
+end;
+{$ELSE}
+begin
+end;
+{$ENDIF}
+
+procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
+begin
+  OpenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);

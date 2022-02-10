@@ -1,0 +1,66 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  Caption = 'MARS-Curiosity Template Server FMX'
+  ClientHeight = 480
+  ClientWidth = 640
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnClose = FormClose
+  DesignerMasterStyle = 0
+  object Layout1: TLayout
+    Align = Top
+    Size.Width = 640.000000000000000000
+    Size.Height = 121.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object PortNumberEdit: TEdit
+      Touch.InteractiveGestures = [LongTap, DoubleTap]
+      TabOrder = 0
+      Text = '8080'
+      Position.X = 109.000000000000000000
+      Position.Y = 22.000000000000000000
+      OnChange = PortNumberEditChange
+    end
+    object Label1: TLabel
+      Position.X = 16.000000000000000000
+      Position.Y = 24.000000000000000000
+      Size.Width = 89.000000000000000000
+      Size.Height = 17.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'Port number:'
+    end
+    object StartButton: TButton
+      Action = StartServerAction
+      Enabled = True
+      ImageIndex = -1
+      Position.X = 16.000000000000000000
+      Position.Y = 64.000000000000000000
+      TabOrder = 2
+    end
+    object StopButton: TButton
+      Action = StopServerAction
+      Enabled = True
+      ImageIndex = -1
+      Position.X = 104.000000000000000000
+      Position.Y = 64.000000000000000000
+      TabOrder = 3
+    end
+  end
+  object MainActionList: TActionList
+    Left = 384
+    Top = 24
+    object StartServerAction: TAction
+      Text = 'Start Server'
+      OnExecute = StartServerActionExecute
+      OnUpdate = StartServerActionUpdate
+    end
+    object StopServerAction: TAction
+      Text = 'Stop Server'
+      OnExecute = StopServerActionExecute
+      OnUpdate = StopServerActionUpdate
+    end
+  end
+end
