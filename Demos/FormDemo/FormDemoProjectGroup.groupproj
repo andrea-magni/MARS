@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="FormDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FormDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FormDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FormDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FormDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FormDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FormDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FormDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="FormDemoServerApplication">
+        <MSBuild Projects="FormDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="FormDemoServerApplication:Clean">
+        <MSBuild Projects="FormDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoServerApplication:Make">
+        <MSBuild Projects="FormDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FormDemoServerFMXApplication">
+        <MSBuild Projects="FormDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="FormDemoServerFMXApplication:Clean">
+        <MSBuild Projects="FormDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoServerFMXApplication:Make">
+        <MSBuild Projects="FormDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FormDemoServerService">
+        <MSBuild Projects="FormDemoServerService.dproj"/>
+    </Target>
+    <Target Name="FormDemoServerService:Clean">
+        <MSBuild Projects="FormDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoServerService:Make">
+        <MSBuild Projects="FormDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FormDemoServerConsoleApplication">
+        <MSBuild Projects="FormDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="FormDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="FormDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoServerConsoleApplication:Make">
+        <MSBuild Projects="FormDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FormDemoServerDaemon">
+        <MSBuild Projects="FormDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="FormDemoServerDaemon:Clean">
+        <MSBuild Projects="FormDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoServerDaemon:Make">
+        <MSBuild Projects="FormDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FormDemoServerApacheModule">
+        <MSBuild Projects="FormDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="FormDemoServerApacheModule:Clean">
+        <MSBuild Projects="FormDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoServerApacheModule:Make">
+        <MSBuild Projects="FormDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FormDemoServerISAPI">
+        <MSBuild Projects="FormDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="FormDemoServerISAPI:Clean">
+        <MSBuild Projects="FormDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoServerISAPI:Make">
+        <MSBuild Projects="FormDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FormDemoClient">
+        <MSBuild Projects="FormDemoClient.dproj"/>
+    </Target>
+    <Target Name="FormDemoClient:Clean">
+        <MSBuild Projects="FormDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FormDemoClient:Make">
+        <MSBuild Projects="FormDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="FormDemoServerApplication;FormDemoServerFMXApplication;FormDemoServerService;FormDemoServerConsoleApplication;FormDemoServerDaemon;FormDemoServerApacheModule;FormDemoServerISAPI;FormDemoClient"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="FormDemoServerApplication:Clean;FormDemoServerFMXApplication:Clean;FormDemoServerService:Clean;FormDemoServerConsoleApplication:Clean;FormDemoServerDaemon:Clean;FormDemoServerApacheModule:Clean;FormDemoServerISAPI:Clean;FormDemoClient:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="FormDemoServerApplication:Make;FormDemoServerFMXApplication:Make;FormDemoServerService:Make;FormDemoServerConsoleApplication:Make;FormDemoServerDaemon:Make;FormDemoServerApacheModule:Make;FormDemoServerISAPI:Make;FormDemoClient:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

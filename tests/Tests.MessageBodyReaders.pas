@@ -127,7 +127,7 @@ begin
       '{'
     + ' "AString": "Andrea", "ABoolean": true, "AInteger": 123,'
     + ' "AFloat": 1234.56789, "ACurrency": 7.75, '
-    + ' "ADate": "1982-05-24T00:00:00.000+02:00", "AChar": "C"'
+    + ' "ADate": "1982-05-24T00:00:00.000+00:00", "AChar": "C"'
     + '}'
   );
   LValue := FMBR.ReadFrom(LData, FPrimitiveTypesRttiObject, FJSONMediaType, nil).AsType<TPrimitiveTypesRecord>;
@@ -147,7 +147,7 @@ var
   LData: TBytes;
 begin
   LData := TEncoding.UTF8.GetBytes(
-    '{ "Name": "Andrea", "Surname": "Magni", "DateOfBirth": "1982-05-24T00:00:00.000+02:00" }'
+    '{ "Name": "Andrea", "Surname": "Magni", "DateOfBirth": "1982-05-24T00:00:00.000+00:00" }'
   );
   LValue := FMBR.ReadFrom(LData, FPersonRttiObject, FJSONMediaType, nil).AsType<TPersonRecord>;
 
@@ -287,7 +287,7 @@ var
   LData: TBytes;
 begin
   LData := TEncoding.UTF8.GetBytes(
-    '[{"Name":"Andrea", "Surname": "Magni", "DateOfBirth": "1982-05-24T00:00:00.000+02:00"}]'
+    '[{"Name":"Andrea", "Surname": "Magni", "DateOfBirth": "1982-05-24T00:00:00.000+00:00"}]'
   );
   LValue := FMBR.ReadFrom(LData, FPersonArrayRttiObject, FJSONMediaType, nil).AsType<TArray<TPersonRecord>>;
 

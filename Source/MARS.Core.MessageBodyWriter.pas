@@ -147,6 +147,13 @@ var
 begin
   LMBWriter := T.Create;
   LMBWriter.WriteTo(AValue, AMediaType, AOutputStream, AActivation);
+  {$IFDEF DEBUG}
+  if Assigned(AActivation) then
+    AActivation.Response.SetHeader(
+      'X-MARS-MBW-WriteWith'
+    , Format('%s, MediaType: %s', [T.ClassName, AMediaType.ToStringDebug])
+    );
+  {$ENDIF}
 end;
 
 
@@ -288,6 +295,12 @@ begin
       begin
         AWriter := LCandidate.CreateInstance();
         AMediaType := TMediaType.Create(LCandidateMediaType);
+        {$IFDEF DEBUG}
+        AActivation.Response.SetHeader(
+          'X-MARS-MBW'
+        , Format('%s, Affinity: %d, MediaType: %s, QualityFactor: %.2f', [LCandidate.RttiName, LCandidateAffinity, LCandidateMediaType, LCandidateQualityFactor])
+        );
+        {$ENDIF}
       end;
     finally
       LMethodProducesMediaTypes.Free;
@@ -312,7 +325,7 @@ begin
       if (AType = LType) or (AType.IsObjectOfType<T>(False)) then
         Result := AFFINITY_HIGH
       else if AType.IsObjectOfType<T> then
-        Result := AFFINITY_MEDIUM;
+        Result := AFFINITY_MEDIUM + AFFINITY_LOW;
     end
 end;
 

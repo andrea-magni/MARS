@@ -22,11 +22,14 @@ type
   private
     FConstructorFunc: TMARSConstructorFunc;
     FTypeTClass: TClass;
+    FPath: string;
   protected
   public
-    constructor Create(AClass: TClass; const AConstructorFunc: TMARSConstructorFunc);
+
+    constructor Create(AClass: TClass; const AConstructorFunc: TMARSConstructorFunc; const APath: string);
 
     property TypeTClass: TClass read FTypeTClass;
+    property Path: string read FPath;
     property ConstructorFunc: TMARSConstructorFunc read FConstructorFunc write FConstructorFunc;
     function Clone: TMARSConstructorInfo;
   end;
@@ -38,15 +41,16 @@ implementation
 
 function TMARSConstructorInfo.Clone: TMARSConstructorInfo;
 begin
-  Result := TMARSConstructorInfo.Create(FTypeTClass, FConstructorFunc);
+  Result := TMARSConstructorInfo.Create(FTypeTClass, FConstructorFunc, FPath);
 end;
 
 constructor TMARSConstructorInfo.Create(AClass: TClass;
-  const AConstructorFunc: TMARSConstructorFunc);
+  const AConstructorFunc: TMARSConstructorFunc; const APath: string);
 begin
   inherited Create;
   FConstructorFunc := AConstructorFunc;
   FTypeTClass := AClass;
+  FPath := APath;
 
   // provide a default constructor function
   if not Assigned(FConstructorFunc) then

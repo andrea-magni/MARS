@@ -478,9 +478,17 @@ begin
 end;
 
 function TMARSWebRequest.GetHeaderParamValue(const AIndex: Integer): string;
+const
+  HEADER_NAME_VALUE_SEPARATOR = ': ';
+var
+  LHeader: string;
+
 begin
   if (FWebRequest is TMARSIdHTTPAppRequest) or (FWebRequest is TIdHTTPAppRequest) then
-    Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.ValueFromIndex[AIndex]
+  begin
+    LHeader := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.Strings[AIndex];
+    Result := LHeader.Substring(LHeader.IndexOf(HEADER_NAME_VALUE_SEPARATOR, 0) + HEADER_NAME_VALUE_SEPARATOR.Length);
+  end
   else
     raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamValue by Index');
 end;

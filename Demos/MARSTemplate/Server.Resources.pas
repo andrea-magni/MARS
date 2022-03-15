@@ -13,6 +13,7 @@ uses
 , MARS.Core.URL
 //, MARS.Core.Token
 , MARS.Core.Token.Resource
+, MARS.OpenAPI.v3, MARS.Metadata.Attributes
 ;
 
 type
@@ -22,6 +23,14 @@ type
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
+  end;
+
+  [Path('openapi'), MetaVisible(False)]
+  TOpenAPIResource = class
+  protected
+  public
+    [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
+    function GetOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
   end;
 
   [Path('token')]
@@ -41,7 +50,14 @@ begin
   Result := 'Hello World!';
 end;
 
+{ TOpenAPIResource }
+
+function TOpenAPIResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+begin
+  Result := AOpenAPI;
+end;
+
 initialization
-  TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
-  TMARSResourceRegistry.Instance.RegisterResource<TTokenResource>;
+  TMARSResourceRegistry.Instance.RegisterResources([THelloWorldResource, TTokenResource, TOpenAPIResource]);
+
 end.

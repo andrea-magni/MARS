@@ -175,6 +175,7 @@ type
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const ASynchronize: Boolean = True); overload; virtual;
     procedure GETAsync(
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const ASynchronize: Boolean = True); overload; virtual;
@@ -641,6 +642,7 @@ end;
 
 {$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.GETAsync(
+  const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
   const AOnException: TMARSClientExecptionProc;
   const ASynchronize: Boolean);

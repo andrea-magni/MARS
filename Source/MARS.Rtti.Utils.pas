@@ -17,6 +17,15 @@ uses
 type
   TRttiObjectHelper = class helper for TRttiObject
   public
+    function IsProperty: Boolean;
+    function AsProperty: TRttiProperty;
+    function IsField: Boolean;
+    function AsField: TRttiField;
+    function IsReadable: Boolean;
+    function IsWritable: Boolean;
+
+    function GetValue(AInstance: Pointer): TValue;
+
     function GetRttiType: TRttiType;
     procedure SetValue(AInstance: Pointer; const AValue: TValue);
 
@@ -50,6 +59,11 @@ type
     function IsArray(out AElementType: TRttiType): Boolean; overload;
     function GetArrayElementType: TRttiType;
 
+    function IsDictionaryOfStringAndT(): Boolean; overload;
+    function IsDictionaryOfStringAndT(out AElementType: TRttiType): Boolean; overload;
+    function IsObjectListOfT: Boolean; overload;
+    function IsObjectListOfT(out AElementType: TRttiType): Boolean; overload;
+
     function IsObjectOfType<T>(const AAllowInherithance: Boolean = True): Boolean; overload;
     function IsObjectOfType(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
 
@@ -59,6 +73,8 @@ type
     function FindMethodFunc<A1,R>(const AName: string): TRttiMethod; overload;
 
     function FindMethodFunc<R>(const AName: string): TRttiMethod; overload;
+
+    function GetPropertiesAndFields: TArray<TRttiMember>;
   end;
 
   TRttiHelper = class
@@ -71,6 +87,9 @@ type
 
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject): Boolean; overload;
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TProc<T>): Boolean; overload;
+
+    class function IfHasAttribute<T: TCustomAttribute>(const AAttributes: TArray<TCustomAttribute>; const ADoSomething: TProc<T>;
+      const ACheckAllOccurences: Boolean = False): Boolean; overload;
 
     class function ForEachAttribute<T: TCustomAttribute>(const AInstance: TObject;
       const ADoSomething: TProc<T>): Integer; overload;
@@ -86,7 +105,11 @@ type
     class function ForEachFieldWithAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TFunc<TRttiField, T, Boolean>): Integer; overload;
     class function ForEachField(AInstance: TObject; const ADoSomething: TFunc<TRttiField, Boolean>): Integer;
 
-    class function FindParameterLessConstructor(const AClass: TClass): TRttiMethod;
+    class function FindParameterLessConstructor(const AClass: TClass): TRttiMethod; overload;
+    class function FindParameterLessConstructor(const AType: TRttiType): TRttiMethod; overload;
+
+    class procedure EnumerateDictionary(const ADictionary: TObject; const ADoSomething: TProc<TValue, TValue>);
+    class procedure EnumerateObjectList(const AObjectList: TObject; const ADoSomething: TProc<TValue>);
   end;
 
   TRecord<R: record> = class
@@ -123,12 +146,29 @@ procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const 
 
 function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
 
+function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
+function IsObjectListOfT(const ATypeName: string): Boolean;
+
 implementation
 
 uses
     StrUtils, DateUtils, Generics.Collections
   , MARS.Core.Utils
 ;
+
+function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
+begin
+  //AM TODO Improve this function. For example: check if it is a nested type...
+  Result := ATypeName.StartsWith('TDictionary<System.string,')
+         or ATypeName.StartsWith('TObjectDictionary<System.string,');
+end;
+
+function IsObjectListOfT(const ATypeName: string): Boolean;
+begin
+  //AM TODO Improve this function. For example: check if it is a nested type...
+  Result := ATypeName.StartsWith('TObjectList<');
+end;
+
 
 function StringsToRecord(const AStrings: string; const ARecordType: TRttiType;
   const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue;
@@ -568,6 +608,11 @@ begin
     Result := TRttiDynamicArrayType(Self).ElementType;
 end;
 
+function TRttiTypeHelper.GetPropertiesAndFields: TArray<TRttiMember>;
+begin
+  Result := TArray<TRttiMember>(GetProperties) + TArray<TRttiMember>(GetFields);
+end;
+
 function TRttiTypeHelper.IsArray: Boolean;
 begin
   Result := (Self is TRttiArrayType) or (Self is TRttiDynamicArrayType);
@@ -585,6 +630,36 @@ begin
   begin
     AElementType := TRttiArrayType(Self).ElementType;
     Result := True;
+  end;
+end;
+
+function TRttiTypeHelper.IsDictionaryOfStringAndT: Boolean;
+begin
+  Result := MARS.Rtti.Utils.IsDictionaryOfStringAndT(Name);
+end;
+
+function TRttiTypeHelper.IsDictionaryOfStringAndT(
+  out AElementType: TRttiType): Boolean;
+var
+  LDictionaryType, LEnumeratorType, LPairType: TRttiType;
+  LGetEnumeratorMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+//  LKeyField: TRttiField;
+  LValueField: TRttiField;
+begin
+  Result := IsDictionaryOfStringAndT;
+
+  if Result then
+  begin
+    LDictionaryType := Self;
+    LGetEnumeratorMethod := LDictionaryType.GetMethod('GetEnumerator');
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+    LPairType := LEnumeratorCurrentProperty.PropertyType;
+//    LKeyField := LPairType.GetField('Key');
+    LValueField := LPairType.GetField('Value');
+
+    AElementType := LValueField.FieldType;
   end;
 end;
 
@@ -617,6 +692,29 @@ begin
   begin
     LElementType := TRttiDynamicArrayType(Self).ElementType;
     Result := LElementType.IsRecord;
+  end;
+end;
+
+function TRttiTypeHelper.IsObjectListOfT: Boolean;
+begin
+  Result := MARS.Rtti.Utils.IsObjectListOfT(Name);
+end;
+
+function TRttiTypeHelper.IsObjectListOfT(out AElementType: TRttiType): Boolean;
+var
+  LObjectListType, LEnumeratorType: TRttiType;
+  LGetEnumeratorMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+begin
+  Result := IsObjectListOfT;
+
+  if Result then
+  begin
+    LObjectListType := Self;
+    LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+    AElementType := LEnumeratorCurrentProperty.PropertyType;
   end;
 end;
 
@@ -700,22 +798,8 @@ end;
 
 class function TRttiHelper.FindParameterLessConstructor(
   const AClass: TClass): TRttiMethod;
-var
-  LContext: TRttiContext;
-  LType: TRttiType;
-  LMethod: TRttiMethod;
 begin
-  Result := nil;
-  LType := LContext.GetType(AClass);
-
-  for LMethod in LType.GetMethods do
-  begin
-    if LMethod.IsConstructor and (Length(LMethod.GetParameters) = 0) then
-    begin
-      Result := LMethod;
-      Break;
-    end;
-  end;
+  Result := FindParameterLessConstructor(TRttiContext.Create.GetType(AClass));
 end;
 
 class function TRttiHelper.ForEachAttribute<T>(const AInstance: TObject;
@@ -728,6 +812,109 @@ begin
   LType := LContext.GetType(AInstance.ClassType);
   if Assigned(LType) then
     Result := LType.ForEachAttribute<T>(ADoSomething);
+end;
+
+class procedure TRttiHelper.EnumerateDictionary(const ADictionary: TObject;
+  const ADoSomething: TProc<TValue, TValue>);
+var
+  LDictionaryType, LEnumeratorType, LPairType: TRttiType;
+  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+  LKeyField, LValueField: TRttiField;
+  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue, LKeyValue, LValueValue: TValue;
+  LEnumeratorObj: TObject;
+  LPair: Pointer;
+begin
+  // highly inspired by https://en.delphipraxis.net/topic/2546-how-to-iterate-a-tdictionary-using-rtti-and-tvalue/
+  // Thanks to Remy Lebeau
+  if not Assigned(ADictionary) then
+    Exit;
+  if not Assigned(ADoSomething) then
+    Exit;
+
+  LDictionaryType := TRttiContext.Create.GetType(ADictionary.ClassType);
+  LGetEnumeratorMethod := LDictionaryType.GetMethod('GetEnumerator');
+  LEnumeratorValue := LGetEnumeratorMethod.Invoke(ADictionary, []);
+  LEnumeratorObj := LEnumeratorValue.AsObject;
+  try
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+
+    LPairType := LEnumeratorCurrentProperty.PropertyType;
+    LKeyField := LPairType.GetField('Key');
+    LValueField := LPairType.GetField('Value');
+
+    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    while LEnumeratorCurrentValue.AsBoolean do
+    try
+      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+      LPair := LCurrentValue.GetReferenceToRawData;
+      LKeyValue := LKeyField.GetValue(LPair);
+      LValueValue := LValueField.GetValue(LPair);
+
+      ADoSomething(LKeyValue, LValueValue);
+    finally
+      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    end;
+  finally
+    LEnumeratorObj.Free;
+  end;
+end;
+
+class procedure TRttiHelper.EnumerateObjectList(const AObjectList: TObject;
+  const ADoSomething: TProc<TValue>);
+var
+  LObjectListType, LEnumeratorType{, LElementType}: TRttiType;
+  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue: TValue;
+  LEnumeratorObj: TObject;
+begin
+  if not Assigned(AObjectList) then
+    Exit;
+  if not Assigned(ADoSomething) then
+    Exit;
+
+  LObjectListType := TRttiContext.Create.GetType(AObjectList.ClassType);
+  LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
+  LEnumeratorValue := LGetEnumeratorMethod.Invoke(AObjectList, []);
+  LEnumeratorObj := LEnumeratorValue.AsObject;
+  try
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+
+//    LElementType := LEnumeratorCurrentProperty.PropertyType;
+
+    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    while LEnumeratorCurrentValue.AsBoolean do
+    try
+      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+      ADoSomething(LCurrentValue);
+    finally
+      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    end;
+  finally
+    LEnumeratorObj.Free;
+  end;
+end;
+
+class function TRttiHelper.FindParameterLessConstructor(
+  const AType: TRttiType): TRttiMethod;
+var
+  LMethod: TRttiMethod;
+begin
+  Result := nil;
+
+  for LMethod in AType.GetMethods do
+  begin
+    if LMethod.IsConstructor and (Length(LMethod.GetParameters) = 0) then
+    begin
+      Result := LMethod;
+      Break;
+    end;
+  end;
 end;
 
 class function TRttiHelper.ForEachAttribute<T>(const AAttributes: TArray<TCustomAttribute>;
@@ -982,7 +1169,7 @@ begin
   LRecordType := TRttiContext.Create.GetType(TypeInfo(R));
   LField := LRecordType.GetField(AFieldName);
   if Assigned(LField) then
-    Result := LField.GetValue(@ARecord);
+    Result := LField.GetValue(@ARecord); // ARecord.GetReferenceToRawData?
 end;
 
 class procedure TRecord<R>.SetFieldByName(var ARecord: R;
@@ -1031,7 +1218,7 @@ begin
       LDataSetField := ADataSet.FindField(LRecordField.Name);
       if Assigned(LDataSetField) and not (AAppend and (LDataSetField.DataType = ftAutoInc)) then
       begin
-        LValue := LRecordField.GetValue(@ARecord);
+        LValue := LRecordField.GetValue(@ARecord); // ARecord.GetReferenceToRawData?
         if LValue.IsEmpty then
           LDataSetField.Clear
         else
@@ -1068,7 +1255,7 @@ begin
   for LField in LRecordType.GetFields do
   begin
     LFieldType := LField.FieldType;
-    LFieldValue := LField.GetValue(@ARecord);
+    LFieldValue := LField.GetValue(@ARecord); // ARecord.GetReferenceToRawData?
 
     if LFieldType.IsRecord then
     begin
@@ -1078,11 +1265,75 @@ begin
       else
       begin
         //AM TODO recursion using ToStrings here
-        AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;
+        AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;   // ARecord.GetReferenceToRawData?
       end;
     end
     else
-      AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString;
+      AStrings.Values[LField.Name] := LField.GetValue(@ARecord).ToString; // ARecord.GetReferenceToRawData?
+  end;
+end;
+
+
+function TRttiObjectHelper.AsField: TRttiField;
+begin
+  Result := Self as TRttiField;
+end;
+
+function TRttiObjectHelper.AsProperty: TRttiProperty;
+begin
+  Result := Self as TRttiProperty;
+end;
+
+function TRttiObjectHelper.GetValue(AInstance: Pointer): TValue;
+begin
+  if IsProperty then
+    Result := AsProperty.GetValue(AInstance)
+  else if IsField then
+    Result := AsField.GetValue(AInstance)
+  else
+    raise Exception.Create('Neither a Field or a Property: ' + Self.ClassName);
+end;
+
+function TRttiObjectHelper.IsField: Boolean;
+begin
+  Result := Self is TRttiField;
+end;
+
+
+function TRttiObjectHelper.IsProperty: Boolean;
+begin
+  Result := Self is TRttiProperty;
+end;
+
+function TRttiObjectHelper.IsReadable: Boolean;
+begin
+  Result := IsField or (IsProperty and AsProperty.IsReadable);
+end;
+
+function TRttiObjectHelper.IsWritable: Boolean;
+begin
+  Result := IsField or (IsProperty and AsProperty.IsWritable);
+end;
+
+class function TRttiHelper.IfHasAttribute<T>(const AAttributes: TArray<TCustomAttribute>;
+  const ADoSomething: TProc<T>; const ACheckAllOccurences: Boolean): Boolean;
+var
+  LAttribute: TCustomAttribute;
+begin
+  Result := False;
+  for LAttribute in AAttributes do
+  begin
+    if LAttribute is T then
+    begin
+      Result := True;
+
+      if Assigned(ADoSomething) then
+        ADoSomething(LAttribute);
+
+      if not ACheckAllOccurences then
+        Break;
+
+    end;
   end;
 end;
 

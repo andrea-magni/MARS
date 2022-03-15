@@ -60,10 +60,17 @@ type
         const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
         const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
         const ASynchronize: Boolean = True);
+      TResourceMethodNoArg = reference to procedure(
+        const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+        const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
+        const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+        const ASynchronize: Boolean = True);
+
     // Implements all async calls except the <R> methods with an array argument
     // as there's no way to disambiguate them from those with a record argument.
     function Call<T>(const AMethod: TResourceMethod<T>;
-      const AArgument: T): IMARSClientAsyncParams;
+      const AArgument: T): IMARSClientAsyncParams; overload;
+    function CallNoArg(const AMethod: TResourceMethodNoArg): IMARSClientAsyncParams; overload;
   public
     function POST(const AJSONValue: TJSONValue): IMARSClientAsyncParams; overload;
 {$ifdef Delphi10Tokyo_UP}
@@ -75,6 +82,7 @@ type
     function PUT<R: record>(const ARecord: R): IMARSClientAsyncParams; overload;
     function PUT<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientAsyncParams; overload;
 {$endif}
+    function GET(): IMARSClientAsyncParams; overload;
   end;
 
 {$ENDREGION}
@@ -670,6 +678,32 @@ begin
         AParams.OnExceptionHandler,
         AParams.Synchronize);
     end);
+end;
+
+function TMARSClientResourceJSONAsync.CallNoArg(
+  const AMethod: TResourceMethodNoArg): IMARSClientAsyncParams;
+begin
+  Assert(Assigned(AMethod));
+
+  Result := TMARSClientAsyncParams.Create(
+    procedure (AParams: TMARSClientAsyncParams)
+    begin
+      AMethod(
+        AParams.BeforeExecuteHandler,
+        AParams.OnCompletionHandler,
+        AParams.OnExceptionHandler,
+        AParams.Synchronize);
+    end);
+end;
+
+function TMARSClientResourceJSONAsync.GET: IMARSClientAsyncParams;
+var
+  LResource: TMARSClientResourceJSON;
+begin
+  Assert(Assigned(FResource));
+
+  LResource := FResource;
+  Result := CallNoArg(LResource.GETAsync);
 end;
 
 function TMARSClientResourceJSONAsync.POST(

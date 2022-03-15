@@ -48,7 +48,7 @@ var
   LTitle: string;
   LHWND: HWND;
 begin
-  Result := Unknown;
+//  Result := Unknown;
 
   LHWND := GetForegroundWindow;
   GetWindowText(LHWND, @LText[0], SizeOf(LText));
@@ -67,20 +67,37 @@ end;
 
 function TCommandResource.Execute(param1: Integer; param2: Integer): string;
 begin
-  if (param1 + param2 < 2) then
+  if (param1 + param2 > 0) then
   begin
     case GetCurrentApplication of
       Teams: begin
-        Result := 'Teams: toggle mic';
-        SetForegroundWindow(FindWindow(nil, PChar('Microsoft Teams')));
+        if Param1 = 1 then
+        begin
+          Result := 'Teams: toggle mic';
+          SetForegroundWindow(FindWindow(nil, PChar('Microsoft Teams')));
 
-        keybd_event(VK_LCONTROL, $9D,0 , 0); // Press Control
-        keybd_event(VK_LSHIFT, $AA,0 , 0); // Press Shift
-        keybd_event(Ord('M'), Ord('M'), 0 , 0); // Press M
+          keybd_event(VK_LCONTROL, $9D,0 , 0); // Press Control
+          keybd_event(VK_LSHIFT, $AA,0 , 0); // Press Shift
+          keybd_event(Ord('M'), Ord('M'), 0 , 0); // Press M
+          Sleep(1);
+          keybd_event(Ord('M'), Ord('M'), KEYEVENTF_KEYUP , 0); // Release M
+          keybd_event(VK_LSHIFT, $AA, KEYEVENTF_KEYUP, 0); // Release Shift
+          keybd_event(VK_LCONTROL, $9D, KEYEVENTF_KEYUP, 0); // Release Control
+        end
+        else if Param2 = 1 then
+        begin
+          Result := 'Teams: raise/lower hand';
+          SetForegroundWindow(FindWindow(nil, PChar('Microsoft Teams')));
 
-        keybd_event(Ord('M'), Ord('M'), KEYEVENTF_KEYUP , 0); // Release M
-        keybd_event(VK_LSHIFT, $AA, KEYEVENTF_KEYUP, 0); // Release Shift
-        keybd_event(VK_LCONTROL, $9D, KEYEVENTF_KEYUP, 0); // Release Control
+          keybd_event(VK_LCONTROL, $9D,0 , 0); // Press Control
+          keybd_event(VK_LSHIFT, $AA,0 , 0); // Press Shift
+          keybd_event(Ord('K'), Ord('K'), 0 , 0); // Press K
+          Sleep(1);
+          keybd_event(Ord('K'), Ord('K'), KEYEVENTF_KEYUP , 0); // Release K
+          keybd_event(VK_LSHIFT, $AA, KEYEVENTF_KEYUP, 0); // Release Shift
+          keybd_event(VK_LCONTROL, $9D, KEYEVENTF_KEYUP, 0); // Release Control
+        end;
+
       end;
       Zoom: begin
         Result := 'Zoom: toggle mic';
@@ -99,6 +116,7 @@ begin
         SetForegroundWindow(FindWindow(nil, PChar('Skype')));
 
         keybd_event(VK_LCONTROL, $9D,0 , 0); // Press Control
+        keybd_event(VK_LSHIFT, $AA,0 , 0); // Press Shift
         keybd_event(Ord('M'), Ord('M'), 0 , 0); // Press M
 
         keybd_event(Ord('M'), Ord('M'), KEYEVENTF_KEYUP , 0); // Release M
@@ -106,10 +124,12 @@ begin
         keybd_event(VK_LCONTROL, $9D, KEYEVENTF_KEYUP, 0); // Release Control
       end;
       else
+      begin
         Result := 'Other app';
+      end;
     end;
 
-    CodeSite.SendMsg(Result);
+    CodeSite.SendMsg(Result + ' param1: ' + param1.ToString + ' param2: ' + param2.ToString);
   end;
 end;
 

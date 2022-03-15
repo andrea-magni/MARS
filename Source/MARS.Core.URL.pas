@@ -105,6 +105,8 @@ type
     class function URLEncode(const AStrings: TArray<string>): TArray<string>; overload;
     class function URLDecode(const AString: string): string; overload;
     class function URLDecode(const AStrings: TArray<string>): TArray<string>; overload;
+
+    class function ExtractPathParams(const APath: string; const APurgeBrackets: Boolean = True): TArray<string>;
   end;
 
 implementation
@@ -239,6 +241,27 @@ end;
 class function TMARSURL.EnsureLastPathDelimiter(const APath: string): string;
 begin
   Result := EnsureSuffix(APath, URL_PATH_SEPARATOR);
+end;
+
+class function TMARSURL.ExtractPathParams(const APath: string;
+  const APurgeBrackets: Boolean): TArray<string>;
+var
+  LTokens: TArray<string>;
+  LToken: string;
+begin
+  Result := [];
+
+  LTokens := APath.Split([URL_PATH_SEPARATOR]);
+  for LToken in LTokens do
+  begin
+    if LToken.StartsWith('{') then
+    begin
+      if APurgeBrackets then
+        Result := Result + [LToken.Substring(1, LToken.Length - 2)]
+      else
+        Result := Result + [LToken];
+    end;
+  end;
 end;
 
 function TMARSURL.GetHasPathParams: Boolean;
