@@ -1198,6 +1198,7 @@ begin
       for LIndex := 0 to LJSONArray.Count-1 do
       begin
         LJSONElement := LJSONArray.Items[LIndex];
+        LElement := nil; // be sure we build a new instance
         TJSONObject.TJSONValueToTValue(LJSONElement, LElementType, LElement);
         LArray.SetArrayElement(LIndex, LElement);
       end;
