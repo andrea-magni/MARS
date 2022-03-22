@@ -369,7 +369,9 @@ begin
         if Assigned(LParamMD) then
         begin
           LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
-          LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
+          LRequestBody.description := LParamMD.Description;
+          if LRequestBody.description = ''then
+            LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
         end;
       end;
     end;

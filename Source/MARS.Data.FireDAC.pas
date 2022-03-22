@@ -81,6 +81,7 @@ type
   end;
 
   TFDConnectionClass = class of TFDConnection;
+  TAfterCreateConnectionProc = reference to procedure(const AConnection: TFDConnection; const AActivation: IMARSActivation);
 
   TMARSFireDAC = class
   private
@@ -93,7 +94,7 @@ type
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TFDConnection; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
-    class var FAfterCreateConnection: TProc<TFDConnection>;
+    class var FAfterCreateConnection: TAfterCreateConnectionProc;
     class var FCustomFDConnectionClass: TFDConnectionClass;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
@@ -157,12 +158,14 @@ type
     class function LoadConnectionDefs(const AParameters: TMARSParameters;
       const ASliceName: string = ''): TArray<string>;
     class procedure CloseConnectionDefs(const AConnectionDefNames: TArray<string>);
-    class function CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
+    class function CreateConnectionByDefName(const AConnectionDefName: string;
+      const AActivation: IMARSActivation = nil): TFDConnection;
     class function GetFDConnectionClass: TFDConnectionClass;
 
     class constructor CreateClass;
     class procedure AddContextValueProvider(const AContextValueProviderProc: TContextValueProviderProc);
-    class property AfterCreateConnection: TProc<TFDConnection> read FAfterCreateConnection write FAfterCreateConnection;
+    class property AfterCreateConnection: TAfterCreateConnectionProc read FAfterCreateConnection write FAfterCreateConnection;
+    class property CustomFDConnectionClass: TFDConnectionClass read FCustomFDConnectionClass write FCustomFDConnectionClass;
   end;
 
   function MacroDataTypeToFieldType(const AMacroDataType: TFDMacroDataType): TFieldType;
@@ -299,14 +302,16 @@ begin
   Result.Open;
 end;
 
-class function TMARSFireDAC.CreateConnectionByDefName(const AConnectionDefName: string): TFDConnection;
+class function TMARSFireDAC.CreateConnectionByDefName(const AConnectionDefName: string;
+  const AActivation: IMARSActivation = nil): TFDConnection;
 begin
   Result := GetFDConnectionClass.Create(nil);
   try
-    Result.ConnectionDefName := AConnectionDefName;
+    if AConnectionDefName <> '' then
+      Result.ConnectionDefName := AConnectionDefName;
 
     if Assigned(FAfterCreateConnection) then
-      FAfterCreateConnection(Result);
+      FAfterCreateConnection(Result, AActivation);
   except
     Result.Free;
     raise;
@@ -536,7 +541,7 @@ end;
 function TMARSFireDAC.GetConnection: TFDConnection;
 begin
   if not Assigned(FConnection) then
-    FConnection := CreateConnectionByDefName(ConnectionDefName);
+    FConnection := CreateConnectionByDefName(ConnectionDefName, FActivation);
   Result := FConnection;
 end;
 
