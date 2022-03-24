@@ -35,7 +35,8 @@ uses
   StrUtils
 , MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT, MARS.Core.Utils
 , MARS.Metadata.Reader
-, MARS.Core.MediaType, MARS.Core.JSON, MARS.YAML.ReadersAndWriters
+, MARS.Core.MediaType, MARS.Core.JSON
+{$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
 
 { TOpenAPIHelper }
@@ -121,6 +122,7 @@ begin
             LJSONName := AAttr.Name;
           end
         );
+{$IFNDEF LINUX}
         LYAMLName := LMember.Name;
         LMember.HasAttribute<YAMLNameAttribute>(
           procedure (AAttr: YAMLNameAttribute)
@@ -128,6 +130,9 @@ begin
             LYAMLName := AAttr.Name;
           end
         );
+{$ELSE}
+        LYAMLName := '';
+{$ENDIF}
         if (LJSONName = '') and (LYAMLName = '') then
           Continue;
 

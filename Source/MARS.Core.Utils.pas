@@ -156,18 +156,18 @@ begin
   Assert(Assigned(ADest));
   {$IFDEF Delphi11Alexandria}
   // *** WORKAROUND ISSUE RSP-35516 on D11 ***
-  try
-  {$ENDIF}
+  // https://quality.embarcadero.com/projects/RSP/issues/RSP-35516 (Delphi 11 Alexandria will throw exception here)
+  ASource.Position := 0;
+  ADest.CopyFrom(ASource, ASource.Size);
+  ADest.Position := 0;
+  // do nothing content remains uncompressed (better than an exception!)
+  {$ELSE}
   LZipStream := TZCompressionStream.Create(ADest, TZCompressionLevel.zcDefault, WindowBits);
   try
     ASource.Position := 0;
     LZipStream.CopyFrom(ASource, ASource.Size);
   finally
     LZipStream.Free;
-  end;
-  {$IFDEF Delphi11Alexandria}
-  except
-    // https://quality.embarcadero.com/projects/RSP/issues/RSP-35516 (Delphi 11 Alexandria will throw exception here)
   end;
   {$ENDIF}
 end;
@@ -179,6 +179,14 @@ begin
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
 
+  {$IFDEF Delphi11Alexandria}
+  // *** WORKAROUND ISSUE RSP-35516 on D11 ***
+  // https://quality.embarcadero.com/projects/RSP/issues/RSP-35516 (Delphi 11 Alexandria will throw exception here)
+  ASource.Position := 0;
+  ADest.CopyFrom(ASource, ASource.Size);
+  ADest.Position := 0;
+  // do nothing content remains uncompressed (better than an exception!)
+  {$ELSE}
   LZipStream := TZDecompressionStream.Create(ASource, WindowBits);
   try
     ASource.Position := 0;
@@ -186,6 +194,9 @@ begin
   finally
     LZipStream.Free;
   end;
+  {$ENDIF}
+
+
 end;
 
 

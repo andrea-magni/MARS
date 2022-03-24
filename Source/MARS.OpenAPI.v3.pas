@@ -4,7 +4,9 @@ interface
 
 uses
   Classes, SysUtils, Generics.Collections, System.Rtti, System.TypInfo
-, MARS.Core.JSON, MARS.YAML.ReadersAndWriters, MARS.Rtti.Utils
+, MARS.Core.JSON
+{$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
+, MARS.Rtti.Utils
 ;
 
 type
@@ -12,7 +14,7 @@ type
 
   TReferenceableType = class
   public
-    [JSONName('$ref'), YAMLName('$ref')] ref: string;
+    [JSONName('$ref'){$IFNDEF LINUX}, YAMLName('$ref'){$ENDIF}] ref: string;
   end;
 
   TContact = class
@@ -48,7 +50,7 @@ type
     contact: TContact;
     license: TLicense;
     version: string; // required
-    [JSONName('x-logo'), YAMLName('x-logo')] x_logo: TXLogo;
+    [JSONName('x-logo'){$IFNDEF LINUX}, YAMLName('x-logo'){$ENDIF}] x_logo: TXLogo;
   end;
 
   TServerVariable = class
@@ -284,8 +286,8 @@ type
     security: TObjectList<TDictionary<string, TSecurityRequirement>>;
     tags: TObjectList<TTag>;
     externalDocs: TExternalDocumentation;
-    [JSONName(''), YAMLName('')] FBearerSecurityConfigured: Boolean;
-    [JSONName(''), YAMLName('')] FCookieSecurityConfigured: Boolean;
+    [JSONName(''){$IFNDEF LINUX}, YAMLName(''){$ENDIF}] FBearerSecurityConfigured: Boolean;
+    [JSONName(''){$IFNDEF LINUX}, YAMLName(''){$ENDIF}] FCookieSecurityConfigured: Boolean;
   end;
 
 implementation
