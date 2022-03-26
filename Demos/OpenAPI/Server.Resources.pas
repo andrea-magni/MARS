@@ -88,6 +88,13 @@ type
       [FormParam('iduser')] AIdSoftwareEsterno: string ): TMARSToken;
   end;
 
+  [Path('openapi'), MetaVisible(False)]
+  TOpenAPIResource = class
+  public
+    [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML) ]
+    function OpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
+  end;
+
 implementation
 
 uses
@@ -188,12 +195,15 @@ begin
   Result := inherited DoLogin(AUserName, APassword);
 end;
 
-initialization
-//  TMARSResourceRegistry.Instance.RegisterResource<THelloWorldResource>;
-//  TMARSResourceRegistry.Instance.RegisterResource<TTokenResource>;
-//  TMARSResourceRegistry.Instance.RegisterResource<TStoreResource>;
+{ TOpenAPIResource }
 
+function TOpenAPIResource.OpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+begin
+  Result := AOpenAPI;
+end;
+
+initialization
   TMARSResourceRegistry.Instance
-  .RegisterResources([THelloWorldResource, TTokenResource, TStoreResource]);
+  .RegisterResources([THelloWorldResource, TTokenResource, TStoreResource, TOpenAPIResource]);
 
 end.
