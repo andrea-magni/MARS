@@ -1183,7 +1183,7 @@ begin
         ATValue := TJSONObject.JSONToObject(ADesiredType.AsInstance.MetaclassType, TJSONObject(AValue));
     end
     else
-      raise Exception.Create('TJSONObjectHelper.TJSONValueToTValue: unkown type: ' + ADesiredType.Name);
+      raise Exception.Create('TJSONObjectHelper.TJSONValueToTValue: unknown type: ' + ADesiredType.Name);
   end
   else if (AValue is TJSONArray) then
   begin

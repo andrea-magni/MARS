@@ -35,7 +35,8 @@ uses
   StrUtils
 , MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT, MARS.Core.Utils
 , MARS.Metadata.Reader
-, MARS.Core.MediaType, MARS.Core.JSON, MARS.YAML.ReadersAndWriters
+, MARS.Core.MediaType, MARS.Core.JSON
+{$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
 
 { TOpenAPIHelper }
@@ -46,6 +47,7 @@ var
   LOpenAPI: TOpenAPI;
   LReader: TMARSMetadataReader;
   LServer: TServer;
+  LApplicationBasePath: string;
 begin
   Assert(Assigned(AEngine));
 
@@ -56,8 +58,12 @@ begin
 
     LServer := LOpenAPI.AddServerFromEngine(AEngine);
 
-    LServer.variables.Add('application'
-      , TServerVariable.Create([], TMARSURL.EnsureFirstPathDelimiter(AApplication.BasePath), 'Application'));
+    LApplicationBasePath := TMARSURL.EnsureFirstPathDelimiter(AApplication.BasePath);
+    if LApplicationBasePath <> '' then
+    begin
+      LServer.url := LServer.url + '{application}';
+      LServer.variables.Add('application', TServerVariable.Create([], LApplicationBasePath, 'Application'));
+    end;
 
     if AApplication.Parameters.ByNameText(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString <> '' then
       LOpenAPI.ReadBearerSecurityScheme('JWT_bearer', AApplication.Parameters);
@@ -121,6 +127,7 @@ begin
             LJSONName := AAttr.Name;
           end
         );
+{$IFNDEF LINUX}
         LYAMLName := LMember.Name;
         LMember.HasAttribute<YAMLNameAttribute>(
           procedure (AAttr: YAMLNameAttribute)
@@ -128,6 +135,9 @@ begin
             LYAMLName := AAttr.Name;
           end
         );
+{$ELSE}
+        LYAMLName := '';
+{$ENDIF}
         if (LJSONName = '') and (LYAMLName = '') then
           Continue;
 
@@ -369,7 +379,9 @@ begin
         if Assigned(LParamMD) then
         begin
           LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
-          LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
+          LRequestBody.description := LParamMD.Description;
+          if LRequestBody.description = ''then
+            LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
         end;
       end;
     end;
@@ -402,17 +414,22 @@ begin
 end;
 
 function TOpenAPIHelper.AddServerFromEngine(const AEngine: TMARSEngine): TServer;
+var
+  LEngineBasePath: string;
 begin
   Result := AddServer;
-             // '{protocol}://localhost:{port}{engine}{application}'
-  Result.url := '{protocol}://{hostname}:{port}{engine}{application}';
+  Result.url := '{protocol}://{hostname}:{port}';
   Result.description := AEngine.Name;
 
   Result.variables.Add('hostname'
   , TServerVariable.Create([], 'localhost', 'Host name'));
 
-  Result.variables.Add('engine'
-  , TServerVariable.Create([], TMARSURL.EnsureFirstPathDelimiter(AEngine.BasePath), 'Engine base path'));
+  LEngineBasePath := TMARSURL.EnsureFirstPathDelimiter(AEngine.BasePath);
+  if LEngineBasePath <> '' then
+  begin
+    Result.url := Result.url + '{engine}';
+    Result.variables.Add('engine', TServerVariable.Create([], LEngineBasePath, 'Engine base path'));
+  end;
 
   Result.variables.Add('port'
   , TServerVariable.Create([AEngine.Port.ToString, AEngine.PortSSL.ToString]

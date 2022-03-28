@@ -177,7 +177,6 @@ function TMARSActivation.GetMethodArgument(const AParam: TRttiParameter): TValue
 var
   LParamValue: TValue;
 begin
-  TValue.Make(nil, AParam.ParamType.Handle, LParamValue);
 
   AParam.HasAttribute<ContextAttribute>(
     procedure (AContextAttr: ContextAttribute)
@@ -185,6 +184,9 @@ begin
       LParamValue := GetContextValue(AParam).Value;
     end
   );
+
+  if LParamValue.IsEmpty then
+    TValue.Make(nil, AParam.ParamType.Handle, LParamValue);
 
   Result := LParamValue;
 end;

@@ -105,7 +105,7 @@ procedure TMARSFireDACInjectionService.GetValue(const ADestination: TRttiObject;
 begin
   if ADestination.GetRttiType.IsObjectOfType(TFDConnection) then
     AValue := TInjectionValue.Create(
-      TMARSFireDAC.CreateConnectionByDefName(GetConnectionDefName(ADestination, AActivation))
+      TMARSFireDAC.CreateConnectionByDefName(GetConnectionDefName(ADestination, AActivation), AActivation)
     )
   else if ADestination.GetRttiType.IsObjectOfType(TMARSFireDAC) then
     AValue := TInjectionValue.Create(

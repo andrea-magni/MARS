@@ -165,6 +165,7 @@ var
   LContentType: string;
   LEncoding: TEncoding;
   LContentBytes: TBytes;
+  LJSONArray: TJSONArray;
 begin
   if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
@@ -172,6 +173,15 @@ begin
   LJSONString := '';
   if AValue.IsType<string> then
     LJSONString := AValue.AsType<string>
+  else if AValue.IsType<TArray<string>> then
+  begin
+    LJSONArray := StringArrayToJsonArray(AValue.AsType<TArray<string>>);
+    try
+      LJSONString := LJSONArray.ToJSON;
+    finally
+      LJSONArray.Free;
+    end;
+  end
   else if AValue.IsType<TJSONValue> then
   begin
     LJSONValue := AValue.AsObject as TJSONValue;
@@ -471,6 +481,18 @@ begin
         Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
       end
   );
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TJSONValueWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := (AType.Handle = TypeInfo(TArray<string>)) and (AMediaType = TMediaType.APPLICATION_JSON);
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM;
+      end
+  );
+
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter<IXMLDocument>(TXMLWriter);
   TMARSMessageBodyRegistry.Instance.RegisterWriter<IXMLNode>(TXMLWriter);
