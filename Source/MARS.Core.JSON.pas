@@ -164,6 +164,7 @@ type
     function ReadArrayValue(const AName: string): TJSONArray; overload; inline;
     function ReadArrayValue<T: record>(const AName: string): TArray<T>; overload; inline;
 
+    function DeletePair(const AName: string): Boolean;
     procedure WriteStringValue(const AName: string; const AValue: string);
     procedure WriteIntegerValue(const AName: string; const AValue: Integer);
     procedure WriteInt64Value(const AName: string; const AValue: Int64);
@@ -824,6 +825,20 @@ begin
     Result := LValue.AsDouble;
 end;
 
+function TJSONObjectHelper.DeletePair(const AName: string): Boolean;
+var
+  LPair: TJSONPair;
+begin
+  Result := False;
+  if Values[AName] <> nil then
+  begin
+    LPair := RemovePair(AName);
+    if LPair.Owned then
+      FreeAndNil(LPair);
+    Result := True;
+  end;
+end;
+
 class function TJSONObjectHelper.DictionaryToJSON(const ADictionary: TObject): TJSONObject;
 begin
   Result := DictionaryToJSON(ADictionary, DefaultMARSJSONSerializationOptions);
@@ -1376,6 +1391,7 @@ end;
 procedure TJSONObjectHelper.WriteArrayValue(const AName: string;
   const AArray: TJSONArray);
 begin
+  DeletePair(AName);
   AddPair(AName, AArray);
 end;
 
@@ -1393,12 +1409,8 @@ end;
 
 procedure TJSONObjectHelper.WriteBoolValue(const AName: string;
   const AValue: Boolean);
-var
-  LDummy: TJSONValue;
 begin
-  if TryGetValue<TJSONValue>(AName, LDummy) then
-    RemovePair(AName);
-
+  DeletePair(AName);
   AddPair(AName, BooleanToTJSON(AValue));
 end;
 
@@ -1416,44 +1428,28 @@ end;
 
 procedure TJSONObjectHelper.WriteDoubleValue(const AName: string;
   const AValue: Double);
-var
-  LDummy: TJSONValue;
 begin
-  if TryGetValue<TJSONValue>(AName, LDummy) then
-    RemovePair(AName);
-
+  DeletePair(AName);
   AddPair(AName, TJSONNumber.Create(AValue));
 end;
 
 procedure TJSONObjectHelper.WriteInt64Value(const AName: string;
   const AValue: Int64);
-var
-  LDummy: TJSONValue;
 begin
-  if TryGetValue<TJSONValue>(AName, LDummy) then
-    RemovePair(AName);
-
+  DeletePair(AName);
   AddPair(AName, TJSONNumber.Create(AValue));
 end;
 
 procedure TJSONObjectHelper.WriteIntegerValue(const AName: string;
   const AValue: Integer);
-var
-  LDummy: TJSONValue;
 begin
-  if TryGetValue<TJSONValue>(AName, LDummy) then
-    RemovePair(AName);
-
+  DeletePair(AName);
   AddPair(AName, TJSONNumber.Create(AValue));
 end;
 
 procedure TJSONObjectHelper.WriteStringValue(const AName, AValue: string);
-var
-  LDummy: TJSONValue;
 begin
-  if TryGetValue<TJSONValue>(AName, LDummy) then
-    RemovePair(AName);
-
+  DeletePair(AName);
   if AValue <> '' then
     AddPair(AName, TJSONString.Create(AValue));
 end;
