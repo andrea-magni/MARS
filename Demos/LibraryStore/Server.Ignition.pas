@@ -41,6 +41,7 @@ uses
 {$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
 , MARS.OpenAPI.v3.InjectionService
 , Server.Resources
+, Storage, Model
 ;
 
 { TServerEngine }
@@ -158,6 +159,8 @@ begin
     );
 *)
 {$ENDREGION}
+
+    S.PrefillBooks;
   except
     FreeAndNil(FEngine);
     raise;

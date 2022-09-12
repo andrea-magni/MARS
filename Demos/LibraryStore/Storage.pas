@@ -16,6 +16,8 @@ type
     function BooksArray(const AFilter: TPredicate<TBook> = nil): TArray<TBook>;
     function AuthorsArray: TArray<TAuthor>;
 
+    procedure PrefillBooks;
+
     constructor Create; virtual;
     destructor Destroy; override;
   public
@@ -104,6 +106,52 @@ begin
   if not Assigned(_Instance) then
     _Instance := TStorage.Create;
   Result := _Instance;
+end;
+
+procedure TStorage.PrefillBooks;
+var LBook: TBook;
+begin
+  // 1 Andrea Magni, Delphi GUI programming with Firemonkey
+  LBook.Author.id := 1;
+  LBook.Author.Name := 'Andrea';
+  LBook.Author.SurName := 'Magni';
+  LBook.Author.Nationality := 'IT';
+  LBook.Author.Email := 'andrea.magni@gmail.com';
+  LBook.id := 1;
+  LBook.Title := 'Delphi GUI programming with Firemonkey';
+  LBook.Description := 'Unleash the full potential of the FMX framework to build exciting cross-platform apps with Embarcadero Delphi';
+  LBook.Year := 2020;
+  LBook.PublicationDate := EncodeDate(2020, 10, 29);
+  LBook.AddedAt := IncMonth(LBook.PublicationDate, 6);
+  Books.Add(LBook);
+
+  // 2 Cantù, OPH
+  LBook.Author.id := 2;
+  LBook.Author.Name := 'Marco';
+  LBook.Author.SurName := 'Cantù';
+  LBook.Author.Nationality := 'IT';
+  LBook.Author.Email := 'marco.cantu@embarcadero.com';
+  LBook.id := 2;
+  LBook.Title := 'Object Pascal Handbook';
+  LBook.Description := 'The Object Pascal Handbook is the complete guide to the programming language of Delphi and AppMethod, by Embarcadero Technologies.';
+  LBook.Year := 2015;
+  LBook.PublicationDate := EncodeDate(2015, 8, 5);
+  LBook.AddedAt := IncMonth(LBook.PublicationDate, 6);
+  Books.Add(LBook);
+
+  // 3 Cantù, Mastering Delphi 2
+  LBook.Author.id := 2;
+  LBook.Author.Name := 'Marco';
+  LBook.Author.SurName := 'Cantù';
+  LBook.Author.Nationality := 'IT';
+  LBook.Author.Email := 'marco.cantu@embarcadero.com';
+  LBook.id := 3;
+  LBook.Title := 'Mastering Delphi 2 for Windows 95';
+  LBook.Description := 'Mastering Delphi 2 is a comprehensive guide to Delphi programming that focuses entirely on the new 32-bit version.';
+  LBook.Year := 1996;
+  LBook.PublicationDate := EncodeDate(1996, 2, 1);
+  LBook.AddedAt := IncMonth(LBook.PublicationDate, 6);
+  Books.Add(LBook);
 end;
 
 end.

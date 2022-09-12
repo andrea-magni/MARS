@@ -11,8 +11,7 @@ uses
   SysUtils, Classes, Generics.Collections
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON, MARS.Core.Response
 , MARS.Core.URL
-//, MARS.Core.Token
-, MARS.Core.Token.Resource
+, MARS.Core.Token, MARS.Utils.JWT
 , MARS.OpenAPI.v3, MARS.Metadata.Attributes
 
 , Model, Storage
@@ -37,7 +36,7 @@ type
     [GET, Path('{id}')]
     function Retrieve([PathParam] id: Integer): TBook;
 
-    [POST]
+    [POST, RolesAllowed('manager')]
     function Add([BodyParam] book: TBook): TBook;
   end;
 
@@ -57,8 +56,29 @@ type
 
 // -----------------------------------------------------------------------------
 
-  [Path('token')]
-  TTokenResource = class(TMARSTokenResource)
+  [ Path('token')
+  , Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
+  TTokenResource = class
+  public
+    type TCredentialsData = record
+      userName: string;
+      password: string;
+      other: string;
+    end;
+  private
+  protected
+    [Context] FToken: TMARSToken;
+    [Context, ApplicationParam(JWT_SECRET_PARAM)] FSecret: string;
+    [Context] FURL: TMARSURL;
+  public
+    [GET, IsReference]
+    function Retrieve: TMARSToken;
+
+    [POST, IsReference]
+    function Authenticate([BodyParam] const ACredentials: TCredentialsData): TMARSToken;
+
+    [DELETE, IsReference]
+    function Logout: TMARSToken;
   end;
 
 // -----------------------------------------------------------------------------
@@ -104,7 +124,7 @@ begin
   Result := S.BooksArray(
     function (b: TBook): Boolean
     begin
-      Result := (Now - b.AddedTimeStamp) <= 1; // last 24 hours
+      Result := (Now - b.AddedAt) <= 1; // last 24 hours
     end
   );
 end;
@@ -115,7 +135,7 @@ begin
     raise Exception.Create('id cannot be zero');
 
   Result := book;
-  Result.AddedTimeStamp := Now;
+  Result.AddedAt := Now;
   S.Books.Add(Result);
 end;
 
@@ -152,6 +172,39 @@ begin
   finally
     LBookResource.Free;
   end;
+end;
+
+{ TTokenResource }
+
+function TTokenResource.Authenticate(
+  const ACredentials: TCredentialsData): TMARSToken;
+begin
+  if ACredentials.userName = '' then
+    raise EMARSHttpException.Create('Invalid userName', 501);
+
+
+  if ACredentials.userName = 'Andrea' then
+  begin
+    FToken.Roles := ['manager'];
+    FToken.Build(FSecret);
+    Result := FToken;
+  end
+  else
+  begin
+    FToken.Clear; // empty FToken
+    Result := FToken;
+  end;
+end;
+
+function TTokenResource.Logout: TMARSToken;
+begin
+  FToken.Clear;
+  Result := FToken;
+end;
+
+function TTokenResource.Retrieve: TMARSToken;
+begin
+  Result := FToken;
 end;
 
 initialization

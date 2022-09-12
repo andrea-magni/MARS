@@ -20,7 +20,8 @@ type
     Title: string;
     Description: string;
     Year: Integer;
-    AddedTimeStamp: TDateTime;
+    PublicationDate: TDateTime;
+    AddedAt: TDateTime;
   end;
 
 
