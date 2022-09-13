@@ -10,7 +10,10 @@ uses
   FMX.Forms,
   Server.FMX.Forms.Main in 'Server.FMX.Forms.Main.pas' {MainForm},
   Server.Ignition in 'Server.Ignition.pas',
-  Server.Resources in 'Server.Resources.pas';
+  Server.Resources in 'Server.Resources.pas',
+  MBW.PlainText in 'MBW.PlainText.pas',
+  Model in 'Model.pas',
+  Storage in 'Storage.pas';
 
 {$R *.res}
 

@@ -10,7 +10,10 @@ uses
   {$IFDEF LINUX}
   MARS.Linux.Daemon in '..\..\Source\MARS.Linux.Daemon.pas',
   {$ENDIF }
-  Server.Ignition in 'Server.Ignition.pas';
+  Server.Ignition in 'Server.Ignition.pas',
+  MBW.PlainText in 'MBW.PlainText.pas',
+  Model in 'Model.pas',
+  Storage in 'Storage.pas';
 
 begin
   {$IFDEF LINUX}

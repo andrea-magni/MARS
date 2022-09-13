@@ -15,7 +15,10 @@ uses
   MARS.http.Server.Indy,
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources in 'Server.Resources.pas',
-  ServerConst in 'ServerConst.pas';
+  ServerConst in 'ServerConst.pas',
+  MBW.PlainText in 'MBW.PlainText.pas',
+  Model in 'Model.pas',
+  Storage in 'Storage.pas';
 
 {$R *.res}
 

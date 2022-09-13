@@ -7,14 +7,18 @@ library LibraryStoreServerApacheModule;
 
 uses
   {$IFDEF MSWINDOWS}
-  Winapi.ActiveX, System.Win.ComObj,
+  Winapi.ActiveX,
+  System.Win.ComObj,
   {$ENDIF }
   Web.WebBroker,
   Web.ApacheApp,
   Web.HTTPD24Impl,
   Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
   Server.Ignition in 'Server.Ignition.pas',
-  Server.Resources in 'Server.Resources.pas';
+  Server.Resources in 'Server.Resources.pas',
+  MBW.PlainText in 'MBW.PlainText.pas',
+  Model in 'Model.pas',
+  Storage in 'Storage.pas';
 
 {$R *.res}
 

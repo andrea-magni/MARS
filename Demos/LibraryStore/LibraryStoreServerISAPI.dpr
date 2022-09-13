@@ -13,7 +13,10 @@ uses
   Web.Win.ISAPIThreadPool,
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources in 'Server.Resources.pas',
-  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule};
+  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
+  MBW.PlainText in 'MBW.PlainText.pas',
+  Model in 'Model.pas',
+  Storage in 'Storage.pas';
 
 {$R *.res}
 

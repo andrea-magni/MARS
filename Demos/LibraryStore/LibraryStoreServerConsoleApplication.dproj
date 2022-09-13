@@ -293,6 +293,9 @@
         <DCCReference Include="Server.Ignition.pas"/>
         <DCCReference Include="Server.Resources.pas"/>
         <DCCReference Include="ServerConst.pas"/>
+        <DCCReference Include="MBW.PlainText.pas"/>
+        <DCCReference Include="Model.pas"/>
+        <DCCReference Include="Storage.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -351,6 +354,12 @@
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx64\libcgsqlite3.dylib" Class="DependencyModule"/>
                 <DeployFile LocalName="bin\LibraryStoreServerConsoleApplication.exe" Configuration="Release" Class="ProjectOutput"/>
+                <DeployFile LocalName="bin\LibraryStoreServerConsoleApplication.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>LibraryStoreServerConsoleApplication.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="bin\LibraryStoreServerConsoleApplication" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="OSX32">

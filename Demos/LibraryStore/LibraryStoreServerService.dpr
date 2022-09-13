@@ -15,7 +15,10 @@ uses
   {$endif }
   Server.Service in 'Server.Service.pas' {ServerService: TService},
   Server.Ignition in 'Server.Ignition.pas',
-  Server.Resources in 'Server.Resources.pas';
+  Server.Resources in 'Server.Resources.pas',
+  MBW.PlainText in 'MBW.PlainText.pas',
+  Model in 'Model.pas',
+  Storage in 'Storage.pas';
 
 {$R *.RES}
 
