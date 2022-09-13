@@ -22,7 +22,7 @@ uses
   ;
 
 type
-  TForm1 = class(TForm)
+  TMainForm = class(TForm)
     MARSClient1: TMARSClient;
     MARSClientApplication1: TMARSClientApplication;
     StringGrid1: TStringGrid;
@@ -48,28 +48,28 @@ type
   end;
 
 var
-  Form1: TForm1;
+  MainForm: TMainForm;
 
 implementation
 
 {$R *.fmx}
 
-procedure TForm1.ButtonGETClick(Sender: TObject);
+procedure TMainForm.ButtonGETClick(Sender: TObject);
 begin
   MARSFDResource1.GET();
 end;
 
-procedure TForm1.ButtonPOSTClick(Sender: TObject);
+procedure TMainForm.ButtonPOSTClick(Sender: TObject);
 begin
   MARSFDResource1.POST();
 end;
 
-procedure TForm1.FormCreate(Sender: TObject);
+procedure TMainForm.FormCreate(Sender: TObject);
 begin
   ButtonGETClick(ButtonGET);
 end;
 
-procedure TForm1.MARSFDResource1ApplyUpdatesError(const ASender: TObject;
+procedure TMainForm.MARSFDResource1ApplyUpdatesError(const ASender: TObject;
   const AItem: TMARSFDResourceDatasetsItem; const AErrorCount: Integer;
   const AErrors: TArray<System.string>; var AHandled: Boolean);
 begin

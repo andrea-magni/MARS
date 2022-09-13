@@ -53,11 +53,13 @@ implementation
 {$R *.dfm}
 
 uses
-  MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
-, MARS.Data.MessageBodyWriters
+  System.Rtti
+, FireDAC.Comp.Client, FireDAC.Stan.Option
+, MARS.Core.MessageBodyReaders
+, MARS.Core.MessageBodyWriters, MARS.Data.MessageBodyWriters
 , MARS.Data.FireDAC, MARS.Data.FireDAC.ReadersAndWriters
 , MARS.Utils.Parameters, MARS.Utils.Parameters.IniFile
-, FireDAC.Comp.Client, FireDAC.Stan.Option, System.Rtti
+, MARS.Core.Activation.Interfaces
 ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -76,12 +78,12 @@ begin
     TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
 
     TMARSFireDAC.AfterCreateConnection :=
-      procedure (Conn: TFDConnection)
+      procedure (const AConnection: TFDConnection; const AActivation: IMARSActivation)
       begin
-        Conn.TxOptions.Isolation :=
+        AConnection.TxOptions.Isolation :=
           FEngine.Parameters
           .ByNameTextEnum<TFDTxIsolation>(
-            'FireDAC.' + Conn.ConnectionDefName + '.TxOptions.Isolation'
+            'FireDAC.' + AConnection.ConnectionDefName + '.TxOptions.Isolation'
             , TFDTxIsolation.xiReadCommitted);
       end;
 

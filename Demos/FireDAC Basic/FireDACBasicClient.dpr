@@ -9,13 +9,13 @@ program FireDACBasicClient;
 uses
   System.StartUpCopy,
   FMX.Forms,
-  Forms.Main in 'Forms.Main.pas' {Form1};
+  Forms.Main in 'Forms.Main.pas' {MainForm};
 
 {$R *.res}
 
 begin
   ReportMemoryLeaksOnShutdown := DebugHook <> 0;
   Application.Initialize;
-  Application.CreateForm(TForm1, Form1);
+  Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.
