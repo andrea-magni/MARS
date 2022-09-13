@@ -31,6 +31,14 @@ type
   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
+    TObjectListOfTWriter = class(TInterfacedObject, IMessageBodyWriter)
+    procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
+      AOutputStream: TStream; const AActivation: IMARSActivation);
+  end;
+
+
+
+  [Produces(TMediaType.APPLICATION_JSON)]
   TJSONValueWriter = class(TInterfacedObject, IMessageBodyWriter)
   protected
   public
@@ -94,11 +102,15 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
+  //AM add a TObjectListOfTWriter (and a TDictionaryOfTWriter too)
+
+
 implementation
 
 uses
   System.TypInfo, Xml.XMLIntf, System.JSON
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
+, CodeSiteLogging
 ;
 
 { TObjectWriter }
@@ -467,6 +479,29 @@ begin
   TMARSMessageBodyWriter.WriteWith<TXMLWriter>(AValue, AMediaType, AOutputStream, AActivation);
 end;
 
+
+{ TObjectListOfTWriter }
+
+procedure TObjectListOfTWriter.WriteTo(const AValue: TValue;
+  const AMediaType: TMediaType; AOutputStream: TStream;
+  const AActivation: IMARSActivation);
+begin
+  CodeSite.SendMsg('TObjectListOfTWriter');
+
+  var LArray : TArray<TObject> := [];
+  TRttiHelper.EnumerateObjectList(AValue.AsObject
+  , procedure (Item: TValue)
+    begin
+      LArray := LArray + [Item.AsObject];
+    end
+  );
+
+  TMARSMessageBodyWriter.WriteWith<TArrayOfObjectWriter>(TValue.From<TArray<TObject>>(LArray)
+  , AMediaType, AOutputStream, AActivation
+  );
+
+end;
+
 procedure RegisterWriters;
 begin
   TMARSMessageBodyRegistry.Instance.RegisterWriter<TJSONValue>(TJSONValueWriter);
@@ -525,6 +560,18 @@ begin
   );
 
   TMARSMessageBodyRegistry.Instance.RegisterWriter(
+    TObjectListOfTWriter
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
+      begin
+        Result := IsObjectListOfT(AType.Name);
+      end
+    , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
+      begin
+        Result := TMARSMessageBodyRegistry.AFFINITY_MEDIUM + 10;
+      end
+  );
+
+  TMARSMessageBodyRegistry.Instance.RegisterWriter(
     TRecordWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
@@ -574,6 +621,8 @@ begin
       end
   );
 end;
+
+
 
 initialization
   RegisterWriters;

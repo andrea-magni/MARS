@@ -184,13 +184,16 @@ end;
 
 function TTokenResource.Authenticate(
   const ACredentials: TCredentialsData): TMARSToken;
+const
+  ADMIN_USER = 'admin';
 begin
   if ACredentials.userName = '' then
     raise EMARSHttpException.Create('Invalid userName', 501);
 
 
-  if SameText(ACredentials.userName, 'Andrea') then
+  if SameText(ACredentials.userName, ADMIN_USER) then
   begin
+    FToken.UserName := ADMIN_USER;
     FToken.Roles := ['manager'];
     FToken.Build(FSecret);
     Result := FToken;
