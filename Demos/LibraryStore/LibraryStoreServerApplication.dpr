@@ -12,7 +12,8 @@ uses
   Server.Resources in 'Server.Resources.pas',
   Server.Ignition in 'Server.Ignition.pas',
   Model in 'Model.pas',
-  Storage in 'Storage.pas';
+  Storage in 'Storage.pas',
+  MBW.PlainText in 'MBW.PlainText.pas';
 
 {$R *.res}
 

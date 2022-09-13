@@ -19,7 +19,11 @@ uses
 ;
 
 type
-  [Path('book'), Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
+  [ Path('book')
+  , Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)
+//  , Produces(TMediaType.APPLICATION_YAML), Consumes(TMediaType.APPLICATION_YAML)
+//  , Produces(TMediaType.TEXT_PLAIN)
+  ]
   TBookResource = class
   protected
   public
@@ -40,7 +44,9 @@ type
     function Add([BodyParam] book: TBook): TBook;
   end;
 
-  [Path('author'), Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)]
+  [ Path('author')
+  , Produces(TMediaType.APPLICATION_JSON), Consumes(TMediaType.APPLICATION_JSON)
+  ]
   TAuthorResource = class
   protected
   public
@@ -183,7 +189,7 @@ begin
     raise EMARSHttpException.Create('Invalid userName', 501);
 
 
-  if ACredentials.userName = 'Andrea' then
+  if SameText(ACredentials.userName, 'Andrea') then
   begin
     FToken.Roles := ['manager'];
     FToken.Build(FSecret);

@@ -42,12 +42,17 @@ uses
 , MARS.OpenAPI.v3.InjectionService
 , Server.Resources
 , Storage, Model
+, MBW.PlainText
+, CodeSiteLogging
 ;
 
 { TServerEngine }
 
 class constructor TServerEngine.CreateEngine;
 begin
+//  CodeSite.Clear;
+//  CodeSite.Send('Engine creation');
+
   FEngine := TMARSEngine.Create;
   try
     // Engine configuration
@@ -119,7 +124,7 @@ begin
     TMARSActivation.RegisterBeforeInvoke(
       procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
       begin
-
+        CodeSite.SendMsg('Incoming request: ' + AActivation.URL.Path);
       end
     );
 *)
@@ -147,6 +152,14 @@ begin
           end;
         end
       );
+
+//    TMARSActivation.RegisterAfterInvoke(
+//      procedure (const AActivation: IMARSActivation)
+//      begin
+//        CodeSite.SendFmtMsg('Request completed: %s, Status: %d, Time: %d ms, Response size: %d'
+//        , [AActivation.URL.Path, AActivation.Response.StatusCode, AActivation.InvocationTime.ElapsedMilliseconds, AActivation.Response.ContentLength]);
+//      end
+//    );
 {$ENDREGION}
 {$REGION 'Global InvokeError handler example'}
 (*
@@ -154,7 +167,14 @@ begin
     TMARSActivation.RegisterInvokeError(
       procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
       begin
+//        CodeSite.SendError('Request: %s, Status: %d, Time: %d ms, Response size: %d, Exception: %s'
+//        , [AActivation.URL.Path, AActivation.Response.StatusCode, AActivation.InvocationTime.ElapsedMilliseconds, AActivation.Response.ContentLength
+//          , AException.ToString
+//          ]
+//        );
 
+//        AActivation.Response.Content := Format('{ "error": "%s" }', [AException.ToString]);
+//        AActivation.Response.ContentType := 'application/json';
       end
     );
 *)

@@ -3,10 +3,13 @@ unit Model;
 interface
 
 uses
-  Classes, SysUtils;
+  Classes, SysUtils
+, MARS.Core.Attributes, MARS.Core.JSON
+;
 
 type
   TAuthor = record
+//    [JSONName('')]
     id: Integer;
     Name: string;
     Surname: string;
