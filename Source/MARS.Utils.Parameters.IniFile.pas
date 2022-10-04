@@ -13,14 +13,14 @@ type
     class function GetActualFileName(const AFileName: string): string;
   public
     class procedure Load(const AParameters: TMARSParameters;
-      const AIniFileName: string = ''; const ABeforeLoad: TProc<TIniFile> = nil);
+      const AIniFileName: string = ''; const ABeforeLoad: TProc<TMemIniFile> = nil);
     class procedure Save(const AParameters: TMARSParameters; const AIniFileName: string = '');
     class function IniFileExists(const AIniFileName: string = '') : boolean;
   end;
 
   TMARSParametersIniFileReaderWriterHelper=class helper for TMARSParameters
   public
-    procedure LoadFromIniFile(const AIniFileName: string = ''; const ABeforeLoad: TProc<TIniFile> = nil);
+    procedure LoadFromIniFile(const AIniFileName: string = ''; const ABeforeLoad: TProc<TMemIniFile> = nil);
     procedure SaveToIniFile(const AIniFileName: string = '');
     function IniFileExists(const AIniFileName: string = '') : boolean;
   end;
@@ -59,9 +59,9 @@ end;
 
 class procedure TMARSParametersIniFileReaderWriter.Load(
   const AParameters: TMARSParameters; const AIniFileName: string;
-  const ABeforeLoad: TProc<TIniFile>);
+  const ABeforeLoad: TProc<TMemIniFile>);
 var
-  LIniFile: TIniFile;
+  LIniFile: TMemIniFile;
   LSections: TStringList;
   LSection: string;
   LValues: TStringList;
@@ -70,7 +70,7 @@ var
   LName: string;
   LValue: string;
 begin
-  LIniFile := TIniFile.Create(GetActualFileName(AIniFileName));
+  LIniFile := TMemIniFile.Create(GetActualFileName(AIniFileName));
   try
     if Assigned(ABeforeLoad) then
       ABeforeLoad(LIniFile);
@@ -151,7 +151,7 @@ begin
 end;
 
 procedure TMARSParametersIniFileReaderWriterHelper.LoadFromIniFile(
-  const AIniFileName: string; const ABeforeLoad: TProc<TIniFile>);
+  const AIniFileName: string; const ABeforeLoad: TProc<TMemIniFile>);
 begin
   TMARSParametersIniFileReaderWriter.Load(Self, AIniFileName, ABeforeLoad);
 end;
