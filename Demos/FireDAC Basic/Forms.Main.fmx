@@ -1,7 +1,7 @@
-object Form1: TForm1
+object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'Form1'
+  Caption = 'FireDAC Client'
   ClientHeight = 505
   ClientWidth = 751
   FormFactor.Width = 320
@@ -15,16 +15,16 @@ object Form1: TForm1
     ClipChildren = True
     Margins.Left = 10.000000000000000000
     Margins.Top = 10.000000000000000000
-    Margins.Right = 100.000000000000000000
+    Margins.Right = 10.000000000000000000
     Margins.Bottom = 10.000000000000000000
-    Size.Width = 641.000000000000000000
+    Size.Width = 731.000000000000000000
     Size.Height = 435.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 4
     RowHeight = 21.000000000000000000
     RowCount = 42
-    Viewport.Width = 621.000000000000000000
-    Viewport.Height = 394.000000000000000000
+    Viewport.Width = 727.000000000000000000
+    Viewport.Height = 410.000000000000000000
   end
   object Layout1: TLayout
     Align = Top
@@ -87,15 +87,15 @@ object Form1: TForm1
     HttpClient.Request.Ranges.Units = 'bytes'
     HttpClient.Request.Ranges = <>
     HttpClient.HTTPOptions = [hoForceEncodeParams]
-    Left = 688
-    Top = 56
+    Left = 488
+    Top = 88
   end
   object MARSClientApplication1: TMARSClientApplication
     DefaultMediaType = 'application/json'
     DefaultContentType = 'application/json'
     Client = MARSClient1
-    Left = 688
-    Top = 120
+    Left = 488
+    Top = 152
   end
   object MARSFDResource1: TMARSFDResource
     Application = MARSClientApplication1
@@ -110,12 +110,11 @@ object Form1: TForm1
         Synchronize = True
       end>
     OnApplyUpdatesError = MARSFDResource1ApplyUpdatesError
-    Left = 688
-    Top = 176
+    Left = 488
+    Top = 208
   end
   object employee1: TFDMemTable
     ActiveStoredUsage = []
-    Active = True
     CachedUpdates = True
     FetchOptions.AssignedValues = [evMode]
     FetchOptions.Mode = fmAll
@@ -124,13 +123,13 @@ object Form1: TForm1
     UpdateOptions.AssignedValues = [uvCheckRequired, uvAutoCommitUpdates]
     UpdateOptions.CheckRequired = False
     UpdateOptions.AutoCommitUpdates = True
-    Left = 688
-    Top = 240
+    Left = 488
+    Top = 272
   end
   object BindSourceDB1: TBindSourceDB
     DataSet = employee1
     ScopeMappings = <>
-    Left = 360
+    Left = 232
     Top = 240
   end
   object BindingsList1: TBindingsList

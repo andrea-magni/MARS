@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="LibraryStoreServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="LibraryStoreServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="LibraryStoreServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="LibraryStoreServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="LibraryStoreServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="LibraryStoreServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="LibraryStoreServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\..\..\FMXER\demos\LibraryStore\LibraryStoreProject.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="LibraryStoreServerApplication">
+        <MSBuild Projects="LibraryStoreServerApplication.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreServerApplication:Clean">
+        <MSBuild Projects="LibraryStoreServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreServerApplication:Make">
+        <MSBuild Projects="LibraryStoreServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LibraryStoreServerFMXApplication">
+        <MSBuild Projects="LibraryStoreServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreServerFMXApplication:Clean">
+        <MSBuild Projects="LibraryStoreServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreServerFMXApplication:Make">
+        <MSBuild Projects="LibraryStoreServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LibraryStoreServerService">
+        <MSBuild Projects="LibraryStoreServerService.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreServerService:Clean">
+        <MSBuild Projects="LibraryStoreServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreServerService:Make">
+        <MSBuild Projects="LibraryStoreServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LibraryStoreServerConsoleApplication">
+        <MSBuild Projects="LibraryStoreServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreServerConsoleApplication:Clean">
+        <MSBuild Projects="LibraryStoreServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreServerConsoleApplication:Make">
+        <MSBuild Projects="LibraryStoreServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LibraryStoreServerDaemon">
+        <MSBuild Projects="LibraryStoreServerDaemon.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreServerDaemon:Clean">
+        <MSBuild Projects="LibraryStoreServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreServerDaemon:Make">
+        <MSBuild Projects="LibraryStoreServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LibraryStoreServerApacheModule">
+        <MSBuild Projects="LibraryStoreServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreServerApacheModule:Clean">
+        <MSBuild Projects="LibraryStoreServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreServerApacheModule:Make">
+        <MSBuild Projects="LibraryStoreServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LibraryStoreServerISAPI">
+        <MSBuild Projects="LibraryStoreServerISAPI.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreServerISAPI:Clean">
+        <MSBuild Projects="LibraryStoreServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreServerISAPI:Make">
+        <MSBuild Projects="LibraryStoreServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LibraryStoreProject">
+        <MSBuild Projects="..\..\..\FMXER\demos\LibraryStore\LibraryStoreProject.dproj"/>
+    </Target>
+    <Target Name="LibraryStoreProject:Clean">
+        <MSBuild Projects="..\..\..\FMXER\demos\LibraryStore\LibraryStoreProject.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LibraryStoreProject:Make">
+        <MSBuild Projects="..\..\..\FMXER\demos\LibraryStore\LibraryStoreProject.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="LibraryStoreServerApplication;LibraryStoreServerFMXApplication;LibraryStoreServerService;LibraryStoreServerConsoleApplication;LibraryStoreServerDaemon;LibraryStoreServerApacheModule;LibraryStoreServerISAPI;LibraryStoreProject"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="LibraryStoreServerApplication:Clean;LibraryStoreServerFMXApplication:Clean;LibraryStoreServerService:Clean;LibraryStoreServerConsoleApplication:Clean;LibraryStoreServerDaemon:Clean;LibraryStoreServerApacheModule:Clean;LibraryStoreServerISAPI:Clean;LibraryStoreProject:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="LibraryStoreServerApplication:Make;LibraryStoreServerFMXApplication:Make;LibraryStoreServerService:Make;LibraryStoreServerConsoleApplication:Make;LibraryStoreServerDaemon:Make;LibraryStoreServerApacheModule:Make;LibraryStoreServerISAPI:Make;LibraryStoreProject:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

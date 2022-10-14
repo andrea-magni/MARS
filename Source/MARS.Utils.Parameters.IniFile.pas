@@ -12,14 +12,15 @@ type
   protected
     class function GetActualFileName(const AFileName: string): string;
   public
-    class procedure Load(const AParameters: TMARSParameters; const AIniFileName: string = '');
+    class procedure Load(const AParameters: TMARSParameters;
+      const AIniFileName: string = ''; const ABeforeLoad: TProc<TMemIniFile> = nil);
     class procedure Save(const AParameters: TMARSParameters; const AIniFileName: string = '');
     class function IniFileExists(const AIniFileName: string = '') : boolean;
   end;
 
   TMARSParametersIniFileReaderWriterHelper=class helper for TMARSParameters
   public
-    procedure LoadFromIniFile(const AIniFileName: string = '');
+    procedure LoadFromIniFile(const AIniFileName: string = ''; const ABeforeLoad: TProc<TMemIniFile> = nil);
     procedure SaveToIniFile(const AIniFileName: string = '');
     function IniFileExists(const AIniFileName: string = '') : boolean;
   end;
@@ -57,9 +58,10 @@ begin
 end;
 
 class procedure TMARSParametersIniFileReaderWriter.Load(
-  const AParameters: TMARSParameters; const AIniFileName: string);
+  const AParameters: TMARSParameters; const AIniFileName: string;
+  const ABeforeLoad: TProc<TMemIniFile>);
 var
-  LIniFile: TIniFile;
+  LIniFile: TMemIniFile;
   LSections: TStringList;
   LSection: string;
   LValues: TStringList;
@@ -68,8 +70,11 @@ var
   LName: string;
   LValue: string;
 begin
-  LIniFile := TIniFile.Create(GetActualFileName(AIniFileName));
+  LIniFile := TMemIniFile.Create(GetActualFileName(AIniFileName));
   try
+    if Assigned(ABeforeLoad) then
+      ABeforeLoad(LIniFile);
+
     LValues := TStringList.Create;
     try
       LIniFile.ReadSectionValues(AParameters.Name, LValues);
@@ -146,9 +151,9 @@ begin
 end;
 
 procedure TMARSParametersIniFileReaderWriterHelper.LoadFromIniFile(
-  const AIniFileName: string);
+  const AIniFileName: string; const ABeforeLoad: TProc<TMemIniFile>);
 begin
-  TMARSParametersIniFileReaderWriter.Load(Self, AIniFileName);
+  TMARSParametersIniFileReaderWriter.Load(Self, AIniFileName, ABeforeLoad);
 end;
 
 procedure TMARSParametersIniFileReaderWriterHelper.SaveToIniFile(

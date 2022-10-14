@@ -1,21 +1,24 @@
 ﻿[ButtonPOST]
-Coordinates=325,10,86,58
+Coordinates=325,10,86,36
+Visible=False
 
 [BindNavigator1]
-Coordinates=196,90,103,58
+Coordinates=196,10,103,58
 
 [Layout1]
-Coordinates=114,372,60,36
+Coordinates=114,212,60,36
+Visible=False
 
 [MARSClientApplication1]
 Coordinates=221,56,155,36
 
 [StringGrid1]
-Coordinates=207,208,80,58
+Coordinates=207,128,80,58
 Visible=True
 
 [ButtonGET]
-Coordinates=10,372,78,58
+Coordinates=10,212,78,36
+Visible=False
 
 [MARSClient1]
 Coordinates=240,111,92,36
@@ -31,7 +34,7 @@ Visible=False
 Coordinates=240,166,91,36
 
 [BindSourceDB1]
-Coordinates=10,10,106,336
+Coordinates=10,51,106,94
 
 [BindingsList1]
 Coordinates=135,87,91,36

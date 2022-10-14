@@ -1,0 +1,50 @@
+package MARS.mORMot;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library'}
+{$LIBSUFFIX '280'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  MARS.Utils,
+  MARS.Core;
+
+contains
+  MARS.mORMotJWT.Token in '..\..\Source\MARS.mORMotJWT.Token.pas',
+  SynCommons in '..\..\ThirdParty\mORMot\Source\SynCommons.pas',
+  SynCrypto in '..\..\ThirdParty\mORMot\Source\SynCrypto.pas',
+  SynEcc in '..\..\ThirdParty\mORMot\Source\SynEcc.pas',
+  SynLZ in '..\..\ThirdParty\mORMot\Source\SynLZ.pas',
+  MARS.mORMotJWT.Token.InjectionService in '..\..\Source\MARS.mORMotJWT.Token.InjectionService.pas',
+  SynTable in '..\..\ThirdParty\mORMot\Source\SynTable.pas';
+
+end.
