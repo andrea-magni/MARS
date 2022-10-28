@@ -582,7 +582,7 @@ procedure TMARSActivation.Invoke;
     begin
       Response.StatusCode := EMARSHttpException(AException).Status;
       Response.Content := AException.Message;
-      Response.ContentType := TMediaType.TEXT_PLAIN;
+      Response.ContentType := EMARSHttpException(AException).ContentType;
     end
     else begin
       Response.StatusCode := 500;
