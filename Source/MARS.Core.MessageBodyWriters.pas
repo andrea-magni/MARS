@@ -110,7 +110,7 @@ implementation
 uses
   System.TypInfo, Xml.XMLIntf, System.JSON
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
-, CodeSiteLogging
+//, CodeSiteLogging
 ;
 
 { TObjectWriter }
@@ -485,10 +485,11 @@ end;
 procedure TObjectListOfTWriter.WriteTo(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
+var
+  LArray : TArray<TObject>;
 begin
-  CodeSite.SendMsg('TObjectListOfTWriter');
+  LArray := [];
 
-  var LArray : TArray<TObject> := [];
   TRttiHelper.EnumerateObjectList(AValue.AsObject
   , procedure (Item: TValue)
     begin
@@ -496,10 +497,10 @@ begin
     end
   );
 
-  TMARSMessageBodyWriter.WriteWith<TArrayOfObjectWriter>(TValue.From<TArray<TObject>>(LArray)
+  TMARSMessageBodyWriter.WriteWith<TArrayOfObjectWriter>(
+    TValue.From<TArray<TObject>>(LArray)
   , AMediaType, AOutputStream, AActivation
   );
-
 end;
 
 procedure RegisterWriters;
@@ -621,8 +622,6 @@ begin
       end
   );
 end;
-
-
 
 initialization
   RegisterWriters;
