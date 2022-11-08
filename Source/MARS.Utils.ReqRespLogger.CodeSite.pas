@@ -108,23 +108,23 @@ const
 class constructor TMARSReqRespLoggerCodeSite.ClassCreate;
 begin
   TMARSActivation.RegisterBeforeInvoke(
-    procedure (const AR: IMARSActivation; out AIsAllowed: Boolean)
+    procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
     var
       LRequest: TMARSRequestLogCodeSite;
     begin
-      if not AR.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
+      if not AActivation.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
         Exit;
 
-      LRequest := TMARSRequestLogCodeSite.Create(AR.Request);
+      LRequest := TMARSRequestLogCodeSite.Create(AActivation.Request);
       try
         TMARSReqRespLoggerCodeSite.Instance.Log(csmOrange, 'Request',
           String.Join(LOGFIELD_SEPARATOR,
           [
             'Incoming',
-            'Engine: ' + AR.Engine.Name,
-            'Application: ' + AR.Application.Name,
-            'Verb: ' + AR.Request.Method,
-            'Path: ' + AR.URL.Path
+            'Engine: ' + AActivation.Engine.Name,
+            'Application: ' + AActivation.Application.Name,
+            'Verb: ' + AActivation.Request.Method,
+            'Path: ' + AActivation.URL.Path
           ]), LRequest
         );
       finally
@@ -134,24 +134,24 @@ begin
   );
 
   TMARSActivation.RegisterAfterInvoke(
-    procedure (const AR: IMARSActivation)
+    procedure (const AActivation: IMARSActivation)
     var
       LResponse: TMARSResponseLogCodeSite;
     begin
-      if not AR.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
+      if not AActivation.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
         Exit;
 
-      LResponse := TMARSResponseLogCodeSite.Create(AR.Response);
+      LResponse := TMARSResponseLogCodeSite.Create(AActivation.Response);
       try
         TMARSReqRespLoggerCodeSite.Instance.Log(csmGreen, 'Response',
           String.Join(LOGFIELD_SEPARATOR,
           [
             'Outgoing',
-            'Time: ' + AR.InvocationTime.ElapsedMilliseconds.ToString + ' ms',
-            'Engine: ' + AR.Engine.Name,
-            'Application: ' + AR.Application.Name,
-            'Resource: ' + IfThen(Assigned(AR.ResourceInstance), AR.ResourceInstance.ClassName, 'Unknown'),
-            'Method: ' + IfThen(Assigned(AR.Method), AR.Method.Name, 'Unknown')
+            'Time: ' + AActivation.InvocationTime.ElapsedMilliseconds.ToString + ' ms',
+            'Engine: ' + AActivation.Engine.Name,
+            'Application: ' + AActivation.Application.Name,
+            'Resource: ' + IfThen(Assigned(AActivation.ResourceInstance), AActivation.ResourceInstance.ClassName, 'Unknown'),
+            'Method: ' + IfThen(Assigned(AActivation.Method), AActivation.Method.Name, 'Unknown')
             ]
           ), LResponse
         );
@@ -165,7 +165,16 @@ begin
     procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
     begin
       CodeSite.Category := '';
-      CodeSite.SendException(AException);
+      CodeSite.SendException(
+          String.Join(LOGFIELD_SEPARATOR,
+          [
+            'Exception: ' + AException.ClassName,
+            'Engine: ' + AActivation.Engine.Name,
+            'Application: ' + AActivation.Application.Name,
+            'Verb: ' + AActivation.Request.Method,
+            'Path: ' + AActivation.URL.Path,
+            'Method: ' + IfThen(Assigned(AActivation.Method), AActivation.Method.Name, 'Unknown')
+          ]) + ' : ', AException);
     end
   );
 end;
