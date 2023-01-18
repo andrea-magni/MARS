@@ -190,11 +190,15 @@ var
   LRelativePath: string;
   LFullPath: string;
   LIndexFileFullPath: string;
+  LPathTokens: TArray<string>;
 begin
   Result := TMARSResponse.Create;
   Result.StatusCode := 404;
 
-  LRelativePath := SmartConcat(URL.SubResourcesToArray, PathDelim);
+  LPathTokens := URL.PathTokens;
+  Delete(LPathTokens, 0, 1);
+
+  LRelativePath := SmartConcat(LPathTokens, PathDelim);
   LFullPath := TPath.Combine(RootFolder, LRelativePath);
 
   if CheckFilters(LFullPath) then
