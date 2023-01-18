@@ -196,7 +196,7 @@ begin
   Result.StatusCode := 404;
 
   LPathTokens := URL.PathTokens;
-  Delete(LPathTokens, 0, 1);
+//  Delete(LPathTokens, 0, 1);
 
   LRelativePath := SmartConcat(LPathTokens, PathDelim);
   LFullPath := TPath.Combine(RootFolder, LRelativePath);
