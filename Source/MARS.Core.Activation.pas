@@ -160,7 +160,7 @@ type
 implementation
 
 uses
-  TypInfo
+  TypInfo, StrUtils
 , MARS.Core.Attributes, MARS.Core.Response, MARS.Core.MessageBodyReader
 , MARS.Core.Exceptions, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Rtti.Utils
 , MARS.Core.Injection, MARS.Core.Activation.InjectionService
@@ -679,7 +679,16 @@ var
 begin
   LFound := Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo);
 
-  // second attempt, if DefaultResourcePath is not empty
+  // another attempt: check wildcards
+  if (not LFound) then
+  begin
+    var LResourceKeys := Application.Resources.Keys.ToArray;
+    var LIndex := IndexStr('{*}', LResourceKeys);
+    if LIndex <> -1 then
+      LFound := Application.Resources.TryGetValue(LResourceKeys[LIndex], FConstructorInfo);
+  end;
+
+  // another attempt: check DefaultResourcePath
   if (not LFound) and (Application.DefaultResourcePath <> '') then
     LFound := Application.Resources.TryGetValue(Application.DefaultResourcePath, FConstructorInfo);
 
