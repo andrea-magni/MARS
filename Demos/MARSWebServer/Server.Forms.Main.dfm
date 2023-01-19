@@ -2,8 +2,8 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'MARS-Curiosity WebServer'
-  ClientHeight = 201
-  ClientWidth = 464
+  ClientHeight = 169
+  ClientWidth = 454
   Color = clBtnFace
   Constraints.MinHeight = 240
   Constraints.MinWidth = 480
@@ -12,20 +12,19 @@ object MainForm: TMainForm
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
-  OldCreateOrder = False
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 96
   TextHeight = 13
   object TopPanel: TPanel
     Left = 0
     Top = 0
-    Width = 464
+    Width = 454
     Height = 73
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitWidth = 464
     object Label1: TLabel
       Left = 28
       Top = 17
