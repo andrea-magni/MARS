@@ -107,6 +107,7 @@ end;
 
 procedure TMainForm.NavigateButtonClick(Sender: TObject);
 begin
+  ForceDirectories('C:\Temp\');
   ShellExecute(0, nil, 'http://localhost:8080/rest/default/helloworld', nil, nil, SW_SHOW);
 end;
 

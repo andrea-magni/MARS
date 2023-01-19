@@ -11,6 +11,7 @@ uses
   SysUtils, Classes, Generics.Collections
 
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL, MARS.Core.Response
+, MARS.Core.Activation.Interfaces
 ;
 
 type
@@ -77,6 +78,7 @@ type
     FIndexFileNames: TStringList;
   protected
     [Context] URL: TMARSURL;
+    [Context] Activation: IMARSActivation;
     procedure Init; virtual;
     procedure InitContentTypesForExt; virtual;
     procedure InitIndexFileNames; virtual;
@@ -89,7 +91,7 @@ type
     destructor Destroy; override;
 
     // REST METHODS
-    [GET, Path('/{*}')]
+    [GET]
     function GetContent: TMARSResponse; virtual;
 
     // PROPERTIES
@@ -107,10 +109,8 @@ implementation
 
 uses
   System.Types, IOUtils, Masks, StrUtils
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils
-  , MARS.Core.Exceptions
-  ;
+, MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions
+;
 
 function AtLeastOneMatch(const ASample: string; const AValues: TStringList): Boolean;
 var
@@ -191,14 +191,37 @@ var
   LFullPath: string;
   LIndexFileFullPath: string;
   LPathTokens: TArray<string>;
+  LBasePath: string;
 begin
   Result := TMARSResponse.Create;
   Result.StatusCode := 404;
 
   LPathTokens := URL.PathTokens;
-//  Delete(LPathTokens, 0, 1);
-
   LRelativePath := SmartConcat(LPathTokens, PathDelim);
+
+(*
+  LBasePath := URL.BasePath.Replace('/', PathDelim, [rfReplaceAll]);
+//  if (URL.Resource <> '') and (URL.HasSubResources) then
+//    LBasePath := TPath.Combine(LBasePath, URL.Resource.Replace('/', PathDelim, [rfReplaceAll]));
+*)
+
+  LBasePath :=
+    IncludeTrailingPathDelimiter(Activation.Engine.BasePath.Replace('/', PathDelim, [rfReplaceAll]))
+  + IncludeTrailingPathDelimiter(Activation.Application.BasePath.Replace('/', PathDelim, [rfReplaceAll]))
+  + IncludeTrailingPathDelimiter(Activation.ResourcePath.Replace('/', PathDelim, [rfReplaceAll]))
+  ;
+
+  if LBasePath.StartsWith(PathDelim) then
+    LBasePath := LBasePath.Substring(string(PathDelim).Length);
+
+  if LBasePath.Contains(TMARSURL.PATH_PARAM_WILDCARD) then
+    LBasePath := LBasePath.Substring(0, LBasePath.IndexOf(TMARSURL.PATH_PARAM_WILDCARD) - 1);
+
+
+  LRelativePath := LRelativePath.Substring(LBasePath.Length);
+  if LRelativePath.StartsWith(PathDelim) then
+    LRelativePath := LRelativePath.Substring(string(PathDelim).Length);
+
   LFullPath := TPath.Combine(RootFolder, LRelativePath);
 
   if CheckFilters(LFullPath) then
@@ -257,6 +280,7 @@ var
   LIndex: Integer;
   LEntry: string;
   LEntryRelativePath: string;
+  LIsFolder: Boolean;
 begin
   AResponse.StatusCode := 200;
   AResponse.ContentType := TMediaType.TEXT_HTML;
@@ -269,10 +293,11 @@ begin
     if CheckFilters(LEntry) then
     begin
       LEntryRelativePath := ExtractRelativePath(RootFolder, LEntry);
+      LIsFolder := TDirectory.Exists(LEntry);
       AResponse.Content := AResponse.Content
         + '<li>'
-        + '<a href="' + LEntryRelativePath + '">' + LEntryRelativePath + '</a>'
-        + IfThen(TDirectory.Exists(LEntry), ' (folder)')
+        + '<a href="' + LEntryRelativePath + IfThen(LIsFolder, '/') + '">' + LEntryRelativePath + '</a>'
+        + IfThen(LIsFolder, ' (folder)')
         + '</li>';
     end;
   end;
