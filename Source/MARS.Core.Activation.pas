@@ -121,6 +121,7 @@ type
     function GetResource: TRttiType; inline;
     function GetResourceAttributes: TArray<TCustomAttribute>; inline;
     function GetResourceInstance: TObject; inline;
+    function GetResourcePath: string; inline;
     function GetResponse: IMARSResponse; inline;
     function GetURL: TMARSURL; inline;
     function GetURLPrototype: TMARSURL; inline;
@@ -683,7 +684,7 @@ begin
   if (not LFound) then
   begin
     var LResourceKeys := Application.Resources.Keys.ToArray;
-    var LIndex := IndexStr('{*}', LResourceKeys);
+    var LIndex := IndexStr(TMARSURL.PATH_PARAM_WILDCARD, LResourceKeys);
     if LIndex <> -1 then
       LFound := Application.Resources.TryGetValue(LResourceKeys[LIndex], FConstructorInfo);
   end;
@@ -736,6 +737,11 @@ begin
       AProperty.SetValue(FResourceInstance, GetContextValue(AProperty).Value);
     end
   );
+end;
+
+function TMARSActivation.GetResourcePath: string;
+begin
+  Result := FResourcePath;
 end;
 
 function TMARSActivation.GetApplication: TMARSApplication;

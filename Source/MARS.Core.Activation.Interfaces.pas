@@ -37,6 +37,7 @@ type
     function GetResource: TRttiType;
     function GetResourceAttributes: TArray<TCustomAttribute>;
     function GetResourceInstance: TObject;
+    function GetResourcePath: string;
     function GetResponse: IMARSResponse;
     function GetURL: TMARSURL;
     function GetURLPrototype: TMARSURL;
@@ -57,6 +58,7 @@ type
     property Resource: TRttiType read GetResource;
     property ResourceAttributes: TArray<TCustomAttribute> read GetResourceAttributes;
     property ResourceInstance: TObject read GetResourceInstance;
+    property ResourcePath: string read GetResourcePath;
     property Response: IMARSResponse read GetResponse;
     property URL: TMARSURL read GetURL;
     property URLPrototype: TMARSURL read GetURLPrototype;
