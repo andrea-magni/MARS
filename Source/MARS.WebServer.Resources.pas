@@ -28,6 +28,8 @@ type
   private
     FPath: string;
     FIncludeSubFolders: Boolean;
+  protected
+    function ExpandMacros(const AString: string): string; virtual;
   public
     constructor Create(const APath: string; const AIncludeSubFolders: Boolean);
     procedure ApplyToResource(const AResource: TFileSystemResource); override;
@@ -325,7 +327,7 @@ procedure RootFolderAttribute.ApplyToResource(
   const AResource: TFileSystemResource);
 begin
   inherited;
-  AResource.RootFolder := Path;
+  AResource.RootFolder := ExpandMacros(Path);
   AResource.IncludeSubFolders := IncludeSubFolders;
 end;
 
@@ -335,6 +337,12 @@ begin
   inherited Create;
   FPath := IncludeTrailingPathDelimiter(APath);
   FIncludeSubFolders := AIncludeSubFolders;
+end;
+
+function RootFolderAttribute.ExpandMacros(const AString: string): string;
+begin
+  Result := AString;
+  Result := Result.Replace('{bin}', ExtractFilePath(ParamStr(0)));
 end;
 
 { ContentTypeForFileExt }
