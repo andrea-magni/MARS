@@ -12,7 +12,7 @@ uses
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON, MARS.Core.Response
 , MARS.Core.URL
 //, MARS.Core.Token
-, MARS.Core.Token.Resource
+, MARS.Core.Token.Resource, MARS.WebServer.Resources
 , MARS.OpenAPI.v3, MARS.Metadata.Attributes
 ;
 
@@ -31,6 +31,10 @@ type
   public
     [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_YAML)]
     function GetOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
+  end;
+
+  [Path('www/{*}'), RootFolder('{bin}\..\..\..\www\swagger-ui-3.52.5-dist', True), MetaVisible(False)]
+  TStaticContentResource = class(TFileSystemResource)
   end;
 
   [Path('token')]
@@ -58,6 +62,6 @@ begin
 end;
 
 initialization
-  TMARSResourceRegistry.Instance.RegisterResources([THelloWorldResource, TTokenResource, TOpenAPIResource]);
+  TMARSResourceRegistry.Instance.RegisterResources([THelloWorldResource, TTokenResource, TOpenAPIResource, TStaticContentResource]);
 
 end.

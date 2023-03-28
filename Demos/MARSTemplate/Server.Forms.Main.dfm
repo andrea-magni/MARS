@@ -2,132 +2,99 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'MARSTemplate Server'
-  ClientHeight = 304
-  ClientWidth = 698
+  ClientHeight = 203
+  ClientWidth = 468
   Color = clBtnFace
-  Constraints.MinHeight = 360
-  Constraints.MinWidth = 720
+  Constraints.MinHeight = 240
+  Constraints.MinWidth = 480
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -17
+  Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
   OnClose = FormClose
   OnCreate = FormCreate
-  PixelsPerInch = 144
   DesignSize = (
-    698
-    304)
-  TextHeight = 21
+    468
+    203)
+  TextHeight = 13
   object TopPanel: TPanel
     Left = 0
     Top = 0
-    Width = 698
-    Height = 110
-    Margins.Left = 5
-    Margins.Top = 5
-    Margins.Right = 5
-    Margins.Bottom = 5
+    Width = 468
+    Height = 73
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitWidth = 458
     object Label1: TLabel
-      Left = 42
-      Top = 26
-      Width = 36
-      Height = 21
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
+      Left = 28
+      Top = 17
+      Width = 24
+      Height = 13
       Caption = 'Port:'
     end
     object Label2: TLabel
-      Left = 366
-      Top = 26
-      Width = 62
-      Height = 21
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
+      Left = 244
+      Top = 17
+      Width = 41
+      Height = 13
       Caption = 'PortSSL:'
     end
     object StartButton: TButton
-      Left = 24
-      Top = 62
-      Width = 113
-      Height = 37
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
+      Left = 16
+      Top = 41
+      Width = 75
+      Height = 25
       Action = StartServerAction
       TabOrder = 0
     end
     object StopButton: TButton
-      Left = 156
-      Top = 62
-      Width = 113
-      Height = 37
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
+      Left = 104
+      Top = 41
+      Width = 75
+      Height = 25
       Action = StopServerAction
       TabOrder = 1
     end
     object PortNumberEdit: TEdit
-      Left = 86
-      Top = 21
-      Width = 123
-      Height = 29
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
+      Left = 57
+      Top = 14
+      Width = 82
+      Height = 21
       TabOrder = 2
       OnChange = PortNumberEditChange
     end
     object PortSSLNumerEdit: TEdit
-      Left = 434
-      Top = 21
-      Width = 123
-      Height = 29
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
+      Left = 289
+      Top = 14
+      Width = 82
+      Height = 21
       TabOrder = 3
       OnChange = PortSSLNumerEditChange
     end
   end
   object MainTreeView: TTreeView
     Left = 0
-    Top = 110
-    Width = 698
-    Height = 194
-    Margins.Left = 5
-    Margins.Top = 5
-    Margins.Right = 5
-    Margins.Bottom = 5
+    Top = 73
+    Width = 468
+    Height = 130
     Align = alClient
-    Indent = 29
+    Indent = 19
     TabOrder = 1
     OnClick = MainTreeViewClick
+    ExplicitWidth = 458
+    ExplicitHeight = 112
   end
   object OpenAPIButton: TButton
-    Left = 575
-    Top = 62
-    Width = 113
-    Height = 38
-    Margins.Left = 5
-    Margins.Top = 5
-    Margins.Right = 5
-    Margins.Bottom = 5
+    Left = 386
+    Top = 41
+    Width = 76
+    Height = 26
     Action = OpenAPIAction
     Anchors = [akTop, akRight]
     TabOrder = 2
+    ExplicitLeft = 376
   end
   object MainActionList: TActionList
     Left = 384

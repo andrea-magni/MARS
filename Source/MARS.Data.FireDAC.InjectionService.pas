@@ -20,8 +20,6 @@ uses
 type
   TMARSFireDACInjectionService = class(TInterfacedObject, IMARSInjectionService)
   protected
-    function GetConnectionDefName(const ADestination: TRttiObject;
-      const AActivation: IMARSActivation): string;
   public
     procedure GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation; out AValue: TInjectionValue);
@@ -30,6 +28,9 @@ type
     const FireDAC_ConnectionExpandMacros_PARAM = 'FireDAC.ConnectionExpandMacros';
     const FireDAC_ConnectionDefName_PARAM_DEFAULT = 'MAIN_DB';
     const FireDAC_ConnectionExpandMacros_PARAM_DEFAULT = False;
+
+   class function GetConnectionDefName(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): string;
   end;
 
 implementation
@@ -44,7 +45,7 @@ uses
 
 { TMARSFireDACInjectionService }
 
-function TMARSFireDACInjectionService.GetConnectionDefName(
+class function TMARSFireDACInjectionService.GetConnectionDefName(
   const ADestination: TRttiObject;
   const AActivation: IMARSActivation): string;
 var

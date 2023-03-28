@@ -10,7 +10,7 @@
 unit Net.CrossHttpRouter;
 
 interface
-
+{$WARN SYMBOL_PLATFORM OFF}
 uses
   Net.CrossHttpServer;
 

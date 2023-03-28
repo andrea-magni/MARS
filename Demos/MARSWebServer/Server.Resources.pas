@@ -3,7 +3,8 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit Server.Resources;
+
+unit Server.Resources;
 
 interface
 
@@ -16,7 +17,7 @@ uses
 ;
 
 type
-  [Path('helloworld'), RootFolder('C:\Temp', True)]
+  [Path('{*}'), RootFolder('C:\Temp', True)]
   THelloWorldResource = class(TFileSystemResource)
   end;
 

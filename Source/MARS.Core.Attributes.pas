@@ -11,7 +11,9 @@ interface
 
 uses
   Classes, SysUtils, System.Rtti, System.TypInfo, Generics.Collections
+{$IFNDEF ANDROID}
 , Web.ReqMulti
+{$ENDIF}
 , MARS.Core.Declarations, MARS.Core.Utils, MARS.Core.URL, MARS.Core.JSON
 , MARS.Core.Activation.Interfaces, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.Exceptions

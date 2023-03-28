@@ -121,6 +121,7 @@ type
     function GetResource: TRttiType; inline;
     function GetResourceAttributes: TArray<TCustomAttribute>; inline;
     function GetResourceInstance: TObject; inline;
+    function GetResourcePath: string; inline;
     function GetResponse: IMARSResponse; inline;
     function GetURL: TMARSURL; inline;
     function GetURLPrototype: TMARSURL; inline;
@@ -160,7 +161,7 @@ type
 implementation
 
 uses
-  TypInfo
+  TypInfo, StrUtils
 , MARS.Core.Attributes, MARS.Core.Response, MARS.Core.MessageBodyReader
 , MARS.Core.Exceptions, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Rtti.Utils
 , MARS.Core.Injection, MARS.Core.Activation.InjectionService
@@ -582,7 +583,7 @@ procedure TMARSActivation.Invoke;
     begin
       Response.StatusCode := EMARSHttpException(AException).Status;
       Response.Content := AException.Message;
-      Response.ContentType := TMediaType.TEXT_PLAIN;
+      Response.ContentType := EMARSHttpException(AException).ContentType;
     end
     else begin
       Response.StatusCode := 500;
@@ -679,7 +680,16 @@ var
 begin
   LFound := Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo);
 
-  // second attempt, if DefaultResourcePath is not empty
+  // another attempt: check wildcards
+  if (not LFound) then
+  begin
+    var LResourceKeys := Application.Resources.Keys.ToArray;
+    var LIndex := IndexStr(TMARSURL.PATH_PARAM_WILDCARD, LResourceKeys);
+    if LIndex <> -1 then
+      LFound := Application.Resources.TryGetValue(LResourceKeys[LIndex], FConstructorInfo);
+  end;
+
+  // another attempt: check DefaultResourcePath
   if (not LFound) and (Application.DefaultResourcePath <> '') then
     LFound := Application.Resources.TryGetValue(Application.DefaultResourcePath, FConstructorInfo);
 
@@ -727,6 +737,11 @@ begin
       AProperty.SetValue(FResourceInstance, GetContextValue(AProperty).Value);
     end
   );
+end;
+
+function TMARSActivation.GetResourcePath: string;
+begin
+  Result := FResourcePath;
 end;
 
 function TMARSActivation.GetApplication: TMARSApplication;

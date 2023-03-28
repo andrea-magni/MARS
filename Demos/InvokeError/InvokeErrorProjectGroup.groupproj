@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="InvokeErrorServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="InvokeErrorServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="InvokeErrorServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="InvokeErrorServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="InvokeErrorServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="InvokeErrorServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="InvokeErrorServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="InvokeErrorClient.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="InvokeErrorServerApplication">
+        <MSBuild Projects="InvokeErrorServerApplication.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorServerApplication:Clean">
+        <MSBuild Projects="InvokeErrorServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorServerApplication:Make">
+        <MSBuild Projects="InvokeErrorServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="InvokeErrorServerFMXApplication">
+        <MSBuild Projects="InvokeErrorServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorServerFMXApplication:Clean">
+        <MSBuild Projects="InvokeErrorServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorServerFMXApplication:Make">
+        <MSBuild Projects="InvokeErrorServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="InvokeErrorServerService">
+        <MSBuild Projects="InvokeErrorServerService.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorServerService:Clean">
+        <MSBuild Projects="InvokeErrorServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorServerService:Make">
+        <MSBuild Projects="InvokeErrorServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="InvokeErrorServerConsoleApplication">
+        <MSBuild Projects="InvokeErrorServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorServerConsoleApplication:Clean">
+        <MSBuild Projects="InvokeErrorServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorServerConsoleApplication:Make">
+        <MSBuild Projects="InvokeErrorServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="InvokeErrorServerDaemon">
+        <MSBuild Projects="InvokeErrorServerDaemon.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorServerDaemon:Clean">
+        <MSBuild Projects="InvokeErrorServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorServerDaemon:Make">
+        <MSBuild Projects="InvokeErrorServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="InvokeErrorServerApacheModule">
+        <MSBuild Projects="InvokeErrorServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorServerApacheModule:Clean">
+        <MSBuild Projects="InvokeErrorServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorServerApacheModule:Make">
+        <MSBuild Projects="InvokeErrorServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="InvokeErrorServerISAPI">
+        <MSBuild Projects="InvokeErrorServerISAPI.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorServerISAPI:Clean">
+        <MSBuild Projects="InvokeErrorServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorServerISAPI:Make">
+        <MSBuild Projects="InvokeErrorServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="InvokeErrorClient">
+        <MSBuild Projects="InvokeErrorClient.dproj"/>
+    </Target>
+    <Target Name="InvokeErrorClient:Clean">
+        <MSBuild Projects="InvokeErrorClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="InvokeErrorClient:Make">
+        <MSBuild Projects="InvokeErrorClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="InvokeErrorServerApplication;InvokeErrorServerFMXApplication;InvokeErrorServerService;InvokeErrorServerConsoleApplication;InvokeErrorServerDaemon;InvokeErrorServerApacheModule;InvokeErrorServerISAPI;InvokeErrorClient"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="InvokeErrorServerApplication:Clean;InvokeErrorServerFMXApplication:Clean;InvokeErrorServerService:Clean;InvokeErrorServerConsoleApplication:Clean;InvokeErrorServerDaemon:Clean;InvokeErrorServerApacheModule:Clean;InvokeErrorServerISAPI:Clean;InvokeErrorClient:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="InvokeErrorServerApplication:Make;InvokeErrorServerFMXApplication:Make;InvokeErrorServerService:Make;InvokeErrorServerConsoleApplication:Make;InvokeErrorServerDaemon:Make;InvokeErrorServerApacheModule:Make;InvokeErrorServerISAPI:Make;InvokeErrorClient:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
