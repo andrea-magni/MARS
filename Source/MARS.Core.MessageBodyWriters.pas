@@ -119,8 +119,20 @@ procedure TObjectWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaTy
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LJSON: TJSONValue;
+  LSerializationOptions: TMARSJSONSerializationOptions;
 begin
-  LJSON := TJSONObject.ObjectToJSON(AValue.AsObject);
+  LSerializationOptions := DefaultMARSJSONSerializationOptions;
+
+  for var LAttribute in AActivation.MethodAttributes do
+  begin
+    if LAttribute is JSONIncludeEmptyValuesAttribute then
+    begin
+      LSerializationOptions.SkipEmptyValues := False;
+      Break;
+    end;
+  end;
+
+  LJSON := TJSONObject.ObjectToJSON(AValue.AsObject, LSerializationOptions);
   try
     TJSONValueWriter.WriteJSONValue(LJSON, AMediaType, AOutputStream, AActivation);
   finally
