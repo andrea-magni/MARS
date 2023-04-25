@@ -316,7 +316,10 @@ begin
     for LIndex := 0 to Length(PathTokens)-1 do
     begin
       LToken := PathTokens[LIndex];
-      LOtherToken := AOtherURL.PathTokens[LIndex];
+      if LIndex < Length(AOtherURL.PathTokens) then
+        LOtherToken := AOtherURL.PathTokens[LIndex]
+      else
+        LOtherToken := '';
 
       if ACaseSensitive then
         LMatches := LToken = LOtherToken
