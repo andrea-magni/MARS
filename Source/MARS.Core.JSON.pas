@@ -148,6 +148,9 @@ type
 {$endif}
     function GetExactPairName(const ACaseInsensitiveName: string): string;
   public
+    function AddObject(const AName: string): TJSONObject;
+    function AddArray(const AName: string): TJSONArray;
+
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
 {$ifdef DelphiXE6_UP}
@@ -825,6 +828,18 @@ begin
   Result := ADefault;
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsDouble;
+end;
+
+function TJSONObjectHelper.AddArray(const AName: string): TJSONArray;
+begin
+  Result := TJSONArray.Create;
+  Self.AddPair(AName, Result);
+end;
+
+function TJSONObjectHelper.AddObject(const AName: string): TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Self.AddPair(AName, Result);
 end;
 
 function TJSONObjectHelper.DeletePair(const AName: string): Boolean;
