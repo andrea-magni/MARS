@@ -113,6 +113,8 @@ type
     function GetValue(const Index: Integer): TJSONValue; inline;
     {$endif}
   public
+    function AddObject(): TJSONObject;
+
     function ToArrayOfRecord<T: record>(): TArray<T>;
     procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions;
@@ -505,6 +507,12 @@ end;
 class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(const AArray: TArray<T>): TJSONArray;
 begin
   Result := ArrayOfObjectToJSON<T>(AArray);
+end;
+
+function TJSONArrayHelper.AddObject: TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Self.AddElement(Result);
 end;
 
 class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(const AArray: TArray<T>;
