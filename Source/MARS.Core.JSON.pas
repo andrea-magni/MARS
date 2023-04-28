@@ -113,7 +113,11 @@ type
     function GetValue(const Index: Integer): TJSONValue; inline;
     {$endif}
   public
-    function AddObject(): TJSONObject;
+    function AddObject(): TJSONObject; overload;
+    function AddObject(const AElement: TJSONObject): TJSONArray; overload;
+    function Add(const AElement: Int64): TJSONArray; overload;
+    function Add(const AElement: TDateTime): TJSONArray; overload;
+    function Add(const AElement: TDateTime; const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
 
     function ToArrayOfRecord<T: record>(): TArray<T>;
     procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
@@ -513,7 +517,12 @@ end;
 function TJSONArrayHelper.AddObject: TJSONObject;
 begin
   Result := TJSONObject.Create;
-  Self.AddElement(Result);
+  AddObject(Result);
+end;
+
+function TJSONArrayHelper.AddObject(const AElement: TJSONObject): TJSONArray;
+begin
+  Result := Self.Add(AElement);
 end;
 
 class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(const AArray: TArray<T>;
@@ -1546,6 +1555,24 @@ procedure TJSONObjectHelper.WriteUnixTimeValue(const AName: string;
 begin
   WriteInt64Value(AName, DateTimeToUnix(AValue));
 end;
+
+function TJSONArrayHelper.Add(const AElement: TDateTime): TJSONArray;
+begin
+  Result := Self.Add(DateToJSON(AElement));
+end;
+
+function TJSONArrayHelper.Add(const AElement: TDateTime;
+  const AOptions: TMARSJSONSerializationOptions): TJSONArray;
+begin
+  Result := Self.Add(DateToJSON(AElement, AOptions));
+end;
+
+function TJSONArrayHelper.Add(const AElement: Int64): TJSONArray;
+begin
+  Result := Self;
+  Self.AddElement(TJSONNumber.Create(AElement));
+end;
+
 
 { JSONNameAttribute }
 
