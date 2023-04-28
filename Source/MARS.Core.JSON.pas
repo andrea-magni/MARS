@@ -247,7 +247,8 @@ type
     class function JSONToRecord(const ARecordType: TRttiType; const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
-    class function TValueToJSONValue(const AValue: TValue; const AOptions: TMARSJSONSerializationOptions): TJSONValue;
+    class function TValueToJSONValue(const AValue: TValue; const AOptions: TMARSJSONSerializationOptions): TJSONValue; overload;
+    class function TValueToJSONValue(const AValue: TValue): TJSONValue; overload;
     class procedure TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType; var ATValue: TValue);
   end;
 
@@ -1417,6 +1418,12 @@ end;
 function TJSONObjectHelper.ToRecord<T>(const AFilterProc: TToRecordFilterProc = nil): T;
 begin
   Result := ToRecord(TRttiContext.Create.GetType(TypeInfo(T)), AFilterProc).AsType<T>;
+end;
+
+class function TJSONObjectHelper.TValueToJSONValue(
+  const AValue: TValue): TJSONValue;
+begin
+  Result := TValueToJSONValue(AValue, DefaultMARSJSONSerializationOptions);
 end;
 
 procedure TJSONObjectHelper.WriteArrayValue(const AName: string;
