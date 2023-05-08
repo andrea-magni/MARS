@@ -192,32 +192,29 @@ begin
   Result := TMARSResponse.Create;
   Result.StatusCode := 404;
 
-  var LPathTokens := URL.PathTokens;
-  var LRelativePath := SmartConcat(LPathTokens, PathDelim);
+  var LRelativePath := SmartConcat(URL.PathTokens
+    , '/').Replace('/', PathDelim, [rfReplaceAll]);
 
-(*
-  LBasePath := URL.BasePath.Replace('/', PathDelim, [rfReplaceAll]);
-//  if (URL.Resource <> '') and (URL.HasSubResources) then
-//    LBasePath := TPath.Combine(LBasePath, URL.Resource.Replace('/', PathDelim, [rfReplaceAll]));
-*)
+  var LBasePath := SmartConcat([
+      Activation.Engine.BasePath, Activation.Application.BasePath, Activation.ResourcePath
+    ], '/').Replace('/', PathDelim, [rfReplaceAll]);
 
-  var LBasePath := Activation.Engine.BasePath;
-  LBasePath := TPath.Combine(LBasePath, Activation.Application.BasePath);
-  LBasePath := TPath.Combine(LBasePath, Activation.ResourcePath);
-  LBasePath := LBasePath.Replace('/', PathDelim, [rfReplaceAll]) ;
-
+  // strip eventual initial PathDelim
   if LBasePath.StartsWith(PathDelim) then
     LBasePath := LBasePath.Substring(string(PathDelim).Length);
 
-  if LBasePath.Contains(TMARSURL.PATH_PARAM_WILDCARD) then
-    LBasePath := LBasePath.Substring(0, LBasePath.IndexOf(TMARSURL.PATH_PARAM_WILDCARD) - 1);
+  // stop at eventual wildcard position
+  var LWildcardPosition := LBasePath.IndexOf(TMARSURL.PATH_PARAM_WILDCARD);
+  if LWildcardPosition <> -1 then
+    LBasePath := LBasePath.Substring(0, LWildcardPosition - 1);
 
+  // make relative path even with base path
   LRelativePath := LRelativePath.Substring(LBasePath.Length);
   if LRelativePath.StartsWith(PathDelim) then
     LRelativePath := LRelativePath.Substring(string(PathDelim).Length);
 
   var LFullPath := RootFolder;
-  LFullPath := TPath.Combine(LFullPath, LRelativePath);
+  LFullPath := SmartConcat([LFullPath, LRelativePath], PathDelim);
 
   if CheckFilters(LFullPath) then
   begin
