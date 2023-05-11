@@ -267,7 +267,7 @@ type
   {$ELSE}
   var DefaultMARSJSONSerializationOptions: TMARSJSONSerializationOptions = (
     SkipEmptyValues: True;
-    DateIsUTC: True;
+    DateIsUTC: True; // check the initialization section of this unit!
     DateFormat: ISO8601;
   );
   {$ENDIF}
@@ -275,9 +275,8 @@ type
 implementation
 
 uses
-    DateUtils, Variants, StrUtils
-  , MARS.Core.Utils
-  , MARS.Rtti.Utils
+  System.DateUtils, System.TimeSpan, System.Variants, System.StrUtils
+, MARS.Core.Utils, MARS.Rtti.Utils
 ;
 
 class function TJSONObjectHelper.TValueToJSONValue(
@@ -1581,5 +1580,10 @@ begin
   inherited Create;
   FName := AName;
 end;
+
+initialization
+    var LUTCOffsetInMinutes := Trunc(TTimeZone.Local.GetUTCOffset(Now).TotalMinutes);
+    DefaultMARSJSONSerializationOptions.DateIsUTC := LUTCOffsetInMinutes = 0;
+
 
 end.
