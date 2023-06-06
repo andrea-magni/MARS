@@ -287,12 +287,12 @@ var
   LTypeName: string;
   LVariantValue: Variant;
 begin
+  if AValue.IsEmpty and not AValue.IsArray then
+    exit(TJSONNull.Create);
+
   LTypeName := string(AValue.TypeInfo^.Name);
 
-  if AValue.IsEmpty and not AValue.IsArray then
-    Result := TJSONNull.Create
-
-  else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
+  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
     Result := TJSONString.Create(AValue.AsString)
 
   else if IsDictionaryOfStringAndT(LTypeName) then
