@@ -114,7 +114,7 @@ type
 
   TRecord<R: record> = class
   public
-    class procedure ToDataSet(const ARecord: R; const ADataSet: TDataSet; const AAppend: Boolean = False);
+    class procedure ToDataSet(const ARecord: R; const ADataSet: TDataSet; const AAppend: Boolean = False; const ABeforePost: TProc = nil);
     class procedure FromDataSet(var ARecord: R; const ADataSet: TDataSet);
     class function DataSetToArray(const ADataSet: TDataSet): TArray<R>;
     class procedure SetFieldByName(var ARecord: R; const AFieldName: string; const AValue: TValue);
@@ -1199,7 +1199,7 @@ begin
 end;
 
 class procedure TRecord<R>.ToDataSet(const ARecord: R; const ADataSet: TDataSet;
-  const AAppend: Boolean);
+  const AAppend: Boolean; const ABeforePost: TProc);
 var
   LRecordType: TRttiType;
   LRecordField: TRttiField;
@@ -1229,6 +1229,10 @@ begin
           LDataSetField.Clear;
       end;
     end;
+
+    if Assigned(ABeforePost) then
+      ABeforePost();
+
     ADataSet.Post;
   except
     ADataSet.Cancel;

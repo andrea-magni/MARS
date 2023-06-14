@@ -199,6 +199,9 @@ begin
       finally
         AResponseInfo.CustomHeaders.AddStrings(LResponse.CustomHeaders);
         SetCookies(AResponseInfo, LResponse);
+
+//        AResponseInfo.CloseConnection := False;
+//        AResponseInfo.Connection := 'close';
       end;
     finally
       FreeAndNil(LResponse);
@@ -304,6 +307,10 @@ begin
   LScheduler.PoolSize := APoolSize;
   Scheduler := LScheduler;
   MaxConnections := LScheduler.PoolSize;
+//  MaxConnections := LScheduler.PoolSize * 2;
+//  MaxConnections := 0;
+//  KeepAlive := False;
+//  ReuseSocket := TIdReuseSocket.rsTrue;
 end;
 
 procedure TMARShttpServerIndy.Shutdown;
