@@ -1358,6 +1358,7 @@ var
   LJSONName: string;
   LAssignedValuesField: TRttiField;
   LAssignedValues: TArray<string>;
+  LDetails: string;
 
   function GetRecordFilterProc: TToRecordFilterProc;
   var
@@ -1411,8 +1412,17 @@ begin
       begin
         if ReadValue(LJSONName, LMember.GetRttiType, True, LValue) then
         begin
+          try
           LMember.SetValue(LRecordInstance, LValue);
           LAssignedValues := LAssignedValues + [LMember.Name];
+          except on E: EInvalidCast do
+            begin
+              LDetails := LMember.Name + ' (type ' + LMember.GetRttiTypeName +')'
+                + ' incompatible value: '
+                + LValue.ToString + ' (kind ' + TRttiEnumerationType.GetName<TTypeKind>(LValue.Kind) + ')';
+              raise EInvalidCast.Create(E.Message + sLineBreak + LDetails);
+            end;
+          end;
         end
         else
           LMember.SetValue(LRecordInstance, TValue.Empty);
@@ -1582,8 +1592,6 @@ begin
 end;
 
 initialization
-    var LUTCOffsetInMinutes := Trunc(TTimeZone.Local.GetUTCOffset(Now).TotalMinutes);
-    DefaultMARSJSONSerializationOptions.DateIsUTC := LUTCOffsetInMinutes = 0;
-
+  DefaultMARSJSONSerializationOptions.DateIsUTC := Trunc(TTimeZone.Local.GetUTCOffset(Now).TotalMinutes) = 0;
 
 end.

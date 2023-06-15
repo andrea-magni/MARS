@@ -27,6 +27,7 @@ type
     function GetValue(AInstance: Pointer): TValue;
 
     function GetRttiType: TRttiType;
+    function GetRttiTypeName: string;
     procedure SetValue(AInstance: Pointer; const AValue: TValue);
 
     function HasAttribute<T: TCustomAttribute>(const AInherited: Boolean = False): Boolean; overload; inline;
@@ -414,6 +415,16 @@ begin
     Result := TRttiParameter(Self).ParamType
   else if Self is TRttiType then
     Result := TRttiType(Self);
+end;
+
+function TRttiObjectHelper.GetRttiTypeName: string;
+var
+  LType: TRttiType;
+begin
+  Result := '';
+  LType := GetRttiType;
+  if Assigned(LType) then
+    Result := LType.Name;
 end;
 
 function TRttiObjectHelper.HasAttribute<T>(
