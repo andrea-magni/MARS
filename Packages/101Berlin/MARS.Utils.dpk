@@ -51,6 +51,7 @@ contains
   MARS.Core.Exceptions in '..\..\Source\MARS.Core.Exceptions.pas',
   MARS.Core.Declarations in '..\..\Source\MARS.Core.Declarations.pas',
   MARS.Core.MediaType in '..\..\Source\MARS.Core.MediaType.pas',
-  MARS.Utils.JWT in '..\..\Source\MARS.Utils.JWT.pas';
+  MARS.Utils.JWT in '..\..\Source\MARS.Utils.JWT.pas',
+  MARS.Core.RequestAndResponse.Interfaces in '..\..\Source\MARS.Core.RequestAndResponse.Interfaces.pas';
 
 end.

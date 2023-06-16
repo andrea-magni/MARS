@@ -120,10 +120,11 @@ procedure TObjectWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaTy
 var
   LJSON: TJSONValue;
   LSerializationOptions: TMARSJSONSerializationOptions;
+  LAttribute: TCustomAttribute;
 begin
   LSerializationOptions := DefaultMARSJSONSerializationOptions;
 
-  for var LAttribute in AActivation.MethodAttributes do
+  for LAttribute in AActivation.MethodAttributes do
   begin
     if LAttribute is JSONIncludeEmptyValuesAttribute then
     begin

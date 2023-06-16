@@ -340,7 +340,7 @@ begin
   begin
     LVariantValue := AValue.AsVariant;
     case VarType(LVariantValue) of
-      varSmallint, varInteger, varShortInt, varByte, varWord, varUInt32, varUInt64:
+      varSmallint, varInteger, varShortInt, varByte, varWord {$ifdef Delphi11Alexandria_UP}, varUInt32, varUInt64 {$ifend}:
         Result := TValueToJSONValue(StrToInt(VarToStr(LVariantValue)), AOptions);
       varSingle, varDouble:
         Result := TValueToJSONValue(StrToFloat(VarToStr(LVariantValue)), AOptions);
@@ -867,7 +867,8 @@ begin
   if Values[AName] <> nil then
   begin
     LPair := RemovePair(AName);
-    if LPair.Owned then
+    if {$ifdef Delphi10Sydney_UP} LPair.Owned {$else} LPair.GetOwned {$ifend}
+    then
       FreeAndNil(LPair);
     Result := True;
   end;

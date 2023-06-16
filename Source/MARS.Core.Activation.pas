@@ -677,14 +677,16 @@ end;
 procedure TMARSActivation.CheckResource;
 var
   LFound: Boolean;
+  LResourceKeys: TArray<string>;
+  LIndex: Integer;
 begin
   LFound := Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo);
 
   // another attempt: check wildcards
   if (not LFound) then
   begin
-    var LResourceKeys := Application.Resources.Keys.ToArray;
-    var LIndex := IndexStr(TMARSURL.PATH_PARAM_WILDCARD, LResourceKeys);
+    LResourceKeys := Application.Resources.Keys.ToArray;
+    LIndex := IndexStr(TMARSURL.PATH_PARAM_WILDCARD, LResourceKeys);
     if LIndex <> -1 then
       LFound := Application.Resources.TryGetValue(LResourceKeys[LIndex], FConstructorInfo);
   end;
