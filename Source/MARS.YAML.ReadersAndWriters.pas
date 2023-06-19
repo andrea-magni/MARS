@@ -2,6 +2,8 @@ unit MARS.YAML.ReadersAndWriters;
 
 interface
 
+{$I MARS.INC}
+
 uses
   Classes, SysUtils, Rtti
 , MARS.Core.Attributes, MARS.Core.Declarations, MARS.Core.MediaType
@@ -500,7 +502,12 @@ begin
   else if LTypeName.Contains('TObjectList<') then
     Result := ObjectListToYaml(ARoot, AKeyName, AValue.AsObject)
 
+  {$IFDEF Delphi11Alexandria_UP}
   else if AValue.IsObjectInstance then
+  {$ELSE}
+  else if AValue.IsObject then
+  {$ENDIF}
+
     Result := ObjectToYaml(ARoot, AKeyName, AValue.AsObject)
 
   else if AValue.IsArray and (AValue.GetArrayLength > 0) then

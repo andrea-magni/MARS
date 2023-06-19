@@ -188,14 +188,17 @@ begin
 end;
 
 function TFileSystemResource.GetContent: TMARSResponse;
+var
+  LRelativePath, LBasePath, LFullPath, LIndexFileFullPath: string;
+  LWildcardPosition: Integer;
 begin
   Result := TMARSResponse.Create;
   Result.StatusCode := 404;
 
-  var LRelativePath := SmartConcat(URL.PathTokens
+  LRelativePath := SmartConcat(URL.PathTokens
     , '/').Replace('/', PathDelim, [rfReplaceAll]);
 
-  var LBasePath := SmartConcat([
+  LBasePath := SmartConcat([
       Activation.Engine.BasePath, Activation.Application.BasePath, Activation.ResourcePath
     ], '/').Replace('/', PathDelim, [rfReplaceAll]);
 
@@ -204,7 +207,7 @@ begin
     LBasePath := LBasePath.Substring(string(PathDelim).Length);
 
   // stop at eventual wildcard position
-  var LWildcardPosition := LBasePath.IndexOf(TMARSURL.PATH_PARAM_WILDCARD);
+  LWildcardPosition := LBasePath.IndexOf(TMARSURL.PATH_PARAM_WILDCARD);
   if LWildcardPosition <> -1 then
     LBasePath := LBasePath.Substring(0, LWildcardPosition - 1);
 
@@ -213,7 +216,7 @@ begin
   if LRelativePath.StartsWith(PathDelim) then
     LRelativePath := LRelativePath.Substring(string(PathDelim).Length);
 
-  var LFullPath := RootFolder;
+  LFullPath := RootFolder;
   LFullPath := SmartConcat([LFullPath, LRelativePath], PathDelim);
 
   if CheckFilters(LFullPath) then
@@ -222,7 +225,7 @@ begin
       ServeFileContent(LFullPath, Result)
     else if TDirectory.Exists(LFullPath) then
     begin
-      var LIndexFileFullPath := '';
+      LIndexFileFullPath := '';
       if DirectoryHasIndexFile(LFullPath, LIndexFileFullPath) then
         ServeFileContent(LIndexFileFullPath, Result)
       else
