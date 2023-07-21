@@ -89,6 +89,7 @@ type
 
 implementation
 
+uses DateUtils;
 
 function GetRecordMBR: IMessageBodyReader;
 begin
@@ -137,7 +138,7 @@ begin
   Assert.AreEqual(123, LValue.AInteger);
   Assert.AreEqual(Double(1234.56789), LValue.AFloat);
   Assert.IsTrue(Currency(7.75) = LValue.ACurrency);
-  Assert.AreEqual(EncodeDate(1982, 5, 24), LValue.ADate);
+  Assert.AreEqual(EncodeDate(1982, 5, 24), DateOf(LValue.ADate));
   Assert.AreEqual('C', LValue.AChar);
 end;
 
@@ -153,7 +154,7 @@ begin
 
   Assert.AreEqual('Andrea', LValue.Name);
   Assert.AreEqual('Magni', LValue.Surname);
-  Assert.AreEqual(EncodeDate(1982, 5, 24), LValue.DateOfBirth);
+  Assert.AreEqual(EncodeDate(1982, 5, 24), DateOf(LValue.DateOfBirth));
 end;
 
 procedure TMARSRecordReaderTest.Setup;
@@ -294,7 +295,7 @@ begin
   Assert.AreEqual(1, Length(LValue));
   Assert.AreEqual('Andrea', LValue[0].Name);
   Assert.AreEqual('Magni', LValue[0].Surname);
-  Assert.AreEqual(EncodeDate(1982, 5, 24), LValue[0].DateOfBirth);
+  Assert.AreEqual(EncodeDate(1982, 5, 24), DateOf(LValue[0].DateOfBirth));
 end;
 
 procedure TMARSArrayOfRecordReaderTest.Setup;

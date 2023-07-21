@@ -82,6 +82,7 @@ type
     const APPLICATION_OCTET_STREAM = 'application/octet-stream';
     const APPLICATION_FORM_URLENCODED_TYPE = 'application/x-www-form-urlencoded';
     const APPLICATION_YAML = 'application/x-yaml';
+    const APPLICATION_PDF = 'application/pdf';
     const MULTIPART_FORM_DATA = 'multipart/form-data';
     const WILDCARD = '*/*';
   public

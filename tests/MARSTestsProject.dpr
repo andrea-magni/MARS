@@ -1,6 +1,6 @@
 program MARSTestsProject;
 
-{.$DEFINE TESTINSIGHT}
+{$DEFINE TESTINSIGHT}
 
 {$IFNDEF TESTINSIGHT}
 {$APPTYPE CONSOLE}
@@ -29,7 +29,7 @@ begin
 var LResults: IRunResults;
 begin
   LResults := TDUnitX.CreateRunner([TDUnitXConsoleLogger.Create()]).Execute;
-  if (LResults.ErrorCount > 0) or (LResults.FailureCount > 0) then
+//  if (LResults.ErrorCount > 0) or (LResults.FailureCount > 0) then
     Readln;
 {$ENDIF}
 end.
