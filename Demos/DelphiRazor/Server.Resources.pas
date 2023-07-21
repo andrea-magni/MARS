@@ -1,9 +1,10 @@
 (*
-  Copyright 2016, MARS-Curiosity library
+  Copyright 2016-2023, MARS-Curiosity library
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit Server.Resources;
+
+unit Server.Resources;
 
 interface
 
