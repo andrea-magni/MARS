@@ -240,6 +240,10 @@ end;
 
 procedure TMARSFireDACReaderWriterTest.TearDown;
 begin
+  FreeAndNil(FDQuery1);
+  FreeAndNil(FDQuery2);
+  FreeAndNil(FDQuery3);
+
   FJSONMediaType.Free;
   FOutputStream.Free;
 end;

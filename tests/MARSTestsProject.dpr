@@ -10,9 +10,9 @@ program MARSTestsProject;
 
 uses
   SysUtils,
-{$IFDEF TESTINSIGHT}
+  {$IFDEF TESTINSIGHT}
   TestInsight.DUnitX,
-{$ENDIF}
+  {$ENDIF }
   DUnitX.TestFramework,
   DUnitX.Loggers.Console,
   Tests.Core in 'Tests.Core.pas',
@@ -20,7 +20,8 @@ uses
   Tests.MessageBodyReaders in 'Tests.MessageBodyReaders.pas',
   Tests.Records.Types in 'Tests.Records.Types.pas',
   Tests.FireDAC in 'Tests.FireDAC.pas',
-  Tests.JWT in 'Tests.JWT.pas';
+  Tests.JWT in 'Tests.JWT.pas',
+  Tests.Data in 'Tests.Data.pas';
 
 {$IFDEF TESTINSIGHT}
 begin

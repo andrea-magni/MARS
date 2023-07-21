@@ -88,6 +88,7 @@ type
 //    joIndentCaseLower
 //    joIndentCaseUpper
 //    joIndentCasePreserve
+    UseDisplayFormatForNumericFields: Boolean;
   end;
 
   JSONIncludeEmptyValuesAttribute = class(TCustomAttribute);
@@ -269,6 +270,7 @@ type
     SkipEmptyValues: True;
     DateIsUTC: True; // check the initialization section of this unit!
     DateFormat: ISO8601;
+    UseDisplayFormatForNumericFields: False;
   );
   {$ENDIF}
 
