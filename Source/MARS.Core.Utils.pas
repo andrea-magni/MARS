@@ -10,8 +10,11 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes, RTTI, SyncObjs, REST.JSON, System.JSON
-, MARS.Core.JSON, MARS.Core.RequestAndResponse.Interfaces
+  SysUtils, Classes, RTTI, SyncObjs
+, REST.JSON
+, System.JSON
+, MARS.Core.JSON
+, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -106,7 +109,10 @@ uses
 {$ifndef DelphiXE6_UP}
   , XSBuiltIns
 {$endif}
-  , StrUtils, DateUtils, Masks, ZLib, Zip, NetEncoding
+  , StrUtils, DateUtils, Masks
+{$IFDEF MARS_ZLIB}, ZLib {$ENDIF}
+{$IFDEF MARS_ZIP}, Zip {$ENDIF}
+  , NetEncoding
 ;
 
 function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;
@@ -148,10 +154,14 @@ begin
     raise Exception.Create('Unable to copy all content to TBytes');
 end;
 
+
 procedure ZipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
+{$IFDEF MARS_ZLIB}
 var
   LZipStream: TZCompressionStream;
+{$ENDIF}
 begin
+{$IFDEF MARS_ZLIB}
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
 
@@ -162,12 +172,16 @@ begin
   finally
     LZipStream.Free;
   end;
+{$ENDIF}
 end;
 
 procedure UnzipStream(const ASource: TStream; const ADest: TStream; const WindowBits: Integer = 15);
+{$IFDEF MARS_ZLIB}
 var
   LZipStream: TZDecompressionStream;
+{$ENDIF}
 begin
+{$IFDEF MARS_ZLIB}
   Assert(Assigned(ASource));
   Assert(Assigned(ADest));
 
@@ -178,6 +192,7 @@ begin
   finally
     LZipStream.Free;
   end;
+{$ENDIF}
 end;
 
 

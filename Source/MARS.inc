@@ -1,7 +1,9 @@
 {$define MARS_FIREDAC} // To enable MARS FireDAC support
 {.$define MARS_UNIDAC} // To enable MARS Devart UniDAC support
-
 {.$define MARS_JSON_LEGACY} // To revert to Rest.JSON serializer/deserializer for JSON and TObject descendants
+
+{$define MARS_ZLIB}
+{$define MARS_ZIP}
 
 {$if compilerversion = 22}
   {$define DelphiXE}

@@ -10,7 +10,8 @@ unit Server.Ignition;
 interface
 
 uses
-  System.Classes, System.SysUtils, System.RTTI, System.StrUtils, System.ZLib
+  System.Classes, System.SysUtils, System.RTTI, System.StrUtils
+{$IFDEF MARS_ZLIB}, System.ZLib {$ENDIF}
 , MARS.Core.Engine
 ;
 
