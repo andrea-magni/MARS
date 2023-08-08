@@ -15,6 +15,9 @@ uses
   , MARS.Core.JSON
   , DB;
 
+procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField); overload;
+procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField; const AOptions: TMARSJSONSerializationOptions); overload;
+
 function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string = ''): TJSONObject; overload;
 function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string; const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
 
@@ -91,6 +94,69 @@ begin
   Result := RecordToJSONObject(ADataSet, ARootPath, DefaultMARSJSONSerializationOptions);
 end;
 
+procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField);
+begin
+  FieldToJSONObject(AObject, APairName, AField, DefaultMARSJSONSerializationOptions);
+end;
+
+procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField; const AOptions: TMARSJSONSerializationOptions);
+begin
+      case AField.DataType of
+//        ftUnknown: ;
+        ftString: AObject.AddPair(APairName, AField.AsString);
+        ftSmallint: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftInteger: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftWord: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftBoolean: AObject.AddPair(APairName, BooleanToTJSON(AField.AsBoolean));
+        ftFloat: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftCurrency: AObject.AddPair(APairName, TJSONNumber.Create(AField.AsCurrency));
+        ftBCD: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftDate: AObject.AddPair(APairName, DateFieldToJSON(AField));
+        ftTime: AObject.AddPair(APairName, DateFieldToJSON(AField));
+        ftDateTime: AObject.AddPair(APairName, DateFieldToJSON(AField));
+//        ftBytes: ;
+//        ftVarBytes: ;
+        ftAutoInc: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+//        ftBlob: ;
+        ftMemo: AObject.AddPair(APairName, AField.AsString);
+//        ftGraphic: ;
+//        ftFmtMemo: ;
+//        ftParadoxOle: ;
+//        ftDBaseOle: ;
+//        ftTypedBinary: ;
+//        ftCursor: ;
+        ftFixedChar: AObject.AddPair(APairName, AField.AsString);
+        ftWideString: AObject.AddPair(APairName, AField.AsWideString);
+        ftLargeint: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+//        ftADT: ;
+//        ftArray: ;
+//        ftReference: ;
+//        ftDataSet: ;
+//        ftOraBlob: ;
+//        ftOraClob: ;
+        ftVariant: AObject.AddPair(APairName, AField.AsString);
+//        ftInterface: ;
+//        ftIDispatch: ;
+        ftGuid: AObject.AddPair(APairName, AField.AsString);
+        ftTimeStamp: AObject.AddPair(APairName, DateFieldToJSON(AField));
+        ftFMTBcd: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftFixedWideChar: AObject.AddPair(APairName, AField.AsString);
+        ftWideMemo: AObject.AddPair(APairName, AField.AsString);
+//        ftOraTimeStamp: ;
+//        ftOraInterval: ;
+        ftLongWord: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftShortint: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftByte: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+        ftExtended: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+//        ftConnection: ;
+//        ftParams: ;
+//        ftStream: ;
+//        ftTimeStampOffset: ;
+//        ftObject: ;
+        ftSingle: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
+      end;
+end;
+
 function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string; const AOptions: TMARSJSONSerializationOptions): TJSONObject;
 var
   LField: TField;
@@ -102,7 +168,6 @@ begin
     raise Exception.Create('DataSet is not active');
   if ADataSet.IsEmpty then
     raise Exception.Create('DataSet is empty');
-
 
   Result := TJSONObject.Create;
   try
@@ -117,60 +182,8 @@ begin
         if ContainsStr(LPairName, '.') then
           Continue;
 
-        case LField.DataType of
-  //        ftUnknown: ;
-          ftString: Result.AddPair(LPairName, LField.AsString);
-          ftSmallint: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftInteger: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftWord: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftBoolean: Result.AddPair(LPairName, BooleanToTJSON(LField.AsBoolean));
-          ftFloat: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftCurrency: Result.AddPair(LPairName, TJSONNumber.Create(LField.AsCurrency));
-          ftBCD: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftDate: Result.AddPair(LPairName, DateFieldToJSON(LField));
-          ftTime: Result.AddPair(LPairName, DateFieldToJSON(LField));
-          ftDateTime: Result.AddPair(LPairName, DateFieldToJSON(LField));
-  //        ftBytes: ;
-  //        ftVarBytes: ;
-          ftAutoInc: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-  //        ftBlob: ;
-          ftMemo: Result.AddPair(LPairName, LField.AsString);
-  //        ftGraphic: ;
-  //        ftFmtMemo: ;
-  //        ftParadoxOle: ;
-  //        ftDBaseOle: ;
-  //        ftTypedBinary: ;
-  //        ftCursor: ;
-          ftFixedChar: Result.AddPair(LPairName, LField.AsString);
-          ftWideString: Result.AddPair(LPairName, LField.AsWideString);
-          ftLargeint: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-  //        ftADT: ;
-  //        ftArray: ;
-  //        ftReference: ;
-  //        ftDataSet: ;
-  //        ftOraBlob: ;
-  //        ftOraClob: ;
-          ftVariant: Result.AddPair(LPairName, LField.AsString);
-  //        ftInterface: ;
-  //        ftIDispatch: ;
-          ftGuid: Result.AddPair(LPairName, LField.AsString);
-          ftTimeStamp: Result.AddPair(LPairName, DateFieldToJSON(LField));
-          ftFMTBcd: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftFixedWideChar: Result.AddPair(LPairName, LField.AsString);
-          ftWideMemo: Result.AddPair(LPairName, LField.AsString);
-  //        ftOraTimeStamp: ;
-  //        ftOraInterval: ;
-          ftLongWord: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftShortint: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftByte: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-          ftExtended: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-  //        ftConnection: ;
-  //        ftParams: ;
-  //        ftStream: ;
-  //        ftTimeStampOffset: ;
-  //        ftObject: ;
-          ftSingle: Result.AddPair(LPairName, NumericFieldToJSON(LField, AOptions.UseDisplayFormatForNumericFields));
-        end;
+        FieldToJSONObject(Result, LPairName, LField, AOptions);
+
       end;
     end;
   except
