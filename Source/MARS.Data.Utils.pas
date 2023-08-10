@@ -15,17 +15,30 @@ uses
   , MARS.Core.JSON
   , DB;
 
+type
+  TBeforeAddElementFunc = reference to
+    function (const AArray: TJSONArray; const AElement: TJSONObject): Boolean;
+  TFieldAcceptFunc = reference to
+    function (var APairName: string; const AField: TField): Boolean;
+
 procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField); overload;
 procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField; const AOptions: TMARSJSONSerializationOptions); overload;
 
-function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string = ''): TJSONObject; overload;
-function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string; const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
+function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string = '';
+  const AFieldAccept: TFieldAcceptFunc = nil): TJSONObject; overload;
+function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string;
+  const AFieldAccept: TFieldAcceptFunc; const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
 
 function DataSetToJSONArray(const ADataSet: TDataSet): TJSONArray; overload;
 function DataSetToJSONArray(const ADataSet: TDataSet; const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
 
-function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>): TJSONArray; overload;
-function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>; const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
+function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>;
+  const ABeforeAddElement: TBeforeAddElementFunc; const AFieldAccept: TFieldAcceptFunc): TJSONArray; overload;
+function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>;
+  const ABeforeAddElement: TBeforeAddElementFunc; const AFieldAccept: TFieldAcceptFunc;
+  const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
+
+
 
 function DataSetToXML(const ADataSet: TDataSet): string; overload;
 function DataSetToXML(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>): string; overload;
@@ -89,9 +102,10 @@ begin
   Result := DateFieldToJSON(AField, DefaultMARSJSONSerializationOptions);
 end;
 
-function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string = ''): TJSONObject;
+function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string = '';
+  const AFieldAccept: TFieldAcceptFunc = nil): TJSONObject;
 begin
-  Result := RecordToJSONObject(ADataSet, ARootPath, DefaultMARSJSONSerializationOptions);
+  Result := RecordToJSONObject(ADataSet, ARootPath, AFieldAccept, DefaultMARSJSONSerializationOptions);
 end;
 
 procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField);
@@ -157,10 +171,13 @@ begin
       end;
 end;
 
-function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string; const AOptions: TMARSJSONSerializationOptions): TJSONObject;
+function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string;
+  const AFieldAccept: TFieldAcceptFunc;
+  const AOptions: TMARSJSONSerializationOptions): TJSONObject;
 var
   LField: TField;
   LPairName: string;
+  LAccept: Boolean;
 begin
   if not Assigned(ADataSet) then
     raise Exception.Create('DataSet not assigned');
@@ -182,8 +199,12 @@ begin
         if ContainsStr(LPairName, '.') then
           Continue;
 
-        FieldToJSONObject(Result, LPairName, LField, AOptions);
+        LAccept := True;
+        if Assigned(AFieldAccept) then
+          LAccept := AFieldAccept(LPairName, LField);
 
+        if LAccept then
+          FieldToJSONObject(Result, LPairName, LField, AOptions);
       end;
     end;
   except
@@ -213,23 +234,30 @@ end;
 
 function DataSetToJSONArray(const ADataSet: TDataSet): TJSONArray; overload;
 begin
-  Result := DataSetToJSONArray(ADataSet, nil, DefaultMARSJSONSerializationOptions);
+  Result := DataSetToJSONArray(ADataSet, nil, nil, nil, DefaultMARSJSONSerializationOptions);
 end;
 
 function DataSetToJSONArray(const ADataSet: TDataSet; const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
 begin
-  Result := DataSetToJSONArray(ADataSet, nil, AOptions);
+  Result := DataSetToJSONArray(ADataSet, nil, nil, nil, AOptions);
 end;
 
 
-function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>): TJSONArray;
+function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>;
+  const ABeforeAddElement: TBeforeAddElementFunc;
+  const AFieldAccept: TFieldAcceptFunc): TJSONArray;
 begin
-  Result := DataSetToJSONArray(ADataset, AAcceptFunc, DefaultMARSJSONSerializationOptions);
+  Result := DataSetToJSONArray(ADataset, AAcceptFunc, ABeforeAddElement, AFieldAccept, DefaultMARSJSONSerializationOptions);
 end;
 
-function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>; const AOptions: TMARSJSONSerializationOptions): TJSONArray;
+function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<Boolean>;
+  const ABeforeAddElement: TBeforeAddElementFunc;
+  const AFieldAccept: TFieldAcceptFunc;
+  const AOptions: TMARSJSONSerializationOptions): TJSONArray;
 var
   LBookmark: TBookmark;
+  LElement: TJSONObject;
+  LAddElement: Boolean;
 begin
   Result := TJSONArray.Create;
   if not Assigned(ADataSet) then
@@ -246,7 +274,16 @@ begin
         while not ADataSet.Eof do
         try
           if (not Assigned(AAcceptFunc)) or (AAcceptFunc()) then
-            Result.AddElement(RecordToJSONObject(ADataSet, '', AOptions));
+          begin
+            LElement := RecordToJSONObject(ADataSet, '', AFieldAccept, AOptions);
+
+            LAddElement := True;
+            if Assigned(ABeforeAddElement) then
+              LAddElement := ABeforeAddElement(Result, LElement);
+
+            if LAddElement then
+              Result.AddElement(LElement);
+          end;
         finally
           ADataSet.Next;
         end;
