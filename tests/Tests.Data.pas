@@ -24,6 +24,7 @@ type
 
     [Test] procedure UtilsDataSetToJSONArray();
     [Test] procedure UtilsDataSetToJSONArrayEx();
+    [Test] procedure UtilsDataSetToJSONArrayEx2();
   end;
 
 implementation
@@ -31,7 +32,6 @@ implementation
 uses
   IOUtils, Data.DB, System.JSON, Generics.Collections
 , MARS.Core.JSON, MARS.Core.Activation.Interfaces
-, CodeSiteLogging
 ;
 
 { TMARSDataTest }
@@ -101,11 +101,62 @@ begin
     Assert.IsTrue(LFirstElement.P['customBool'].ClassType = TJSONBool, 'customBool pair with boolean value is missing');
     Assert.IsTrue(LFirstElement.P['otherFields'].ClassType = TJSONObject, 'otherFields pair with object value is missing');
     Assert.IsNotNull(LFirstElement.FindValue('field_no_4'), 'field_no_4 is missing');
-    CodeSite.SendMsg(LJSON.ToJSON);
+    Log(LFirstElement.Format);
   finally
     FreeAndNil(LJSON);
   end;
 end;
+
+procedure TMARSDataTest.UtilsDataSetToJSONArrayEx2;
+begin
+  var LJSON := DataSetToJSONArray(
+    FDQuery1
+  , nil
+  , function (const AArray: TJSONArray; const AElement: TJSONObject): Boolean
+    var LOtherFields: TJSONArray;
+    begin
+      LOtherFields := TJSONArray.Create;
+      for var LField in FDQuery1.Fields do
+      begin
+        if LField.Index > 5 then
+        begin
+          var LElement := TJSONObject.Create;
+          LElement.WriteStringValue('fieldName', LField.FieldName);
+          FieldToJSONObject(LElement, 'value', LField);
+          LOtherFields.Add(LElement);
+        end;
+      end;
+
+      AElement.AddPair('otherFields', LOtherFields);
+
+      Result := True;
+    end
+  , function (var APairName: string; const AField: TField): Boolean
+    begin
+      Result := AField.Index < 5;
+      if AField.Index = 3 then
+        APairName := 'field_no_4';
+    end
+  );
+
+  Assert.IsNotNull(LJSON, 'Serialization to JSON');
+  Assert.InheritsFrom(LJSON.ClassType, TJSONArray, 'JSON is TJSONArray');
+  Assert.IsTrue(LJSON.Count > 0, 'Array is not empty');
+  try
+
+    var LFirstElement := LJSON.Items[0];
+    Assert.InheritsFrom(LFirstElement.ClassType, TJSONObject, 'Element is TJSONObject');
+
+    Assert.IsTrue(LFirstElement.P['otherFields'].ClassType = TJSONArray, 'otherFields pair with array value is missing');
+    Assert.IsNotNull(LFirstElement.FindValue('field_no_4'), 'field_no_4 is missing');
+
+    Log(LFirstElement.Format);
+
+  finally
+    FreeAndNil(LJSON);
+  end;
+end;
+
 
 procedure TMARSDataTest.Setup;
 begin
