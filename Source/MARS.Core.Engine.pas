@@ -298,7 +298,7 @@ begin
     Exit;
 
   SetHeaderFromParameter('Access-Control-Allow-Origin', 'CORS.Origin', '*');
-  SetHeaderFromParameter('Access-Control-Allow-Methods', 'CORS.Methods', 'HEAD,GET,PUT,POST,DELETE,OPTIONS');
+  SetHeaderFromParameter('Access-Control-Allow-Methods', 'CORS.Methods', 'HEAD,GET,PUT,POST,PATCH,DELETE,OPTIONS');
   SetHeaderFromParameter('Access-Control-Allow-Headers', 'CORS.Headers', 'X-Requested-With,Content-Type,Authorization');
 end;
 
