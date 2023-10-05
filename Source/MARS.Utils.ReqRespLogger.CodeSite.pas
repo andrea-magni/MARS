@@ -17,6 +17,7 @@ uses
   System.Rtti,
   MARS.Core.Classes,
   MARS.Core.MediaType,
+  MARS.Core.Application,
   MARS.Core.Activation,
   MARS.Core.Activation.Interfaces,
   MARS.Utils.ReqRespLogger.Interfaces,
@@ -137,9 +138,17 @@ begin
     procedure (const AActivation: IMARSActivation)
     var
       LResponse: TMARSResponseLogCodeSite;
+      LMethod, LResource: String;
     begin
       if not AActivation.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
         Exit;
+
+      LResource := 'Resource: Unknown';
+      if Assigned(AActivation.ResourceInstance) then
+        LResource := 'Resource: ' + AActivation.ResourceInstance.ClassName;
+      LMethod := 'Method: Unknown';
+      if Assigned(AActivation.Method) then
+        LMethod := 'Method: ' + AActivation.Method.Name;
 
       LResponse := TMARSResponseLogCodeSite.Create(AActivation.Response);
       try
@@ -150,8 +159,8 @@ begin
             'Time: ' + AActivation.InvocationTime.ElapsedMilliseconds.ToString + ' ms',
             'Engine: ' + AActivation.Engine.Name,
             'Application: ' + AActivation.Application.Name,
-            'Resource: ' + IfThen(Assigned(AActivation.ResourceInstance), AActivation.ResourceInstance.ClassName, 'Unknown'),
-            'Method: ' + IfThen(Assigned(AActivation.Method), AActivation.Method.Name, 'Unknown')
+            LResource,
+            LMethod
             ]
           ), LResponse
         );
@@ -163,8 +172,17 @@ begin
 
   TMARSActivation.RegisterInvokeError(
     procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
+    var
+      LMethod: String;
     begin
+      if not AActivation.Engine.Parameters.ByName('CodeSiteLogging.Enabled').AsBoolean then
+        Exit;
+
       CodeSite.Category := '';
+      LMethod := 'Method: Unknown';
+      if Assigned(AActivation.Method) then
+        LMethod := 'Method: ' + AActivation.Method.Name;
+
       CodeSite.SendException(
           String.Join(LOGFIELD_SEPARATOR,
           [
@@ -172,8 +190,8 @@ begin
             'Engine: ' + AActivation.Engine.Name,
             'Application: ' + AActivation.Application.Name,
             'Verb: ' + AActivation.Request.Method,
-            'Path: ' + AActivation.URL.Path,
-            'Method: ' + IfThen(Assigned(AActivation.Method), AActivation.Method.Name, 'Unknown')
+            'Url: ' + AActivation.URL.Url,
+            LMethod
           ]) + ' : ', AException);
     end
   );
