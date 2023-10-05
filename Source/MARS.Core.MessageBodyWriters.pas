@@ -274,10 +274,22 @@ procedure TRecordWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaTy
 var
   LJSONObj: TJSONObject;
   LJSONWriter: TJSONValueWriter;
+  LSerializationOptions: TMARSJSONSerializationOptions;
 begin
   if not AValue.IsEmpty then
   begin
-    LJSONObj := TJSONObject.RecordToJSON(AValue);
+    LSerializationOptions := DefaultMARSJSONSerializationOptions;
+
+    for var LAttribute in AActivation.MethodAttributes do
+    begin
+      if LAttribute is JSONIncludeEmptyValuesAttribute then
+      begin
+        LSerializationOptions.SkipEmptyValues := False;
+        Break;
+      end;
+    end;
+
+    LJSONObj := TJSONObject.RecordToJSON(AValue, LSerializationOptions);
     try
       LJSONWriter := TJSONValueWriter.Create;
       try
