@@ -150,9 +150,23 @@ var
   LJSONArray: TJSONArray;
   LIndex: Integer;
   LElement: TValue;
+  LSerializationOptions: TMARSJSONSerializationOptions;
+  LAttribute: TCustomAttribute;
+
 begin
   if not AValue.IsArray then
     Exit;
+
+  LSerializationOptions := DefaultMARSJSONSerializationOptions;
+
+  for LAttribute in AActivation.MethodAttributes do
+  begin
+    if LAttribute is JSONIncludeEmptyValuesAttribute then
+    begin
+      LSerializationOptions.SkipEmptyValues := False;
+      Break;
+    end;
+  end;
 
   LJSONArray := TJSONArray.Create;
   try
@@ -160,7 +174,7 @@ begin
     begin
       LElement := AValue.GetArrayElement(LIndex);
 
-      LJSONArray.Add(TJSONObject.ObjectToJSON(LElement.AsObject));
+      LJSONArray.Add(TJSONObject.ObjectToJSON(LElement.AsObject, LSerializationOptions));
     end;
 
     TJSONValueWriter.WriteJSONValue(LJSONArray, AMediaType, AOutputStream, AActivation);
@@ -311,9 +325,22 @@ var
   LJSONArray: TJSONArray;
   LIndex: Integer;
   LElement: TValue;
+  LSerializationOptions: TMARSJSONSerializationOptions;
+  LAttribute: TCustomAttribute;
 begin
   if not AValue.IsArray then
     Exit;
+
+  LSerializationOptions := DefaultMARSJSONSerializationOptions;
+
+  for LAttribute in AActivation.MethodAttributes do
+  begin
+    if LAttribute is JSONIncludeEmptyValuesAttribute then
+    begin
+      LSerializationOptions.SkipEmptyValues := False;
+      Break;
+    end;
+  end;
 
   LJSONArray := TJSONArray.Create;
   try
@@ -321,7 +348,7 @@ begin
     begin
       LElement := AValue.GetArrayElement(LIndex);
 
-      LJSONArray.Add(TJSONObject.RecordToJSON(LElement));
+      LJSONArray.Add(TJSONObject.RecordToJSON(LElement, LSerializationOptions));
     end;
 
     TJSONValueWriter.WriteJSONValue(LJSONArray, AMediaType, AOutputStream, AActivation);
