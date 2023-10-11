@@ -148,7 +148,8 @@ procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const 
 function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
 
 function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
-function IsObjectListOfT(const ATypeName: string): Boolean;
+function IsObjectListOfT(const ATypeName: string): Boolean; overload;
+function IsObjectListOfT(const AType: TRttiType): Boolean; overload;
 
 implementation
 
@@ -168,6 +169,12 @@ function IsObjectListOfT(const ATypeName: string): Boolean;
 begin
   //AM TODO Improve this function. For example: check if it is a nested type...
   Result := ATypeName.StartsWith('TObjectList<');
+end;
+
+function IsObjectListOfT(const AType: TRttiType): Boolean;
+begin
+  Result := IsObjectListOfT(AType.Name) or
+    ((AType.IsInstance) and (IsObjectListOfT(AType.BaseType.Name)));
 end;
 
 

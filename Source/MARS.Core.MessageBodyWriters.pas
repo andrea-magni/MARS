@@ -577,7 +577,7 @@ begin
     TObjectListOfTWriter
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
-        Result := IsObjectListOfT(AType.Name);
+        Result := IsObjectListOfT(AType);
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
