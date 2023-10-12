@@ -1,4 +1,5 @@
 {$define MARS_FIREDAC} // To enable MARS FireDAC support
+{$define MARS_FASTREPORT} // To enable MARS FastReport support
 {.$define MARS_UNIDAC} // To enable MARS Devart UniDAC support
 {.$define MARS_JSON_LEGACY} // To revert to Rest.JSON serializer/deserializer for JSON and TObject descendants
 
