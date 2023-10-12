@@ -335,9 +335,9 @@ end;
 
 function RootFolderAttribute.ExpandMacros(const AString: string): string;
 begin
-  Result := AString;
-  Result := Result.Replace('{bin}', ExtractFilePath(ParamStr(0)))
-                  .Replace('\\', '\', [rfReplaceAll]);
+  Result := AString
+    .Replace('{bin}', ExtractFilePath(ParamStr(0)))
+    .Replace('\\', '\', [rfReplaceAll]);
 end;
 
 { ContentTypeForFileExt }

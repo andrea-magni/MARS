@@ -305,7 +305,7 @@ end;
 class function TMARSFireDAC.CreateConnectionByDefName(const AConnectionDefName: string;
   const AActivation: IMARSActivation = nil): TFDConnection;
 begin
-  Result := GetFDConnectionClass.Create(nil);
+  Result := GetFDConnectionClass().Create(nil);
   try
     if AConnectionDefName <> '' then
       Result.ConnectionDefName := AConnectionDefName;
