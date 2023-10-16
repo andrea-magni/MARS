@@ -11,7 +11,7 @@ uses
 // *** BEWARE ***
 // if your Delphi edition/license does not include FastReport,
 // remove the MARS_FASTREPORT definition in the MARS.inc file!
-, frxClass, frxExportBaseDialog, frxExportPDF
+, frxClass, frxExportBaseDialog, frxExportPDF, frxDBSet
 
 , MARS.Core.Application
 , MARS.Core.Attributes
@@ -47,6 +47,17 @@ type
   TReportDef = record
     Name: string;
     FileName: string;
+
+    // DoublePass
+    // ConvertNulls
+    // IgnoreDevByZero
+    // IgnoreExprError
+    // MaxMemSize
+    // PrintIfEmpty
+    // Author
+    // Compressed
+    // Name
+    // Password
   end;
 
   TReportDefs = TArray<TReportDef>;
@@ -62,16 +73,17 @@ type
     FReport: TfrxReport;
     FPDFExport: TfrxPDFExport;
     FReportOnGetValue: TReportOnGetValue;
-    procedure SetReportDefName(const Value: string);
-    function GetReport: TfrxReport;
-    function GetPDFExport: TfrxPDFExport;
 
     // CLASS FUNCTIONS AND DATA
     class var FAfterCreateReport: TAfterCreateReportProc;
     class var FCustomReportClass: TfrxReportClass;
     class var FReportDefDictionary: TReportDefDictionary;
-    function GetReportDef: TReportDef;
   protected
+    procedure SetReportDefName(const Value: string);
+    function GetReport: TfrxReport;
+    function GetPDFExport: TfrxPDFExport;
+    function GetReportDef: TReportDef;
+
     procedure DoReportBeforePrint(Sender: TfrxReportComponent);
     procedure DoReportAfterPrint(Sender: TfrxReportComponent);
 
@@ -88,6 +100,8 @@ type
     constructor Create(const AReportDefName: string; const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
+    procedure SetMasterDataSet(const ADataSet: TDataSet;
+      const ADataSetName: string = ''; const AMasterDataName: string = 'MasterData1');
     function ExportToPDF(): TBytes;
 
     property Report: TfrxReport read GetReport;
@@ -136,6 +150,48 @@ uses
 
 { TMARSFastReport }
 
+procedure TMARSFastReport.SetMasterDataSet(const ADataSet: TDataSet;
+  const ADataSetName: string; const AMasterDataName: string);
+var
+  LFrxDataSet: TfrxDBDataSet;
+  LMasterDataBand: TfrxMasterData;
+begin
+  LFrxDataSet := TfrxDBDataSet.Create(nil);
+  try
+    LFrxDataSet.DataSet := ADataSet;
+
+    if ADataSetName <> '' then
+    begin
+      LFrxDataSet.Name := ADataSetName;
+      LFrxDataSet.UserName := ADataSetName;
+    end
+    else
+    begin
+      LFrxDataSet.Name := ADataSet.Name;
+      LFrxDataSet.UserName := ADataSet.Name;
+    end;
+
+
+    Report.DataSets.Clear;
+    Report.DataSets.Add(LFrxDataSet);
+
+//    Report.DataSetName := LFrxDataSet.UserName;
+    LMasterDataBand := Report.FindObject(AMasterDataName) as TfrxMasterData;
+    if not Assigned(LMasterDataBand) then
+      raise EMARSFastReportException.CreateFmt('Band [%s] not found. Report def: %s', [AMasterDataName, ReportDefName]);
+
+    LMasterDataBand.DataSet := LFrxDataSet;
+
+    // lifecycle of instances
+    Activation.AddToContext(LFrxDataSet);
+    Activation.AddToContext(ADataSet);
+  except
+    LFrxDataSet.Free;
+    raise;
+  end;
+
+end;
+
 class constructor TMARSFastReport.ClassCreate;
 begin
   FReportDefDictionary := TReportDefDictionary.Create;;
@@ -162,6 +218,9 @@ begin
 
   Result := GetReportClass().Create(nil);
   try
+    Result.EngineOptions.SilentMode := True;
+    Result.EngineOptions.NewSilentMode := TfrxSilentMode.simSilent;
+
     if AReportDefName <> '' then
       Result.Name := AReportDefName;
 
