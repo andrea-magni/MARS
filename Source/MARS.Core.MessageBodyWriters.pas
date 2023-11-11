@@ -294,14 +294,15 @@ begin
   begin
     LSerializationOptions := DefaultMARSJSONSerializationOptions;
 
-    for var LAttribute in AActivation.MethodAttributes do
-    begin
-      if LAttribute is JSONIncludeEmptyValuesAttribute then
+    if Assigned(AActivation) then
+      for var LAttribute in AActivation.MethodAttributes do
       begin
-        LSerializationOptions.SkipEmptyValues := False;
-        Break;
+        if LAttribute is JSONIncludeEmptyValuesAttribute then
+        begin
+          LSerializationOptions.SkipEmptyValues := False;
+          Break;
+        end;
       end;
-    end;
 
     LJSONObj := TJSONObject.RecordToJSON(AValue, LSerializationOptions);
     try
@@ -333,14 +334,15 @@ begin
 
   LSerializationOptions := DefaultMARSJSONSerializationOptions;
 
-  for LAttribute in AActivation.MethodAttributes do
-  begin
-    if LAttribute is JSONIncludeEmptyValuesAttribute then
+  if Assigned(AActivation) then
+    for LAttribute in AActivation.MethodAttributes do
     begin
-      LSerializationOptions.SkipEmptyValues := False;
-      Break;
+      if LAttribute is JSONIncludeEmptyValuesAttribute then
+      begin
+        LSerializationOptions.SkipEmptyValues := False;
+        Break;
+      end;
     end;
-  end;
 
   LJSONArray := TJSONArray.Create;
   try
