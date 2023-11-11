@@ -100,6 +100,9 @@ type
     constructor Create(const AReportDefName: string; const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
+    function AddDataSet(const ADataSet: TDataSet; const ADataSetName: string = ''): TfrxDBDataset;
+    procedure SetDataSetForBand(const ADataSet: TfrxDBDataset; const ABandName: string);
+
     procedure SetMasterDataSet(const ADataSet: TDataSet;
       const ADataSetName: string = ''; const AMasterDataName: string = 'MasterData1');
     function ExportToPDF(): TBytes;
@@ -109,6 +112,7 @@ type
     property ReportDef: TReportDef read GetReportDef;
 
     property ReportOnGetValue: TReportOnGetValue read FReportOnGetValue write FReportOnGetValue;
+
 
     property PDFExport: TfrxPDFExport read GetPDFExport;
     property Activation: IMARSActivation read FActivation;
@@ -150,46 +154,61 @@ uses
 
 { TMARSFastReport }
 
+procedure TMARSFastReport.SetDataSetForBand(const ADataSet: TfrxDBDataset;
+  const ABandName: string);
+var
+  LDataBand: TfrxDataBand;
+begin
+  if not Assigned(ADataSet) then
+    raise EMARSFastReportException.CreateFmt('[SetDataSetForBand] DataSet not assigned. Band: %s', [ABandName]);
+
+  LDataBand := Report.FindObject(ABandName) as TfrxDataBand;
+  if not Assigned(LDataBand) then
+    raise EMARSFastReportException.CreateFmt('[SetDataSetForBand] Band [%s] not found. Report def: %s', [ABandName, ReportDefName]);
+
+  LDataBand.DataSet := ADataSet;
+end;
+
 procedure TMARSFastReport.SetMasterDataSet(const ADataSet: TDataSet;
   const ADataSetName: string; const AMasterDataName: string);
 var
   LFrxDataSet: TfrxDBDataSet;
-  LMasterDataBand: TfrxMasterData;
 begin
-  LFrxDataSet := TfrxDBDataSet.Create(nil);
+  LFrxDataSet := AddDataSet(ADataSet, ADataSetName);
   try
-    LFrxDataSet.DataSet := ADataSet;
-
-    if ADataSetName <> '' then
-    begin
-      LFrxDataSet.Name := ADataSetName;
-      LFrxDataSet.UserName := ADataSetName;
-    end
-    else
-    begin
-      LFrxDataSet.Name := ADataSet.Name;
-      LFrxDataSet.UserName := ADataSet.Name;
-    end;
-
-
-    Report.DataSets.Clear;
-    Report.DataSets.Add(LFrxDataSet);
-
-//    Report.DataSetName := LFrxDataSet.UserName;
-    LMasterDataBand := Report.FindObject(AMasterDataName) as TfrxMasterData;
-    if not Assigned(LMasterDataBand) then
-      raise EMARSFastReportException.CreateFmt('Band [%s] not found. Report def: %s', [AMasterDataName, ReportDefName]);
-
-    LMasterDataBand.DataSet := LFrxDataSet;
-
-    // lifecycle of instances
-    Activation.AddToContext(LFrxDataSet);
-    Activation.AddToContext(ADataSet);
+    SetDataSetForBand(LFrxDataSet, AMasterDataName);
   except
     LFrxDataSet.Free;
     raise;
   end;
+end;
 
+function TMARSFastReport.AddDataSet(const ADataSet: TDataSet;
+  const ADataSetName: string): TfrxDBDataset;
+begin
+  Result := TfrxDBDataSet.Create(nil);
+  try
+    Result.DataSet := ADataSet;
+
+    if ADataSetName <> '' then
+    begin
+      Result.Name := ADataSetName;
+      Result.UserName := ADataSetName;
+    end
+    else
+    begin
+      Result.Name := ADataSet.Name;
+      Result.UserName := ADataSet.Name;
+    end;
+
+    Report.DataSets.Add(Result);
+
+    Activation.AddToContext(Result);
+    Activation.AddToContext(ADataSet);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 class constructor TMARSFastReport.ClassCreate;
@@ -218,14 +237,16 @@ begin
 
   Result := GetReportClass().Create(nil);
   try
-    Result.EngineOptions.SilentMode := True;
-    Result.EngineOptions.NewSilentMode := TfrxSilentMode.simSilent;
+//    Result.EngineOptions.SilentMode := True;
+//    Result.EngineOptions.NewSilentMode := TfrxSilentMode.simSilent;
 
     if AReportDefName <> '' then
       Result.Name := AReportDefName;
 
     if LReportDef.FileName <> '' then
       Result.LoadFromFile(LReportDef.FileName);
+
+    Result.DataSets.Clear;
 
     if Assigned(FAfterCreateReport) then
       FAfterCreateReport(Result, AActivation);
