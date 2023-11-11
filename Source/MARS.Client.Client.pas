@@ -456,7 +456,6 @@ var
   LResource: TMARSClientResourceJSON;
   LApp: TMARSClientApplication;
   LIndex: Integer;
-  LFinalURL: string;
 begin
   Result := nil;
   LClient := Create(nil);
@@ -483,7 +482,6 @@ begin
         FireBeforeExecute(LResource.URL, LClient);
         LResource.GET(nil, nil, nil);
 
-        Result := nil;
         if not AIgnoreResult then
           Result := LResource.Response.Clone as T;
       finally

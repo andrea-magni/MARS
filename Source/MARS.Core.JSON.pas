@@ -585,7 +585,6 @@ procedure TJSONArrayHelper.FromArrayOfObject<T>(const AArray: TArray<T>;
   const AOptions: TMARSJSONSerializationOptions);
 var
   LObject: T;
-  LObj: TJSONObject;
 begin
   // clear all
   while Count > 0 do

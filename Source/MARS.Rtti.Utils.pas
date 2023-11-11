@@ -437,7 +437,6 @@ end;
 function TRttiObjectHelper.HasAttribute<T>(
   const ADoSomething: TProc<T>; const AInherited: Boolean): Boolean;
 var
-  LAttribute: TCustomAttribute;
   LResult: Boolean;
 begin
   LResult := False;
@@ -471,7 +470,6 @@ end;
 function TRttiTypeHelper.FindMethodFunc<A1, A2, A3, A4, R>(const AName: string): TRttiMethod;
 var
   LMethod: TRttiMethod;
-  LParameters: TArray<TRttiParameter>;
 begin
   LMethod := GetMethod(AName);
   if Assigned(LMethod) then
@@ -489,7 +487,6 @@ end;
 function TRttiTypeHelper.FindMethodFunc<A1, A2, A3, R>(const AName: string): TRttiMethod;
 var
   LMethod: TRttiMethod;
-  LParameters: TArray<TRttiParameter>;
 begin
   LMethod := GetMethod(AName);
   if Assigned(LMethod) then
@@ -507,7 +504,6 @@ end;
 function TRttiTypeHelper.FindMethodFunc<A1, A2, R>(const AName: string): TRttiMethod;
 var
   LMethod: TRttiMethod;
-  LParameters: TArray<TRttiParameter>;
 begin
   LMethod := GetMethod(AName);
   if Assigned(LMethod) then
@@ -525,7 +521,6 @@ end;
 function TRttiTypeHelper.FindMethodFunc<A1, R>(const AName: string): TRttiMethod;
 var
   LMethod: TRttiMethod;
-  LParameters: TArray<TRttiParameter>;
 begin
   LMethod := GetMethod(AName);
   if Assigned(LMethod) then
@@ -543,7 +538,6 @@ end;
 function TRttiTypeHelper.FindMethodFunc<R>(const AName: string): TRttiMethod;
 var
   LMethod: TRttiMethod;
-  LParameters: TArray<TRttiParameter>;
 begin
   LMethod := GetMethod(AName);
   if Assigned(LMethod) then
@@ -564,6 +558,7 @@ var
   LField: TRttiField;
   LBreak: Boolean;
 begin
+  Result := 0;
   for LField in Self.GetFields do
   begin
     LBreak := False;
@@ -963,6 +958,7 @@ class function TRttiHelper.ForEachAttribute<T>(const AAttributes: TArray<TCustom
 var
   LAttribute: TCustomAttribute;
 begin
+  Result := 0;
   if Assigned(ADoSomething) then
     for LAttribute in AAttributes do
     begin
@@ -1109,7 +1105,6 @@ var
   LRecordType: TRttiType;
   LRecordField: TRttiField;
   LDataSetField: TField;
-  LValue: TValue;
 begin
   if not ADataSet.Active then
     ADataSet.Active := True;

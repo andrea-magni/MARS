@@ -148,8 +148,8 @@ begin
 end;
 
 class operator TJOSEArray<T>.Add(const A, B: TJOSEArray<T>): TJOSEArray<T>;
-var
-  LSizeSource: NativeInt;
+//var
+//  LSizeSource: NativeInt;
 begin
   Result := A;
   if B.Size = 0 then

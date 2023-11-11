@@ -66,6 +66,7 @@ function TMARSResourceRegistry.GetResourceInstance<T>(const AContext: TValue): T
 var
   LInfo: TMARSConstructorInfo;
 begin
+  Result := nil;
   if Self.TryGetValue(T.ClassName, LInfo) then
   begin
     if LInfo.ConstructorFunc <> nil then

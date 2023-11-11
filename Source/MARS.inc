@@ -62,6 +62,11 @@
   {$define Delphi11Alexandria}
 {$ENDIF}
 
+{$if compilerversion = 36}
+  {$define Delphi12Athens}
+{$ENDIF}
+
+
 {$if compilerversion >= 22}
   {$define DelphiXE_UP}
 {$ENDIF}
@@ -206,5 +211,23 @@
   {$define Delphi10Tokyo_UP}
   {$define Delphi10Rio_UP}
   {$define Delphi10Sydney_UP}
-  {$define Delphi11Alexandria_UP}  
+  {$define Delphi11Alexandria_UP}
+{$ENDIF}
+
+{$if compilerversion >= 36}
+  {$define DelphiXE_UP}
+  {$define DelphiXE2_UP}
+  {$define DelphiXE3_UP}
+  {$define DelphiXE4_UP}
+  {$define DelphiXE5_UP}
+  {$define DelphiXE6_UP}
+  {$define DelphiXE7_UP}
+  {$define DelphiXE8_UP}
+  {$define Delphi10Seattle_UP}
+  {$define Delphi10Berlin_UP}
+  {$define Delphi10Tokyo_UP}
+  {$define Delphi10Rio_UP}
+  {$define Delphi10Sydney_UP}
+  {$define Delphi11Alexandria_UP}
+  {$define Delphi12Athens_UP}
 {$ENDIF}
