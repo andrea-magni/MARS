@@ -78,6 +78,7 @@ type
     function GetContentStream: TStream;
     function GetContentType: string;
     function GetStatusCode: Integer;
+    function GetReasonString: string;
     procedure SetContent(const AContent: string);
     procedure SetContentEncoding(const AContentEncoding: string);
     procedure SetContentLength(const ALength: Integer);
@@ -85,6 +86,7 @@ type
     procedure SetContentType(const AContentType: string);
     procedure SetHeader(const AName: string; const AValue: string);
     procedure SetStatusCode(const AStatusCode: Integer);
+    procedure SetReasonString(const AReasonString: string);
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
     procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
@@ -641,6 +643,11 @@ begin
   Result := FDCSResponse.ContentType;
 end;
 
+function TMARSDCSResponse.GetReasonString: string;
+begin
+  Result := ''; // unsupported
+end;
+
 function TMARSDCSResponse.GetStatusCode: Integer;
 begin
   Result := FDCSResponse.StatusCode;
@@ -685,6 +692,11 @@ end;
 procedure TMARSDCSResponse.SetHeader(const AName, AValue: string);
 begin
   FDCSResponse.Header.Add(AName, AValue);
+end;
+
+procedure TMARSDCSResponse.SetReasonString(const AReasonString: string);
+begin
+  // unsupported
 end;
 
 procedure TMARSDCSResponse.SetStatusCode(const AStatusCode: Integer);

@@ -74,6 +74,8 @@ type
     procedure SetContentEncoding(const AContentEncoding: string);
     function GetStatusCode: Integer;
     procedure SetStatusCode(const AStatusCode: Integer);
+    function GetReasonString: string;
+    procedure SetReasonString(const AReasonString: string);
     function GetContent: string;
     procedure SetContent(const AContent: string);
     procedure SetHeader(const AName, AValue: string);
@@ -86,6 +88,7 @@ type
     property ContentLength: Integer read GetContentLength write SetContentLength;
     property ContentEncoding: string read GetContentEncoding write SetContentEncoding;
     property StatusCode: Integer read GetStatusCode write SetStatusCode;
+    property ReasonString: string read GetReasonString write SetReasonString;
   end;
 
 

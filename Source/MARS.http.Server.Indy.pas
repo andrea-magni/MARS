@@ -87,6 +87,7 @@ type
     function GetContentType: string; inline;
     function GetContentLength: Integer; inline;
     function GetStatusCode: Integer; inline;
+    function GetReasonString: string; inline;
     procedure SetContent(const AContent: string); inline;
     procedure SetContentEncoding(const AContentEncoding: string); inline;
     procedure SetContentStream(const AContentStream: TStream); inline;
@@ -94,6 +95,7 @@ type
     procedure SetContentLength(const ALength: Integer); inline;
     procedure SetHeader(const AName: string; const AValue: string); inline;
     procedure SetStatusCode(const AStatusCode: Integer); inline;
+    procedure SetReasonString(const AReasonString: string); inline;
     procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); inline;
     procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
@@ -619,6 +621,11 @@ begin
   Result := FWebResponse.ContentType;
 end;
 
+function TMARSWebResponse.GetReasonString: string;
+begin
+  Result := FWebResponse.ReasonString;
+end;
+
 function TMARSWebResponse.GetStatusCode: Integer;
 begin
   Result := FWebResponse.StatusCode;
@@ -672,6 +679,11 @@ end;
 procedure TMARSWebResponse.SetHeader(const AName, AValue: string);
 begin
   FWebResponse.CustomHeaders.Values[AName] := AValue;
+end;
+
+procedure TMARSWebResponse.SetReasonString(const AReasonString: string);
+begin
+  FWebResponse.ReasonString := AReasonString;
 end;
 
 procedure TMARSWebResponse.SetStatusCode(const AStatusCode: Integer);
