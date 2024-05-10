@@ -80,6 +80,11 @@ type
   function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = False): TDateTime;
 {$endif}
 
+{$ifndef DelphiXE8_UP}
+  // https://github.com/andrea-magni/MARS/issues/76#issuecomment-589954750
+  function TryISO8601ToDate(const AISODate: string; out Value: TDateTime; AReturnUTC: Boolean = True): Boolean;
+{$endif}
+
   function DateToJSON(const ADate: TDateTime): string; overload;
   function DateToJSON(const ADate: TDateTime; const AOptions: TMARSJSONSerializationOptions): string; overload;
 
@@ -415,6 +420,20 @@ end;
 function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = False): TDateTime;
 begin
   Result := XMLTimeToDateTime(AISODate, AReturnUTC);
+end;
+{$endif}
+
+{$ifndef DelphiXE8_UP}
+// https://github.com/andrea-magni/MARS/issues/76#issuecomment-589954750
+function TryISO8601ToDate(const AISODate: string; out Value: TDateTime; AReturnUTC: Boolean = True): Boolean;
+begin
+  Result := False;
+  try
+    Value := ISO8601ToDate(AISODate, AReturnUTC);
+    Result := True
+  except
+
+  end;
 end;
 {$endif}
 
