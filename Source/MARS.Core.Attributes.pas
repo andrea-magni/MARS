@@ -22,6 +22,8 @@ uses
 type
   MARSAttribute = class(TCustomAttribute);
 
+  NoLogAttribute = class(MARSAttribute);
+
   PathAttribute = class(MARSAttribute)
   private
     FValue: string;

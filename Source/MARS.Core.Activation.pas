@@ -43,6 +43,7 @@ type
 
   TMARSActivation = class(TInterfacedObject, IMARSActivation)
   private
+    FId: string;
     FRequest: IMARSRequest;
     FResponse: IMARSResponse;
     class var FBeforeInvokeProcs: TArray<TMARSBeforeInvokeProc>;
@@ -106,6 +107,7 @@ type
     function HasToken: Boolean; virtual;
     procedure Invoke; virtual;
 
+    function GetId: string; inline;
     function GetApplication: TMARSApplication; inline;
     function GetEngine: TMARSEngine; inline;
     function GetInvocationTime: TStopwatch; inline;
@@ -128,6 +130,7 @@ type
     function GetToken: TMARSToken; inline;
     // ---
 
+    property Id: string read FId;
     property Application: TMARSApplication read FApplication;
     property Engine: TMARSEngine read FEngine;
     property InvocationTime: TStopwatch read FInvocationTime;
@@ -764,6 +767,11 @@ begin
   Result := FEngine;
 end;
 
+function TMARSActivation.GetId: string;
+begin
+  Result := FId;
+end;
+
 function TMARSActivation.GetInvocationTime: TStopwatch;
 begin
   Result := FInvocationTime;
@@ -780,6 +788,8 @@ begin
   FRequest := ARequest;
   FResponse := AResponse;
   FURL := AURL;
+
+  FId := TGUID.NewGuid.ToString;
 
   FURLPrototype := nil;
   FToken := nil;
