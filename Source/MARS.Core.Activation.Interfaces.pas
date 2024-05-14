@@ -22,6 +22,7 @@ type
 
     procedure Invoke;
 
+    function GetId: string;
     function GetApplication: TMARSApplication;
     function GetEngine: TMARSEngine;
     function GetInvocationTime: TStopwatch;
@@ -43,6 +44,7 @@ type
     function GetURLPrototype: TMARSURL;
     function GetToken: TMARSToken;
 
+    property Id: string read GetId;
     property Application: TMARSApplication read GetApplication;
     property Engine: TMARSEngine read GetEngine;
     property InvocationTime: TStopwatch read GetInvocationTime;
