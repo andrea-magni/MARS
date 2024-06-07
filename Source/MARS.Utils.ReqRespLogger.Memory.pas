@@ -15,6 +15,7 @@ uses
   , Web.HttpApp, SyncObjs, Rtti
   , MARS.Core.Activation
   , MARS.Core.Activation.Interfaces
+  , MARS.Core.RequestAndResponse.Interfaces, MARS.http.Server.Indy
 ;
 
 type
@@ -42,20 +43,23 @@ type
     class destructor ClassDestroy;
   end;
 
-  TWebRequestHelper = class helper for TWebRequest
+  TMARSWebRequestHelper = class helper for TMARSWebRequest
   public
     procedure ToDataSet(const ADataSet: TDataSet);
   end;
 
-  TWebResponseHelper = class helper for TWebResponse
+  TMARSWebResponseHelper = class helper for TMARSWebResponse
   public
     procedure ToDataSet(const ADataSet: TDataSet);
   end;
 
 
 implementation
-
-uses MARS.Core.Utils;
+uses
+  MARS.Core.Utils
+, MARS.Core.Attributes
+, MARS.Rtti.Utils
+;
 
 { TMARSReqRespLoggerMemory }
 
@@ -78,6 +82,9 @@ end;
 
 class destructor TMARSReqRespLoggerMemory.ClassDestroy;
 begin
+  if Assigned( _Instance ) then
+    _Instance.Free;
+
   _Instance := nil;
 end;
 
@@ -103,6 +110,8 @@ begin
       FMemory.FieldDefs.Add('TimeStamp', ftTimeStamp);
       FMemory.FieldDefs.Add('Engine', ftString, 255);
       FMemory.FieldDefs.Add('Application', ftString, 255);
+      FMemory.FieldDefs.Add('ActivationID', ftString, 100);
+      FMemory.FieldDefs.Add('TokenClaims', ftString, 1024); // 1K
       FMemory.FieldDefs.Add('Kind', ftString, 100);
       FMemory.FieldDefs.Add('Verb', ftString, 100);
       FMemory.FieldDefs.Add('Path', ftString, 2048); // 2K
@@ -173,6 +182,10 @@ end;
 
 procedure TMARSReqRespLoggerMemory.LogIncoming(const AR: IMARSActivation);
 begin
+  if AR.Resource.HasAttribute<NoLogAttribute> or
+     AR.Method.HasAttribute<NoLogAttribute> then
+    Exit;
+
   FCriticalSection.Enter;
   try
     FMemory.Append;
@@ -180,8 +193,13 @@ begin
       FMemory.FieldByName('TimeStamp').AsDateTime := Now;
       FMemory.FieldByName('Engine').AsString := AR.Engine.Name;
       FMemory.FieldByName('Application').AsString := AR.Application.Name;
+      FMemory.FieldByName('ActivationID').AsString := AR.Id;
       FMemory.FieldByName('Kind').AsString := 'Incoming';
-      AR.Request.ToDataSet(FMemory);
+
+      if Assigned( AR.Token ) then
+        FMemory.FieldByName('TokenClaims').AsString := AR.Token.Claims.ToString;
+
+      (AR.Request as TMARSWebRequest).ToDataSet(FMemory);
       FMemory.Post;
     except
       FMemory.Cancel;
@@ -194,6 +212,10 @@ end;
 
 procedure TMARSReqRespLoggerMemory.LogOutgoing(const AR: IMARSActivation);
 begin
+  if AR.Resource.HasAttribute<NoLogAttribute> or
+     AR.Method.HasAttribute<NoLogAttribute> then
+    Exit;
+
   FCriticalSection.Enter;
   try
     FMemory.Append;
@@ -201,10 +223,14 @@ begin
       FMemory.FieldByName('TimeStamp').AsDateTime := Now;
       FMemory.FieldByName('Engine').AsString := AR.Engine.Name;
       FMemory.FieldByName('Application').AsString := AR.Application.Name;
+      FMemory.FieldByName('ActivationID').AsString := AR.Id;
       FMemory.FieldByName('Kind').AsString := 'Outgoing';
       FMemory.FieldByName('ExecutionTime').AsInteger := AR.InvocationTime.ElapsedMilliseconds;
 
-      AR.Response.ToDataSet(FMemory);
+      if Assigned( AR.Token ) then
+        FMemory.FieldByName('TokenClaims').AsString := AR.Token.Claims.ToString;
+
+      (AR.Response as TMARSWebResponse).ToDataSet(FMemory);
       FMemory.Post;
     except
       FMemory.Cancel;
@@ -228,66 +254,78 @@ end;
 
 { TWebRequestHelper }
 
-procedure TWebRequestHelper.ToDataSet(const ADataSet: TDataSet);
+procedure TMARSWebRequestHelper.ToDataSet(const ADataSet: TDataSet);
 begin
-  ADataSet.FieldByName('Verb').AsString := Method;
-  ADataSet.FieldByName('Path').AsString := PathInfo;
-  ADataSet.FieldByName('Query').AsString := QueryFields.Text;
-  ADataSet.FieldByName('RemoteIP').AsString := RemoteIP;
-  ADataSet.FieldByName('RemoteAddr').AsString := RemoteAddr;
-  ADataSet.FieldByName('RemoteHost').AsString := RemoteHost;
+  ADataSet.FieldByName('Verb').AsString := GetMethod;
+  ADataSet.FieldByName('Path').AsString := GetRawPath;
+  ADataSet.FieldByName('Query').AsString := StringArrayToString( GetQueryFields, sLineBreak );
+  ADataSet.FieldByName('RemoteIP').AsString := GetRemoteIP;
+  ADataSet.FieldByName('RemoteAddr').AsString := WebRequest.RemoteAddr;
+  ADataSet.FieldByName('RemoteHost').AsString := WebRequest.RemoteHost;
 
   ADataSet.FieldByName('StatusCode').Clear;
   ADataSet.FieldByName('StatusText').Clear;
 
   try
-    ADataSet.FieldByName('Content').AsString := Content;
+    ADataSet.FieldByName('Content').AsString := GetContent;
   except on E: EEncodingError do
     ADataSet.FieldByName('Content').AsString := E.ToString;
   end;
 
-  ADataSet.FieldByName('ContentType').AsString := ContentType;
-  ADataSet.FieldByName('ContentSize').AsInteger := ContentLength;
-  ADataSet.FieldByName('CookieCount').AsInteger := CookieFields.Count;
-  ADataSet.FieldByName('Cookie').AsString := CookieFields.Text;
+  ADataSet.FieldByName('ContentType').AsString := WebRequest.ContentType;
+  ADataSet.FieldByName('ContentSize').AsInteger := WebRequest.ContentLength;
+  ADataSet.FieldByName('CookieCount').AsInteger := GetCookieParamCount;
+  ADataSet.FieldByName('Cookie').AsString := WebRequest.CookieFields.Text;
 end;
 
 { TWebResponseHelper }
 
-procedure TWebResponseHelper.ToDataSet(const ADataSet: TDataSet);
+procedure TMARSWebResponseHelper.ToDataSet(const ADataSet: TDataSet);
 var
   LCookie: TCookie;
   LCookies: string;
   LCookieIndex: Integer;
   LContentString: string;
+  LContentStream: TStream;
 begin
-  HTTPRequest.ToDataSet(ADataSet);
+  //from request
+  ADataSet.FieldByName('Verb').AsString := WebResponse.HTTPRequest.Method;
+  ADataSet.FieldByName('Path').AsString := WebResponse.HTTPRequest.RawPathInfo;
+  ADataSet.FieldByName('Query').AsString := WebResponse.HTTPRequest.QueryFields.Text;
+  ADataSet.FieldByName('RemoteIP').AsString := WebResponse.HTTPRequest.RemoteIP;
+  ADataSet.FieldByName('RemoteAddr').AsString := WebResponse.HTTPRequest.RemoteAddr;
+  ADataSet.FieldByName('RemoteHost').AsString := WebResponse.HTTPRequest.RemoteHost;
 
+  ADataSet.FieldByName('StatusCode').Clear;
+  ADataSet.FieldByName('StatusText').Clear;
+
+  //response
   LContentString := '';
-  if Assigned(ContentStream) then
+  LContentStream := GetContentStream;
+  if Assigned(LContentStream) then
   begin
-    ADataSet.FieldByName('ContentSize').AsInteger := ContentStream.Size;
+    ADataSet.FieldByName('ContentSize').AsInteger := GetContentLength;
 
     try
-      LContentString := StreamToString(ContentStream);
+      LContentString := StreamToString(LContentStream);
     except on E:EEncodingError do
       LContentString := E.ToString;
     end;
-    ContentStream.Position := 0;
+    LContentStream.Position := 0;
 
     ADataSet.FieldByName('Content').AsString := LContentString;
   end;
 
-  ADataSet.FieldByName('StatusCode').AsInteger := StatusCode;
-  ADataSet.FieldByName('StatusText').AsString := ReasonString;
-  ADataSet.FieldByName('ContentType').AsString := ContentType;
+  ADataSet.FieldByName('StatusCode').AsInteger := GetStatusCode;
+  ADataSet.FieldByName('StatusText').AsString := WebResponse.ReasonString;
+  ADataSet.FieldByName('ContentType').AsString := GetContentType;
 
-  ADataSet.FieldByName('CookieCount').AsInteger := Cookies.Count;
+  ADataSet.FieldByName('CookieCount').AsInteger := WebResponse.Cookies.Count;
 
   LCookies := '';
-  for LCookieIndex := 0 to Cookies.Count-1 do
+  for LCookieIndex := 0 to WebResponse.Cookies.Count-1 do
   begin
-    LCookie := Cookies.Items[LCookieIndex];
+    LCookie := WebResponse.Cookies.Items[LCookieIndex];
     LCookies := LCookie.Name + '=' + LCookie.Value + sLineBreak;
   end;
   ADataSet.FieldByName('Cookie').AsString := LCookies;

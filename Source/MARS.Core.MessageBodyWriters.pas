@@ -289,13 +289,14 @@ var
   LJSONObj: TJSONObject;
   LJSONWriter: TJSONValueWriter;
   LSerializationOptions: TMARSJSONSerializationOptions;
+  LAttribute: TCustomAttribute;
 begin
   if not AValue.IsEmpty then
   begin
     LSerializationOptions := DefaultMARSJSONSerializationOptions;
 
     if Assigned(AActivation) then
-      for var LAttribute in AActivation.MethodAttributes do
+      for LAttribute in AActivation.MethodAttributes do
       begin
         if LAttribute is JSONIncludeEmptyValuesAttribute then
         begin

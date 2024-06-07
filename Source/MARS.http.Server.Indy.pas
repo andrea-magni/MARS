@@ -100,6 +100,8 @@ type
     procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(AWebResponse: TWebResponse); virtual;
+
+    property WebResponse: TWebResponse read FWebResponse;
   end;
 
   TMARSIdHTTPAppRequest = class(TIdHTTPAppRequest)
