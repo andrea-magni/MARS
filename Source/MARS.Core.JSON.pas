@@ -129,6 +129,9 @@ type
       const AOptions: TMARSJSONSerializationOptions); overload;
     procedure FromArrayOfObject<T: class>(const AArray: TArray<T>); overload;
     function ForEach<T: TJSONValue>(const AFunc: TFunc<T,Boolean>): Integer;
+    // returns an array of TValue elements, covering primitive types (JSON representation returned
+    // for complex types like objects and arrays)
+    function ToArrayOfTValue: TArray<TValue>;
 
     {$ifndef DelphiXE6_UP}
     function GetEnumerator: TJSONArrayEnumerator;
@@ -508,6 +511,29 @@ begin
   Result := [];
   for LElement in Self do
     Result := Result + [(LElement as TJSONObject).ToRecord<T>()]
+end;
+
+function TJSONArrayHelper.ToArrayOfTValue: TArray<TValue>;
+var
+  LIndex: Integer;
+  LItem: TJSONValue;
+begin
+  Result := [];
+  for LIndex := 0 to Count-1 do
+  begin
+    LItem := Items[Lindex];
+    if LItem is TJSONString then
+      Result := Result + [TJSONString(LItem).Value]
+    else if LItem is TJSONNumber then
+      Result := Result + [TJSONNumber(LItem).AsDouble]
+    else if LItem is TJSONBool then
+      Result := Result + [TJSONBool(LItem).AsBoolean]
+    else if LItem is TJSONNull then
+      Result := Result + [TValue.Empty]
+    else
+      Result := Result + [LItem.ToJSON]
+  end;
+
 end;
 
 class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(const AArray: TArray<T>): TJSONArray;
