@@ -176,6 +176,7 @@ type
       const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue; overload;
     function ReadValue(const AName: string; const ADesiredType: TRttiType;
       const ANameCaseSensitive: Boolean; var AValue: TValue): Boolean; overload;
+    function ReadValue(const AName: string; const ADefault: TValue): TValue; overload;
     function ReadArrayValue(const AName: string): TJSONArray; overload; inline;
     function ReadArrayValue<T: record>(const AName: string): TArray<T>; overload; inline;
 
@@ -1118,6 +1119,7 @@ begin
     Result := LPair.JsonValue.Value;
 end;
 
+
 function TJSONObjectHelper.ReadUnixTimeValue(const AName: string;
   const ADefault: TDateTime): TDateTime;
 var
@@ -1617,6 +1619,39 @@ constructor JSONNameAttribute.Create(const AName: string);
 begin
   inherited Create;
   FName := AName;
+end;
+
+function TJSONObjectHelper.ReadValue(const AName: string;
+  const ADefault: TValue): TValue;
+var
+  LJSONValue: TJSONValue;
+  LDesiredType: TRttiType;
+  LContext: TRttiContext;
+begin
+  Result := TValue.Empty;
+  var LFound := TryGetValue<TJSONValue>(AName, LJSONValue);
+
+  if LFound then
+  begin
+    LContext := TRttiContext.Create;
+
+    LDesiredType := LContext.GetType(TypeInfo(String)); // fallback to string
+    if LJSONValue is TJSONString then
+      LDesiredType := LContext.GetType(TypeInfo(String))
+    else if LJSONValue is TJSONNumber then
+      LDesiredType := LContext.GetType(TypeInfo(Double))
+    else if LJSONValue is TJSONBool then
+      LDesiredType := LContext.GetType(TypeInfo(Boolean))
+    else if LJSONValue is TJSONArray then
+      raise ENotImplemented.Create('MARS ReadValue: conversion from JSONArray to TValue')
+    else if LJSONValue is TJSONObject then
+      raise ENotImplemented.Create('MARS ReadValue: conversion from JSONObject to TValue')
+    else if LJSONValue is TJSONNull then
+      Exit; // Result = Empty
+
+    TJSONValueToTValue(LJSONValue, LDesiredType, Result);
+  end;
+
 end;
 
 initialization
