@@ -267,7 +267,7 @@ begin
 {$ENDIF}
 
     then
-      Result := LValueDateTime
+      Result := TValue.From<TDateTime>(LValueDateTime)
     else
       Result := AString;
   end;
