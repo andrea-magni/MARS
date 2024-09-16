@@ -76,23 +76,14 @@ function TMARSApplication.AddResource(AResource: string): Boolean;
     FRttiContext.GetType(LClass).HasAttribute<PathAttribute>(
       procedure (AAttribute: PathAttribute)
       var
-        LURL: TMARSURL;
         LResourceName: string;
       begin
-        LURL := TMARSURL.CreateDummy(AAttribute.Value);
-        try
-          LResourceName := '';
-          if LURL.HasPathTokens then
-            LResourceName := LURL.PathTokens[0].ToLower;
+        LResourceName := AAttribute.Value;
 
-          if not FResourceRegistry.ContainsKey(LResourceName) then
-          begin
-            FResourceRegistry.Add(LResourceName, AInfo.Clone);
-            LResult := True;
-          end;
-
-        finally
-          LURL.Free;
+        if not FResourceRegistry.ContainsKey(LResourceName) then
+        begin
+          FResourceRegistry.Add(LResourceName, AInfo.Clone);
+          LResult := True;
         end;
       end
     );

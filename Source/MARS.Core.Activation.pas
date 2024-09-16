@@ -680,18 +680,38 @@ end;
 procedure TMARSActivation.CheckResource;
 var
   LFound: Boolean;
-  LResourceKeys: TArray<string>;
-  LIndex: Integer;
+  LResourcesKeys: TArray<string>;
+  LBasePath, LURLPath, LRelativePath, LAppResourceKey, LAppResourcePath: string;
 begin
-  LFound := Application.Resources.TryGetValue(URL.Resource.ToLower, FConstructorInfo);
+  LBasePath := EnsurePrefix(URL.BasePath, TMARSURL.URL_PATH_SEPARATOR);
+  LURLPath := EnsurePrefix(string.Join(TMARSURL.URL_PATH_SEPARATOR, URL.PathTokens), TMARSURL.URL_PATH_SEPARATOR);
 
-  // another attempt: check wildcards
-  if (not LFound) then
+  LRelativePath := LURLPath;
+  if LURLPath.StartsWith(LBasePath, True) then
+    LRelativePath := EnsurePrefix(LRelativePath.Substring(LBasePath.Length), TMARSURL.URL_PATH_SEPARATOR);
+
+  LResourcesKeys := Application.Resources.Keys.ToArray;
+  LFound := False;
+  for LAppResourceKey in LResourcesKeys do
   begin
-    LResourceKeys := Application.Resources.Keys.ToArray;
-    LIndex := IndexStr(TMARSURL.PATH_PARAM_WILDCARD, LResourceKeys);
-    if LIndex <> -1 then
-      LFound := Application.Resources.TryGetValue(LResourceKeys[LIndex], FConstructorInfo);
+    LAppResourcePath := EnsurePrefix(LAppResourceKey, TMARSURL.URL_PATH_SEPARATOR);
+    if LRelativePath.StartsWith(LAppResourcePath, True) then
+    begin
+      LFound := True;
+      if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
+        raise Exception.CreateFmt('Resource matching error: %s, relative path: %s', [LAppResourceKey, LRelativePath]);
+      Break;
+    end
+    else if LAppResourcePath.Contains(TMARSURL.PATH_PARAM_WILDCARD) then
+    begin
+      if MatchesMask(LRelativePath, LAppResourcePath.Replace(TMARSURL.PATH_PARAM_WILDCARD, '*')) then
+      begin
+        LFound := True;
+        if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
+          raise Exception.CreateFmt('Resource matching error: %s, relative path: %s', [LAppResourcePath, LRelativePath]);
+        Break;
+      end;
+    end;
   end;
 
   // another attempt: check DefaultResourcePath
