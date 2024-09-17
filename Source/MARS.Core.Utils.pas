@@ -10,7 +10,7 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes, RTTI, SyncObjs
+  SysUtils, Classes, RTTI, SyncObjs, Math, Generics.Collections
 , REST.JSON
 , System.JSON
 , MARS.Core.JSON
@@ -20,6 +20,10 @@ uses
 type
   TStringArrayHelper = record helper for TArray<string>
     function RemoveDuplicates: TArray<string>;
+    function StartsWith(const AArray: TArray<string>; const AIgnoreCase: Boolean): Boolean;
+    function SubArray(const AStartIndex: Integer): TArray<string>; overload;
+    function SubArray(const AStartIndex: Integer; const ACount: Integer): TArray<string>; overload;
+    function Contains(const AString: string): Boolean;
   end;
 
   TFormParamFile = record
@@ -768,6 +772,58 @@ begin
   finally
     LStringList.Free;
   end;
+end;
+
+function TStringArrayHelper.StartsWith(const AArray: TArray<string>; const AIgnoreCase: Boolean): Boolean;
+begin
+  Result := True;
+
+  if Length(Self) < Length(AArray) then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  var LCommonLength := Min(Length(Self), Length(AArray));
+
+  for var LIndex := 0 to LCommonLength-1 do
+  begin
+    if AIgnoreCase then
+    begin
+      if not SameText(Self[LIndex], AArray[LIndex]) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    end
+    else
+    begin
+      if (Self[LIndex] <> AArray[LIndex]) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+function TStringArrayHelper.SubArray(const AStartIndex: Integer): TArray<string>;
+begin
+  Result := [];
+  for var LIndex := AStartIndex to Length(Self)-1 do
+    Result := Result + [Self[LIndex]];
+end;
+
+function TStringArrayHelper.SubArray(const AStartIndex: Integer; const ACount: Integer): TArray<string>;
+begin
+  Result := [];
+  for var LIndex := AStartIndex to Min(Length(Self)-1, AStartIndex + ACount - 1) do
+    Result := Result + [Self[LIndex]];
+end;
+
+function TStringArrayHelper.Contains(const AString: string): Boolean;
+begin
+  Result := TArray.Contains<string>(Self, AString);
 end;
 
 end.

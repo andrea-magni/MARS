@@ -681,20 +681,21 @@ procedure TMARSActivation.CheckResource;
 var
   LFound: Boolean;
   LResourcesKeys: TArray<string>;
-  LBasePath, LURLPath, LRelativePath, LAppResourceKey, LAppResourcePath: string;
+  LBasePath, LURLPath, LRelativePath, LAppResourcePath: TArray<string>;
+  LAppResourceKey: string;
 begin
-  LBasePath := EnsurePrefix(URL.BasePath, TMARSURL.URL_PATH_SEPARATOR);
-  LURLPath := EnsurePrefix(string.Join(TMARSURL.URL_PATH_SEPARATOR, URL.PathTokens), TMARSURL.URL_PATH_SEPARATOR);
+  LBasePath := URL.BasePath.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
+  LURLPath := URL.PathTokens;
 
-  LRelativePath := LURLPath;
+  LRelativePath := [];
   if LURLPath.StartsWith(LBasePath, True) then
-    LRelativePath := EnsurePrefix(LRelativePath.Substring(LBasePath.Length), TMARSURL.URL_PATH_SEPARATOR);
+    LRelativePath := LURLPath.SubArray(Length(LBasePath));
 
   LResourcesKeys := Application.Resources.Keys.ToArray;
   LFound := False;
   for LAppResourceKey in LResourcesKeys do
   begin
-    LAppResourcePath := EnsurePrefix(LAppResourceKey, TMARSURL.URL_PATH_SEPARATOR);
+    LAppResourcePath := LAppResourceKey.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
     if LRelativePath.StartsWith(LAppResourcePath, True) then
     begin
       LFound := True;
@@ -704,7 +705,9 @@ begin
     end
     else if LAppResourcePath.Contains(TMARSURL.PATH_PARAM_WILDCARD) then
     begin
-      if MatchesMask(LRelativePath, LAppResourcePath.Replace(TMARSURL.PATH_PARAM_WILDCARD, '*')) then
+      var LRelativePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LRelativePath);
+      var LAppResourcePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LAppResourcePath);
+      if MatchesMask(LRelativePathStr, LAppResourcePathStr.Replace(TMARSURL.PATH_PARAM_WILDCARD, '*')) then
       begin
         LFound := True;
         if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
