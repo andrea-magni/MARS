@@ -724,16 +724,10 @@ begin
   if not LFound then
     raise EMARSResourceNotFoundException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 
-  FResource := FRttiContext.GetType(FConstructorInfo.TypeTClass);
-  FResourceAttributes := FResource.GetAllAttributes(True);
-  FResourceMethods := FResource.GetMethods;
-  FResourcePath := '';
-  FResource.HasAttribute<PathAttribute>(
-    procedure (APathAttribute: PathAttribute)
-    begin
-      FResourcePath := APathAttribute.Value;
-    end
-  );
+  FResource := FConstructorInfo.RttiType;
+  FResourceAttributes := FConstructorInfo.Attributes;
+  FResourceMethods := FConstructorInfo.Methods;
+  FResourcePath := FConstructorInfo.Path;
 end;
 
 procedure TMARSActivation.AddToContext(AValue: TValue);
