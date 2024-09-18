@@ -823,7 +823,14 @@ end;
 
 function TStringArrayHelper.Contains(const AString: string): Boolean;
 begin
+  {$ifdef Delphi12Athens_UP}
   Result := TArray.Contains<string>(Self, AString);
+  {$else}
+  for var LIndex := Low(Self) to High(Self) do
+    if AString = Self[LIndex] then
+      Exit(True);
+  Result := False;
+  {$endif}
 end;
 
 end.
