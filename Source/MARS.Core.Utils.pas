@@ -18,9 +18,11 @@ uses
 ;
 
 type
+  TStringCompareFunc = reference to function (const AString1, AString2: string): Boolean;
   TStringArrayHelper = record helper for TArray<string>
     function RemoveDuplicates: TArray<string>;
-    function StartsWith(const AArray: TArray<string>; const AIgnoreCase: Boolean): Boolean;
+    function StartsWith(const AArray: TArray<string>; const AIgnoreCase: Boolean): Boolean; overload;
+    function StartsWith(const AArray: TArray<string>; const ACompareFunc: TStringCompareFunc): Boolean; overload;
     function SubArray(const AStartIndex: Integer): TArray<string>; overload;
     function SubArray(const AStartIndex: Integer; const ACount: Integer): TArray<string>; overload;
     function Contains(const AString: string): Boolean;
@@ -776,6 +778,27 @@ end;
 
 function TStringArrayHelper.StartsWith(const AArray: TArray<string>; const AIgnoreCase: Boolean): Boolean;
 begin
+  if Length(Self) < Length(AArray) then
+    Exit(False);
+
+  var LCompareFunc: TStringCompareFunc := nil;
+  if AIgnoreCase then
+    LCompareFunc := function (const AString1, AString2: string): Boolean
+    begin
+      Result := SameText(AString1, AString2); // case insensitive
+    end
+  else
+    LCompareFunc := function (const AString1, AString2: string): Boolean
+    begin
+      Result := AString1 = AString2; // case sensitive
+    end;
+
+  Result := StartsWith(AArray, LCompareFunc);
+end;
+
+function TStringArrayHelper.StartsWith(const AArray: TArray<string>;
+  const ACompareFunc: TStringCompareFunc): Boolean;
+begin
   Result := True;
 
   if Length(Self) < Length(AArray) then
@@ -785,40 +808,24 @@ begin
   end;
 
   var LCommonLength := Min(Length(Self), Length(AArray));
-
   for var LIndex := 0 to LCommonLength-1 do
   begin
-    if AIgnoreCase then
+    if not ACompareFunc(Self[LIndex], AArray[LIndex]) then
     begin
-      if not SameText(Self[LIndex], AArray[LIndex]) then
-      begin
-        Result := False;
-        Exit;
-      end;
-    end
-    else
-    begin
-      if (Self[LIndex] <> AArray[LIndex]) then
-      begin
-        Result := False;
-        Exit;
-      end;
+      Result := False;
+      Exit;
     end;
   end;
 end;
 
 function TStringArrayHelper.SubArray(const AStartIndex: Integer): TArray<string>;
 begin
-  Result := [];
-  for var LIndex := AStartIndex to Length(Self)-1 do
-    Result := Result + [Self[LIndex]];
+  Result := Copy(Self, AStartIndex, MAXINT);
 end;
 
 function TStringArrayHelper.SubArray(const AStartIndex: Integer; const ACount: Integer): TArray<string>;
 begin
-  Result := [];
-  for var LIndex := AStartIndex to Min(Length(Self)-1, AStartIndex + ACount - 1) do
-    Result := Result + [Self[LIndex]];
+  Result := Copy(Self, AStartIndex, ACount);
 end;
 
 function TStringArrayHelper.Contains(const AString: string): Boolean;

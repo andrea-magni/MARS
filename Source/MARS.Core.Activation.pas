@@ -691,12 +691,24 @@ begin
   if LURLPath.StartsWith(LBasePath, True) then
     LRelativePath := LURLPath.SubArray(Length(LBasePath));
 
+  var LCompareFunc: TStringCompareFunc :=
+    function (const AString1, AString2: string): Boolean
+    begin
+      Result :=
+        SameText(AString1, AString2) // 1 - exact match
+        or (
+          (Length(AString2) >= 2)
+          and (AString2[1] = '{')
+          and (AString2[High(AString2)] = '}')
+        );
+    end;
+
   LResourcesKeys := Application.Resources.Keys.ToArray;
   LFound := False;
   for LAppResourceKey in LResourcesKeys do
   begin
     LAppResourcePath := LAppResourceKey.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
-    if LRelativePath.StartsWith(LAppResourcePath, True) then
+    if LRelativePath.StartsWith(LAppResourcePath, LCompareFunc) then
     begin
       LFound := True;
       if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
