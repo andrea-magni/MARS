@@ -60,6 +60,7 @@ uses
 , MARS.Data.FireDAC, MARS.Data.FireDAC.ReadersAndWriters
 , MARS.Utils.Parameters, MARS.Utils.Parameters.IniFile
 , MARS.Core.Activation.Interfaces
+, IniFiles, StrUtils
 ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -67,12 +68,30 @@ begin
   StopServerAction.Execute;
 end;
 
+function MyDecryptFunc(const AEncryptedString: string): string;
+begin
+  Result := ReverseString(AEncryptedString);
+end;
+
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   // MARS-Curiosity Engine
   FEngine := TMARSEngine.Create;
   try
-    FEngine.Parameters.LoadFromIniFile;
+    FEngine.Parameters.LoadFromIniFile('',
+      procedure (AIniFile: TMemIniFile)
+      begin
+        // [DefaultEngine]
+        // Encrypted:
+        // FireDAC.MAIN_DB.Password=yekretsam
+        // Cleartext: masterkey
+        var LEncryptedPassword := AIniFile.ReadString('DefaultEngine', 'FireDAC.MAIN_DB.Password', '');
+        var LClearTextPassword := MyDecryptFunc(LEncryptedPassword);
+        AIniFile.WriteString('DefaultEngine', 'FireDAC.MAIN_DB.Password', LClearTextPassword);
+      end
+    );
+
+
     FEngine.AddApplication('DefaultApp', '/default', ['Server.*']);
     PortNumberEdit.Text := FEngine.Port.ToString;
     TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
