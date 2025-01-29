@@ -6,6 +6,7 @@ uses
   Classes, SysUtils;
 
 type
+  {$M+}
   IMARSRequest = interface
     function GetRawContent: TBytes;
     function GetContent: string;
@@ -63,6 +64,7 @@ type
     property UserAgent: string read GetUserAgent;
   end;
 
+  {$M+}
   IMARSResponse = interface
     function GetContentStream: TStream;
     procedure SetContentStream(const AContentStream: TStream);
