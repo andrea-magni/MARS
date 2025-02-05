@@ -14,10 +14,6 @@ type
   TProviderAppFunc = TFunc<TMARSApplication>;
 
   TMARSTestCaseData = record
-    ResourceName: string;
-    Info: TMARSConstructorInfo;
-    Method: TRttiMethod;
-
     Data: TRequestData;
 
     constructor Create(const AResourceName: string;
@@ -50,7 +46,7 @@ type
 implementation
 
 uses
-  MARS.Core.Attributes
+  MARS.Core.Attributes, MARS.Core.Utils, MARS.Core.URL
 , MARS.Rtti.Utils
 ;
 
@@ -82,19 +78,19 @@ end;
 function TMARSTestCaseProvider.GetCaseName(const methodName: string;
   const caseNumber: Integer): string;
 begin
-  var LData := FList[caseNumber];
-  Result := LData.Data.Path + ' ' + LData.Data.HttpMethod;
+  var LTestCase := FList[caseNumber];
+  Result := LTestCase.Data.MethodQualifiedName + ' ' + LTestCase.Data.HttpMethod + ' ' + LTestCase.Data.Path;
 end;
 
 function TMARSTestCaseProvider.GetCaseParams(const methodName: string;
   const caseNumber: Integer): TValueArray;
 begin
-  var LData := FList[caseNumber];
+  var LTestCase := FList[caseNumber];
   Result := [
-    LData.ResourceName
-  , LData.Info
-  , LData.Method
-  , TValue.From<TRequestData>(LData.Data)
+    LTestCase.Data.ResourceName
+  , LTestCase.Data.Info
+  , LTestCase.Data.Method
+  , TValue.From<TRequestData>(LTestCase.Data)
   ];
 end;
 
@@ -121,6 +117,8 @@ begin
             LHttpMethod := HttpMethodAttribute(LAttribute).HttpMethodName;
         end;
 
+        // if RolesAllowed --> Token valido
+
         if (LResourcePath <> '') and (LHttpMethod <> '') then
           FList.Add(TMARSTestCaseData.Create(AResourceName, AInfo, LMethod, LBasePath + LResourcePath, LMethodPath, LHttpMethod));
       end;
@@ -135,11 +133,8 @@ constructor TMARSTestCaseData.Create(const AResourceName: string;
   const AMethod: TRttiMethod;
   const AResourcePath, AMethodPath, AHttpMethod: string);
 begin
-  ResourceName := AResourceName;
-  Info := AInfo;
-  Method := AMethod;
-
-  Data.Path := AResourcePath + AMethodPath;
+  Data.SetContext(AResourceName, AInfo, AMethod);
+  Data.Path := TMARSURL.URL_PATH_SEPARATOR + SmartConcat([AResourcePath, AMethodPath], TMARSURL.URL_PATH_SEPARATOR);
   Data.HttpMethod := AHttpMethod;
 end;
 

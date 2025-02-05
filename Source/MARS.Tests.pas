@@ -34,6 +34,27 @@ type
     property Values : TValueArray read GetValues;
   end;
 
+  TMockRequest = TMock<IMARSRequest>;
+
+  TMockRequestHelper = record helper for TMock<IMARSRequest>
+    function SetQueryParam(const AParamIndex: Integer;
+      const AParamName, AParamValue: string): TMock<IMARSRequest>;
+    function SetQueryParamCount(const ACount: Integer): TMock<IMARSRequest>;
+
+    function SetFormParam(const AParamIndex: Integer;
+      const AParamName, AParamValue: string): TMock<IMARSRequest>;
+    function SetFormParamCount(const ACount: Integer): TMock<IMARSRequest>;
+
+    function SetHeaderParam(const AParamIndex: Integer;
+      const AHeaderParamName, AHeaderParamValue: string): TMock<IMARSRequest>;
+    function SetHeaderParamCount(const ACount: Integer): TMock<IMARSRequest>;
+
+    function SetCookieParam(const AParamIndex: Integer;
+      const ACookieParamName, ACookieParamValue: string): TMock<IMARSRequest>;
+    function SetCookieParamCount(const ACount: Integer): TMock<IMARSRequest>;
+
+  end;
+
   TMARSTestFixture = class
   private
     FEngine: TMARSEngine;
@@ -48,11 +69,12 @@ type
     function GetValidToken(const AAppName: string; const AUserName: string; const ARoles: TArray<string>): string; virtual;
 
     function MockRequest(const APath: string; const AHttpMethod: string = 'GET';
-      const AQueryString: string = ''; const AContent: string = '';
+      const AQueryString: string = ''; const ABody: string = '';
       const AAccept: string = TMediaType.WILDCARD; const AToken: string = ''
     ): TMock<IMARSRequest>; overload; virtual;
     function MockRequest(const AData: TRequestData): TMock<IMARSRequest>; overload; virtual;
-    procedure AfterMockRequest(const AMock: TMock<IMARSRequest>); virtual;
+
+    procedure AfterMockRequest(const AData: TRequestData; const AMock: TMock<IMARSRequest>); virtual;
 
     function CreateDummyResponse(): IMARSResponse; virtual;
 
@@ -86,32 +108,58 @@ type
     [TearDownFixture]
     procedure TeardownFixture;
 
-    procedure allRequests(const AResourceName: string;
+    function RequestHasSuccessfulResponse(const AResourceName: string;
       const AInfo: TMARSConstructorInfo;
       const AMethod: TRttiMethod;
-      const AData: TRequestData); virtual;
+      const AData: TRequestData): IMARSResponse; overload; virtual;
+    function RequestHasSuccessfulResponse(const AData: TRequestData): IMARSResponse; overload; virtual;
 
-    procedure legalRequests(const APath: string; const AHttpMethod: string;
-      const AQueryString: string; const AContent: string); virtual;
+    procedure RequestHasNonSuccessfulResponse(const AResourceName: string;
+      const AInfo: TMARSConstructorInfo;
+      const AMethod: TRttiMethod;
+      const AData: TRequestData); overload; virtual;
+    procedure RequestHasNonSuccessfulResponse(const AData: TRequestData); overload; virtual;
 
-    procedure legalRequestsWithResponse(const AData: TRequestData); virtual;
-
-    procedure illegalRequests(const APath: string; const AHttpMethod: string;
-      const AQueryString: string; const AContent: string); virtual;
+    procedure Legal(const APath: string; const AHttpMethod: string;
+      const AQueryString: string; const ABody: string); virtual;
   end;
 
 implementation
 
 { TMARSTestFixture }
 
-procedure TMARSTestFixture.allRequests(const AResourceName: string;
-  const AInfo: TMARSConstructorInfo; const AMethod: TRttiMethod;
-  const AData: TRequestData);
+procedure TMARSTestFixture.RequestHasNonSuccessfulResponse(
+  const AResourceName: string; const AInfo: TMARSConstructorInfo;
+  const AMethod: TRttiMethod; const AData: TRequestData);
+begin
+  AData.SetContext(AResourceName, AInfo, AMethod);
+  RequestHasNonSuccessfulResponse(AData);
+end;
+
+procedure TMARSTestFixture.RequestHasNonSuccessfulResponse(const AData: TRequestData);
 begin
   var LResponse := ExecuteMockRequest(AData);
-  Assert.IsTrue(
+  Assert.IsFalse(
     IsSuccessful(LResponse.StatusCode)
   , Format('Status code: %d Response: %s', [LResponse.StatusCode, LResponse.Content])
+  );
+end;
+
+function TMARSTestFixture.RequestHasSuccessfulResponse(const AResourceName: string;
+  const AInfo: TMARSConstructorInfo; const AMethod: TRttiMethod;
+  const AData: TRequestData): IMARSResponse;
+begin
+  AData.SetContext(AResourceName, AInfo, AMethod);
+  Result := RequestHasSuccessfulResponse(AData);
+end;
+
+function TMARSTestFixture.RequestHasSuccessfulResponse(
+  const AData: TRequestData): IMARSResponse;
+begin
+  Result := ExecuteMockRequest(AData);
+  Assert.IsTrue(
+    IsSuccessful(Result.StatusCode)
+  , Format('Status code: %d Response: %s', [Result.StatusCode, Result.Content])
   );
 end;
 
@@ -141,20 +189,10 @@ begin
 end;
 
 function TMARSTestFixture.MockRequest(const APath, AHttpMethod, AQueryString,
-  AContent, AAccept, AToken: string): TMock<IMARSRequest>;
+  ABody, AAccept, AToken: string): TMock<IMARSRequest>;
 begin
-  var LData := Default(TRequestData);
-
-  LData.HostName := 'localhost';
-  LData.Port := Engine.Port;
-
-  LData.Path := APath;
-  LData.HttpMethod := AHttpMethod;
-  LData.QueryString := AQueryString;
-  LData.Content := AContent;
-  LData.Accept := AAccept;
-  LData.Token := AToken;
-
+  var LData := TRequestData.Create(TRequestData.DEFAULT_HOSTNAME, Engine.Port
+    , APath, AHttpMethod, AQueryString, ABody, AAccept, AToken);
   Result := MockRequest(LData);
 end;
 
@@ -165,21 +203,28 @@ begin
   with Result.Setup do
   begin
     AllowRedefineBehaviorDefinitions := True;
+    WillReturn(0).When.GetQueryParamCount;
+    WillReturn(0).When.GetFormParamCount;
+    WillReturn(0).When.GetHeaderParamCount;
 
     WillReturn(AData.HostName).When.HostName;
     WillReturn(AData.Port).When.Port;
     WillReturn(AData.HttpMethod).When.Method;
     WillReturn(AData.Path).When.RawPath;
     WillReturn(AData.QueryString).When.QueryString;
-    WillReturn('Bearer ' + AData.Token).When.Authorization;
+    WillReturn('').When.Authorization;
+    if AData.Token <> '' then
+      Result
+        .SetHeaderParamCount(1)
+        .SetHeaderParam(0, 'Authorization', 'Bearer ' + AData.Token);
     WillReturn(AData.Token).When.GetCookieParamValue(TokenCookieName);
     WillReturn(AData.Accept).When.Accept;
-    WillReturn(AData.Content).When.Content;
+    WillReturn(AData.Body).When.Content;
   end;
-  AfterMockRequest(Result);
+  AfterMockRequest(AData, Result);
 end;
 
-procedure TMARSTestFixture.AfterMockRequest(const AMock: TMock<IMARSRequest>);
+procedure TMARSTestFixture.AfterMockRequest(const AData: TRequestData; const AMock: TMock<IMARSRequest>);
 begin
 
 end;
@@ -213,28 +258,12 @@ begin
 end;
 
 
-procedure TMARSTestFixture.legalRequests(const APath, AHttpMethod, AQueryString,
-  AContent: string);
+procedure TMARSTestFixture.Legal(const APath, AHttpMethod, AQueryString,
+  ABody: string);
 begin
-  var LRequest :=  MockRequest(APath, AHttpMethod, AQueryString, AContent);
+  var LRequest :=  MockRequest(APath, AHttpMethod, AQueryString, ABody);
   var LResponse := ExecuteRequest(LRequest);
   Assert.IsTrue(IsSuccessful(LResponse.StatusCode), 'Status code: ' + LResponse.StatusCode.ToString);
-end;
-
-procedure TMARSTestFixture.legalRequestsWithResponse(const AData: TRequestData);
-begin
-  var LResponse := ExecuteMockRequest(AData);
-  Assert.IsTrue(IsSuccessful(LResponse.StatusCode), 'Status code: ' + LResponse.StatusCode.ToString);
-  Assert.AreEqual(AData.ExpectedResponse, LResponse.Content, 'Response content')
-end;
-
-
-procedure TMARSTestFixture.illegalRequests(const APath, AHttpMethod, AQueryString,
-  AContent: string);
-begin
-  var LRequest :=  MockRequest(APath, AHttpMethod, AQueryString, AContent);
-  var LResponse := ExecuteRequest(LRequest);
-  Assert.IsFalse(IsSuccessful(LResponse.StatusCode));
 end;
 
 function TMARSTestFixture.Is404(const AStatusCode: Integer): Boolean;
@@ -301,5 +330,74 @@ function RequestTestCaseAttribute.GetValues: TValueArray;
 begin
   Result := FCaseInfo.Values;
 end;
+
+{ TMockRequestHelper }
+
+function TMockRequestHelper.SetQueryParamCount(
+  const ACount: Integer): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(ACount).When.GetQueryParamCount;
+end;
+
+function TMockRequestHelper.SetQueryParam(const AParamIndex: Integer;
+  const AParamName, AParamValue: string): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(AParamIndex).When.GetQueryParamIndex(AParamName);
+  Self.Setup.WillReturn(AParamValue).When.GetQueryParamValue(AParamIndex);
+end;
+
+function TMockRequestHelper.SetFormParamCount(
+  const ACount: Integer): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(ACount).When.GetFormParamCount;
+end;
+
+function TMockRequestHelper.SetFormParam(const AParamIndex: Integer;
+  const AParamName, AParamValue: string): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(AParamValue).When.GetFormParamValue(AParamIndex);
+  Self.Setup.WillReturn(AParamValue).When.GetFormParamValue(AParamName);
+  Self.Setup.WillReturn(AParamIndex).When.GetFormParamIndex(AParamName);
+  Self.Setup.WillReturn(-1).When.GetFormFileParamIndex(AParamName);
+end;
+
+function TMockRequestHelper.SetHeaderParam(const AParamIndex: Integer; const AHeaderParamName, AHeaderParamValue: string): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(AHeaderParamValue).When.GetHeaderParamValue(AHeaderParamName);
+  Self.Setup.WillReturn(AParamIndex).When.GetHeaderParamIndex(AHeaderParamName);
+  Self.Setup.WillReturn(AHeaderParamValue).When.GetHeaderParamValue(AParamIndex);
+
+  if AHeaderParamName = 'Authorization' then
+    Self.Setup.WillReturn(AHeaderParamValue).When.Authorization;
+end;
+
+function TMockRequestHelper.SetHeaderParamCount(
+  const ACount: Integer): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(ACount).When.GetHeaderParamCount;
+end;
+
+function TMockRequestHelper.SetCookieParam(const AParamIndex: Integer;
+  const ACookieParamName, ACookieParamValue: string): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(ACookieParamValue).When.GetCookieParamValue(ACookieParamName);
+  Self.Setup.WillReturn(AParamIndex).When.GetCookieParamIndex(ACookieParamName);
+  Self.Setup.WillReturn(ACookieParamValue).When.GetHeaderParamValue(AParamIndex);
+end;
+
+function TMockRequestHelper.SetCookieParamCount(const ACount: Integer): TMock<IMARSRequest>;
+begin
+  Result := Self;
+  Self.Setup.WillReturn(ACount).When.GetCookieParamCount;
+end;
+
+
 
 end.
