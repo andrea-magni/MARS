@@ -44,6 +44,7 @@ type
 
     [Test] procedure SkipEmptyValues1;
     [Test] procedure SkipEmptyValues2;
+    [Test] procedure SkipEmptyValues3;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -340,6 +341,21 @@ begin
 
 // LRecord.Name is '' and SkipEmptyValues is True so we should not see it in the JSON
   Assert.IsNull(LJSONObj.FindValue('Name'), 'LRecord.Name is empty and should not show up in JSON string');
+end;
+
+procedure TMARSRecordToJSONTest.SkipEmptyValues3;
+begin
+  var LObj: TObject := nil;
+  var LRecord := TRecordWithObject.Create('test1', LObj);
+
+  var LOptions: TMARSJSONSerializationOptions := DefaultMARSJSONSerializationOptions;
+  LOptions.SkipEmptyValues := True;
+  var LJSONObj := TJSONObject.RecordToJSON<TRecordWithObject>(LRecord, LOptions);
+
+  Assert.IsNotNull(LJSONObj);
+
+// LRecord.Name is '' and SkipEmptyValues is True so we should not see it in the JSON
+  Assert.IsNull(LJSONObj.FindValue('Instance'), 'LRecord.Instance is nil and should not show up in JSON string');
 end;
 
 procedure TMARSRecordToJSONTest.Variants;

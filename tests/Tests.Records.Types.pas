@@ -70,6 +70,12 @@ type
     Value7: Variant;
   end;
 
+  TRecordWithObject = record
+    Name: string;
+    Instance: TObject;
+    constructor Create(const AName: string; const AInstance: TObject);
+  end;
+
 
 implementation
 
@@ -118,6 +124,15 @@ constructor TSwingNamesRecord.Create(const AName, ASurname: string);
 begin
   Name := AName;
   Surname := ASurname;
+end;
+
+{ TRecordWithObject }
+
+constructor TRecordWithObject.Create(const AName: string;
+  const AInstance: TObject);
+begin
+  Name := AName;
+  Instance := AInstance;
 end;
 
 end.

@@ -365,9 +365,10 @@ begin
     end;
 //    Result := TValueToJSONValue( TValue.FromVariant(AValue.AsVariant), AOptions )
   end
+  else if (AValue.IsObject and (AValue.AsObject = nil)) then
+    Result := TJSONNull.Create
   else if (AValue.IsInstanceOf(TObject)) then
     Result := ObjectToJSON(AValue.AsObject, AOptions)
-
   else
     Result := TJSONString.Create(AValue.ToString);
 
@@ -1584,12 +1585,20 @@ begin
       Exit;
     end;
 
-    // skip empty objects
-    if Assigned(LValue) and (LValue is TJSONObject) and (TJSONObject(LValue).Count = 0) then
+//    // skip empty objects
+//    if Assigned(LValue) and (LValue is TJSONObject) and (TJSONObject(LValue).Count = 0) then
+//    begin
+//      FreeAndNil(LValue);
+//      Exit;
+//    end;
+
+    // skip null values
+    if Assigned(LValue) and (LValue is TJSONNull) then
     begin
       FreeAndNil(LValue);
       Exit;
     end;
+
   end;
 {$ENDIF}
 
