@@ -1939,7 +1939,9 @@ type
 
     function _CheckCompress(const ABodySize: Int64; var ACompressType: TCompressType): Boolean;
     procedure _AdjustOffsetCount(const ABodySize: NativeInt; var AOffset, ACount: NativeInt); overload;
+    {$IFDEF WIN32}
     procedure _AdjustOffsetCount(const ABodySize: Int64; var AOffset, ACount: Int64); overload;
+    {$ENDIF}
 
     {$region '压缩发送'}
     procedure SendZCompress(const AChunkSource: TFunc<PPointer, PNativeInt, Boolean>; ACompressType: TCompressType; ACallback: TProc<ICrossConnection, Boolean> = nil); overload;
@@ -4199,6 +4201,7 @@ begin
   {$endregion}
 end;
 
+{$IFDEF WIN32}
 procedure TCrossHttpResponse._AdjustOffsetCount(const ABodySize: Int64;
   var AOffset, ACount: Int64);
 begin
@@ -4227,6 +4230,7 @@ begin
     ACount := ABodySize - AOffset;
   {$endregion}
 end;
+{$ENDIF}
 
 function TCrossHttpResponse._CheckCompress(const ABodySize: Int64;
   var ACompressType: TCompressType): Boolean;
