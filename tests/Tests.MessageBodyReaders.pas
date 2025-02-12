@@ -17,7 +17,7 @@ type
   private
     FMBR: IMessageBodyReader;
     FJSONMediaType: TMediaType;
-
+    // leave the following fields declared, they are checked through RTTI
     FPerson: TPersonRecord;
     FPrimitiveTypes: TPrimitiveTypesRecord;
     FOuter: TOuterRecord;

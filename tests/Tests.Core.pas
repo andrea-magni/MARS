@@ -41,6 +41,9 @@ type
     [Test] procedure AssignedValues;
 
     [Test] procedure Variants;
+
+    [Test] procedure SkipEmptyValues1;
+    [Test] procedure SkipEmptyValues2;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -309,6 +312,34 @@ begin
   Assert.IsNotNull(LJSONObj);
   Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Surname'));
   Assert.AreEqual(LRecord.Surname, LJSONObj.ReadStringValue('Name'));
+end;
+
+procedure TMARSRecordToJSONTest.SkipEmptyValues1;
+begin
+  var LRecord := TNamedIntegerRecord.Create('The answer', 0);
+
+  var LOptions: TMARSJSONSerializationOptions := DefaultMARSJSONSerializationOptions;
+  LOptions.SkipEmptyValues := True;
+  var LJSONObj := TJSONObject.RecordToJSON<TNamedIntegerRecord>(LRecord, LOptions);
+
+  Assert.IsNotNull(LJSONObj);
+
+// LRecord.Value is zero and SkipEmptyValues is True so we should not see it in the JSON
+  Assert.IsNull(LJSONObj.FindValue('Value'), 'LRecord.Value is zero and should not show up in JSON string');
+end;
+
+procedure TMARSRecordToJSONTest.SkipEmptyValues2;
+begin
+  var LRecord := TNamedIntegerRecord.Create('', 42);
+
+  var LOptions: TMARSJSONSerializationOptions := DefaultMARSJSONSerializationOptions;
+  LOptions.SkipEmptyValues := True;
+  var LJSONObj := TJSONObject.RecordToJSON<TNamedIntegerRecord>(LRecord, LOptions);
+
+  Assert.IsNotNull(LJSONObj);
+
+// LRecord.Name is '' and SkipEmptyValues is True so we should not see it in the JSON
+  Assert.IsNull(LJSONObj.FindValue('Name'), 'LRecord.Name is empty and should not show up in JSON string');
 end;
 
 procedure TMARSRecordToJSONTest.Variants;

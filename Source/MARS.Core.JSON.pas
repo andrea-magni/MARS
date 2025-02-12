@@ -281,7 +281,7 @@ type
 implementation
 
 uses
-  System.DateUtils, System.TimeSpan, System.Variants, System.StrUtils
+  System.DateUtils, System.TimeSpan, System.Variants, System.StrUtils, System.Math
 , MARS.Core.Utils, MARS.Rtti.Utils
 ;
 
@@ -1558,6 +1558,13 @@ begin
   begin
     // skip empty string
     if Assigned(LValue) and (LValue is TJSONString) and (TJSONString(LValue).Value = '') then
+    begin
+      FreeAndNil(LValue);
+      Exit;
+    end;
+
+    // skip empty numbers
+    if Assigned(LValue) and (LValue is TJSONNumber) and (SameValue(TJSONNumber(LValue).AsDouble, 0)) then
     begin
       FreeAndNil(LValue);
       Exit;
