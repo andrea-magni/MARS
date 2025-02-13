@@ -75,7 +75,7 @@ var
   LDataSet: TMemDataSet;
 begin
   for LDataSet in ADataSets do
-    LDataSet.DisposeOf;
+    LDataSet.Free();
   ADataSets := [];
 end;
 

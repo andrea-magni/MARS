@@ -24,6 +24,7 @@ uses
   , MARS.Core.Utils
   , MARS.Data.Utils
   , MARS.Data.UniDAC.Utils
+  , MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
