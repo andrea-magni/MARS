@@ -10,11 +10,9 @@ unit MARS.Core.Engine;
 interface
 
 uses
-  SysUtils, Classes, Generics.Collections
-  , SyncObjs
-
-  , MARS.Core.Classes, MARS.Core.Registry, MARS.Core.Application, MARS.Core.URL
-  , MARS.Core.Exceptions, MARS.Utils.Parameters, MARS.Core.RequestAndResponse.Interfaces
+  SysUtils, Classes, Generics.Collections, SyncObjs
+, MARS.Core.Classes, MARS.Core.Registry, MARS.Core.Application, MARS.Core.URL
+, MARS.Core.Exceptions, MARS.Utils.Parameters, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 {$M+}
@@ -116,10 +114,10 @@ type
 implementation
 
 uses
-    MARS.Core.Utils
-  , MARS.Core.Activation, MARS.Core.Activation.Interfaces
-  , MARS.Core.MediaType
-  ;
+  MARS.Core.Utils
+, MARS.Core.Activation, MARS.Core.Activation.Interfaces
+, MARS.Core.MediaType
+;
 
 function TMARSEngine.AddApplication(const AName, ABasePath: string;
   const AResources: array of string; const AParametersSliceName: string;
