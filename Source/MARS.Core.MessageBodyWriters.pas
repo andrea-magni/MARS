@@ -128,7 +128,7 @@ begin
   begin
     if LAttribute is JSONIncludeEmptyValuesAttribute then
     begin
-      LSerializationOptions.SkipEmptyValues := False;
+      LSerializationOptions.IncludeEmptyOrNullValues;
       Break;
     end;
   end;
@@ -163,7 +163,7 @@ begin
   begin
     if LAttribute is JSONIncludeEmptyValuesAttribute then
     begin
-      LSerializationOptions.SkipEmptyValues := False;
+      LSerializationOptions.IncludeEmptyOrNullValues;
       Break;
     end;
   end;
@@ -300,7 +300,7 @@ begin
       begin
         if LAttribute is JSONIncludeEmptyValuesAttribute then
         begin
-          LSerializationOptions.SkipEmptyValues := False;
+          LSerializationOptions.IncludeEmptyOrNullValues;
           Break;
         end;
       end;
@@ -340,7 +340,7 @@ begin
     begin
       if LAttribute is JSONIncludeEmptyValuesAttribute then
       begin
-        LSerializationOptions.SkipEmptyValues := False;
+        LSerializationOptions.IncludeEmptyOrNullValues;
         Break;
       end;
     end;

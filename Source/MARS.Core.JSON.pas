@@ -71,9 +71,14 @@ type
   TMARSJSONSerializationOptions = TJsonOptions;
   {$ELSE}
   TMARSJSONSerializationOptions = record
-    SkipEmptyValues: Boolean;
-//    joIgnoreEmptyStrings
-//    joIgnoreEmptyArrays
+  public
+    SkipEmptyStrings: Boolean;
+    SkipEmptyNumbers: Boolean;
+    SkipEmptyBooleans: Boolean;
+    SkipEmptyObjects: Boolean;
+    SkipEmptyArrays: Boolean;
+    SkipNullValues: Boolean;
+
     DateIsUTC: Boolean;
     DateFormat: TMARSJSONDateFormat;
 //    joDateFormatUnix
@@ -89,6 +94,10 @@ type
 //    joIndentCaseUpper
 //    joIndentCasePreserve
     UseDisplayFormatForNumericFields: Boolean;
+
+    function SkipEmptyValues: Boolean;
+    procedure IncludeEmptyOrNullValues;
+    procedure SkipAllEmptyOrNullValues;
   end;
 
   JSONIncludeEmptyValuesAttribute = class(TCustomAttribute);
@@ -271,7 +280,12 @@ type
   var DefaultMARSJSONSerializationOptions: TJSONOptions = [joDateIsUTC, joDateFormatISO8601, joBytesFormatArray, joIndentCaseCamel];
   {$ELSE}
   var DefaultMARSJSONSerializationOptions: TMARSJSONSerializationOptions = (
-    SkipEmptyValues: True;
+    SkipEmptyStrings: True;
+    SkipEmptyNumbers: False;
+    SkipEmptyBooleans: True;
+    SkipEmptyObjects: True;
+    SkipEmptyArrays: True;
+    SkipNullValues: True;
     DateIsUTC: True; // check the initialization section of this unit!
     DateFormat: ISO8601;
     UseDisplayFormatForNumericFields: False;
@@ -1557,43 +1571,43 @@ begin
 {$IFNDEF MARS_JSON_LEGACY}
   if AOptions.SkipEmptyValues then
   begin
-    // skip empty string
-    if Assigned(LValue) and (LValue is TJSONString) and (TJSONString(LValue).Value = '') then
+    if AOptions.SkipEmptyStrings
+      and ((LValue is TJSONString) and (TJSONString(LValue).Value = '')) then
     begin
       FreeAndNil(LValue);
       Exit;
     end;
 
-    // skip empty numbers
-    if Assigned(LValue) and (LValue is TJSONNumber) and (SameValue(TJSONNumber(LValue).AsDouble, 0)) then
+    if AOptions.SkipEmptyNumbers
+      and (LValue is TJSONNumber) and (SameValue(TJSONNumber(LValue).AsDouble, 0)) then
     begin
       FreeAndNil(LValue);
       Exit;
     end;
 
-      // skip false boolean values
-    if Assigned(LValue) and (LValue is TJSONBool) and (TJSONBool(LValue).AsBoolean = false) then
+    if AOptions.SkipEmptyBooleans
+       and (LValue is TJSONBool) and (TJSONBool(LValue).AsBoolean = false) then
     begin
       FreeAndNil(LValue);
       Exit;
     end;
 
-    // skip empty arrays
-    if Assigned(LValue) and (LValue is TJSONArray) and (TJSONArray(LValue).Count = 0) then
+    if AOptions.SkipEmptyArrays
+       and (LValue is TJSONArray) and (TJSONArray(LValue).Count = 0) then
     begin
       FreeAndNil(LValue);
       Exit;
     end;
 
-//    // skip empty objects
-//    if Assigned(LValue) and (LValue is TJSONObject) and (TJSONObject(LValue).Count = 0) then
-//    begin
-//      FreeAndNil(LValue);
-//      Exit;
-//    end;
+    if AOptions.SkipEmptyObjects
+      and (LValue is TJSONObject) and (TJSONObject(LValue).Count = 0) then
+    begin
+      FreeAndNil(LValue);
+      Exit;
+    end;
 
-    // skip null values
-    if Assigned(LValue) and (LValue is TJSONNull) then
+    if AOptions.SkipNullValues
+       and (LValue is TJSONNull) then
     begin
       FreeAndNil(LValue);
       Exit;
@@ -1668,6 +1682,39 @@ begin
     TJSONValueToTValue(LJSONValue, LDesiredType, Result);
   end;
 
+end;
+
+{ TMARSJSONSerializationOptions }
+
+procedure TMARSJSONSerializationOptions.IncludeEmptyOrNullValues;
+begin
+  SkipEmptyStrings := False;
+  SkipEmptyNumbers := False;
+  SkipEmptyBooleans := False;
+  SkipEmptyObjects := False;
+  SkipEmptyArrays := False;
+  SkipNullValues := False;
+end;
+
+procedure TMARSJSONSerializationOptions.SkipAllEmptyOrNullValues;
+begin
+  SkipEmptyStrings := True;
+  SkipEmptyNumbers := True;
+  SkipEmptyBooleans := True;
+  SkipEmptyObjects := True;
+  SkipEmptyArrays := True;
+  SkipNullValues := True;
+end;
+
+function TMARSJSONSerializationOptions.SkipEmptyValues: Boolean;
+begin
+  Result :=
+     SkipEmptyStrings
+  or SkipEmptyNumbers
+  or SkipEmptyBooleans
+  or SkipEmptyObjects
+  or SkipEmptyArrays
+  or SkipNullValues;
 end;
 
 initialization
