@@ -110,6 +110,7 @@ type
 
   InvocationEventAttribute = class(MARSAttribute);
 
+  AfterContextCleanupAttribute = class(InvocationEventAttribute);
   BeforeInvokeAttribute = class(InvocationEventAttribute);
   AfterInvokeAttribute = class(InvocationEventAttribute);
   InvokeErrorAttribute = class(InvocationEventAttribute);

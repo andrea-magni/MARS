@@ -27,6 +27,8 @@ type
     const AURL: TMARSURL
   ): IMARSActivation;
 
+
+  TMARSAfterContextCleanupProc = reference to procedure(const AActivation: IMARSActivation);
   TMARSBeforeInvokeProc = reference to procedure(const AActivation: IMARSActivation; out AIsAllowed: Boolean);
   TMARSAfterInvokeProc = reference to procedure(const AActivation: IMARSActivation);
   TMARSInvokeErrorProc = reference to procedure(const AActivation: IMARSActivation;
@@ -46,6 +48,7 @@ type
     FId: string;
     FRequest: IMARSRequest;
     FResponse: IMARSResponse;
+    class var FAfterContextCleanupProcs: TArray<TMARSAfterContextCleanupProc>;
     class var FBeforeInvokeProcs: TArray<TMARSBeforeInvokeProc>;
     class var FAfterInvokeProcs: TArray<TMARSAfterInvokeProc>;
     class var FInvokeErrorProcs: TArray<TMARSInvokeErrorProc>;
@@ -76,8 +79,11 @@ type
     FSerializationTime: TStopWatch;
     FAuthorizationInfo: TMARSAuthorizationInfo;
 
-    procedure FreeContext; virtual;
-    procedure CleanupGarbage(const AValue: TValue; const ADestroyed: TList<TObject>); virtual;
+    procedure CallEachMethodWithAttribute<A: TCustomAttribute>();
+
+    procedure ContextCleanup; virtual;
+    procedure DoAfterContextCleanup; virtual;
+    procedure Cleanup(const AValue: TValue; const ADestroyed: TList<TObject>); virtual;
     procedure ContextInjection; virtual;
     function GetContextValue(const ADestination: TRttiObject): TInjectionValue; virtual;
     function GetMethodArgument(const AParam: TRttiParameter): TValue; virtual;
@@ -146,6 +152,9 @@ type
 
     class procedure RegisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
 //    class procedure UnregisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
+
+    class procedure ClearAfterContextCleanups;
+    class procedure RegisterAfterContextCleanup(const AAfterContextCleanup: TMARSAfterContextCleanupProc);
     class procedure ClearBeforeInvokes;
     class procedure RegisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
 //    class procedure UnregisterAfterInvoke(const AAfterInvoke: TMARSAfterInvokeProc);
@@ -360,7 +369,7 @@ begin
   end;
 end;
 
-procedure TMARSActivation.CleanupGarbage(const AValue: TValue; const ADestroyed: TList<TObject>);
+procedure TMARSActivation.Cleanup(const AValue: TValue; const ADestroyed: TList<TObject>);
 
   procedure FreeOnlyOnce(const AValueToFree: TValue);
   var
@@ -390,11 +399,16 @@ begin
         LValue := AValue.GetArrayElement(LIndex);
         case LValue.Kind of
           tkClass: FreeOnlyOnce(LValue);
-          tkArray, tkDynArray: CleanupGarbage(LValue, ADestroyed); //recursion
+          tkArray, tkDynArray: Cleanup(LValue, ADestroyed); //recursion
         end;
       end;
     end;
   end;
+end;
+
+class procedure TMARSActivation.ClearAfterContextCleanups;
+begin
+  FAfterContextCleanupProcs := [];
 end;
 
 class procedure TMARSActivation.ClearAfterInvokes;
@@ -412,7 +426,7 @@ begin
   FInvokeErrorProcs := [];
 end;
 
-procedure TMARSActivation.FreeContext;
+procedure TMARSActivation.ContextCleanup;
 var
   LDestroyed: TList<TObject>;
   LIndex: Integer;
@@ -420,18 +434,21 @@ var
 begin
   if FContext.Count = 0 then
     Exit;
-
-  LDestroyed := TList<TObject>.Create;
   try
-    while FContext.Count > 0 do
-    begin
-      LIndex := FContext.Count-1; // last one first
-      LValue := FContext[LIndex];
-      CleanupGarbage(LValue, LDestroyed);
-      FContext.Delete(LIndex);
+    LDestroyed := TList<TObject>.Create;
+    try
+      while FContext.Count > 0 do
+      begin
+        LIndex := FContext.Count-1; // last one first
+        LValue := FContext[LIndex];
+        Cleanup(LValue, LDestroyed);
+        FContext.Delete(LIndex);
+      end;
+    finally
+      LDestroyed.Free;
     end;
   finally
-    LDestroyed.Free;
+    DoAfterContextCleanup;
   end;
 end;
 
@@ -532,6 +549,12 @@ begin
   finally
     LAllowedRoles.Free;
   end;
+end;
+
+class procedure TMARSActivation.RegisterAfterContextCleanup(
+  const AAfterContextCleanup: TMARSAfterContextCleanupProc);
+begin
+  FAfterContextCleanupProcs := FAfterContextCleanupProcs + [AAfterContextCleanup];
 end;
 
 class procedure TMARSActivation.RegisterAfterInvoke(
@@ -636,12 +659,27 @@ begin
   finally
     // teardown phase
     FTeardownTime := TStopwatch.StartNew;
+    ContextCleanup;
     if Assigned(FResourceInstance) then
       FResourceInstance.Free;
     FMethodArguments := [];
-    FreeContext;
     FTeardownTime.Stop;
   end;
+end;
+
+procedure TMARSActivation.CallEachMethodWithAttribute<A>;
+begin
+  TRttiHelper.ForEachMethodWithAttribute<A>(FResourceMethods
+  , function (AMethod: TRttiMethod; AAttribute: A): Boolean
+    var
+      LReturnValue: TValue;
+    begin
+      Result := True;
+      LReturnValue := AMethod.Invoke(FResourceInstance, []);
+      if Assigned(AMethod.ReturnType) and (AMethod.ReturnType.Handle = TypeInfo(Boolean)) then
+        Result := LReturnValue.AsBoolean;
+    end
+  );
 end;
 
 procedure TMARSActivation.CheckAuthentication;
@@ -856,10 +894,24 @@ end;
 
 destructor TMARSActivation.Destroy;
 begin
-  FreeContext;
+  if (not FContext.IsEmpty) then
+    ContextCleanup;
   FContext.Free;
   FreeAndNil(FURLPrototype);
   inherited;
+end;
+
+procedure TMARSActivation.DoAfterContextCleanup;
+var
+  LSubscriber: TMARSAfterContextCleanupProc;
+begin
+  for LSubscriber in FAfterContextCleanupProcs do
+    LSubscriber(Self);
+
+  if not Assigned(FResourceInstance) then
+    Exit;
+
+  CallEachMethodWithAttribute<AfterContextCleanupAttribute>;
 end;
 
 procedure TMARSActivation.DoAfterInvoke;
@@ -869,17 +921,7 @@ begin
   for LSubscriber in FAfterInvokeProcs do
     LSubscriber(Self);
 
-  TRttiHelper.ForEachMethodWithAttribute<AfterInvokeAttribute>(FResourceMethods
-  , function (AMethod: TRttiMethod; AAttribute: AfterInvokeAttribute): Boolean
-    var
-      LReturnValue: TValue;
-    begin
-      Result := True;
-      LReturnValue := AMethod.Invoke(FResourceInstance, []);
-      if Assigned(AMethod.ReturnType) and (AMethod.ReturnType.Handle = TypeInfo(Boolean)) then
-        Result := LReturnValue.AsBoolean;
-    end
-  );
+  CallEachMethodWithAttribute<AfterInvokeAttribute>;
 end;
 
 function TMARSActivation.DoBeforeInvoke: Boolean;
