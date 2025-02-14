@@ -129,7 +129,7 @@ type
     function Add(const AElement: TDateTime): TJSONArray; overload;
     function Add(const AElement: TDateTime; const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
 
-    function ToArrayOfRecord<T: record>(): TArray<T>;
+    function ToArrayOfRecord<T>(): TArray<T>;
     procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil);
@@ -214,11 +214,11 @@ type
     procedure ToObject<T: class>(const AInstance: TObject; const AFilterProc: TToObjectFilterProc = nil); overload;
     procedure ToObject(const AInstance: TObject; const AObjectType: TRttiType; const AFilterProc: TToObjectFilterProc = nil); overload;
 
-    procedure FromRecord<T: record>(ARecord: T;
+    procedure FromRecord<T>(ARecord: T;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromRecord(const ARecord: TValue;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
-    function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    function ToRecord<T>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToRecord(const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
 {$ifndef DelphiXE6_UP}
@@ -247,10 +247,10 @@ type
       const AOptions: TMARSJSONSerializationOptions): TObject; overload;
     class function JSONToObject(const AClassType: TClass; const AJSON: TJSONObject): TObject; overload;
 
-    class function RecordToJSON<T: record>(ARecord: T;
+    class function RecordToJSON<T>(ARecord: T;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
-    class function RecordToJSON<T: record>(ARecord: T;
+    class function RecordToJSON<T>(ARecord: T;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
 
     class function RecordToJSON(const ARecord: TValue;
