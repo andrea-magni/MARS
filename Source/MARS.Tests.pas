@@ -91,6 +91,11 @@ type
 
     function GetEngine: TMARSEngine; virtual; abstract;
     function GetApplicationName: string; virtual;
+    (*
+      {app} -> Application base path (i.e. '/rest/default')
+      {eng} -> Engine base path (i.e. '/rest')
+    *)
+    function ExpandMacros(const AString: string): string; virtual;
 
     property Engine: TMARSEngine read FEngine;
     property ApplicationName: string read GetApplicationName;
@@ -173,6 +178,14 @@ begin
   Result := 'DefaultApp';
 end;
 
+function TMARSTestFixture.ExpandMacros(const AString: string): string;
+begin
+  Result := AString
+    .Replace('{app}', Application.BasePath)
+    .Replace('{eng}', Engine.BasePath)
+    .Replace('{basePath}', Engine.BasePath + Application.BasePath, [rfIgnoreCase])
+  ;
+end;
 
 function TMARSTestFixture.GetValidToken(const AAppName, AUserName: string;
   const ARoles: TArray<string>): string;
@@ -210,7 +223,7 @@ begin
     WillReturn(AData.HostName).When.HostName;
     WillReturn(AData.Port).When.Port;
     WillReturn(AData.HttpMethod).When.Method;
-    WillReturn(AData.Path).When.RawPath;
+    WillReturn(ExpandMacros(AData.Path)).When.RawPath;
     WillReturn(AData.QueryString).When.QueryString;
     WillReturn('').When.Authorization;
     if AData.Token <> '' then
