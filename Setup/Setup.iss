@@ -70,7 +70,7 @@
 #define LibraryPackagesFolder "Packages"
 #define LibrarySourceFolder "Source"
 #define LibraryDCUFolder "Lib"
-#define LibraryDocumentationURL "https://github.com/andrea-magni/MARS/blob/master/docs/"
+#define LibraryDocumentationURL "https://github.com/andrea-magni/MARS/wiki/"
 #define LibrarySupportURL "https://github.com/andrea-magni/MARS/issues/"
 #define LibraryUpdatesURL "https://github.com/andrea-magni/MARS/releases/"
 #define LibraryLicenseFileName "..\LICENSE"
@@ -146,7 +146,7 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl,.\InnoSetupScript
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl,.\InnoSetupScripts\Languages\Default.isl"
 
 #expr Exec(SourcePath + '\.\InnoSetupScripts\Scripts\Setup.Preprocessor.ClearFiles.bat', '', SourcePath + '\.\InnoSetupScripts\Scripts\')
-#define CommonRADStudioFilesExcludes "*.exe,*.dll,*.bpl,*.bpi,*.dcp,*.so,*.apk,*.drc,*.map,*.dres,*.rsm,*.tds,*.dcu,*.lib,*.jdbg,*.plist,*.cfg,*Resource.rc,*.cfg,*Resource.rc,*.local,*.identcache,*.projdata,*.tvsconfig,*.skincfg,*.cbk,*.dsk,__history\*,__recovery\*,*.~*,*.stat,modules\*,.github\*,*template*\*,*template*,*.a,*.dex,*.o,*.vrc,*.res,*.log,*.deployproj,*.bak,unins0*.dat,*.nupkg"
+#define CommonRADStudioFilesExcludes "*.exe,*.dll,*.bpl,*.bpi,*.dcp,*.so,*.apk,*.drc,*.map,*.dres,*.rsm,*.tds,*.dcu,*.lib,*.jdbg,*.plist,*.cfg,*Resource.rc,*.cfg,*Resource.rc,*.local,*.identcache,*.projdata,*.tvsconfig,*.skincfg,*.cbk,*.dsk,__history\*,__recovery\*,*.~*,*.stat,modules\*,.github\*,*.a,*.dex,*.o,*.vrc,*.res,*.log,*.deployproj,*.bak,unins0*.dat,*.nupkg"
 ; Don't change the order of the files. This could affect the performance when extract temp files
 [Files]
 #ifdef VclStyle
@@ -156,9 +156,11 @@ Source: "..\{#LibraryPackagesFolder}\*"; Excludes: "{#CommonRADStudioFilesExclud
 Source: "..\ThirdParty\mORMot\Source\SynEcc64O2.o"; DestDir: "{app}\ThirdParty\mORMot\Source"; Flags: ignoreversion
 Source: "..\*.rc"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "..\*"; Excludes: "{#CommonRADStudioFilesExcludes},*.gitattributes,*.gitignore,*.gitmodules,\.github\*,\.history\*,\Documents\*,\Externals\*,\{#LibraryDCUFolder}\*,Logs\*,*.Logs.txt,Objects\*,\{#SetupFolder}\*,\{#LibraryPackagesFolder}\*,\Test"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+Source: "..\Utils\Bin\Win32\MARSCmd_VCL.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Uninstall"; Filename: "{uninstallexe}"
+Name: "{userdesktop}\MARSCmd"; Filename: "{app}\Utils\Bin\Win32\MARSCmd_VCL.exe"; WorkingDir: "{app}\Utils\Bin\Win32\";
 
 [Run]
 Filename: "{app}\{#LibrarySamplesFolder}"; Description: "{cm:SetupOpenSamplesFolder}"; Flags: shellexec runasoriginaluser postinstall;
@@ -190,6 +192,7 @@ Type: filesandordirs; Name: "{app}\www\*";
 Type: filesandordirs; Name: "{app}\LICENSE";
 Type: filesandordirs; Name: "{app}\README.htm";
 Type: filesandordirs; Name: "{app}\README.md";
+Type: filesandordirs; Name: "{app}\Utils\Bin\";
 Type: dirifempty; Name: "{app}\Demos";
 Type: dirifempty; Name: "{app}\docs";
 Type: dirifempty; Name: "{app}\media";
