@@ -202,7 +202,10 @@ begin
     FPOSTResponse := StreamToJSONValue(AContent);
     FApplyUpdatesResults := [];
     if FPOSTResponse is TJSONArray then
-      FApplyUpdatesResults := TJSONArray(FPOSTResponse).ToArrayOfRecord<TMARSFDApplyUpdatesRes>;
+    begin
+      var LJSONArray := TJSONArray(FPOSTResponse);
+      FApplyUpdatesResults := LJSONArray.ToArrayOfRecord<TMARSFDApplyUpdatesRes>;
+    end;
     FResourceDataSets.ForEach(
       procedure (AItem: TMARSFDResourceDatasetsItem)
       var
