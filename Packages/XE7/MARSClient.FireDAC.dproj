@@ -116,7 +116,6 @@
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="FireDACCommon.dcp"/>
         <DCCReference Include="DataSnapFireDAC.dcp"/>
-        <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Client.FireDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Editor.pas"/>
         <BuildConfiguration Include="Debug">

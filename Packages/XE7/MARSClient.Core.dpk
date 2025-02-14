@@ -38,8 +38,7 @@ requires
   IndyCore,
   bindengine,
   bindcomp,
-  MARS.Utils,
-  designide;
+  MARS.Utils;
 
 contains
   MARS.Client.Application in '..\..\Source\MARS.Client.Application.pas',

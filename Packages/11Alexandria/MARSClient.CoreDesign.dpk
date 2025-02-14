@@ -26,14 +26,15 @@ package MARSClient.CoreDesign;
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'MARS-Curiosity REST Library (Client)'}
-{$LIBSUFFIX '280'}
+{$LIBSUFFIX AUTO}
 {$DESIGNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
   bindengine,
   bindcomp,
-  MARSClient.Core;
+  MARSClient.Core,
+  DesignIDE;
 
 contains
   MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',

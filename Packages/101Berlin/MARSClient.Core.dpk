@@ -26,9 +26,9 @@ package MARSClient.Core;
 {$IMAGEBASE $400000}
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity Client Core'}
+{$DESCRIPTION 'MARS-Curiosity REST Library (Client)'}
 {$LIBSUFFIX '240'}
-{$DESIGNONLY}
+{$RUNONLY}
 {$IMPLICITBUILD OFF}
 
 requires
@@ -51,7 +51,8 @@ contains
   MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas',
   MARS.Client.Client in '..\..\Source\MARS.Client.Client.pas',
   MARS.Client.Client.Indy in '..\..\Source\MARS.Client.Client.Indy.pas',
-  MARS.Client.Resource.FormData in '..\..\Source\MARS.Client.Resource.FormData.pas';
+  MARS.Client.Resource.FormData in '..\..\Source\MARS.Client.Resource.FormData.pas',
+  MARS.Client.Resource.FormUrlEncoded in '..\..\Source\MARS.Client.Resource.FormUrlEncoded.pas';
 
 end.
 

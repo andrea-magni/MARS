@@ -105,4 +105,48 @@
         <CallTarget Targets="MARS_Utils:Make;MARS_Core:Make;MARS_DCS:Make;MARS_mORMot:Make;MARS_JOSE:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+    <ItemGroup Condition="'$(BuildGroup)'=='ALL'">
+        <BuildGroupProject Include="MARS.Utils.dproj">
+            <ProjectGuid>{A5387B60-F9BE-4AEF-8E11-EFB0EDCAB2ED}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.Core.dproj">
+            <ProjectGuid>{8C6A1564-94E6-420D-BDE4-54A4CD3BD125}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.DCS.dproj">
+            <ProjectGuid>{02BBCED0-86EE-4FB8-A124-5BD6E5477506}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.mORMot.dproj">
+            <ProjectGuid>{CFDDCD9D-D0A9-42FE-8036-193E21B00BD9}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.JOSE.dproj">
+            <ProjectGuid>{16057797-C497-46DA-B133-A45E7F564D8D}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.ReadersAndWriters.dproj">
+            <ProjectGuid>{5170D912-4303-47AD-85A6-D77D3D0874DA}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.FireDAC.dproj">
+            <ProjectGuid>{D44362A0-1BCF-45FD-80B4-281FB36C0E08}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+    </ItemGroup>
 </Project>

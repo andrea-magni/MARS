@@ -25,7 +25,7 @@ package MARS.Utils;
 {$IMAGEBASE $400000}
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'MARS-Curiosity REST Library'}
+{$DESCRIPTION 'MARS-Curiosity Utils'}
 {$LIBSUFFIX '250'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
@@ -55,4 +55,3 @@ contains
   MARS.Core.RequestAndResponse.Interfaces in '..\..\Source\MARS.Core.RequestAndResponse.Interfaces.pas';
 
 end.
-

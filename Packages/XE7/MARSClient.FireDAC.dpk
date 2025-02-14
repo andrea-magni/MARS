@@ -37,8 +37,7 @@ requires
   FireDAC,
   FireDACCommonDriver,
   FireDACCommon,
-  DataSnapFireDAC,
-  designide;
+  DataSnapFireDAC;
 
 contains
   MARS.Client.FireDAC in '..\..\Source\MARS.Client.FireDAC.pas',

@@ -46,6 +46,7 @@ contains
   SynCrypto in '..\..\ThirdParty\mORMot\Source\SynCrypto.pas',
   SynEcc in '..\..\ThirdParty\mORMot\Source\SynEcc.pas',
   SynLZ in '..\..\ThirdParty\mORMot\Source\SynLZ.pas',
-  MARS.mORMotJWT.Token.InjectionService in '..\..\Source\MARS.mORMotJWT.Token.InjectionService.pas';
+  MARS.mORMotJWT.Token.InjectionService in '..\..\Source\MARS.mORMotJWT.Token.InjectionService.pas',
+  SynTable in '..\..\ThirdParty\mORMot\Source\SynTable.pas';
 
 end.

@@ -910,7 +910,7 @@ begin
   if Values[AName] <> nil then
   begin
     LPair := RemovePair(AName);
-    if {$ifdef Delphi10Sydney_UP} LPair.Owned {$else} LPair.GetOwned {$ifend}
+    if {$ifdef Delphi10Rio_UP} LPair.Owned {$else} LPair.GetOwned {$ifend}
     then
       FreeAndNil(LPair);
     Result := True;
@@ -1657,9 +1657,10 @@ var
   LJSONValue: TJSONValue;
   LDesiredType: TRttiType;
   LContext: TRttiContext;
+  LFound: Boolean;
 begin
   Result := TValue.Empty;
-  var LFound := TryGetValue<TJSONValue>(AName, LJSONValue);
+  LFound := TryGetValue<TJSONValue>(AName, LJSONValue);
 
   if LFound then
   begin

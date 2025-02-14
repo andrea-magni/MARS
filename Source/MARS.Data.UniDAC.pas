@@ -166,6 +166,7 @@ uses
   , MARS.Data.Utils
   , MARS.Rtti.Utils
   , MARS.Data.UniDAC.InjectionService
+  , MARS.Data.UniDAC.ReadersAndWriters
 ;
 
 function GetAsTStrings(const AParameters: TMARSParameters): TStrings;

@@ -128,7 +128,6 @@
         <DCCReference Include="bindengine.dcp"/>
         <DCCReference Include="bindcomp.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
-        <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.CustomResource.Editor.pas"/>

@@ -75,6 +75,7 @@ uses
   , MARS.Core.Exceptions
   , MARS.Rtti.Utils
   , MARS.dmustache.InjectionService
+  , {$ifdef DelphiXE6_UP}System.JSON{$else}System.DBXJSON{$endif}
 ;
 
   { TMARSdmustache }

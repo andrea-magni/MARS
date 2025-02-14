@@ -777,11 +777,13 @@ begin
 end;
 
 function TStringArrayHelper.StartsWith(const AArray: TArray<string>; const AIgnoreCase: Boolean): Boolean;
+var
+  LCompareFunc: TStringCompareFunc;
 begin
   if Length(Self) < Length(AArray) then
     Exit(False);
 
-  var LCompareFunc: TStringCompareFunc := nil;
+  LCompareFunc := nil;
   if AIgnoreCase then
     LCompareFunc := function (const AString1, AString2: string): Boolean
     begin
@@ -798,6 +800,8 @@ end;
 
 function TStringArrayHelper.StartsWith(const AArray: TArray<string>;
   const ACompareFunc: TStringCompareFunc): Boolean;
+var
+  LCommonLength, LIndex: Integer;
 begin
   Result := True;
 
@@ -807,8 +811,8 @@ begin
     Exit;
   end;
 
-  var LCommonLength := Min(Length(Self), Length(AArray));
-  for var LIndex := 0 to LCommonLength-1 do
+  LCommonLength := Min(Length(Self), Length(AArray));
+  for LIndex := 0 to LCommonLength-1 do
   begin
     if not ACompareFunc(Self[LIndex], AArray[LIndex]) then
     begin
@@ -829,11 +833,15 @@ begin
 end;
 
 function TStringArrayHelper.Contains(const AString: string): Boolean;
+{$ifndef Delphi12Athens_UP}
+var
+  LIndex: Integer;
+{$endif}
 begin
   {$ifdef Delphi12Athens_UP}
   Result := TArray.Contains<string>(Self, AString);
   {$else}
-  for var LIndex := Low(Self) to High(Self) do
+  for LIndex := Low(Self) to High(Self) do
     if AString = Self[LIndex] then
       Exit(True);
   Result := False;

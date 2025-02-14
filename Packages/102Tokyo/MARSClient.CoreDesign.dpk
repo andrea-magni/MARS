@@ -33,7 +33,8 @@ package MARSClient.CoreDesign;
 requires
   bindengine,
   bindcomp,
-  MARSClient.Core;
+  MARSClient.Core,
+  DesignIDE;
 
 contains
   MARS.Client.Utils.LiveBindings in '..\..\Source\MARS.Client.Utils.LiveBindings.pas',
@@ -41,7 +42,6 @@ contains
   MARS.Client.CustomResource.Editor in '..\..\Source\MARS.Client.CustomResource.Editor.pas';
 
 end.
-
 
 
 
