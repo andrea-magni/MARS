@@ -113,7 +113,7 @@ type
     class procedure EnumerateObjectList(const AObjectList: TObject; const ADoSomething: TProc<TValue>);
   end;
 
-  TRecord<R: record> = class
+  TRecord<R> = class
   public
     class procedure ToDataSet(const ARecord: R; const ADataSet: TDataSet; const AAppend: Boolean = False; const ABeforePost: TProc = nil);
     class procedure FromDataSet(var ARecord: R; const ADataSet: TDataSet);
