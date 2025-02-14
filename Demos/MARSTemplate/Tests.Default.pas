@@ -22,9 +22,9 @@ uses
 ;
 
 type
+  [Application('DefaultApp')]
   TDefaultAppProvider = class(TMARSTestCaseProvider)
   protected
-    function GetApplication: TMARSApplication; override;
     function GetEngine: TMARSEngine; override;
   end;
 
@@ -128,11 +128,6 @@ begin
 end;
 
 { TDefaultAppProvider }
-
-function TDefaultAppProvider.GetApplication: TMARSApplication;
-begin
-  Result := Engine.ApplicationByName('DefaultApp');
-end;
 
 function TDefaultAppProvider.GetEngine: TMARSEngine;
 begin

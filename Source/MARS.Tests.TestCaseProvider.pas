@@ -11,6 +11,13 @@ uses
 ;
 
 type
+  ApplicationAttribute = class(TCustomAttribute)
+  protected
+    FName: string;
+  public
+    constructor Create(const AName: string);
+    property Name: string read FName;
+  end;
   TProviderAppFunc = TFunc<TMARSApplication>;
 
   TMARSTestCaseData = record
@@ -27,7 +34,7 @@ type
      FList : TList<TMARSTestCaseData>;
   protected
      function GetEngine: TMARSEngine; virtual; abstract;
-     function GetApplication: TMARSApplication; virtual; abstract;
+     function GetApplication: TMARSApplication; virtual;
      procedure InitTestCaseData; virtual;
      property List: TList<TMARSTestCaseData> read FList;
      property Engine: TMARSEngine read GetEngine;
@@ -68,6 +75,32 @@ destructor TMARSTestCaseProvider.Destroy;
 begin
   FList.Free;
   inherited;
+end;
+
+function TMARSTestCaseProvider.GetApplication: TMARSApplication;
+begin
+  Result := nil;
+  if Assigned(Engine) then
+  begin
+    // default: name of the class after removing the Provider suffix and the initial T.
+    //          (i.e. TDefaultAppProvider -> DefaultApp)
+    var LAppName := ClassName
+      .Replace('Provider', '', [rfIgnoreCase])
+      .Substring(1);
+
+    // if ApplicationAttribute is present, use its Name value
+    TRttiHelper.IfHasAttribute<ApplicationAttribute>(Self,
+      procedure (AAttribute: ApplicationAttribute)
+      begin
+        LAppName := AAttribute.Name;
+      end
+    );
+
+    Result := Engine.ApplicationByName(LAppName);
+    if not Assigned(Result) then
+      raise Exception.CreateFmt('[%s] Application not found %s', [ClassName, LAppName]);
+
+  end;
 end;
 
 function TMARSTestCaseProvider.GetCaseCount(const methodName: string): Integer;
@@ -136,6 +169,14 @@ begin
   Data.SetContext(AResourceName, AInfo, AMethod);
   Data.Path := TMARSURL.URL_PATH_SEPARATOR + SmartConcat([AResourcePath, AMethodPath], TMARSURL.URL_PATH_SEPARATOR);
   Data.HttpMethod := AHttpMethod;
+end;
+
+{ ApplicationAttribute }
+
+constructor ApplicationAttribute.Create(const AName: string);
+begin
+  inherited Create;
+  FName := AName;
 end;
 
 end.
