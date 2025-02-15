@@ -29,6 +29,7 @@ package MARS.mORMot;
 {$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
+{$WARN DUPLICATE_CTOR_DTOR OFF}
 
 requires
   rtl,
@@ -48,3 +49,4 @@ contains
   SynTable in '..\..\ThirdParty\mORMot\Source\SynTable.pas';
 
 end.
+
