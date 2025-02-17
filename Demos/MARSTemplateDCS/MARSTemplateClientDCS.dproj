@@ -3,7 +3,7 @@
         <ProjectGuid>{B6B860BA-E3A5-48E9-8EC6-7FE516AE7FC4}</ProjectGuid>
         <MainSource>MARSTemplateClientDCS.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>32785</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>FMX</FrameworkType>

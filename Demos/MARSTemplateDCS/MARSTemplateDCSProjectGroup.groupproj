@@ -21,6 +21,9 @@
         <Projects Include="MARSTemplateClientDCS.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="MARSTemplateTests.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -83,14 +86,23 @@
     <Target Name="MARSTemplateClientDCS:Make">
         <MSBuild Projects="MARSTemplateClientDCS.dproj" Targets="Make"/>
     </Target>
+    <Target Name="MARSTemplateTests">
+        <MSBuild Projects="MARSTemplateTests.dproj"/>
+    </Target>
+    <Target Name="MARSTemplateTests:Clean">
+        <MSBuild Projects="MARSTemplateTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSTemplateTests:Make">
+        <MSBuild Projects="MARSTemplateTests.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARSTemplateServerDCSApplication;MARSTemplateServerDCSFMXApplication;MARSTemplateServerDCSService;MARSTemplateServerDCSConsoleApplication;MARSTemplateServerDCSDaemon;MARSTemplateClientDCS"/>
+        <CallTarget Targets="MARSTemplateServerDCSApplication;MARSTemplateServerDCSFMXApplication;MARSTemplateServerDCSService;MARSTemplateServerDCSConsoleApplication;MARSTemplateServerDCSDaemon;MARSTemplateClientDCS;MARSTemplateTests"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARSTemplateServerDCSApplication:Clean;MARSTemplateServerDCSFMXApplication:Clean;MARSTemplateServerDCSService:Clean;MARSTemplateServerDCSConsoleApplication:Clean;MARSTemplateServerDCSDaemon:Clean;MARSTemplateClientDCS:Clean"/>
+        <CallTarget Targets="MARSTemplateServerDCSApplication:Clean;MARSTemplateServerDCSFMXApplication:Clean;MARSTemplateServerDCSService:Clean;MARSTemplateServerDCSConsoleApplication:Clean;MARSTemplateServerDCSDaemon:Clean;MARSTemplateClientDCS:Clean;MARSTemplateTests:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARSTemplateServerDCSApplication:Make;MARSTemplateServerDCSFMXApplication:Make;MARSTemplateServerDCSService:Make;MARSTemplateServerDCSConsoleApplication:Make;MARSTemplateServerDCSDaemon:Make;MARSTemplateClientDCS:Make"/>
+        <CallTarget Targets="MARSTemplateServerDCSApplication:Make;MARSTemplateServerDCSFMXApplication:Make;MARSTemplateServerDCSService:Make;MARSTemplateServerDCSConsoleApplication:Make;MARSTemplateServerDCSDaemon:Make;MARSTemplateClientDCS:Make;MARSTemplateTests:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
