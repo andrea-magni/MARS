@@ -13,9 +13,9 @@ uses
   SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
 
 , MARS.Core.Classes, MARS.Core.URL, MARS.Core.MediaType
-//, MARS.Core.Application
 , MARS.Core.Application.Interfaces
-, MARS.Core.Engine, MARS.Core.Token
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Token
 , MARS.Core.Registry.Utils, MARS.Core.Injection.Types, MARS.Core.Activation.Interfaces
 , MARS.Core.MessageBodyWriter, MARS.Core.RequestAndResponse.Interfaces
 ;
@@ -23,7 +23,7 @@ uses
 type
   TMARSActivation = class;
 
-  TMARSActivationFactoryFunc = reference to function (const AEngine: TMARSEngine;
+  TMARSActivationFactoryFunc = reference to function (const AEngine: IMARSEngine;
     const AApplication: IMARSApplication;
     const ARequest: IMARSRequest; const AResponse: IMARSResponse;
     const AURL: TMARSURL
@@ -58,7 +58,7 @@ type
     FRttiContext: TRttiContext;
     FConstructorInfo: TMARSConstructorInfo;
     FApplication: IMARSApplication;
-    FEngine: TMARSEngine;
+    FEngine: IMARSEngine;
     FURL: TMARSURL;
     FURLPrototype: TMARSURL;
     FToken: TMARSToken;
@@ -106,7 +106,7 @@ type
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
   public
-    constructor Create(const AEngine: TMARSEngine; const AApplication: IMARSApplication;
+    constructor Create(const AEngine: IMARSEngine; const AApplication: IMARSApplication;
       const ARequest: IMARSRequest; const AResponse: IMARSResponse; const AURL: TMARSURL); virtual;
     destructor Destroy; override;
 
@@ -117,7 +117,7 @@ type
 
     function GetId: string; inline;
     function GetApplication: IMARSApplication; inline;
-    function GetEngine: TMARSEngine; inline;
+    function GetEngine: IMARSEngine; inline;
     function GetInvocationTime: TStopwatch; inline;
     function GetSetupTime: TStopwatch; inline;
     function GetTeardownTime: TStopwatch; inline;
@@ -140,7 +140,7 @@ type
 
     property Id: string read FId;
     property Application: IMARSApplication read FApplication;
-    property Engine: TMARSEngine read FEngine;
+    property Engine: IMARSEngine read FEngine;
     property InvocationTime: TStopwatch read FInvocationTime;
     property Method: TRttiMethod read FMethod;
     property MethodArguments: TArray<TValue> read FMethodArguments;
@@ -166,10 +166,12 @@ type
 
 
     class var CreateActivationFunc: TMARSActivationFactoryFunc;
-    class function CreateActivation(const AEngine: TMARSEngine;
+    class function CreateActivation(
+      const AEngine: IMARSEngine;
       const AApplication: IMARSApplication;
       const ARequest: IMARSRequest; const AResponse: IMARSResponse;
-      const AURL: TMARSURL): IMARSActivation;
+      const AURL: TMARSURL
+    ): IMARSActivation;
   end;
 
 implementation
@@ -831,7 +833,7 @@ begin
 end;
 
 
-function TMARSActivation.GetEngine: TMARSEngine;
+function TMARSActivation.GetEngine: IMARSEngine;
 begin
   Result := FEngine;
 end;
@@ -846,10 +848,12 @@ begin
   Result := FInvocationTime;
 end;
 
-constructor TMARSActivation.Create(const AEngine: TMARSEngine;
+constructor TMARSActivation.Create(
+  const AEngine: IMARSEngine;
   const AApplication: IMARSApplication;
   const ARequest: IMARSRequest; const AResponse: IMARSResponse;
-  const AURL: TMARSURL);
+  const AURL: TMARSURL
+);
 begin
   inherited Create;
   FEngine := AEngine;
@@ -884,9 +888,11 @@ begin
   FSerializationTime.Reset;
 end;
 
-class function TMARSActivation.CreateActivation(const AEngine: TMARSEngine;
+class function TMARSActivation.CreateActivation(
+  const AEngine: IMARSEngine;
   const AApplication: IMARSApplication; const ARequest: IMARSRequest;
-  const AResponse: IMARSResponse; const AURL: TMARSURL): IMARSActivation;
+  const AResponse: IMARSResponse; const AURL: TMARSURL
+): IMARSActivation;
 begin
   if Assigned(CreateActivationFunc) then
     Result := CreateActivationFunc(AEngine, AApplication, ARequest, AResponse, AURL)

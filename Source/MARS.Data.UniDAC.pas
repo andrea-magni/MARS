@@ -3,6 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit MARS.Data.UniDAC;
 
 {$I MARS.inc}
@@ -10,22 +11,23 @@ unit MARS.Data.UniDAC;
 interface
 
 uses
-    System.Classes, System.SysUtils, Generics.Collections, Rtti, Data.DB
-  // Devart UniDAC
-  , Uni, UniProvider, VirtualTable
-  // MARS
-  , MARS.Core.Application
-  , MARS.Core.Attributes
-  , MARS.Core.Classes
-  , MARS.Core.Declarations
-  , MARS.Core.JSON
-  , MARS.Core.MediaType
-  , MARS.Core.Registry
-  , MARS.Core.Token
-  , MARS.Core.URL
-  , MARS.Utils.Parameters
-  , MARS.Core.Activation.Interfaces
-  , MARS.Data.UniDAC.Utils
+  System.Classes, System.SysUtils, Generics.Collections, Rtti, Data.DB
+// Devart UniDAC
+, Uni, UniProvider, VirtualTable
+// MARS
+, MARS.Core.Application.Interfaces
+, MARS.Core.Attributes
+, MARS.Core.Classes
+, MARS.Core.Declarations
+, MARS.Core.Exception
+, MARS.Core.JSON
+, MARS.Core.MediaType
+, MARS.Core.Registry
+, MARS.Core.Token
+, MARS.Core.URL
+, MARS.Utils.Parameters
+, MARS.Core.Activation.Interfaces
+, MARS.Data.UniDAC.Utils
 ;
 
 type

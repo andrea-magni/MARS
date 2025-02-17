@@ -28,7 +28,9 @@ implementation
 
 uses
   MARS.Rtti.Utils
-, MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application
+, MARS.Core.Token, MARS.Core.URL
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Application.Interfaces
 ;
 
 { TMARSTokenInjectionService }

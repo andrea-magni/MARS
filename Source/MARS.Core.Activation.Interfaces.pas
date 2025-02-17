@@ -11,7 +11,8 @@ interface
 
 uses
   SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
-, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Token
+, MARS.Core.URL, MARS.Core.Token
+, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.MediaType, MARS.Core.Injection.Types, MARS.Core.RequestAndResponse.Interfaces
 ;
@@ -25,7 +26,7 @@ type
 
     function GetId: string;
     function GetApplication: IMARSApplication;
-    function GetEngine: TMARSEngine;
+    function GetEngine: IMARSEngine;
     function GetInvocationTime: TStopwatch;
     function GetSetupTime: TStopwatch;
     function GetTeardownTime: TStopwatch;
@@ -47,7 +48,7 @@ type
 
     property Id: string read GetId;
     property Application: IMARSApplication read GetApplication;
-    property Engine: TMARSEngine read GetEngine;
+    property Engine: IMARSEngine read GetEngine;
     property InvocationTime: TStopwatch read GetInvocationTime;
     property SetupTime: TStopwatch read GetSetupTime;
     property TeardownTime: TStopwatch read GetTeardownTime;

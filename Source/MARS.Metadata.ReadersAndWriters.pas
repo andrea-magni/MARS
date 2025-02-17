@@ -14,7 +14,7 @@ uses
   , MARS.Core.Declarations
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
-  , MARS.Core.Engine
+  , MARS.Core.Engine.Interfaces
   , MARS.Core.JSON
   , MARS.Core.Activation.Interfaces
 ;

@@ -28,10 +28,11 @@ type
 implementation
 
 uses
-    MARS.Rtti.Utils, MARS.Core.Attributes
-  , MARS.Core.Engine, MARS.Core.Application
-  , MARS.Metadata
-  , MARS.Metadata.Reader
+  MARS.Rtti.Utils, MARS.Core.Attributes
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Application.Interfaces
+, MARS.Metadata
+, MARS.Metadata.Reader
 ;
 
 { TMARSMetadataInjectionService }

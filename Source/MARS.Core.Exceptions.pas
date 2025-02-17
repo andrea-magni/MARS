@@ -3,6 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit MARS.Core.Exceptions;
 
 interface
@@ -29,12 +30,13 @@ type
     property ContentType: string read FContentType write FContentType;
   end;
 
+  EMARSEngineException = class(EMARSHttpException);
+
   EMARSApplicationException = class(EMARSHttpException);
   EMARSResourceNotFoundException = class(EMARSApplicationException);
   EMARSMethodNotFoundException = class(EMARSApplicationException);
   EMARSAuthenticationException = class(EMARSApplicationException);
   EMARSAuthorizationException = class(EMARSApplicationException);
-
 
 implementation
 

@@ -1,9 +1,10 @@
-unit MARS.Core.Application.Interfaces;
 (*
   Copyright 2025, MARS-Curiosity library
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
+unit MARS.Core.Application.Interfaces;
 
 {$I MARS.inc}
 

@@ -35,9 +35,11 @@ type
 implementation
 
 uses
-  MARS.Rtti.Utils
-, MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application
-, Data.DB
+  Data.DB
+, MARS.Rtti.Utils
+, MARS.Core.Token, MARS.Core.URL
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Application.Interfaces
 , Uni
 , MARS.Data.UniDAC
 ;

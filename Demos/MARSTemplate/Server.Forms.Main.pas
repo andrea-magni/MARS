@@ -59,7 +59,7 @@ implementation
 uses
   StrUtils, Web.HttpApp, IOUtils, Windows, ShellAPI, NetEncoding
 , MARS.Core.URL
-, MARS.Core.Engine
+, MARS.Core.Engine, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Registry, MARS.Core.Registry.Utils, MARS.Core.Utils
 , Server.Ignition
@@ -72,7 +72,7 @@ begin
   try
     ATreeview.Items.Clear;
     TMARSEngineRegistry.Instance.EnumerateEngines(
-      procedure (AName: string; AEngine: TMARSEngine)
+      procedure (AName: string; AEngine: IMARSEngine)
       var
         LEngineItem: TTreeNode;
         LEngineHttpPath, LEngineHttpsPath: string;

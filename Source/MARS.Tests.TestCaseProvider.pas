@@ -6,7 +6,7 @@ uses
   Classes, SysUtils, Generics.Collections, System.Rtti
 , DUnitX.Types, DUnitX.InternalDataProvider, DUnitX.TestDataProvider
 , DUnitX.TestFramework
-, MARS.Core.Engine
+, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Registry.Utils
 , MARS.Tests.Types
@@ -35,11 +35,11 @@ type
   private
     FList : TList<TMARSTestCaseData>;
   protected
-    function GetEngine: TMARSEngine; virtual; abstract;
+    function GetEngine: IMARSEngine; virtual; abstract;
     function GetApplication: IMARSApplication; virtual;
     procedure InitTestCaseData; virtual;
     property List: TList<TMARSTestCaseData> read FList;
-    property Engine: TMARSEngine read GetEngine;
+    property Engine: IMARSEngine read GetEngine;
     property Application: IMARSApplication read GetApplication;
   public
     constructor Create; override;

@@ -14,7 +14,7 @@ uses
 , MARS.Core.MediaType
 , MARS.Core.JSON
 , MARS.Metadata
-, MARS.Core.Application
+, MARS.Core.Application.Interfaces
 ;
 
 type

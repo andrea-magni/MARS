@@ -5,18 +5,18 @@ interface
 {$I MARS.inc}
 
 uses
-  System.Classes, System.SysUtils, Generics.Collections, Rtti
-, Data.DB
+  System.Classes, System.SysUtils, Generics.Collections, Rtti, Data.DB
 
 // *** BEWARE ***
 // if your Delphi edition/license does not include FastReport,
 // remove the MARS_FASTREPORT definition in the MARS.inc file!
 , frxClass, frxExportBaseDialog, frxExportPDF, frxDBSet
 
-, MARS.Core.Application
+, MARS.Core.Application.Interfaces
 , MARS.Core.Attributes
 , MARS.Core.Classes
 , MARS.Core.Declarations
+, MARS.Core.Exceptions
 , MARS.Core.JSON
 , MARS.Core.MediaType
 , MARS.Core.Registry

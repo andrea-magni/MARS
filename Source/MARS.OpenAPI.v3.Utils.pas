@@ -5,7 +5,7 @@ interface
 uses
   Classes, SysUtils, System.Rtti, System.TypInfo, MARS.Rtti.Utils
 , MARS.OpenAPI.v3
-, MARS.Core.Engine
+, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Activation.Interfaces, MARS.Utils.Parameters
 , MARS.Metadata
@@ -18,7 +18,7 @@ type
     procedure ReadBearerSecurityScheme(const AName: string; const AParams: TMARSParameters);
     procedure ReadCookieSecurityScheme(const AName: string; const AParams: TMARSParameters);
     procedure ReadInfoFromParams(const AParams: TMARSParameters);
-    function AddServerFromEngine(const AEngine: TMARSEngine): TServer;
+    function AddServerFromEngine(const AEngine: IMARSEngine): TServer;
     procedure ReadApplication(const AAppMD: TMARSApplicationMetadata);
     procedure ReadOperation(const AOperation: TOperation; const ARes: TMARSResourceMetadata;
       const AMet: TMARSMethodMetadata);
@@ -26,7 +26,7 @@ type
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
     function MARSKindToOpenAPIKind(const AString: string): string;
     function MARSDataTypeToOpenAPIType(const AType: TRttiType; const ARefPrefix: string = '#/components/schemas/'): string;
-    class function BuildFrom(const AEngine: TMARSEngine; const AApplication: IMARSApplication): TOpenAPI; overload;
+    class function BuildFrom(const AEngine: IMARSEngine; const AApplication: IMARSApplication): TOpenAPI; overload;
     class function BuildFrom(const AActivation: IMARSActivation): TOpenAPI; overload;
   end;
 
@@ -43,7 +43,7 @@ uses
 
 { TOpenAPIHelper }
 
-class function TOpenAPIHelper.BuildFrom(const AEngine: TMARSEngine;
+class function TOpenAPIHelper.BuildFrom(const AEngine: IMARSEngine;
   const AApplication: IMARSApplication): TOpenAPI;
 var
   LOpenAPI: TOpenAPI;
@@ -415,7 +415,7 @@ begin
   end;
 end;
 
-function TOpenAPIHelper.AddServerFromEngine(const AEngine: TMARSEngine): TServer;
+function TOpenAPIHelper.AddServerFromEngine(const AEngine: IMARSEngine): TServer;
 var
   LEngineBasePath: string;
 begin

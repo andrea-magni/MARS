@@ -11,12 +11,12 @@ interface
 
 uses
   Classes, SysUtils, Rtti
-  , MARS.Core.Injection
-  , MARS.Core.Injection.Interfaces
-  , MARS.Core.Injection.Types
-  , MARS.Core.Activation.Interfaces
-  , MARS.DelphiRazor
-  , RlxRazor
+, MARS.Core.Injection
+, MARS.Core.Injection.Interfaces
+, MARS.Core.Injection.Types
+, MARS.Core.Activation.Interfaces
+, MARS.DelphiRazor
+, RlxRazor
 ;
 
 type
@@ -35,8 +35,10 @@ type
 implementation
 
 uses
-    MARS.Rtti.Utils, MARS.Core.Attributes
-  , MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application
+  MARS.Rtti.Utils, MARS.Core.Attributes
+, MARS.Core.Token, MARS.Core.URL
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Application.Interfaces
 ;
 
 { TMARSDelphiRazorInjectionService }

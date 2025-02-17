@@ -8,7 +8,7 @@ uses
 , DUnitX.TestFramework, DUnitX.Types
 , Delphi.Mocks
 // MARS
-, MARS.Core.Engine
+, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Utils.Parameters
 , MARS.Core.MediaType
@@ -59,7 +59,7 @@ type
 
   TMARSTestFixture = class
   private
-    FEngine: TMARSEngine;
+    FEngine: IMARSEngine;
     FApplication: IMARSApplication;
     FAppParameters: TMARSParameters;
     FTokenSecret: string;
@@ -91,7 +91,7 @@ type
     function Is404(const AStatusCode: Integer): Boolean; virtual;
     function IsError(const AStatusCode: Integer): Boolean; virtual;
 
-    function GetEngine: TMARSEngine; virtual; abstract;
+    function GetEngine: IMARSEngine; virtual; abstract;
     function GetApplicationName: string; virtual;
     (*
       {app} -> Application base path (i.e. '/rest/default')
@@ -99,7 +99,7 @@ type
     *)
     function ExpandMacros(const AString: string): string; virtual;
 
-    property Engine: TMARSEngine read FEngine;
+    property Engine: IMARSEngine read FEngine;
     property ApplicationName: string read GetApplicationName;
 
     property Application: IMARSApplication read FApplication;

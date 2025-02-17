@@ -35,8 +35,10 @@ type
 implementation
 
 uses
-    MARS.Rtti.Utils, MARS.Core.Attributes
-  , MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application
+  MARS.Rtti.Utils, MARS.Core.Attributes
+, MARS.Core.Token, MARS.Core.URL
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Application.Interfaces
 ;
 
 { TMARSdmustacheInjectionService }

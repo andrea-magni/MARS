@@ -11,7 +11,9 @@ uses
   SysUtils, Classes, Generics.Collections
 
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL, MARS.Core.Response
-, MARS.Core.Token, MARS.Core.Classes, MARS.Core.Engine, MARS.Core.Application
+, MARS.Core.Token, MARS.Core.Classes
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Application.Interfaces
 , MARS.Core.RequestAndResponse.Interfaces
 
 , RlxRazor

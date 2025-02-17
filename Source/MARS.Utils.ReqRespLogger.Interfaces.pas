@@ -9,7 +9,7 @@ interface
 
 uses
     Rtti
-  , MARS.Core.Engine
+  , MARS.Core.Engine.Interfaces
 ;
 
 type

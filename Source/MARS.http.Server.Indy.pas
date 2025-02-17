@@ -3,6 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit MARS.http.Server.Indy;
 
 {$I MARS.inc}
@@ -18,7 +19,9 @@ uses
 // to enable standalone SSL
 , IdBaseComponent, IdComponent, IdServerIOHandler, IdSSL, IdSSLOpenSSL
 // MARS
-, MARS.Core.Engine, MARS.Core.Token, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.Exceptions
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Token, MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
@@ -115,7 +118,7 @@ type
 
   TMARShttpServerIndy = class(TIdCustomHTTPServer)
   private
-    FEngine: TMARSEngine;
+    FEngine: IMARSEngine;
     FStartedAt: TDateTime;
     FStoppedAt: TDateTime;
     FBeforeCommandGet: TBeforeCommandGetFunc;
@@ -139,9 +142,11 @@ type
     procedure SetupSSLIOHandler(); virtual;
     function DoQuerySSLPort(APort: TIdPort): Boolean; override;
   public
-    constructor Create(AEngine: TMARSEngine); virtual;
+    constructor Create(AEngine: IMARSEngine); virtual;
+    destructor Destroy; override;
 
-    property Engine: TMARSEngine read FEngine;
+
+    property Engine: IMARSEngine read FEngine;
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
@@ -161,12 +166,18 @@ uses
 
 { TMARShttpServerIndy }
 
-constructor TMARShttpServerIndy.Create(AEngine: TMARSEngine);
+constructor TMARShttpServerIndy.Create(AEngine: IMARSEngine);
 begin
   inherited Create(nil);
   OnParseAuthentication := ParseAuthenticationHandler;
   FEngine := AEngine;
   FBeforeCommandGet := nil;
+end;
+
+destructor TMARShttpServerIndy.Destroy;
+begin
+  FEngine := nil;
+  inherited;
 end;
 
 procedure TMARShttpServerIndy.DoCommandGet(AContext: TIdContext;

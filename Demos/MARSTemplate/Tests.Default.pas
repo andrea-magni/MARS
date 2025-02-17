@@ -12,7 +12,7 @@ uses
 // Test Frameworks
 , DUnitX.TestFramework, Delphi.Mocks
 // MARS Core
-, MARS.Core.Engine
+, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.MediaType, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.Registry.Utils
@@ -26,14 +26,14 @@ type
   [Application('DefaultApp')]
   TDefaultAppProvider = class(TMARSTestCaseProvider)
   protected
-    function GetEngine: TMARSEngine; override;
+    function GetEngine: IMARSEngine; override;
   end;
 
   [TestFixture('DefaultEngine')]
   TDefaultEngineTest = class(TMARSTestFixture)
   private
   protected
-    function GetEngine: TMARSEngine; override;
+    function GetEngine: IMARSEngine; override;
     procedure AfterMockRequest(const AData: TRequestData; const AMock: TMock<IMARSRequest>); override;
     procedure AfterExecuteRequest(const ARequest: IMARSRequest; const AResponse: IMARSResponse); override;
   public
@@ -61,7 +61,7 @@ uses
 
 { TDefaultEngineTest }
 
-function TDefaultEngineTest.GetEngine: TMARSEngine;
+function TDefaultEngineTest.GetEngine: IMARSEngine;
 begin
   Result := TServerEngine.Default;
 end;
@@ -130,7 +130,7 @@ end;
 
 { TDefaultAppProvider }
 
-function TDefaultAppProvider.GetEngine: TMARSEngine;
+function TDefaultAppProvider.GetEngine: IMARSEngine;
 begin
   Result := TServerEngine.Default;
 end;

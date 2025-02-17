@@ -9,7 +9,8 @@ interface
 
 uses
   Classes, SysUtils, Rtti, TypInfo
-, MARS.Metadata, MARS.Core.Engine
+, MARS.Metadata
+, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Registry.Utils
 ;
@@ -17,7 +18,7 @@ uses
 type
   TMARSMetadataReader=class
   private
-    FEngine: TMARSEngine;
+    FEngine: IMARSEngine;
     FMetadata: TMARSEngineMetadata;
   protected
     procedure ReadApplication(const AApplication: IMARSApplication); virtual;
@@ -30,12 +31,12 @@ type
       const AMethodMetadata: TMARSMethodMetadata;
       const AParameter: TRttiParameter; const AMethod: TRttiMethod); virtual;
   public
-    constructor Create(const AEngine: TMARSEngine; const AReadImmediately: Boolean = True); virtual;
+    constructor Create(const AEngine: IMARSEngine; const AReadImmediately: Boolean = True); virtual;
     destructor Destroy; override;
 
     procedure Read; virtual;
 
-    property Engine: TMARSEngine read FEngine;
+    property Engine: IMARSEngine read FEngine;
     property Metadata: TMARSEngineMetadata read FMetadata;
   end;
 
@@ -49,7 +50,7 @@ uses
 
 { TMARSMetadataReader }
 
-constructor TMARSMetadataReader.Create(const AEngine: TMARSEngine; const AReadImmediately: Boolean);
+constructor TMARSMetadataReader.Create(const AEngine: IMARSEngine; const AReadImmediately: Boolean);
 begin
   inherited Create;
   FEngine := AEngine;

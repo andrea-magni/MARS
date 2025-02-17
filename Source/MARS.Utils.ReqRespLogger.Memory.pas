@@ -3,6 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit MARS.Utils.ReqRespLogger.Memory;
 
 interface
@@ -10,7 +11,6 @@ interface
 uses
   Classes, SysUtils, Diagnostics
   , Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param, FireDAC.Comp.DataSet
-//  , MARS.Core.Engine, MARS.Core.Application
   , MARS.Utils.ReqRespLogger.Interfaces
   , Web.HttpApp, SyncObjs, Rtti
   , MARS.Core.Activation

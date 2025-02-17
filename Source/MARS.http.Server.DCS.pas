@@ -13,7 +13,8 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections, System.TimeSpan, DateUtils
 , Net.CrossSocket.Base, Net.CrossSocket, Net.CrossHttpServer
 , Net.CrossHttpMiddleware, Net.CrossHttpUtils
-, MARS.Core.Engine, MARS.Core.Token
+, MARS.Core.Engine.Interfaces
+, MARS.Core.Token
 , MARS.Core.RequestAndResponse.Interfaces
 ;
 
@@ -97,7 +98,7 @@ type
   TMARShttpServerDCS = class
   private
     FStoppedAt: TDateTime;
-    FEngine: TMARSEngine;
+    FEngine: IMARSEngine;
     FStartedAt: TDateTime;
     FActive: Boolean;
     FDefaultPort: Integer;
@@ -109,12 +110,12 @@ type
     procedure Startup; virtual;
     procedure Shutdown; virtual;
   public
-    constructor Create(AEngine: TMARSEngine); virtual;
+    constructor Create(AEngine: IMARSEngine); virtual;
     destructor Destroy; override;
 
     property Active: Boolean read FActive write SetActive;
     property DefaultPort: Integer read FDefaultPort write SetDefaultPort;
-    property Engine: TMARSEngine read FEngine;
+    property Engine: IMARSEngine read FEngine;
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
@@ -127,7 +128,7 @@ uses
 
 { TMARShttpServerDCS }
 
-constructor TMARShttpServerDCS.Create(AEngine: TMARSEngine);
+constructor TMARShttpServerDCS.Create(AEngine: IMARSEngine);
 begin
   inherited Create;
   FEngine := AEngine;
