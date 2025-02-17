@@ -894,7 +894,7 @@ end;
 
 destructor TMARSActivation.Destroy;
 begin
-  if (not FContext.IsEmpty) then
+  if not (FContext.Count = 0) then
     ContextCleanup;
   FContext.Free;
   FreeAndNil(FURLPrototype);
