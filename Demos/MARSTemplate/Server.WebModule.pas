@@ -1,5 +1,5 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
@@ -9,7 +9,9 @@ unit Server.WebModule;
 
 interface
 
-uses System.SysUtils, System.Classes, Web.HTTPApp;
+uses
+  System.SysUtils, System.Classes, Web.HTTPApp
+;
 
 type
   TServerWebModule = class(TWebModule)

@@ -1,8 +1,9 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 program MARSTemplateServerDCSConsoleApplication;
 {$APPTYPE CONSOLE}
 
@@ -113,7 +114,7 @@ begin
     AServer.Scheduler := LScheduler;
     AServer.MaxConnections := LScheduler.PoolSize;
   except
-    AServer.Scheduler.DisposeOf;
+    AServer.Scheduler.Free;
     AServer.Scheduler := nil;
     raise;
   end;

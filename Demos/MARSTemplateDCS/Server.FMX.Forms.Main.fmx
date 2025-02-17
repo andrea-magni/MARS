@@ -34,19 +34,19 @@ object MainForm: TMainForm
     end
     object StartButton: TButton
       Action = StartServerAction
-      Enabled = True
       ImageIndex = -1
       Position.X = 16.000000000000000000
       Position.Y = 64.000000000000000000
       TabOrder = 2
+      TextSettings.Trimming = None
     end
     object StopButton: TButton
       Action = StopServerAction
-      Enabled = True
       ImageIndex = -1
       Position.X = 104.000000000000000000
       Position.Y = 64.000000000000000000
       TabOrder = 3
+      TextSettings.Trimming = None
     end
   end
   object MainActionList: TActionList

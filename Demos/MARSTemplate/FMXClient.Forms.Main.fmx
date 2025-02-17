@@ -16,7 +16,7 @@ object MainForm: TMainForm
     object TitleLabel: TLabel
       Align = Center
       AutoSize = True
-      Size.Width = 117.333343505859400000
+      Size.Width = 118.000000000000000000
       Size.Height = 16.000000000000000000
       Size.PlatformDefault = False
       StyleLookup = 'toollabel'

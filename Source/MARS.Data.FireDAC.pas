@@ -10,33 +10,25 @@ unit MARS.Data.FireDAC;
 interface
 
 uses
-    System.Classes, System.SysUtils, Generics.Collections, Rtti
-  , Data.DB
+    System.Classes, System.SysUtils, Generics.Collections, Rtti, Data.DB
 // *** BEWARE ***
 // if your Delphi edition/license does not include FireDAC,
 // remove the MARS_FIREDAC definition in the MARS.inc file!
 // This is likely to be the case if you are compiling your first project and
 // got a "FireDAC.DApt not found" error at the following line
-  , FireDAC.DApt, FireDAC.DApt.Intf, FireDAC.DatS
-  , FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def
-  , FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Stan.StorageXML, FireDAC.Stan.Param
-  , FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin
-  , FireDAC.UI.Intf
-  , FireDAC.Phys.Intf, FireDAC.Phys
-  , FireDAC.Comp.Client, FireDAC.Comp.UI, FireDAC.Comp.DataSet
+, FireDAC.DApt, FireDAC.DApt.Intf, FireDAC.DatS
+, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.Stan.Def
+, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Stan.StorageXML, FireDAC.Stan.Param
+, FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageBin
+, FireDAC.UI.Intf
+, FireDAC.Phys.Intf, FireDAC.Phys
+, FireDAC.Comp.Client, FireDAC.Comp.UI, FireDAC.Comp.DataSet
 
-  , MARS.Core.Application
-  , MARS.Core.Attributes
-  , MARS.Core.Classes
-  , MARS.Core.Declarations
-  , MARS.Core.JSON
-  , MARS.Core.MediaType
-  , MARS.Core.Registry
-  , MARS.Core.Token
-  , MARS.Core.URL
-  , MARS.Utils.Parameters
-  , MARS.Core.Activation.Interfaces
-  , MARS.Data.FireDAC.Utils
+, MARS.Core.Activation.Interfaces, MARS.Core.Application.Interfaces
+, MARS.Core.Attributes, MARS.Core.Classes, MARS.Core.Declarations, MARS.Core.Exceptions
+, MARS.Core.JSON, MARS.Core.MediaType
+, MARS.Core.Registry, MARS.Core.Token, MARS.Core.URL, MARS.Utils.Parameters
+, MARS.Data.FireDAC.Utils
 ;
 
 type
@@ -174,12 +166,9 @@ implementation
 
 uses
   StrUtils, Variants
-  , MARS.Core.Utils
-  , MARS.Core.Exceptions
-  , MARS.Data.Utils
-  , MARS.Rtti.Utils
-  , MARS.Data.FireDAC.InjectionService
-  , MARS.Data.FireDAC.ReadersAndWriters
+, MARS.Core.Utils, MARS.Data.Utils, MARS.Rtti.Utils
+, MARS.Data.FireDAC.InjectionService
+, MARS.Data.FireDAC.ReadersAndWriters
 ;
 
 

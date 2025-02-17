@@ -12,7 +12,7 @@ interface
 uses
     System.Classes, System.SysUtils, Rtti
 
-  , MARS.Core.Application
+  , MARS.Core.Application.Interfaces
   , MARS.Core.Attributes
   , MARS.Core.Classes
   , MARS.Core.Declarations
@@ -64,7 +64,7 @@ type
     FRazorEngine: TRlxRazorEngine;
     FRazorProc: TRlxRazorProcessor;
     FName: string;
-    FApplication: TMARSApplication;
+    FApplication: IMARSApplication;
     FParameters: TMARSParameters;
     FURL: TMARSURL;
     FToken: TMARSToken;
@@ -103,7 +103,7 @@ type
     function DoBlock(const AContent: string; const AEncoding: TEncoding = nil): string; overload; virtual;
 
     property Activation: IMARSActivation read FActivation;
-    property Application: TMARSApplication read FApplication;
+    property Application: IMARSApplication read FApplication;
     property URL: TMARSURL read FURL;
     property Token: TMARSToken read FToken;
     property Parameters: TMARSParameters read FParameters;

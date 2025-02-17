@@ -59,7 +59,8 @@ contains
   MARS.Core.Injection.Types in '..\..\Source\MARS.Core.Injection.Types.pas',
   MARS.Core.Activation.InjectionService in '..\..\Source\MARS.Core.Activation.InjectionService.pas',
   MARS.Core.Activation.Interfaces in '..\..\Source\MARS.Core.Activation.Interfaces.pas',
-  MARS.Core.Registry.Utils in '..\..\Source\MARS.Core.Registry.Utils.pas';
+  MARS.Core.Registry.Utils in '..\..\Source\MARS.Core.Registry.Utils.pas',
+  MARS.Core.Application.Interfaces in '..\..\Source\MARS.Core.Application.Interfaces.pas';
 
 end.
 

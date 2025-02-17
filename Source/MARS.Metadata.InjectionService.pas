@@ -11,10 +11,10 @@ interface
 
 uses
   Classes, SysUtils, Rtti, Generics.Collections
-  , MARS.Core.Injection
-  , MARS.Core.Injection.Interfaces
-  , MARS.Core.Injection.Types
-  , MARS.Core.Activation.Interfaces
+, MARS.Core.Injection
+, MARS.Core.Injection.Interfaces
+, MARS.Core.Injection.Types
+, MARS.Core.Activation.Interfaces
 ;
 
 type

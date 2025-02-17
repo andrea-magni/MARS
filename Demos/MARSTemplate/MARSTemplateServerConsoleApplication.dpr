@@ -1,9 +1,11 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 program MARSTemplateServerConsoleApplication;
+
 {$APPTYPE CONSOLE}
 
 {$I MARS.inc}

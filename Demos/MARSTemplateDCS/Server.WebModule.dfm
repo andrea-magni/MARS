@@ -1,5 +1,4 @@
 object ServerWebModule: TServerWebModule
-  OldCreateOrder = False
   Actions = <
     item
       Default = True

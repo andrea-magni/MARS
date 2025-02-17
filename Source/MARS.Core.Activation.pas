@@ -13,7 +13,9 @@ uses
   SysUtils, Classes, Generics.Collections, Rtti, Diagnostics
 
 , MARS.Core.Classes, MARS.Core.URL, MARS.Core.MediaType
-, MARS.Core.Application, MARS.Core.Engine, MARS.Core.Token
+//, MARS.Core.Application
+, MARS.Core.Application.Interfaces
+, MARS.Core.Engine, MARS.Core.Token
 , MARS.Core.Registry.Utils, MARS.Core.Injection.Types, MARS.Core.Activation.Interfaces
 , MARS.Core.MessageBodyWriter, MARS.Core.RequestAndResponse.Interfaces
 ;
@@ -22,7 +24,7 @@ type
   TMARSActivation = class;
 
   TMARSActivationFactoryFunc = reference to function (const AEngine: TMARSEngine;
-    const AApplication: TMARSApplication;
+    const AApplication: IMARSApplication;
     const ARequest: IMARSRequest; const AResponse: IMARSResponse;
     const AURL: TMARSURL
   ): IMARSActivation;
@@ -55,7 +57,7 @@ type
   protected
     FRttiContext: TRttiContext;
     FConstructorInfo: TMARSConstructorInfo;
-    FApplication: TMARSApplication;
+    FApplication: IMARSApplication;
     FEngine: TMARSEngine;
     FURL: TMARSURL;
     FURLPrototype: TMARSURL;
@@ -104,7 +106,7 @@ type
     procedure CheckAuthentication; virtual;
     procedure CheckAuthorization; virtual;
   public
-    constructor Create(const AEngine: TMARSEngine; const AApplication: TMARSApplication;
+    constructor Create(const AEngine: TMARSEngine; const AApplication: IMARSApplication;
       const ARequest: IMARSRequest; const AResponse: IMARSResponse; const AURL: TMARSURL); virtual;
     destructor Destroy; override;
 
@@ -114,7 +116,7 @@ type
     procedure Invoke; virtual;
 
     function GetId: string; inline;
-    function GetApplication: TMARSApplication; inline;
+    function GetApplication: IMARSApplication; inline;
     function GetEngine: TMARSEngine; inline;
     function GetInvocationTime: TStopwatch; inline;
     function GetSetupTime: TStopwatch; inline;
@@ -137,7 +139,7 @@ type
     // ---
 
     property Id: string read FId;
-    property Application: TMARSApplication read FApplication;
+    property Application: IMARSApplication read FApplication;
     property Engine: TMARSEngine read FEngine;
     property InvocationTime: TStopwatch read FInvocationTime;
     property Method: TRttiMethod read FMethod;
@@ -165,7 +167,7 @@ type
 
     class var CreateActivationFunc: TMARSActivationFactoryFunc;
     class function CreateActivation(const AEngine: TMARSEngine;
-      const AApplication: TMARSApplication;
+      const AApplication: IMARSApplication;
       const ARequest: IMARSRequest; const AResponse: IMARSResponse;
       const AURL: TMARSURL): IMARSActivation;
   end;
@@ -816,7 +818,7 @@ begin
   Result := FResourcePath;
 end;
 
-function TMARSActivation.GetApplication: TMARSApplication;
+function TMARSActivation.GetApplication: IMARSApplication;
 begin
   Result := FApplication;
 end;
@@ -845,7 +847,7 @@ begin
 end;
 
 constructor TMARSActivation.Create(const AEngine: TMARSEngine;
-  const AApplication: TMARSApplication;
+  const AApplication: IMARSApplication;
   const ARequest: IMARSRequest; const AResponse: IMARSResponse;
   const AURL: TMARSURL);
 begin
@@ -883,7 +885,7 @@ begin
 end;
 
 class function TMARSActivation.CreateActivation(const AEngine: TMARSEngine;
-  const AApplication: TMARSApplication; const ARequest: IMARSRequest;
+  const AApplication: IMARSApplication; const ARequest: IMARSRequest;
   const AResponse: IMARSResponse; const AURL: TMARSURL): IMARSActivation;
 begin
   if Assigned(CreateActivationFunc) then

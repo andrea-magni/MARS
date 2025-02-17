@@ -11,7 +11,10 @@ interface
 
 uses
   SysUtils, Classes, Generics.Collections, SyncObjs
-, MARS.Core.Classes, MARS.Core.Registry, MARS.Core.Application, MARS.Core.URL
+, MARS.Core.Classes, MARS.Core.Registry
+//, MARS.Core.Application
+, MARS.Core.Application.Interfaces
+, MARS.Core.URL
 , MARS.Core.Exceptions, MARS.Utils.Parameters, MARS.Core.RequestAndResponse.Interfaces
 ;
 
@@ -32,7 +35,7 @@ type
     var Handled: Boolean);
   TGetApplicationProc = reference to procedure (const AEngine: TMARSEngine;
     const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
-    var AApplication: TMARSApplication);
+    var AApplication: IMARSApplication);
 
   TMARSEngine = class
   private
@@ -61,11 +64,11 @@ type
 
     function AddApplication(const AName, ABasePath: string;
       const AResources: array of string; const AParametersSliceName: string = '';
-      const ADefaultResourcePath: string = ''): TMARSApplication; virtual;
-    function ApplicationByName(const AName: string): TMARSApplication; virtual;
-    function ApplicationByBasePath(const ABasePath: string): TMARSApplication; virtual;
+      const ADefaultResourcePath: string = ''): IMARSApplication; virtual;
+    function ApplicationByName(const AName: string): IMARSApplication; virtual;
+    function ApplicationByBasePath(const ABasePath: string): IMARSApplication; virtual;
 
-    procedure EnumerateApplications(const ADoSomething: TProc<string, TMARSApplication>); virtual;
+    procedure EnumerateApplications(const ADoSomething: TProc<string, IMARSApplication>); virtual;
     function IsCORSEnabled: Boolean; virtual;
 
     property Applications: TMARSApplicationDictionary read FApplications;
@@ -116,53 +119,50 @@ implementation
 uses
   MARS.Core.Utils
 , MARS.Core.Activation, MARS.Core.Activation.Interfaces
+, MARS.Core.Application
 , MARS.Core.MediaType
 ;
 
 function TMARSEngine.AddApplication(const AName, ABasePath: string;
   const AResources: array of string; const AParametersSliceName: string;
-  const ADefaultResourcePath: string): TMARSApplication;
+  const ADefaultResourcePath: string): IMARSApplication;
 var
   LResource: string;
   LParametersSliceName: string;
 begin
   Result := TMARSApplication.Create(AName);
+
+  Result.BasePath := ABasePath;
+  Result.DefaultResourcePath := ADefaultResourcePath;
+  for LResource in AResources do
+    Result.AddResource(LResource);
+
+  LParametersSliceName := AParametersSliceName;
+  if LParametersSliceName = '' then
+    LParametersSliceName := AName;
+  Result.Parameters.CopyFrom(Parameters, LParametersSliceName);
+
+  FCriticalSection.Enter;
   try
-    Result.BasePath := ABasePath;
-    Result.DefaultResourcePath := ADefaultResourcePath;
-    for LResource in AResources do
-      Result.AddResource(LResource);
-
-    LParametersSliceName := AParametersSliceName;
-    if LParametersSliceName = '' then
-      LParametersSliceName := AName;
-    Result.Parameters.CopyFrom(Parameters, LParametersSliceName);
-
-    FCriticalSection.Enter;
-    try
-      Applications.Add(
-        TMARSURL.CombinePath([BasePath, ABasePath]).ToLower
-        , Result
-      );
-    finally
-      FCriticalSection.Leave;
-    end;
-  except
-    Result.Free;
-    raise
+    Applications.Add(
+      TMARSURL.CombinePath([BasePath, ABasePath]).ToLower
+    , Result
+    );
+  finally
+    FCriticalSection.Leave;
   end;
 end;
 
 function TMARSEngine.ApplicationByBasePath(
-  const ABasePath: string): TMARSApplication;
+  const ABasePath: string): IMARSApplication;
 begin
   if not FApplications.TryGetValue(ABasePath, Result) then
     Result := nil;
 end;
 
-function TMARSEngine.ApplicationByName(const AName: string): TMARSApplication;
+function TMARSEngine.ApplicationByName(const AName: string): IMARSApplication;
 var
-  LApplication: TMARSApplication;
+  LApplication: IMARSApplication;
 begin
   Result := nil;
   for LApplication in FApplications.Values.ToArray do
@@ -176,7 +176,7 @@ begin
 
   FName := AName;
 
-  FApplications := TMARSApplicationDictionary.Create([doOwnsValues]);
+  FApplications := TMARSApplicationDictionary.Create();
   FCriticalSection := TCriticalSection.Create;
   FParameters := TMARSParameters.Create(FName);
 
@@ -204,9 +204,9 @@ begin
 end;
 
 procedure TMARSEngine.EnumerateApplications(
-  const ADoSomething: TProc<string, TMARSApplication>);
+  const ADoSomething: TProc<string, IMARSApplication>);
 var
-  LPair: TPair<string, TMARSApplication>;
+  LPair: TPair<string, IMARSApplication>;
 begin
   if Assigned(ADoSomething) then
   begin
@@ -222,7 +222,7 @@ end;
 
 function TMARSEngine.HandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean;
 var
-  LApplication: TMARSApplication;
+  LApplication: IMARSApplication;
   LURL: TMARSURL;
   LApplicationPath: string;
   LActivation: IMARSActivation;

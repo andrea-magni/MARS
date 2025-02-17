@@ -9,7 +9,9 @@ interface
 
 uses
   Classes, SysUtils, Rtti, TypInfo
-, MARS.Metadata, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry.Utils
+, MARS.Metadata, MARS.Core.Engine
+, MARS.Core.Application.Interfaces
+, MARS.Core.Registry.Utils
 ;
 
 type
@@ -18,8 +20,8 @@ type
     FEngine: TMARSEngine;
     FMetadata: TMARSEngineMetadata;
   protected
-    procedure ReadApplication(const AApplication: TMARSApplication); virtual;
-    procedure ReadResource(const AApplication: TMARSApplication;
+    procedure ReadApplication(const AApplication: IMARSApplication); virtual;
+    procedure ReadResource(const AApplication: IMARSApplication;
       const AApplicationMetadata: TMARSApplicationMetadata;
       const AResourcePath: string; AResourceInfo: TMARSConstructorInfo); virtual;
     procedure ReadMethod(const AResourceMetadata: TMARSResourceMetadata;
@@ -69,7 +71,7 @@ begin
   Metadata.Path := Engine.BasePath;
 
   Engine.EnumerateApplications(
-    procedure (APath: string; AApplication: TMARSApplication)
+    procedure (APath: string; AApplication: IMARSApplication)
     begin
       ReadApplication(AApplication);
     end
@@ -78,7 +80,7 @@ begin
 end;
 
 procedure TMARSMetadataReader.ReadApplication(
-  const AApplication: TMARSApplication);
+  const AApplication: IMARSApplication);
 var
   LApplicationMetadata: TMARSApplicationMetadata;
 begin
@@ -237,7 +239,7 @@ begin
   );
 end;
 
-procedure TMARSMetadataReader.ReadResource(const AApplication: TMARSApplication;
+procedure TMARSMetadataReader.ReadResource(const AApplication: IMARSApplication;
   const AApplicationMetadata: TMARSApplicationMetadata;
   const AResourcePath: string; AResourceInfo: TMARSConstructorInfo);
 var

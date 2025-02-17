@@ -10,21 +10,22 @@ unit MARS.dmustache;
 interface
 
 uses
-    System.Classes, System.SysUtils, Rtti
+  System.Classes, System.SysUtils, Rtti
 
-  , MARS.Core.Application
-  , MARS.Core.Attributes
-  , MARS.Core.Classes
-  , MARS.Core.Declarations
-  , MARS.Core.JSON
-  , MARS.Core.MediaType
-  , MARS.Core.Registry
-  , MARS.Core.Token
-  , MARS.Core.URL
-  , MARS.Utils.Parameters
-  , MARS.Core.Activation.Interfaces
+, MARS.Core.Application.Interfaces
+, MARS.Core.Attributes
+, MARS.Core.Classes
+, MARS.Core.Declarations
+, MARS.Core.Exceptions
+, MARS.Core.JSON
+, MARS.Core.MediaType
+, MARS.Core.Registry
+, MARS.Core.Token
+, MARS.Core.URL
+, MARS.Utils.Parameters
+, MARS.Core.Activation.Interfaces
 
-  , SynMustache, SynCommons
+, SynMustache, SynCommons
 ;
 
 type
@@ -42,7 +43,7 @@ type
   private
     FActivation: IMARSActivation;
     FName: string;
-    FApplication: TMARSApplication;
+    FApplication: IMARSApplication;
     FParameters: TMARSParameters;
     FURL: TMARSURL;
     FToken: TMARSToken;
@@ -59,7 +60,7 @@ type
     function Render(const ATemplate: string; const AValue: variant): string;
 
     property Activation: IMARSActivation read FActivation;
-    property Application: TMARSApplication read FApplication;
+    property Application: IMARSApplication read FApplication;
     property URL: TMARSURL read FURL;
     property Token: TMARSToken read FToken;
     property Parameters: TMARSParameters read FParameters;

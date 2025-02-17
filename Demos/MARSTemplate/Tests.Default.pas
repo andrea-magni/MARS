@@ -1,5 +1,5 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
@@ -12,7 +12,8 @@ uses
 // Test Frameworks
 , DUnitX.TestFramework, Delphi.Mocks
 // MARS Core
-, MARS.Core.Engine, MARS.Core.Application
+, MARS.Core.Engine
+, MARS.Core.Application.Interfaces
 , MARS.Core.MediaType, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.Registry.Utils
 // MARS Test Framework

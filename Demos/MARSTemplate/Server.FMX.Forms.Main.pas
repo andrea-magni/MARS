@@ -1,8 +1,9 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit Server.FMX.Forms.Main;
 
 interface
@@ -48,10 +49,10 @@ implementation
 {$R *.fmx}
 
 uses
+{$IFDEF MSWINDOWS} Windows, ShellAPI, NetEncoding, {$ENDIF}
   IdSSLOpenSSL
 , MARS.Core.URL, MARS.Core.Engine
 , Server.Ignition
-{$IFDEF MSWINDOWS}, Windows, ShellAPI, NetEncoding {$ENDIF}
 ;
 
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);

@@ -26,7 +26,11 @@ implementation
 
 uses
   MARS.Rtti.Utils
-, MARS.Core.Token, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Attributes
+, MARS.Core.Token, MARS.Core.URL
+, MARS.Core.Engine
+//, MARS.Core.Application
+, MARS.Core.Application.Interfaces
+, MARS.Core.Attributes
 , MARS.Core.RequestAndResponse.Interfaces
 ;
 
@@ -65,8 +69,8 @@ begin
     AValue := TInjectionValue.Create(AActivation.URL, True)
   else if (LType.IsObjectOfType(TMARSEngine)) then
     AValue := TInjectionValue.Create(AActivation.Engine, True)
-  else if (LType.IsObjectOfType(TMARSApplication)) then
-    AValue := TInjectionValue.Create(AActivation.Application, True)
+  else if (LType is TRttiInterfaceType) and (LType.Handle = TypeInfo(IMARSApplication)) then
+    AValue := TInjectionValue.Create(TValue.From<IMARSApplication>(AActivation.Application), True)
   else if (LType is TRttiInterfaceType) and (LType.Handle = TypeInfo(IMARSActivation)) then
     AValue := TInjectionValue.Create(TValue.From<IMARSActivation>(AActivation), True);
 end;
@@ -94,7 +98,7 @@ begin
           or (LType.Handle = TypeInfo(IMARSResponse))
           or LType.IsObjectOfType(TMARSURL)
           or LType.IsObjectOfType(TMARSEngine)
-          or LType.IsObjectOfType(TMARSApplication)
+          or (LType.Handle = TypeInfo(IMARSApplication))
           or (LType.Handle = TypeInfo(IMARSActivation));
       end;
     end

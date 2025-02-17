@@ -1,15 +1,17 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit Server.Forms.Main;
 
 {$I MARS.inc}
 
 interface
 
-uses Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls,
+uses
+  Classes, SysUtils, Forms, ActnList, ComCtrls, StdCtrls, Controls, ExtCtrls,
   System.Actions
 , MARS.http.Server.Indy
 ;
@@ -56,8 +58,10 @@ implementation
 
 uses
   StrUtils, Web.HttpApp, IOUtils, Windows, ShellAPI, NetEncoding
-, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry
-, MARS.Core.Registry.Utils, MARS.Core.Utils
+, MARS.Core.URL
+, MARS.Core.Engine
+, MARS.Core.Application.Interfaces
+, MARS.Core.Registry, MARS.Core.Registry.Utils, MARS.Core.Utils
 , Server.Ignition
 ;
 
@@ -90,7 +94,7 @@ begin
         end;
 
         AEngine.EnumerateApplications(
-          procedure (AName: string; AApplication: TMARSApplication)
+          procedure (AName: string; AApplication: IMARSApplication)
           var
             LApplicationItem: TTreeNode;
             LApplicationHttpPath, LApplicationHttpsPath: string;

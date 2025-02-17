@@ -6,7 +6,9 @@ uses
   Classes, SysUtils, Generics.Collections, System.Rtti
 , DUnitX.Types, DUnitX.InternalDataProvider, DUnitX.TestDataProvider
 , DUnitX.TestFramework
-, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Registry.Utils
+, MARS.Core.Engine
+, MARS.Core.Application.Interfaces
+, MARS.Core.Registry.Utils
 , MARS.Tests.Types
 ;
 
@@ -18,7 +20,7 @@ type
     constructor Create(const AName: string);
     property Name: string read FName;
   end;
-  TProviderAppFunc = TFunc<TMARSApplication>;
+  TProviderAppFunc = TFunc<IMARSApplication>;
 
   TMARSTestCaseData = record
     Data: TRequestData;
@@ -31,14 +33,14 @@ type
 
   TMARSTestCaseProvider = class(TTestDataProvider)
   private
-     FList : TList<TMARSTestCaseData>;
+    FList : TList<TMARSTestCaseData>;
   protected
-     function GetEngine: TMARSEngine; virtual; abstract;
-     function GetApplication: TMARSApplication; virtual;
-     procedure InitTestCaseData; virtual;
-     property List: TList<TMARSTestCaseData> read FList;
-     property Engine: TMARSEngine read GetEngine;
-     property Application: TMARSApplication read GetApplication;
+    function GetEngine: TMARSEngine; virtual; abstract;
+    function GetApplication: IMARSApplication; virtual;
+    procedure InitTestCaseData; virtual;
+    property List: TList<TMARSTestCaseData> read FList;
+    property Engine: TMARSEngine read GetEngine;
+    property Application: IMARSApplication read GetApplication;
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -77,7 +79,7 @@ begin
   inherited;
 end;
 
-function TMARSTestCaseProvider.GetApplication: TMARSApplication;
+function TMARSTestCaseProvider.GetApplication: IMARSApplication;
 begin
   Result := nil;
   if Assigned(Engine) then

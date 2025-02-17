@@ -5,7 +5,9 @@ interface
 uses
   Classes, SysUtils, System.Rtti, System.TypInfo, MARS.Rtti.Utils
 , MARS.OpenAPI.v3
-, MARS.Core.Engine, MARS.Core.Application, MARS.Core.Activation.Interfaces, MARS.Utils.Parameters
+, MARS.Core.Engine
+, MARS.Core.Application.Interfaces
+, MARS.Core.Activation.Interfaces, MARS.Utils.Parameters
 , MARS.Metadata
 ;
 
@@ -24,7 +26,7 @@ type
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
     function MARSKindToOpenAPIKind(const AString: string): string;
     function MARSDataTypeToOpenAPIType(const AType: TRttiType; const ARefPrefix: string = '#/components/schemas/'): string;
-    class function BuildFrom(const AEngine: TMARSEngine; const AApplication: TMARSApplication): TOpenAPI; overload;
+    class function BuildFrom(const AEngine: TMARSEngine; const AApplication: IMARSApplication): TOpenAPI; overload;
     class function BuildFrom(const AActivation: IMARSActivation): TOpenAPI; overload;
   end;
 
@@ -42,7 +44,7 @@ uses
 { TOpenAPIHelper }
 
 class function TOpenAPIHelper.BuildFrom(const AEngine: TMARSEngine;
-  const AApplication: TMARSApplication): TOpenAPI;
+  const AApplication: IMARSApplication): TOpenAPI;
 var
   LOpenAPI: TOpenAPI;
   LReader: TMARSMetadataReader;

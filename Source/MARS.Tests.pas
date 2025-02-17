@@ -8,7 +8,9 @@ uses
 , DUnitX.TestFramework, DUnitX.Types
 , Delphi.Mocks
 // MARS
-, MARS.Core.Engine, MARS.Core.Application, MARS.Utils.Parameters
+, MARS.Core.Engine
+, MARS.Core.Application.Interfaces
+, MARS.Utils.Parameters
 , MARS.Core.MediaType
 , MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.Activation.Interfaces
@@ -58,7 +60,7 @@ type
   TMARSTestFixture = class
   private
     FEngine: TMARSEngine;
-    FApplication: TMARSApplication;
+    FApplication: IMARSApplication;
     FAppParameters: TMARSParameters;
     FTokenSecret: string;
     FTokenIssuer: string;
@@ -100,7 +102,7 @@ type
     property Engine: TMARSEngine read FEngine;
     property ApplicationName: string read GetApplicationName;
 
-    property Application: TMARSApplication read FApplication;
+    property Application: IMARSApplication read FApplication;
     property AppParameters: TMARSParameters read FAppParameters;
     property TokenSecret: string read FTokenSecret;
     property TokenIssuer: string read FTokenIssuer;

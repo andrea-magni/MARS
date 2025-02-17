@@ -8,12 +8,13 @@ unit MARS.Metadata.Engine.Resource;
 interface
 
 uses
-    MARS.Core.Registry
-  , MARS.Core.Attributes
-  , MARS.Core.MediaType
-  , MARS.Core.JSON
-  , MARS.Metadata
-  , MARS.Core.Application
+  MARS.Core.Registry
+, MARS.Core.Attributes
+, MARS.Core.Exceptions
+, MARS.Core.MediaType
+, MARS.Core.JSON
+, MARS.Metadata
+, MARS.Core.Application
 ;
 
 type

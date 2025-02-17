@@ -26,7 +26,6 @@ object MainForm: TMainForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 458
     object Label1: TLabel
       Left = 28
       Top = 17
@@ -83,8 +82,6 @@ object MainForm: TMainForm
     Indent = 19
     TabOrder = 1
     OnClick = MainTreeViewClick
-    ExplicitWidth = 458
-    ExplicitHeight = 112
   end
   object OpenAPIButton: TButton
     Left = 386
@@ -94,7 +91,6 @@ object MainForm: TMainForm
     Action = OpenAPIAction
     Anchors = [akTop, akRight]
     TabOrder = 2
-    ExplicitLeft = 376
   end
   object MainActionList: TActionList
     Left = 384

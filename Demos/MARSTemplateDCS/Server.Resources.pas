@@ -1,8 +1,9 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit Server.Resources;
 
 interface
@@ -40,7 +41,7 @@ type
 implementation
 
 uses
-    MARS.Core.Registry
+  MARS.Core.Registry
 ;
 
 { THelloWorldResource }

@@ -29,6 +29,13 @@ type
     property ContentType: string read FContentType write FContentType;
   end;
 
+  EMARSApplicationException = class(EMARSHttpException);
+  EMARSResourceNotFoundException = class(EMARSApplicationException);
+  EMARSMethodNotFoundException = class(EMARSApplicationException);
+  EMARSAuthenticationException = class(EMARSApplicationException);
+  EMARSAuthorizationException = class(EMARSApplicationException);
+
+
 implementation
 
 { EMARSHttpException }

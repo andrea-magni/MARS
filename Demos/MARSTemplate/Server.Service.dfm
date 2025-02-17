@@ -1,5 +1,4 @@
 object ServerService: TServerService
-  OldCreateOrder = False
   OnCreate = ServiceCreate
   OnDestroy = ServiceDestroy
   DisplayName = 'MARSTemplate Service'

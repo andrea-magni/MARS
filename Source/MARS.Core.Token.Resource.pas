@@ -11,7 +11,9 @@ interface
 
 uses
   Classes, SysUtils
-, MARS.Core.Registry, MARS.Core.Classes, MARS.Core.Application, MARS.Core.Attributes
+, MARS.Core.Registry, MARS.Core.Classes
+, MARS.Core.Application.Interfaces
+, MARS.Core.Attributes
 , MARS.Core.MediaType, MARS.Core.Token.ReadersAndWriters, MARS.Core.Token
 , MARS.Core.URL, MARS.Metadata.Attributes
 ;
@@ -22,7 +24,7 @@ type
   private
   protected
     [Context] Token: TMARSToken;
-    [Context] App: TMARSApplication;
+    [Context] App: IMARSApplication;
     [Context] URL: TMARSURL;
     function Authenticate(const AUserName, APassword: string): Boolean; virtual;
     procedure BeforeLogin(const AUserName, APassword: string); virtual;

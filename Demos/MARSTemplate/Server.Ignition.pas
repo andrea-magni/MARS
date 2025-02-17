@@ -1,8 +1,9 @@
 (*
-  Copyright 2016-2023, MARS-Curiosity - REST Library
+  Copyright 2025, MARS-Curiosity - REST Library
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit Server.Ignition;
 
 {$I MARS.inc}
@@ -33,7 +34,8 @@ implementation
 
 uses
   MARS.Core.Activation, MARS.Core.Activation.Interfaces
-, MARS.Core.Application, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
+, MARS.Core.Application.Interfaces
+, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
 , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
 , MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
@@ -60,7 +62,7 @@ begin
     FEngine.OnGetApplication :=
       procedure (const AEngine: TMARSEngine;
         const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
-        var AApplication: TMARSApplication)
+        var AApplication: IMARSApplication)
       begin
         if AApplication = nil then
           AApplication := FEngine.ApplicationByName('DefaultApp');

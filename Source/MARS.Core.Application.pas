@@ -13,22 +13,16 @@ uses
     SysUtils, Classes, Rtti, Generics.Collections
   , MARS.Core.Classes, MARS.Core.URL, MARS.Core.Exceptions, MARS.Utils.Parameters
   , MARS.Core.Registry, MARS.Core.Registry.Utils
+  , MARS.Core.Application.Interfaces
 ;
 
 type
-  EMARSApplicationException = class(EMARSHttpException);
-  EMARSResourceNotFoundException = class(EMARSApplicationException);
-  EMARSMethodNotFoundException = class(EMARSApplicationException);
-  EMARSAuthenticationException = class(EMARSApplicationException);
-  EMARSAuthorizationException = class(EMARSApplicationException);
-
-  TMARSApplication = class
+  TMARSApplication = class(TInterfacedObject, IMARSApplication)
   private
     FRttiContext: TRttiContext;
-    FResourceRegistry: TObjectDictionary<string, TMARSConstructorInfo>;
+    FResources: TObjectDictionary<string, TMARSConstructorInfo>;
     FBasePath: string;
     FName: string;
-    FSystem: Boolean;
     FParameters: TMARSParameters;
     FDefaultResourcePath: string;
   protected
@@ -36,22 +30,25 @@ type
     constructor Create(const AName: string); virtual;
     destructor Destroy; override;
 
+    // IMARSApplication --------------------------------------------------------
     function AddResource(AResource: string): Boolean;
     procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
 
-    property Name: string read FName;
-    property BasePath: string read FBasePath write FBasePath;
-    property DefaultResourcePath: string read FDefaultResourcePath write FDefaultResourcePath;
-    property System: Boolean read FSystem write FSystem;
-    property Resources: TObjectDictionary<string, TMARSConstructorInfo> read FResourceRegistry;
-    property Parameters: TMARSParameters read FParameters;
-  end;
+    function GetName: string;
+    function GetBasePath: string;
+    procedure SetBasePath(const AValue: string);
+    function GetDefaultResourcePath: string;
+    procedure SetDefaultResourcePath(const AValue: string);
+    function GetResources: TObjectDictionary<string, TMARSConstructorInfo>;
+    function GetParameters: TMARSParameters;
+    // IMARSApplication --------------------------------------------------------
 
-  TMARSApplicationDictionary = class(TObjectDictionary<string, TMARSApplication>)
-  private
-  protected
-  public
-    function AllBasePaths: TArray<string>;
+//    property Name: string read FName;
+//    property BasePath: string read FBasePath write FBasePath;
+//    property DefaultResourcePath: string read FDefaultResourcePath write FDefaultResourcePath;
+//    property System: Boolean read FSystem write FSystem;
+//    property Resources: TObjectDictionary<string, TMARSConstructorInfo> read FResourceRegistry;
+//    property Parameters: TMARSParameters read FParameters;
   end;
 
 implementation
@@ -80,9 +77,9 @@ function TMARSApplication.AddResource(AResource: string): Boolean;
       begin
         LResourceName := AAttribute.Value;
 
-        if not FResourceRegistry.ContainsKey(LResourceName) then
+        if not FResources.ContainsKey(LResourceName) then
         begin
-          FResourceRegistry.Add(LResourceName, AInfo.Clone);
+          FResources.Add(LResourceName, AInfo.Clone);
           LResult := True;
         end;
       end
@@ -124,14 +121,14 @@ begin
   FBasePath := '';
   FDefaultResourcePath := '';
   FRttiContext := TRttiContext.Create;
-  FResourceRegistry := TObjectDictionary<string, TMARSConstructorInfo>.Create([doOwnsValues]);
+  FResources := TObjectDictionary<string, TMARSConstructorInfo>.Create([doOwnsValues]);
   FParameters := TMARSParameters.Create(AName);
 end;
 
 destructor TMARSApplication.Destroy;
 begin
   FParameters.Free;
-  FResourceRegistry.Free;
+  FResources.Free;
   inherited;
 end;
 
@@ -141,19 +138,44 @@ var
   LPair: TPair<string, TMARSConstructorInfo>;
 begin
   if Assigned(ADoSomething) then
-    for LPair in FResourceRegistry do
+    for LPair in FResources do
       ADoSomething(LPair.Key, LPair.Value);
 end;
 
 
-{ TMARSApplicationDictionary }
-
-function TMARSApplicationDictionary.AllBasePaths: TArray<string>;
-var LApplication: TMARSApplication;
+function TMARSApplication.GetBasePath: string;
 begin
-  Result := [];
-  for LApplication in Values.ToArray do
-    Result := Result + [LApplication.BasePath];
+  Result := FBasePath;
+end;
+
+function TMARSApplication.GetDefaultResourcePath: string;
+begin
+  Result := FDefaultResourcePath;
+end;
+
+function TMARSApplication.GetName: string;
+begin
+  Result := FName;
+end;
+
+function TMARSApplication.GetParameters: TMARSParameters;
+begin
+  Result := FParameters;
+end;
+
+function TMARSApplication.GetResources: TObjectDictionary<string, TMARSConstructorInfo>;
+begin
+  Result := FResources
+end;
+
+procedure TMARSApplication.SetBasePath(const AValue: string);
+begin
+  FBasePath := AValue;
+end;
+
+procedure TMARSApplication.SetDefaultResourcePath(const AValue: string);
+begin
+  FDefaultResourcePath := AValue;
 end;
 
 end.
