@@ -20,15 +20,14 @@ type
   TServerEngine=class
   private
     class var FEngine: IMARSEngine;
-{$IFDEF MARS_FIREDAC}
+    {$IFDEF MARS_FIREDAC}
     class var FAvailableConnectionDefs: TArray<string>;
-{$ENDIF}
+    {$ENDIF}
   public
     class constructor CreateEngine;
     class destructor DestroyEngine;
     class property Default: IMARSEngine read FEngine;
   end;
-
 
 implementation
 
@@ -38,12 +37,23 @@ uses
 , MARS.Core.Engine
 , MARS.Core.Utils, MARS.Utils.Parameters.IniFile
 , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
-, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters
-, MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
-{$IFDEF MARS_FIREDAC} , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option {$ENDIF}
-{$IFDEF MSWINDOWS} , MARS.mORMotJWT.Token {$ELSE} , MARS.JOSEJWT.Token {$ENDIF}
-{$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
+, MARS.Core.MessageBodyWriter
+, MARS.Core.MessageBodyWriters
+, MARS.Data.MessageBodyWriters
+, MARS.Core.MessageBodyReaders
+{$IFDEF MARS_FIREDAC}
+, MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+, MARS.mORMotJWT.Token
+{$ELSE}
+, MARS.JOSEJWT.Token
+{$ENDIF}
+{$IFNDEF LINUX}
+, MARS.YAML.ReadersAndWriters
+{$ENDIF}
 , MARS.OpenAPI.v3.InjectionService
+
 , Server.Resources
 ;
 
@@ -52,6 +62,7 @@ uses
 class constructor TServerEngine.CreateEngine;
 begin
   FEngine := TMARSEngine.Create;
+
   // Engine configuration
   FEngine.Parameters.LoadFromIniFile;
 
@@ -72,19 +83,18 @@ begin
     end;
 *)
 {$ENDREGION}
-{$IFDEF MARS_FIREDAC}
+  {$IFDEF MARS_FIREDAC}
   FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
-{$ENDIF}
+  {$ENDIF}
 {$REGION 'AfterCreateConnection example'}
 (*
   TMARSFireDAC.AfterCreateConnection :=
-    procedure (Conn: TFDConnection)
+    procedure (AConn: TFDConnection)
     begin
-      Conn.TxOptions.Isolation :=
-        FEngine.Parameters
-        .ByNameTextEnum<TFDTxIsolation>(
-          'FireDAC.' + Conn.ConnectionDefName + '.TxOptions.Isolation'
-          , TFDTxIsolation.xiUnspecified);
+      AConn.TxOptions.Isolation := FEngine.Parameters.ByNameTextEnum<TFDTxIsolation>(
+        'FireDAC.' + AConn.ConnectionDefName + '.TxOptions.Isolation'
+      , TFDTxIsolation.xiUnspecified
+      );
     end;
 *)
 {$ENDREGION}
@@ -170,9 +180,9 @@ end;
 
 class destructor TServerEngine.DestroyEngine;
 begin
-{$IFDEF MARS_FIREDAC}
+  {$IFDEF MARS_FIREDAC}
   TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
-{$ENDIF}
+  {$ENDIF}
   FEngine := nil;
 end;
 
