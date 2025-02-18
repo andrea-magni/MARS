@@ -9,16 +9,17 @@ program MARSTemplateServerDCSService;
 {$I MARS.inc}
 
 uses
-{$ifdef DelphiXE3_UP}
+  {$ifdef DelphiXE3_UP}
   Vcl.SvcMgr,
-{$else}
+  {$else}
   SvcMgr,
-{$endif}
-
+  {$endif }
   Server.Service in 'Server.Service.pas' {ServerService: TService},
   Server.Ignition in 'Server.Ignition.pas',
-  Server.Resources in 'Server.Resources.pas',
-  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule};
+  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
+  Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
+  Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
+  Server.Resources.Token in 'Server.Resources.Token.pas';
 
 {$R *.RES}
 

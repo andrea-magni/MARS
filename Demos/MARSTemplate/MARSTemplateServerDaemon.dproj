@@ -140,6 +140,9 @@
         </DelphiCompile>
         <DCCReference Include="..\..\Source\MARS.Linux.Daemon.pas"/>
         <DCCReference Include="Server.Ignition.pas"/>
+        <DCCReference Include="Server.Resources.OpenAPI.pas"/>
+        <DCCReference Include="Server.Resources.Token.pas"/>
+        <DCCReference Include="Server.Resources.HelloWorld.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -184,6 +187,12 @@
                     </Platform>
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx64\libcgsqlite3.dylib" Class="DependencyModule"/>
+                <DeployFile LocalName="bin\MARSTemplateServerDaemon.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>MARSTemplateServerDaemon.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="bin\MARSTemplateServerDaemon" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">

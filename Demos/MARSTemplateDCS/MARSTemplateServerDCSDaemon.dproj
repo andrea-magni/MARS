@@ -143,6 +143,9 @@
             <Form>ServerWebModule</Form>
             <DesignClass>TWebModule</DesignClass>
         </DCCReference>
+        <DCCReference Include="Server.Resources.HelloWorld.pas"/>
+        <DCCReference Include="Server.Resources.OpenAPI.pas"/>
+        <DCCReference Include="Server.Resources.Token.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -187,6 +190,12 @@
                     </Platform>
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx64\libcgsqlite3.dylib" Class="DependencyModule"/>
+                <DeployFile LocalName="bin\MARSTemplateServerDCSDaemon.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>MARSTemplateServerDCSDaemon.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="bin\MARSTemplateServerDCSDaemon" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">

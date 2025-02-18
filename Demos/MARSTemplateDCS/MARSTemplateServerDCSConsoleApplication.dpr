@@ -20,7 +20,10 @@ uses
   {$endif }
   MARS.http.Server.DCS,
   ServerConst in 'ServerConst.pas',
-  Server.Ignition in 'Server.Ignition.pas';
+  Server.Ignition in 'Server.Ignition.pas',
+  Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
+  Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
+  Server.Resources.Token in 'Server.Resources.Token.pas';
 
 {$R *.res}
 

@@ -137,7 +137,9 @@
             <Form>MainForm</Form>
         </DCCReference>
         <DCCReference Include="Server.Ignition.pas"/>
-        <DCCReference Include="Server.Resources.pas"/>
+        <DCCReference Include="Server.Resources.HelloWorld.pas"/>
+        <DCCReference Include="Server.Resources.OpenAPI.pas"/>
+        <DCCReference Include="Server.Resources.Token.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -167,6 +169,12 @@
                 <DeployFile LocalName="Win32\Debug\MARSTemplateServerDCSApplication.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="bin\MARSTemplateServerDCSApplication.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="bin\MARSTemplateServerDCSApplication.exe" Configuration="Release" Class="ProjectOutput"/>
+                <DeployFile LocalName="bin\MARSTemplateServerDCSApplication.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>MARSTemplateServerDCSApplication.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">
                         <Operation>1</Operation>

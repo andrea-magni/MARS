@@ -2,8 +2,8 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'MARSTemplate Server'
-  ClientHeight = 203
-  ClientWidth = 468
+  ClientHeight = 561
+  ClientWidth = 784
   Color = clBtnFace
   Constraints.MinHeight = 240
   Constraints.MinWidth = 480
@@ -12,20 +12,22 @@ object MainForm: TMainForm
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  Position = poScreenCenter
   OnClose = FormClose
   OnCreate = FormCreate
   DesignSize = (
-    468
-    203)
+    784
+    561)
   TextHeight = 13
   object TopPanel: TPanel
     Left = 0
     Top = 0
-    Width = 468
+    Width = 784
     Height = 73
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitWidth = 468
     object Label1: TLabel
       Left = 28
       Top = 17
@@ -76,21 +78,24 @@ object MainForm: TMainForm
   object MainTreeView: TTreeView
     Left = 0
     Top = 73
-    Width = 468
-    Height = 130
+    Width = 784
+    Height = 488
     Align = alClient
     Indent = 19
     TabOrder = 1
     OnClick = MainTreeViewClick
+    ExplicitWidth = 468
+    ExplicitHeight = 130
   end
   object OpenAPIButton: TButton
-    Left = 386
+    Left = 702
     Top = 41
     Width = 76
     Height = 26
     Action = OpenAPIAction
     Anchors = [akTop, akRight]
     TabOrder = 2
+    ExplicitLeft = 386
   end
   object MainActionList: TActionList
     Left = 384

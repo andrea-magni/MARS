@@ -176,7 +176,9 @@
             <DesignClass>TService</DesignClass>
         </DCCReference>
         <DCCReference Include="Server.Ignition.pas"/>
-        <DCCReference Include="Server.Resources.pas"/>
+        <DCCReference Include="Server.Resources.HelloWorld.pas"/>
+        <DCCReference Include="Server.Resources.OpenAPI.pas"/>
+        <DCCReference Include="Server.Resources.Token.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -230,6 +232,12 @@
                 <DeployFile LocalName="$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_150.png" Configuration="Debug" Class="UWP_DelphiLogo150"/>
                 <DeployFile LocalName="$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_44.png" Configuration="Debug" Class="UWP_DelphiLogo44"/>
                 <DeployFile LocalName="bin\MARSTemplateServerService.exe" Configuration="Release" Class="ProjectOutput"/>
+                <DeployFile LocalName="bin\MARSTemplateServerService.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>MARSTemplateServerService.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">
                         <Operation>1</Operation>

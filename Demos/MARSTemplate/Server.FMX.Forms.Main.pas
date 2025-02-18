@@ -68,30 +68,19 @@ begin
 end;
 
 procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
-{$IFDEF MSWINDOWS}
 const
+  STATIC_CONTENT_URL = 'http://localhost:8080/rest/default/www/';
   OPENAPI_URL = 'http://localhost:8080/rest/default/openapi';
 var
-  LSwaggerUIIndex: string;
-  LDefaultHTMLApp: array [0..MAX_PATH] of WideChar;
+  LURL: string;
 begin
-  ZeroMemory(@LDefaultHTMLApp, SizeOf(LDefaultHTMLApp));
-
-  LSwaggerUIIndex := ExpandFileName('..\..\..\www\swagger-ui-3.52.5-dist\index.html');
-
-  var LErrorCode := FindExecutable(PWideChar(LSwaggerUIIndex), nil, LDefaultHTMLApp);
-  if LErrorCode < 32 then
-    raise Exception.CreateFmt('Default application to open HTML files not found [Error: %d]', [LErrorCode]);
-
-  LSwaggerUIIndex := 'file:///' + LSwaggerUIIndex.Replace('\', '/')
-    + '?openAPIURL=' + TURLEncoding.URL.Encode(OPENAPI_URL);
-
-  ShellExecute(0, nil, @LDefaultHTMLApp[0], PWideChar(LSwaggerUIIndex), nil, SW_SHOWDEFAULT);
-end;
+  LURL := STATIC_CONTENT_URL + 'index.html' + '?openAPIURL=' + TURLEncoding.URL.Encode(OPENAPI_URL);
+{$IFNDEF MSWINDOWS}
+  ShellExecute(0, nil, PWideChar(LURL), nil, nil, SW_SHOWDEFAULT);
 {$ELSE}
-begin
-end;
+  raise Exception.Create('This is currently available on Microsoft Windows only. Open your browser at ' + LURL);
 {$ENDIF}
+end;
 
 procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
 begin

@@ -19,7 +19,7 @@ uses
 // MARS Test Framework
 , MARS.Tests, MARS.Tests.TestCaseProvider, MARS.Tests.Types, MARS.Core.Response.Dummy
 // Application specific
-, Server.Ignition, Server.Resources
+, Server.Ignition
 ;
 
 type

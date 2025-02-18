@@ -9,8 +9,10 @@ program MARSTemplateServerApplication;
 uses
   Forms,
   Server.Forms.Main in 'Server.Forms.Main.pas' {MainForm},
-  Server.Resources in 'Server.Resources.pas',
-  Server.Ignition in 'Server.Ignition.pas';
+  Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
+  Server.Ignition in 'Server.Ignition.pas',
+  Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
+  Server.Resources.Token in 'Server.Resources.Token.pas';
 
 {$R *.res}
 

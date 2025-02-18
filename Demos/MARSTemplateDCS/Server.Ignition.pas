@@ -51,7 +51,10 @@ uses
 , MARS.YAML.ReadersAndWriters
 {$ENDIF}
 , MARS.OpenAPI.v3.InjectionService
-, Server.Resources
+
+, Server.Resources.HelloWorld
+, Server.Resources.Token
+, Server.Resources.OpenAPI
 ;
 
 { TServerEngine }

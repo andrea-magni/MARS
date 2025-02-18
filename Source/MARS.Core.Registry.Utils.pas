@@ -39,6 +39,7 @@ type
     property Path: string read FPath;
     property ConstructorFunc: TMARSConstructorFunc read FConstructorFunc write FConstructorFunc;
     function Clone: TMARSConstructorInfo;
+    class function DefaultConstructorFunc(const AResource: TClass): TMARSConstructorFunc;
   end;
   TDataModuleClass = class of TDataModule;
 
@@ -55,24 +56,28 @@ constructor TMARSConstructorInfo.Create(AClass: TClass;
   const AConstructorFunc: TMARSConstructorFunc; const APath: string);
 begin
   inherited Create;
-  FConstructorFunc := AConstructorFunc;
   FTypeTClass := AClass;
   FRttiType := TRttiContext.Create.GetType(FTypeTClass);
   FMethods := FRttiType.GetMethods;
   FAttributes := FRttiType.GetAllAttributes(True);
   FPath := APath;
-
-  // provide a default constructor function
-  if not Assigned(FConstructorFunc) then
-    FConstructorFunc :=
-      function(const AContext: TValue): TObject
-      begin
-        if FTypeTClass.InheritsFrom(TDataModule) then
-          Result := TDataModuleClass(FTypeTClass).Create(nil)
-        else
-          Result := TRttiHelper.FindParameterLessConstructor(FTypeTClass).Invoke(FTypeTClass, []).AsObject;
-      end;
+  if Assigned(FConstructorFunc) then
+    FConstructorFunc := AConstructorFunc
+  else
+    FConstructorFunc := DefaultConstructorFunc(AClass);
 end;
 
+
+class function TMARSConstructorInfo.DefaultConstructorFunc(const AResource: TClass): TMARSConstructorFunc;
+begin
+  Result :=
+    function(const AContext: TValue): TObject
+    begin
+      if AResource.InheritsFrom(TDataModule) then
+        Result := TDataModuleClass(AResource).Create(nil)
+      else
+        Result := TRttiHelper.FindParameterLessConstructor(AResource).Invoke(AResource, []).AsObject;
+    end;
+end;
 
 end.

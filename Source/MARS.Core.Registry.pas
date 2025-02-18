@@ -36,6 +36,10 @@ type
     class destructor ClassDestroy;
   end;
 
+  // Shortcuts
+  procedure MARSRegister(const AResource: TClass; const AConstructorFunc: TMARSConstructorFunc = nil); overload;
+  procedure MARSRegister(const AResources: TArray<TClass>); overload;
+
 {$ifdef DelphiXE}
 type
   TObjectHelper = class helper for TObject
@@ -59,6 +63,16 @@ begin
     Result := LScope + '.' + ClassName;
 end;
 {$endif}
+
+procedure MARSRegister(const AResource: TClass; const AConstructorFunc: TMARSConstructorFunc);
+begin
+  TMARSResourceRegistry.Instance.RegisterResource(AResource, AConstructorFunc);
+end;
+
+procedure MARSRegister(const AResources: TArray<TClass>);
+begin
+  TMARSResourceRegistry.Instance.RegisterResources(AResources);
+end;
 
 { TMARSResourceRegistry }
 

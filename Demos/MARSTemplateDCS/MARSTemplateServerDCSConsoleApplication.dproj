@@ -173,6 +173,9 @@
         </DelphiCompile>
         <DCCReference Include="ServerConst.pas"/>
         <DCCReference Include="Server.Ignition.pas"/>
+        <DCCReference Include="Server.Resources.HelloWorld.pas"/>
+        <DCCReference Include="Server.Resources.OpenAPI.pas"/>
+        <DCCReference Include="Server.Resources.Token.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -13,8 +13,10 @@ uses
   Web.Win.ISAPIApp,
   Web.Win.ISAPIThreadPool,
   Server.Ignition in 'Server.Ignition.pas',
-  Server.Resources in 'Server.Resources.pas',
-  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule};
+  Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
+  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
+  Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
+  Server.Resources.Token in 'Server.Resources.Token.pas';
 
 {$R *.res}
 

@@ -12,14 +12,13 @@ uses
 // Test Frameworks
 , DUnitX.TestFramework, Delphi.Mocks
 // MARS Core
-, MARS.Core.Engine.Interfaces
-, MARS.Core.Application.Interfaces
-, MARS.Core.MediaType, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.Registry.Utils
+, MARS.Core.Engine.Interfaces, MARS.Core.Application.Interfaces
+, MARS.Core.RequestAndResponse.Interfaces
 // MARS Test Framework
 , MARS.Tests, MARS.Tests.TestCaseProvider, MARS.Tests.Types, MARS.Core.Response.Dummy
 // Application specific
-, Server.Ignition, Server.Resources
+, Server.Ignition
 ;
 
 type
@@ -55,7 +54,6 @@ implementation
 
 uses
   MARS.Core.JSON
-, System.NetEncoding
 ;
 
 
