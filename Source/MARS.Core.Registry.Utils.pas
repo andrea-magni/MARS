@@ -61,7 +61,7 @@ begin
   FMethods := FRttiType.GetMethods;
   FAttributes := FRttiType.GetAllAttributes(True);
   FPath := APath;
-  if Assigned(FConstructorFunc) then
+  if Assigned(AConstructorFunc) then
     FConstructorFunc := AConstructorFunc
   else
     FConstructorFunc := DefaultConstructorFunc(AClass);
