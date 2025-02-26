@@ -80,13 +80,15 @@ begin
 end;
 
 function TMARSTestCaseProvider.GetApplication: IMARSApplication;
+var
+  LAppName: string;
 begin
   Result := nil;
   if Assigned(Engine) then
   begin
     // default: name of the class after removing the Provider suffix and the initial T.
     //          (i.e. TDefaultAppProvider -> DefaultApp)
-    var LAppName := ClassName
+    LAppName := ClassName
       .Replace('Provider', '', [rfIgnoreCase])
       .Substring(1);
 
@@ -101,7 +103,6 @@ begin
     Result := Engine.ApplicationByName(LAppName);
     if not Assigned(Result) then
       raise Exception.CreateFmt('[%s] Application not found %s', [ClassName, LAppName]);
-
   end;
 end;
 
@@ -112,15 +113,19 @@ end;
 
 function TMARSTestCaseProvider.GetCaseName(const methodName: string;
   const caseNumber: Integer): string;
+var
+  LTestCase: TMARSTestCaseData;
 begin
-  var LTestCase := FList[caseNumber];
+  LTestCase := FList[caseNumber];
   Result := LTestCase.Data.MethodQualifiedName + ' ' + LTestCase.Data.HttpMethod + ' ' + LTestCase.Data.Path;
 end;
 
 function TMARSTestCaseProvider.GetCaseParams(const methodName: string;
   const caseNumber: Integer): TValueArray;
+var
+  LTestCase: TMARSTestCaseData;
 begin
-  var LTestCase := FList[caseNumber];
+  LTestCase := FList[caseNumber];
   Result := [
     LTestCase.Data.ResourceName
   , LTestCase.Data.Info
@@ -130,20 +135,25 @@ begin
 end;
 
 procedure TMARSTestCaseProvider.InitTestCaseData;
+var
+  LBasePath: string;
 begin
-  var LBasePath := Engine.BasePath + Application.BasePath + '/';
+  LBasePath := Engine.BasePath + Application.BasePath + '/';
 
   FList.Clear;
   Application.EnumerateResources(
     procedure (AResourceName: string; AInfo: TMARSConstructorInfo)
+    var LResourcePath, LMethodPath, LHttpMethod: string;
+    var LMethod: TRttiMethod;
+    var LAttribute: TCustomAttribute;
     begin
-      var LResourcePath := AInfo.Path;
-      for var LMethod in AInfo.Methods do
+      LResourcePath := AInfo.Path;
+      for LMethod in AInfo.Methods do
       begin
-        var LMethodPath := '';
-        var LHttpMethod := '';
+        LMethodPath := '';
+        LHttpMethod := '';
 
-        for var LAttribute in LMethod.GetAttributes do
+        for LAttribute in LMethod.GetAttributes do
         begin
           if LAttribute is PathAttribute then
             LMethodPath := PathAttribute(LAttribute).Value;
@@ -154,7 +164,7 @@ begin
 
         // if RolesAllowed --> Token valido
 
-        if (LResourcePath <> '') and (LHttpMethod <> '') then
+        if (LHttpMethod <> '') then
           FList.Add(TMARSTestCaseData.Create(AResourceName, AInfo, LMethod, LBasePath + LResourcePath, LMethodPath, LHttpMethod));
       end;
     end

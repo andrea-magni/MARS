@@ -18,6 +18,7 @@ type
     FMBR: IMessageBodyReader;
     FJSONMediaType: TMediaType;
     // leave the following fields declared, they are checked through RTTI
+    {$HINTS OFF}
     FPerson: TPersonRecord;
     FPrimitiveTypes: TPrimitiveTypesRecord;
     FOuter: TOuterRecord;
@@ -26,6 +27,7 @@ type
     FPersonRttiObject: TRttiObject;
     FPrimitiveTypesRttiObject: TRttiObject;
     FOuterRttiObject: TRttiObject;
+    {$HINTS ON}
   public
     [Setup]
     procedure Setup;
@@ -48,12 +50,12 @@ type
   private
     FMBR: IMessageBodyReader;
     FJSONMediaType: TMediaType;
-
+    {$HINTS OFF}
     FPersonArray: TArray<TPersonRecord>;
     FNamedIntegerArray: TArray<TNamedIntegerRecord>;
     FOuterArray: TArray<TOuterRecord>;
     FArrayNamedIntegerArray: TArray<TArrayNamedIntegerRecord>;
-
+    {$HINTS ON}
     FRttiContext: TRttiContext;
     FPersonArrayRttiObject: TRttiObject;
     FNamedIntegerArrayRttiObject: TRttiObject;

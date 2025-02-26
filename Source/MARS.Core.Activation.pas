@@ -725,6 +725,7 @@ var
   LResourcesKeys: TArray<string>;
   LBasePath, LURLPath, LRelativePath, LAppResourcePath: TArray<string>;
   LAppResourceKey: string;
+  LRelativePathLength, LAppResourcePathLength: Integer;
 begin
   LBasePath := URL.BasePath.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
   LURLPath := URL.PathTokens;
@@ -747,10 +748,15 @@ begin
 
   LResourcesKeys := Application.Resources.Keys.ToArray;
   LFound := False;
+  LRelativePathLength := Length(LRelativePath);
   for LAppResourceKey in LResourcesKeys do
   begin
     LAppResourcePath := LAppResourceKey.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
-    if LRelativePath.StartsWith(LAppResourcePath, LCompareFunc) then
+    LAppResourcePathLength := Length(LAppResourcePath);
+
+    if ((LAppResourcePathLength > 0) and (LRelativePath.StartsWith(LAppResourcePath, LCompareFunc)))
+       or ((LAppResourcePathLength = 0) and (LRelativePathLength = 0))
+    then
     begin
       LFound := True;
       if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
