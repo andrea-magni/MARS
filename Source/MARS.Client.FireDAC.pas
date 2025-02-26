@@ -192,6 +192,8 @@ begin
 end;
 
 procedure TMARSFDResource.AfterPOST(const AContent: TStream);
+var
+  LJSONArray: TJSONArray;
 begin
   inherited;
 
@@ -203,7 +205,7 @@ begin
     FApplyUpdatesResults := [];
     if FPOSTResponse is TJSONArray then
     begin
-      var LJSONArray := TJSONArray(FPOSTResponse);
+      LJSONArray := TJSONArray(FPOSTResponse);
       FApplyUpdatesResults := LJSONArray.ToArrayOfRecord<TMARSFDApplyUpdatesRes>;
     end;
     FResourceDataSets.ForEach(
