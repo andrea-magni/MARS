@@ -19,7 +19,7 @@ uses
 , MARS.Core.Attributes
 , MARS.Core.Classes
 , MARS.Core.Declarations
-, MARS.Core.Exception
+, MARS.Core.Exceptions
 , MARS.Core.JSON
 , MARS.Core.MediaType
 , MARS.Core.Registry
@@ -164,7 +164,6 @@ implementation
 uses
   StrUtils, Variants, DBAccess
   , MARS.Core.Utils
-  , MARS.Core.Exceptions
   , MARS.Data.Utils
   , MARS.Rtti.Utils
   , MARS.Data.UniDAC.InjectionService
