@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{6F52BB40-74E2-410E-A54D-0C20E713A0CE}</ProjectGuid>
         <MainSource>MARSClient.FireDACDesign.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>

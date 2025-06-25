@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{8C6A1564-94E6-420D-BDE4-54A4CD3BD125}</ProjectGuid>
         <MainSource>MARS.Core.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
@@ -279,6 +279,16 @@
                     </Platform>
                     <Platform Name="Android64">
                         <RemoteDir>res\values-v31</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                </DeployClass>
+                <DeployClass Name="AndroidSplashStylesV35">
+                    <Platform Name="Android">
+                        <RemoteDir>res\values-v35</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                    <Platform Name="Android64">
+                        <RemoteDir>res\values-v35</RemoteDir>
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>

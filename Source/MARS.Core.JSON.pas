@@ -129,8 +129,8 @@ type
     function Add(const AElement: TDateTime): TJSONArray; overload;
     function Add(const AElement: TDateTime; const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
 
-    function ToArrayOfRecord<T: record>(): TArray<T>;
-    procedure FromArrayOfRecord<T: record>(const AArray: TArray<T>;
+    function ToArrayOfRecord<T{: record}>(): TArray<T>;
+    procedure FromArrayOfRecord<T{: record}>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil);
 
@@ -149,9 +149,9 @@ type
     property Items[const Index: Integer]: TJSONValue read GetValue;
     {$endif}
 
-    class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>;
+    class function ArrayOfRecordToJSON<T{: record}>(const AArray: TArray<T>;
       const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
-    class function ArrayOfRecordToJSON<T: record>(const AArray: TArray<T>;
+    class function ArrayOfRecordToJSON<T{: record}>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
 
     class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>): TJSONArray; overload;
@@ -187,7 +187,7 @@ type
       const ANameCaseSensitive: Boolean; var AValue: TValue): Boolean; overload;
     function ReadValue(const AName: string; const ADefault: TValue): TValue; overload;
     function ReadArrayValue(const AName: string): TJSONArray; overload; inline;
-    function ReadArrayValue<T: record>(const AName: string): TArray<T>; overload; inline;
+    function ReadArrayValue<T{: record}>(const AName: string): TArray<T>; overload; inline;
 
     function DeletePair(const AName: string): Boolean;
     procedure WriteStringValue(const AName: string; const AValue: string);
@@ -203,9 +203,9 @@ type
       const AOptions: TMARSJSONSerializationOptions); overload;
     procedure WriteTValue(const AName: string; const AValue: TValue); overload;
     procedure WriteArrayValue(const AName: string; const AArray: TJSONArray); overload; inline;
-    procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>;
+    procedure WriteArrayValue<T{: record}>(const AName: string; const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions); overload; inline;
-    procedure WriteArrayValue<T: record>(const AName: string; const AArray: TArray<T>); overload; inline;
+    procedure WriteArrayValue<T{: record}>(const AName: string; const AArray: TArray<T>); overload; inline;
 
 
     procedure FromObject(const AObject: TObject; const AFilterProc: TToJSONFilterProc = nil); overload;
@@ -214,11 +214,11 @@ type
     procedure ToObject<T: class>(const AInstance: TObject; const AFilterProc: TToObjectFilterProc = nil); overload;
     procedure ToObject(const AInstance: TObject; const AObjectType: TRttiType; const AFilterProc: TToObjectFilterProc = nil); overload;
 
-    procedure FromRecord<T: record>(ARecord: T;
+    procedure FromRecord<T{: record}>(ARecord: T;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromRecord(const ARecord: TValue;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
-    function ToRecord<T: record>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    function ToRecord<T{: record}>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToRecord(const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
 {$ifndef DelphiXE6_UP}
@@ -247,10 +247,10 @@ type
       const AOptions: TMARSJSONSerializationOptions): TObject; overload;
     class function JSONToObject(const AClassType: TClass; const AJSON: TJSONObject): TObject; overload;
 
-    class function RecordToJSON<T: record>(ARecord: T;
+    class function RecordToJSON<T{: record}>(ARecord: T;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
-    class function RecordToJSON<T: record>(ARecord: T;
+    class function RecordToJSON<T{: record}>(ARecord: T;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
 
     class function RecordToJSON(const ARecord: TValue;
@@ -260,7 +260,7 @@ type
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
 
 
-    class function JSONToRecord<T: record>(const AJSON: TJSONObject;
+    class function JSONToRecord<T{: record}>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
     class function JSONToRecord(const ARecordType: TRttiType; const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;

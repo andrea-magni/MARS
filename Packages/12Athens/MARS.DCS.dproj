@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{02BBCED0-86EE-4FB8-A124-5BD6E5477506}</ProjectGuid>
         <MainSource>MARS.DCS.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>

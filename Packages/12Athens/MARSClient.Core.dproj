@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{48E75129-EE24-48D4-AE54-2F549C909CC8}</ProjectGuid>
         <MainSource>MARSClient.Core.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>

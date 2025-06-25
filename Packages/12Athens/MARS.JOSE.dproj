@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{16057797-C497-46DA-B133-A45E7F564D8D}</ProjectGuid>
         <MainSource>MARS.JOSE.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>

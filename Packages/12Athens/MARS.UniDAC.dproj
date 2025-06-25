@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{BD9048A8-F51F-4F53-92B4-4A4ADE6BE0BE}</ProjectGuid>
         <MainSource>MARS.UniDAC.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
@@ -129,6 +129,18 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="dbrtl.dcp"/>
+        <DCCReference Include="xmlrtl.dcp"/>
+        <DCCReference Include="inet.dcp"/>
+        <DCCReference Include="IndySystem.dcp"/>
+        <DCCReference Include="IndyProtocols.dcp"/>
+        <DCCReference Include="IndyCore.dcp"/>
+        <DCCReference Include="RESTComponents.dcp"/>
+        <DCCReference Include="dac290.dcp"/>
+        <DCCReference Include="unidac290.dcp"/>
+        <DCCReference Include="MARS.Utils.dcp"/>
+        <DCCReference Include="MARS.Core.dcp"/>
+        <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.ReadersAndWriters.pas"/>
@@ -287,6 +299,16 @@
                     </Platform>
                     <Platform Name="Android64">
                         <RemoteDir>res\values-v31</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                </DeployClass>
+                <DeployClass Name="AndroidSplashStylesV35">
+                    <Platform Name="Android">
+                        <RemoteDir>res\values-v35</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                    <Platform Name="Android64">
+                        <RemoteDir>res\values-v35</RemoteDir>
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>

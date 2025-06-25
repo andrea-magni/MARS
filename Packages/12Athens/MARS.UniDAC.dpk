@@ -31,7 +31,19 @@ package MARS.UniDAC;
 {$IMPLICITBUILD OFF}
 
 requires
-  rtl;
+  rtl,
+  dbrtl,
+  xmlrtl,
+  inet,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  RESTComponents,
+  dac290,
+  unidac290,
+  MARS.Utils,
+  MARS.Core,
+  MARS.ReadersAndWriters;
 
 contains
   MARS.Data.UniDAC.InjectionService in '..\..\Source\MARS.Data.UniDAC.InjectionService.pas',
