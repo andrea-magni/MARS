@@ -6,9 +6,9 @@
 {                                                                        }
 { InnoSetup Tools Library for Delphi Components                          }
 {                                                                        }
-{ Copyright (c) 2024 Ethea S.r.l.                                        }
+{ Copyright (c) 2024-2025 Ethea S.r.l.                                   }
 {                                                                        }
-{ Original Code is Copyright (c) 2021-2024 Skia4Delphi Project.          }
+{ Original Code is Copyright (c) 2021-2025 Skia4Delphi Project.          }
 {                                                                        }
 { Use of this source code is governed by the MIT license that can be     }
 { found in the LICENSE file.                                             }
@@ -46,7 +46,7 @@ function InitializeSetup: Boolean; forward;
 /// <summary> [Event] Triggered when initialize wizard (after InitializeSetup) </summary>
 procedure InitializeWizard; forward;
 /// <summary> Install the packages </summary>
-function InstallPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects): Boolean; forward;
+function InstallPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects; const ABeforeProjectBuild: TBeforeProjectBuildFunc): Boolean; forward;
 /// <summary> Check if the setup can create the uninstall registry key to be able to uninstall in windows settings. This reg key can be disabled by executing the setup with the parameter /CreateUninstallRegKey=no </summary>
 function NeedsUninstallRegKey: Boolean; forward;
 /// <summary> [Event] Called to determine whether or not a particular page should be shown at all </summary>
@@ -57,7 +57,7 @@ function UninstallPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupP
 var
   FGroupProjects: TRADStudioGroupProjects;
   FMaxVersionInGroupProjects: TRADStudioVersion;
-  FOnBeforeProjectBuild: TBeforeProjectBuildProc;
+  FOnBeforeProjectBuild: TBeforeProjectBuildFunc;
   FOnGetBuildCustomParam: TGetBuildCustomParamEvent;
   FOnTryExtractPreBuildObjects: TTryExtractPreBuildObjectsProc;
   FOnTryPrepareProjectInstallation: TTryPrepareProjectInstallationEvent;
@@ -119,7 +119,7 @@ begin
           #ifdef FilesEmbedded
           CopyDirectory(ExpandConstant('{tmp}\') +'{app}\{#LibraryPackagesFolder}', ExpandConstant('{app}\') + '{#LibraryPackagesFolder}', False);
           #endif
-          if not InstallPackages(GetSelectedRADStudioVersions, FGroupProjects) then
+          if not InstallPackages(GetSelectedRADStudioVersions, FGroupProjects, FOnBeforeProjectBuild) then
             Abort;
           if HaveRADStudioInstanceRunning and not IsSilent then
             ShowMessage(CustomMessage('SetupMainInstallationSuccesfullyRestartRADStudio'));
@@ -213,7 +213,8 @@ begin
   WizardForm.LicenseAcceptedRadio.Checked := True;
 end;
 
-function InstallPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects): Boolean;
+function InstallPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects;
+  const ABeforeProjectBuild: TBeforeProjectBuildFunc): Boolean;
 var
   I, J, K: Integer;
   LInfo: TRADStudioInfo;
@@ -236,6 +237,7 @@ var
   LDcpFileName: string;
   LPlatform: TProjectPlatform;
   LCustomParam: string;
+  LBuilt: Boolean;
 begin
   Log('Setup.Main.InstallPackages: Starting...');
   WizardForm.ProgressGauge.Min := 0;
@@ -291,22 +293,39 @@ begin
                 end;
                 // The Bpl file is built in Project folder: copy the bpl file to RadStudioCommonBplDir
                 //Copy always the 32 bit BPL file
-                if (not LProject.IsDesignOnly) and (LRadStudioCommon32Dir <> '') then
+                if (LRadStudioCommon32Dir <> '') then
+                begin
                   CopyFileToDir(LBplFileName, LRadStudioCommon32Dir);
+                  // Registering Bpl 32 Bit
+                  if LProject.IsInstallable then
+                  begin
+                    if not TryRegisterRADStudioBpl(LVersion, pfWin32, LBplFileName, LProject.Description) then
+                    begin
+                      TryShowErrorFmt(CustomMessage('SetupMainFailedToInstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '3']);
+                      Result := False;
+                      Exit;
+                    end;
+                  end;  
+                end;
                 //Copy the 64 bit BPL file only if exists
                 LBplPrj64FileName := ExpandProjectPath(LBplFileName, LInfo.BuildConfig, pfWin64);  
-                if (not LProject.IsDesignOnly) and (pfWin64 in LProject.Platforms) and (LRadStudioCommon64Dir <> '') then
+                if (pfWin64 in LProject.Platforms) and (LRadStudioCommon64Dir <> '') then
+                begin
                   CopyFileToDir(LBplPrj64FileName, LRadStudioCommon64Dir);
-
+                  // Registering Bpl 64 Bit
+                  if LProject.IsInstallable then
+                  begin
+                    if not TryRegisterRADStudioBpl(LVersion, pfWin64, LBplFileName, LProject.Description) then
+                    begin
+                      TryShowErrorFmt(CustomMessage('SetupMainFailedToInstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '3']);
+                      Result := False;
+                      Exit;
+                    end;
+                  end;  
+                end;
                 // Registering Bpl
                 if LProject.IsInstallable then
                 begin
-                  if not TryRegisterRADStudioBpl(LVersion, LBplFileName, LProject.Description) then
-                  begin
-                    TryShowErrorFmt(CustomMessage('SetupMainFailedToInstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '3']);
-                    Result := False;
-                    Exit;
-                  end;
                   //Add Path Environment Variable
                   if not TryAddRADStudioPathEnvVariable(LVersion, RemoveBackslash(ExtractFilePath(LBplFileName))) then
                   begin
@@ -314,7 +333,7 @@ begin
                     Result := False;
                     Exit;
                   end;
-                end;
+                end;  
               end
               else
               begin
@@ -326,32 +345,51 @@ begin
                   Result := False;
                   Exit;
                 end;
+                //Check if the file is Built before proceeding to Installation
+                LBuilt := True;
+                if FOnBeforeProjectBuild <> nil then
+                  LBuilt := FOnBeforeProjectBuild(LProject, LPlatform, LInfo);
+                if not LBuilt then
+                  Continue;
                 LRadStudioCommon32FileName := AddBackSlash(LRadStudioCommon32Dir) + LBplFileName; 
                 if not FileExists(LRadStudioCommon32FileName) then
                 begin
                   TryShowErrorFmt(CustomMessage('SetupMainFailedToInstallPackage'), [LRadStudioCommon32FileName, LVersion.Name, '2']);
                   Result := False;
                   Exit;
+                end
+                else
+                begin
+                  //Copy the 32 bit BPL file from RadStudioCommonBplDir Folder to Project folder
+                  LBplPrj32Dir := ExpandProjectPath(LProjectDir+'$(Platform)\$(Config)\Bpl', LInfo.BuildConfig, pfWin32);
+                  if (not LProject.IsDesignOnly) and (LRadStudioCommon32Dir <> '') then
+                    CopyFileToDir(LRadStudioCommon32FileName, LBplPrj32Dir);
+                  // Registering 32Bit Bpl
+                  if LProject.IsInstallable then
+                  begin
+                    if not TryRegisterRADStudioBpl(LVersion, pfWin32, LRadStudioCommon32FileName, LProject.Description) then
+                    begin
+                      TryShowErrorFmt(CustomMessage('SetupMainFailedToInstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '3']);
+                      Result := False;
+                      Exit;
+                    end;
+                  end;
                 end;
-                //Copy always the 32 bit BPL file from RadStudioCommonBplDir Folder to Project folder
-                LBplPrj32Dir := ExpandProjectPath(LProjectDir+'$(Platform)\$(Config)\Bpl', LInfo.BuildConfig, pfWin32);
-                if (not LProject.IsDesignOnly) and (LRadStudioCommon32Dir <> '') then
-                  CopyFileToDir(LRadStudioCommon32FileName, LBplPrj32Dir);
                 //Copy the 64 bit BPL file only if exists
                 LRadStudioCommon64FileName := AddBackSlash(LRadStudioCommon64Dir) + LBplFileName; 
-                if FileExists(LRadStudioCommon64FileName) and (not LProject.IsDesignOnly) and (pfWin64 in LProject.Platforms) then
+                if FileExists(LRadStudioCommon64FileName) and (pfWin64 in LProject.Platforms) then
                 begin
                   LBplPrj64Dir := ExpandProjectPath(LProjectDir+'$(Platform)\$(Config)\Bpl', LInfo.BuildConfig, pfWin64);
                   CopyFileToDir(LRadStudioCommon64FileName, LBplPrj64Dir);
-                end;
-                // Registering Bpl
-                if LProject.IsInstallable then
-                begin
-                  if not TryRegisterRADStudioBpl(LVersion, LRadStudioCommon32FileName, LProject.Description) then
+                  // Registering 64Bit Bpl
+                  if LProject.IsInstallable and (LBplPrj64Dir <> '') then
                   begin
-                    TryShowErrorFmt(CustomMessage('SetupMainFailedToInstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '3']);
-                    Result := False;
-                    Exit;
+                    if not TryRegisterRADStudioBpl(LVersion, pfWin64, LRadStudioCommon64FileName, LProject.Description) then
+                    begin
+                      TryShowErrorFmt(CustomMessage('SetupMainFailedToInstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '3']);
+                      Result := False;
+                      Exit;
+                    end;
                   end;
                 end;
               end;
@@ -474,7 +512,7 @@ var
   I, J, K, L: Integer;
   LBplFileName, LOldBplFileName, LDcpFileName: string;
   LConfig: TProjectConfig;
-  LFileName, LOldFileName, LProjectDir: string;
+  LFileName, LProjectDir: string;
   LInfo: TRADStudioInfo;
   LProject: TRADStudioProject;
   LVersion: TRADStudioVersion;
@@ -487,7 +525,8 @@ var
   LRadStudioCommon32DcpDir: string;
   LRadStudioCommon64DcpDir: string;
   LBplOutputPath: string;
-  LRadStudioCommon32FileName: string;  
+  LRadStudioCommon32FileName: string;
+  LRadStudioCommon64FileName: string;  
 begin
   Result := True;
   Log('Setup.Main.UninstallPackages: Starting...');
@@ -555,12 +594,19 @@ begin
             TryGetRADStudioProjectBplOutputFileName(LProject, LProject.DllSuffix, LBplFileName);
             for LConfig := LowProjectConfig to HighProjectConfig do
             begin
+              // Unregistering Bpl 32Bit         
               LFileName := ExpandProjectPath(LBplFileName, LConfig, pfWin32);
-              // Unregistering Bpl          
-                if not TryUnregisterRADStudioBpl(LVersion, LFileName) then
+              if not TryUnregisterRADStudioBpl(LVersion, pfWin32, LFileName) then
               begin
                 Log(FmtMessage(CustomMessage('SetupMainFailedToUninstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '1']));
-                Result := False;
+                //Result := False;
+              end;
+              // Unregistering Bpl 64Bit
+              LFileName := ExpandProjectPath(LBplFileName, LConfig, pfWin64);
+              if not TryUnregisterRADStudioBpl(LVersion, pfWin64, LFileName) then
+              begin
+                Log(FmtMessage(CustomMessage('SetupMainFailedToUninstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '1']));
+                //Result := False;
               end;
             end;
           end
@@ -569,14 +615,21 @@ begin
             // The Bpl file is built in RadStudioCommonBplDir: copy in LibraryPath\${Platform}\${Config}\Bpl
             //Acquire only bpl FileName with suffix expanded
             TryGetRADStudioBplFileName(LProject, LProject.DllSuffix, LBplFileName);
-            LRadStudioCommon32FileName := AddBackSlash(LRadStudioCommon32BplDir) + LBplFileName; 
+            LRadStudioCommon32FileName := AddBackSlash(LRadStudioCommon32BplDir) + LBplFileName;
+            LRadStudioCommon64FileName := AddBackSlash(LRadStudioCommon64BplDir) + LBplFileName;
             for LConfig := LowProjectConfig to HighProjectConfig do
             begin
-              // Unregistering Bpl          
-              if not TryUnregisterRADStudioBpl(LVersion, LRadStudioCommon32FileName) then
+              // Unregistering Bpl 32Bit         
+              if not TryUnregisterRADStudioBpl(LVersion, pfWin32, LRadStudioCommon32FileName) then
               begin
                 Log(FmtMessage(CustomMessage('SetupMainFailedToUninstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '1']));
-                Result := False;
+                //Result := False;
+              end;
+              // Unregistering Bpl 64Bit         
+              if not TryUnregisterRADStudioBpl(LVersion, pfWin64, LRadStudioCommon64FileName) then
+              begin
+                Log(FmtMessage(CustomMessage('SetupMainFailedToUninstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '1']));
+                //Result := False;
               end;
             end;
             //Try to unregister old Bpl suffix
@@ -586,11 +639,15 @@ begin
             begin
               for LConfig := LowProjectConfig to HighProjectConfig do
               begin
-                // Unregistering Bpl          
-                if not TryUnregisterRADStudioBpl(LVersion, LRadStudioCommon32FileName) then
+                // Unregistering Bpl 32Bit
+                if not TryUnregisterRADStudioBpl(LVersion, pfWin32, LRadStudioCommon32FileName) then
                 begin
                   Log(FmtMessage(CustomMessage('SetupMainFailedToUninstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '1']));
-                  Result := False;
+                end;
+                // Unregistering Bpl 64Bit
+                if not TryUnregisterRADStudioBpl(LVersion, pfWin64, LRadStudioCommon64FileName) then
+                begin
+                  Log(FmtMessage(CustomMessage('SetupMainFailedToUninstallPackage'), [ExtractFileName(LProject.FileName), LVersion.Name, '1']));
                 end;
               end;
             end;  

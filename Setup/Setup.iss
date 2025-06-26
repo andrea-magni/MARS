@@ -3,7 +3,7 @@
 {                                                                        }
 { Ethea InnoSetup Tools Library                                          }
 {                                                                        }
-{ Copyright (c) 2024 Ethea S.r.l.                                        }
+{ Copyright (c) 2024-2025 Ethea S.r.l.                                   }
 {                                                                        }
 { Original Code is Copyright (c) 2021-2024 Skia4Delphi Project.          }
 {                                                                        }
@@ -60,8 +60,8 @@
 {                                                                        }
 {************************************************************************}
 
-#define LibraryName "MARS-Curiosity"
-#define SetupName "MARS"
+#define LibraryName "MARS Curiosity"
+#define SetupName "MARS_Curiosity"
 #define LibraryVersion "1.5.0"
 #define LibraryPublisher "Andrea Magni"
 #define LibraryCopyright "Copyright (c) Andrea Magni"
@@ -82,6 +82,7 @@
 #define VclStyle "RubyGraphite.vsf"
 
 [Setup]
+WizardSizePercent=120
 AllowCancelDuringInstall=yes
 AppCopyright={#LibraryCopyright}
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -153,6 +154,7 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl,.\InnoSetupSc
   Source: ".\InnoSetupScripts\Style\*"; DestDir: "{app}\{#SetupFolder}\Style"; Flags: ignoreversion
 #endif
 Source: "..\{#LibraryPackagesFolder}\*"; Excludes: "{#CommonRADStudioFilesExcludes}"; DestDir: "{app}\{#LibraryPackagesFolder}"; Flags: recursesubdirs ignoreversion
+Source: "..\{#LibraryPackagesFolder}\MARSSplash.res"; DestDir: "{app}\{#LibraryPackagesFolder}"; Flags: ignoreversion
 Source: "..\ThirdParty\mORMot\Source\SynEcc64O2.o"; DestDir: "{app}\ThirdParty\mORMot\Source"; Flags: ignoreversion
 Source: "..\*.rc"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "..\*"; Excludes: "{#CommonRADStudioFilesExcludes},*.gitattributes,*.gitignore,*.gitmodules,\.github\*,\.history\*,\Documents\*,\Externals\*,\{#LibraryDCUFolder}\*,Logs\*,*.Logs.txt,Objects\*,\{#SetupFolder}\*,\{#LibraryPackagesFolder}\*,\Test"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
@@ -164,7 +166,7 @@ Name: "{userdesktop}\MARSCmd"; Filename: "{app}\Utils\Bin\Win32\MARSCmd_VCL.exe"
 
 [Run]
 Filename: "{app}\{#LibrarySamplesFolder}"; Description: "{cm:SetupOpenSamplesFolder}"; Flags: shellexec runasoriginaluser postinstall;
-Filename: "{#LibraryDocumentationURL}"; Description: "{cm:SetupViewOnlineDocumentation}"; Flags: shellexec runasoriginaluser postinstall unchecked;
+Filename: "{#LibraryDocumentationURL}"; Description: "{cm:SetupViewOnlineDocumentation}"; Flags: shellexec runasoriginaluser postinstall;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Demos\*";
@@ -229,6 +231,8 @@ const
 function _OnTryPrepareProjectInstallation(var AProjectItem: TRADStudioGroupProjectItem; const AInfo: TRADStudioInfo): Boolean; forward;
 /// <summary> Make custom changes before the uninstallation </summary>
 function _OnTryPrepareProjectUninstallation(var AProjectItem: TRADStudioGroupProjectItem; const AInfo: TRADStudioInfo): Boolean; forward;
+/// <summary> Check for dependencies Before Build a Package</summary>
+function _OnBeforeProjectBuild(const AProject: TRADStudioProject; const APlatform: TProjectPlatform; const AInfo: TRADStudioInfo): Boolean; forward;
 
 var
   _FRADStudioInstalledList: TArrayOfString;
@@ -272,11 +276,53 @@ begin
     Log(Format('_OnTryPrepareProjectUninstallation: Failed to prepare the project "%s"', [AProjectItem.Project.FileName]));
 end;
 
+function _OnBeforeProjectBuild(const AProject: TRADStudioProject; const APlatform: TProjectPlatform; const AInfo: TRADStudioInfo): Boolean;
+var
+  LProjectName: string;
+  LBplFileName: string;
+  LRADStudioPath: string;
+  LProject: TRADStudioProject;
+begin
+  LProjectName := ExtractFileName(AProject.FileName);
+  //Compile MARS.UniDAC only if unidac package is installed
+  if SameText(LProjectName, 'MARS.UniDAC.dproj') then
+  begin
+    Result := False;
+    //Check if UniDAC Package is installed
+    LRadStudioPath := AInfo.RootDir; 
+
+    if (pfWin32 in AProject.Platforms) then 
+      LRadStudioPath := AddBackslash(LRadStudioPath) + 'bin'
+    else if (pfWin64 in AProject.Platforms) then 
+      LRadStudioPath := AddBackslash(LRadStudioPath) + 'bin64';
+
+    LProject := AProject;
+    LProject.FileName := 'unidac.dproj';
+    //Check if UniDAC BPL file Exists in RADStudioPath/Bin(64)/
+    if TryGetRADStudioBplFileName(LProject, LProject.DllSuffix, LBplFileName) then
+    begin
+      //Check if bpl file Exists in Windows System Folder
+      Result := FileExists(LBplFileName);
+      if not Result then
+      begin
+        //Check if bpl file Exists in 32 or 64 BDS binary folder
+        LBplFileName := AddBackslash(LRadStudioPath)+LBplFileName;
+        Result := Result and FileExists(LBplFileName);
+      end;
+      if Result then
+        Log(Format('Found unidac Package "%s": proceed to Build "%s" Package of Version "%s"', [LBplFileName, AProject.FileName, AProject.ProjectVersion]));
+    end;
+  end
+  else
+    Result := True;  
+end;
+
 <event('InitializeSetup')>
 function _InitializeSetup: Boolean;
 begin
   FOnTryPrepareProjectInstallation := @_OnTryPrepareProjectInstallation;
   FOnTryPrepareProjectUninstallation := @_OnTryPrepareProjectUninstallation;
+  FOnBeforeProjectBuild := @_OnBeforeProjectBuild;
   Result := True;
 end;
 

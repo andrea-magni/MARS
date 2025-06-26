@@ -9,21 +9,21 @@ package MARS.UniDAC;
 {$EXTENDEDSYNTAX ON}
 {$IMPORTEDDATA ON}
 {$IOCHECKS ON}
-{$LOCALSYMBOLS ON}
+{$LOCALSYMBOLS OFF}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
-{$OPTIMIZATION OFF}
-{$OVERFLOWCHECKS ON}
-{$RANGECHECKS ON}
-{$REFERENCEINFO ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
 {$SAFEDIVIDE OFF}
-{$STACKFRAMES ON}
+{$STACKFRAMES OFF}
 {$TYPEDADDRESS OFF}
 {$VARSTRINGCHECKS ON}
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE DEBUG}
+{$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'MARS-Curiosity REST Library (UniDAC)'}
 {$LIBSUFFIX AUTO}
@@ -33,17 +33,10 @@ package MARS.UniDAC;
 requires
   rtl,
   dbrtl,
-  xmlrtl,
-  inet,
-  IndySystem,
-  IndyProtocols,
-  IndyCore,
-  RESTComponents,
-  dac290,
-  unidac290,
-  MARS.Utils,
   MARS.Core,
-  MARS.ReadersAndWriters;
+  MARS.ReadersAndWriters,
+  unidac290,
+  dac290;
 
 contains
   MARS.Data.UniDAC.InjectionService in '..\..\Source\MARS.Data.UniDAC.InjectionService.pas',

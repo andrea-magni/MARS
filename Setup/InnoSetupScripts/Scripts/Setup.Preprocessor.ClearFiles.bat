@@ -1,7 +1,7 @@
 @echo off
 
 rem #
-rem # Copyright (c) 2024 (Ethea S.r.l.)
+rem # Copyright (c) 2024-2025 (Ethea S.r.l.)
 rem #
 rem # Original code is Copyright (c) 2021-2024 Skia4Delphi Project.
 rem #
