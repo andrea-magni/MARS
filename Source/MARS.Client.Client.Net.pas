@@ -15,8 +15,8 @@ uses
 
   // Net
   , System.Net.URLClient, System.Net.HttpClient, System.Net.HttpClientComponent
-, System.Net.Mime
-  ;
+  , System.Net.Mime
+;
 
 type
   [ComponentPlatformsAttribute(pidAllPlatforms)]

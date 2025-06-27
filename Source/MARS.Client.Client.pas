@@ -19,6 +19,20 @@ uses
 ;
 
 type
+  TMARSNameAndValue<T> = record
+    Name: string;
+    Value: T;
+    constructor Create(const AName: string; const AValue: T); overload;
+    constructor Create(const AName: string); overload;
+  end;
+
+  TMARSQueryParam = TMARSNameAndValue<string>;
+  TMARSQueryParams = TArray<TMARSQueryParam>;
+  TMARSQueryParamsHelper = record helper for TMARSQueryParams
+    procedure Add(const AName: string; const AValue: string = '');
+    function ToStringList: TStringList;
+  end;
+
   TMARSAuthEndorsement = (Cookie, AuthorizationBearer);
   TMARSHttpVerb = (Get, Put, Post, Head, Delete, Patch);
   TMARSClientErrorEvent = procedure (
@@ -122,6 +136,12 @@ type
       const AToken: string = '';
       const AIgnoreResult: Boolean = False): T; overload;
 
+    class function GetJSON<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
+      const APathParams: TArray<string>; const AQueryParams: TMARSQueryParams = [];
+      const AToken: string = '';
+      const AIgnoreResult: Boolean = False): T; overload;
+
+
 {$ifdef DelphiXE7_UP}
     class procedure GetJSONAsync<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
@@ -180,6 +200,7 @@ type
   end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
+function MARSQueryParam(const AName: string; const AValue: string = ''): TMARSQueryParam;
 
 implementation
 
@@ -192,6 +213,11 @@ uses
 , MARS.Client.Resource.Stream
 , MARS.Client.Application
 ;
+
+function MARSQueryParam(const AName: string; const AValue: string): TMARSQueryParam;
+begin
+  Result := TMARSQueryParam.Create(AName, AValue);
+end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
 begin
@@ -322,6 +348,21 @@ end;
 function TMARSCustomClient.GetConnectTimeout: Integer;
 begin
   Result := -1;
+end;
+
+class function TMARSCustomClient.GetJSON<T>(const AEngineURL, AAppName,
+  AResourceName: string; const APathParams: TArray<string>;
+  const AQueryParams: TMARSQueryParams; const AToken: string;
+  const AIgnoreResult: Boolean): T;
+begin
+  var LQueryParams: TStringList := nil;
+  if Length(AQueryParams) > 0 then
+    LQueryParams := AQueryParams.ToStringList;
+  try
+    Result := GetJSON<T>(AEngineURL, AAppName, AResourceName, APathParams, LQueryParams, AToken, AIgnoreResult)
+  finally
+    LQueryParams.Free;
+  end;
 end;
 
 function TMARSCustomClient.GetReadTimeout: Integer;
@@ -856,6 +897,35 @@ begin
     LDest.Password := Password;
   end;
 
+end;
+
+{ TMARSNameAndValue<T> }
+
+constructor TMARSNameAndValue<T>.Create(const AName: string);
+begin
+  Name := AName;
+  Value := Default(T);
+end;
+
+constructor TMARSNameAndValue<T>.Create(const AName: string; const AValue: T);
+begin
+  Name := AName;
+  Value := AValue;
+end;
+
+{ TMARSQueryParamsHelper }
+
+procedure TMARSQueryParamsHelper.Add(const AName,
+  AValue: string);
+begin
+  Self := Self + [MARSQueryParam(AName, AValue)];
+end;
+
+function TMARSQueryParamsHelper.ToStringList: TStringList;
+begin
+  Result := TStringList.Create;
+  for var LItem in  Self do
+    Result.Values[LItem.Name] := LItem.Value;
 end;
 
 end.
