@@ -24,6 +24,9 @@
         <Projects Include="MARS.FireDAC.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="MARS.UniDAC.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -95,14 +98,23 @@
     <Target Name="MARS_FireDAC:Make">
         <MSBuild Projects="MARS.FireDAC.dproj" Targets="Make"/>
     </Target>
+    <Target Name="MARS_UniDAC">
+        <MSBuild Projects="MARS.UniDAC.dproj"/>
+    </Target>
+    <Target Name="MARS_UniDAC:Clean">
+        <MSBuild Projects="MARS.UniDAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_UniDAC:Make">
+        <MSBuild Projects="MARS.UniDAC.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARS_Utils;MARS_Core;MARS_DCS;MARS_mORMot;MARS_JOSE;MARS_ReadersAndWriters;MARS_FireDAC"/>
+        <CallTarget Targets="MARS_Utils;MARS_Core;MARS_DCS;MARS_mORMot;MARS_JOSE;MARS_ReadersAndWriters;MARS_FireDAC;MARS_UniDAC"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARS_Utils:Clean;MARS_Core:Clean;MARS_DCS:Clean;MARS_mORMot:Clean;MARS_JOSE:Clean;MARS_ReadersAndWriters:Clean;MARS_FireDAC:Clean"/>
+        <CallTarget Targets="MARS_Utils:Clean;MARS_Core:Clean;MARS_DCS:Clean;MARS_mORMot:Clean;MARS_JOSE:Clean;MARS_ReadersAndWriters:Clean;MARS_FireDAC:Clean;MARS_UniDAC:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARS_Utils:Make;MARS_Core:Make;MARS_DCS:Make;MARS_mORMot:Make;MARS_JOSE:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make"/>
+        <CallTarget Targets="MARS_Utils:Make;MARS_Core:Make;MARS_DCS:Make;MARS_mORMot:Make;MARS_JOSE:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make;MARS_UniDAC:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
     <ItemGroup Condition="'$(BuildGroup)'=='ALL'">
@@ -144,6 +156,12 @@
         </BuildGroupProject>
         <BuildGroupProject Include="MARS.FireDAC.dproj">
             <ProjectGuid>{D44362A0-1BCF-45FD-80B4-281FB36C0E08}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.UniDAC.dproj">
+            <ProjectGuid>{BD9048A8-F51F-4F53-92B4-4A4ADE6BE0BE}</ProjectGuid>
             <Configurations>Release</Configurations>
             <Platforms>Win32;Win64</Platforms>
             <Enabled>True</Enabled>

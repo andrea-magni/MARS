@@ -13,16 +13,6 @@
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Base)'=='true') or '$(Base_Win32)'!=''">
-        <Base_Win32>true</Base_Win32>
-        <CfgParent>Base</CfgParent>
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Base)'=='true') or '$(Base_Win64)'!=''">
-        <Base_Win64>true</Base_Win64>
-        <CfgParent>Base</CfgParent>
-        <Base>true</Base>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
         <Cfg_1>true</Cfg_1>
         <CfgParent>Base</CfgParent>
@@ -95,6 +85,8 @@
         <DCCReference Include="..\..\Source\MARS.Core.Activation.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Activation.Interfaces.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Registry.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Application.Interfaces.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Engine.Interfaces.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

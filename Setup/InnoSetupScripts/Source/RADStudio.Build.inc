@@ -6,9 +6,9 @@
 {                                                                        }
 { InnoSetup Tools Library for Delphi Components                          }
 {                                                                        }
-{ Copyright (c) 2024 Ethea S.r.l.                                        }
+{ Copyright (c) 2024-2025 Ethea S.r.l.                                   }
 {                                                                        }
-{ Original Code is Copyright (c) 2021-2024 Skia4Delphi Project.          }
+{ Original Code is Copyright (c) 2021-2025 Skia4Delphi Project.          }
 {                                                                        }
 { Use of this source code is governed by the MIT license that can be     }
 { found in the LICENSE file.                                             }
@@ -23,7 +23,7 @@
   #include ".\RADStudio.Project.inc"
 
 type
-  TBeforeProjectBuildProc = procedure(const AProject: TRADStudioProject; const APlatform: TProjectPlatform; const AInfo: TRADStudioInfo);
+  TBeforeProjectBuildFunc = function(const AProject: TRADStudioProject; const APlatform: TProjectPlatform; const AInfo: TRADStudioInfo): Boolean;
   TTryExtractPreBuildObjectsProc = function(const AInfo: TRADStudioInfo): Boolean;
 
 /// <summary> Get platforms that are allowed to build in specific platform. Current, allowed only windows platforms to avoid problems with sdk. </summary>
@@ -31,7 +31,7 @@ function GetPlatformsAllowedToBuild(const ARADStudioInfo: TRADStudioInfo): TProj
 /// <summary> Get steps of TryBuildRADStudioPackages used in WizardForm.ProgressGauge.Position. Use this to set WizardForm.ProgressGauge.Max before call the TryBuildRADStudioPackages. </summary>
 function GetTryBuildRADStudioPackagesSteps(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects): Integer; forward;
 /// <summary> Try to build RAD Studio packages, but only in allowed platforms. </summary>
-function TryBuildRADStudioPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects; const ACustomParameter: string; const ABeforeProjectBuild: TBeforeProjectBuildProc; const ATryExtractPreBuildObjects: TTryExtractPreBuildObjectsProc): Boolean; forward;
+function TryBuildRADStudioPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects; const ACustomParameter: string; const ABeforeProjectBuild: TBeforeProjectBuildFunc; const ATryExtractPreBuildObjects: TTryExtractPreBuildObjectsProc): Boolean; forward;
 
 // implementation
 
@@ -45,7 +45,7 @@ const
 /// <summary> Get the MSBuild parameters. The custom parameter is optionally. </summary>
 function _GetMSBuildParams(const AConfig: TProjectConfig; const APlatform: TProjectPlatform; const ACustomParameter: string): string; forward;
 /// <summary> Try to get the comand to build a project. The custom parameter is optionally. </summary>
-function _TryBuildRADStudioProject(const ARADStudioInfo: TRADStudioInfo; const AConfig: TProjectConfig; const APlatform: TProjectPlatform; const AProject: TRADStudioProject; const ACustomParameter, ALogFileName: string; const ABeforeProjectBuild: TBeforeProjectBuildProc; out AResultCode: Integer): Boolean; forward;
+function _TryBuildRADStudioProject(const ARADStudioInfo: TRADStudioInfo; const AConfig: TProjectConfig; const APlatform: TProjectPlatform; const AProject: TRADStudioProject; const ACustomParameter, ALogFileName: string; const ABeforeProjectBuild: TBeforeProjectBuildFunc; out AResultCode: Integer): Boolean; forward;
 /// <summary> Try to get the comand to build a project. The custom parameter is optionally. </summary>
 function _TryGetBuildCommand(const ARADStudioInfo: TRADStudioInfo; const AConfig: TProjectConfig; const APlatform: TProjectPlatform; const AProjectFileName, ACustomParameter, ALogFileName: string; out ACommand: string): Boolean; forward;
 
@@ -93,7 +93,7 @@ begin
 end;
 
 function TryBuildRADStudioPackages(const ARADStudioInfos: TRADStudioInfos; const AGroupProjects: TRADStudioGroupProjects; const ACustomParameter: string;
-  const ABeforeProjectBuild: TBeforeProjectBuildProc; const ATryExtractPreBuildObjects: TTryExtractPreBuildObjectsProc): Boolean;
+  const ABeforeProjectBuild: TBeforeProjectBuildFunc; const ATryExtractPreBuildObjects: TTryExtractPreBuildObjectsProc): Boolean;
 var
   I, J, K: Integer;
   LInfo: TRADStudioInfo;
@@ -153,10 +153,11 @@ begin
 end;
 
 function _TryBuildRADStudioProject(const ARADStudioInfo: TRADStudioInfo; const AConfig: TProjectConfig; const APlatform: TProjectPlatform;
-  const AProject: TRADStudioProject; const ACustomParameter, ALogFileName: string; const ABeforeProjectBuild: TBeforeProjectBuildProc; out AResultCode: Integer): Boolean;
+  const AProject: TRADStudioProject; const ACustomParameter, ALogFileName: string; const ABeforeProjectBuild: TBeforeProjectBuildFunc; out AResultCode: Integer): Boolean;
 var
-  LProjectDir: string;
+  LProjectDir, LVersion: string;
   LCommand: string;
+  LBuild: Boolean;
 begin
   DeleteFile(ALogFileName);
   Result := _TryGetBuildCommand(ARADStudioInfo, AConfig, APlatform, AProject.FileName, ACustomParameter, ALogFileName, LCommand);
@@ -164,14 +165,27 @@ begin
   begin
     AResultCode := 0;
     LProjectDir := ExtractFilePath(AProject.FileName);
+    LBuild := True;
     if ABeforeProjectBuild <> nil then
-      ABeforeProjectBuild(AProject, APlatform, ARADStudioInfo);
-    Result := Exec(ExpandConstant('{cmd}'), '/C ' + LCommand, LProjectDir, SW_HIDE, ewWaitUntilTerminated, AResultCode) and (AResultCode = 0);
-  end;
-  if Result then
-    DeleteFile(ALogFileName)
-  else
-    Log(Format('RADStudio.Build._TryBuildRADStudioProject: Failed executing command "%s"', [LCommand]));
+      LBuild := ABeforeProjectBuild(AProject, APlatform, ARADStudioInfo);
+    if LBuild then  
+    begin
+      Result := Exec(ExpandConstant('{cmd}'), '/C ' + LCommand, LProjectDir, SW_HIDE, ewWaitUntilTerminated, AResultCode) and (AResultCode = 0)
+      if Result then
+        DeleteFile(ALogFileName)
+      else
+      begin
+        LVersion := ARADStudioInfo.Version.RegVersion;
+        //Check if we are building a 64Bit Design-Time Package: do not stop process, for backward compatibility with Delphi 12.2
+        if (APlatform = pfWin64) and AProject.IsDesignOnly and (LVersion = '23.0') then
+          Result := True
+        else  
+          Log(Format('RADStudio.Build._TryBuildRADStudioProject: Failed executing command "%s"', [LCommand]));
+      end;  
+    end
+    else
+      Log(Format('RADStudio.Build._TryBuildRADStudioProject: Skipped Build of Package "%s"', [AProject.FileName]));
+  end;          
 end;
 
 function _TryGetBuildCommand(const ARADStudioInfo: TRADStudioInfo; const AConfig: TProjectConfig; const APlatform: TProjectPlatform; const AProjectFileName, ACustomParameter, ALogFileName: string; out ACommand: string): Boolean;

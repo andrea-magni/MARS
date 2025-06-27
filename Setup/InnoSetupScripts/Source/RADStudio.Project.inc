@@ -6,9 +6,9 @@
 {                                                                        }
 { InnoSetup Tools Library for Delphi Components                          }
 {                                                                        }
-{ Copyright (c) 2024 Ethea S.r.l.                                        }
+{ Copyright (c) 2024-2025 Ethea S.r.l.                                   }
 {                                                                        }
-{ Original Code is Copyright (c) 2021-2024 Skia4Delphi Project.          }
+{ Original Code is Copyright (c) 2021-2025 Skia4Delphi Project.          }
 {                                                                        }
 { Use of this source code is governed by the MIT license that can be     }
 { found in the LICENSE file.                                             }

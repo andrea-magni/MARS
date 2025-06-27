@@ -6,9 +6,9 @@
 {                                                                        }
 { InnoSetup Tools Library for Delphi Components                          }
 {                                                                        }
-{ Copyright (c) 2024 Ethea S.r.l.                                        }
+{ Copyright (c) 2024-2025 Ethea S.r.l.                                   }
 {                                                                        }
-{ Original Code is Copyright (c) 2021-2024 Skia4Delphi Project.          }
+{ Original Code is Copyright (c) 2021-2025 Skia4Delphi Project.          }
 {                                                                        }
 { Use of this source code is governed by the MIT license that can be     }
 { found in the LICENSE file.                                             }
@@ -26,7 +26,7 @@
 {                    VCL Styles Plugin for Inno Setup                    }
 {               https://github.com/RRUZ/vcl-styles-plugins               }
 {                                                                        }
-{ Copyright (c) 2013-2024 Rodrigo Ruz V.                                 }
+{ Copyright (c) 2013-2025 Rodrigo Ruz V.                                 }
 {                                                                        }
 { Use of this source code is governed by a MPL 1.1 license that can be   }
 { found at http://www.mozilla.org/MPL/                                   }

@@ -26,7 +26,7 @@ package MARS.UniDAC;
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'MARS-Curiosity REST Library (UniDAC)'}
-{$LIBSUFFIX '260'}
+{$LIBSUFFIX AUTO}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
@@ -35,8 +35,8 @@ requires
   dbrtl,
   MARS.Core,
   MARS.ReadersAndWriters,
-  unidac260,
-  dac260;
+  unidac270,
+  dac270;
 
 contains
   MARS.Data.UniDAC.InjectionService in '..\..\Source\MARS.Data.UniDAC.InjectionService.pas',
