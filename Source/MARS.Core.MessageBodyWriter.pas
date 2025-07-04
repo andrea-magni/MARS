@@ -187,7 +187,8 @@ begin
     AProc(LEntry);
 end;
 
-procedure TMARSMessageBodyRegistry.FindWriter(const AActivation: IMARSActivation;
+procedure TMARSMessageBodyRegistry.FindWriter(
+  const AActivation: IMARSActivation;
   out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 begin
   FindWriter(AActivation, AActivation.Request.Accept, AWriter, AMediaType);
