@@ -1,0 +1,132 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="ErrorObjectsServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ErrorObjectsTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="ErrorObjectsServerApplication">
+        <MSBuild Projects="ErrorObjectsServerApplication.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsServerApplication:Clean">
+        <MSBuild Projects="ErrorObjectsServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsServerApplication:Make">
+        <MSBuild Projects="ErrorObjectsServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsServerFMXApplication">
+        <MSBuild Projects="ErrorObjectsServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsServerFMXApplication:Clean">
+        <MSBuild Projects="ErrorObjectsServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsServerFMXApplication:Make">
+        <MSBuild Projects="ErrorObjectsServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsServerService">
+        <MSBuild Projects="ErrorObjectsServerService.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsServerService:Clean">
+        <MSBuild Projects="ErrorObjectsServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsServerService:Make">
+        <MSBuild Projects="ErrorObjectsServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsServerConsoleApplication">
+        <MSBuild Projects="ErrorObjectsServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsServerConsoleApplication:Clean">
+        <MSBuild Projects="ErrorObjectsServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsServerConsoleApplication:Make">
+        <MSBuild Projects="ErrorObjectsServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsServerDaemon">
+        <MSBuild Projects="ErrorObjectsServerDaemon.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsServerDaemon:Clean">
+        <MSBuild Projects="ErrorObjectsServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsServerDaemon:Make">
+        <MSBuild Projects="ErrorObjectsServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsServerApacheModule">
+        <MSBuild Projects="ErrorObjectsServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsServerApacheModule:Clean">
+        <MSBuild Projects="ErrorObjectsServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsServerApacheModule:Make">
+        <MSBuild Projects="ErrorObjectsServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsServerISAPI">
+        <MSBuild Projects="ErrorObjectsServerISAPI.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsServerISAPI:Clean">
+        <MSBuild Projects="ErrorObjectsServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsServerISAPI:Make">
+        <MSBuild Projects="ErrorObjectsServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsClient">
+        <MSBuild Projects="ErrorObjectsClient.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsClient:Clean">
+        <MSBuild Projects="ErrorObjectsClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsClient:Make">
+        <MSBuild Projects="ErrorObjectsClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ErrorObjectsTests">
+        <MSBuild Projects="ErrorObjectsTests.dproj"/>
+    </Target>
+    <Target Name="ErrorObjectsTests:Clean">
+        <MSBuild Projects="ErrorObjectsTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ErrorObjectsTests:Make">
+        <MSBuild Projects="ErrorObjectsTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="ErrorObjectsServerApplication;ErrorObjectsServerFMXApplication;ErrorObjectsServerService;ErrorObjectsServerConsoleApplication;ErrorObjectsServerDaemon;ErrorObjectsServerApacheModule;ErrorObjectsServerISAPI;ErrorObjectsClient;ErrorObjectsTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="ErrorObjectsServerApplication:Clean;ErrorObjectsServerFMXApplication:Clean;ErrorObjectsServerService:Clean;ErrorObjectsServerConsoleApplication:Clean;ErrorObjectsServerDaemon:Clean;ErrorObjectsServerApacheModule:Clean;ErrorObjectsServerISAPI:Clean;ErrorObjectsClient:Clean;ErrorObjectsTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="ErrorObjectsServerApplication:Make;ErrorObjectsServerFMXApplication:Make;ErrorObjectsServerService:Make;ErrorObjectsServerConsoleApplication:Make;ErrorObjectsServerDaemon:Make;ErrorObjectsServerApacheModule:Make;ErrorObjectsServerISAPI:Make;ErrorObjectsClient:Make;ErrorObjectsTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
