@@ -9,7 +9,8 @@ interface
 
 uses
   Classes, SysUtils
-  ;
+, MARS.Core.JSON
+;
 
 {$IFNDEF Delphi10Rio_UP}
 const pidAllPlatforms = $FFFF;
@@ -32,6 +33,10 @@ type
     property StatusCode: Integer read FStatusCode;
     property Content: TMemoryStream read FContent;
     property ContentType: string read FContentType;
+    function ContentAsString: string;
+    function ContentAsJSON: TJSONValue;
+    function ContentAs<T>: T;
+    function ContentAsArrayOf<T>: TArray<T>;
   end;
 
   TMARSClientProc = TProc;
@@ -46,6 +51,10 @@ type
 
 
 implementation
+
+uses
+  MARS.Core.Utils
+;
 
 class function TMARSComponentHelper.IsDesigning(AComponent: TComponent): Boolean;
 begin
@@ -74,6 +83,42 @@ end;
 
 
 { EMARSClientHttpException }
+
+function EMARSClientHttpException.ContentAs<T>: T;
+begin
+  var LJSONValue := ContentAsJSON;
+  try
+    if not (LJSONValue is TJSONObject) then
+      raise EMARSClientException.Create('Content is not a JSON object');
+
+    Result := TJSONObject(LJSONValue).ToRecord<T>;
+  finally
+    LJSONValue.Free;
+  end;
+end;
+
+function EMARSClientHttpException.ContentAsArrayOf<T>: TArray<T>;
+begin
+  var LJSONValue := ContentAsJSON;
+  try
+    if not (LJSONValue is TJSONArray) then
+      raise EMARSClientException.Create('Content is not a JSON array');
+
+    Result := TJSONArray(LJSONValue).ToArrayOfRecord<T>;
+  finally
+    LJSONValue.Free;
+  end;
+end;
+
+function EMARSClientHttpException.ContentAsJSON: TJSONValue;
+begin
+  Result := TJSONValue.ParseJSONValue(ContentAsString);
+end;
+
+function EMARSClientHttpException.ContentAsString: string;
+begin
+  Result := StreamToString(Content);
+end;
 
 constructor EMARSClientHttpException.Create(const AStatusText: string;
   const AStatusCode: Integer; const AContent: TStream; const AContentType: string);
