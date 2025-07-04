@@ -48,6 +48,7 @@ type
     [Test] procedure SkipNullValues;
     [Test] procedure SkipEmptyObjects;
     [Test] procedure SkipEmptyArrays;
+    [Test] procedure CustomDateTimeValues;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -302,6 +303,22 @@ begin
   Assert.IsNotNull(LJSONObj);
   Assert.AreEqual(LRecord.Value, LJSONObj.ReadIntegerValue('Value'));
   Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Name'));
+end;
+
+procedure TMARSRecordToJSONTest.CustomDateTimeValues;
+var
+  LRecord: TRecordWithCustomDate;
+  LJSONObj: TJSONObject;
+  LJSONString: string;
+begin
+  LRecord := Default(TRecordWithCustomDate);
+
+  LRecord.Date := EncodeDateTime(1982, 05, 24, 13, 30, 12, 345);
+
+  LJSONObj := TJSONObject.RecordToJSON<TRecordWithCustomDate>(LRecord);
+
+  Assert.IsNotNull(LJSONObj);
+  Assert.AreEqual('1982-05-24 13:30.12', LJSONObj.ReadStringValue('Date'));
 end;
 
 procedure TMARSRecordToJSONTest.JSONNameAttribute;

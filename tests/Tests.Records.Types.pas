@@ -4,6 +4,7 @@ interface
 
 uses
   Classes, SysUtils, Generics.Collections
+, System.Rtti
 , MARS.Core.JSON
 ;
 
@@ -76,6 +77,13 @@ type
     constructor Create(const AName: string; const AInstance: TObject);
   end;
 
+  TRecordWithCustomDate = record
+  public
+    Date: TDateTime;
+
+    function ToJSONFilter(AMember: TRttiMember; AJSON: TJSONObject): Boolean;
+  end;
+
 
 implementation
 
@@ -133,6 +141,35 @@ constructor TRecordWithObject.Create(const AName: string;
 begin
   Name := AName;
   Instance := AInstance;
+end;
+
+
+{ TRecordWithCustomDate }
+
+function TRecordWithCustomDate.ToJSONFilter(AMember: TRttiMember;
+  AJSON: TJSONObject): Boolean;
+const
+  CUSTOM_DATETIME_FORMAT = 'yyyy-mm-dd hh:nn.ss';
+begin
+  if (AMember is TRttiDataMember) then
+  begin
+    var LDataMember := AMember as TRttiDataMember;
+    if (LDataMember.DataType.Name = 'TDateTime') or (LDataMember.DataType.Name = 'TDate') then
+    begin
+      var LDateValue := LDataMember.GetValue(@Self).AsType<TDateTime>;
+
+      var LJSONValue := '';
+      if LDateValue <> 0 then
+        LJSONValue := FormatDateTime(CUSTOM_DATETIME_FORMAT, LDateValue);
+
+      var LJSONName := AMember.Name;
+      var LJSONNameAttribute := AMember.GetAttribute<JSONNameAttribute>;
+      if Assigned(LJSONNameAttribute) then
+        LJSONName := LJSONNameAttribute.Name;
+
+      AJSON.WriteStringValue(AMember.Name, LJSONValue);
+    end;
+  end;
 end;
 
 end.
