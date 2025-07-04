@@ -95,7 +95,8 @@ type
     procedure SetCustomHeaders; virtual;
     procedure WriteToResponse(const AValue: TValue;
       const AValueContentType: string; const AOriginalContentType: string;
-      const ARewriteAccept: Boolean = False); virtual;
+      const ARewriteAccept: Boolean = False;
+      const AReturnType: TRttiType = nil); virtual;
 
     function DoBeforeInvoke: Boolean;
     procedure DoAfterInvoke;
@@ -459,10 +460,12 @@ end;
 
 procedure TMARSActivation.WriteToResponse(const AValue: TValue;
   const AValueContentType: string; const AOriginalContentType: string;
-  const ARewriteAccept: Boolean);
+  const ARewriteAccept: Boolean;
+  const AReturnType: TRttiType);
 var
   LStream: TBytesStream;
   LAccept: string;
+  LReturnType: TRttiType;
 begin
   // 1 - TMARSResponse (override)
   if (not AValue.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
@@ -475,7 +478,11 @@ begin
     if ARewriteAccept then
       LAccept := string.Join(';', [AValueContentType, AOriginalContentType]);
 
-    TMARSMessageBodyRegistry.Instance.FindWriter(Self, LAccept, FWriter, FWriterMediaType);
+    LReturnType := AReturnType;
+    if not Assigned(LReturnType) then
+      LReturnType := Self.FMethodReturnType;
+
+    TMARSMessageBodyRegistry.Instance.FindWriter(Self, LAccept, LReturnType, FWriter, FWriterMediaType);
     try
       if Assigned(FWriter) then
       begin
@@ -619,33 +626,35 @@ procedure TMARSActivation.Invoke;
     LHttpException: EMARSHttpException;
     LWithResponseException: EMARSWithResponseException;
     LResponseContent: TValue;
+    LResponseType: TRttiType;
   begin
     if AException is EMARSWithResponseException then
     begin
       LWithResponseException := EMARSWithResponseException(AException);
 
+      Response.StatusCode := LWithResponseException.Status;
+      Response.ContentType := LWithResponseException.ContentType;
+      Response.ReasonString := LWithResponseException.ReasonString;
+
       if LWithResponseException.UseMBW then
         try
           LResponseContent := LWithResponseException.ResponseContent;
+          LResponseType := FRttiContext.GetType(LResponseContent.TypeInfo);
 
           FSerializationTime := TStopwatch.StartNew;
           WriteToResponse(LResponseContent
           , LWithResponseException.ContentType, LWithResponseException.ContentType
           , True
+          , LResponseType
           );
-          Response.ReasonString := LWithResponseException.ReasonString;
           FSerializationTime.Stop;
         finally
           if not LWithResponseException.IsReference then
             AddToContext(LResponseContent);
         end
       else
-      begin
-        Response.StatusCode := LWithResponseException.Status;
         Response.Content := LWithResponseException.ResponseContent.ToString;
-        Response.ContentType := LWithResponseException.ContentType;
-        Response.ReasonString := LWithResponseException.ReasonString;
-      end;
+
     end
     else if AException is EMARSHttpException then
     begin

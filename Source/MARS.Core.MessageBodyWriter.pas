@@ -63,7 +63,7 @@ type
     procedure FindWriter(const AActivation: IMARSActivation;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType); overload;
     procedure FindWriter(const AActivation: IMARSActivation;
-      const AAccept: string;
+      const AAccept: string; const AReturnType: TRttiType;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType); overload;
 
 
@@ -191,11 +191,12 @@ procedure TMARSMessageBodyRegistry.FindWriter(
   const AActivation: IMARSActivation;
   out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 begin
-  FindWriter(AActivation, AActivation.Request.Accept, AWriter, AMediaType);
+  FindWriter(AActivation, AActivation.Request.Accept, AActivation.MethodReturnType, AWriter, AMediaType);
 end;
 
 procedure TMARSMessageBodyRegistry.FindWriter(
-  const AActivation: IMARSActivation; const AAccept: string;
+  const AActivation: IMARSActivation;
+  const AAccept: string; const AReturnType: TRttiType;
   out AWriter: IMessageBodyWriter; out AMediaType: TMediaType);
 var
   LWriterEntry: TEntryInfo;
@@ -212,11 +213,9 @@ var
   LMediaType: string;
   LCandidateMediaType: string;
   LCandidateQualityFactor: Double;
-  LMethodReturnType: TRttiType;
   LMethodAttributes: TArray<TCustomAttribute>;
   LAffinity: Integer;
 begin
-  LMethodReturnType := AActivation.MethodReturnType;
   LMethodAttributes := AActivation.MethodAttributes;
 
   AMediaType := nil;
@@ -226,8 +225,8 @@ begin
   LCandidateMediaType := '';
   LCandidateQualityFactor := -1;
 
-  if not Assigned(LMethodReturnType) then
-    Exit; // no serialization (it's a procedure!)
+  if not Assigned(AReturnType) then
+    Exit; // no serialization
 
   // consider client's Accept
   LAcceptParser := TAcceptParser.Create(AAccept);
@@ -268,8 +267,8 @@ begin
               LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LWriterMediaTypes);
             for LMediaType in LMediaTypes do
             begin
-              LAffinity := LWriterEntry.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType);
-              if LWriterEntry.IsWritable(LMethodReturnType, LMethodAttributes, LMediaType) then
+              LAffinity := LWriterEntry.GetAffinity(AReturnType, LMethodAttributes, LMediaType);
+              if LWriterEntry.IsWritable(AReturnType, LMethodAttributes, LMediaType) then
               begin
                 if not LFound
                    or (LCandidateAffinity < LAffinity)
@@ -280,7 +279,7 @@ begin
                 then
                 begin
                   LCandidate := LWriterEntry;
-                  LCandidateAffinity := LCandidate.GetAffinity(LMethodReturnType, LMethodAttributes, LMediaType);
+                  LCandidateAffinity := LCandidate.GetAffinity(AReturnType, LMethodAttributes, LMediaType);
                   LCandidateMediaType := LMediaType;
                   LCandidateQualityFactor := LAcceptMediaTypes.GetQualityFactor(LMediaType);
                   LFound := True;
