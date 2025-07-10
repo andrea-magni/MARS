@@ -16,6 +16,8 @@ interface
     const JWT_COOKIEDOMAIN_PARAM = 'JWT.CookieDomain';
     const JWT_COOKIEPATH_PARAM = 'JWT.CookiePath';
     const JWT_DURATION_PARAM = 'JWT.Duration';
+    const JWT_DURATION_IN_SECONDS_PARAM = 'JWT.Duration.InSeconds';
+    const JWT_DURATION_IN_MINUTES_PARAM = 'JWT.Duration.InMinutes';
     const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
     const JWT_COOKIESECURE_PARAM = 'JWT.CookieSecure';
     const JWT_COOKIESECURE_PARAM_DEFAULT = false;

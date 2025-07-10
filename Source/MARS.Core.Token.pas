@@ -55,6 +55,7 @@ type
     function GetTokenFromCookie(const ARequest: IMARSRequest): string; virtual;
     function GetToken(const ARequest: IMARSRequest): string; virtual;
     function GetIsExpired: Boolean; virtual;
+    function GetDurationFromParameters(const AParameters: TMARSParameters): TDateTime; virtual;
 
     function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string; virtual;
     function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean; virtual;
@@ -103,17 +104,16 @@ type
 implementation
 
 uses
-  DateUtils
+  System.DateUtils, System.TimeSpan
 
   {$ifndef DelphiXE7_UP}
   , IdCoderMIME, IdUri
   {$else}
   , System.NetEncoding
   {$endif}
-  , MARS.Core.Utils
-  , MARS.Utils.Parameters.JSON
-  , MARS.Utils.JWT
-  ;
+
+  , MARS.Core.Utils, MARS.Utils.Parameters.JSON, MARS.Utils.JWT
+;
 
 { TMARSToken }
 
@@ -123,7 +123,7 @@ begin
     AToken
   , AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
   , AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString
-  , AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended
+  , GetDurationFromParameters(AParameters)
   );
 end;
 
@@ -199,6 +199,36 @@ destructor TMARSToken.Destroy;
 begin
   FClaims.Free;
   inherited;
+end;
+
+function TMARSToken.GetDurationFromParameters(
+  const AParameters: TMARSParameters): TDateTime;
+var
+  LInSeconds: Int64;
+  LInMinutes: Int64;
+  LDurationSpan: TTimeSpan;
+begin
+  Result := AParameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsExtended;
+
+  if AParameters.ContainsParam(JWT_DURATION_IN_SECONDS_PARAM) then
+  begin
+    LInSeconds := AParameters.ByNameText(JWT_DURATION_IN_SECONDS_PARAM, 0).AsInt64;
+    if LInSeconds <> 0 then
+    begin
+      LDurationSpan := TTimeSpan.FromSeconds(LInSeconds);
+      Result := LDurationSpan.Days + EncodeTime(LDurationSpan.Hours, LDurationSpan.Minutes, LDurationSpan.Seconds, 0);
+    end;
+  end
+  else if AParameters.ContainsParam(JWT_DURATION_IN_MINUTES_PARAM) then
+  begin
+    LInMinutes := AParameters.ByNameText(JWT_DURATION_IN_MINUTES_PARAM, 0).AsInt64;
+    if LInMinutes <> 0 then
+    begin
+      LDurationSpan := TTimeSpan.FromMinutes(LInMinutes);
+      Result := LDurationSpan.Days + EncodeTime(LDurationSpan.Hours, LDurationSpan.Minutes, LDurationSpan.Seconds, 0);
+    end;
+  end;
+
 end;
 
 function TMARSToken.GetDurationMins: Int64;
