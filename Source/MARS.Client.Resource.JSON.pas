@@ -96,6 +96,7 @@ type
     function _GetSync: TMARSClientResourceJSONSync;
   protected
     procedure AfterGET(const AContent: TStream); override;
+    procedure AfterPATCH(const AContent: TStream); override;
     procedure AfterPOST(const AContent: TStream); override;
     procedure AfterPUT(const AContent: TStream); override;
     procedure AfterDELETE(const AContent: TStream); override;
@@ -226,6 +227,12 @@ begin
 end;
 
 procedure TMARSClientResourceJSON.AfterGET(const AContent: TStream);
+begin
+  inherited;
+  RefreshResponse(AContent);
+end;
+
+procedure TMARSClientResourceJSON.AfterPATCH(const AContent: TStream);
 begin
   inherited;
   RefreshResponse(AContent);
