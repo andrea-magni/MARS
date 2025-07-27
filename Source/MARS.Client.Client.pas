@@ -106,6 +106,8 @@ type
       const AAuthToken: string; const AAccept: string; const AContentType: string); virtual;
     procedure Get(const AURL: string; AResponseContent: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); virtual;
+    procedure Patch(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
     procedure Post(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
     procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
@@ -668,6 +670,14 @@ end;
 procedure TMARSCustomClient.Post(const AURL: string;
   const AFormData: TArray<TFormParam>; const AResponse: TStream;
   const AAuthToken, AAccept: string; const AContentType: string);
+begin
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+  FireBeforeExecute(AURL, Self);
+end;
+
+procedure TMARSCustomClient.Patch(const AURL: string; AContent,
+  AResponse: TStream; const AAuthToken, AAccept, AContentType: string);
 begin
   FAuthToken := AAuthToken;
   BeforeExecute;
