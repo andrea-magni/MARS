@@ -20,7 +20,10 @@ uses
   Tests.Records.Types in 'Tests.Records.Types.pas',
   Tests.FireDAC in 'Tests.FireDAC.pas',
   Tests.JWT in 'Tests.JWT.pas',
-  Tests.Data in 'Tests.Data.pas';
+  Tests.Data in 'Tests.Data.pas',
+  Tests.Client in 'Tests.Client.pas',
+  Tests.Client.Resources in 'Tests.Client.Resources.pas',
+  Tests.Client.TestServer in 'Tests.Client.TestServer.pas';
 
 {$IFDEF TESTINSIGHT}
 begin
