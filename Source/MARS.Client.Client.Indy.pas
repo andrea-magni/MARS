@@ -94,9 +94,12 @@ uses
 { TMARSIndyClient }
 
 procedure TMARSIndyClient.ApplyCustomHeaders(const AHeaders: TStrings);
+var
+  LIndex: Integer;
 begin
   inherited;
-  FHttpClient.Request.CustomHeaders.AddStrings(AHeaders);
+  for LIndex := 0 to AHeaders.Count-1 do
+    FHttpClient.Request.CustomHeaders.Values[AHeaders.Names[LIndex]] := AHeaders.ValueFromIndex[LIndex];
 end;
 
 procedure TMARSIndyClient.ApplyProxyConfig;
