@@ -151,6 +151,7 @@ function TRecordWithCustomDate.ToJSONFilter(AMember: TRttiMember;
 const
   CUSTOM_DATETIME_FORMAT = 'yyyy-mm-dd hh:nn.ss';
 begin
+  Result := True;
   if (AMember is TRttiDataMember) then
   begin
     var LDataMember := AMember as TRttiDataMember;

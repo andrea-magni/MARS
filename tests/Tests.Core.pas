@@ -309,7 +309,6 @@ procedure TMARSRecordToJSONTest.CustomDateTimeValues;
 var
   LRecord: TRecordWithCustomDate;
   LJSONObj: TJSONObject;
-  LJSONString: string;
 begin
   LRecord := Default(TRecordWithCustomDate);
 

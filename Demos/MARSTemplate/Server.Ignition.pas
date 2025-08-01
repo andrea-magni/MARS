@@ -13,7 +13,7 @@ interface
 uses
   System.Classes, System.SysUtils, System.RTTI, System.StrUtils
 {$IFDEF MARS_ZLIB}, System.ZLib {$ENDIF}
-, MARS.Core.Engine, MARS.Core.Engine.Interfaces
+, MARS.Core.Engine.Interfaces
 ;
 
 type
@@ -32,7 +32,8 @@ type
 implementation
 
 uses
-  MARS.Core.Activation, MARS.Core.Activation.Interfaces
+  MARS.Core.Engine
+, MARS.Core.Activation, MARS.Core.Activation.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Utils, MARS.Utils.Parameters.IniFile
 , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
