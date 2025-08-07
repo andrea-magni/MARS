@@ -129,7 +129,8 @@ type
     function Add(const AElement: TDateTime): TJSONArray; overload;
     function Add(const AElement: TDateTime; const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
 
-    function ToArrayOfRecord<T{: record}>(): TArray<T>;
+    function ToArrayOfRecord<T{: record}>(const AOptions: TMARSJSONSerializationOptions): TArray<T>; overload;
+    function ToArrayOfRecord<T{: record}>(): TArray<T>; overload;
     procedure FromArrayOfRecord<T{: record}>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil);
@@ -184,9 +185,16 @@ type
     function ReadValue(const AName: string; const ADefault: TValue;
       const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean = True): TValue; overload;
     function ReadValue(const AName: string; const ADesiredType: TRttiType;
-      const ANameCaseSensitive: Boolean; var AValue: TValue): Boolean; overload;
-    function ReadValue(const AName: string; const ADefault: TValue): TValue; overload;
+      const ANameCaseSensitive: Boolean; var AValue: TValue;
+      const AOptions: TMARSJSONSerializationOptions): Boolean; overload;
+    function ReadValue(const AName: string; const ADefault: TValue;
+      const ADesiredType: TRttiType; const AOptions: TMARSJSONSerializationOptions;
+      const ANameCaseSensitive: Boolean = True): TValue; overload;
+    function ReadValue(const AName: string; const ADefault: TValue;
+      const AOptions: TMARSJSONSerializationOptions): TValue; overload;
     function ReadArrayValue(const AName: string): TJSONArray; overload; inline;
+    function ReadArrayValue<T{: record}>(const AName: string;
+      const AOptions: TMARSJSONSerializationOptions): TArray<T>; overload; inline;
     function ReadArrayValue<T{: record}>(const AName: string): TArray<T>; overload; inline;
 
     function DeletePair(const AName: string): Boolean;
@@ -211,14 +219,20 @@ type
     procedure FromObject(const AObject: TObject; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromObject(const AObject: TObject; const AFilterProc: TToJSONFilterProc; const AOptions: TMARSJSONSerializationOptions); overload;
     procedure FromObject<T: class>(const AObject: T; const AFilterProc: TToJSONFilterProc = nil); overload;
-    procedure ToObject<T: class>(const AInstance: TObject; const AFilterProc: TToObjectFilterProc = nil); overload;
-    procedure ToObject(const AInstance: TObject; const AObjectType: TRttiType; const AFilterProc: TToObjectFilterProc = nil); overload;
+    procedure ToObject<T: class>(const AInstance: TObject;
+      const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToObjectFilterProc = nil); overload;
+    procedure ToObject(const AInstance: TObject; const AObjectType: TRttiType;
+      const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToObjectFilterProc = nil); overload;
 
     procedure FromRecord<T{: record}>(ARecord: T;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromRecord(const ARecord: TValue;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil); overload;
+    function ToRecord<T{: record}>(const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToRecordFilterProc = nil): T; overload;
     function ToRecord<T{: record}>(const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    function ToRecord(const ARecordType: TRttiType; const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
     function ToRecord(const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
 {$ifndef DelphiXE6_UP}
@@ -262,12 +276,17 @@ type
 
     class function JSONToRecord<T{: record}>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    class function JSONToRecord<T{: record}>(const AJSON: TJSONObject;
+      const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToRecordFilterProc = nil): T; overload;
     class function JSONToRecord(const ARecordType: TRttiType; const AJSON: TJSONObject;
+      const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
     class function TValueToJSONValue(const AValue: TValue; const AOptions: TMARSJSONSerializationOptions): TJSONValue; overload;
     class function TValueToJSONValue(const AValue: TValue): TJSONValue; overload;
-    class procedure TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType; var ATValue: TValue);
+    class procedure TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType; var ATValue: TValue; const AOptions: TMARSJSONSerializationOptions); overload;
+    class procedure TJSONValueToTValue(const AValue: TJSONValue; const ADesiredType: TRttiType; var ATValue: TValue); overload;
   end;
 
 
@@ -342,11 +361,11 @@ begin
     Result := BooleanToTJSON(AValue.AsType<Boolean>)
 
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
-    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>) )
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>, AOptions) )
   else if AValue.TypeInfo = TypeInfo(TDate) then
-    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDate>) )
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDate>, AOptions) )
   else if AValue.TypeInfo = TypeInfo(TTime) then
-    Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>) )
+    Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>, AOptions) )
 
   else if (AValue.Kind in [tkInt64]) then
     Result := TJSONNumber.Create( AValue.AsType<Int64> )
@@ -520,13 +539,19 @@ end;
 
 { TJSONArrayHelper }
 
-function TJSONArrayHelper.ToArrayOfRecord<T>: TArray<T>;
+function TJSONArrayHelper.ToArrayOfRecord<T>(
+  const AOptions: TMARSJSONSerializationOptions): TArray<T>;
 var
   LElement: TJSONValue;
 begin
   Result := [];
   for LElement in Self do
-    Result := Result + [(LElement as TJSONObject).ToRecord<T>()]
+    Result := Result + [(LElement as TJSONObject).ToRecord<T>(AOptions)];
+end;
+
+function TJSONArrayHelper.ToArrayOfRecord<T>: TArray<T>;
+begin
+  Result := ToArrayOfRecord<T>(DefaultMARSJSONSerializationOptions);
 end;
 
 function TJSONArrayHelper.ToArrayOfTValue: TArray<TValue>;
@@ -734,7 +759,7 @@ begin
     {$IFDEF MARS_JSON_LEGACY}
     TJson.JsonToObject(Result, AJSON, AOptions);
     {$ELSE}
-    AJSON.ToObject(Result, LType);
+    AJSON.ToObject(Result, LType, AOptions);
     {$ENDIF}
   except
     Result.Free;
@@ -764,7 +789,7 @@ begin
 
   Result := LConstructor.Invoke((LType as TRttiInstanceType).MetaclassType, []).AsObject as T;
   try
-    AJSON.ToObject(Result, LType);
+    AJSON.ToObject(Result, LType, AOptions);
   except
     Result.Free;
     raise;
@@ -773,17 +798,25 @@ begin
 end;
 
 class function TJSONObjectHelper.JSONToRecord(const ARecordType: TRttiType;
-  const AJSON: TJSONObject; const AFilterProc: TToRecordFilterProc): TValue;
+  const AJSON: TJSONObject; const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToRecordFilterProc): TValue;
 begin
   Assert(Assigned(AJSON));
-  Result := AJSON.ToRecord(ARecordType, AFilterProc);
+  Result := AJSON.ToRecord(ARecordType, AOptions, AFilterProc);
 end;
 
 class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
-  const AFilterProc: TToRecordFilterProc = nil): T;
+  const AFilterProc: TToRecordFilterProc): T;
 begin
   Assert(Assigned(AJSON));
-  Result := AJSON.ToRecord<T>(AFilterProc);
+  Result := AJSON.ToRecord<T>(DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TJSONObjectHelper.JSONToRecord<T>(const AJSON: TJSONObject;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToRecordFilterProc = nil): T;
+begin
+  Assert(Assigned(AJSON));
+  Result := AJSON.ToRecord<T>(AOptions, AFilterProc);
 end;
 
 class function TJSONObjectHelper.ObjectListToJSON(const AObjectList: TObject): TJSONArray;
@@ -837,12 +870,18 @@ begin
 end;
 
 function TJSONObjectHelper.ReadArrayValue<T>(const AName: string): TArray<T>;
+begin
+  Result := ReadArrayValue<T>(AName, DefaultMARSJSONSerializationOptions);
+end;
+
+function TJSONObjectHelper.ReadArrayValue<T>(const AName: string;
+  const AOptions: TMARSJSONSerializationOptions): TArray<T>;
 var
   LArray: TJSONArray;
 begin
   LArray := ReadArrayValue(AName);
   if Assigned(LArray) then
-    Result := LArray.ToArrayOfRecord<T>
+    Result := LArray.ToArrayOfRecord<T>(AOptions)
   else
     Result := [];
 end;
@@ -1152,7 +1191,7 @@ end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
   const ADesiredType: TRttiType; const ANameCaseSensitive: Boolean;
-  var AValue: TValue): Boolean;
+  var AValue: TValue; const AOptions: TMARSJSONSerializationOptions): Boolean;
 var
   LJSONValue: TJSONValue;
   LName: string;
@@ -1163,15 +1202,15 @@ begin
 
   Result := TryGetValue<TJSONValue>(LName, LJSONValue);
   if Result then
-    TJSONValueToTValue(LJSONValue, ADesiredType, AValue);
+    TJSONValueToTValue(LJSONValue, ADesiredType, AValue, AOptions);
 end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
   const ADefault: TValue; const ADesiredType: TRttiType;
-  const ANameCaseSensitive: Boolean): TValue;
+  const AOptions: TMARSJSONSerializationOptions; const ANameCaseSensitive: Boolean): TValue;
 begin
   Result := ADefault;
-  ReadValue(AName, ADesiredType, ANameCaseSensitive, Result);
+  ReadValue(AName, ADesiredType, ANameCaseSensitive, Result, AOptions);
 end;
 
 class function TJSONObjectHelper.RecordToJSON(const ARecord: TValue;
@@ -1214,6 +1253,13 @@ end;
 
 class procedure TJSONObjectHelper.TJSONValueToTValue(
   const AValue: TJSONValue; const ADesiredType: TRttiType; var ATValue: TValue);
+begin
+  TJSONValueToTValue(AValue, ADesiredType, ATValue, DefaultMARSJSONSerializationOptions);
+end;
+
+class procedure TJSONObjectHelper.TJSONValueToTValue(const AValue: TJSONValue;
+  const ADesiredType: TRttiType; var ATValue: TValue;
+  const AOptions: TMARSJSONSerializationOptions);
 var
   LArray: TValue;
   LElementType: TRttiType;
@@ -1259,7 +1305,7 @@ begin
       or (ADesiredType.Handle = TypeInfo(TDate))
       or (ADesiredType.Handle = TypeInfo(TTime))
     then
-      ATValue := JSONToDate(TJSONString(AValue).Value)
+      ATValue := JSONToDate(TJSONString(AValue).Value, AOptions)
     else
     begin // strings
       if (ADesiredType.Handle = TypeInfo(TValue)) or (ADesiredType.Handle = TypeInfo(Variant)) then
@@ -1273,12 +1319,12 @@ begin
   else if AValue is TJSONObject then
   begin
     if ADesiredType.IsRecord then
-      ATValue := TJSONObject(AValue).ToRecord(ADesiredType)
+      ATValue := TJSONObject(AValue).ToRecord(ADesiredType, AOptions)
     else if ADesiredType.IsInstance then
     begin
       LInstance := ATValue.AsObject;
       if Assigned(LInstance) then
-        TJSONObject(AValue).ToObject(LInstance, ADesiredType)
+        TJSONObject(AValue).ToObject(LInstance, ADesiredType, AOptions)
       else
         ATValue := TJSONObject.JSONToObject(ADesiredType.AsInstance.MetaclassType, TJSONObject(AValue));
     end
@@ -1299,7 +1345,7 @@ begin
       begin
         LJSONElement := LJSONArray.Items[LIndex];
         LElement := nil; // be sure we build a new instance
-        TJSONObject.TJSONValueToTValue(LJSONElement, LElementType, LElement);
+        TJSONObject.TJSONValueToTValue(LJSONElement, LElementType, LElement, AOptions);
         LArray.SetArrayElement(LIndex, LElement);
       end;
       ATValue := LArray;
@@ -1310,7 +1356,7 @@ begin
 end;
 
 procedure TJSONObjectHelper.ToObject(const AInstance: TObject; const AObjectType: TRttiType;
-  const AFilterProc: TToObjectFilterProc);
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToObjectFilterProc);
 var
   LMember: TRttiMember;
   LValue: TValue;
@@ -1372,7 +1418,7 @@ begin
       if LJSONName <> '' then
       begin
         LValue := LMember.GetValue(LObjectInstance);
-        if ReadValue(LJSONName, LMember.GetRttiType, True, LValue) then
+        if ReadValue(LJSONName, LMember.GetRttiType, True, LValue, AOptions) then
         begin
           LMember.SetValue(LObjectInstance, LValue);
           LAssignedValues := LAssignedValues + [LMember.Name];
@@ -1387,13 +1433,13 @@ begin
 end;
 
 procedure TJSONObjectHelper.ToObject<T>(const AInstance: TObject;
-  const AFilterProc: TToObjectFilterProc);
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToObjectFilterProc);
 begin
-  ToObject(AInstance, TRttiContext.Create.GetType(T), AFilterProc);
+  ToObject(AInstance, TRttiContext.Create.GetType(T), AOptions, AFilterProc);
 end;
 
 function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType;
-  const AFilterProc: TToRecordFilterProc = nil): TValue;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToRecordFilterProc = nil): TValue;
 var
   LMember: TRttiMember;
   LValue: TValue;
@@ -1455,7 +1501,7 @@ begin
       );
       if LJSONName <> '' then
       begin
-        if ReadValue(LJSONName, LMember.GetRttiType, True, LValue) then
+        if ReadValue(LJSONName, LMember.GetRttiType, True, LValue, AOptions) then
         begin
           try
           LMember.SetValue(LRecordInstance, LValue);
@@ -1478,9 +1524,22 @@ begin
     LAssignedValuesField.SetValue(LRecordInstance, TValue.From<TArray<string>>(LAssignedValues));
 end;
 
-function TJSONObjectHelper.ToRecord<T>(const AFilterProc: TToRecordFilterProc = nil): T;
+function TJSONObjectHelper.ToRecord<T>(
+  const AFilterProc: TToRecordFilterProc): T;
 begin
-  Result := ToRecord(TRttiContext.Create.GetType(TypeInfo(T)), AFilterProc).AsType<T>;
+  Result := ToRecord<T>(DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+function TJSONObjectHelper.ToRecord(const ARecordType: TRttiType;
+  const AFilterProc: TToRecordFilterProc): TValue;
+begin
+  Result := ToRecord(ARecordType, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+function TJSONObjectHelper.ToRecord<T>(const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToRecordFilterProc = nil): T;
+begin
+  Result := ToRecord(TRttiContext.Create.GetType(TypeInfo(T)), AOptions, AFilterProc).AsType<T>;
 end;
 
 class function TJSONObjectHelper.TValueToJSONValue(
@@ -1652,7 +1711,7 @@ begin
 end;
 
 function TJSONObjectHelper.ReadValue(const AName: string;
-  const ADefault: TValue): TValue;
+  const ADefault: TValue; const AOptions: TMARSJSONSerializationOptions): TValue;
 var
   LJSONValue: TJSONValue;
   LDesiredType: TRttiType;
@@ -1680,9 +1739,17 @@ begin
     else if LJSONValue is TJSONNull then
       Exit; // Result = Empty
 
-    TJSONValueToTValue(LJSONValue, LDesiredType, Result);
+    TJSONValueToTValue(LJSONValue, LDesiredType, Result, AOptions);
   end;
 
+end;
+
+function TJSONObjectHelper.ReadValue(const AName: string;
+  const ADefault: TValue; const ADesiredType: TRttiType;
+  const ANameCaseSensitive: Boolean): TValue;
+begin
+  Result := ADefault;
+  ReadValue(AName, ADesiredType, ANameCaseSensitive, Result, DefaultMARSJSONSerializationOptions);
 end;
 
 { TMARSJSONSerializationOptions }
