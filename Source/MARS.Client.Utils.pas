@@ -5,6 +5,8 @@
 *)
 unit MARS.Client.Utils;
 
+{$I MARS.inc}
+
 interface
 
 uses
@@ -112,7 +114,11 @@ end;
 
 function EMARSClientHttpException.ContentAsJSON: TJSONValue;
 begin
+  {$IFNDEF Delphi11Alexandria_UP}
+  Result := TJSONObject.ParseJSONValue(ContentAsString);
+  {$ELSE}
   Result := TJSONValue.ParseJSONValue(ContentAsString);
+  {$ENDIF}
 end;
 
 function EMARSClientHttpException.ContentAsString: string;

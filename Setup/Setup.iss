@@ -15,14 +15,14 @@
 {                          Custom Parameters                             }
 {                                                                        }
 { /RADStudioVersions=                                                    }
-{   Values allowed: 10.0 to 24.0 separed by comma or all keyword         }
+{   Values allowed: 10.0 to 37.0 separed by comma or all keyword         }
 {   Default: (latest version found in computer)                          }
 {   Description: The version used is the product version in resgistry,   }
-{     i.e, the RAD Studio 11 Alexandria is "22.0", the RAD Studio 12     }
-{     Athens is "23.0", etc. This is used to set the RAD Studio          }
+{     i.e, the RAD Studio 12 Athens is "23.0", the RAD Studio 13         }
+{     Florence is "37.0", etc. This is used to set the RAD Studio        }
 {     versions, in silent mode, that will installed the library.         }
-{     Ex: /RADStudioVersions=23.0,22.0 will install only in              }
-{     RAD Studio 12 Athens and 11 Alexandria. But if the parameter is    }
+{     Ex: /RADStudioVersions=37.0,23.0 will install only in              }
+{     RAD Studio 13 Florence and 12 Athens. But if the parameter is      }
 {     /RADStudioVersions=all will install in all RAD Studio installed in }
 {     the machine. Without set this parameter, the value will be only    }
 {     the newest RAD Studio version found on the machine. A cool tip of  }
@@ -62,7 +62,7 @@
 
 #define LibraryName "MARS Curiosity"
 #define SetupName "MARS_Curiosity"
-#define LibraryVersion "1.5.9"
+#define LibraryVersion "1.5.9c"
 #define LibraryPublisher "Andrea Magni"
 #define LibraryCopyright "Copyright (c) Andrea Magni"
 #define LibraryURL "https://github.com/andrea-magni/MARS"
@@ -174,6 +174,7 @@ Type: filesandordirs; Name: "{app}\docs\*";
 Type: filesandordirs; Name: "{app}\media\*";
 Type: filesandordirs; Name: "{app}\Packages\*";
 Type: filesandordirs; Name: "{app}\Source\*";
+Type: filesandordirs; Name: "{app}\Lib370\*";
 Type: filesandordirs; Name: "{app}\Lib290\*";
 Type: filesandordirs; Name: "{app}\Lib280\*";
 Type: filesandordirs; Name: "{app}\Lib270\*";
@@ -200,6 +201,7 @@ Type: dirifempty; Name: "{app}\docs";
 Type: dirifempty; Name: "{app}\media";
 Type: dirifempty; Name: "{app}\Packages";
 Type: dirifempty; Name: "{app}\Source";
+Type: dirifempty; Name: "{app}\Lib370";
 Type: dirifempty; Name: "{app}\Lib290";
 Type: dirifempty; Name: "{app}\Lib280";
 Type: dirifempty; Name: "{app}\Lib270";

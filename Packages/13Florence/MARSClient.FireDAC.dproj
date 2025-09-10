@@ -1,15 +1,15 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{BD9048A8-F51F-4F53-92B4-4A4ADE6BE0BE}</ProjectGuid>
-        <MainSource>MARS.UniDAC.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectGuid>{29A0C2A3-BA6B-44DF-B909-A20D8DBF1B9B}</ProjectGuid>
+        <MainSource>MARSClient.FireDAC.dpk</MainSource>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
-        <ProjectName Condition="'$(ProjectName)'==''">MARS.UniDAC</ProjectName>
+        <ProjectName Condition="'$(ProjectName)'==''">MARSClient.FireDAC</ProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -25,16 +25,17 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <DCC_ImageBase>00400000</DCC_ImageBase>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DllSuffix>$(Auto)</DllSuffix>
-        <DCC_Description>MARS-Curiosity REST Library (UniDAC)</DCC_Description>
+        <DCC_Description>MARS-Curiosity Client FireDAC</DCC_Description>
         <GenPackage>true</GenPackage>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <GenDll>true</GenDll>
-        <SanitizedProjectName>MARS_UniDAC</SanitizedProjectName>
-        <DCC_DcuOutput>..\..\Lib290\$(Platform)\$(Config)</DCC_DcuOutput>
+        <SanitizedProjectName>MARSClient_FireDAC</SanitizedProjectName>
+        <DCC_DcuOutput>..\..\Lib370\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
@@ -59,15 +60,12 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="dbrtl.dcp"/>
-        <DCCReference Include="MARS.Core.dcp"/>
-        <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
-        <DCCReference Include="unidac290.dcp"/>
-        <DCCReference Include="dac290.dcp"/>
-        <DCCReference Include="..\..\Source\MARS.Data.UniDAC.InjectionService.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.UniDAC.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.UniDAC.ReadersAndWriters.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Data.UniDAC.Utils.pas"/>
+        <DCCReference Include="MARSClient.Core.dcp"/>
+        <DCCReference Include="FireDAC.dcp"/>
+        <DCCReference Include="FireDACCommonDriver.dcp"/>
+        <DCCReference Include="FireDACCommon.dcp"/>
+        <DCCReference Include="..\..\Source\MARS.Client.FireDAC.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.FireDAC.Utils.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -86,7 +84,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">MARS.UniDAC.dpk</Source>
+                    <Source Name="MainSource">MARSClient.FireDAC.dpk</Source>
                 </Source>
                 <Excluded_Packages/>
             </Delphi.Personality>

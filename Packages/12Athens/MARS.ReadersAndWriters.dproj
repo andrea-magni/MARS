@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{5170D912-4303-47AD-85A6-D77D3D0874DA}</ProjectGuid>
         <MainSource>MARS.ReadersAndWriters.dpk</MainSource>
-        <ProjectVersion>20.3</ProjectVersion>
+        <ProjectVersion>20.2</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>

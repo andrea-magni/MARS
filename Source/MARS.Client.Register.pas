@@ -10,8 +10,8 @@ procedure Register;
 implementation
 
 uses
-  Classes, SysUtils, DesignIntf, ToolsAPI
-, BrandingAPI, VCL.Graphics, Vcl.Imaging.pngimage, System.Types
+  System.Classes, System.SysUtils, DesignIntf, ToolsAPI
+, BrandingAPI, VCL.Graphics, Vcl.Imaging.pngimage, System.Types, Winapi.Windows
 , MARS.Client.Client.Indy, MARS.Client.Client.Net
 , MARS.Client.Application
 , MARS.Client.CustomResource, MARS.Client.CustomResource.Editor
@@ -106,7 +106,7 @@ var
 begin
   Supports(BorlandIDEServices,IOTAAboutBoxServices, AboutBoxServices);
   ProductImage := LoadBitmap(FindResourceHInstance(HInstance), ABOUT_RES_NAME);
-  AboutBoxIndex := AboutBoxServices.AddPluginInfo(RsAboutTitle+' '+SVGIconImageListVersion,
+  AboutBoxIndex := AboutBoxServices.AddPluginInfo(RsAboutTitle+' '+MARSVersion,
     RsAboutDescription, ProductImage, False, RsAboutLicense);
 end;
 
