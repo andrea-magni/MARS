@@ -1,15 +1,15 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{48E75129-EE24-48D4-AE54-2F549C909CC8}</ProjectGuid>
-        <MainSource>MARSClient.Core.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectGuid>{16057797-C497-46DA-B133-A45E7F564D8D}</ProjectGuid>
+        <MainSource>MARS.JOSE.dpk</MainSource>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
-        <ProjectName Condition="'$(ProjectName)'==''">MARSClient.Core</ProjectName>
+        <ProjectName Condition="'$(ProjectName)'==''">MARS.JOSE</ProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -30,12 +30,12 @@
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DllSuffix>$(Auto)</DllSuffix>
-        <DCC_Description>MARS-Curiosity REST Library (Client)</DCC_Description>
+        <DCC_Description>MARS-Curiosity JOSE</DCC_Description>
         <GenPackage>true</GenPackage>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <GenDll>true</GenDll>
-        <SanitizedProjectName>MARSClient_Core</SanitizedProjectName>
-        <DCC_DcuOutput>..\..\Lib290\$(Platform)\$(Config)</DCC_DcuOutput>
+        <SanitizedProjectName>MARS_JOSE</SanitizedProjectName>
+        <DCC_DcuOutput>..\..\Lib370\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
@@ -60,72 +60,35 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="dbrtl.dcp"/>
-        <DCCReference Include="inet.dcp"/>
         <DCCReference Include="IndySystem.dcp"/>
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
         <DCCReference Include="MARS.Utils.dcp"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Client.Net.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.JSON.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.Stream.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Client.Indy.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormData.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormUrlEncoded.pas"/>
-        <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResource.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCE</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResourceJSON.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCEJSON</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResourceStream.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCESTREAM</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientSubResource.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTSUBRESOURCE</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientSubResourceJSON.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTSUBRESOURCEJSON</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientSubResourceStream.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTSUBRESOURCESTREAM</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientToken.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTTOKEN</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClient.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENT</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientApplication.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTAPPLICATION</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSNetClient.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSNETCLIENT</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResourceFormData.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCEFORMDATA</ResourceId>
-        </RcItem>
+        <DCCReference Include="MARS.Core.dcp"/>
+        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.JOSEJWT.Token.InjectionService.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Builder.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Consumer.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Consumer.Validators.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Context.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Base.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Builder.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Compression.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Encryption.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Factory.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWA.Signing.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWE.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWK.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWS.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.JWT.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Core.Parts.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Encoding.Base64.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Hashing.HMAC.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Signing.RSA.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Arrays.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.Bytes.pas"/>
+        <DCCReference Include="..\..\ThirdParty\delphi-jose-jwt\Source\JOSE.Types.JSON.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -144,7 +107,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">MARSClient.Core.dpk</Source>
+                    <Source Name="MainSource">MARS.JOSE.dpk</Source>
                 </Source>
                 <Excluded_Packages/>
             </Delphi.Personality>

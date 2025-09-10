@@ -1,15 +1,15 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{48E75129-EE24-48D4-AE54-2F549C909CC8}</ProjectGuid>
-        <MainSource>MARSClient.Core.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectGuid>{A5387B60-F9BE-4AEF-8E11-EFB0EDCAB2ED}</ProjectGuid>
+        <MainSource>MARS.Utils.dpk</MainSource>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Package</AppType>
-        <ProjectName Condition="'$(ProjectName)'==''">MARSClient.Core</ProjectName>
+        <ProjectName Condition="'$(ProjectName)'==''">MARS.Utils</ProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -30,12 +30,12 @@
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DllSuffix>$(Auto)</DllSuffix>
-        <DCC_Description>MARS-Curiosity REST Library (Client)</DCC_Description>
+        <DCC_Description>MARS-Curiosity Utils</DCC_Description>
         <GenPackage>true</GenPackage>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <GenDll>true</GenDll>
-        <SanitizedProjectName>MARSClient_Core</SanitizedProjectName>
-        <DCC_DcuOutput>..\..\Lib290\$(Platform)\$(Config)</DCC_DcuOutput>
+        <SanitizedProjectName>MARS_Utils</SanitizedProjectName>
+        <DCC_DcuOutput>..\..\Lib370\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
@@ -65,67 +65,20 @@
         <DCCReference Include="IndySystem.dcp"/>
         <DCCReference Include="IndyProtocols.dcp"/>
         <DCCReference Include="IndyCore.dcp"/>
-        <DCCReference Include="MARS.Utils.dcp"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Application.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Client.Net.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.CustomResource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.JSON.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.Stream.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Token.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Utils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Client.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Client.Indy.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormData.pas"/>
-        <DCCReference Include="..\..\Source\MARS.Client.Resource.FormUrlEncoded.pas"/>
-        <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResource.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCE</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResourceJSON.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCEJSON</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResourceStream.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCESTREAM</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientSubResource.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTSUBRESOURCE</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientSubResourceJSON.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTSUBRESOURCEJSON</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientSubResourceStream.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTSUBRESOURCESTREAM</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientToken.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTTOKEN</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClient.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENT</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientApplication.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTAPPLICATION</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSNetClient.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSNETCLIENT</ResourceId>
-        </RcItem>
-        <RcItem Include="..\..\media\TMARSClientResourceFormData.bmp">
-            <ResourceType>BITMAP</ResourceType>
-            <ResourceId>TMARSCLIENTRESOURCEFORMDATA</ResourceId>
-        </RcItem>
+        <DCCReference Include="RESTComponents.dcp"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Data.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.IniFile.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.Parameters.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.JSON.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.URL.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Exceptions.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Declarations.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.MediaType.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.JWT.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.RequestAndResponse.Interfaces.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -144,7 +97,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">MARSClient.Core.dpk</Source>
+                    <Source Name="MainSource">MARS.Utils.dpk</Source>
                 </Source>
                 <Excluded_Packages/>
             </Delphi.Personality>

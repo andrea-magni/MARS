@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{BD9048A8-F51F-4F53-92B4-4A4ADE6BE0BE}</ProjectGuid>
         <MainSource>MARS.UniDAC.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
@@ -34,7 +34,7 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <GenDll>true</GenDll>
         <SanitizedProjectName>MARS_UniDAC</SanitizedProjectName>
-        <DCC_DcuOutput>..\..\Lib290\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcuOutput>..\..\Lib370\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
@@ -62,8 +62,8 @@
         <DCCReference Include="dbrtl.dcp"/>
         <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
-        <DCCReference Include="unidac290.dcp"/>
-        <DCCReference Include="dac290.dcp"/>
+        <DCCReference Include="unidac370.dcp"/>
+        <DCCReference Include="dac370.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.ReadersAndWriters.pas"/>

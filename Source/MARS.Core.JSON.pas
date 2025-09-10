@@ -949,7 +949,7 @@ begin
   if Values[AName] <> nil then
   begin
     LPair := RemovePair(AName);
-    if {$ifdef Delphi10Rio_UP} LPair.Owned {$else} LPair.GetOwned {$ifend}
+    if {$ifdef Delphi10Rio_UP} LPair.Owned {$else} LPair.GetOwned {$endif}
     then
       FreeAndNil(LPair);
     Result := True;
