@@ -18,9 +18,11 @@ resourcestring
   sServerNotRunning = '- The Server is not running';
   sInvalidCommand = '- Error: Invalid Command';
   sIndyVersion = '- Indy Version: ';
+  sRTLVersion = '- RTL Version: ';
   sActive = '- Active: ';
   sPort = '- Port: ';
   sSessionID = '- Session ID CookieName: ';
+  sLogging = '- Logging: ';
   sCommands = 'Enter a Command: ' + slineBreak +
     '   - "start" to start the server'+ slineBreak +
     '   - "stop" to stop the server'+ slineBreak +
@@ -37,6 +39,12 @@ const
   cCommandHelp = 'help';
   cCommandSetPort = 'set port';
   cCommandExit = 'exit';
+
+  cCommandSetLog = 'set log';
+  cLogDebug = 'debug';
+  cLogInfo = 'info';
+  cLogWarning = 'warning';
+  cLogError = 'error';
 
 implementation
 

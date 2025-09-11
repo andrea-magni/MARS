@@ -18,9 +18,7 @@ type
     procedure ServerWebModuleDefaultHandlerAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
   private
-    { Private declarations }
   public
-    { Public declarations }
   end;
 
 var
