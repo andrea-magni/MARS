@@ -62,7 +62,7 @@
 
 #define LibraryName "MARS Curiosity"
 #define SetupName "MARS_Curiosity"
-#define LibraryVersion "1.5.9c"
+#define LibraryVersion "1.6"
 #define LibraryPublisher "Andrea Magni"
 #define LibraryCopyright "Copyright (c) Andrea Magni"
 #define LibraryURL "https://github.com/andrea-magni/MARS"
