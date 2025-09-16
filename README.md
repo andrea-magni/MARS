@@ -17,7 +17,7 @@
 
 # Installation
 
-1. Just run [the setup of the latest release](./releases/latest)
+1. Just run [the setup of the latest release](https://github.com/andrea-magni/MARS/releases/latest)
 
 # Manual Installation
 
