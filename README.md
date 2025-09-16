@@ -17,6 +17,10 @@
 
 # Installation
 
+1. Just run [the setup of the latest release](./releases/latest)
+
+# Manual Installation
+
 1. Clone or download this project
 1. Add folders to RAD Studio Library Path
 1. Build All in the RAD Studio IDE
