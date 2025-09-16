@@ -28,8 +28,12 @@
 
 [More about the installation ...](docs/Installation.md)
 
-# Use the Code Luke!
+# Get started
 
+### Bootstrap with MARSCmd
+Check out [MARSCmd utility](Utils/Source/MARScmd). Compile and run MARSCmd to have your first MARS project up and running in just few clicks.
+
+### Manual approach
 Build REST server with MARS Curiosity is very easy. To run a simple REST server just create a new Console Application and use the following code:
 
 ```pascal
