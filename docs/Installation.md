@@ -1,5 +1,9 @@
 # MARS Curiosity Installation
 
+* MARS has an executable installer. Check [latest release page](https://github.com/andrea-magni/MARS/releases/latest).
+
+# MARS Curiosity Manual Installation
+
 1. Grab a copy of MARS (git clone or download zip)
 1. Add five folders to your Library Path:
     * [MARS Folder]\Source
