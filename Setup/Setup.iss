@@ -285,6 +285,12 @@ var
   LRADStudioPath: string;
   LProject: TRADStudioProject;
 begin
+  if (AInfo.Version.Name = 'RAD Studio 10.2 Tokyo') and (APlatform <> pfWin32) then
+  begin
+    Result := False;
+    Exit;
+  end;
+  
   LProjectName := ExtractFileName(AProject.FileName);
   //Compile MARS.UniDAC only if unidac package is installed
   if SameText(LProjectName, 'MARS.UniDAC.dproj') then
