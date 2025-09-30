@@ -531,7 +531,7 @@ begin
   LRADStudioVersion.DotNetServicePack := 1;
   SetArrayLength(_FRADStudioVersions, GetArrayLength(_FRADStudioVersions) + 1);
   _FRADStudioVersions[GetArrayLength(_FRADStudioVersions) - 1] := LRADStudioVersion;
-
+*)
   // RAD Studio 10.2 Tokyo
   LRADStudioVersion.Name := 'RAD Studio 10.2 Tokyo';
   LRADStudioVersion.RegVersion := '19.0';
@@ -548,7 +548,7 @@ begin
   LRADStudioVersion.DotNetServicePack := 1;
   SetArrayLength(_FRADStudioVersions, GetArrayLength(_FRADStudioVersions) + 1);
   _FRADStudioVersions[GetArrayLength(_FRADStudioVersions) - 1] := LRADStudioVersion;
-*)
+
   // RAD Studio 10.3 Rio
   LRADStudioVersion.Name := 'RAD Studio 10.3 Rio';
   LRADStudioVersion.RegVersion := '20.0';
