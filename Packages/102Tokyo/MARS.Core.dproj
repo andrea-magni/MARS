@@ -27,6 +27,7 @@
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
+        <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DllSuffix>250</DllSuffix>
         <DCC_Description>MARS-Curiosity Core</DCC_Description>
         <GenPackage>true</GenPackage>
@@ -39,8 +40,6 @@
         <DCC_S>false</DCC_S>
         <DCC_F>false</DCC_F>
         <DCC_K>false</DCC_K>
-        <VerInfo_Locale>1040</VerInfo_Locale>
-        <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
@@ -88,7 +87,6 @@
         <DCCReference Include="..\..\Source\MARS.Core.Registry.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Application.Interfaces.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Engine.Interfaces.pas"/>
-
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
