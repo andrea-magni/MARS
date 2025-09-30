@@ -87,8 +87,10 @@ end;
 { EMARSClientHttpException }
 
 function EMARSClientHttpException.ContentAs<T>: T;
+var
+  LJSONValue: TJSONValue;
 begin
-  var LJSONValue := ContentAsJSON;
+  LJSONValue := ContentAsJSON;
   try
     if not (LJSONValue is TJSONObject) then
       raise EMARSClientException.Create('Content is not a JSON object');
@@ -100,8 +102,10 @@ begin
 end;
 
 function EMARSClientHttpException.ContentAsArrayOf<T>: TArray<T>;
+var
+  LJSONValue: TJSONValue;
 begin
-  var LJSONValue := ContentAsJSON;
+  LJSONValue := ContentAsJSON;
   try
     if not (LJSONValue is TJSONArray) then
       raise EMARSClientException.Create('Content is not a JSON array');

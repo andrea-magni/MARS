@@ -356,8 +356,10 @@ class function TMARSCustomClient.GetJSON<T>(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TMARSQueryParams; const AToken: string;
   const AIgnoreResult: Boolean): T;
+var
+  LQueryParams: TStringList;
 begin
-  var LQueryParams: TStringList := nil;
+  LQueryParams := nil;
   if Length(AQueryParams) > 0 then
     LQueryParams := AQueryParams.ToStringList;
   try
@@ -932,9 +934,11 @@ begin
 end;
 
 function TMARSQueryParamsHelper.ToStringList: TStringList;
+var
+  LItem: TMARSQueryParam;
 begin
   Result := TStringList.Create;
-  for var LItem in  Self do
+  for LItem in Self do
     Result.Values[LItem.Name] := LItem.Value;
 end;
 

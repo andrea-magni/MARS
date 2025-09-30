@@ -86,6 +86,9 @@
         <DCCReference Include="..\..\Source\MARS.Core.Activation.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Activation.Interfaces.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.Registry.Utils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Application.Interfaces.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Core.Engine.Interfaces.pas"/>
+
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

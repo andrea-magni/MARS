@@ -572,7 +572,7 @@ end;
 class procedure TMARSActivation.RegisterAfterContextCleanup(
   const AAfterContextCleanup: TMARSAfterContextCleanupProc);
 begin
-  FAfterContextCleanupProcs := FAfterContextCleanupProcs + [AAfterContextCleanup];
+  FAfterContextCleanupProcs := FAfterContextCleanupProcs + [TMARSAfterContextCleanupProc(AAfterContextCleanup)];
 end;
 
 class procedure TMARSActivation.RegisterAfterInvoke(
@@ -776,6 +776,8 @@ var
   LBasePath, LURLPath, LRelativePath, LAppResourcePath: TArray<string>;
   LAppResourceKey: string;
   LRelativePathLength, LAppResourcePathLength: Integer;
+  LCompareFunc: TStringCompareFunc;
+  LRelativePathStr, LAppResourcePathStr: string;
 begin
   LBasePath := URL.BasePath.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
   LURLPath := URL.PathTokens;
@@ -784,7 +786,7 @@ begin
   if LURLPath.StartsWith(LBasePath, True) then
     LRelativePath := LURLPath.SubArray(Length(LBasePath));
 
-  var LCompareFunc: TStringCompareFunc :=
+  LCompareFunc :=
     function (const AString1, AString2: string): Boolean
     begin
       Result :=
@@ -815,8 +817,8 @@ begin
     end
     else if LAppResourcePath.Contains(TMARSURL.PATH_PARAM_WILDCARD) then
     begin
-      var LRelativePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LRelativePath);
-      var LAppResourcePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LAppResourcePath);
+      LRelativePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LRelativePath);
+      LAppResourcePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LAppResourcePath);
       if MatchesMask(LRelativePathStr, LAppResourcePathStr.Replace(TMARSURL.PATH_PARAM_WILDCARD, '*')) then
       begin
         LFound := True;

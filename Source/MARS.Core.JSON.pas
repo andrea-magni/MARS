@@ -828,12 +828,14 @@ class function TJSONObjectHelper.ObjectListToJSON(const AObjectList: TObject;
   const AOptions: TMARSJSONSerializationOptions): TJSONArray;
 var
   LResult: TJSONArray;
+  LOptions: TMARSJSONSerializationOptions;
 begin
   LResult := TJSONArray.Create;
+  LOptions := AOptions;
   TRttiHelper.EnumerateObjectList(AObjectList,
     procedure (AValue: TValue)
     begin
-      LResult.AddElement(TValueToJSONValue(AValue, AOptions));
+      LResult.AddElement(TValueToJSONValue(AValue, LOptions));
     end
   );
 
@@ -965,13 +967,15 @@ class function TJSONObjectHelper.DictionaryToJSON(const ADictionary: TObject;
   const AOptions: TMARSJSONSerializationOptions): TJSONObject;
 var
   LResult: TJSONObject;
+  LOptions: TMARSJSONSerializationOptions;
 begin
   LResult := TJSONObject.Create;
+  LOptions := AOptions;
 
   TRttiHelper.EnumerateDictionary(ADictionary,
     procedure (AKey: TValue; AValue: TValue)
     begin
-      LResult.AddPair(AKey.ToString, TValueToJSONValue(AValue, AOptions));
+      LResult.AddPair(AKey.ToString, TValueToJSONValue(AValue, LOptions));
     end
   );
 
