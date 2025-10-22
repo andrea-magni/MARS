@@ -31,10 +31,10 @@
 # Get started
 
 ### Bootstrap with MARSCmd
-Check out [MARSCmd utility](Utils/Source/MARScmd). Compile and run MARSCmd to have your first MARS project up and running in just few clicks.
+Check out [MARSCmd utility](Utils/Source/MARScmd). Compile and run MARSCmd to have your first MARS project up and running in just few a clicks.
 
 ### Manual approach
-Build REST server with MARS Curiosity is very easy. To run a simple REST server just create a new Console Application and use the following code:
+Building a REST server with MARS Curiosity is very easy. To run a simple REST server, just create a new Console Application and use the following code:
 
 ```pascal
 program Mars1;
@@ -108,7 +108,7 @@ Official MARS Curiosity forum at Delphi-Praxis International: https://en.delphip
 
 # Contribution
 
-It would be great if you would like to support this project. It's quite easy and you can became better Gitter then.
+It would be great if you would like to support this project. It's quite easy, and you can become better at Git, too.
 
 * [See Contribution Guide](./CONTRIBUTING.md)
 
