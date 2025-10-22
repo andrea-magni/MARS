@@ -54,7 +54,7 @@ type
     function ForEachPropertyWithAttribute<T: TCustomAttribute>(
       const ADoSomething: TFunc<TRttiProperty, T, Boolean>): Integer;
 
-    function IsDynamicArrayOf<T>(const AAllowInherithance: Boolean = True): Boolean;
+    function IsDynamicArrayOf<T>(const AAllowInheritance: Boolean = True): Boolean;
     function IsDynamicArrayOfRecord: Boolean;
     function IsArray: Boolean; overload;
     function IsArray(out AElementType: TRttiType): Boolean; overload;
@@ -65,8 +65,8 @@ type
     function IsObjectListOfT: Boolean; overload;
     function IsObjectListOfT(out AElementType: TRttiType): Boolean; overload;
 
-    function IsObjectOfType<T>(const AAllowInherithance: Boolean = True): Boolean; overload;
-    function IsObjectOfType(const AClass: TClass; const AAllowInherithance: Boolean = True): Boolean; overload;
+    function IsObjectOfType<T>(const AAllowInheritance: Boolean = True): Boolean; overload;
+    function IsObjectOfType(const AClass: TClass; const AAllowInheritance: Boolean = True): Boolean; overload;
 
     function FindMethodFunc<A1,A2,A3,A4,R>(const AName: string): TRttiMethod; overload;
     function FindMethodFunc<A1,A2,A3,R>(const AName: string): TRttiMethod; overload;
@@ -90,7 +90,7 @@ type
     class function IfHasAttribute<T: TCustomAttribute>(AInstance: TObject; const ADoSomething: TProc<T>): Boolean; overload;
 
     class function IfHasAttribute<T: TCustomAttribute>(const AAttributes: TArray<TCustomAttribute>; const ADoSomething: TProc<T>;
-      const ACheckAllOccurences: Boolean = False): Boolean; overload;
+      const ACheckAllOccurrences: Boolean = False): Boolean; overload;
 
     class function ForEachAttribute<T: TCustomAttribute>(const AInstance: TObject;
       const ADoSomething: TProc<T>): Integer; overload;
@@ -677,7 +677,7 @@ begin
 end;
 
 function TRttiTypeHelper.IsDynamicArrayOf<T>(
-  const AAllowInherithance: Boolean): Boolean;
+  const AAllowInheritance: Boolean): Boolean;
 var
   LElementType: TRttiType;
   LType: TRttiType;
@@ -691,7 +691,7 @@ begin
     Result := (LElementType = LType) // exact match
       or ( // classes with inheritance check (wrt AAllowInheritance argument)
         (LElementType.IsInstance and LType.IsInstance)
-        and LElementType.IsObjectOfType(TRttiInstanceType(LType).MetaclassType, AAllowInherithance)
+        and LElementType.IsObjectOfType(TRttiInstanceType(LType).MetaclassType, AAllowInheritance)
       );
   end;
 end;
@@ -732,12 +732,12 @@ begin
 end;
 
 function TRttiTypeHelper.IsObjectOfType(const AClass: TClass;
-  const AAllowInherithance: Boolean): Boolean;
+  const AAllowInheritance: Boolean): Boolean;
 begin
   Result := False;
   if IsInstance then
   begin
-    if AAllowInherithance then
+    if AAllowInheritance then
       Result := TRttiInstanceType(Self).MetaclassType.InheritsFrom(AClass)
     else
       Result := TRttiInstanceType(Self).MetaclassType = AClass;
@@ -745,14 +745,14 @@ begin
 end;
 
 function TRttiTypeHelper.IsObjectOfType<T>(
-  const AAllowInherithance: Boolean): Boolean;
+  const AAllowInheritance: Boolean): Boolean;
 var
   LType: TRttiType;
 begin
   Result := False;
   LType := TRttiContext.Create.GetType(TypeInfo(T));
   if LType.IsInstance then
-    Result := IsObjectOfType((LType as TRttiInstanceType).MetaclassType, AAllowInherithance);
+    Result := IsObjectOfType((LType as TRttiInstanceType).MetaclassType, AAllowInheritance);
 end;
 
 { TRttiHelper }
@@ -1333,7 +1333,7 @@ begin
 end;
 
 class function TRttiHelper.IfHasAttribute<T>(const AAttributes: TArray<TCustomAttribute>;
-  const ADoSomething: TProc<T>; const ACheckAllOccurences: Boolean): Boolean;
+  const ADoSomething: TProc<T>; const ACheckAllOccurrences: Boolean): Boolean;
 var
   LAttribute: TCustomAttribute;
 begin
@@ -1347,7 +1347,7 @@ begin
       if Assigned(ADoSomething) then
         ADoSomething(LAttribute);
 
-      if not ACheckAllOccurences then
+      if not ACheckAllOccurrences then
         Break;
 
     end;
