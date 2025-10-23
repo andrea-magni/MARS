@@ -222,19 +222,23 @@ begin
     WillReturn(0).When.GetFormParamCount;
     WillReturn(0).When.GetHeaderParamCount;
 
+    WillReturn('').When.Authorization;
+
     WillReturn(AData.HostName).When.HostName;
     WillReturn(AData.Port).When.Port;
     WillReturn(AData.HttpMethod).When.Method;
     WillReturn(ExpandMacros(AData.Path)).When.RawPath;
     WillReturn(AData.QueryString).When.QueryString;
-    WillReturn('').When.Authorization;
     if AData.Token <> '' then
       Result
         .SetHeaderParamCount(1)
         .SetHeaderParam(0, 'Authorization', 'Bearer ' + AData.Token);
     WillReturn(AData.Token).When.GetCookieParamValue(TokenCookieName);
     WillReturn(AData.Accept).When.Accept;
+
     WillReturn(AData.Body).When.Content;
+    var LBodyBytes := TValue.From<TBytes>(TEncoding.UTF8.GetBytes(AData.Body));
+    WillReturn(LBodyBytes, True).When.GetRawContent;
   end;
   AfterMockRequest(AData, Result);
 end;
@@ -374,6 +378,7 @@ function TMockRequestHelper.SetFormParam(const AParamIndex: Integer;
   const AParamName, AParamValue: string): TMock<IMARSRequest>;
 begin
   Result := Self;
+  Self.Setup.WillReturnDefault('GetFormParamValue', '');
   Self.Setup.WillReturn(AParamValue).When.GetFormParamValue(AParamIndex);
   Self.Setup.WillReturn(AParamValue).When.GetFormParamValue(AParamName);
   Self.Setup.WillReturn(AParamIndex).When.GetFormParamIndex(AParamName);
