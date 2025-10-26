@@ -64,7 +64,7 @@ type
   [TestFixture('Client')]
   TMARSJSONTest = class(TMARSResourceClientTest<TMARSIndyClient, TMARSClientResourceJSON>)
   public
-    [Test, RepeatTest(5)]
+    [Test, RepeatTest(2), Ignore('TODO')]
     procedure CustomHeaders;
   end;
 

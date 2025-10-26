@@ -98,7 +98,7 @@ begin
     var LFirstElement := LJSON.Items[0];
     Assert.InheritsFrom(LFirstElement.ClassType, TJSONObject, 'Element is TJSONObject');
 
-    Assert.IsTrue(LFirstElement.P['customBool'].ClassType = TJSONBool, 'customBool pair with boolean value is missing');
+    Assert.IsTrue(LFirstElement.P['customBool'] is TJSONBool, 'customBool pair with boolean value is missing');
     Assert.IsTrue(LFirstElement.P['otherFields'].ClassType = TJSONObject, 'otherFields pair with object value is missing');
     Assert.IsNotNull(LFirstElement.FindValue('field_no_4'), 'field_no_4 is missing');
     Log(LFirstElement.Format);
