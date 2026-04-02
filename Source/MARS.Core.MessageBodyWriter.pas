@@ -20,6 +20,13 @@ type
       AOutputStream: TStream; const AActivation: IMARSActivation);
   end;
 
+  IMessageBodyStreamProvider = interface
+  ['{D7D8F553-B0A4-4554-8135-AC23202DBE53}']
+    function GetStream(const AValue: TValue; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation): TStream;
+  end;
+
+
   TIsWritableFunction = reference to function(AType: TRttiType;
     const AAttributes: TAttributeArray; AMediaType: string): Boolean;
   TGetAffinityFunction = reference to function(AType: TRttiType;

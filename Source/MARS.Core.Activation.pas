@@ -80,6 +80,7 @@ type
     FTeardownTime: TStopWatch;
     FSerializationTime: TStopWatch;
     FAuthorizationInfo: TMARSAuthorizationInfo;
+    FAddMethodResultToContext: Boolean;
 
     procedure CallEachMethodWithAttribute<A: TCustomAttribute>();
 
@@ -332,6 +333,7 @@ begin
   FMethod := nil;
   FMethodReturnType := nil;
   FMethodAttributes := [];
+  FAddMethodResultToContext := False;
   FreeAndNil(FURLPrototype);
 
   for LMethod in FResourceMethods do
@@ -365,6 +367,7 @@ begin
           FMethod := LMethod;
           FMethodAttributes := FMethod.GetAllAttributes(False);
           FMethodReturnType := FMethod.ReturnType;
+          FAddMethodResultToContext := Assigned(FMethodReturnType) and not FMethod.HasAttribute<IsReference>(nil);
           Break;
         end;
       finally
@@ -463,7 +466,8 @@ procedure TMARSActivation.WriteToResponse(const AValue: TValue;
   const ARewriteAccept: Boolean;
   const AReturnType: TRttiType);
 var
-  LStream: TBytesStream;
+  LContentStream: TBytesStream;
+//  LFreeContentStream: Boolean;
   LAccept: string;
   LReturnType: TRttiType;
 begin
@@ -484,23 +488,32 @@ begin
 
     TMARSMessageBodyRegistry.Instance.FindWriter(Self, LAccept, LReturnType, FWriter, FWriterMediaType);
     try
-      if Assigned(FWriter) then
-      begin
-        if AValueContentType = AOriginalContentType then
-          Response.ContentType := FWriterMediaType.ToString;
+      if not Assigned(FWriter) then
+        raise EMARSHttpException.CreateFmt('MessageBodyWriter not found for method %s of resource %s', [Method.Name, Resource.Name]);
 
-        LStream := TBytesStream.Create();
+      if AValueContentType = AOriginalContentType then
+        Response.ContentType := FWriterMediaType.ToString;
+
+      var LBodyStreamProvider: IMessageBodyStreamProvider := nil;
+      if Supports(FWriter, IMessageBodyStreamProvider, LBodyStreamProvider) then
+      begin
+//          LFreeContentStream := True;
+        Response.ContentStream := LBodyStreamProvider.GetStream(AValue, FWriterMediaType, Self);
+        FAddMethodResultToContext := False;
+//          Response.FreeContentStream := LFreeContentStream;
+      end
+      else begin
+        LContentStream := TBytesStream.Create();
         try
-          FWriter.WriteTo(AValue, FWriterMediaType, LStream, Self);
-          LStream.Position := 0;
-          Response.ContentStream := LStream;
+          FWriter.WriteTo(AValue, FWriterMediaType, LContentStream, Self);
+          LContentStream.Position := 0;
+          Response.ContentStream := LContentStream;
         except
-          LStream.Free;
+          LContentStream.Free;
           raise;
         end;
-      end
-      else
-        raise EMARSHttpException.CreateFmt('MessageBodyWriter not found for method %s of resource %s', [Method.Name, Resource.Name]);
+      end;
+
     finally
       FWriter := nil;
       FreeAndNil(FWriterMediaType);
@@ -511,8 +524,11 @@ end;
 procedure TMARSActivation.InvokeResourceMethod();
 var
   LContentType: string;
+  LHasMethodResult: Boolean;
 begin
   Assert(Assigned(FMethod));
+
+  LHasMethodResult := Assigned(FMethodReturnType);
 
   // cache initial ContentType value to check later if it has been changed
   LContentType := string(Response.ContentType);
@@ -522,13 +538,14 @@ begin
 
     // actual method invocation
     FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
-
-    FSerializationTime := TStopwatch.StartNew;
-    if Assigned(FMethodReturnType) then // if the method is actually a function and not a procedure
+    if LHasMethodResult then
+    begin
+      FSerializationTime := TStopWatch.StartNew;
       WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
-    FSerializationTime.Stop;
+      FSerializationTime.Stop;
+    end;
   finally
-    if not FMethod.HasAttribute<IsReference>(nil) then
+    if FAddMethodResultToContext then
       AddToContext(FMethodResult);
   end;
 end;

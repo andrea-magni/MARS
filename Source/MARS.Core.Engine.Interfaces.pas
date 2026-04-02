@@ -29,6 +29,7 @@ type
   TGetApplicationProc = reference to procedure (const AEngine: IMARSEngine;
     const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
     var AApplication: IMARSApplication);
+  TExceptionProc = reference to procedure (const AException: Exception);
 
 
   IMARSEngine = interface ['{222D2BB8-589A-456C-A5D3-C6BEAE4022B9}']
@@ -60,6 +61,8 @@ type
     procedure SetAfterHandleRequest(const AValue: TAfterHandleRequestProc);
     function GetOnGetApplication: TGetApplicationProc;
     procedure SetOnGetApplication(const AValue: TGetApplicationProc);
+    function GetOnException: TExceptionProc;
+    procedure SetOnException(const AValue: TExceptionProc);
 
     property Applications: TMARSApplicationDictionary read GetApplications;
     property Parameters: TMARSParameters read GetParameters;
@@ -73,6 +76,7 @@ type
     property BeforeHandleRequest: TBeforeHandleRequestProc read GetBeforeHandleRequest write SetBeforeHandleRequest;
     property AfterHandleRequest: TAfterHandleRequestProc read GetAfterHandleRequest write SetAfterHandleRequest;
     property OnGetApplication: TGetApplicationProc read GetOnGetApplication write SetOnGetApplication;
+    property OnException: TExceptionProc read GetOnException write SetOnException;
 
   end;
 
