@@ -151,10 +151,14 @@ begin
       var
         LOutputStream: TBytesStream;
       begin
-        if ContainsText(AActivation.Request.GetHeaderParamValue('Accept-Encoding'), 'gzip')  then
+        if ContainsText(AActivation.Request.GetHeaderParamValue('Accept-Encoding'), 'gzip')
+           and Assigned(AActivation.Response.ContentStream)
+           and (AActivation.Response.ContentStream.Size > 0)
+        then
         begin
           LOutputStream := TBytesStream.Create(nil);
           try
+            AActivation.Response.ContentStream.Position := 0;
             ZipStream(AActivation.Response.ContentStream, LOutputStream, 15 + 16);
             AActivation.Response.ContentStream.Free;
             AActivation.Response.ContentStream := LOutputStream;
