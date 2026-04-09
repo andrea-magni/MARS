@@ -75,10 +75,13 @@ type
   [Produces(TMediaType.APPLICATION_OCTET_STREAM)
   , Produces(TMediaType.WILDCARD)
   , Produces('data:image/png;base64')]
-  TStreamValueWriter = class(TInterfacedObject, IMessageBodyWriter)
+  TStreamValueWriter = class(TInterfacedObject, IMessageBodyWriter, IMessageBodyStreamProvider)
+   public
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
-  end;
+     function GetStream(const AValue: TValue; const AMediaType: TMediaType;
+       const AActivation: IMARSActivation): TStream;
+   end;
 
   [Produces(TMediaType.APPLICATION_JSON)]
   TStandardMethodWriter = class(TInterfacedObject, IMessageBodyWriter)
@@ -262,6 +265,24 @@ begin
 end;
 
 { TStreamValueWriter }
+
+function TStreamValueWriter.GetStream(const AValue: TValue;
+  const AMediaType: TMediaType; const AActivation: IMARSActivation): TStream;
+begin
+  Result := AValue.AsObject as TStream;
+
+  {$IFDEF DEBUG}
+  if Assigned(AActivation) then
+  begin
+    if Assigned(Result) then
+      AActivation.Response.SetHeader('X-MARS-MBW-STREAMPROVIDER'
+      , Format('Stream ClassName: %s, Size: %d, Position: %d', [Result.ClassName, Result.Size, Result.Position])
+      )
+    else
+      AActivation.Response.SetHeader('X-MARS-MBW-STREAMPROVIDER', 'Stream = nil');
+  end;
+  {$ENDIF}
+end;
 
 procedure TStreamValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;
   AOutputStream: TStream; const AActivation: IMARSActivation);

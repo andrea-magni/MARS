@@ -14,7 +14,7 @@ uses
   Classes, SysUtils, TimeSpan, SyncObjs, Web.HttpApp
 // Indy
 , IdContext, IdCustomHTTPServer, IdException, IdTCPServer, IdIOHandlerSocket
-, IdSchedulerOfThreadPool
+, IdSchedulerOfThreadPool, IdHeaderList
 , idHTTPWebBrokerBridge, idGlobal
 // to enable standalone SSL
 , IdBaseComponent, IdComponent, IdServerIOHandler, IdSSL, IdSSLOpenSSL
@@ -129,10 +129,15 @@ type
     procedure SetCookies(const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse); virtual;
     procedure Startup; override;
     procedure Shutdown; override;
+
     procedure DoCommandGet(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); override;
     procedure DoCommandOther(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); override;
+
+    procedure DoCommandError(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo;
+      AResponseInfo: TIdHTTPResponseInfo; AException: Exception); override;
+    procedure DoException(AContext: TIdContext; AException: Exception); override;
 
     procedure ParseAuthenticationHandler(AContext: TIdContext;
       const AAuthType, AAuthData: String; var VUsername, VPassword: String;
@@ -178,6 +183,14 @@ destructor TMARShttpServerIndy.Destroy;
 begin
   FEngine := nil;
   inherited;
+end;
+
+procedure TMARShttpServerIndy.DoCommandError(AContext: TIdContext;
+  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo;
+  AException: Exception);
+begin
+  inherited;
+
 end;
 
 procedure TMARShttpServerIndy.DoCommandGet(AContext: TIdContext;
@@ -231,6 +244,14 @@ procedure TMARShttpServerIndy.DoCommandOther(AContext: TIdContext;
 begin
   inherited;
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
+end;
+
+procedure TMARShttpServerIndy.DoException(AContext: TIdContext;
+  AException: Exception);
+begin
+  inherited;
+  if Assigned(FEngine) and Assigned(FEngine.OnException) then
+    FEngine.OnException(AException);
 end;
 
 function TMARShttpServerIndy.DoQuerySSLPort(APort: TIdPort): Boolean;

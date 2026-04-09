@@ -35,6 +35,7 @@ type
     FBeforeHandleRequest: TBeforeHandleRequestProc;
     FAfterHandleRequest: TAfterHandleRequestProc;
     FOnGetApplication: TGetApplicationProc;
+    FOnException: TExceptionProc;
   protected
     procedure PatchCORS(const ARequest: IMARSRequest; const AResponse: IMARSResponse); virtual;
   public
@@ -70,7 +71,8 @@ type
     procedure SetAfterHandleRequest(const AValue: TAfterHandleRequestProc);
     function GetOnGetApplication: TGetApplicationProc;
     procedure SetOnGetApplication(const AValue: TGetApplicationProc);
-
+    function GetOnException: TExceptionProc;
+    procedure SetOnException(const AValue: TExceptionProc);
 
     // IMARSEngine -------------------------------------------------------------
     property Parameters: TMARSParameters read FParameters;
@@ -87,6 +89,7 @@ type
     property BeforeHandleRequest: TBeforeHandleRequestProc read FBeforeHandleRequest write FBeforeHandleRequest;
     property AfterHandleRequest: TAfterHandleRequestProc read FAfterHandleRequest write FAfterHandleRequest;
     property OnGetApplication: TGetApplicationProc read FOnGetApplication write FOnGetApplication;
+    property OnException: TOnExceptionProc read GetOnException write SetOnException;
 *)
   end;
 
@@ -340,6 +343,11 @@ begin
   Result := FName;
 end;
 
+function TMARSEngine.GetOnException: TExceptionProc;
+begin
+  Result := FOnException;
+end;
+
 function TMARSEngine.GetOnGetApplication: TGetApplicationProc;
 begin
   Result := FOnGetApplication;
@@ -360,6 +368,11 @@ procedure TMARSEngine.SetBeforeHandleRequest(
   const AValue: TBeforeHandleRequestProc);
 begin
   FBeforeHandleRequest := AValue;
+end;
+
+procedure TMARSEngine.SetOnException(const AValue: TExceptionProc);
+begin
+  FOnException := AValue;
 end;
 
 procedure TMARSEngine.SetOnGetApplication(const AValue: TGetApplicationProc);

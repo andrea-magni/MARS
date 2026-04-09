@@ -267,12 +267,19 @@ type
     class function RecordToJSON<T{: record}>(ARecord: T;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
 
+    class function RecordToJSONString<T{: record}>(ARecord: T;
+      const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToJSONFilterProc = nil;
+      const AFormatJSON: Boolean = False; const AFormatIndentation: Integer = 4): string; overload;
+    class function RecordToJSONString<T{: record}>(ARecord: T;
+      const AFilterProc: TToJSONFilterProc = nil;
+      const AFormatJSON: Boolean = False; const AFormatIndentation: Integer = 4): string; overload;
+
     class function RecordToJSON(const ARecord: TValue;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
     class function RecordToJSON(const ARecord: TValue;
       const AFilterProc: TToJSONFilterProc = nil): TJSONObject; overload;
-
 
     class function JSONToRecord<T{: record}>(const AJSON: TJSONObject;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
@@ -280,6 +287,15 @@ type
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToRecordFilterProc = nil): T; overload;
     class function JSONToRecord(const ARecordType: TRttiType; const AJSON: TJSONObject;
+      const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
+
+    class function JSONStringToRecord<T{: record}>(const AJSON: string;
+      const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    class function JSONStringToRecord<T{: record}>(const AJSON: string;
+      const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToRecordFilterProc = nil): T; overload;
+    class function JSONStringToRecord(const ARecordType: TRttiType; const AJSON: string;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
@@ -742,6 +758,48 @@ begin
   end;
 end;
 
+
+class function TJSONObjectHelper.JSONStringToRecord<T>(const AJSON: string;
+  const AFilterProc: TToRecordFilterProc): T;
+var
+  LJSON: TJSONObject;
+begin
+  LJSON := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;
+  try
+    Result := JSONToRecord<T>(LJSON, AFilterProc);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+class function TJSONObjectHelper.JSONStringToRecord(
+  const ARecordType: TRttiType; const AJSON: string;
+  const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToRecordFilterProc): TValue;
+var
+  LJSON: TJSONObject;
+begin
+  LJSON := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;
+  try
+    Result := JSONToRecord(ARecordType, LJSON, AOptions, AFilterProc);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+class function TJSONObjectHelper.JSONStringToRecord<T>(const AJSON: string;
+  const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToRecordFilterProc): T;
+var
+  LJSON: TJSONObject;
+begin
+  LJSON := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;
+  try
+    Result := JSONToRecord<T>(LJSON, AOptions, AFilterProc);
+  finally
+    LJSON.Free;
+  end;
+end;
 
 class function TJSONObjectHelper.JSONToObject(const AClassType: TClass;
   const AJSON: TJSONObject): TObject;
@@ -1247,6 +1305,37 @@ class function TJSONObjectHelper.RecordToJSON<T>(ARecord: T;
   const AFilterProc: TToJSONFilterProc): TJSONObject;
 begin
   Result := RecordToJSON<T>(ARecord, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TJSONObjectHelper.RecordToJSONString<T>(ARecord: T;
+  const AFilterProc: TToJSONFilterProc;
+  const AFormatJSON: Boolean; const AFormatIndentation: Integer): string;
+begin
+  var LJSONObject := RecordToJSON<T>(ARecord, AFilterProc);
+  try
+    if AFormatJSON then
+      Result := LJSONObject.Format(AFormatIndentation)
+    else
+      Result := LJSONObject.ToJSON(); //AM TODO: pass in JSON options?
+  finally
+    LJSONObject.Free;
+  end;
+end;
+
+class function TJSONObjectHelper.RecordToJSONString<T>(ARecord: T;
+  const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToJSONFilterProc;
+  const AFormatJSON: Boolean; const AFormatIndentation: Integer): string;
+begin
+  var LJSONObject := RecordToJSON<T>(ARecord, AOptions, AFilterProc);
+  try
+    if AFormatJSON then
+      Result := LJSONObject.Format()
+    else
+      Result := LJSONObject.ToJSON(); //AM TODO: pass in JSON options?
+  finally
+    LJSONObject.Free;
+  end;
 end;
 
 class function TJSONObjectHelper.RecordToJSON<T>(ARecord: T;

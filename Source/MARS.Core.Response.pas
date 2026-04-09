@@ -44,6 +44,8 @@ begin
   if Assigned(ContentStream) then
   begin
     AResponse.ContentStream := ContentStream;
+
+    // AResponse is the new owner of the ContentStream
     FreeContentStream := False;
   end
   else
