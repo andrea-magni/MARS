@@ -6,15 +6,22 @@ uses
   Classes, SysUtils;
 
 type
+  THeader = record
+    Name: string;
+    Value: string;
+  end;
+
   {$M+}
   IMARSRequest = interface
     function GetRawContent: TBytes;
     function GetContent: string;
+    // Query params
     function GetQueryParamIndex(const AName: string): Integer;
     function GetQueryParamName(const AIndex: integer): string;
     function GetQueryParamValue(const AIndex: Integer): string; overload;
     function GetQueryParamValue(const AName: string): string; overload;
     function GetQueryParamCount: Integer;
+    // Form params
     function GetFormParamIndex(const AName: string): Integer;
     function GetFormParamName(const AIndex: Integer): string;
     function GetFormParamValue(const AIndex: Integer): string; overload;
@@ -23,16 +30,23 @@ type
     function GetFormFileParam(const AIndex: Integer; out AFieldName, AFileName: string;
       out ABytes: TBytes; out AContentType: string): Boolean;
     function GetFormParamCount: Integer;
+    function GetFilesCount: Integer;
+    function GetFormParams: string;
+
+    // Header params
     function GetHeaderParamCount: Integer;
     function GetHeaderParamIndex(const AName: string): Integer;
+    function GetHeaderParamName(const AIndex: Integer): string;
     function GetHeaderParamValue(const AHeaderName: string): string; overload;
     function GetHeaderParamValue(const AIndex: Integer): string; overload;
+    function GetHeaders: TArray<THeader>;
+
+    // Cookie params
     function GetCookieParamIndex(const AName: string): Integer;
     function GetCookieParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamValue(const AName: string): string; overload;
     function GetCookieParamCount: Integer;
-    function GetFilesCount: Integer;
-    function GetFormParams: string;
+
     function GetAccept: string;
     function GetAuthorization: string;
     function GetMethod: string;
@@ -59,6 +73,7 @@ type
     property Port: Integer read GetPort;
     property RawPath: string read GetRawPath;
     property ContentFields: TArray<string> read GetContentFields;
+    property Headers: TArray<THeader> read GetHeaders;
     property QueryFields: TArray<string> read GetQueryFields;
     property RemoteIP: string read GetRemoteIP;
     property UserAgent: string read GetUserAgent;

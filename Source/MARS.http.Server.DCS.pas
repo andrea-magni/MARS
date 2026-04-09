@@ -28,10 +28,12 @@ type
     function GetAccept: string;
     function GetAuthorization: string;
     function GetContent: string;
+
     function GetCookieParamIndex(const AName: string): Integer;
     function GetCookieParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamValue(const AName: string): string; overload;
     function GetCookieParamCount: Integer;
+
     function GetFilesCount: Integer;
     function GetFormParamCount: Integer;
     function GetFormParamIndex(const AName: string): Integer;
@@ -43,20 +45,26 @@ type
       out AFileName: string; out ABytes: System.TArray<System.Byte>;
       out AContentType: string): Boolean;
     function GetFormParams: string;
+
     function GetHeaderParamCount: Integer; inline;
     function GetHeaderParamIndex(const AName: string): Integer; inline;
+    function GetHeaderParamName(const AIndex: Integer): string; inline;
     function GetHeaderParamValue(const AHeaderName: string): string; overload; inline;
     function GetHeaderParamValue(const AIndex: Integer): string; overload; inline;
+    function GetHeaders: TArray<THeader>; inline;
+
     function GetHostName: string;
     function GetMethod: string;
     function GetPort: Integer;
     function GetDate: TDateTime; inline;
+
     function GetQueryParamIndex(const AName: string): Integer; inline;
     function GetQueryParamValue(const AIndex: Integer): string; overload; inline;
     function GetQueryParamValue(const AName: string): string; overload; inline;
     function GetQueryParamName(const AIndex: Integer): string; inline;
     function GetQueryParamCount: Integer; inline;
     function GetQueryString: string; inline;
+
     function GetRawContent: TBytes; inline;
     function GetRawPath: string;
     function GetContentFields: TArray<string>;
@@ -489,6 +497,20 @@ begin
   Result := FDCSRequest.Header.Items[AIndex].Value;
 end;
 
+function TMARSDCSRequest.GetHeaders: TArray<THeader>;
+var
+  LIndex: Integer;
+  LParam: TNameValue;
+begin
+  SetLength(Result, FDCSRequest.Header.Count);
+  for LIndex := Low(Result) to High(Result) do
+  begin
+    LParam := FDCSRequest.Header.Items[LIndex];
+    Result[LIndex].Name := LParam.Name;
+    Result[LIndex].Value := LParam.Value;
+  end;
+end;
+
 function TMARSDCSRequest.GetHostName: string;
 begin
   Result := FDCSRequest.HostName;
@@ -606,6 +628,11 @@ begin
       Break;
     end;
   end;
+end;
+
+function TMARSDCSRequest.GetHeaderParamName(const AIndex: Integer): string;
+begin
+  Result := FDCSRequest.Header.Items[AIndex].Name;
 end;
 
 { TMARSDCSResponse }

@@ -53,8 +53,10 @@ type
     function GetFormParams: string; inline;
     function GetHeaderParamCount: Integer; inline;
     function GetHeaderParamIndex(const AName: string): Integer; inline;
+    function GetHeaderParamName(const AIndex: Integer): string; inline;
     function GetHeaderParamValue(const AHeaderName: string): string; overload; inline;
     function GetHeaderParamValue(const AIndex: Integer): string; overload; inline;
+    function GetHeaders: TArray<THeader>; inline;
     function GetHostName: string; inline;
     function GetMethod: string; inline;
     function GetPort: Integer; inline;
@@ -536,6 +538,16 @@ begin
     raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamValue by Index');
 end;
 
+function TMARSWebRequest.GetHeaders: TArray<THeader>;
+begin
+  SetLength(Result, GetHeaderParamCount);
+  for var LIndex := Low(Result) to High(Result) do
+  begin
+    Result[LIndex].Name := GetHeaderParamName(LIndex);
+    Result[LIndex].Value := GetHeaderParamValue(LIndex);
+  end;
+end;
+
 function TMARSWebRequest.GetHostName: string;
 begin
   Result := FWebRequest.Host;
@@ -620,6 +632,14 @@ begin
     Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.IndexOfName(AName)
   else
     raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamIndex by Index');
+end;
+
+function TMARSWebRequest.GetHeaderParamName(const AIndex: Integer): string;
+begin
+  if (FWebRequest is TMARSIdHTTPAppRequest) or (FWebRequest is TIdHTTPAppRequest) then
+    Result := TMARSIdHTTPAppRequest(FWebRequest).RequestInfo.RawHeaders.Names[AIndex]
+  else
+    raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamName by Index');
 end;
 
 { TMARSWebResponse }
