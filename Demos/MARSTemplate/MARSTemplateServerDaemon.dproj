@@ -6,8 +6,8 @@
         <MainSource>MARSTemplateServerDaemon.dpr</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
-        <Platform Condition="'$(Platform)'==''">Android64</Platform>
-        <TargetedPlatforms>32768</TargetedPlatforms>
+        <Platform Condition="'$(Platform)'==''">Linux64</Platform>
+        <TargetedPlatforms>32896</TargetedPlatforms>
         <AppType>Console</AppType>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
@@ -1120,6 +1120,7 @@
             <Platforms>
                 <Platform value="Android">False</Platform>
                 <Platform value="Android64">True</Platform>
+                <Platform value="Linux64">True</Platform>
                 <Platform value="Win32">False</Platform>
                 <Platform value="Win64">False</Platform>
             </Platforms>
