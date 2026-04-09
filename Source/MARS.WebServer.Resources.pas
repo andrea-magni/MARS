@@ -1,4 +1,4 @@
-(*
+﻿(*
   Copyright 2025, MARS-Curiosity library
 
   Home: https://github.com/andrea-magni/MARS
@@ -217,7 +217,13 @@ begin
     LRelativePath := LRelativePath.Substring(string(PathDelim).Length);
 
   LFullPath := RootFolder;
-  LFullPath := SmartConcat([LFullPath, LRelativePath], PathDelim);
+  // MF20260319
+  // NON usare SmartConcat per costruire il path finale: su Linux stripa il '/' iniziale
+  // rendendo il path relativo invece che assoluto (es. 'app/swagger...' invece di '/app/swagger...').
+  // Usiamo concatenazione diretta preservando il path assoluto.
+  if not LFullPath.EndsWith(PathDelim) then
+    LFullPath := LFullPath + PathDelim;
+  LFullPath := LFullPath + LRelativePath;
 
   if CheckFilters(LFullPath) then
   begin
@@ -337,7 +343,11 @@ function RootFolderAttribute.ExpandMacros(const AString: string): string;
 begin
   Result := AString
     .Replace('{bin}', ExtractFilePath(ParamStr(0)))
-    .Replace('\\', '\', [rfReplaceAll]);
+    .Replace('\\', PathDelim, [rfReplaceAll])  // doppio backslash → separatore
+    .Replace('\', PathDelim, [rfReplaceAll]);   // backslash singolo → separatore
+  // MF20260319
+  // Su Windows PathDelim = '', comportamento invariato.
+  // Su Linux   PathDelim = '/', converte i backslash in slash.
 end;
 
 { ContentTypeForFileExt }

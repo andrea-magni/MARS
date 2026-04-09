@@ -430,7 +430,15 @@
         {$define NOSQLITE3STATIC} // Kylix will use external sqlite3.so
         {$define LINUXNOTBSD}     // e.g. to disable epoll API
       {$else}
-      Kylix1/2 or Delphi Tokyo/ARC are unsupported
+        // Delphi Linux64 (Tokyo and later) - modern cross-platform target
+        // FCS 2026: patch for Delphi 12.2 Linux64 compatibility
+        // Delphi Linux64 uses LLVM backend: inline ASM is NOT supported.
+        {$define LINUXNOTBSD}      // Linux without BSD specifics
+        {$define PUREPASCAL}       // force pure pascal (no asm)
+        {$undef CPUINTEL}          // CRITICAL: unset CPUINTEL set earlier before
+                                   // this block - prevents ASM sections in SynLZ
+        {$undef FORCE_STRSSE42}    // avoid SIGABRT/SIGSEGV on POSIX
+        {$undef ENHANCEDRTL}       // no enhanced RTL on Linux
       {$ifend}
     {$else}
       {$ifdef VER140}
