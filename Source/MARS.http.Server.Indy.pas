@@ -87,7 +87,6 @@ type
     function GetContent: string; inline;
     function GetContentEncoding: string; inline;
     function GetContentStream: TStream; inline;
-//    function GetFreeContentStream: Boolean; inline;
     function GetContentType: string; inline;
     function GetContentLength: Integer; inline;
     function GetStatusCode: Integer; inline;
@@ -95,7 +94,6 @@ type
     procedure SetContent(const AContent: string); inline;
     procedure SetContentEncoding(const AContentEncoding: string); inline;
     procedure SetContentStream(const AContentStream: TStream); inline;
-//    procedure SetFreeContentStream(const AValue: Boolean); inline;
     procedure SetContentType(const AContentType: string); inline;
     procedure SetContentLength(const ALength: Integer); inline;
     procedure SetHeader(const AName: string; const AValue: string); inline;
@@ -141,10 +139,6 @@ type
       AResponseInfo: TIdHTTPResponseInfo; AException: Exception); override;
     procedure DoException(AContext: TIdContext; AException: Exception); override;
 
-    procedure CreatePostStream(ASender: TIdContext; AHeaders: TIdHeaderList; var VPostStream: TStream); override;
-    procedure DoneWithPostStream(ASender: TIdContext; ARequestInfo: TIdHTTPRequestInfo); override;
-
-
     procedure ParseAuthenticationHandler(AContext: TIdContext;
       const AAuthType, AAuthData: String; var VUsername, VPassword: String;
       var VHandled: Boolean); virtual;
@@ -173,7 +167,6 @@ uses
   StrUtils, DateUtils, System.Rtti
 , IdCookie
 , MARS.Core.Utils, MARS.Utils.Parameters
-, CodeSiteLogging
 ;
 
 { TMARShttpServerIndy }
@@ -184,13 +177,6 @@ begin
   OnParseAuthentication := ParseAuthenticationHandler;
   FEngine := AEngine;
   FBeforeCommandGet := nil;
-end;
-
-procedure TMARShttpServerIndy.CreatePostStream(ASender: TIdContext;
-  AHeaders: TIdHeaderList; var VPostStream: TStream);
-begin
-  inherited;
-
 end;
 
 destructor TMARShttpServerIndy.Destroy;
@@ -264,16 +250,8 @@ procedure TMARShttpServerIndy.DoException(AContext: TIdContext;
   AException: Exception);
 begin
   inherited;
-  CodeSite.SendException(AException);
   if Assigned(FEngine) and Assigned(FEngine.OnException) then
     FEngine.OnException(AException);
-end;
-
-procedure TMARShttpServerIndy.DoneWithPostStream(ASender: TIdContext;
-  ARequestInfo: TIdHTTPRequestInfo);
-begin
-  inherited;
-
 end;
 
 function TMARShttpServerIndy.DoQuerySSLPort(APort: TIdPort): Boolean;
@@ -677,11 +655,6 @@ begin
   Result := FWebResponse.ContentType;
 end;
 
-//function TMARSWebResponse.GetFreeContentStream: Boolean;
-//begin
-//  Result := FWebResponse.FreeContentStream;
-//end;
-
 function TMARSWebResponse.GetReasonString: string;
 begin
   Result := FWebResponse.ReasonString;
@@ -736,11 +709,6 @@ begin
     LSL.Free;
   end;
 end;
-
-//procedure TMARSWebResponse.SetFreeContentStream(const AValue: Boolean);
-//begin
-//  FWebResponse.FreeContentStream := AValue;
-//end;
 
 procedure TMARSWebResponse.SetHeader(const AName, AValue: string);
 begin

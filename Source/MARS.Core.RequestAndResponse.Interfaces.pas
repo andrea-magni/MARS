@@ -68,8 +68,6 @@ type
   IMARSResponse = interface
     function GetContentStream: TStream;
     procedure SetContentStream(const AContentStream: TStream);
-//    function GetFreeContentStream: Boolean;
-//    procedure SetFreeContentStream(const AValue: Boolean);
     function GetContentType: string;
     procedure SetContentType(const AContentType: string);
     function GetContentLength: Integer;
@@ -88,7 +86,6 @@ type
 
     property Content: string read GetContent write SetContent;
     property ContentStream: TStream read GetContentStream write SetContentStream;
-//    property FreeContentStream: Boolean read GetFreeContentStream write SetFreeContentStream;
     property ContentType: string read GetContentType write SetContentType;
     property ContentLength: Integer read GetContentLength write SetContentLength;
     property ContentEncoding: string read GetContentEncoding write SetContentEncoding;

@@ -270,12 +270,18 @@ function TStreamValueWriter.GetStream(const AValue: TValue;
   const AMediaType: TMediaType; const AActivation: IMARSActivation): TStream;
 begin
   Result := AValue.AsObject as TStream;
-  Sleep(3_000);
+
+  {$IFDEF DEBUG}
   if Assigned(AActivation) then
-    AActivation.Response.SetHeader(
-      'X-MARS-MBW-STREAMPROVIDER'
-    , Format('Stream ClassName: %s, Size: %d, Position: %d', [Result.ClassName, Result.Size, Result.Position])
-    );
+  begin
+    if Assigned(Result) then
+      AActivation.Response.SetHeader('X-MARS-MBW-STREAMPROVIDER'
+      , Format('Stream ClassName: %s, Size: %d, Position: %d', [Result.ClassName, Result.Size, Result.Position])
+      )
+    else
+      AActivation.Response.SetHeader('X-MARS-MBW-STREAMPROVIDER', 'Stream = nil');
+  end;
+  {$ENDIF}
 end;
 
 procedure TStreamValueWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaType;

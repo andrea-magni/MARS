@@ -467,7 +467,6 @@ procedure TMARSActivation.WriteToResponse(const AValue: TValue;
   const AReturnType: TRttiType);
 var
   LContentStream: TBytesStream;
-//  LFreeContentStream: Boolean;
   LAccept: string;
   LReturnType: TRttiType;
 begin
@@ -497,10 +496,8 @@ begin
       var LBodyStreamProvider: IMessageBodyStreamProvider := nil;
       if Supports(FWriter, IMessageBodyStreamProvider, LBodyStreamProvider) then
       begin
-//          LFreeContentStream := True;
         Response.ContentStream := LBodyStreamProvider.GetStream(AValue, FWriterMediaType, Self);
         FAddMethodResultToContext := False;
-//          Response.FreeContentStream := LFreeContentStream;
       end
       else begin
         LContentStream := TBytesStream.Create();
