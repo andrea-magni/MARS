@@ -1045,20 +1045,23 @@ function PathParamsAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 var
   LPathParams: TMARSPathParams;
-  LProtoPathParams: TArray<TPair<Integer, string>>;
+  LProtoPathParams: TDictionary<Integer, string>;
+  LProtoPathParamsIndexes: TArray<Integer>;
   LURLPathParams: TArray<string>;
-  LPair: TPair<Integer, string>;
-  LIndex: Integer;
+  LIndex, LKey: Integer;
 begin
-  LProtoPathParams := AActivation.URLPrototype.PathParams.ToArray;
+  LProtoPathParams := AActivation.URLPrototype.PathParams;
+  LProtoPathParamsIndexes := AActivation.URLPrototype.PathParams.Keys.ToArray;
+  TArray.Sort<Integer>(LProtoPathParamsIndexes);
+
   LURLPathParams := AActivation.URL.PathTokens;
 
-  SetLength(LPathParams, Length(LProtoPathParams));
-  for LIndex := Low(LProtoPathParams) to High(LProtoPathParams) do
+  SetLength(LPathParams, Length(LProtoPathParamsIndexes));
+  for LIndex := Low(LProtoPathParamsIndexes) to High(LProtoPathParamsIndexes) do
   begin
-    LPair := LProtoPathParams[LIndex];
-    LPathParams[LIndex].Name := LPair.Value;
-    LPathParams[LIndex].Value := LURLPathParams[LPair.Key];
+    LKey := LProtoPathParamsIndexes[LIndex];
+    LPathParams[LIndex].Name := LProtoPathParams.Items[LKey];
+    LPathParams[LIndex].Value := LURLPathParams[LKey];
   end;
 
   Result := TValue.From<TMARSPathParams>(LPathParams);
