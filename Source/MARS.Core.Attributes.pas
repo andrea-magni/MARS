@@ -115,13 +115,15 @@ type
   AfterInvokeAttribute = class(InvocationEventAttribute);
   InvokeErrorAttribute = class(InvocationEventAttribute);
 
-  ContextAttribute = class(MARSAttribute);
+  ContextAttribute = class(MARSAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; virtual;
+  end;
 
   ConfigParamAttribute = class(ContextAttribute)
   protected
   public
-    function GetValue(const ADestination: TRttiObject;
-      const AActivation: IMARSActivation): TValue; virtual;
   end;
 
   ConfigSingleParamAttribute = class(ConfigParamAttribute)
@@ -173,11 +175,11 @@ type
   public
     function IsRequired(const ADestination: TRttiObject): Boolean; virtual;
 
-    function GetValue(const ADestination: TRttiObject;
-      const AActivation: IMARSActivation): TValue; virtual;
     property Kind: string read GetKind;
     property SwaggerKind: string read GetSwaggerKind;
   end;
+
+  RequestParamsAttribute = class(ContextAttribute);
 
   ERequiredException = class(EMARSHttpException);
 
@@ -219,6 +221,12 @@ type
       const AActivation: IMARSActivation): TValue; override;
   end;
 
+  QueryParamsAttribute = class(RequestParamsAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
   FormParamAttribute = class(NamedRequestParamAttribute)
   protected
     function GetSwaggerKind: string; override;
@@ -243,9 +251,21 @@ type
       const AActivation: IMARSActivation): TValue; override;
   end;
 
+  HeadersAttribute = class(RequestParamsAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
   CookieParamAttribute = class(NamedRequestParamAttribute)
   protected
     function GetSwaggerKind: string; override;
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
+  CookiesAttribute = class(RequestParamsAttribute)
   public
     function GetValue(const ADestination: TRttiObject;
       const AActivation: IMARSActivation): TValue; override;
@@ -589,12 +609,6 @@ begin
   Result := '';
 end;
 
-function RequestParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivation: IMARSActivation): TValue;
-begin
-  Result := TValue.Empty;
-end;
-
 function RequestParamAttribute.IsRequired(
   const ADestination: TRttiObject): Boolean;
 begin
@@ -912,15 +926,6 @@ begin
   Create(AName, TValue.Empty);
 end;
 
-
-{ ConfigParamAttribute }
-
-function ConfigParamAttribute.GetValue(const ADestination: TRttiObject;
-  const AActivation: IMARSActivation): TValue;
-begin
-  Result := TValue.Empty;
-end;
-
 { EngineParamAttribute }
 
 function EngineParamAttribute.GetValue(const ADestination: TRttiObject;
@@ -994,6 +999,38 @@ begin
   else if SameText(Name, 'Unicode') then Result := TEncoding.Unicode
   else if SameText(Name, 'UTF7') then Result := TEncoding.UTF7
   else if SameText(Name, 'UTF8') then Result := TEncoding.UTF8;
+end;
+
+{ ContextAttribute }
+
+function ContextAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  Result := TValue.Empty;
+end;
+
+{ QueryParamsAttribute }
+
+function QueryParamsAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  Result := TValue.From<TMARSQueryParams>(AActivation.Request.QueryParams);
+end;
+
+{ HeadersAttribute }
+
+function HeadersAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  Result := TValue.From<TMARSHeaders>(AActivation.Request.Headers);
+end;
+
+{ CookiesAttribute }
+
+function CookiesAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+begin
+  Result := TValue.From<TMARSCookies>(AActivation.Request.Cookies);
 end;
 
 end.

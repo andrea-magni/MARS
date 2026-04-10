@@ -37,10 +37,13 @@ type
     function GetAccept: string; inline;
     function GetAuthorization: string; inline;
     function GetContent: string; inline;
+
     function GetCookieParamIndex(const AName: string): Integer; inline;
     function GetCookieParamValue(const AIndex: Integer): string; overload; inline;
     function GetCookieParamValue(const AName: string): string; overload; inline;
     function GetCookieParamCount: Integer;
+    function GetCookies: TMARSCookies;
+
     function GetFilesCount: Integer; inline;
     function GetFormParamCount: Integer; inline;
     function GetFormParamIndex(const AName: string): Integer; inline;
@@ -51,12 +54,14 @@ type
     function GetFormFileParam(const AIndex: Integer; out AFieldName, AFileName: string;
       out ABytes: TBytes; out AContentType: string): Boolean;
     function GetFormParams: string; inline;
+
     function GetHeaderParamCount: Integer; inline;
     function GetHeaderParamIndex(const AName: string): Integer; inline;
     function GetHeaderParamName(const AIndex: Integer): string; inline;
     function GetHeaderParamValue(const AHeaderName: string): string; overload; inline;
     function GetHeaderParamValue(const AIndex: Integer): string; overload; inline;
-    function GetHeaders: TArray<THeader>; inline;
+    function GetHeaders: TMARSHeaders; inline;
+
     function GetHostName: string; inline;
     function GetMethod: string; inline;
     function GetPort: Integer; inline;
@@ -67,6 +72,8 @@ type
     function GetQueryParamValue(const AName: string): string; overload; inline;
     function GetQueryParamCount: Integer;
     function GetQueryString: string; inline;
+    function GetQueryParams: TMARSQueryParams;
+
     function GetRawContent: TBytes; inline;
     function GetRawPath: string; inline;
     function GetContentFields: TArray<string>;
@@ -436,6 +443,18 @@ begin
   Result := FWebRequest.CookieFields.Values[AName];
 end;
 
+function TMARSWebRequest.GetCookies: TMARSCookies;
+var
+  LIndex: Integer;
+begin
+  SetLength(Result, FWebRequest.CookieFields.Count);
+  for LIndex := Low(Result) to High(Result) do
+  begin
+     Result[LIndex].Name := FWebRequest.CookieFields.Names[LIndex];
+     Result[LIndex].Value := FWebRequest.CookieFields.ValueFromIndex[LIndex];
+  end;
+end;
+
 function TMARSWebRequest.GetDate: TDateTime;
 begin
   result := FWebRequest.Date;
@@ -538,7 +557,7 @@ begin
     raise EMARSEngineException.Create('[Indy] Not supported: GetHeaderParamValue by Index');
 end;
 
-function TMARSWebRequest.GetHeaders: TArray<THeader>;
+function TMARSWebRequest.GetHeaders: TMARSHeaders;
 begin
   SetLength(Result, GetHeaderParamCount);
   for var LIndex := Low(Result) to High(Result) do
@@ -581,6 +600,18 @@ end;
 function TMARSWebRequest.GetQueryParamName(const AIndex: Integer): string;
 begin
   result := FWebRequest.QueryFields.Names[AIndex];
+end;
+
+function TMARSWebRequest.GetQueryParams: TMARSQueryParams;
+var
+  LIndex: Integer;
+begin
+  SetLength(Result, FWebRequest.QueryFields.Count);
+  for LIndex := Low(Result) to High(Result) do
+  begin
+     Result[LIndex].Name := FWebRequest.QueryFields.Names[LIndex];
+     Result[LIndex].Value := FWebRequest.QueryFields.ValueFromIndex[LIndex];
+  end;
 end;
 
 function TMARSWebRequest.GetQueryParamValue(const AName: string): string;

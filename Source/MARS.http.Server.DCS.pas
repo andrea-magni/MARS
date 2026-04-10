@@ -33,6 +33,7 @@ type
     function GetCookieParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamValue(const AName: string): string; overload;
     function GetCookieParamCount: Integer;
+    function GetCookies: TMARSCookies;
 
     function GetFilesCount: Integer;
     function GetFormParamCount: Integer;
@@ -51,7 +52,7 @@ type
     function GetHeaderParamName(const AIndex: Integer): string; inline;
     function GetHeaderParamValue(const AHeaderName: string): string; overload; inline;
     function GetHeaderParamValue(const AIndex: Integer): string; overload; inline;
-    function GetHeaders: TArray<THeader>; inline;
+    function GetHeaders: TMARSHeaders; inline;
 
     function GetHostName: string;
     function GetMethod: string;
@@ -64,6 +65,7 @@ type
     function GetQueryParamName(const AIndex: Integer): string; inline;
     function GetQueryParamCount: Integer; inline;
     function GetQueryString: string; inline;
+    function GetQueryParams: TMARSQueryParams;
 
     function GetRawContent: TBytes; inline;
     function GetRawPath: string;
@@ -312,6 +314,21 @@ begin
   end;
 end;
 
+function TMARSDCSRequest.GetCookies: TMARSCookies;
+var
+  LIndex: Integer;
+  LCookie: TNameValue;
+begin
+  SetLength(Result, FDCSRequest.Cookies.Count);
+
+  for LIndex := 0 to FDCSRequest.Cookies.Count -1 do
+  begin
+    LCookie := FDCSRequest.Cookies.Items[LIndex];
+    Result[LIndex].Name := LCookie.Name;
+    Result[LIndex].Value := LCookie.Value;
+  end;
+end;
+
 function TMARSDCSRequest.GetDate: TDateTime;
 begin
   Result := TCrossHttpUtils.RFC1123_StrToDate(GetHeaderParamValue('Date'));
@@ -497,7 +514,7 @@ begin
   Result := FDCSRequest.Header.Items[AIndex].Value;
 end;
 
-function TMARSDCSRequest.GetHeaders: TArray<THeader>;
+function TMARSDCSRequest.GetHeaders: TMARSHeaders;
 var
   LIndex: Integer;
   LParam: TNameValue;
@@ -558,6 +575,19 @@ end;
 function TMARSDCSRequest.GetQueryParamName(const AIndex: Integer): string;
 begin
   Result := FDCSRequest.Query.Items[AIndex].Name;
+end;
+
+function TMARSDCSRequest.GetQueryParams: TMARSQueryParams;
+var
+  LIndex: Integer;
+begin
+  SetLength(Result, FDCSRequest.Query.Count);
+
+  for LIndex := 0 to FDCSRequest.Query.Count -1 do
+  begin
+    Result[LIndex].Name := FDCSRequest.Query.Items[LIndex].Name;
+    Result[LIndex].Value := FDCSRequest.Query.Items[LIndex].Value;
+  end;
 end;
 
 function TMARSDCSRequest.GetQueryParamValue(const AName: string): string;

@@ -6,10 +6,20 @@ uses
   Classes, SysUtils;
 
 type
-  THeader = record
-    Name: string;
-    Value: string;
+
+  TNameValuePair<N,V> = record
+    Name: N;
+    Value: V;
   end;
+
+  TMARSHeader = TNameValuePair<string, string>;
+  TMARSHeaders = TArray<TMARSHeader>;
+
+  TMARSCookie = TNameValuePair<string, string>;
+  TMARSCookies = TArray<TMARSCookie>;
+
+  TMARSQueryParam = TNameValuePair<string, string>;
+  TMARSQueryParams = TArray<TMARSQueryParam>;
 
   {$M+}
   IMARSRequest = interface
@@ -21,6 +31,8 @@ type
     function GetQueryParamValue(const AIndex: Integer): string; overload;
     function GetQueryParamValue(const AName: string): string; overload;
     function GetQueryParamCount: Integer;
+    function GetQueryParams: TMARSQueryParams;
+
     // Form params
     function GetFormParamIndex(const AName: string): Integer;
     function GetFormParamName(const AIndex: Integer): string;
@@ -39,13 +51,14 @@ type
     function GetHeaderParamName(const AIndex: Integer): string;
     function GetHeaderParamValue(const AHeaderName: string): string; overload;
     function GetHeaderParamValue(const AIndex: Integer): string; overload;
-    function GetHeaders: TArray<THeader>;
+    function GetHeaders: TMARSHeaders;
 
     // Cookie params
     function GetCookieParamIndex(const AName: string): Integer;
     function GetCookieParamValue(const AIndex: Integer): string; overload;
     function GetCookieParamValue(const AName: string): string; overload;
     function GetCookieParamCount: Integer;
+    function GetCookies: TMARSCookies;
 
     function GetAccept: string;
     function GetAuthorization: string;
@@ -73,8 +86,10 @@ type
     property Port: Integer read GetPort;
     property RawPath: string read GetRawPath;
     property ContentFields: TArray<string> read GetContentFields;
-    property Headers: TArray<THeader> read GetHeaders;
+    property Cookies: TMARSCookies read GetCookies;
+    property Headers: TMARSHeaders read GetHeaders;
     property QueryFields: TArray<string> read GetQueryFields;
+    property QueryParams: TMARSQueryParams read GetQueryParams;
     property RemoteIP: string read GetRemoteIP;
     property UserAgent: string read GetUserAgent;
   end;

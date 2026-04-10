@@ -44,15 +44,23 @@ begin
   LType := ADestination.GetRttiType;
 
   LValue.Clear;
+
   if ADestination.HasAttribute<RequestParamAttribute>(
     procedure (AParam: RequestParamAttribute)
     begin
-      LValue := TInjectionValue.Create(
-        AParam.GetValue(ADestination, AActivation), ADestination.HasAttribute<IsReference>
-      );
+      LValue := TInjectionValue.Create(AParam.GetValue(ADestination, AActivation), ADestination.HasAttribute<IsReference>);
     end
   ) then
     AValue := LValue
+
+  else if ADestination.HasAttribute<RequestParamsAttribute>(
+    procedure (AParam: RequestParamsAttribute)
+    begin
+      LValue := TInjectionValue.Create(AParam.GetValue(ADestination, AActivation), ADestination.HasAttribute<IsReference>);
+    end
+  ) then
+    AValue := LValue
+
   else if ADestination.HasAttribute<ConfigParamAttribute>(
     procedure (AConfigParam: ConfigParamAttribute)
     begin
@@ -60,6 +68,7 @@ begin
     end
   ) then
     AValue := LValue
+
   else if (LType is TRttiInterfaceType) and (LType.Handle = TypeInfo(IMARSRequest)) then
     AValue := TInjectionValue.Create(TValue.From<IMARSRequest>(AActivation.Request), True)
   else if (LType is TRttiInterfaceType) and (LType.Handle = TypeInfo(IMARSResponse)) then
@@ -91,9 +100,14 @@ begin
       begin
         LType := ADestination.GetRttiType;
         Result :=
-          ADestination.HasAttribute<RequestParamAttribute>
+          ADestination.HasAttribute<ContextAttribute>
           or ADestination.HasAttribute<ConfigParamAttribute>
           or (LType.Handle = TypeInfo(IMARSRequest))
+
+//          or (LType.Handle = TypeInfo(TMARSHeaders))
+//          or (LType.Handle = TypeInfo(TMARSCookies))
+//          or (LType.Handle = TypeInfo(TMARSQueryParams))
+
           or (LType.Handle = TypeInfo(IMARSResponse))
           or LType.IsObjectOfType(TMARSURL)
           or (LType.Handle = TypeInfo(IMARSEngine))
