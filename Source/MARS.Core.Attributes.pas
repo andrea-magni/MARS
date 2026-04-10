@@ -213,6 +213,12 @@ type
       const AActivation: IMARSActivation): TValue; override;
   end;
 
+  PathParamsAttribute = class(RequestParamsAttribute)
+  public
+    function GetValue(const ADestination: TRttiObject;
+      const AActivation: IMARSActivation): TValue; override;
+  end;
+
   QueryParamAttribute = class(NamedRequestParamAttribute)
   protected
     function GetSwaggerKind: string; override;
@@ -1031,6 +1037,31 @@ function CookiesAttribute.GetValue(const ADestination: TRttiObject;
   const AActivation: IMARSActivation): TValue;
 begin
   Result := TValue.From<TMARSCookies>(AActivation.Request.Cookies);
+end;
+
+{ PathParamsAttribute }
+
+function PathParamsAttribute.GetValue(const ADestination: TRttiObject;
+  const AActivation: IMARSActivation): TValue;
+var
+  LPathParams: TMARSPathParams;
+  LProtoPathParams: TArray<TPair<Integer, string>>;
+  LURLPathParams: TArray<string>;
+  LPair: TPair<Integer, string>;
+  LIndex: Integer;
+begin
+  LProtoPathParams := AActivation.URLPrototype.PathParams.ToArray;
+  LURLPathParams := AActivation.URL.PathTokens;
+
+  SetLength(LPathParams, Length(LProtoPathParams));
+  for LIndex := Low(LProtoPathParams) to High(LProtoPathParams) do
+  begin
+    LPair := LProtoPathParams[LIndex];
+    LPathParams[LIndex].Name := LPair.Value;
+    LPathParams[LIndex].Value := LURLPathParams[LPair.Key];
+  end;
+
+  Result := TValue.From<TMARSPathParams>(LPathParams);
 end;
 
 end.

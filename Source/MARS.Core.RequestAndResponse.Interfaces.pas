@@ -21,6 +21,9 @@ type
   TMARSQueryParam = TNameValuePair<string, string>;
   TMARSQueryParams = TArray<TMARSQueryParam>;
 
+  TMARSPathParam = TNameValuePair<string, string>;
+  TMARSPathParams = TArray<TMARSPathParam>;
+
   {$M+}
   IMARSRequest = interface
     function GetRawContent: TBytes;
