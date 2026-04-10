@@ -558,9 +558,11 @@ begin
 end;
 
 function TMARSWebRequest.GetHeaders: TMARSHeaders;
+var
+  LIndex: Integer;
 begin
   SetLength(Result, GetHeaderParamCount);
-  for var LIndex := Low(Result) to High(Result) do
+  for LIndex := Low(Result) to High(Result) do
   begin
     Result[LIndex].Name := GetHeaderParamName(LIndex);
     Result[LIndex].Value := GetHeaderParamValue(LIndex);
