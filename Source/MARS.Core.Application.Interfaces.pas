@@ -21,6 +21,7 @@ type
 
     function AddResource(AResource: string): Boolean;
     procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
+    procedure EnumerateEndpoints(const ADoSomething: TProc<string, TMARSConstructorInfo, string, string>);
 
     function GetName: string;
     function GetBasePath: string;

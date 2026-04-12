@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="OTPDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="OTPDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OTPDemoServerApplication">
+        <MSBuild Projects="OTPDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerApplication:Clean">
+        <MSBuild Projects="OTPDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerApplication:Make">
+        <MSBuild Projects="OTPDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoServerFMXApplication">
+        <MSBuild Projects="OTPDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerFMXApplication:Clean">
+        <MSBuild Projects="OTPDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerFMXApplication:Make">
+        <MSBuild Projects="OTPDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoServerService">
+        <MSBuild Projects="OTPDemoServerService.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerService:Clean">
+        <MSBuild Projects="OTPDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerService:Make">
+        <MSBuild Projects="OTPDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoServerConsoleApplication">
+        <MSBuild Projects="OTPDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="OTPDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerConsoleApplication:Make">
+        <MSBuild Projects="OTPDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoServerDaemon">
+        <MSBuild Projects="OTPDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerDaemon:Clean">
+        <MSBuild Projects="OTPDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerDaemon:Make">
+        <MSBuild Projects="OTPDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoServerApacheModule">
+        <MSBuild Projects="OTPDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerApacheModule:Clean">
+        <MSBuild Projects="OTPDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerApacheModule:Make">
+        <MSBuild Projects="OTPDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoServerFCGI">
+        <MSBuild Projects="OTPDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerFCGI:Clean">
+        <MSBuild Projects="OTPDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerFCGI:Make">
+        <MSBuild Projects="OTPDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoServerISAPI">
+        <MSBuild Projects="OTPDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="OTPDemoServerISAPI:Clean">
+        <MSBuild Projects="OTPDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoServerISAPI:Make">
+        <MSBuild Projects="OTPDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoClient">
+        <MSBuild Projects="OTPDemoClient.dproj"/>
+    </Target>
+    <Target Name="OTPDemoClient:Clean">
+        <MSBuild Projects="OTPDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoClient:Make">
+        <MSBuild Projects="OTPDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTPDemoTests">
+        <MSBuild Projects="OTPDemoTests.dproj"/>
+    </Target>
+    <Target Name="OTPDemoTests:Clean">
+        <MSBuild Projects="OTPDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTPDemoTests:Make">
+        <MSBuild Projects="OTPDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OTPDemoServerApplication;OTPDemoServerFMXApplication;OTPDemoServerService;OTPDemoServerConsoleApplication;OTPDemoServerDaemon;OTPDemoServerApacheModule;OTPDemoServerFCGI;OTPDemoServerISAPI;OTPDemoClient;OTPDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OTPDemoServerApplication:Clean;OTPDemoServerFMXApplication:Clean;OTPDemoServerService:Clean;OTPDemoServerConsoleApplication:Clean;OTPDemoServerDaemon:Clean;OTPDemoServerApacheModule:Clean;OTPDemoServerFCGI:Clean;OTPDemoServerISAPI:Clean;OTPDemoClient:Clean;OTPDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OTPDemoServerApplication:Make;OTPDemoServerFMXApplication:Make;OTPDemoServerService:Make;OTPDemoServerConsoleApplication:Make;OTPDemoServerDaemon:Make;OTPDemoServerApacheModule:Make;OTPDemoServerFCGI:Make;OTPDemoServerISAPI:Make;OTPDemoClient:Make;OTPDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

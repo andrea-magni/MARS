@@ -33,6 +33,7 @@ type
     // IMARSApplication --------------------------------------------------------
     function AddResource(AResource: string): Boolean;
     procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
+    procedure EnumerateEndpoints(const ADoSomething: TProc<string, TMARSConstructorInfo, string, string>);
 
     function GetName: string;
     function GetBasePath: string;
@@ -130,6 +131,36 @@ begin
   FParameters.Free;
   FResources.Free;
   inherited;
+end;
+
+procedure TMARSApplication.EnumerateEndpoints(
+  const ADoSomething: TProc<string, TMARSConstructorInfo, string, string>);
+begin
+  EnumerateResources(
+    procedure (AName: string; AInfo: TMARSConstructorInfo)
+    var
+      LMethod: TRttiMethod;
+      LHttpMethodAttribute: HttpMethodAttribute;
+      LResourcePath, LMethodPath: string;
+      LPathAttribute: PathAttribute;
+    begin
+      LResourcePath := {LApplicationHttpPath +} AInfo.Path;
+
+      for LMethod in AInfo.Methods do
+      begin
+        LHttpMethodAttribute := LMethod.GetAttribute<HttpMethodAttribute>;
+        if Assigned(LHttpMethodAttribute) then
+        begin
+          LMethodPath := LResourcePath;
+          LPathAttribute := LMethod.GetAttribute<PathAttribute>;
+          if Assigned(LPathAttribute) then
+            LMethodPath := LMethodPath + LPathAttribute.Value;
+
+          ADoSomething(AName, AInfo, LMethodPath, LHttpMethodAttribute.HttpMethodName);
+        end;
+      end;
+    end
+  );
 end;
 
 procedure TMARSApplication.EnumerateResources(
