@@ -57,8 +57,8 @@ implementation
 {$R *.dfm}
 
 uses
-  StrUtils, Web.HttpApp, IOUtils, Windows, ShellAPI, NetEncoding
-, MARS.Core.URL
+  StrUtils, Web.HttpApp, IOUtils, Windows, ShellAPI, NetEncoding, Rtti
+, MARS.Core.URL, MARS.Core.Attributes
 , MARS.Core.Engine, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Registry, MARS.Core.Registry.Utils, MARS.Core.Utils
@@ -116,13 +116,24 @@ begin
               procedure (AName: string; AInfo: TMARSConstructorInfo)
               var
                 LResourceItem: TTreeNode;
+                LResourcePath: string;
               begin
                 LResourceItem := ATreeview.Items.AddChild(LApplicationItem, AInfo.TypeTClass.ClassName);
+                LResourcePath := LApplicationHttpPath + AInfo.Path;
 
-                if LApplicationHttpPath <> '' then
-                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpPath + AInfo.Path);
-                if LApplicationHttpsPath <> '' then
-                  ATreeview.Items.AddChild(LResourceItem, LApplicationHttpsPath + AInfo.Path);
+                AApplication.EnumerateEndpoints(
+                  procedure (AResourceName: string; AResourceInfo: TMARSConstructorInfo; AMethodPath: string; AMethodVerb: string)
+                  begin
+                    if AName = AResourceName then
+                    begin
+                      if LApplicationHttpPath <> '' then
+                        ATreeview.Items.AddChild(LResourceItem, LApplicationHttpPath + AMethodPath + ' ' + AMethodVerb);
+                      if LApplicationHttpsPath <> '' then
+                        ATreeview.Items.AddChild(LResourceItem, LApplicationHttpsPath + AMethodPath + ' ' + AMethodVerb);
+                    end;
+                  end
+                );
+
               end
             );
           end
@@ -152,10 +163,23 @@ end;
 procedure TMainForm.MainTreeViewClick(Sender: TObject);
 var
   LItem: TTreeNode;
+  LFinalURL: string;
+  LSpaceIndex: Integer;
 begin
   LItem := MainTreeView.Selected;
   if Assigned(LItem) and StartsText('http', LItem.Text) then
-    ShellExecute(0, nil, PWideChar(LItem.Text.Replace(TMARSURL.PATH_PARAM_WILDCARD, '', [rfReplaceAll])), nil, nil, SW_SHOW);
+  begin
+    LFinalURL := LItem.Text.Replace(TMARSURL.PATH_PARAM_WILDCARD, '', [rfReplaceAll]);
+    LSpaceIndex := LFinalURL.LastIndexOf(' ');
+    if LSpaceIndex <> -1 then
+      LFinalURL := LFinalURL.Substring(0, LSpaceIndex);
+    LFinalURL := LFinalURL
+      .Replace('{', '', [rfReplaceAll])
+      .Replace('}', '', [rfReplaceAll])
+    ;
+
+    ShellExecute(0, nil, PWideChar(LFinalURL), nil, nil, SW_SHOW);
+  end;
 end;
 
 procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
