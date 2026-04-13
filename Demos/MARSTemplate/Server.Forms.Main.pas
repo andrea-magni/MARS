@@ -127,9 +127,9 @@ begin
                     if AName = AResourceName then
                     begin
                       if LApplicationHttpPath <> '' then
-                        ATreeview.Items.AddChild(LResourceItem, LApplicationHttpPath + AMethodPath + ' ' + AMethodVerb);
+                        ATreeview.Items.AddChild(LResourceItem, TMARSURL.CombinePath([LApplicationHttpPath, AMethodPath]) + ' ' + AMethodVerb);
                       if LApplicationHttpsPath <> '' then
-                        ATreeview.Items.AddChild(LResourceItem, LApplicationHttpsPath + AMethodPath + ' ' + AMethodVerb);
+                        ATreeview.Items.AddChild(LResourceItem, TMARSURL.CombinePath([LApplicationHttpPath, AMethodPath]) + ' ' + AMethodVerb);
                     end;
                   end
                 );
