@@ -63,22 +63,6 @@ begin
 
       LValue := ASource.ReadValue(LName, TValue.Empty, DefaultMARSJSONSerializationOptions);
 
-//      if LPair.JsonValue is TJSONNumber then
-//        LValue := GuessTValueFromString(TJSONNumber(LPair.JsonValue).Value)
-//      else if LPair.JsonValue is TJSONTrue then
-//        LValue := True
-//      else if LPair.JsonValue is TJSONFalse then
-//        LValue := False
-//      else if LPair.JsonValue is TJSONObject then
-//      begin
-//        Load(AParameters, TJSONObject(LPair.JsonValue), LName);
-//        Continue;
-//      end
-//      else if LPair.JsonValue is TJSONArray then
-//        LValue := '{array}'
-//      else if LPair.JsonValue is TJSONString then
-//        LValue := TJSONString(LPair.JsonValue).Value;
-
       AParameters.Values[LName] := LValue;
     end;
   end;
@@ -112,41 +96,6 @@ begin
     TMARSParameters.GetSliceAndParamName(LPair.Key, LSlice, LParamName);
 
     ADestination.WriteTValue(LPair.Key, LPair.Value)
-{
-    case LPair.Value.Kind of
-      tkInteger: ADestination.WriteIntegerValue(LPair.Key, LPair.Value.AsInteger);
-        tkInt64: ADestination.WriteInt64Value(LPair.Key, LPair.Value.AsInt64);
-        tkFloat: ADestination.WriteDoubleValue(LPair.Key, LPair.Value.AsExtended);
-
-      tkChar,
-      tkString,
-      tkWChar,
-      tkLString,
-      tkWString,
-      tkUString: ADestination.WriteStringValue(LPair.Key, LPair.Value.AsString);
-
-      tkEnumeration: begin
-        if LPair.Value.IsType<Boolean> then
-          ADestination.WriteBoolValue(LPair.Key, LPair.Value.AsBoolean)
-        else
-          ADestination.WriteStringValue(LPair.Key, GetEnumName(LPair.Value.TypeInfo, LPair.Value.AsOrdinal));
-      end;
-
-//      tkUnknown: ;
-//      tkSet: ;
-
-//      tkClass: ;
-//      tkMethod: ;
-//      tkVariant: ;
-//      tkArray: ;
-//      tkRecord: ;
-//      tkInterface: ;
-//      tkDynArray: ;
-//      tkClassRef: ;
-//      tkPointer: ;
-//      tkProcedure: ;
-    end;
-}
   end;
 end;
 
