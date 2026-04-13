@@ -1817,6 +1817,10 @@ var
   LDesiredType: TRttiType;
   LContext: TRttiContext;
   LFound: Boolean;
+  LStringValue: string;
+  LValueAsInteger: Integer;
+  LValueAsInt64: Int64;
+  LValueAsDouble: Double;
 begin
   Result := TValue.Empty;
   LFound := TryGetValue<TJSONValue>(AName, LJSONValue);
@@ -1829,7 +1833,17 @@ begin
     if LJSONValue is TJSONString then
       LDesiredType := LContext.GetType(TypeInfo(String))
     else if LJSONValue is TJSONNumber then
-      LDesiredType := LContext.GetType(TypeInfo(Double))
+    begin
+      LStringValue := LJSONValue.Value;
+      if Integer.TryParse(LStringValue, LValueAsInteger)then
+        LDesiredType := LContext.GetType(TypeInfo(Integer))
+      else if TryStrToInt64(LStringValue, LValueAsInt64) then
+        LDesiredType := LContext.GetType(TypeInfo(Int64))
+      else if TryStrToFloat(LStringValue, LValueAsDouble) then
+        LDesiredType := LContext.GetType(TypeInfo(Double))
+      else if TryStrToFloat(LStringValue, LValueAsDouble, TFormatSettings.Create('en')) then
+        LDesiredType := LContext.GetType(TypeInfo(Double));
+    end
     else if LJSONValue is TJSONBool then
       LDesiredType := LContext.GetType(TypeInfo(Boolean))
     else if LJSONValue is TJSONArray then
