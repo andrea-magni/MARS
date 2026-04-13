@@ -154,7 +154,7 @@ begin
           LMethodPath := LResourcePath;
           LPathAttribute := LMethod.GetAttribute<PathAttribute>;
           if Assigned(LPathAttribute) then
-            LMethodPath := LMethodPath + LPathAttribute.Value;
+            LMethodPath := TMARSURL.CombinePath([LMethodPath, LPathAttribute.Value]);
 
           ADoSomething(AName, AInfo, LMethodPath, LHttpMethodAttribute.HttpMethodName);
         end;

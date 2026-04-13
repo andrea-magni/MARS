@@ -370,7 +370,7 @@ begin
   FClaims[JWT_ISSUED_AT_CLAIM] := DateTimeToUnix(LIssuedAt {$ifdef DelphiXE7_UP}, False{$endif});
   FClaims[JWT_EXPIRATION_CLAIM] := DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE7_UP}, False{$endif});
   FClaims[JWT_ISSUER_CLAIM] := FIssuer;
-  FClaims[JWT_DURATION_CLAIM] := FDuration;
+  FClaims[JWT_DURATION_CLAIM] := TValue.From<TDateTime>(FDuration);
 
   FToken := BuildJWTToken(ASecret, FClaims);
   FIsVerified := True;

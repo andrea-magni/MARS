@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="TokenRenewServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="TokenRenewTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="TokenRenewServerApplication">
+        <MSBuild Projects="TokenRenewServerApplication.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerApplication:Clean">
+        <MSBuild Projects="TokenRenewServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerApplication:Make">
+        <MSBuild Projects="TokenRenewServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewServerFMXApplication">
+        <MSBuild Projects="TokenRenewServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerFMXApplication:Clean">
+        <MSBuild Projects="TokenRenewServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerFMXApplication:Make">
+        <MSBuild Projects="TokenRenewServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewServerService">
+        <MSBuild Projects="TokenRenewServerService.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerService:Clean">
+        <MSBuild Projects="TokenRenewServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerService:Make">
+        <MSBuild Projects="TokenRenewServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewServerConsoleApplication">
+        <MSBuild Projects="TokenRenewServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerConsoleApplication:Clean">
+        <MSBuild Projects="TokenRenewServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerConsoleApplication:Make">
+        <MSBuild Projects="TokenRenewServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewServerDaemon">
+        <MSBuild Projects="TokenRenewServerDaemon.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerDaemon:Clean">
+        <MSBuild Projects="TokenRenewServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerDaemon:Make">
+        <MSBuild Projects="TokenRenewServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewServerApacheModule">
+        <MSBuild Projects="TokenRenewServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerApacheModule:Clean">
+        <MSBuild Projects="TokenRenewServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerApacheModule:Make">
+        <MSBuild Projects="TokenRenewServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewServerFCGI">
+        <MSBuild Projects="TokenRenewServerFCGI.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerFCGI:Clean">
+        <MSBuild Projects="TokenRenewServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerFCGI:Make">
+        <MSBuild Projects="TokenRenewServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewServerISAPI">
+        <MSBuild Projects="TokenRenewServerISAPI.dproj"/>
+    </Target>
+    <Target Name="TokenRenewServerISAPI:Clean">
+        <MSBuild Projects="TokenRenewServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewServerISAPI:Make">
+        <MSBuild Projects="TokenRenewServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewClient">
+        <MSBuild Projects="TokenRenewClient.dproj"/>
+    </Target>
+    <Target Name="TokenRenewClient:Clean">
+        <MSBuild Projects="TokenRenewClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewClient:Make">
+        <MSBuild Projects="TokenRenewClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TokenRenewTests">
+        <MSBuild Projects="TokenRenewTests.dproj"/>
+    </Target>
+    <Target Name="TokenRenewTests:Clean">
+        <MSBuild Projects="TokenRenewTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TokenRenewTests:Make">
+        <MSBuild Projects="TokenRenewTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="TokenRenewServerApplication;TokenRenewServerFMXApplication;TokenRenewServerService;TokenRenewServerConsoleApplication;TokenRenewServerDaemon;TokenRenewServerApacheModule;TokenRenewServerFCGI;TokenRenewServerISAPI;TokenRenewClient;TokenRenewTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="TokenRenewServerApplication:Clean;TokenRenewServerFMXApplication:Clean;TokenRenewServerService:Clean;TokenRenewServerConsoleApplication:Clean;TokenRenewServerDaemon:Clean;TokenRenewServerApacheModule:Clean;TokenRenewServerFCGI:Clean;TokenRenewServerISAPI:Clean;TokenRenewClient:Clean;TokenRenewTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="TokenRenewServerApplication:Make;TokenRenewServerFMXApplication:Make;TokenRenewServerService:Make;TokenRenewServerConsoleApplication:Make;TokenRenewServerDaemon:Make;TokenRenewServerApacheModule:Make;TokenRenewServerFCGI:Make;TokenRenewServerISAPI:Make;TokenRenewClient:Make;TokenRenewTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

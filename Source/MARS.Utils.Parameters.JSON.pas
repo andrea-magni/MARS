@@ -61,21 +61,23 @@ begin
 
       LName := AParameters.CombineSliceAndParamName(ASliceName, LPair.JsonString.Value);
 
-      if LPair.JsonValue is TJSONNumber then
-        LValue := GuessTValueFromString(TJSONNumber(LPair.JsonValue).Value)
-      else if LPair.JsonValue is TJSONTrue then
-        LValue := True
-      else if LPair.JsonValue is TJSONFalse then
-        LValue := False
-      else if LPair.JsonValue is TJSONObject then
-      begin
-        Load(AParameters, TJSONObject(LPair.JsonValue), LName);
-        Continue;
-      end
-      else if LPair.JsonValue is TJSONArray then
-        LValue := '{array}'
-      else if LPair.JsonValue is TJSONString then
-        LValue := TJSONString(LPair.JsonValue).Value;
+      LValue := ASource.ReadValue(LName, TValue.Empty, DefaultMARSJSONSerializationOptions);
+
+//      if LPair.JsonValue is TJSONNumber then
+//        LValue := GuessTValueFromString(TJSONNumber(LPair.JsonValue).Value)
+//      else if LPair.JsonValue is TJSONTrue then
+//        LValue := True
+//      else if LPair.JsonValue is TJSONFalse then
+//        LValue := False
+//      else if LPair.JsonValue is TJSONObject then
+//      begin
+//        Load(AParameters, TJSONObject(LPair.JsonValue), LName);
+//        Continue;
+//      end
+//      else if LPair.JsonValue is TJSONArray then
+//        LValue := '{array}'
+//      else if LPair.JsonValue is TJSONString then
+//        LValue := TJSONString(LPair.JsonValue).Value;
 
       AParameters.Values[LName] := LValue;
     end;
@@ -109,6 +111,8 @@ begin
   begin
     TMARSParameters.GetSliceAndParamName(LPair.Key, LSlice, LParamName);
 
+    ADestination.WriteTValue(LPair.Key, LPair.Value)
+{
     case LPair.Value.Kind of
       tkInteger: ADestination.WriteIntegerValue(LPair.Key, LPair.Value.AsInteger);
         tkInt64: ADestination.WriteInt64Value(LPair.Key, LPair.Value.AsInt64);
@@ -142,6 +146,7 @@ begin
 //      tkPointer: ;
 //      tkProcedure: ;
     end;
+}
   end;
 end;
 
