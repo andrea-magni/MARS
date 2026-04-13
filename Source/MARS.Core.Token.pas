@@ -367,8 +367,8 @@ var
 begin
   LIssuedAt := Now;
 
-  FClaims[JWT_ISSUED_AT_CLAIM] := DateTimeToUnix(LIssuedAt {$ifdef DelphiXE7_UP}, False{$endif});
-  FClaims[JWT_EXPIRATION_CLAIM] := DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE7_UP}, False{$endif});
+  FClaims[JWT_ISSUED_AT_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt {$ifdef DelphiXE7_UP}, False{$endif}));
+  FClaims[JWT_EXPIRATION_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE7_UP}, False{$endif}));
   FClaims[JWT_ISSUER_CLAIM] := FIssuer;
   FClaims[JWT_DURATION_CLAIM] := TValue.From<TDateTime>(FDuration);
 
