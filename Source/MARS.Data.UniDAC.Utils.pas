@@ -1,5 +1,9 @@
 unit MARS.Data.UniDAC.Utils;
 
+{$I MARS.inc}
+
+{$IFDEF MARS_UNIDAC}
+
 interface
 
 uses
@@ -255,6 +259,11 @@ begin
   Clear;
   dataset := ADatasetName;
 end;
+
+{$ELSE}
+interface
+implementation
+{$ENDIF}
 
 
 end.

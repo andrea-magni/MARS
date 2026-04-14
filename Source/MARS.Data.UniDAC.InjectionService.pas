@@ -7,6 +7,8 @@ unit MARS.Data.UniDAC.InjectionService;
 
 {$I MARS.inc}
 
+{$IFDEF MARS_UNIDAC}
+
 interface
 
 uses
@@ -16,6 +18,7 @@ uses
   , MARS.Core.Injection.Types
   , MARS.Core.Activation.Interfaces
 ;
+
 
 type
   TMARSUniDACInjectionService = class(TInterfacedObject, IMARSInjectionService)
@@ -140,5 +143,10 @@ end;
 
 initialization
   RegisterServices;
+
+{$ELSE}
+interface
+implementation
+{$ENDIF}
 
 end.

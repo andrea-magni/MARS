@@ -8,6 +8,8 @@ unit MARS.Data.UniDAC;
 
 {$I MARS.inc}
 
+{$IFDEF MARS_UNIDAC}
+
 interface
 
 uses
@@ -718,5 +720,10 @@ begin
   FApplyUpdatesRes.AddError(ARow, AException, ARequest);
 end;
 *)
+
+{$ELSE}
+interface
+implementation
+{$ENDIF}
 
 end.

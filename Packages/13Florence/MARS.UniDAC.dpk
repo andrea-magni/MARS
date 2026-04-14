@@ -1,5 +1,7 @@
 package MARS.UniDAC;
 
+{$I MARS.inc}
+
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
@@ -34,9 +36,12 @@ requires
   rtl,
   dbrtl,
   MARS.Core,
-  MARS.ReadersAndWriters,
-  unidac370,
-  dac370;
+  MARS.ReadersAndWriters
+{$IFDEF MARS_UNIDAC}
+  , unidac370
+  , dac370
+{$ENDIF}
+;
 
 contains
   MARS.Data.UniDAC.InjectionService in '..\..\Source\MARS.Data.UniDAC.InjectionService.pas',

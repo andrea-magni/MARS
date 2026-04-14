@@ -7,6 +7,8 @@ unit MARS.Data.UniDAC.ReadersAndWriters;
 
 {$I MARS.inc}
 
+{$IFDEF MARS_UNIDAC}
+
 interface
 
 uses
@@ -174,5 +176,10 @@ end;
 
 initialization
   RegisterReadersAndWriters;
+
+{$ELSE}
+interface
+implementation
+{$ENDIF}
 
 end.

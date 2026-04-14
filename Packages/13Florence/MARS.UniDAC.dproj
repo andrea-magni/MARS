@@ -95,8 +95,6 @@
         <DCCReference Include="dbrtl.dcp"/>
         <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
-        <DCCReference Include="unidac370.dcp"/>
-        <DCCReference Include="dac370.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.ReadersAndWriters.pas"/>
@@ -126,6 +124,7 @@
             <Platforms>
                 <Platform value="Android">False</Platform>
                 <Platform value="Android64">False</Platform>
+                <Platform value="Linux64">False</Platform>
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>
                 <Platform value="Win64x">False</Platform>
