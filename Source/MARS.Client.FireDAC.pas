@@ -63,7 +63,7 @@ type
     FApplyUpdatesResults: TArray<TMARSFDApplyUpdatesRes>;
   protected
     procedure AfterGET(const AContent: TStream); override;
-    procedure BeforePOST(const AContent: TMemoryStream); override;
+    procedure BeforePOST(const AContent: TStream); override;
     procedure AfterPOST(const AContent: TStream); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
@@ -257,7 +257,7 @@ begin
   LDest.ResourceDataSets.Assign(ResourceDataSets);
 end;
 
-procedure TMARSFDResource.BeforePOST(const AContent: TMemoryStream);
+procedure TMARSFDResource.BeforePOST(const AContent: TStream);
 var
   LDeltas: TArray<TFDDataSet>;
   LDelta: TFDDataSet;

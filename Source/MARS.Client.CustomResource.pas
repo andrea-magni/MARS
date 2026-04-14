@@ -119,16 +119,16 @@ type
     procedure BeforeGET; virtual;
     procedure AfterGET(const AContent: TStream); virtual;
 
-    procedure BeforePOST(const AContent: TMemoryStream); virtual;
+    procedure BeforePOST(const AContent: TStream); virtual;
     procedure AfterPOST(const AContent: TStream); virtual;
 
-    procedure BeforePUT(const AContent: TMemoryStream); virtual;
+    procedure BeforePUT(const AContent: TStream); virtual;
     procedure AfterPUT(const AContent: TStream); virtual;
 
-    procedure BeforeDELETE(const AContent: TMemoryStream); virtual;
+    procedure BeforeDELETE(const AContent: TStream); virtual;
     procedure AfterDELETE(const AContent: TStream); virtual;
 
-    procedure BeforePATCH(const AContent: TMemoryStream); virtual;
+    procedure BeforePATCH(const AContent: TStream); virtual;
     procedure AfterPATCH(const AContent: TStream); virtual;
 
     procedure DoError(const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
@@ -153,6 +153,9 @@ type
       const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}): string; {$ifndef DelphiXE2_UP}overload;{$endif} virtual;
     procedure POST(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
+    procedure POST(const ABody: TStream{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
     procedure PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
@@ -283,7 +286,7 @@ begin
   LDestResource.Token := Token;
 end;
 
-procedure TMARSClientCustomResource.BeforeDELETE(const AContent: TMemoryStream);
+procedure TMARSClientCustomResource.BeforeDELETE(const AContent: TStream);
 begin
   ApplyCustomHeaders;
 
@@ -295,19 +298,19 @@ begin
 
 end;
 
-procedure TMARSClientCustomResource.BeforePATCH(const AContent: TMemoryStream);
+procedure TMARSClientCustomResource.BeforePATCH(const AContent: TStream);
 begin
   ApplyCustomHeaders;
 
 end;
 
-procedure TMARSClientCustomResource.BeforePOST(const AContent: TMemoryStream);
+procedure TMARSClientCustomResource.BeforePOST(const AContent: TStream);
 begin
   ApplyCustomHeaders;
 
 end;
 
-procedure TMARSClientCustomResource.BeforePUT(const AContent: TMemoryStream);
+procedure TMARSClientCustomResource.BeforePUT(const AContent: TStream);
 begin
   ApplyCustomHeaders;
 
@@ -792,6 +795,37 @@ begin
               if Assigned(AAfterExecute) then
                 AAfterExecute(AStream);
             end);
+    end;
+  end;
+end;
+
+procedure TMARSClientCustomResource.POST(const ABody: TStream;
+  const AAfterExecute: TMARSClientResponseProc;
+  const AOnException: TMARSClientExecptionProc);
+var
+  LResponseStream: TMemoryStream;
+begin
+  try
+    BeforePOST(ABody);
+
+    LResponseStream := TMemoryStream.Create;
+    try
+      Client.Post(URL, ABody, LResponseStream, AuthToken, Accept, ContentType);
+
+      AfterPOST(LResponseStream);
+
+      if Assigned(AAfterExecute) then
+        AAfterExecute(LResponseStream);
+    finally
+      LResponseStream.Free;
+    end;
+  except
+    on E:Exception do
+    begin
+      if Assigned(AOnException) then
+        AOnException(E)
+      else
+        DoError(E, TMARSHttpVerb.Post, AAfterExecute);
     end;
   end;
 end;

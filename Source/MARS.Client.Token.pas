@@ -32,7 +32,7 @@ type
     function GetIsExpired: Boolean;
   protected
     procedure AfterGET(const AContent: TStream); override;
-    procedure BeforePOST(const AContent: TMemoryStream); override;
+    procedure BeforePOST(const AContent: TStream); override;
     procedure AfterPOST(const AContent: TStream); override;
     procedure AfterDELETE(const AContent: TStream); override;
     procedure ParseData; virtual;
@@ -108,7 +108,7 @@ begin
   end;
 end;
 
-procedure TMARSClientToken.BeforePOST(const AContent: TMemoryStream);
+procedure TMARSClientToken.BeforePOST(const AContent: TStream);
 begin
   inherited;
   StringToStream(AContent, 'username=' + FUserName + '&password=' + FPassword);
