@@ -213,7 +213,7 @@ begin
   Counter := LTime div APeriod;
   MsgBytes := Int64ToBigEndianBytes(Counter);
 
-  // RFC 6238 usa HOTP come base; la variante comune è HMAC-SHA1
+  // RFC 6238 uses HOTP as default; common variant is HMAC-SHA1
   Hmac := THashSHA1.GetHMACAsBytes(MsgBytes, ASecret);
 
   BinaryCode := DynamicTruncate(Hmac);
