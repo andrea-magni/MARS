@@ -13,6 +13,7 @@ uses
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Core.JSON, MARS.Core.Response
 , MARS.Core.Token
+, TokenAutoRenew
 ;
 
 type
@@ -24,6 +25,18 @@ type
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
+  end;
+
+
+  [Path('invoices'), TokenAutoRenew, RolesAllowed('standard')]
+  TInvoicesResource = class
+    type TInvoiceRef = record
+      number: Integer;
+      date: TDateTime;
+    end;
+  public
+    [GET]
+    function RetrieveAll: TArray<TInvoiceRef>;
   end;
 
 implementation
@@ -70,7 +83,20 @@ begin
 
 end;
 
+{ TInvoicesResource }
+
+function TInvoicesResource.RetrieveAll: TArray<TInvoiceRef>;
+begin
+  var LDummyInvoiceRef: TInvoiceRef;
+  LDummyInvoiceRef.number := Random(100);
+  LDummyInvoiceRef.date := Now;
+
+  Result := [
+    LDummyInvoiceRef
+  ];
+end;
+
 initialization
-  MARSRegister(THelloWorldResource);
+  MARSRegister([THelloWorldResource, TInvoicesResource]);
 
 end.

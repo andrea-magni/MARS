@@ -12,7 +12,8 @@ uses
   Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
-  Server.Resources.Token in 'Server.Resources.Token.pas';
+  Server.Resources.Token in 'Server.Resources.Token.pas',
+  TokenAutoRenew in 'TokenAutoRenew.pas';
 
 {$R *.res}
 

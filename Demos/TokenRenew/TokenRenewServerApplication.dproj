@@ -145,6 +145,7 @@
         <DCCReference Include="Server.Ignition.pas"/>
         <DCCReference Include="Server.Resources.OpenAPI.pas"/>
         <DCCReference Include="Server.Resources.Token.pas"/>
+        <DCCReference Include="TokenAutoRenew.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -175,6 +176,12 @@
                 <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment Version="5">
+                <DeployFile LocalName="bin\TokenRenewServerApplication.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>TokenRenewServerApplication.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="bin\TokenRenewServerApplication.exe" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>TokenRenewServerApplication.exe</RemoteName>

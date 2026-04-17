@@ -57,6 +57,7 @@ uses
 , Server.Resources.HelloWorld
 , Server.Resources.Token
 , Server.Resources.OpenAPI
+, TokenAutoRenew
 ;
 
 { TServerEngine }
@@ -144,6 +145,26 @@ begin
 *)
 {$ENDREGION}
 {$REGION 'Global AfterInvoke handler example'}
+
+  TMARSActivation.RegisterAfterInvoke(
+    procedure (const AActivation: IMARSActivation)
+    var
+  	  LTokenAutoRenew: TokenAutoRenewAttribute;
+  	begin
+      LTokenAutoRenew := AActivation.Resource.GetAttribute<TokenAutoRenewAttribute>;
+      if Assigned(LTokenAutoRenew) and Assigned(AActivation.Token) then
+      begin
+        if LTokenAutoRenew.RenewRequired(AActivation) then
+          LTokenAutoRenew.Renew(AActivation);
+        {$IFDEF DEBUG}
+        AActivation.Response.SetHeader('X-MARS-TOKEN-RENEW-DURATION-SECS', AActivation.Token.DurationSecs.ToString);
+        AActivation.Response.SetHeader('X-MARS-TOKEN-RENEW-THRESHOLD', LTokenAutoRenew.RenewalThresholdSeconds(AActivation).ToString);
+        AActivation.Response.SetHeader('X-MARS-TOKEN-RENEW-EXPIRES-IN-SECS', LTokenAutoRenew.ExpiresInSeconds(AActivation).ToString);
+        {$ENDIF}
+      end;
+    end
+  );
+
   // Compression
   if FEngine.Parameters.ByName('Compression.Enabled').AsBoolean then
     TMARSActivation.RegisterAfterInvoke(
