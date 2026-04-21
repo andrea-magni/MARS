@@ -12,6 +12,7 @@ uses
   SysUtils, Classes
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Core.JSON, MARS.Core.Response
+, MARS.Data.FireDAC, FireDAC.Comp.Client
 //, MARS.Core.Token
 ;
 
@@ -32,6 +33,8 @@ type
         OTP: string;
         verified: Boolean;
       end;
+  protected
+    [Context] FD: TMARSFireDAC;
 
   public
     [GET, Path('/generate/{username}')]
@@ -56,13 +59,12 @@ uses
 
 function TOTPResource.Auth(AUserName: string): string;
 begin
-  var LUser := TUserRepository.GetUser(AUserName);
-
-  if LUser.UserName = '' then
+  var LUser : TUser;
+  if not TUserUtils.FindByUserName(AUserName, FD, LUser) then
     raise EMARSHttpException.Create('User not found', 404);
 
   var LImgBase64 := '';
-  var LQRCodeStream := GenerateQRCode(ifPNG, LUser.GetOTPAuthURI('MARS'));
+  var LQRCodeStream := GenerateQRCode(ifPNG, TUserUtils.GetOTPAuthURI(LUser.Name, LUser.OTP_Secret, 'MARS'));
   try
     LImgBase64 := StreamToBase64(LQRCodeStream);
   finally
@@ -80,33 +82,31 @@ begin
       </body>
     </html>
   '''
-  .Replace('%SECRET_BASE32%', LUser.SecretAsBase32, [])
+  .Replace('%SECRET_BASE32%', TUserUtils.EncodeBase32(LUser.OTP_Secret), [])
   .Replace('%IMG_BASE64%', LImgBase64, [])
   ;
 end;
 
 function TOTPResource.Generate(AUserName: string): TGenerateOTPResponse;
 begin
-  var LUser := TUserRepository.GetUser(AUserName);
-
-  if LUser.UserName = '' then
+  var LUser : TUser;
+  if not TUserUtils.FindByUserName(AUserName, FD, LUser) then
     raise EMARSHttpException.Create('User not found', 404);
 
-  Result.userName := LUser.UserName;
-  Result.OTP := LUser.GetOTP();
+  Result.userName := LUser.Name;
+  Result.OTP := TUserUtils.GetOTP(LUser.OTP_Secret);
   Result.secondsRemaining := TOTP.TotpSecondsRemaining();
 end;
 
 function TOTPResource.Verify(AUserName, AOTP: string): TVerifyOTPResponse;
 begin
-  var LUser := TUserRepository.GetUser(AUserName);
-
-  if LUser.UserName = '' then
+  var LUser : TUser;
+  if not TUserUtils.FindByUserName(AUserName, FD, LUser) then
     raise EMARSHttpException.Create('User not found', 404);
 
-  Result.userName := LUser.UserName;
+  Result.userName := LUser.Name;
   Result.OTP := AOTP;
-  Result.verified := TOTP.VerifyTotp(LUser.Secret, AOtp);
+  Result.verified := TOTP.VerifyTotp(LUser.OTP_Secret, AOtp);
 end;
 
 initialization

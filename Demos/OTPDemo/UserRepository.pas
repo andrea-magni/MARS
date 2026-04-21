@@ -4,63 +4,92 @@ interface
 
 uses
   Classes, SysUtils, System.Hash
+, MARS.Data.FireDAC, FireDAC.Comp.Client
+, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
 , Utils.OTP
 ;
 
 type
   TUser = record
-    UserName: string;
-    Password: string;
-    Secret: string;
-
-    function PasswordHash: string;
-    function SecretAsBase32: string;
-    function GetOTP(const ADigits: Integer = 6; const APeriod: Integer = 30): string;
-    function GetOTPAuthURI(const AIssuer: string): string;
+    Id: Integer;
+    Name: string;
+    Email: string;
+    Password_Hash: string;
+    OTP_Secret: string;
+    Real_Name: string;
+    Real_Surname: string;
   end;
 
-  TUserRepository = record
-    class function GetUser(const AUserName: string): TUser; static;
+  TUserUtils = record
+    class function HashPassword(const APassword: string): string; static;
+    class function EncodeBase32(const ASecret: string): string; static;
+    class function GetOTP(const ASecret: string;
+      const ADigits: Integer = 6; const APeriod: Integer = 30): string; static;
+    class function GetOTPAuthURI(const AUserName: string;
+      const ASecret: string; const AIssuer: string): string; static;
+    class function GenerateRandomSecret: string; static;
+
+    class function FindByUserName(const AUserName: string;
+      const AFD: TMARSFireDAC; out AUser: TUser): Boolean; static;
   end;
 
-  const Users: array[0..1] of TUser =
-    (
-     ( UserName: 'andrea'; Password: 'andreaPass'; Secret: 'andreaSecret'),
-     ( UserName: 'marta';  Password: 'martaPass';  Secret: 'martaSecret')
-    );
+//  const Users: array[0..1] of TUser =
+//    (
+//     ( UserName: 'andrea'; Password: 'andreaPass'; Secret: 'andreaSecret'),
+//     ( UserName: 'marta';  Password: 'martaPass';  Secret: 'martaSecret')
+//    );
 
 implementation
 
-{ TUser }
 
-function TUser.GetOTP(const ADigits: Integer; const APeriod: Integer): string;
+{ TUserUtils }
+
+class function TUserUtils.FindByUserName(const AUserName: string;
+  const AFD: TMARSFireDAC; out AUser: TUser): Boolean;
 begin
-  Result := TOTP.GenerateTotp(Secret, 0, ADigits, APeriod);
+  Result := False;
+
+  var LQuery := AFD.Query('select * from USER where Name = :Name'
+  , nil
+  , True
+  , procedure (AQy: TFDQuery)
+    begin
+      AQy.ParamByName('Name').AsString := AUserName;
+    end
+  );
+
+  if LQuery.RecordCount = 1 then
+  begin
+    Result := True;
+    TRecord<TUser>.FromDataSet(AUser, LQuery);
+  end;
 end;
 
-function TUser.GetOTPAuthURI(const AIssuer: string): string;
+class function TUserUtils.GenerateRandomSecret: string;
 begin
-  Result := TOTP.BuildOtpAuthUri(AIssuer, UserName, SecretAsBase32);
+  Result := TOTP.GenerateTotpSecret;
 end;
 
-function TUser.PasswordHash: string;
+class function TUserUtils.GetOTP(const ASecret: string;
+  const ADigits: Integer; const APeriod: Integer): string;
 begin
-  Result := THashSHA2.GetHashString(password);
+  Result := TOTP.GenerateTotp(ASecret, 0, ADigits, APeriod);
 end;
 
-function TUser.SecretAsBase32: string;
+class function TUserUtils.GetOTPAuthURI(const AUserName: string;
+  const ASecret: string; const AIssuer: string): string;
 begin
-  Result := TOTP.SecretToOtpAuthSecret(Secret);
+  Result := TOTP.BuildOtpAuthUri(AIssuer, AUserName, EncodeBase32(ASecret));
 end;
 
-{ TUserRepository }
-
-class function TUserRepository.GetUser(const AUserName: string): TUser;
+class function TUserUtils.HashPassword(const APassword: string): string;
 begin
-  Result := Default(TUser);
-  for var LUser in Users do
-   if SameText(LUser.UserName, AUserName) then
-     Exit(LUser);
+  Result := THashSHA2.GetHashString(APassword);
+end;
+
+class function TUserUtils.EncodeBase32(const ASecret: string): string;
+begin
+  Result := TOTP.SecretToOtpAuthSecret(ASecret);
 end;
 
 end.

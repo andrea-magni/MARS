@@ -43,6 +43,7 @@ uses
 , MARS.Core.MessageBodyReaders
 {$IFDEF MARS_FIREDAC}
 , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option
+, FireDAC.Phys.SQLite
 {$ENDIF}
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
@@ -54,6 +55,7 @@ uses
 {$ENDIF}
 , MARS.OpenAPI.v3.InjectionService
 
+, Server.Resources.User
 , Server.Resources.OTP
 , Server.Resources.Token
 , Server.Resources.OpenAPI

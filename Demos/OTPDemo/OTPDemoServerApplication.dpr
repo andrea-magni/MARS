@@ -16,7 +16,8 @@ uses
   Utils.OTP in 'Utils.OTP.pas',
   UserRepository in 'UserRepository.pas',
   DelphiZXIngQRCode in 'ThirdParty\DelphiZXIngQRCode.pas',
-  Utils.QRCode in 'Utils.QRCode.pas';
+  Utils.QRCode in 'Utils.QRCode.pas',
+  Server.Resources.User in 'Server.Resources.User.pas';
 
 {$R *.res}
 
