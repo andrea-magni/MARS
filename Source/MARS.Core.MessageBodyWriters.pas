@@ -15,7 +15,7 @@ uses
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
   , MARS.Core.Activation.Interfaces
-  ;
+;
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -269,6 +269,7 @@ end;
 function TStreamValueWriter.GetStream(const AValue: TValue;
   const AMediaType: TMediaType; const AActivation: IMARSActivation): TStream;
 begin
+  //AM TODO: check the media type!!
   Result := AValue.AsObject as TStream;
 
   {$IFDEF DEBUG}

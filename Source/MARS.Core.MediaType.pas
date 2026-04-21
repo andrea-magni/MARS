@@ -21,6 +21,7 @@ type
     Text_XML,
     Text_HTML,
     Text_YAML,
+    Text_EventStream,
     Application_XML,
     Application_JSON,
     Application_XHTML_XML,
@@ -33,10 +34,6 @@ type
     Wildcard
   );
   {$SCOPEDENUMS OFF}
-
-//  MediaTypeHelper = record helper for MediaType
-//    function ToString: string;
-//  end;
 
   TMediaTypeParams = TDictionary<string, string>;
 
@@ -72,6 +69,7 @@ type
     const TEXT_XML = 'text/xml';
     const TEXT_HTML = 'text/html';
     const TEXT_YAML = 'text/yaml';
+    const TEXT_EVENT_STREAM = 'text/event-stream';
     const APPLICATION_XML = 'application/xml';
     const APPLICATION_XML_FireDAC = 'application/xml-firedac';
     const APPLICATION_JSON = 'application/json';
@@ -151,29 +149,6 @@ implementation
 
 uses
   StrUtils;
-
-{ MediaTypeHelper }
-
-//function MediaTypeHelper.ToString: string;
-//begin
-//  case Self of
-//    MediaType.Text_Plain: Result := 'text/plain';
-//    MediaType.Text_XML: Result := 'text/xml';
-//    MediaType.Text_HTML: Result := 'text/html';
-//
-//    MediaType.Application_XML: Result := 'application/xml';
-//    MediaType.Application_JSON: Result := 'application/json';
-//    MediaType.Application_XHTML_XML: Result := 'application/xhtml+xml';
-//    MediaType.Application_SVG_XML: Result := 'application/svg+xml';
-//    MediaType.Application_Atom_XML: Result := 'application/atom+xml';
-//    MediaType.Application_Octet_Stream: Result := 'application/octet-stream';
-//    MediaType.Application_Form_Encoded: Result := 'application/x-www-form-urlencoded';
-//
-//    MediaType.Multipart_Form_Data: Result := 'multipart/form-data';
-//
-//    MediaType.Wildcard: Result := '*/*';
-//  end;
-//end;
 
 { TMediaType }
 

@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="SSEDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SSEDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="SSEDemoServerApplication">
+        <MSBuild Projects="SSEDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerApplication:Clean">
+        <MSBuild Projects="SSEDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerApplication:Make">
+        <MSBuild Projects="SSEDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoServerFMXApplication">
+        <MSBuild Projects="SSEDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerFMXApplication:Clean">
+        <MSBuild Projects="SSEDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerFMXApplication:Make">
+        <MSBuild Projects="SSEDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoServerService">
+        <MSBuild Projects="SSEDemoServerService.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerService:Clean">
+        <MSBuild Projects="SSEDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerService:Make">
+        <MSBuild Projects="SSEDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoServerConsoleApplication">
+        <MSBuild Projects="SSEDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="SSEDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerConsoleApplication:Make">
+        <MSBuild Projects="SSEDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoServerDaemon">
+        <MSBuild Projects="SSEDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerDaemon:Clean">
+        <MSBuild Projects="SSEDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerDaemon:Make">
+        <MSBuild Projects="SSEDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoServerApacheModule">
+        <MSBuild Projects="SSEDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerApacheModule:Clean">
+        <MSBuild Projects="SSEDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerApacheModule:Make">
+        <MSBuild Projects="SSEDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoServerFCGI">
+        <MSBuild Projects="SSEDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerFCGI:Clean">
+        <MSBuild Projects="SSEDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerFCGI:Make">
+        <MSBuild Projects="SSEDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoServerISAPI">
+        <MSBuild Projects="SSEDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="SSEDemoServerISAPI:Clean">
+        <MSBuild Projects="SSEDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoServerISAPI:Make">
+        <MSBuild Projects="SSEDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoClient">
+        <MSBuild Projects="SSEDemoClient.dproj"/>
+    </Target>
+    <Target Name="SSEDemoClient:Clean">
+        <MSBuild Projects="SSEDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoClient:Make">
+        <MSBuild Projects="SSEDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SSEDemoTests">
+        <MSBuild Projects="SSEDemoTests.dproj"/>
+    </Target>
+    <Target Name="SSEDemoTests:Clean">
+        <MSBuild Projects="SSEDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SSEDemoTests:Make">
+        <MSBuild Projects="SSEDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="SSEDemoServerApplication;SSEDemoServerFMXApplication;SSEDemoServerService;SSEDemoServerConsoleApplication;SSEDemoServerDaemon;SSEDemoServerApacheModule;SSEDemoServerFCGI;SSEDemoServerISAPI;SSEDemoClient;SSEDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="SSEDemoServerApplication:Clean;SSEDemoServerFMXApplication:Clean;SSEDemoServerService:Clean;SSEDemoServerConsoleApplication:Clean;SSEDemoServerDaemon:Clean;SSEDemoServerApacheModule:Clean;SSEDemoServerFCGI:Clean;SSEDemoServerISAPI:Clean;SSEDemoClient:Clean;SSEDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="SSEDemoServerApplication:Make;SSEDemoServerFMXApplication:Make;SSEDemoServerService:Make;SSEDemoServerConsoleApplication:Make;SSEDemoServerDaemon:Make;SSEDemoServerApacheModule:Make;SSEDemoServerFCGI:Make;SSEDemoServerISAPI:Make;SSEDemoClient:Make;SSEDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

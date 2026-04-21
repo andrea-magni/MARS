@@ -469,6 +469,8 @@ var
   LContentStream: TBytesStream;
   LAccept: string;
   LReturnType: TRttiType;
+  LBodyStreamProvider: IMessageBodyStreamProvider;
+  LServerSideEventsProvider: IMessageServerSideEventsProvider;
 begin
   // 1 - TMARSResponse (override)
   if (not AValue.IsEmpty) // workaround for IsInstanceOf returning True on empty value (https://quality.embarcadero.com/browse/RSP-15301)
@@ -493,23 +495,32 @@ begin
       if AValueContentType = AOriginalContentType then
         Response.ContentType := FWriterMediaType.ToString;
 
-      var LBodyStreamProvider: IMessageBodyStreamProvider := nil;
+      LBodyStreamProvider := nil;
       if Supports(FWriter, IMessageBodyStreamProvider, LBodyStreamProvider) then
       begin
         Response.ContentStream := LBodyStreamProvider.GetStream(AValue, FWriterMediaType, Self);
         FAddMethodResultToContext := False;
       end
-      else begin
-        LContentStream := TBytesStream.Create();
-        try
-          FWriter.WriteTo(AValue, FWriterMediaType, LContentStream, Self);
-          LContentStream.Position := 0;
-          Response.ContentStream := LContentStream;
-        except
-          LContentStream.Free;
-          raise;
+      else
+      begin
+        LServerSideEventsProvider := nil;
+        if Supports(FWriter, IMessageServerSideEventsProvider, LServerSideEventsProvider) then
+        begin
+          LServerSideEventsProvider.GenerateEvents(AValue, FWriterMediaType, Self);
+          FAddMethodResultToContext := False;
+        end
+        else begin
+          LContentStream := TBytesStream.Create();
+          try
+            FWriter.WriteTo(AValue, FWriterMediaType, LContentStream, Self);
+            LContentStream.Position := 0;
+            Response.ContentStream := LContentStream;
+          except
+            LContentStream.Free;
+            raise;
+          end;
         end;
-      end;
+      end
 
     finally
       FWriter := nil;

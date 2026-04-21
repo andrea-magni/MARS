@@ -26,6 +26,12 @@ type
       const AActivation: IMARSActivation): TStream;
   end;
 
+  IMessageServerSideEventsProvider = interface
+  ['{C6449898-90C7-4FD6-980E-4E80A54EEAC1}']
+    procedure GenerateEvents(const AValue: TValue; const AMediaType: TMediaType;
+      const AActivation: IMARSActivation);
+  end;
+
 
   TIsWritableFunction = reference to function(AType: TRttiType;
     const AAttributes: TAttributeArray; AMediaType: string): Boolean;
