@@ -4,7 +4,7 @@ interface
 
 uses
   Classes, SysUtils, System.Hash
-, MARS.Data.FireDAC, FireDAC.Comp.Client
+, MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Param
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
 , Utils.OTP
 ;

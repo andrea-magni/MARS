@@ -18,7 +18,8 @@ uses
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.OTP in 'Server.Resources.OTP.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
-  Server.Resources.Token in 'Server.Resources.Token.pas';
+  Server.Resources.Token in 'Server.Resources.Token.pas',
+  DelphiZXIngQRCode in 'ThirdParty\DelphiZXIngQRCode.pas';
 
 {$R *.RES}
 

@@ -203,6 +203,7 @@
         <DCCReference Include="Server.Resources.OTP.pas"/>
         <DCCReference Include="Server.Resources.OpenAPI.pas"/>
         <DCCReference Include="Server.Resources.Token.pas"/>
+        <DCCReference Include="ThirdParty\DelphiZXIngQRCode.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

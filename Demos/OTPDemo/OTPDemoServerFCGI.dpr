@@ -23,7 +23,8 @@ uses
   Server.Resources.OTP in 'Server.Resources.OTP.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
   Server.Resources.Token in 'Server.Resources.Token.pas',
-  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule};
+  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
+  DelphiZXIngQRCode in 'ThirdParty\DelphiZXIngQRCode.pas';
 
 {$R *.res}
 

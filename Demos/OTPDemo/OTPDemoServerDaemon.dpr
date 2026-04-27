@@ -13,7 +13,8 @@ uses
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
   Server.Resources.Token in 'Server.Resources.Token.pas',
-  Server.Resources.OTP in 'Server.Resources.OTP.pas';
+  Server.Resources.OTP in 'Server.Resources.OTP.pas',
+  DelphiZXIngQRCode in 'ThirdParty\DelphiZXIngQRCode.pas';
 
 begin
   {$IFDEF LINUX}

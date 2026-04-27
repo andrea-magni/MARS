@@ -19,7 +19,8 @@ uses
   Server.Resources.OTP in 'Server.Resources.OTP.pas',
   ServerConst in 'ServerConst.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
-  Server.Resources.Token in 'Server.Resources.Token.pas';
+  Server.Resources.Token in 'Server.Resources.Token.pas',
+  DelphiZXIngQRCode in 'ThirdParty\DelphiZXIngQRCode.pas';
 
 {$R *.res}
 

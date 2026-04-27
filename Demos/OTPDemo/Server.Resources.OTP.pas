@@ -53,6 +53,9 @@ uses
   MARS.Core.Registry, MARS.Core.Exceptions, MARS.Core.Utils
 , Utils.OTP, Utils.QRCode
 , UserRepository
+{$IFDEF MSWINDOWS}
+, VCL.Graphics
+{$ENDIF}
 ;
 
 { TOTPResource }
@@ -63,13 +66,15 @@ begin
   if not TUserUtils.FindByUserName(AUserName, FD, LUser) then
     raise EMARSHttpException.Create('User not found', 404);
 
-  var LImgBase64 := '';
-  var LQRCodeStream := GenerateQRCode(ifPNG, TUserUtils.GetOTPAuthURI(LUser.Name, LUser.OTP_Secret, 'MARS'));
-  try
-    LImgBase64 := StreamToBase64(LQRCodeStream);
-  finally
-    LQRCodeStream.Free;
-  end;
+  var LItem_ImgBase64 := '';
+  {$IFDEF MSWINDOWS}
+  var LImgBase64 := GenerateQRCode_PNGBase64(TUserUtils.GetOTPAuthURI(LUser.Name, LUser.OTP_Secret, 'MARS'));
+  LItem_ImgBase64 :=
+    '<li>QR Code (link for Authenticator app):<br><img src="data:image/png;base64,%IMG_BASE64%"></li>'
+    .Replace('%IMG_BASE64%', LImgBase64, []);
+  {$ENDIF}
+
+  var LImgSVG := GenerateQRCode_SVG(TUserUtils.GetOTPAuthURI(LUser.Name, LUser.OTP_Secret, 'MARS'));
 
   Result :=
   '''
@@ -77,13 +82,15 @@ begin
       <body>
         <ul>
           <li>Secret (Base32): %SECRET_BASE32%</li>
-          <li>QR Code (link for Authenticator app):<br><img src="data:image/png;base64,%IMG_BASE64%"></li>
+          %ITEM_IMGBASE64%
+          <li>QR Code (link for Authenticator app) SVG:<br>%SVG%</li>
         </ul>
       </body>
     </html>
   '''
   .Replace('%SECRET_BASE32%', TUserUtils.EncodeBase32(LUser.OTP_Secret), [])
-  .Replace('%IMG_BASE64%', LImgBase64, [])
+  .Replace('%ITEM_IMGBASE64%', LItem_ImgBase64, [])
+  .Replace('%SVG%', LImgSVG, []);
   ;
 end;
 

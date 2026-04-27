@@ -70,6 +70,8 @@ begin
       end;
     end
   );
+
+//  Result.KeepAliveTimeout := 15;
 end;
 
 { THelloWorldResource.TMyEventPayload }
