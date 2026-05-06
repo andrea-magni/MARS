@@ -346,7 +346,7 @@ begin
     .Replace('\\', PathDelim, [rfReplaceAll])  // doppio backslash → separatore
     .Replace('\', PathDelim, [rfReplaceAll]);   // backslash singolo → separatore
   // MF20260319
-  // Su Windows PathDelim = '', comportamento invariato.
+  // Su Windows PathDelim = '\', comportamento invariato.
   // Su Linux   PathDelim = '/', converte i backslash in slash.
 end;
 

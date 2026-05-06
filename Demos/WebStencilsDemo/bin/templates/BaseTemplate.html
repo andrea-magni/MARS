@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>MARS + WebStencils Demo</title>
+
+  <style>
+    body { 
+    	font-family: system-ui, sans-serif; 
+    	max-width: 1000px; 
+    	margin: 40px auto; 
+		
+    }
+    button { 
+    	padding: 8px 14px; 
+    	cursor: pointer; 
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .box { 
+    	margin-top: 20px; 
+    	padding: 16px; 
+    	border: 1px solid #ccc; 
+    	border-radius: 8px; 
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);		
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px;}
+    th { background: #f3f3f3; text-align: left; }
+
+    span.method {border: 1px solid #ccc; padding: 4px; border-radius: 10px; margin-right: 8px;}
+	h1 {
+		display: flex; 
+		align-items: center; 
+		gap: 10px; 
+		border: 1px solid red;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+	}
+
+    .ftFloat, .ftSmallint, .ftInteger, .ftLargeint {
+        text-align: right;
+    }
+  </style>
+</head>
+
+<body>
+  
+	<h1>
+		<img width="100" src="https://andrea-magni.github.io/MARS/media/MARS_logo_256.png"> 
+		<a href="https://github.com/andrea-magni/MARS">MARS-Curiosity</a> + <a href="https://docwiki.embarcadero.com/RADStudio/Florence/en/WebStencils">WebStencils</a> Demo
+	</h1>
+	
+    <div class="container">
+@RenderBody
+    </div>
+
+</body>
+</html>

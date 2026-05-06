@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="WebStencilsDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="WebStencilsDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="WebStencilsDemoServerApplication">
+        <MSBuild Projects="WebStencilsDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerApplication:Clean">
+        <MSBuild Projects="WebStencilsDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerApplication:Make">
+        <MSBuild Projects="WebStencilsDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerFMXApplication">
+        <MSBuild Projects="WebStencilsDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerFMXApplication:Clean">
+        <MSBuild Projects="WebStencilsDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerFMXApplication:Make">
+        <MSBuild Projects="WebStencilsDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerService">
+        <MSBuild Projects="WebStencilsDemoServerService.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerService:Clean">
+        <MSBuild Projects="WebStencilsDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerService:Make">
+        <MSBuild Projects="WebStencilsDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerConsoleApplication">
+        <MSBuild Projects="WebStencilsDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="WebStencilsDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerConsoleApplication:Make">
+        <MSBuild Projects="WebStencilsDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerDaemon">
+        <MSBuild Projects="WebStencilsDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerDaemon:Clean">
+        <MSBuild Projects="WebStencilsDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerDaemon:Make">
+        <MSBuild Projects="WebStencilsDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerApacheModule">
+        <MSBuild Projects="WebStencilsDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerApacheModule:Clean">
+        <MSBuild Projects="WebStencilsDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerApacheModule:Make">
+        <MSBuild Projects="WebStencilsDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerFCGI">
+        <MSBuild Projects="WebStencilsDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerFCGI:Clean">
+        <MSBuild Projects="WebStencilsDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerFCGI:Make">
+        <MSBuild Projects="WebStencilsDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerISAPI">
+        <MSBuild Projects="WebStencilsDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerISAPI:Clean">
+        <MSBuild Projects="WebStencilsDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoServerISAPI:Make">
+        <MSBuild Projects="WebStencilsDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoClient">
+        <MSBuild Projects="WebStencilsDemoClient.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoClient:Clean">
+        <MSBuild Projects="WebStencilsDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoClient:Make">
+        <MSBuild Projects="WebStencilsDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WebStencilsDemoTests">
+        <MSBuild Projects="WebStencilsDemoTests.dproj"/>
+    </Target>
+    <Target Name="WebStencilsDemoTests:Clean">
+        <MSBuild Projects="WebStencilsDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WebStencilsDemoTests:Make">
+        <MSBuild Projects="WebStencilsDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="WebStencilsDemoServerApplication;WebStencilsDemoServerFMXApplication;WebStencilsDemoServerService;WebStencilsDemoServerConsoleApplication;WebStencilsDemoServerDaemon;WebStencilsDemoServerApacheModule;WebStencilsDemoServerFCGI;WebStencilsDemoServerISAPI;WebStencilsDemoClient;WebStencilsDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="WebStencilsDemoServerApplication:Clean;WebStencilsDemoServerFMXApplication:Clean;WebStencilsDemoServerService:Clean;WebStencilsDemoServerConsoleApplication:Clean;WebStencilsDemoServerDaemon:Clean;WebStencilsDemoServerApacheModule:Clean;WebStencilsDemoServerFCGI:Clean;WebStencilsDemoServerISAPI:Clean;WebStencilsDemoClient:Clean;WebStencilsDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="WebStencilsDemoServerApplication:Make;WebStencilsDemoServerFMXApplication:Make;WebStencilsDemoServerService:Make;WebStencilsDemoServerConsoleApplication:Make;WebStencilsDemoServerDaemon:Make;WebStencilsDemoServerApacheModule:Make;WebStencilsDemoServerFCGI:Make;WebStencilsDemoServerISAPI:Make;WebStencilsDemoClient:Make;WebStencilsDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
