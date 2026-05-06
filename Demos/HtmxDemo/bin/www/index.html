@@ -15,16 +15,19 @@
     	font-family: system-ui, sans-serif; 
     	max-width: 1000px; 
     	margin: 40px auto; 
+		
     }
     button { 
     	padding: 8px 14px; 
     	cursor: pointer; 
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .box { 
     	margin-top: 20px; 
     	padding: 16px; 
     	border: 1px solid #ccc; 
     	border-radius: 8px; 
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);		
     }
 
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -32,12 +35,23 @@
     th { background: #f3f3f3; text-align: left; }
 
     span.method {border: 1px solid #ccc; padding: 4px; border-radius: 10px; margin-right: 8px;}
+	h1 {
+		display: flex; 
+		align-items: center; 
+		gap: 10px; 
+		border: 1px solid red;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+	}
   </style>
 </head>
 
 <body hx-ext="client-side-templates">
   
-	<h1>MARS-Curiosity htmx Demo</h1>
+	<h1>
+		<img width="100" src="https://andrea-magni.github.io/MARS/media/MARS_logo_256.png"> 
+		<a href="https://github.com/andrea-magni/MARS">MARS-Curiosity</a> + <a href="https://htmx.org/">htmx</a> Demo
+	</h1>
+	
 
 	<div class="box">
 		<button hx-get="/rest/default/helloworld" hx-target="#result" hx-swap="innerHTML">Click me to call /helloworld</button>
@@ -45,6 +59,7 @@
 	</div>
 	
 	<div class="box">
+		<p>Click on the button and htmx will retrieve data from the server and a Mustache client side template will be used to render it.</p>
 		<button hx-get="/rest/default/helloworld/data" hx-target="#data" hx-swap="innerHTML" mustache-template="data-template">
 	    Load data from server
 		</button>
