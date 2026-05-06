@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>htmx Demo</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/htmx-ext-json-enc@2.0.1/json-enc.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/htmx-ext-client-side-templates@2.0.0/client-side-templates.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mustache@4.2.0/mustache.min.js"></script>  
+
+  <style>
+    body { 
+    	font-family: system-ui, sans-serif; 
+    	max-width: 1000px; 
+    	margin: 40px auto; 
+    }
+    button { 
+    	padding: 8px 14px; 
+    	cursor: pointer; 
+    }
+    .box { 
+    	margin-top: 20px; 
+    	padding: 16px; 
+    	border: 1px solid #ccc; 
+    	border-radius: 8px; 
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px;}
+    th { background: #f3f3f3; text-align: left; }
+
+    span.method {border: 1px solid #ccc; padding: 4px; border-radius: 10px; margin-right: 8px;}
+  </style>
+</head>
+
+<body hx-ext="client-side-templates">
+  
+	<h1>MARS-Curiosity htmx Demo</h1>
+
+	<div class="box">
+		<button hx-get="/rest/default/helloworld" hx-target="#result" hx-swap="innerHTML">Click me to call /helloworld</button>
+		<div id="result" class="box">Response here.</div>		
+	</div>
+	
+	<div class="box">
+		<button hx-get="/rest/default/helloworld/data" hx-target="#data" hx-swap="innerHTML" mustache-template="data-template">
+	    Load data from server
+		</button>
+
+		<div id="data"></div>
+
+		<script id="data-template" type="text/template">
+		    <h2>Data</h2>
+		    <table>
+		      <thead>
+		        <tr>
+		          <th>Methods</th>
+		          <th>Path</th>         
+		          <th>Description</th>
+				  <th>Summary</th>          
+		        </tr>
+		      </thead>
+		      <tbody>
+		        {{#endpoints}}
+		        <tr>
+		          <td>{{#methods}}<span class="method">{{.}}</span>{{/methods}}</td>
+		          <td>{{path}}</td>
+		          <td>{{description}}</td>
+				  <td>{{summary}}</td>	          
+		        </tr>
+		        {{/endpoints}}
+		      </tbody>
+		    </table>
+		</script>
+	</div>
+
+</body>
+</html>

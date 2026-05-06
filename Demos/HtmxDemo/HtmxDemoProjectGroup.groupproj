@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="HtmxDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="HtmxDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="HtmxDemoServerApplication">
+        <MSBuild Projects="HtmxDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerApplication:Clean">
+        <MSBuild Projects="HtmxDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerApplication:Make">
+        <MSBuild Projects="HtmxDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoServerFMXApplication">
+        <MSBuild Projects="HtmxDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerFMXApplication:Clean">
+        <MSBuild Projects="HtmxDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerFMXApplication:Make">
+        <MSBuild Projects="HtmxDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoServerService">
+        <MSBuild Projects="HtmxDemoServerService.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerService:Clean">
+        <MSBuild Projects="HtmxDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerService:Make">
+        <MSBuild Projects="HtmxDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoServerConsoleApplication">
+        <MSBuild Projects="HtmxDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="HtmxDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerConsoleApplication:Make">
+        <MSBuild Projects="HtmxDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoServerDaemon">
+        <MSBuild Projects="HtmxDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerDaemon:Clean">
+        <MSBuild Projects="HtmxDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerDaemon:Make">
+        <MSBuild Projects="HtmxDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoServerApacheModule">
+        <MSBuild Projects="HtmxDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerApacheModule:Clean">
+        <MSBuild Projects="HtmxDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerApacheModule:Make">
+        <MSBuild Projects="HtmxDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoServerFCGI">
+        <MSBuild Projects="HtmxDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerFCGI:Clean">
+        <MSBuild Projects="HtmxDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerFCGI:Make">
+        <MSBuild Projects="HtmxDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoServerISAPI">
+        <MSBuild Projects="HtmxDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoServerISAPI:Clean">
+        <MSBuild Projects="HtmxDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoServerISAPI:Make">
+        <MSBuild Projects="HtmxDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoClient">
+        <MSBuild Projects="HtmxDemoClient.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoClient:Clean">
+        <MSBuild Projects="HtmxDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoClient:Make">
+        <MSBuild Projects="HtmxDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HtmxDemoTests">
+        <MSBuild Projects="HtmxDemoTests.dproj"/>
+    </Target>
+    <Target Name="HtmxDemoTests:Clean">
+        <MSBuild Projects="HtmxDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HtmxDemoTests:Make">
+        <MSBuild Projects="HtmxDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="HtmxDemoServerApplication;HtmxDemoServerFMXApplication;HtmxDemoServerService;HtmxDemoServerConsoleApplication;HtmxDemoServerDaemon;HtmxDemoServerApacheModule;HtmxDemoServerFCGI;HtmxDemoServerISAPI;HtmxDemoClient;HtmxDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="HtmxDemoServerApplication:Clean;HtmxDemoServerFMXApplication:Clean;HtmxDemoServerService:Clean;HtmxDemoServerConsoleApplication:Clean;HtmxDemoServerDaemon:Clean;HtmxDemoServerApacheModule:Clean;HtmxDemoServerFCGI:Clean;HtmxDemoServerISAPI:Clean;HtmxDemoClient:Clean;HtmxDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="HtmxDemoServerApplication:Make;HtmxDemoServerFMXApplication:Make;HtmxDemoServerService:Make;HtmxDemoServerConsoleApplication:Make;HtmxDemoServerDaemon:Make;HtmxDemoServerApacheModule:Make;HtmxDemoServerFCGI:Make;HtmxDemoServerISAPI:Make;HtmxDemoClient:Make;HtmxDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

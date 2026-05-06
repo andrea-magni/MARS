@@ -232,6 +232,8 @@ type
     trace: TOperation;
     servers: TObjectList<TServer>;
     parameters: TObjectList<TParameter>;
+
+    function Methods: TArray<string>;
   end;
 
   TSecurityScheme = class(TReferenceableType)
@@ -419,6 +421,27 @@ begin
   put.Free;
   get.Free;
   inherited;
+end;
+
+function TPathItem.Methods: TArray<string>;
+begin
+  Result := [];
+  if not get.operationId.IsEmpty then
+    Result := Result + ['GET'];
+  if not post.operationId.IsEmpty then
+    Result := Result + ['POST'];
+  if not put.operationId.IsEmpty then
+    Result := Result + ['PUT'];
+  if not patch.operationId.IsEmpty then
+    Result := Result + ['PATCH'];
+  if not delete.operationId.IsEmpty then
+    Result := Result + ['DELETE'];
+  if not head.operationId.IsEmpty then
+    Result := Result + ['HEAD'];
+  if not options.operationId.IsEmpty then
+    Result := Result + ['OPTIONS'];
+  if not trace.operationId.IsEmpty then
+    Result := Result + ['TRACE'];
 end;
 
 function TPathItem.OperationByHttpMethod(const AHttpMethod: string): TOperation;
