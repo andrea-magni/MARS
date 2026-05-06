@@ -1,4 +1,6 @@
-﻿object MainDataModule: TMainDataModule
+object MainDataModule: TMainDataModule
+  OnCreate = DataModuleCreate
+  OnDestroy = DataModuleDestroy
   Height = 411
   Width = 518
   object MARSApplication: TMARSClientApplication
