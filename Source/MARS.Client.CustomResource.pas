@@ -155,7 +155,7 @@ type
     procedure POST(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
-    procedure POST(const ABody: TStream{$ifdef DelphiXE2_UP} = nil{$endif};
+    procedure POST(const ABody: TStream;
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
     procedure PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
@@ -804,20 +804,34 @@ procedure TMARSClientCustomResource.POST(const ABody: TStream;
   const AOnException: TMARSClientExecptionProc);
 var
   LResponseStream: TMemoryStream;
+  LBody: TStream;
+  LOwnsBody: Boolean;
 begin
   try
-    BeforePOST(ABody);
-
-    LResponseStream := TMemoryStream.Create;
+    LOwnsBody := False;
+    if Assigned(ABody) then
+      LBody := ABody
+    else begin
+      LBody := TMemoryStream.Create;
+      LOwnsBody := True;
+    end;
     try
-      Client.Post(URL, ABody, LResponseStream, AuthToken, Accept, ContentType);
+      BeforePOST(LBody);
 
-      AfterPOST(LResponseStream);
+      LResponseStream := TMemoryStream.Create;
+      try
+        Client.Post(URL, LBody, LResponseStream, AuthToken, Accept, ContentType);
 
-      if Assigned(AAfterExecute) then
-        AAfterExecute(LResponseStream);
+        AfterPOST(LResponseStream);
+
+        if Assigned(AAfterExecute) then
+          AAfterExecute(LResponseStream);
+      finally
+        LResponseStream.Free;
+      end;
     finally
-      LResponseStream.Free;
+      if LOwnsBody then
+        FreeAndNil(LBody);
     end;
   except
     on E:Exception do
