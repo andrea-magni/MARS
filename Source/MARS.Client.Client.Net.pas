@@ -292,7 +292,8 @@ begin
   inherited;
   FHttpClient.Accept := AAccept;
   FHttpClient.ContentType := AContentType;
-  AContent.Position := 0;
+  if Assigned(AContent) then
+    AContent.Position := 0;
   FLastResponse := FHttpClient.Post(AURL, AContent, AResponse);
   CheckLastCmdSuccess;
 end;
@@ -303,7 +304,8 @@ begin
   inherited;
   FHttpClient.Accept := AAccept;
   FHttpClient.ContentType := AContentType;
-  AContent.Position := 0;
+  if Assigned(AContent) then
+    AContent.Position := 0;
   FLastResponse := FHttpClient.Put(AURL, AContent, AResponse);
   CheckLastCmdSuccess;
 end;
