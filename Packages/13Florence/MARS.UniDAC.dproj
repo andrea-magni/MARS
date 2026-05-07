@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{BD9048A8-F51F-4F53-92B4-4A4ADE6BE0BE}</ProjectGuid>
         <MainSource>MARS.UniDAC.dpk</MainSource>
-        <ProjectVersion>20.3</ProjectVersion>
+        <ProjectVersion>20.4</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
