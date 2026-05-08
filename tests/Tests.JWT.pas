@@ -24,6 +24,7 @@ type
     [Test] procedure Duration30secs;
     [Test] procedure Duration5secs;
     [Test] procedure Duration1sec;
+    [Test] procedure ClaimTypes;
   end;
 
   [TestFixture('JWT.mORMotJWT')]
@@ -76,6 +77,70 @@ begin
       Assert.AreEqual('Andrea1', LToken.UserName);
       Assert.AreEqual(1, Length(LToken.Roles));
       Assert.AreEqual('standard', LToken.Roles[0]);
+
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.ClaimTypes;
+var
+  LParams: TMARSParameters;
+  LToken: TMARSToken;
+  LDuration: TDateTime;
+begin
+  const LContext = TRttiContext.Create;
+
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
+    LDuration := 1;
+    LParams.Values[JWT_DURATION_PARAM] := LDuration;
+
+    LToken := T.Create('', LParams);
+    try
+      LToken.Claims['AString'] := 'theString';
+      LToken.Claims['ADouble'] := 123.45;
+      LToken.Claims['AInteger'] := 123;
+      LToken.Claims['ABoolean'] := True;
+      LToken.Claims['AStringNumeric'] := '123';
+
+      LToken.Build(DUMMY_SECRET);
+      Assert.IsNotEmpty(LToken.Token, 'Token build failed');
+
+      LToken.Load(LToken.Token, DUMMY_SECRET);
+
+      const LClaims = LToken.Claims;
+
+      var LValue := LClaims['AString'];
+      var LRttiType := LContext.GetType(LValue.TypeInfo);
+      var LRttiTypeName := LRttiType.Name;
+      Assert.AreEqual('string', LRttiTypeName, 'Type differs');
+
+      LValue := LClaims['AStringNumeric'];
+      LRttiType := LContext.GetType(LValue.TypeInfo);
+      LRttiTypeName := LRttiType.Name;
+      Assert.AreEqual('string', LRttiTypeName, 'Type differs');
+
+      LValue := LClaims['AInteger'];
+      LRttiType := LContext.GetType(LValue.TypeInfo);
+      LRttiTypeName := LRttiType.Name;
+      Assert.AreEqual('Integer', LRttiTypeName, 'Type differs');
+
+      LValue := LClaims['ADouble'];
+      LRttiType := LContext.GetType(LValue.TypeInfo);
+      LRttiTypeName := LRttiType.Name;
+      Assert.AreEqual('Double', LRttiTypeName, 'Type differs');
+
+      LValue := LClaims['ABoolean'];
+      LRttiType := LContext.GetType(LValue.TypeInfo);
+      LRttiTypeName := LRttiType.Name;
+      Assert.AreEqual('Boolean', LRttiTypeName, 'Type differs');
+
 
     finally
       LToken.Free;
