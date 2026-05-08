@@ -119,27 +119,27 @@ begin
       var LValue := LClaims['AString'];
       var LRttiType := LContext.GetType(LValue.TypeInfo);
       var LRttiTypeName := LRttiType.Name;
-      Assert.AreEqual('string', LRttiTypeName, 'Type differs');
+      Assert.AreEqual('string', LRttiTypeName, 'Type differs AString');
 
       LValue := LClaims['AStringNumeric'];
       LRttiType := LContext.GetType(LValue.TypeInfo);
       LRttiTypeName := LRttiType.Name;
-      Assert.AreEqual('string', LRttiTypeName, 'Type differs');
+      Assert.AreEqual('string', LRttiTypeName, 'Type differs AStringNumeric');
 
       LValue := LClaims['AInteger'];
       LRttiType := LContext.GetType(LValue.TypeInfo);
       LRttiTypeName := LRttiType.Name;
-      Assert.AreEqual('Integer', LRttiTypeName, 'Type differs');
+      Assert.AreEqual('Integer', LRttiTypeName, 'Type differs AInteger');
 
       LValue := LClaims['ADouble'];
       LRttiType := LContext.GetType(LValue.TypeInfo);
       LRttiTypeName := LRttiType.Name;
-      Assert.AreEqual('Double', LRttiTypeName, 'Type differs');
+      Assert.AreEqual('Double', LRttiTypeName, 'Type differs ADouble');
 
       LValue := LClaims['ABoolean'];
       LRttiType := LContext.GetType(LValue.TypeInfo);
       LRttiTypeName := LRttiType.Name;
-      Assert.AreEqual('Boolean', LRttiTypeName, 'Type differs');
+      Assert.AreEqual('Boolean', LRttiTypeName, 'Type differs ABoolean');
 
 
     finally

@@ -25,7 +25,8 @@ type
 implementation
 
 uses
-  DateUtils, Generics.Collections, Rtti
+  DateUtils, Generics.Collections, Rtti, TypInfo
+, MARS.Core.JSON
 , MARS.Core.Utils, MARS.Utils.JWT
 , MARS.mORMotJWT.Token.InjectionService
 ;
@@ -40,14 +41,23 @@ var
   LClaimsValues: TDocVariantData;
   LArray: TTVarRecDynArray;
   LClaim: TPair<string, TValue>;
+  LClaimValue: TValue;
+//  LContext: TRttiContext;
+//  LClaimValueRttiType: TRttiType;
 begin
+//  LContext := TRttiContext.Create;
+
   LJWT := TJWTHS256.Create(StringToUTF8(ASecret), 0, [jrcIssuer], []);
   try
+
     LClaimsValues.Init([], dvArray);
     for LClaim in AClaims do
     begin
       LClaimsValues.AddItem(LClaim.Key);
-      LClaimsValues.AddItem(LClaim.Value.AsVariant);
+
+      LClaimValue := LClaim.Value;
+//      LClaimValueRttiType := LContext.GetType(LClaimValue.TypeInfo);
+      LClaimsValues.AddItem(LClaimValue.AsVariant);
     end;
     LClaimsValues.ToArrayOfConst(LArray);
 
@@ -70,14 +80,22 @@ function TMARSmORMotJWTToken.LoadJWTToken(const AToken, ASecret: string;
 var
   LJWT: TJWTAbstract;
   LContent: TJWTContent;
-  LName: RawUTF8;
-  LValue: RawUTF8;
+  LJSON: TJSONObject;
+  LJSONString: string;
 begin
   LJWT := TJWTHS256.Create(StringToUTF8(ASecret), 0, [jrcIssuer], []);
   try
     LJWT.Options := [joHeaderParse, joAllowUnexpectedClaims];
     LJWT.Verify(StringToUTF8(AToken), LContent);
     Result := LContent.result = jwtValid;
+
+    LJSONString := UTF8ToString(LContent.data.ToJSON());
+    LJSON := TJSONObject.ParseJSONValue(LJSONString) as TJSONObject;
+    try
+      AClaims.LoadFromJSON(LJSON);
+    finally
+      LJSON.Free;
+    end;
 
     if jrcAudience in LContent.claims then
       AClaims.Values[JWT_AUDIENCE_CLAIM] := string(LContent.reg[TJWTClaim.jrcAudience]);
@@ -94,12 +112,6 @@ begin
     if jrcSubject in LContent.claims then
       AClaims.Values[JWT_SUBJECT_CLAIM] := string(LContent.reg[TJWTClaim.jrcSubject]);
 
-    for LName in LContent.data.Names do
-    begin
-      LValue := '';
-      LContent.data.GetAsRawUTF8(LName, LValue);
-      AClaims.Values[string(LName)] := GuessTValueFromString( string(LValue) );
-    end;
   finally
     LJWT.Free;
   end;
