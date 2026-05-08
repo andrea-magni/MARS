@@ -80,7 +80,7 @@ type
     , TestCase('StringNumeric'
       , '''
         [General]
-        Value=123
+        Value="123"
         |General.Value|string
         ''', '|')
 
@@ -150,7 +150,7 @@ begin
       var LRttiType := LContext.GetType(LParameterValue.TypeInfo);
       var LRttiTypeName := LRttiType.Name;
 
-      Assert.AreEqual(AMemberType, LRttiTypeName, 'Type differs');
+      Assert.AreEqual(AMemberType, LRttiTypeName, 'Type differs ' + AMemberName + ' ' + AMemberType);
 
     finally
       LParameters.Free;
