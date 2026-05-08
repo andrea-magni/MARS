@@ -26,6 +26,14 @@ type
         |Value|string
         ''', '|')
 
+    , TestCase('StringNumeric'
+      , '''
+        {
+          "Value": "123"
+        }
+        |Value|string
+        ''', '|')
+
     , TestCase('Integer'
       , '''
         {
@@ -69,6 +77,13 @@ type
         |General.Value|string
         ''', '|')
 
+    , TestCase('StringNumeric'
+      , '''
+        [General]
+        Value=123
+        |General.Value|string
+        ''', '|')
+
     , TestCase('Integer'
       , '''
         [General]
@@ -99,6 +114,10 @@ type
 
     ]
     procedure LoadFromINIFile(AIniFileContent: string; AMemberName: string; AMemberType: string);
+
+    [Test]
+    procedure Test1;
+
   end;
 
 implementation
@@ -164,6 +183,43 @@ begin
     end;
   finally
     LJSONObject.Free;
+  end;
+end;
+
+procedure TMARSParametersFixture.Test1;
+begin
+  var LContext := TRttiContext.Create;
+
+  var LParameters := TMARSParameters.Create('Test');
+  try
+
+    LParameters.Values['AString'] := 'theString';
+    var LValue := LParameters['AString'];
+    var LRttiType := LContext.GetType(LValue.TypeInfo);
+    var LRttiTypeName := LRttiType.Name;
+    Assert.AreEqual('string', LRttiTypeName, 'Type differs');
+
+    LParameters.Values['AInteger'] := Integer(123);
+    LValue := LParameters['AInteger'];
+    LRttiType := LContext.GetType(LValue.TypeInfo);
+    LRttiTypeName := LRttiType.Name;
+    Assert.AreEqual('Integer', LRttiTypeName, 'Type differs');
+
+    LParameters.Values['ADouble'] := Double(123.45);
+    LValue := LParameters['ADouble'];
+    LRttiType := LContext.GetType(LValue.TypeInfo);
+    LRttiTypeName := LRttiType.Name;
+    Assert.AreEqual('Double', LRttiTypeName, 'Type differs');
+
+    LParameters.Values['ABoolean'] := True;
+    LValue := LParameters['ABoolean'];
+    LRttiType := LContext.GetType(LValue.TypeInfo);
+    LRttiTypeName := LRttiType.Name;
+    Assert.AreEqual('Boolean', LRttiTypeName, 'Type differs');
+
+
+  finally
+    LParameters.Free;
   end;
 end;
 
