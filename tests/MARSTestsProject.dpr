@@ -23,7 +23,8 @@ uses
   Tests.Data in 'Tests.Data.pas',
   Tests.Client in 'Tests.Client.pas',
   Tests.Client.Resources in 'Tests.Client.Resources.pas',
-  Tests.Client.TestServer in 'Tests.Client.TestServer.pas';
+  Tests.Client.TestServer in 'Tests.Client.TestServer.pas',
+  Tests.MARSParameters in 'Tests.MARSParameters.pas';
 
 {$IFDEF TESTINSIGHT}
 begin
