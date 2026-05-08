@@ -3,7 +3,7 @@ unit Tests.JWT;
 interface
 
 uses
-  Classes, SysUtils, Rtti, Types
+  Classes, SysUtils, Rtti, Types, TypInfo
 , DUnitX.TestFramework
 , MARS.Core.Token
 , MARS.mORMotJWT.Token, MARS.JOSEJWT.Token
@@ -28,7 +28,10 @@ type
   end;
 
   [TestFixture('JWT.mORMotJWT')]
-  TMARSmORMotJWT = class(TMARSJWT<TMARSmORMotJWTToken>);
+  TMARSmORMotJWT = class(TMARSJWT<TMARSmORMotJWTToken>)
+  public
+    [Test] procedure mORMotJSON_Types;
+  end;
 
   [TestFixture('JWT.JOSEJWT')]
   TMARSJOSEJWT = class(TMARSJWT<TMARSJOSEJWTToken>);
@@ -38,6 +41,8 @@ implementation
 uses
   Math
 , MARS.Utils.Parameters, MARS.Utils.JWT
+, System.JSON, MARS.Core.JSON
+, SynCommons, SynCrypto, Generics.Collections
 ;
 
 { TMARSJWTmORMotTest }
@@ -139,8 +144,7 @@ begin
       LValue := LClaims['ABoolean'];
       LRttiType := LContext.GetType(LValue.TypeInfo);
       LRttiTypeName := LRttiType.Name;
-      Assert.AreEqual('Boolean', LRttiTypeName, 'Type differs ABoolean');
-
+      Assert.AreEqual('Boolean', LRttiTypeName, 'Type differs ABoolean ' + LRttiTypeName);
 
     finally
       LToken.Free;
@@ -237,6 +241,48 @@ begin
   finally
     LParams.Free;
   end;
+end;
+
+{ TMARSmORMotJWT }
+
+procedure TMARSmORMotJWT.mORMotJSON_Types;
+var
+  LClaimsValues: TDocVariantData;
+  LArray: TTVarRecDynArray;
+  LClaims: TMARSParameters;
+  LClaim: TPair<string, TValue>;
+  LClaimValue: TValue;
+  payload: TDocVariantData;
+begin
+  LClaims := TMARSParameters.Create('Test');
+  try
+    LClaims.Values['ABoolean'] := True;
+
+    LClaimsValues.Init([], dvArray);
+    for LClaim in LClaims do
+    begin
+      LClaimsValues.AddItem(LClaim.Key);
+
+      LClaimValue := LClaim.Value;
+      LClaimsValues.AddItem(LClaimValue.AsVariant);
+    end;
+    LClaimsValues.ToArrayOfConst(LArray);
+
+
+    payload.InitObject(LArray,JSON_OPTIONS_FAST);
+    var LJSONString := UTF8ToString(payload.ToJSON);
+
+    var LJSONObject := TJSONObject.ParseJSONValue(LJSONString) as TJSONObject;
+    try
+      Assert.IsTrue(LJSONObject.P['ABoolean'] is TJSONBool);
+    finally
+      LJSONObject.Free;
+    end;
+
+  finally
+    LClaims.Free;
+  end;
+
 end;
 
 initialization

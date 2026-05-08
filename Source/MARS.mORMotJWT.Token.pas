@@ -25,7 +25,7 @@ type
 implementation
 
 uses
-  DateUtils, Generics.Collections, Rtti, TypInfo
+  DateUtils, Generics.Collections, Rtti, TypInfo, NetEncoding
 , MARS.Core.JSON
 , MARS.Core.Utils, MARS.Utils.JWT
 , MARS.mORMotJWT.Token.InjectionService
@@ -80,7 +80,7 @@ function TMARSmORMotJWTToken.LoadJWTToken(const AToken, ASecret: string;
 var
   LJWT: TJWTAbstract;
   LContent: TJWTContent;
-  LJSON: TJSONObject;
+  LPayloadJSON: TJSONObject;
   LJSONString: string;
 begin
   LJWT := TJWTHS256.Create(StringToUTF8(ASecret), 0, [jrcIssuer], []);
@@ -89,12 +89,15 @@ begin
     LJWT.Verify(StringToUTF8(AToken), LContent);
     Result := LContent.result = jwtValid;
 
-    LJSONString := UTF8ToString(LContent.data.ToJSON());
-    LJSON := TJSONObject.ParseJSONValue(LJSONString) as TJSONObject;
+//    LJSONString := UTF8ToString(LContent.data.ToJSON('', '', jsonCompact));
+
+    var LPayloadBase64 := AToken.Split(['.'])[1];
+    LJSONString := TNetEncoding.Base64.Decode(LPayloadBase64);
+    LPayloadJSON := TJSONObject.ParseJSONValue(LJSONString) as TJSONObject;
     try
-      AClaims.LoadFromJSON(LJSON);
+      AClaims.LoadFromJSON(LPayloadJSON);
     finally
-      LJSON.Free;
+      LPayloadJSON.Free;
     end;
 
     if jrcAudience in LContent.claims then
