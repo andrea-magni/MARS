@@ -192,6 +192,7 @@ type
     class procedure UnregisterBeforeExecute(const AIndex: Integer);
     class procedure ClearBeforeExecute;
   published
+    property BaseURL: string read FMARSEngineURL write FMARSEngineURL;
     property MARSEngineURL: string read FMARSEngineURL write FMARSEngineURL;
     property ConnectTimeout: Integer read GetConnectTimeout write SetConnectTimeout;
     property ReadTimeout: Integer read GetReadTimeout write SetReadTimeout;

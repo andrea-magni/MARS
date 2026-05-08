@@ -13,17 +13,17 @@ uses
 , MARS.Client.Application
 , MARS.Client.Client, MARS.Client.Client.Net
 , System.Net.HttpSse, System.Net.HttpClient
-, MARS.Core.JSON
+, MARS.Core.JSON, System.Net.HttpClient.Win, MARS.Client.Client.Http
 ;
 
 type
   TMainDataModule = class(TDataModule)
     MARSApplication: TMARSClientApplication;
-    MARSClient: TMARSNetClient;
+    MARSHttpClient1: TMARSHttpClient;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
   private
-    FClient: THTTPClient;
+//    FClient: THTTPClient;
     FSource: THTTPEventSource;
     procedure HandleSseMessages(ASender: THTTPEventSource);
     procedure HandleSseOpen(ASender: THTTPEventSource);
@@ -112,11 +112,9 @@ end;
 
 procedure TMainDataModule.DataModuleCreate(Sender: TObject);
 begin
-  FClient := THTTPClient.Create;
-
   FSource := THTTPEventSource.Create;
-  FSource.Client := FClient;
-  FSource.URL := 'http://localhost:8080/rest/default/helloworld';
+  FSource.Client := MARSHttpClient1.HttpClient;
+  FSource.URL := MARSHttpClient1.MARSEngineURL + '/default/helloworld';
   FSource.OnMessage := HandleSseMessages;
   FSource.OnOpen := HandleSseOpen;
   FSource.OnReconnect := HandleSseReconnect;
@@ -129,7 +127,6 @@ procedure TMainDataModule.DataModuleDestroy(Sender: TObject);
 begin
   FSource.Close;
   FreeAndNil(FSource);
-  FreeAndNil(FClient);
 end;
 
 end.

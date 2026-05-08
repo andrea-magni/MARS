@@ -13,6 +13,7 @@ uses
   System.Classes, System.SysUtils, DesignIntf, ToolsAPI
 , BrandingAPI, VCL.Graphics, Vcl.Imaging.pngimage, System.Types, Winapi.Windows
 , MARS.Client.Client.Indy, MARS.Client.Client.Net
+{$IFDEF Delphi13Florence_UP}, MARS.Client.Client.Http{$ENDIF}
 , MARS.Client.Application
 , MARS.Client.CustomResource, MARS.Client.CustomResource.Editor
 , MARS.Client.Resource, MARS.Client.Resource.FormData, MARS.Client.Resource.JSON
@@ -21,7 +22,7 @@ uses
 ;
 
 const
-  MARSVersion = '1.6.3';
+  MARSVersion = '1.6.4';
   Component_Docs_URL = 'https://github.com/andrea-magni/MARS/Wiki/';
   {$IFDEF Delphi11Alexandria_UP}
   ABOUT_RES_NAME = 'MARSSPLASH48PNG';
@@ -134,15 +135,18 @@ end;
 procedure Register;
 begin
   RegisterWithSplashScreen;
-  RegisterComponents('MARS-Curiosity Client', [TMARSClient,
-                                               TMARSClientApplication,
-                                               TMARSClientResource,
-                                               TMARSClientResourceFormData,
-                                               TMARSClientResourceFormUrlEncoded,
-                                               TMARSClientResourceJSON,
-                                               TMARSClientResourceStream,
-                                               TMARSClientToken,
-                                               TMARSNetClient]);
+  RegisterComponents('MARS-Curiosity Client', [
+    TMARSClient,
+    TMARSClientApplication,
+    TMARSClientResource,
+    TMARSClientResourceFormData,
+    TMARSClientResourceFormUrlEncoded,
+    TMARSClientResourceJSON,
+    TMARSClientResourceStream,
+    TMARSClientToken,
+    TMARSNetClient
+{$IFDEF Delphi13Florence_UP}, TMARSHttpClient{$ENDIF}
+  ]);
   RegisterComponentEditor(TMARSClientCustomResource, TMARSClientCustomResourceEditor);
 end;
 

@@ -26,8 +26,6 @@ type
     FLastResponse: IHTTPResponse;
   protected
     procedure AssignTo(Dest: TPersistent); override;
-//    function GetProtocolVersion: TIdHTTPProtocolVersion;
-//    procedure SetProtocolVersion(const Value: TIdHTTPProtocolVersion);
 
     procedure CloneCookies(const ADestination, ASource: TNetHTTPClient);
 
@@ -74,7 +72,6 @@ type
     function ResponseStatusCode: Integer; override;
     function ResponseText: string; override;
   published
-//    property ProtocolVersion: TIdHTTPProtocolVersion read GetProtocolVersion write SetProtocolVersion;
     property HttpClient: TNetHTTPClient read FHttpClient;
   end;
 
