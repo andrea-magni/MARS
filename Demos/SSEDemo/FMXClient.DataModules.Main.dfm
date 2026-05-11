@@ -1,6 +1,5 @@
 object MainDataModule: TMainDataModule
   OnCreate = DataModuleCreate
-  OnDestroy = DataModuleDestroy
   Height = 411
   Width = 518
   object MARSApplication: TMARSClientApplication
@@ -25,7 +24,22 @@ object MainDataModule: TMainDataModule
     Application = MARSApplication
     SpecificAccept = '*/*'
     Resource = 'helloworld'
-    Left = 224
-    Top = 80
+    Active = False
+    LastEventID = '22'
+    OnOpen = HandleSseOpen
+    OnReconnect = HandleSseReconnect
+    OnClose = HandleSseClose
+    OnMessage = HandleSseMessages
+    OnError = HandleSseError
+    Left = 96
+    Top = 208
+  end
+  object MARSClientToken1: TMARSClientToken
+    Application = MARSApplication
+    SpecificAccept = 'application/json'
+    SpecificContentType = 'application/json'
+    Resource = 'token'
+    Left = 216
+    Top = 152
   end
 end

@@ -14,7 +14,8 @@ uses
 , MARS.Client.Client, MARS.Client.Client.Net
 , System.Net.HttpSse, System.Net.HttpClient
 , MARS.Core.JSON, System.Net.HttpClient.Win, MARS.Client.Client.Http,
-  MARS.Client.Resource.SSE, MARS.Client.CustomResource, MARS.Client.Resource
+  MARS.Client.Resource.SSE, MARS.Client.CustomResource, MARS.Client.Resource,
+  MARS.Utils.Parameters, System.JSON, MARS.Client.Token
 ;
 
 type
@@ -22,18 +23,18 @@ type
     MARSApplication: TMARSClientApplication;
     MARSHttpClient1: TMARSHttpClient;
     MARSClientResourceSSE1: TMARSClientResourceSSE;
-    procedure DataModuleCreate(Sender: TObject);
-    procedure DataModuleDestroy(Sender: TObject);
-  private
-//    FClient: THTTPClient;
-    FSource: THTTPEventSource;
+    MARSClientToken1: TMARSClientToken;
+
     procedure HandleSseMessages(ASender: THTTPEventSource);
     procedure HandleSseOpen(ASender: THTTPEventSource);
     procedure HandleSseReconnect(ASender: THTTPEventSource);
     procedure HandleSseClose(ASender: THTTPEventSource);
     procedure HandleSseError(ASender: THTTPEventSource;
       const AException: Exception; var AReconnect: Boolean);
-    procedure AppendLog(const AMsg: string);
+
+    procedure DataModuleCreate(Sender: TObject);
+
+  private
   public
   end;
 
@@ -46,21 +47,10 @@ implementation
 
 {$R *.dfm}
 
-uses CodeSiteLogging;
-
-procedure TMainDataModule.AppendLog(const AMsg: string);
-begin
-  CodeSite.SendMsg(AMsg);
-end;
+uses CodeSiteLogging, DateUtils;
 
 procedure TMainDataModule.HandleSseMessages(ASender: THTTPEventSource);
 begin
-//  if FIsShuttingDown then
-//    Exit;
-
-  if not Assigned(ASender) then
-    Exit;
-
   var Ev := ASender.GetEvent;
   while Assigned(Ev) do
   begin
@@ -81,7 +71,8 @@ begin
       end
       else if EventName.IsEmpty then
         EventName := 'message';
-      AppendLog(Format('[%s] id=%s data=%s', [EventName, EventID, EventData]));
+
+      CodeSite.SendFmtMsg('[%s] id=%s data=%s', [EventName, EventID, EventData]);
     finally
       Ev.Free;
     end;
@@ -92,43 +83,35 @@ end;
 
 procedure TMainDataModule.HandleSseOpen(ASender: THTTPEventSource);
 begin
-  AppendLog('[state] connected');
+  CodeSite.SendMsg('[state] connected');
 end;
 
 procedure TMainDataModule.HandleSseReconnect(ASender: THTTPEventSource);
 begin
-  AppendLog('[state] reconnecting...');
+  CodeSite.SendMsg('[state] reconnecting...');
+end;
+
+procedure TMainDataModule.DataModuleCreate(Sender: TObject);
+begin
+  MARSClientToken1.UserName := 'andrea';
+  MARSClientToken1.Password := HourOf(Now).ToString;
+  MARSClientToken1.POST();
+
+  CodeSite.SendMsg('[LOGIN] ' + MARSClientToken1.UserRoles.CommaText);
+
+  MARSClientResourceSSE1.Active := True;
 end;
 
 procedure TMainDataModule.HandleSseClose(ASender: THTTPEventSource);
 begin
-  AppendLog('[state] disconnected');
+  CodeSite.SendMsg('[state] disconnected');
 end;
 
 procedure TMainDataModule.HandleSseError(ASender: THTTPEventSource;
   const AException: Exception; var AReconnect: Boolean);
 begin
-  AppendLog('[error] ' + AException.Message);
+  CodeSite.SendFmtMsg(csmError, '[error] %s ', [AException.Message]);
   AReconnect := True;
-end;
-
-procedure TMainDataModule.DataModuleCreate(Sender: TObject);
-begin
-  FSource := THTTPEventSource.Create;
-  FSource.Client := MARSHttpClient1.HttpClient;
-  FSource.URL := MARSHttpClient1.MARSEngineURL + '/default/helloworld';
-  FSource.OnMessage := HandleSseMessages;
-  FSource.OnOpen := HandleSseOpen;
-  FSource.OnReconnect := HandleSseReconnect;
-  FSource.OnClose := HandleSseClose;
-  FSource.OnError := HandleSseError;
-  FSource.Open;
-end;
-
-procedure TMainDataModule.DataModuleDestroy(Sender: TObject);
-begin
-  FSource.Close;
-  FreeAndNil(FSource);
 end;
 
 end.

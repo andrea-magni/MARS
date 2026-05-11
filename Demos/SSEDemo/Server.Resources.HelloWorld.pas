@@ -29,7 +29,7 @@ type
       end;
   protected
   public
-    [GET, Produces(TMediaType.TEXT_EVENT_STREAM)]
+    [GET, Produces(TMediaType.TEXT_EVENT_STREAM), RolesAllowed('admin')]
     function SayHelloWorld: TMARSServerSideEvent;
   end;
 

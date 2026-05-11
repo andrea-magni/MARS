@@ -17,6 +17,7 @@ type
   TMainForm = class(TForm)
     TopToolBar: TToolBar;
     TitleLabel: TLabel;
+    procedure FormCreate(Sender: TObject);
   private
   public
   end;
@@ -30,6 +31,13 @@ implementation
 
 uses
   FMXClient.DataModules.Main
+, CodeSiteLogging
 ;
+
+procedure TMainForm.FormCreate(Sender: TObject);
+begin
+  CodeSite.Clear;
+  CodeSite.SendMsg(csmGreen, 'MainForm OnCreate');
+end;
 
 end.
