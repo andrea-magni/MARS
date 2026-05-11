@@ -53,6 +53,7 @@ type
     procedure SetLastEventID(const Value: string); inline;
     procedure SetLastEventURLParam(const Value: string); inline;
     procedure SetRetryTimeout(const Value: Cardinal); inline;
+    function GetStatusAsString: string;
   protected
     function GetMARSHttpClient: TMARSHttpClient; virtual;
     function GetHttpClient: THttpClient; virtual;
@@ -71,6 +72,7 @@ type
     function GetEvent: THTTPEvent; virtual;
   published
     property Status: THTTPEventSourceStatus read GetStatus;
+    property StatusAsString: string read GetStatusAsString;
     property Active: Boolean read GetActive write SetActive;
     property LastEventID: string read GetLastEventID write SetLastEventID;
     property RetryTimeout: Cardinal read GetRetryTimeout write SetRetryTimeout default THTTPEventSource.CDefRetryTimeout;
@@ -86,6 +88,7 @@ type
 
 implementation
 
+uses System.Rtti;
 
 { TMARSClientResourceSSE }
 
@@ -147,6 +150,11 @@ end;
 function TMARSClientResourceSSE.GetStatus: THTTPEventSourceStatus;
 begin
   Result := FSource.Status;
+end;
+
+function TMARSClientResourceSSE.GetStatusAsString: string;
+begin
+  Result := TRttiEnumerationType.GetName<THTTPEventSourceStatus>(Status);
 end;
 
 procedure TMARSClientResourceSSE.Open;

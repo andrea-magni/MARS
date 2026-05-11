@@ -25,14 +25,15 @@ type
     MARSClientResourceSSE1: TMARSClientResourceSSE;
     MARSClientToken1: TMARSClientToken;
 
-    procedure HandleSseMessages(ASender: TMARSClientResourceSSE);
-    procedure HandleSseOpen(ASender: TMARSClientResourceSSE);
-    procedure HandleSseReconnect(ASender: TMARSClientResourceSSE);
-    procedure HandleSseClose(ASender: TMARSClientResourceSSE);
-    procedure HandleSseError(ASender: TMARSClientResourceSSE;
-      const AException: Exception; var AReconnect: Boolean);
-
     procedure DataModuleCreate(Sender: TObject);
+    procedure MARSClientResourceSSE1Message(Sender: TMARSClientResourceSSE);
+    procedure MARSClientResourceSSE1Error(ASender: TMARSClientResourceSSE;
+      const AException: Exception; var AReconnect: Boolean);
+    procedure MARSClientResourceSSE1Open(Sender: TMARSClientResourceSSE);
+    procedure MARSClientResourceSSE1Reconnect(Sender: TMARSClientResourceSSE);
+    procedure MARSClientResourceSSE1Close(Sender: TMARSClientResourceSSE);
+    procedure MARSClientResourceSSE1Comment(ASender: TMARSClientResourceSSE;
+      const AComment: string);
 
   private
   public
@@ -49,14 +50,35 @@ implementation
 
 uses CodeSiteLogging, DateUtils;
 
-procedure TMainDataModule.HandleSseMessages(ASender: TMARSClientResourceSSE);
+procedure TMainDataModule.MARSClientResourceSSE1Close(
+  Sender: TMARSClientResourceSSE);
 begin
-  var LEvent := ASender.GetEvent;
+  CodeSite.SendMsg('[state] disconnected');
+end;
+
+procedure TMainDataModule.MARSClientResourceSSE1Comment(
+  ASender: TMARSClientResourceSSE; const AComment: string);
+begin
+//  CodeSite.SendMsg('[comment] ' + AComment);
+end;
+
+procedure TMainDataModule.MARSClientResourceSSE1Error(
+  ASender: TMARSClientResourceSSE; const AException: Exception;
+  var AReconnect: Boolean);
+begin
+  CodeSite.SendFmtMsg(csmError, '[error] %s', [AException.Message]);
+  AReconnect := True;
+end;
+
+procedure TMainDataModule.MARSClientResourceSSE1Message(
+  Sender: TMARSClientResourceSSE);
+begin
+  var LEvent := Sender.GetEvent;
   while Assigned(LEvent) do
   begin
     try
       var LEventName := LEvent.Event;
-      var LEventData := StringReplace(LEvent.Data.Text, sLineBreak, '\n', [rfReplaceAll]);
+      var LEventData := LEvent.Data.Text;
       var LEventID := LEvent.ID;
 
       if SameText(LEventName, 'heartbeat') then
@@ -76,16 +98,18 @@ begin
       LEvent.Free;
     end;
 
-    LEvent := ASender.GetEvent;
+    LEvent := Sender.GetEvent;
   end;
 end;
 
-procedure TMainDataModule.HandleSseOpen(ASender: TMARSClientResourceSSE);
+procedure TMainDataModule.MARSClientResourceSSE1Open(
+  Sender: TMARSClientResourceSSE);
 begin
   CodeSite.SendMsg('[state] connected');
 end;
 
-procedure TMainDataModule.HandleSseReconnect(ASender: TMARSClientResourceSSE);
+procedure TMainDataModule.MARSClientResourceSSE1Reconnect(
+  Sender: TMARSClientResourceSSE);
 begin
   CodeSite.SendMsg('[state] reconnecting...');
 end;
@@ -99,18 +123,6 @@ begin
   CodeSite.SendMsg('[LOGIN] ' + MARSClientToken1.UserRoles.CommaText);
 
   MARSClientResourceSSE1.Active := True;
-end;
-
-procedure TMainDataModule.HandleSseClose(ASender: TMARSClientResourceSSE);
-begin
-  CodeSite.SendMsg('[state] disconnected');
-end;
-
-procedure TMainDataModule.HandleSseError(ASender: TMARSClientResourceSSE;
-  const AException: Exception; var AReconnect: Boolean);
-begin
-  CodeSite.SendFmtMsg(csmError, '[error] %s ', [AException.Message]);
-  AReconnect := True;
 end;
 
 end.

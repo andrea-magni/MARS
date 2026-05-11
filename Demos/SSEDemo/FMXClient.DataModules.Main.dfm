@@ -26,11 +26,12 @@ object MainDataModule: TMainDataModule
     Resource = 'helloworld'
     Active = False
     LastEventID = '22'
-    OnOpen = HandleSseOpen
-    OnReconnect = HandleSseReconnect
-    OnClose = HandleSseClose
-    OnMessage = HandleSseMessages
-    OnError = HandleSseError
+    OnOpen = MARSClientResourceSSE1Open
+    OnReconnect = MARSClientResourceSSE1Reconnect
+    OnClose = MARSClientResourceSSE1Close
+    OnMessage = MARSClientResourceSSE1Message
+    OnComment = MARSClientResourceSSE1Comment
+    OnError = MARSClientResourceSSE1Error
     Left = 96
     Top = 208
   end
@@ -39,6 +40,8 @@ object MainDataModule: TMainDataModule
     SpecificAccept = 'application/json'
     SpecificContentType = 'application/json'
     Resource = 'token'
+    UserName = 'admin'
+    Password = '23'
     Left = 216
     Top = 152
   end

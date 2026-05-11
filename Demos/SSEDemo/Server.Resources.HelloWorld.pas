@@ -63,15 +63,14 @@ begin
           AStream.Write<TMyEventPayload>(LPayload.sequence.ToString, LPayload);
           AStream.EndEvent;
 
-          Sleep(250);
+          Sleep(1000);
         end;
       except on E: Exception do
 //        CodeSite.SendException(E);
       end;
     end
+    , 500
   );
-
-//  Result.KeepAliveTimeout := 15;
 end;
 
 { THelloWorldResource.TMyEventPayload }
