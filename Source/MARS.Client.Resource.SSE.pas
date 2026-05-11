@@ -21,21 +21,30 @@ uses
 type
   [ComponentPlatformsAttribute(pidAllPlatforms)]
   TMARSClientResourceSSE = class(TMARSClientResource)
+    type
+      TMARSHTTPNotifyEvent = procedure (Sender: TMARSClientResourceSSE) of object;
+      TMARSHTTPCommentEvent = procedure(ASender: TMARSClientResourceSSE; const AComment: string) of object;
+      TMARSHTTPErrorEvent = procedure(ASender: TMARSClientResourceSSE; const AException: Exception;
+        var AReconnect: Boolean) of object;
+
   private
     FSource: THTTPEventSource;
 
-    function GetOnClose: THTTPNotifyEvent; inline;
-    function GetOnComment: THTTPCommentEvent; inline;
-    function GetOnError: THTTPErrorEvent; inline;
-    function GetOnMessage: THTTPNotifyEvent; inline;
-    function GetOnOpen: THTTPNotifyEvent; inline;
-    function GetOnReconnect: THTTPNotifyEvent; inline;
-    procedure SetOnClose(const Value: THTTPNotifyEvent); inline;
-    procedure SetOnComment(const Value: THTTPCommentEvent); inline;
-    procedure SetOnError(const Value: THTTPErrorEvent); inline;
-    procedure SetOnMessage(const Value: THTTPNotifyEvent); inline;
-    procedure SetOnOpen(const Value: THTTPNotifyEvent); inline;
-    procedure SetOnReconnect(const Value: THTTPNotifyEvent); inline;
+    FOnClose: TMARSHTTPNotifyEvent;
+    FOnMessage: TMARSHTTPNotifyEvent;
+    FOnOpen: TMARSHTTPNotifyEvent;
+    FOnReconnect: TMARSHTTPNotifyEvent;
+    FOnComment: TMARSHTTPCommentEvent;
+    FOnError: TMARSHTTPErrorEvent;
+
+    procedure SourceOnClose(Sender: THTTPEventSource);
+    procedure SourceOnMessage(Sender: THTTPEventSource);
+    procedure SourceOnOpen(Sender: THTTPEventSource);
+    procedure SourceOnReconnect(Sender: THTTPEventSource);
+    procedure SourceOnComment(ASender: THTTPEventSource; const AComment: string);
+    procedure SourceOnError(ASender: THTTPEventSource; const AException: Exception;
+        var AReconnect: Boolean);
+
     function GetActive: Boolean;  inline;
     function GetStatus: THTTPEventSourceStatus; inline;
     function GetLastEventID: string; inline;
@@ -59,6 +68,7 @@ type
 
     procedure Open; virtual;
     procedure Close; virtual;
+    function GetEvent: THTTPEvent; virtual;
   published
     property Status: THTTPEventSourceStatus read GetStatus;
     property Active: Boolean read GetActive write SetActive;
@@ -66,12 +76,12 @@ type
     property RetryTimeout: Cardinal read GetRetryTimeout write SetRetryTimeout default THTTPEventSource.CDefRetryTimeout;
     property LastEventURLParam: string read GetLastEventURLParam write SetLastEventURLParam;
 
-    property OnOpen: THTTPNotifyEvent read GetOnOpen write SetOnOpen;
-    property OnReconnect: THTTPNotifyEvent read GetOnReconnect write SetOnReconnect;
-    property OnClose: THTTPNotifyEvent read GetOnClose write SetOnClose;
-    property OnMessage: THTTPNotifyEvent read GetOnMessage write SetOnMessage;
-    property OnComment: THTTPCommentEvent read GetOnComment write SetOnComment;
-    property OnError: THTTPErrorEvent read GetOnError write SetOnError;
+    property OnOpen: TMARSHTTPNotifyEvent read FOnOpen write FOnOpen;
+    property OnReconnect: TMARSHTTPNotifyEvent read FOnReconnect write FOnReconnect;
+    property OnClose: TMARSHTTPNotifyEvent read FOnClose write FOnClose;
+    property OnMessage: TMARSHTTPNotifyEvent read FOnMessage write FOnMessage;
+    property OnComment: TMARSHTTPCommentEvent read FOnComment write FOnComment;
+    property OnError: TMARSHTTPErrorEvent read FOnError write FOnError;
   end;
 
 implementation
@@ -102,6 +112,11 @@ begin
   Result := FSource.Active;
 end;
 
+function TMARSClientResourceSSE.GetEvent: THTTPEvent;
+begin
+  Result := FSource.GetEvent;
+end;
+
 function TMARSClientResourceSSE.GetHttpClient: THttpClient;
 begin
   Result := nil;
@@ -122,36 +137,6 @@ end;
 function TMARSClientResourceSSE.GetMARSHttpClient: TMARSHttpClient;
 begin
   Result := Client as TMARSHttpClient;
-end;
-
-function TMARSClientResourceSSE.GetOnClose: THTTPNotifyEvent;
-begin
-  Result := FSource.OnClose;
-end;
-
-function TMARSClientResourceSSE.GetOnComment: THTTPCommentEvent;
-begin
-  Result := FSource.OnComment;
-end;
-
-function TMARSClientResourceSSE.GetOnError: THTTPErrorEvent;
-begin
-  Result := FSource.OnError;
-end;
-
-function TMARSClientResourceSSE.GetOnMessage: THTTPNotifyEvent;
-begin
-  Result := FSource.OnMessage;
-end;
-
-function TMARSClientResourceSSE.GetOnOpen: THTTPNotifyEvent;
-begin
-  Result := FSource.OnOpen;
-end;
-
-function TMARSClientResourceSSE.GetOnReconnect: THTTPNotifyEvent;
-begin
-  Result := FSource.OnReconnect;
 end;
 
 function TMARSClientResourceSSE.GetRetryTimeout: Cardinal;
@@ -186,36 +171,6 @@ begin
   FSource.LastEventURLParam := Value;
 end;
 
-procedure TMARSClientResourceSSE.SetOnClose(const Value: THTTPNotifyEvent);
-begin
-  FSource.OnClose := Value;
-end;
-
-procedure TMARSClientResourceSSE.SetOnComment(const Value: THTTPCommentEvent);
-begin
-  FSource.OnComment := Value;
-end;
-
-procedure TMARSClientResourceSSE.SetOnError(const Value: THTTPErrorEvent);
-begin
-  FSource.OnError := Value;
-end;
-
-procedure TMARSClientResourceSSE.SetOnMessage(const Value: THTTPNotifyEvent);
-begin
-  FSource.OnMessage := Value;
-end;
-
-procedure TMARSClientResourceSSE.SetOnOpen(const Value: THTTPNotifyEvent);
-begin
-  FSource.OnOpen := Value;
-end;
-
-procedure TMARSClientResourceSSE.SetOnReconnect(const Value: THTTPNotifyEvent);
-begin
-  FSource.OnReconnect := Value;
-end;
-
 procedure TMARSClientResourceSSE.SetRetryTimeout(const Value: Cardinal);
 begin
   FSource.RetryTimeout := Value;
@@ -223,8 +178,53 @@ end;
 
 procedure TMARSClientResourceSSE.SetupSource;
 begin
+  FSource.OnOpen := SourceOnOpen;
+  FSource.OnReconnect := SourceOnReconnect;
+  FSource.OnClose := SourceOnClose;
+  FSource.OnMessage := SourceOnMessage;
+  FSource.OnComment := SourceOnComment;
+  FSource.OnError := SourceOnError;
+
   FSource.Client := HttpClient;
   FSource.URL := Path;
+end;
+
+procedure TMARSClientResourceSSE.SourceOnClose(Sender: THTTPEventSource);
+begin
+  if Assigned(FOnClose) then
+    FOnClose(Self);
+end;
+
+procedure TMARSClientResourceSSE.SourceOnComment(
+  ASender: THTTPEventSource; const AComment: string);
+begin
+  if Assigned(FOnComment) then
+    FOnComment(Self, AComment);
+end;
+
+procedure TMARSClientResourceSSE.SourceOnError(ASender: THTTPEventSource;
+  const AException: Exception; var AReconnect: Boolean);
+begin
+  if Assigned(FOnError) then
+    FOnError(Self, AException, AReconnect);
+end;
+
+procedure TMARSClientResourceSSE.SourceOnMessage(Sender: THTTPEventSource);
+begin
+  if Assigned(FOnMessage) then
+    FOnMessage(Self);
+end;
+
+procedure TMARSClientResourceSSE.SourceOnOpen(Sender: THTTPEventSource);
+begin
+  if Assigned(FOnOpen) then
+    FOnOpen(Self);
+end;
+
+procedure TMARSClientResourceSSE.SourceOnReconnect(Sender: THTTPEventSource);
+begin
+  if Assigned(FOnReconnect) then
+    FOnReconnect(Self);
 end;
 
 end.

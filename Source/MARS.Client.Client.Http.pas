@@ -14,7 +14,7 @@ uses
   , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client,  MARS.Utils.Parameters
 
   // Net
-  , System.Net.URLClient, System.Net.HttpClient
+  , System.Net.URLClient, System.Net.HttpClient, System.NetConsts
   , System.Net.Mime
 ;
 

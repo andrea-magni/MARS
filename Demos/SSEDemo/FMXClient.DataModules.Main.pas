@@ -25,11 +25,11 @@ type
     MARSClientResourceSSE1: TMARSClientResourceSSE;
     MARSClientToken1: TMARSClientToken;
 
-    procedure HandleSseMessages(ASender: THTTPEventSource);
-    procedure HandleSseOpen(ASender: THTTPEventSource);
-    procedure HandleSseReconnect(ASender: THTTPEventSource);
-    procedure HandleSseClose(ASender: THTTPEventSource);
-    procedure HandleSseError(ASender: THTTPEventSource;
+    procedure HandleSseMessages(ASender: TMARSClientResourceSSE);
+    procedure HandleSseOpen(ASender: TMARSClientResourceSSE);
+    procedure HandleSseReconnect(ASender: TMARSClientResourceSSE);
+    procedure HandleSseClose(ASender: TMARSClientResourceSSE);
+    procedure HandleSseError(ASender: TMARSClientResourceSSE;
       const AException: Exception; var AReconnect: Boolean);
 
     procedure DataModuleCreate(Sender: TObject);
@@ -49,51 +49,50 @@ implementation
 
 uses CodeSiteLogging, DateUtils;
 
-procedure TMainDataModule.HandleSseMessages(ASender: THTTPEventSource);
+procedure TMainDataModule.HandleSseMessages(ASender: TMARSClientResourceSSE);
 begin
-  var Ev := ASender.GetEvent;
-  while Assigned(Ev) do
+  var LEvent := ASender.GetEvent;
+  while Assigned(LEvent) do
   begin
     try
-      var EventName := Ev.Event;
-      var EventData := StringReplace(Ev.Data.Text, sLineBreak, '\n', [rfReplaceAll]);
-      var EventID := Ev.ID;
+      var LEventName := LEvent.Event;
+      var LEventData := StringReplace(LEvent.Data.Text, sLineBreak, '\n', [rfReplaceAll]);
+      var LEventID := LEvent.ID;
 
-      if SameText(EventName, 'heartbeat') then
+      if SameText(LEventName, 'heartbeat') then
       begin
-          var JObj := TJSONObject.ParseJSONValue(EventData) as TJSONObject;
+          var LPayload := TJSONObject.ParseJSONValue(LEventData) as TJSONObject;
           try
-//            FUiJobPercent := JObj.GetValue<Integer>('percent', 0);
-//            FUiJobStage := JObj.GetValue<string>('stage', '');
+
           finally
-            JObj.Free;
+            LPayload.Free;
           end;
       end
-      else if EventName.IsEmpty then
-        EventName := 'message';
+      else if LEventName.IsEmpty then
+        LEventName := 'message';
 
-      CodeSite.SendFmtMsg('[%s] id=%s data=%s', [EventName, EventID, EventData]);
+      CodeSite.SendFmtMsg('[%s] id=%s data=%s', [LEventName, LEventID, LEventData]);
     finally
-      Ev.Free;
+      LEvent.Free;
     end;
 
-    Ev := ASender.GetEvent;
+    LEvent := ASender.GetEvent;
   end;
 end;
 
-procedure TMainDataModule.HandleSseOpen(ASender: THTTPEventSource);
+procedure TMainDataModule.HandleSseOpen(ASender: TMARSClientResourceSSE);
 begin
   CodeSite.SendMsg('[state] connected');
 end;
 
-procedure TMainDataModule.HandleSseReconnect(ASender: THTTPEventSource);
+procedure TMainDataModule.HandleSseReconnect(ASender: TMARSClientResourceSSE);
 begin
   CodeSite.SendMsg('[state] reconnecting...');
 end;
 
 procedure TMainDataModule.DataModuleCreate(Sender: TObject);
 begin
-  MARSClientToken1.UserName := 'andrea';
+  MARSClientToken1.UserName := 'admin';
   MARSClientToken1.Password := HourOf(Now).ToString;
   MARSClientToken1.POST();
 
@@ -102,12 +101,12 @@ begin
   MARSClientResourceSSE1.Active := True;
 end;
 
-procedure TMainDataModule.HandleSseClose(ASender: THTTPEventSource);
+procedure TMainDataModule.HandleSseClose(ASender: TMARSClientResourceSSE);
 begin
   CodeSite.SendMsg('[state] disconnected');
 end;
 
-procedure TMainDataModule.HandleSseError(ASender: THTTPEventSource;
+procedure TMainDataModule.HandleSseError(ASender: TMARSClientResourceSSE;
   const AException: Exception; var AReconnect: Boolean);
 begin
   CodeSite.SendFmtMsg(csmError, '[error] %s ', [AException.Message]);
