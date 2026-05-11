@@ -53,6 +53,7 @@ contains
   MARS.Client.Client.Indy in '..\..\Source\MARS.Client.Client.Indy.pas',
   MARS.Client.Resource.FormData in '..\..\Source\MARS.Client.Resource.FormData.pas',
   MARS.Client.Resource.FormUrlEncoded in '..\..\Source\MARS.Client.Resource.FormUrlEncoded.pas',
-  MARS.Client.Client.Http in '..\..\Source\MARS.Client.Client.Http.pas';
+  MARS.Client.Client.Http in '..\..\Source\MARS.Client.Client.Http.pas',
+  MARS.Client.Resource.SSE in '..\..\Source\MARS.Client.Resource.SSE.pas';
 
 end.

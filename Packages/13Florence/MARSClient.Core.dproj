@@ -112,6 +112,7 @@
         <DCCReference Include="..\..\Source\MARS.Client.Resource.FormData.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Resource.FormUrlEncoded.pas"/>
         <DCCReference Include="..\..\Source\MARS.Client.Client.Http.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Client.Resource.SSE.pas"/>
         <RcItem Include="..\..\media\TMARSClientMessagingResource.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSCLIENTMESSAGINGRESOURCE</ResourceId>
@@ -163,6 +164,10 @@
         <RcItem Include="..\..\media\TMARSHttpClient.bmp">
             <ResourceType>BITMAP</ResourceType>
             <ResourceId>TMARSHTTPCLIENT</ResourceId>
+        </RcItem>
+        <RcItem Include="..\..\media\TMARSClientResourceSSE.bmp">
+            <ResourceType>BITMAP</ResourceType>
+            <ResourceId>TMARSCLIENTRESOURCESSE</ResourceId>
         </RcItem>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

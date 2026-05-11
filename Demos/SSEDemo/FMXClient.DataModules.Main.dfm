@@ -11,6 +11,7 @@ object MainDataModule: TMainDataModule
     Top = 80
   end
   object MARSHttpClient1: TMARSHttpClient
+    BaseURL = 'http://localhost:8080/rest'
     MARSEngineURL = 'http://localhost:8080/rest'
     ConnectTimeout = 60000
     ReadTimeout = 60000
@@ -19,5 +20,12 @@ object MainDataModule: TMainDataModule
     ProxyConfig.Port = 0
     Left = 88
     Top = 24
+  end
+  object MARSClientResourceSSE1: TMARSClientResourceSSE
+    Application = MARSApplication
+    SpecificAccept = '*/*'
+    Resource = 'helloworld'
+    Left = 224
+    Top = 80
   end
 end

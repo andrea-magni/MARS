@@ -13,12 +13,15 @@ uses
   System.Classes, System.SysUtils, DesignIntf, ToolsAPI
 , BrandingAPI, VCL.Graphics, Vcl.Imaging.pngimage, System.Types, Winapi.Windows
 , MARS.Client.Client.Indy, MARS.Client.Client.Net
-{$IFDEF Delphi13Florence_UP}, MARS.Client.Client.Http{$ENDIF}
 , MARS.Client.Application
 , MARS.Client.CustomResource, MARS.Client.CustomResource.Editor
 , MARS.Client.Resource, MARS.Client.Resource.FormData, MARS.Client.Resource.JSON
 , MARS.Client.Resource.Stream, MARS.Client.Resource.FormUrlEncoded
 , MARS.Client.Token
+{$IFDEF Delphi13Florence_UP}
+, MARS.Client.Client.Http
+, MARS.Client.Resource.SSE
+{$ENDIF}
 ;
 
 const
@@ -145,7 +148,10 @@ begin
     TMARSClientResourceStream,
     TMARSClientToken,
     TMARSNetClient
-{$IFDEF Delphi13Florence_UP}, TMARSHttpClient{$ENDIF}
+{$IFDEF Delphi13Florence_UP}
+  , TMARSHttpClient
+  , TMARSClientResourceSSE
+{$ENDIF}
   ]);
   RegisterComponentEditor(TMARSClientCustomResource, TMARSClientCustomResourceEditor);
 end;

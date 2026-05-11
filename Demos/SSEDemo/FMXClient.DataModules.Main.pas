@@ -13,13 +13,15 @@ uses
 , MARS.Client.Application
 , MARS.Client.Client, MARS.Client.Client.Net
 , System.Net.HttpSse, System.Net.HttpClient
-, MARS.Core.JSON, System.Net.HttpClient.Win, MARS.Client.Client.Http
+, MARS.Core.JSON, System.Net.HttpClient.Win, MARS.Client.Client.Http,
+  MARS.Client.Resource.SSE, MARS.Client.CustomResource, MARS.Client.Resource
 ;
 
 type
   TMainDataModule = class(TDataModule)
     MARSApplication: TMARSClientApplication;
     MARSHttpClient1: TMARSHttpClient;
+    MARSClientResourceSSE1: TMARSClientResourceSSE;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
   private

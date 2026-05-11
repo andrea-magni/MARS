@@ -105,6 +105,7 @@ type
     procedure SetPathParamsValues(const Value: TStrings);
     procedure SetQueryParams(const Value: TStrings);
     procedure SetCustomHeaders(const Value: TStrings);
+    procedure SetApplication(const Value: TMARSClientApplication);
   protected
     procedure ApplyCustomHeaders;
     function GetClient: TMARSCustomClient; virtual;
@@ -135,6 +136,7 @@ type
     procedure AssignTo(Dest: TPersistent); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
 
+    procedure DoApplicationChanged; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -204,7 +206,7 @@ type
 
     property Accept: string read GetAccept;
     property ContentType: string read GetContentType;
-    property Application: TMARSClientApplication read GetApplication write FApplication;
+    property Application: TMARSClientApplication read GetApplication write SetApplication;
     property AuthToken: string read GetAuthToken;
     property Client: TMARSCustomClient read GetClient;
     property CustomHeaders: TStrings read FCustomHeaders write SetCustomHeaders;
@@ -574,6 +576,11 @@ begin
   FQueryParams.Free;
   FPathParamsValues.Free;
   inherited;
+end;
+
+procedure TMARSClientCustomResource.DoApplicationChanged;
+begin
+
 end;
 
 procedure TMARSClientCustomResource.DoError(const AException: Exception;
@@ -1197,6 +1204,16 @@ begin
   end;
 end;
 {$endif}
+
+procedure TMARSClientCustomResource.SetApplication(
+  const Value: TMARSClientApplication);
+begin
+  if FApplication <> Value then
+  begin
+    FApplication := Value;
+    DoApplicationChanged;
+  end;
+end;
 
 procedure TMARSClientCustomResource.SetCustomHeaders(const Value: TStrings);
 begin
