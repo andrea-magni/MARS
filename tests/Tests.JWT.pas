@@ -161,7 +161,7 @@ begin
 
       if LToken is TMARSmORMotJWTToken then
       begin
-        LValue_AsDateTime := Iso8601ToDateTime(LValue_AsString);
+        LValue_AsDateTime := Iso8601ToDateTime(StringToUTF8(LValue_AsString));
         LNow_ISO8601 := UTF8ToString(DateTimeToIso8601(LNow, True));
       end
       else
