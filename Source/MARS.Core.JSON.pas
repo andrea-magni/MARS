@@ -1830,9 +1830,7 @@ begin
     LContext := TRttiContext.Create;
 
     LDesiredType := LContext.GetType(TypeInfo(String)); // fallback to string
-    if LJSONValue is TJSONString then
-      LDesiredType := LContext.GetType(TypeInfo(String))
-    else if LJSONValue is TJSONNumber then
+    if LJSONValue is TJSONNumber then
     begin
       LStringValue := LJSONValue.Value;
       if Integer.TryParse(LStringValue, LValueAsInteger)then
