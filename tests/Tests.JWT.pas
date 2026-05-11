@@ -25,6 +25,8 @@ type
     [Test] procedure Duration5secs;
     [Test] procedure Duration1sec;
     [Test] procedure ClaimTypes;
+    [Test] procedure IatType_Built;
+    [Test] procedure IatType_Parse;
   end;
 
   [TestFixture('JWT.mORMotJWT')]
@@ -39,8 +41,8 @@ type
 implementation
 
 uses
-  Math
-, MARS.Utils.Parameters, MARS.Utils.JWT
+  Math, TimeSpan
+, MARS.Utils.Parameters, MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
 , SynCommons, SynCrypto, Generics.Collections
 ;
@@ -96,8 +98,12 @@ var
   LParams: TMARSParameters;
   LToken: TMARSToken;
   LDuration: TDateTime;
+  LValue_AsDateTime: TDateTime;
+  LNow_ISO8601: string;
+
 begin
   const LContext = TRttiContext.Create;
+  const LNow: TDateTime = Now;
 
   LParams := TMARSParameters.Create('');
   try
@@ -113,6 +119,7 @@ begin
       LToken.Claims['AInteger'] := 123;
       LToken.Claims['ABoolean'] := True;
       LToken.Claims['AStringNumeric'] := '123';
+      LToken.Claims['ADateTime'] := LNow;
 
       LToken.Build(DUMMY_SECRET);
       Assert.IsNotEmpty(LToken.Token, 'Token build failed');
@@ -145,6 +152,30 @@ begin
       LRttiType := LContext.GetType(LValue.TypeInfo);
       LRttiTypeName := LRttiType.Name;
       Assert.AreEqual('Boolean', LRttiTypeName, 'Type differs ABoolean ' + LRttiTypeName);
+
+      LValue := LClaims['ADateTime'];
+      LRttiType := LContext.GetType(LValue.TypeInfo);
+      LRttiTypeName := LRttiType.Name;
+      Assert.AreEqual('string', LRttiTypeName, 'Type differs ADateTime ' + LRttiTypeName + ' ' + LValue.ToString);
+      var LValue_AsString := LValue.AsString;
+
+      if LToken is TMARSmORMotJWTToken then
+      begin
+        LValue_AsDateTime := Iso8601ToDateTime(LValue_AsString);
+        LNow_ISO8601 := UTF8ToString(DateTimeToIso8601(LNow, True));
+      end
+      else
+      begin
+        LValue_AsDateTime := MARS.Core.Utils.JSONToDate(LValue_AsString);
+        LNow_ISO8601 := MARS.Core.Utils.DateToJSON(LNow);
+      end;
+
+      Assert.IsTrue(
+          TTimeSpan.Subtract(LNow, LValue_AsDateTime).TotalSeconds < 1
+        , Format('DateTimeValue (AsDateTime) differs more than 1s, expected %s actual %s', [DateTimeToStr(LNow), DateTimeToStr(LValue_AsDateTime)]));
+
+      Assert.AreEqual(LNow_ISO8601, LValue_AsString
+        , Format('DateTimeValue (As ISO8601) differs, expected %s actual %s', [LNow_ISO8601, LValue_AsString]));
 
     finally
       LToken.Free;
@@ -217,6 +248,75 @@ begin
   +'.HpiUlC0d-a-oA4rZRFOpQsHxML55B0vXL5BbtEQNnLI';
 end;
 
+procedure TMARSJWT<T>.IatType_Built;
+var
+  LParams: TMARSParameters;
+  LToken: TMARSToken;
+  LDuration: TDateTime;
+begin
+  const LContext = TRttiContext.Create;
+  const LNow: TDateTime = Now;
+
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
+    LDuration := 1;
+    LParams.Values[JWT_DURATION_PARAM] := LDuration;
+
+    LToken := T.Create('', LParams);
+    try
+      LToken.Build(DUMMY_SECRET);
+      Assert.IsNotEmpty(LToken.Token, 'Token build failed');
+
+      LToken.Load(LToken.Token, DUMMY_SECRET);
+
+      const LClaims = LToken.Claims;
+
+      var LValue := LClaims['AString'];
+      if not LValue.IsEmpty then
+      begin
+        var LRttiType := LContext.GetType(LValue.TypeInfo);
+        var LRttiTypeName := LRttiType.Name;
+        Assert.AreEqual('string', LRttiTypeName, 'Type differs AString');
+      end;
+
+      Assert.IsTrue( LToken.IssuedAt > 0, 'IssuedAt is <= 0');
+      Assert.IsTrue( TTimeSpan.Subtract(LNow, LToken.IssuedAt).TotalSeconds < 1, 'IssuedAt within the second');
+
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.IatType_Parse;
+var
+  LParams: TMARSParameters;
+  LToken: TMARSToken;
+begin
+  var LIssuedAt_Date: TDateTime := EncodeDate(2017, 11, 15);
+
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+
+    LToken := T.Create(GetTokenForVerifyOne, LParams);
+    try
+      Assert.IsTrue(LToken.Token <> '', 'Token is not empty');
+      Assert.IsTrue( LToken.IssuedAt > 0, 'IssuedAt is <= 0');
+      Assert.IsTrue( TTimeSpan.Subtract(LIssuedAt_Date, LToken.IssuedAt).TotalDays < 1, 'IssuedAt within the day');
+
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
 procedure TMARSJWT<T>.VerifyOne;
 var
   LParams: TMARSParameters;
@@ -254,9 +354,12 @@ var
   LClaimValue: TValue;
   payload: TDocVariantData;
 begin
+  const LNow: TDateTime = Now;
+
   LClaims := TMARSParameters.Create('Test');
   try
     LClaims.Values['ABoolean'] := True;
+    LClaims.Values['ADateTime'] := LNow;
 
     LClaimsValues.Init([], dvArray);
     for LClaim in LClaims do
@@ -275,6 +378,12 @@ begin
     var LJSONObject := TJSONObject.ParseJSONValue(LJSONString) as TJSONObject;
     try
       Assert.IsTrue(LJSONObject.P['ABoolean'] is TJSONBool);
+      Assert.IsTrue(LJSONObject.P['ADateTime'] is TJSONString);
+      var LADateTime_string := LJSONObject.P['ADateTime'].Value;
+      var LADateTime_DateTime := JSONToDate(LADateTime_string);
+
+      Assert.IsTrue( TTimeSpan.Subtract(LNow, LADateTime_DateTime).TotalSeconds < 1, 'ADateTime within second' );
+
     finally
       LJSONObject.Free;
     end;
