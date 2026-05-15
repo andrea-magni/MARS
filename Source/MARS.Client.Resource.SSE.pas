@@ -27,6 +27,11 @@ type
       TMARSHTTPErrorEvent = procedure(ASender: TMARSClientResourceSSE; const AException: Exception;
         var AReconnect: Boolean) of object;
 
+      TMARSHTTPNotifyCallback = reference to procedure(ASender: TMARSClientResourceSSE);
+      TMARSHTTPCommentCallback = reference to procedure(ASender: TMARSClientResourceSSE; const AComment: string);
+      TMARSHTTPErrorCallback = reference to procedure(ASender: TMARSClientResourceSSE; const AException: Exception;
+        var AReconnect: Boolean);
+
   private
     FSource: THTTPEventSource;
 
@@ -36,6 +41,20 @@ type
     FOnReconnect: TMARSHTTPNotifyEvent;
     FOnComment: TMARSHTTPCommentEvent;
     FOnError: TMARSHTTPErrorEvent;
+
+    FCloseCallback: TMARSHTTPNotifyCallback;
+    FOpenCallback: TMARSHTTPNotifyCallback;
+    FMessageCallback: TMARSHTTPNotifyCallback;
+    FReconnectCallback: TMARSHTTPNotifyCallback;
+    FCommentCallback: TMARSHTTPCommentCallback;
+    FErrorCallback: TMARSHTTPErrorCallback;
+
+    FCloseCallbackWrapper: THTTPNotifyCallback;
+    FOpenCallbackWrapper: THTTPNotifyCallback;
+    FMessageCallbackWrapper: THTTPNotifyCallback;
+    FReconnectCallbackWrapper: THTTPNotifyCallback;
+    FCommentCallbackWrapper: THTTPCommentCallback;
+    FErrorCallbackWrapper: THTTPErrorCallback;
 
     procedure SourceOnClose(Sender: THTTPEventSource);
     procedure SourceOnMessage(Sender: THTTPEventSource);
@@ -54,6 +73,12 @@ type
     procedure SetLastEventURLParam(const Value: string); inline;
     procedure SetRetryTimeout(const Value: Cardinal); inline;
     function GetStatusAsString: string;
+    procedure SetCloseCallback(const Value: TMARSHTTPNotifyCallback);
+    procedure SetCommentCallback(const Value: TMARSHTTPCommentCallback);
+    procedure SetErrorCallback(const Value: TMARSHTTPErrorCallback);
+    procedure SetMessageCallback(const Value: TMARSHTTPNotifyCallback);
+    procedure SetOpenCallback(const Value: TMARSHTTPNotifyCallback);
+    procedure SetReconnectCallback(const Value: TMARSHTTPNotifyCallback);
   protected
     function GetMARSHttpClient: TMARSHttpClient; virtual;
     function GetHttpClient: THttpClient; virtual;
@@ -84,6 +109,13 @@ type
     property OnMessage: TMARSHTTPNotifyEvent read FOnMessage write FOnMessage;
     property OnComment: TMARSHTTPCommentEvent read FOnComment write FOnComment;
     property OnError: TMARSHTTPErrorEvent read FOnError write FOnError;
+
+    property OpenCallback: TMARSHTTPNotifyCallback read FOpenCallback write SetOpenCallback;
+    property ReconnectCallback: TMARSHTTPNotifyCallback read FReconnectCallback write SetReconnectCallback;
+    property CloseCallback: TMARSHTTPNotifyCallback read FCloseCallback write SetCloseCallback;
+    property MessageCallback: TMARSHTTPNotifyCallback read FMessageCallback write SetMessageCallback;
+    property CommentCallback: TMARSHTTPCommentCallback read FCommentCallback write SetCommentCallback;
+    property ErrorCallback: TMARSHTTPErrorCallback read FErrorCallback write SetErrorCallback;
   end;
 
 implementation
@@ -101,6 +133,7 @@ constructor TMARSClientResourceSSE.Create(AOwner: TComponent);
 begin
   inherited;
   FSource := THTTPEventSource.Create;
+  SetupSource;
 end;
 
 destructor TMARSClientResourceSSE.Destroy;
@@ -169,6 +202,36 @@ begin
   FSource.Active := Value;
 end;
 
+procedure TMARSClientResourceSSE.SetCloseCallback(
+  const Value: TMARSHTTPNotifyCallback);
+begin
+  FCloseCallback := Value;
+  if Assigned(FCloseCallback) then
+    FSource.CloseCallback := FCloseCallbackWrapper
+  else
+    FSource.CloseCallback := nil;
+end;
+
+procedure TMARSClientResourceSSE.SetCommentCallback(
+  const Value: TMARSHTTPCommentCallback);
+begin
+  FCommentCallback := Value;
+  if Assigned(FCommentCallback) then
+    FSource.CommentCallback := FCommentCallbackWrapper
+  else
+    FSource.CommentCallback := nil;
+end;
+
+procedure TMARSClientResourceSSE.SetErrorCallback(
+  const Value: TMARSHTTPErrorCallback);
+begin
+  FErrorCallback := Value;
+  if Assigned(FErrorCallback) then
+    FSource.ErrorCallback := FErrorCallbackWrapper
+  else
+    FSource.ErrorCallback := nil;
+end;
+
 procedure TMARSClientResourceSSE.SetLastEventID(const Value: string);
 begin
   FSource.LastEventID := Value;
@@ -177,6 +240,36 @@ end;
 procedure TMARSClientResourceSSE.SetLastEventURLParam(const Value: string);
 begin
   FSource.LastEventURLParam := Value;
+end;
+
+procedure TMARSClientResourceSSE.SetMessageCallback(
+  const Value: TMARSHTTPNotifyCallback);
+begin
+  FMessageCallback := Value;
+  if Assigned(FMessageCallback) then
+    FSource.MessageCallback := FMessageCallbackWrapper
+  else
+    FSource.MessageCallback := nil;
+end;
+
+procedure TMARSClientResourceSSE.SetOpenCallback(
+  const Value: TMARSHTTPNotifyCallback);
+begin
+  FOpenCallback := Value;
+  if Assigned(FOpenCallback) then
+    FSource.OpenCallback := FOpenCallbackWrapper
+  else
+    FSource.OpenCallback := nil;
+end;
+
+procedure TMARSClientResourceSSE.SetReconnectCallback(
+  const Value: TMARSHTTPNotifyCallback);
+begin
+  FReconnectCallback := Value;
+  if Assigned(FReconnectCallback) then
+    FSource.ReconnectCallback := FReconnectCallbackWrapper
+  else
+    FSource.ReconnectCallback := nil;
 end;
 
 procedure TMARSClientResourceSSE.SetRetryTimeout(const Value: Cardinal);
@@ -192,6 +285,48 @@ begin
   FSource.OnMessage := SourceOnMessage;
   FSource.OnComment := SourceOnComment;
   FSource.OnError := SourceOnError;
+
+  FCloseCallbackWrapper :=
+    procedure (ASender: THTTPEventSource)
+    begin
+      if Assigned(FCloseCallback) then
+        FCloseCallback(Self);
+    end;
+
+  FOpenCallbackWrapper :=
+    procedure (ASender: THTTPEventSource)
+    begin
+      if Assigned(FOpenCallback) then
+        FOpenCallback(Self);
+    end;
+
+  FMessageCallbackWrapper :=
+    procedure (ASender: THTTPEventSource)
+    begin
+      if Assigned(FMessageCallback) then
+        FMessageCallback(Self);
+    end;
+
+  FReconnectCallbackWrapper :=
+    procedure (ASender: THTTPEventSource)
+    begin
+      if Assigned(FReconnectCallback) then
+        FReconnectCallback(Self);
+    end;
+
+  FCommentCallbackWrapper :=
+    procedure(ASender: THTTPEventSource; const AComment: string)
+    begin
+      if Assigned(FCommentCallback) then
+        FCommentCallback(Self, AComment);
+    end;
+
+  FErrorCallbackWrapper :=
+    procedure(ASender: THTTPEventSource; const AException: Exception; var AReconnect: Boolean)
+    begin
+      if Assigned(FErrorCallback) then
+        FErrorCallback(Self, AException, AReconnect);
+    end;
 
   FSource.Client := HttpClient;
   FSource.URL := Path;

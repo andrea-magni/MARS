@@ -36,7 +36,6 @@ uses
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
-  CodeSite.Clear;
   CodeSite.SendMsg(csmGreen, 'MainForm OnCreate');
 end;
 

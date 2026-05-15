@@ -3,7 +3,7 @@
         <ProjectGuid>{8EEC8DF2-3740-468A-937A-60168245FB71}</ProjectGuid>
         <MainSource>SSEDemoServerConsoleApplication.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Console</AppType>
         <FrameworkType>None</FrameworkType>

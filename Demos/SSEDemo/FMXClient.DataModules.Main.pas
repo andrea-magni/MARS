@@ -116,11 +116,28 @@ end;
 
 procedure TMainDataModule.DataModuleCreate(Sender: TObject);
 begin
+  CodeSite.Clear;
+  CodeSite.SendMsg(csmGreen, 'MainData OnCreate');
   MARSClientToken1.UserName := 'admin';
   MARSClientToken1.Password := HourOf(Now).ToString;
   MARSClientToken1.POST();
 
   CodeSite.SendMsg('[LOGIN] ' + MARSClientToken1.UserRoles.CommaText);
+
+(*
+  MARSClientResourceSSE1.OpenCallback :=
+    procedure (ASender: TMARSClientResourceSSE)
+    begin
+      CodeSite.SendMsg('[state] CALLBACK connected');
+    end;
+
+  MARSClientResourceSSE1.MessageCallback :=
+    procedure (ASender: TMARSClientResourceSSE)
+    begin
+      var LEvent := ASender.GetEvent;
+      CodeSite.SendMsg('CALLBACK message ' + LEvent.Data.Text);
+    end;
+*)
 
   MARSClientResourceSSE1.Active := True;
 end;

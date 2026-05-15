@@ -3,7 +3,7 @@
         <ProjectGuid>{9715EDC7-B308-42F7-B5EF-14BB4698B974}</ProjectGuid>
         <MainSource>SSEDemoServerISAPI.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Library</AppType>
         <FrameworkType>None</FrameworkType>
