@@ -3,7 +3,7 @@
         <ProjectGuid>{FEF5DF94-50B0-46F7-9F4B-6C355F140A2F}</ProjectGuid>
         <MainSource>SSEDemoServerService.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>None</FrameworkType>

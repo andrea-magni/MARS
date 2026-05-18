@@ -1,0 +1,106 @@
+<!doctype html encode="utf-8">
+<html lang="it" encode="utf-8">
+<head>
+  <meta charset="utf-8">
+  <title>SSE Demo</title>
+
+  <style>
+    body { 
+    	font-family: system-ui, sans-serif; 
+    	max-width: 1000px; 
+    	margin: 40px auto; 
+		
+    }
+    button { 
+    	padding: 8px 14px; 
+    	cursor: pointer; 
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .box { 
+    	margin-top: 20px; 
+    	padding: 16px; 
+    	border: 1px solid #ccc; 
+    	border-radius: 8px; 
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);		
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px;}
+    th { background: #f3f3f3; text-align: left; }
+
+    span.method {border: 1px solid #ccc; padding: 4px; border-radius: 10px; margin-right: 8px;}
+	h1 {
+		display: flex; 
+		align-items: center; 
+		gap: 10px; 
+		border: 1px solid red;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+	}
+  </style>
+</head>
+
+<body hx-ext="client-side-templates">
+  
+	<h1>
+		<img width="100" src="https://andrea-magni.github.io/MARS/media/MARS_logo_256.png"> 
+		<a href="https://github.com/andrea-magni/MARS">MARS-Curiosity</a> SSE Demo
+	</h1>
+	
+
+	<div class="box">
+		<button id="startBtn">Start Listening</button>
+		<button id="stopBtn" disabled>Stop Listening</button>
+		<div id="status"></div>
+		<div id="events" style="margin-top: 20px; max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #f9f9f9;"></div>
+	</div>
+
+	<script>
+		let eventSource = null;
+		const startBtn = document.getElementById('startBtn');
+		const stopBtn = document.getElementById('stopBtn');
+		const statusDiv = document.getElementById('status');
+		const eventsDiv = document.getElementById('events');
+
+		startBtn.addEventListener('click', () => {
+			if (eventSource) return;
+
+			eventSource = new EventSource('/rest/default/helloworld');
+			startBtn.disabled = true;
+			stopBtn.disabled = false;
+			statusDiv.innerHTML = '<span style="color: green;">&#x2713; Connected</span>';
+
+			eventSource.addEventListener('heartbeat', (event) => {
+				const timestamp = new Date().toLocaleTimeString();
+				const data = event.data;
+				const eventEl = document.createElement('div');
+				eventEl.style.cssText = 'padding: 8px; margin-bottom: 8px; background: white; border-left: 4px solid #4CAF50; border-radius: 2px;';
+				eventEl.innerHTML = `<strong>${timestamp}</strong>: ${data}`;
+				eventsDiv.insertBefore(eventEl, eventsDiv.firstChild);
+
+				// Keep only last 50 events
+				while (eventsDiv.children.length > 50) {
+					eventsDiv.removeChild(eventsDiv.lastChild);
+				}
+			});
+
+			eventSource.addEventListener('error', () => {
+				statusDiv.innerHTML = '<span style="color: red;">&#x2717; Connection error</span>';
+				stopListening();
+			});
+		});
+
+		stopBtn.addEventListener('click', stopListening);
+
+		function stopListening() {
+			if (eventSource) {
+				eventSource.close();
+				eventSource = null;
+			}
+			startBtn.disabled = false;
+			stopBtn.disabled = true;
+			statusDiv.innerHTML = '<span style="color: gray;">&#x25cb; Disconnected</span>';
+		}
+	</script>
+
+</body>
+</html>

@@ -1,9 +1,10 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'MARS Template Client'
+  Caption = 'SSE Demo - FMX Client'
   ClientHeight = 480
   ClientWidth = 640
+  Position = ScreenCenter
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
@@ -17,12 +18,121 @@ object MainForm: TMainForm
     object TitleLabel: TLabel
       Align = Center
       AutoSize = True
-      Size.Width = 118.000000000000000000
+      Size.Width = 82.000000000000000000
       Size.Height = 16.000000000000000000
       Size.PlatformDefault = False
       StyleLookup = 'toollabel'
       TextSettings.WordWrap = False
-      Text = 'MARS Template Client'
+      Text = 'SSE FMX Demo'
+    end
+  end
+  object EventsListView: TListView
+    ItemAppearanceClassName = 'TListItemRightDetailAppearance'
+    ItemEditAppearanceClassName = 'TListItemRightDetailDeleteAppearance'
+    HeaderAppearanceClassName = 'TListHeaderObjects'
+    FooterAppearanceClassName = 'TListHeaderObjects'
+    OnUpdateObjects = EventsListViewUpdateObjects
+    Align = Client
+    Size.Width = 640.000000000000000000
+    Size.Height = 382.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    ItemAppearanceObjects.ItemObjects.Accessory.Visible = False
+  end
+  object Layout1: TLayout
+    Align = Top
+    Position.Y = 48.000000000000000000
+    Size.Width = 640.000000000000000000
+    Size.Height = 50.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    object ConnectButton: TButton
+      Action = ConnectAction
+      ImageIndex = -1
+      Position.X = 72.000000000000000000
+      Position.Y = 15.000000000000000000
+      TabOrder = 0
+    end
+    object DisconnectButton: TButton
+      Action = DisconnectAction
+      ImageIndex = -1
+      Position.X = 168.000000000000000000
+      Position.Y = 15.000000000000000000
+      TabOrder = 1
+    end
+    object StatusRectangle: TRectangle
+      Align = Left
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Right = 8.000000000000000000
+      Margins.Bottom = 8.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 50.000000000000000000
+      Size.Height = 34.000000000000000000
+      Size.PlatformDefault = False
+    end
+  end
+  object EventsDataset: TFDMemTable
+    IndexFieldNames = 'TimeStamp;Kind'
+    FetchOptions.AssignedValues = [evMode]
+    FetchOptions.Mode = fmAll
+    ResourceOptions.AssignedValues = [rvSilentMode]
+    ResourceOptions.SilentMode = True
+    UpdateOptions.AssignedValues = [uvCheckRequired, uvAutoCommitUpdates]
+    UpdateOptions.CheckRequired = False
+    UpdateOptions.AutoCommitUpdates = True
+    Left = 440
+    Top = 96
+    object EventsDatasetTimeStamp: TDateTimeField
+      FieldName = 'TimeStamp'
+    end
+    object EventsDatasetKind: TStringField
+      FieldName = 'Kind'
+      Size = 50
+    end
+    object EventsDatasetContent: TStringField
+      FieldName = 'Content'
+      Size = 1024
+    end
+  end
+  object ActionList1: TActionList
+    Left = 336
+    Top = 98
+    object ConnectAction: TAction
+      Text = 'Connect'
+      OnExecute = ConnectActionExecute
+      OnUpdate = ConnectActionUpdate
+    end
+    object DisconnectAction: TAction
+      Text = 'Disconnect'
+      OnExecute = DisconnectActionExecute
+      OnUpdate = DisconnectActionUpdate
+    end
+  end
+  object BindSourceDB1: TBindSourceDB
+    DataSet = EventsDataset
+    ScopeMappings = <>
+    Left = 304
+    Top = 224
+  end
+  object BindingsList1: TBindingsList
+    Methods = <>
+    OutputConverters = <>
+    Left = 20
+    Top = 5
+    object LinkListControlToField1: TLinkListControlToField
+      Category = 'Quick Bindings'
+      DataSource = BindSourceDB1
+      FieldName = 'Content'
+      Control = EventsListView
+      FillExpressions = <
+        item
+          SourceMemberName = 'Kind'
+          ControlMemberName = 'Detail'
+        end>
+      FillHeaderExpressions = <>
+      FillBreakGroups = <>
     end
   end
 end

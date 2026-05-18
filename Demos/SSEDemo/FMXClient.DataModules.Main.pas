@@ -24,8 +24,6 @@ type
     MARSHttpClient1: TMARSHttpClient;
     MARSClientResourceSSE1: TMARSClientResourceSSE;
     MARSClientToken1: TMARSClientToken;
-
-    procedure DataModuleCreate(Sender: TObject);
     procedure MARSClientResourceSSE1Message(Sender: TMARSClientResourceSSE);
     procedure MARSClientResourceSSE1Error(ASender: TMARSClientResourceSSE;
       const AException: Exception; var AReconnect: Boolean);
@@ -36,7 +34,16 @@ type
       const AComment: string);
 
   private
+    FOnHeartbeat: TProc<string,TJSONObject>;
+    FOnStatusChanged: TProc<THTTPEventSourceStatus>;
+    FOnError: TProc<string>;
+    function GetConnected: Boolean;
+    procedure SetConnected(const Value: Boolean);
   public
+    property OnHeartbeat: TProc<string,TJSONObject> read FOnHeartbeat write FOnHeartbeat;
+    property OnStatusChanged: TProc<THTTPEventSourceStatus> read FOnStatusChanged write FOnStatusChanged;
+    property OnError: TProc<string> read FOnError write FOnError;
+    property Connected: Boolean read GetConnected write SetConnected;
   end;
 
 var
@@ -48,12 +55,26 @@ implementation
 
 {$R *.dfm}
 
-uses CodeSiteLogging, DateUtils;
+uses DateUtils;
+
+function TMainDataModule.GetConnected: Boolean;
+begin
+  Result := MARSClientResourceSSE1.Active;
+end;
 
 procedure TMainDataModule.MARSClientResourceSSE1Close(
   Sender: TMARSClientResourceSSE);
 begin
-  CodeSite.SendMsg('[state] disconnected');
+  if Assigned(FOnStatusChanged) then
+  begin
+    const LStatus = MARSClientResourceSSE1.Status;
+    TThread.Queue(nil
+    , procedure
+      begin
+        FOnStatusChanged(LStatus);
+      end
+    );
+  end;
 end;
 
 procedure TMainDataModule.MARSClientResourceSSE1Comment(
@@ -66,14 +87,25 @@ procedure TMainDataModule.MARSClientResourceSSE1Error(
   ASender: TMARSClientResourceSSE; const AException: Exception;
   var AReconnect: Boolean);
 begin
-  CodeSite.SendFmtMsg(csmError, '[error] %s', [AException.Message]);
   AReconnect := True;
+
+  if Assigned(FOnError) then
+  begin
+    const LMessage = AException.Message;
+    TThread.Queue(nil
+    , procedure
+      begin
+        FOnError(LMessage);
+      end
+    );
+  end;
 end;
 
 procedure TMainDataModule.MARSClientResourceSSE1Message(
   Sender: TMARSClientResourceSSE);
 begin
   var LEvent := Sender.GetEvent;
+
   while Assigned(LEvent) do
   begin
     try
@@ -82,18 +114,18 @@ begin
       var LEventID := LEvent.ID;
 
       if SameText(LEventName, 'heartbeat') then
-      begin
-          var LPayload := TJSONObject.ParseJSONValue(LEventData) as TJSONObject;
-          try
-
-          finally
-            LPayload.Free;
-          end;
-      end
-      else if LEventName.IsEmpty then
-        LEventName := 'message';
-
-      CodeSite.SendFmtMsg('[%s] id=%s data=%s', [LEventName, LEventID, LEventData]);
+        TThread.Queue(nil
+        , procedure
+          begin
+            var LPayload := TJSONObject.ParseJSONValue(LEventData) as TJSONObject;
+            try
+              if Assigned(FOnHeartbeat) then
+                FOnHeartbeat(LEventId, LPayload);
+            finally
+              LPayload.Free;
+            end;
+          end
+        );
     finally
       LEvent.Free;
     end;
@@ -105,41 +137,30 @@ end;
 procedure TMainDataModule.MARSClientResourceSSE1Open(
   Sender: TMARSClientResourceSSE);
 begin
-  CodeSite.SendMsg('[state] connected');
+  if Assigned(FOnStatusChanged) then
+    TThread.Queue(nil
+    , procedure
+      begin
+        FOnStatusChanged(MARSClientResourceSSE1.Status);
+      end
+    );
 end;
 
 procedure TMainDataModule.MARSClientResourceSSE1Reconnect(
   Sender: TMARSClientResourceSSE);
 begin
-  CodeSite.SendMsg('[state] reconnecting...');
+  if Assigned(FOnStatusChanged) then
+    TThread.Queue(nil
+    , procedure
+      begin
+        FOnStatusChanged(MARSClientResourceSSE1.Status);
+      end
+    );
 end;
 
-procedure TMainDataModule.DataModuleCreate(Sender: TObject);
+procedure TMainDataModule.SetConnected(const Value: Boolean);
 begin
-  CodeSite.Clear;
-  CodeSite.SendMsg(csmGreen, 'MainData OnCreate');
-  MARSClientToken1.UserName := 'admin';
-  MARSClientToken1.Password := HourOf(Now).ToString;
-  MARSClientToken1.POST();
-
-  CodeSite.SendMsg('[LOGIN] ' + MARSClientToken1.UserRoles.CommaText);
-
-(*
-  MARSClientResourceSSE1.OpenCallback :=
-    procedure (ASender: TMARSClientResourceSSE)
-    begin
-      CodeSite.SendMsg('[state] CALLBACK connected');
-    end;
-
-  MARSClientResourceSSE1.MessageCallback :=
-    procedure (ASender: TMARSClientResourceSSE)
-    begin
-      var LEvent := ASender.GetEvent;
-      CodeSite.SendMsg('CALLBACK message ' + LEvent.Data.Text);
-    end;
-*)
-
-  MARSClientResourceSSE1.Active := True;
+  MARSClientResourceSSE1.Active := Value;
 end;
 
 end.

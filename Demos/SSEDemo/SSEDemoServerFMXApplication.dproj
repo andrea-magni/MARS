@@ -3,7 +3,7 @@
         <ProjectGuid>{2DC28130-9EB1-48C8-9CA6-0F3CFD5D8E1D}</ProjectGuid>
         <MainSource>SSEDemoServerFMXApplication.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>FMX</FrameworkType>

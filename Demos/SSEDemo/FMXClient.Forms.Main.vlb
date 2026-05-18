@@ -1,15 +1,15 @@
 ﻿[TopToolBar]
-Coordinates=317,78,82,36
+Coordinates=10,310,82,36
 
 [MainDataModule.ItemsQueryDataSet]
 Coordinates=10,10,228,212
 
 []
-Coordinates=145,78,71,36
+Coordinates=19,77,91,36
 Visible=True
 
 [TitleLabel]
-Coordinates=236,78,71,58
+Coordinates=276,226,71,58
 
 [MainDataModule.]
 Coordinates=472,428,215,249
@@ -23,4 +23,45 @@ Coordinates=100,10,253,58
 
 [MainDataModule.CountryByName1]
 Coordinates=10,78,216,58
+
+[DisconnectButton]
+Coordinates=10,226,115,58
+
+[EventsDataset]
+Coordinates=127,10,98,36
+Visible=False
+
+[EventsDatasetContent]
+Coordinates=107,144,143,36
+
+[EventsDatasetKind]
+Coordinates=437,1,124,36
+
+[ConnectButton]
+Coordinates=151,226,99,58
+
+[Layout1]
+Coordinates=373,226,60,36
+
+[DisconnectAction]
+Coordinates=437,56,114,36
+
+[EventsDatasetTimeStamp]
+Coordinates=437,111,164,36
+
+[ConnectAction]
+Coordinates=437,166,98,36
+
+[ActionList1]
+Coordinates=437,221,78,36
+
+[BindSourceDB1]
+Coordinates=10,32,106,146
+
+[BindingsList1]
+Coordinates=325,87,91,36
+
+[EventsListView]
+Coordinates=196,10,107,190
+Visible=True
 

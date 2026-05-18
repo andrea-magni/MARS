@@ -14,10 +14,14 @@ uses
 , MARS.Core.JSON, MARS.Core.Response
 , MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.ServerSideEvents, Web.HTTPApp
+, MARS.WebServer.Resources
 //, MARS.Core.Token
 ;
 
 type
+  [Path('www'), RootFolder('.\www', True)]
+  TStaticContentResource = class(TFileSystemResource)
+  end;
 
   [Path('helloworld')]
   THelloWorldResource = class
@@ -29,7 +33,7 @@ type
       end;
   protected
   public
-    [GET, Produces(TMediaType.TEXT_EVENT_STREAM), RolesAllowed('admin')]
+    [GET, Produces(TMediaType.TEXT_EVENT_STREAM)]
     function SayHelloWorld: TMARSServerSideEvent;
   end;
 
@@ -82,6 +86,6 @@ begin
 end;
 
 initialization
-  MARSRegister(THelloWorldResource);
+  MARSRegister([THelloWorldResource, TStaticContentResource]);
 
 end.
