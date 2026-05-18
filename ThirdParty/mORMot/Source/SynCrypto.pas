@@ -4,6 +4,7 @@
 // - this unit is a part of the freeware Synopse mORMot framework,
 // licensed under a MPL/GPL/LGPL tri-license; version 1.18
 unit SynCrypto;
+{$HINTS OFF} // MARS uses SynCrypto as-is so turning off hints here.
 
 (*
     This file is part of Synopse framework.
