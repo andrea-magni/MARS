@@ -1,0 +1,36 @@
+@LayoutPage BaseTemplate
+<h2>Hello, World!</h2>
+<p>
+  <ul>
+    <li>Local property value (Resource.LocalPropertyValue):  @resource.LocalPropertyValue</li>
+    <li>URL: @context.URL_Path</li>
+    <li>URL prototype: @context.URLPrototype_Path</li>
+  
+  </ul>
+</p>
+
+<h2>Available datasets:</h2>
+
+  <table>
+
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>FileName</th>
+        <th>Link</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      @foreach (var record in availableDatasets) {
+        <tr>
+
+          <td>@record.Name</td>
+          <td>@record.FileName</td>
+          <td><a href="/rest/default/helloworld/@record.Name">Open</a></td>
+          
+        </tr>
+      }
+    </tbody>
+
+  </table>

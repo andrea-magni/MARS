@@ -1,14 +1,6 @@
 @LayoutPage BaseTemplate
-<h2>Hello, World!</h2>
-<p>Local property value (Resource.Name):  @resource.name</p>
-<p>RawPath: @req.RawPath </p>
-<p>RawPath: @(Substring('@resource.name',0,4)) </p>
-<p>Query: @req.QueryString </p>
-<p>Datasets: @datasetList.Count</p>
 
-@foreach (var dataset in datasetList) {
-
-  <h2>Dataset @dataset.Name</h2>
+<h2>Dataset @context.datasetName</h2>
 
   <table>
 
@@ -31,5 +23,3 @@
     </tbody>
 
   </table>
-
-}

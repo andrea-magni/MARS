@@ -57,6 +57,7 @@ uses
 , Server.Resources.HelloWorld
 , Server.Resources.Token
 , Server.Resources.OpenAPI
+, MARS.WebStencils.InjectionService
 ;
 
 { TServerEngine }

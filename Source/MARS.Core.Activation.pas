@@ -175,6 +175,8 @@ type
       const ARequest: IMARSRequest; const AResponse: IMARSResponse;
       const AURL: TMARSURL
     ): IMARSActivation;
+
+    class function GetValueByName(const AName: string; const AActivation: IMARSActivation): TValue;
   end;
 
 implementation
@@ -292,6 +294,64 @@ end;
 function TMARSActivation.GetURLPrototype: TMARSURL;
 begin
   Result := FURLPrototype;
+end;
+
+class function TMARSActivation.GetValueByName(const AName: string;
+  const AActivation: IMARSActivation): TValue;
+const NAME_DELIMITER = '_';
+var
+  LFirstToken, LSecondToken: string;
+  LHasThirdToken: Boolean;
+  LSecondTokenAndAll, LThirdTokenAndAll: string;
+  LNameTokens: TArray<string>;
+  LFirstDelim, LSecondDelim: Integer;
+  LIndex: Integer;
+begin
+  Result := TValue.Empty;
+  LNameTokens := AName.Split([NAME_DELIMITER]);
+  if Length(LNameTokens) < 2 then
+    Exit;
+
+  LFirstToken := LNameTokens[0];
+  LSecondToken := LNameTokens[1];
+  LFirstDelim := AName.IndexOf(NAME_DELIMITER);
+  LSecondTokenAndAll := AName.Substring(LFirstDelim + 1);
+  LHasThirdToken := Length(LNameTokens) > 2;
+  if LHasThirdToken then
+  begin
+    LSecondDelim := AName.IndexOf(NAME_DELIMITER, LFirstDelim + Length(NAME_DELIMITER));
+    LThirdTokenAndAll := AName.Substring(LSecondDelim + 1);
+  end;
+
+  if SameText(LFirstToken, 'Token') then
+  begin
+    Result := ReadPropertyValue(AActivation.Token, LSecondToken);
+
+    if SameText(LSecondToken, 'HasRole') and LHasThirdToken then
+      Result := AActivation.Token.HasRole(LThirdTokenAndAll)
+    else if SameText(LSecondToken, 'Claim') and LHasThirdToken then
+      Result := AActivation.Token.Claims.ByNameText(LThirdTokenAndAll);
+  end
+  else if SameText(LFirstToken, 'PathParam') then
+  begin
+    LIndex := AActivation.URLPrototype.GetPathParamIndex(LSecondTokenAndAll);
+    if (LIndex > -1) and (LIndex < Length(AActivation.URL.PathTokens)) then
+      Result := AActivation.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
+    else
+      raise EMARSException.CreateFmt('PathParam not found: %s', [LSecondTokenAndAll]);
+  end
+  else if SameText(LFirstToken, 'QueryParam') then
+    Result := AActivation.URL.QueryTokenByName(LSecondTokenAndAll)
+  else if SameText(LFirstToken, 'FormParam') then
+    Result := AActivation.Request.GetFormParamValue(LSecondTokenAndAll)
+  else if SameText(LFirstToken, 'Request') then
+    Result := ReadPropertyValue(AActivation.Request.AsObject, LSecondTokenAndAll)
+//  else if SameText(LFirstToken, 'Response') then
+//    Result := ReadPropertyValue(AActivation.Response, LSecondToken)
+  else if SameText(LFirstToken, 'URL') then
+    Result := ReadPropertyValue(AActivation.URL, LSecondTokenAndAll)
+  else if SameText(LFirstToken, 'URLPrototype') then
+    Result := ReadPropertyValue(AActivation.URLPrototype, LSecondTokenAndAll);
 end;
 
 function TMARSActivation.HasToken: Boolean;

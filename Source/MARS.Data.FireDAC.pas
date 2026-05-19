@@ -169,6 +169,7 @@ uses
 , MARS.Core.Utils, MARS.Data.Utils, MARS.Rtti.Utils
 , MARS.Data.FireDAC.InjectionService
 , MARS.Data.FireDAC.ReadersAndWriters
+, MARS.Core.Activation
 ;
 
 
@@ -537,61 +538,11 @@ end;
 class function TMARSFireDAC.GetContextValue(const AName: string; const AActivation: IMARSActivation;
   const ADesiredType: TFieldType): TValue;
 var
-  LFirstToken, LSecondToken: string;
-  LHasThirdToken: Boolean;
-  LSecondTokenAndAll, LThirdTokenAndAll: string;
-  LNameTokens: TArray<string>;
-  LFirstDelim, LSecondDelim: Integer;
-
-  LIndex: Integer;
   LCustomProvider: TContextValueProviderProc;
 begin
-  Result := TValue.Empty;
-  LNameTokens := AName.Split([PARAM_AND_MACRO_DELIMITER]);
-  if Length(LNameTokens) < 2 then
-    Exit;
+  Result := TMARSActivation.GetValueByName(AName, AActivation);
 
-  LFirstToken := LNameTokens[0];
-  LSecondToken := LNameTokens[1];
-  LFirstDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER);
-  LSecondTokenAndAll := AName.Substring(LFirstDelim + 1);
-  LHasThirdToken := Length(LNameTokens) > 2;
-  if LHasThirdToken then
-  begin
-    LSecondDelim := AName.IndexOf(PARAM_AND_MACRO_DELIMITER, LFirstDelim + Length(PARAM_AND_MACRO_DELIMITER));
-    LThirdTokenAndAll := AName.Substring(LSecondDelim + 1);
-  end;
-
-  if SameText(LFirstToken, 'Token') then
-  begin
-    Result := ReadPropertyValue(AActivation.Token, LSecondToken);
-
-    if SameText(LSecondToken, 'HasRole') and LHasThirdToken then
-      Result := AActivation.Token.HasRole(LThirdTokenAndAll)
-    else if SameText(LSecondToken, 'Claim') and LHasThirdToken then
-      Result := AActivation.Token.Claims.ByNameText(LThirdTokenAndAll);
-  end
-  else if SameText(LFirstToken, 'PathParam') then
-  begin
-    LIndex := AActivation.URLPrototype.GetPathParamIndex(LSecondTokenAndAll);
-    if (LIndex > -1) and (LIndex < Length(AActivation.URL.PathTokens)) then
-      Result := AActivation.URL.PathTokens[LIndex] { TODO -oAndrea : Try to convert according to ADesiredType }
-    else
-      raise EMARSFireDACException.CreateFmt('PathParam not found: %s', [LSecondTokenAndAll]);
-  end
-  else if SameText(LFirstToken, 'QueryParam') then
-    Result := AActivation.URL.QueryTokenByName(LSecondTokenAndAll)
-  else if SameText(LFirstToken, 'FormParam') then
-    Result := AActivation.Request.GetFormParamValue(LSecondTokenAndAll)
-  else if SameText(LFirstToken, 'Request') then
-    Result := ReadPropertyValue(AActivation.Request.AsObject, LSecondTokenAndAll)
-//  else if SameText(LFirstToken, 'Response') then
-//    Result := ReadPropertyValue(AActivation.Response, LSecondToken)
-  else if SameText(LFirstToken, 'URL') then
-    Result := ReadPropertyValue(AActivation.URL, LSecondTokenAndAll)
-  else if SameText(LFirstToken, 'URLPrototype') then
-    Result := ReadPropertyValue(AActivation.URLPrototype, LSecondTokenAndAll)
-  else // last chance, custom injection
+  if Result.IsEmpty then   // last chance, custom injection
     for LCustomProvider in FContextValueProviders do
       LCustomProvider(AActivation, AName, ADesiredType, Result);
 end;

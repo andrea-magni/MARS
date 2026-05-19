@@ -145,6 +145,8 @@
         <DCCReference Include="Server.Ignition.pas"/>
         <DCCReference Include="Server.Resources.OpenAPI.pas"/>
         <DCCReference Include="Server.Resources.Token.pas"/>
+        <DCCReference Include="..\..\Source\MARS.WebStencils.pas"/>
+        <DCCReference Include="..\..\Source\MARS.WebStencils.InjectionService.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -175,6 +177,12 @@
                 <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment Version="5">
+                <DeployFile LocalName="bin\WebStencilsDemoServerApplication.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>WebStencilsDemoServerApplication.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="bin\WebStencilsDemoServerApplication.exe" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>WebStencilsDemoServerApplication.exe</RemoteName>
