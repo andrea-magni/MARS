@@ -141,7 +141,8 @@ function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const
 function ExecuteMethod(const AInstance: TValue; AMethod: TRttiMethod; const AArguments: array of TValue;
   const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
 
-function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
+function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue; overload;
+function ReadPropertyValue(AInstance: TValue; const APropertyName: string): TValue; overload;
 
 procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: PNativeInt);
 
@@ -336,6 +337,23 @@ begin
     LProperty := LType.GetProperty(APropertyName);
     if Assigned(LProperty) then
       Result := LProperty.GetValue(AInstance);
+  end;
+end;
+
+function ReadPropertyValue(AInstance: TValue; const APropertyName: string): TValue;
+var
+  LContext: TRttiContext;
+  LType: TRttiType;
+  LProperty: TRttiProperty;
+  LGetter: TRttiMethod;
+begin
+  Result := TValue.Empty;
+  LType := LContext.GetType(AInstance.TypeInfo);
+  if Assigned(LType) then
+  begin
+    LGetter := LType.GetMethod('Get' + APropertyName);
+    if Assigned(LGetter) then
+      LGetter.Invoke(AInstance, []).TryAsType<TValue>(Result)
   end;
 end;
 

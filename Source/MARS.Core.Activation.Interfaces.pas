@@ -18,6 +18,7 @@ uses
 ;
 
 type
+  {$M+}
   IMARSActivation = interface
     procedure AddToContext(AValue: TValue);
     function HasToken: Boolean;

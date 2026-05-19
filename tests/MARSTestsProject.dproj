@@ -165,6 +165,7 @@
         <DCCReference Include="Tests.Client.Resources.pas"/>
         <DCCReference Include="Tests.Client.TestServer.pas"/>
         <DCCReference Include="Tests.MARSParameters.pas"/>
+        <DCCReference Include="Tests.Activation.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
