@@ -12,9 +12,7 @@ uses
   Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
-  Server.Resources.Token in 'Server.Resources.Token.pas',
-  MARS.WebStencils in '..\..\Source\MARS.WebStencils.pas',
-  MARS.WebStencils.InjectionService in '..\..\Source\MARS.WebStencils.InjectionService.pas';
+  Server.Resources.Token in 'Server.Resources.Token.pas';
 
 {$R *.res}
 

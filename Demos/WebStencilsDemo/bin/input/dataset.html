@@ -1,7 +1,18 @@
 @LayoutPage BaseTemplate
 
-<h2>Dataset @context.datasetName</h2>
+<p><a href="/rest/default/helloworld">Back to index</a></p>
 
+<h2>This is a dataset page</h2>
+<p>
+  <ul>
+    <li>Local property value (Resource.LocalPropertyValue):  @resource.LocalPropertyValue</li>
+    <li>URL: @context.URL_Path</li>
+    <li>URL prototype: @context.URLPrototype_Path</li>
+  
+  </ul>
+</p>
+
+<h2>Content of "@context.datasetName" dataset (@dataset.RecordCount rows)</h2>
   <table>
 
     <thead>

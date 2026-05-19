@@ -145,8 +145,6 @@
         <DCCReference Include="Server.Ignition.pas"/>
         <DCCReference Include="Server.Resources.OpenAPI.pas"/>
         <DCCReference Include="Server.Resources.Token.pas"/>
-        <DCCReference Include="..\..\Source\MARS.WebStencils.pas"/>
-        <DCCReference Include="..\..\Source\MARS.WebStencils.InjectionService.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
