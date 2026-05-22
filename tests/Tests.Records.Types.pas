@@ -84,6 +84,13 @@ type
     function ToJSONFilter(AMember: TRttiMember; AJSON: TJSONObject): Boolean;
   end;
 
+  TRecordFromCustomJSON = record
+  public
+    [JSONName(''), JSONSkip]
+    Date: TDateTime;
+
+    function ToRecordFilter(AMember: TRttiMember; AJSON: TJSONObject): Boolean;
+  end;
 
 implementation
 
@@ -170,6 +177,20 @@ begin
 
       AJSON.WriteStringValue(AMember.Name, LJSONValue);
     end;
+  end;
+end;
+
+{ TRecordFromCustomJSON }
+
+function TRecordFromCustomJSON.ToRecordFilter(AMember: TRttiMember;
+  AJSON: TJSONObject): Boolean;
+const
+  CUSTOM_DATETIME_FORMAT = 'yyyy-mm-dd hh:nn.ss';
+begin
+  Result := True;
+  if (AMember.Name = 'Date') then
+  begin
+    Date := EncodeDate(1982, 05, 24);
   end;
 end;
 

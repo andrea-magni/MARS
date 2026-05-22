@@ -55,8 +55,13 @@ type
     property Name: string read FName;
   end;
 
+  JSONSkip = class(JSONNameAttribute)
+  public
+    constructor Create();
+  end;
+
   TToRecordFilterProc = reference to procedure (const AMember: TRttiMember;
-    const AValue: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
+    var ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean);
   TToObjectFilterProc = reference to procedure (const AMember: TRttiMember;
     const AObject: TObject; const AJSONObject: TJSONObject; var AAccept: Boolean);
 
@@ -1560,9 +1565,9 @@ var
     LMethod := ARecordType.FindMethodFunc<TRttiMember, TJSONObject, Boolean>('ToRecordFilter');
     if Assigned(LMethod) then
       Result :=
-        procedure (const AMember: TRttiMember; const AValue: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean)
+        procedure (const AMember: TRttiMember; var ARecord: TValue; const AJSONObject: TJSONObject; var AAccept: Boolean)
         begin
-          AAccept := LMethod.Invoke(AValue, [AMember, AJSONObject]).AsBoolean;
+          AAccept := LMethod.Invoke(ARecord, [AMember, AJSONObject]).AsBoolean;
         end;
   end;
 
@@ -1895,6 +1900,13 @@ begin
   or SkipEmptyObjects
   or SkipEmptyArrays
   or SkipNullValues;
+end;
+
+{ JSONSkip }
+
+constructor JSONSkip.Create;
+begin
+  inherited Create('');
 end;
 
 initialization

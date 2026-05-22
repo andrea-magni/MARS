@@ -57,6 +57,7 @@ type
   public
     [Test] procedure Basic;
     [Test] procedure Variants;
+    [Test] procedure FilterProc;
   end;
 
   [TestFixture('RecordFromDataSet')]
@@ -580,6 +581,20 @@ begin
   Assert.IsTrue(LRecord.ACurrency = LJSONObj.ReadDoubleValue('ACurrency'), 'Currency');
   Assert.IsTrue(LRecord.ADate = LJSONObj.ReadDateTimeValue('ADate'), 'Date');
 
+end;
+
+procedure TMARSJSONToRecordTest.FilterProc;
+var
+  LJSONObj: TJSONObject;
+  LRecord: TRecordFromCustomJSON;
+  LJSONData: string;
+begin
+  LJSONData := '{ "Date": "Andrea''s birthday" }';
+  LJSONObj := TJSONObject.ParseJSONValue(LJSONData) as TJSONObject;
+  LRecord := LJSONObj.ToRecord<TRecordFromCustomJSON>();
+
+  Assert.IsNotNull(LJSONObj);
+  Assert.AreEqual(LRecord.Date, EncodeDate(1982, 05, 24));
 end;
 
 procedure TMARSJSONToRecordTest.Variants;

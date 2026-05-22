@@ -344,7 +344,6 @@ function ReadPropertyValue(AInstance: TValue; const APropertyName: string): TVal
 var
   LContext: TRttiContext;
   LType: TRttiType;
-  LProperty: TRttiProperty;
   LGetter: TRttiMethod;
 begin
   Result := TValue.Empty;
