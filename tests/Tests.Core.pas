@@ -3,7 +3,7 @@ unit Tests.Core;
 interface
 
 uses
-  Classes, SysUtils
+  Classes, SysUtils, Generics.Collections
 , DUnitX.TestFramework
 , MARS.Core.URL, MARS.Core.Utils
 ;
@@ -49,6 +49,7 @@ type
     [Test] procedure SkipEmptyObjects;
     [Test] procedure SkipEmptyArrays;
     [Test] procedure CustomDateTimeValues;
+    [Test] procedure OrderOfMembers;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -67,6 +68,30 @@ type
     [Test] procedure Basic;
   end;
 
+  [TestFixture('ObjectToJSON')]
+  TMARSObjectToJSONTest = class(TObject)
+  private
+  public
+(*
+    [Test] procedure Basic;
+
+    [Test] procedure JSONNameAttribute;
+
+    [Test] procedure AssignedValues;
+
+    [Test] procedure Variants;
+
+    [Test] procedure SkipEmptyBooleans;
+    [Test] procedure SkipEmptyNumbers;
+    [Test] procedure SkipEmptyStrings;
+    [Test] procedure SkipNullValues;
+    [Test] procedure SkipEmptyObjects;
+    [Test] procedure SkipEmptyArrays;
+    [Test] procedure CustomDateTimeValues;
+*)
+    [Test] procedure OrderOfProperties;
+    [Test] procedure TList_string_Obj;
+  end;
 
 
 implementation
@@ -74,10 +99,10 @@ implementation
 { TMARSCoreTest }
 
 uses
-  Rtti, Variants, Math, DateUtils
+  Rtti, Variants, Math, DateUtils, System.JSON
 , FireDAC.Comp.Client, Data.DB
 , MARS.Core.JSON, MARS.Rtti.Utils
-, Tests.Records.Types
+, Tests.Records.Types, Tests.Objects.Types
 ;
 
 procedure TMARSCoreTest.ParseBase;
@@ -300,10 +325,14 @@ begin
   LRecord := TNamedIntegerRecord.Create('The answer', 42);
 
   LJSONObj := TJSONObject.RecordToJSON<TNamedIntegerRecord>(LRecord);
+  try
+    Assert.IsNotNull(LJSONObj);
+    Assert.AreEqual(LRecord.Value, LJSONObj.ReadIntegerValue('Value'));
+    Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Name'));
+  finally
+    LJSONObj.Free;
+  end;
 
-  Assert.IsNotNull(LJSONObj);
-  Assert.AreEqual(LRecord.Value, LJSONObj.ReadIntegerValue('Value'));
-  Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Name'));
 end;
 
 procedure TMARSRecordToJSONTest.CustomDateTimeValues;
@@ -316,9 +345,13 @@ begin
   LRecord.Date := EncodeDateTime(1982, 05, 24, 13, 30, 12, 345);
 
   LJSONObj := TJSONObject.RecordToJSON<TRecordWithCustomDate>(LRecord);
+  try
+    Assert.IsNotNull(LJSONObj);
+    Assert.AreEqual('1982-05-24 13:30.12', LJSONObj.ReadStringValue('Date'));
+  finally
+    LJSONObj.Free;
+  end;
 
-  Assert.IsNotNull(LJSONObj);
-  Assert.AreEqual('1982-05-24 13:30.12', LJSONObj.ReadStringValue('Date'));
 end;
 
 procedure TMARSRecordToJSONTest.JSONNameAttribute;
@@ -329,10 +362,33 @@ begin
   LRecord := TSwingNamesRecord.Create('Andrea', 'Magni');
 
   LJSONObj := TJSONObject.RecordToJSON<TSwingNamesRecord>(LRecord);
+  try
+    Assert.IsNotNull(LJSONObj);
+    Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Surname'));
+    Assert.AreEqual(LRecord.Surname, LJSONObj.ReadStringValue('Name'));
+  finally
+    LJSONObj.Free;
+  end;
+end;
 
-  Assert.IsNotNull(LJSONObj);
-  Assert.AreEqual(LRecord.Name, LJSONObj.ReadStringValue('Surname'));
-  Assert.AreEqual(LRecord.Surname, LJSONObj.ReadStringValue('Name'));
+procedure TMARSRecordToJSONTest.OrderOfMembers;
+var
+  LJSONObj: TJSONObject;
+  LRecord: TRecordMemberOrders;
+begin
+  LRecord := Default(TRecordMemberOrders);
+
+  var LSerializationOptions := DefaultMARSJSONSerializationOptions;
+  LSerializationOptions.IncludeEmptyOrNullValues;
+
+  LJSONObj := TJSONObject.RecordToJSON<TRecordMemberOrders>(LRecord, LSerializationOptions);
+  try
+    Assert.IsNotNull(LJSONObj);
+    Log(LJSONObj.ToJSON);
+  finally
+    LJSONObj.Free;
+  end;
+
 end;
 
 procedure TMARSRecordToJSONTest.SkipEmptyArrays;
@@ -346,9 +402,13 @@ begin
   LOptions.SkipEmptyArrays := True;
 
   var LJSONObj := TJSONObject.RecordToJSON<TArrayNamedIntegerRecord>(LRecord, LOptions);
-  Assert.IsNotNull(LJSONObj);
+  try
+    Assert.IsNotNull(LJSONObj);
 
-  Assert.IsNull(LJSONObj.FindValue('Value'), 'LRecord.Data is an empty array and should not show up in JSON string');
+    Assert.IsNull(LJSONObj.FindValue('Value'), 'LRecord.Data is an empty array and should not show up in JSON string');
+  finally
+    LJSONObj.Free;
+  end;
 end;
 
 procedure TMARSRecordToJSONTest.SkipEmptyBooleans;
@@ -361,9 +421,14 @@ begin
   LOptions.SkipEmptyBooleans := True;
 
   var LJSONObj := TJSONObject.RecordToJSON<TPrimitiveTypesRecord>(LRecord, LOptions);
-  Assert.IsNotNull(LJSONObj);
+  try
+    Assert.IsNotNull(LJSONObj);
 
-  Assert.IsNull(LJSONObj.FindValue('ABoolean'), 'LRecord.ABoolean is false and should not show up in JSON string');
+    Assert.IsNull(LJSONObj.FindValue('ABoolean'), 'LRecord.ABoolean is false and should not show up in JSON string');
+  finally
+    LJSONObj.Free;
+  end;
+
 end;
 
 procedure TMARSRecordToJSONTest.SkipEmptyNumbers;
@@ -375,24 +440,38 @@ begin
   LOptions.SkipEmptyNumbers := True;
 
   var LJSONObj := TJSONObject.RecordToJSON<TNamedIntegerRecord>(LRecord, LOptions);
-  Assert.IsNotNull(LJSONObj);
+  try
+    Assert.IsNotNull(LJSONObj);
 
-  Assert.IsNull(LJSONObj.FindValue('Value'), 'LRecord.Value is zero and should not show up in JSON string');
+    Assert.IsNull(LJSONObj.FindValue('Value'), 'LRecord.Value is zero and should not show up in JSON string');
+  finally
+    LJSONObj.Free;
+  end;
+
 end;
 
 procedure TMARSRecordToJSONTest.SkipEmptyObjects;
 begin
   var LObj: TObject := TObject.Create;
-  var LRecord := TRecordWithObject.Create('test1', LObj);
+  try
+    var LRecord := TRecordWithObject.Create('test1', LObj);
 
-  var LOptions: TMARSJSONSerializationOptions := DefaultMARSJSONSerializationOptions;
-  LOptions.IncludeEmptyOrNullValues;
-  LOptions.SkipEmptyObjects := True;
+    var LOptions: TMARSJSONSerializationOptions := DefaultMARSJSONSerializationOptions;
+    LOptions.IncludeEmptyOrNullValues;
+    LOptions.SkipEmptyObjects := True;
 
-  var LJSONObj := TJSONObject.RecordToJSON<TRecordWithObject>(LRecord, LOptions);
-  Assert.IsNotNull(LJSONObj);
+    var LJSONObj := TJSONObject.RecordToJSON<TRecordWithObject>(LRecord, LOptions);
+    try
+      Assert.IsNotNull(LJSONObj);
 
-  Assert.IsNull(LJSONObj.FindValue('Instance'), 'LRecord.Instance is an empty object and should not show up in JSON string');
+      Assert.IsNull(LJSONObj.FindValue('Instance'), 'LRecord.Instance is an empty object and should not show up in JSON string');
+    finally
+      LJSONObj.Free;
+    end;
+  finally
+    LObj.Free;
+  end;
+
 end;
 
 procedure TMARSRecordToJSONTest.SkipEmptyStrings;
@@ -404,9 +483,14 @@ begin
   LOptions.SkipEmptyStrings := True;
 
   var LJSONObj := TJSONObject.RecordToJSON<TNamedIntegerRecord>(LRecord, LOptions);
-  Assert.IsNotNull(LJSONObj);
+  try
+    Assert.IsNotNull(LJSONObj);
 
-  Assert.IsNull(LJSONObj.FindValue('Name'), 'LRecord.Name is empty and should not show up in JSON string');
+    Assert.IsNull(LJSONObj.FindValue('Name'), 'LRecord.Name is empty and should not show up in JSON string');
+  finally
+    LJSONObj.Free;
+  end;
+
 end;
 
 procedure TMARSRecordToJSONTest.SkipNullValues;
@@ -419,9 +503,14 @@ begin
   LOptions.SkipNullValues := True;
 
   var LJSONObj := TJSONObject.RecordToJSON<TRecordWithObject>(LRecord, LOptions);
-  Assert.IsNotNull(LJSONObj);
+  try
+    Assert.IsNotNull(LJSONObj);
 
-  Assert.IsNull(LJSONObj.FindValue('Instance'), 'LRecord.Instance is nil and should not show up in JSON string');
+    Assert.IsNull(LJSONObj.FindValue('Instance'), 'LRecord.Instance is nil and should not show up in JSON string');
+  finally
+    LJSONObj.Free;
+  end;
+
 end;
 
 procedure TMARSRecordToJSONTest.Variants;
@@ -436,12 +525,16 @@ begin
   LRecord.Value5 := Null;
 
   LJSONObj := TJSONObject.RecordToJSON<TVariantsRecord>(LRecord);
+  try
+    Assert.IsNotNull(LJSONObj);
+    Assert.AreEqual(VarToStr(LRecord.Value1), LJSONObj.ReadStringValue('Value1'));
+    Assert.AreEqual(42, LJSONObj.ReadIntegerValue('Value2'));
+    Assert.IsTrue(SameValue(3.14, LJSONObj.ReadDoubleValue('Value3')));
+    Assert.AreEqual(True, LJSONObj.ReadBoolValue('Value4'));
+  finally
+    LJSONObj.Free;
+  end;
 
-  Assert.IsNotNull(LJSONObj);
-  Assert.AreEqual(VarToStr(LRecord.Value1), LJSONObj.ReadStringValue('Value1'));
-  Assert.AreEqual(42, LJSONObj.ReadIntegerValue('Value2'));
-  Assert.IsTrue(SameValue(3.14, LJSONObj.ReadDoubleValue('Value3')));
-  Assert.AreEqual(True, LJSONObj.ReadBoolValue('Value4'));
 end;
 
 { TMARSCoreUtilsTest }
@@ -571,15 +664,19 @@ begin
     + ' "ADate": "1982-05-24T00:00:00.000+02:00", "AChar": "C"'
     + '}';
   LJSONObj := TJSONObject.ParseJSONValue(LJSONData) as TJSONObject;
-  LRecord := LJSONObj.ToRecord<TPrimitiveTypesRecord>();
+  try
+    LRecord := LJSONObj.ToRecord<TPrimitiveTypesRecord>();
 
-  Assert.IsNotNull(LJSONObj);
-  Assert.AreEqual(LRecord.AString, LJSONObj.ReadStringValue('AString'));
-  Assert.AreEqual(LRecord.ABoolean, LJSONObj.ReadBoolValue('ABoolean'));
-  Assert.AreEqual(LRecord.AInteger, LJSONObj.ReadIntegerValue('AInteger'));
-  Assert.AreEqual(LRecord.AFloat, LJSONObj.ReadDoubleValue('AFloat'));
-  Assert.IsTrue(LRecord.ACurrency = LJSONObj.ReadDoubleValue('ACurrency'), 'Currency');
-  Assert.IsTrue(LRecord.ADate = LJSONObj.ReadDateTimeValue('ADate'), 'Date');
+    Assert.IsNotNull(LJSONObj);
+    Assert.AreEqual(LRecord.AString, LJSONObj.ReadStringValue('AString'));
+    Assert.AreEqual(LRecord.ABoolean, LJSONObj.ReadBoolValue('ABoolean'));
+    Assert.AreEqual(LRecord.AInteger, LJSONObj.ReadIntegerValue('AInteger'));
+    Assert.AreEqual(LRecord.AFloat, LJSONObj.ReadDoubleValue('AFloat'));
+    Assert.IsTrue(LRecord.ACurrency = LJSONObj.ReadDoubleValue('ACurrency'), 'Currency');
+    Assert.IsTrue(LRecord.ADate = LJSONObj.ReadDateTimeValue('ADate'), 'Date');
+  finally
+    LJSONObj.Free;
+  end;
 
 end;
 
@@ -591,10 +688,15 @@ var
 begin
   LJSONData := '{ "Date": "Andrea''s birthday" }';
   LJSONObj := TJSONObject.ParseJSONValue(LJSONData) as TJSONObject;
-  LRecord := LJSONObj.ToRecord<TRecordFromCustomJSON>();
+  try
+    LRecord := LJSONObj.ToRecord<TRecordFromCustomJSON>();
 
-  Assert.IsNotNull(LJSONObj);
-  Assert.AreEqual(LRecord.Date, EncodeDate(1982, 05, 24));
+    Assert.IsNotNull(LJSONObj);
+    Assert.AreEqual(LRecord.Date, EncodeDate(1982, 05, 24));
+  finally
+    LJSONObj.Free;
+  end;
+
 end;
 
 procedure TMARSJSONToRecordTest.Variants;
@@ -610,16 +712,85 @@ begin
     + ' "Value6": "1982-05-24T00:00:00.000+02:00", "Value7": "C"'
     + '}';
   LJSONObj := TJSONObject.ParseJSONValue(LJSONData) as TJSONObject;
-  LRecord := LJSONObj.ToRecord<TVariantsRecord>();
+  try
+    LRecord := LJSONObj.ToRecord<TVariantsRecord>();
 
-  Assert.IsNotNull(LJSONObj);
-  Assert.IsTrue(LRecord.Value1 = 'Andrea', 'string');
-  Assert.IsTrue(LRecord.Value2 = true, 'Boolean');
-  Assert.IsTrue(LRecord.Value3 = 123, 'Integer');
-  Assert.IsTrue(SameValue(LRecord.Value4, 1234.56789), 'Float');
-  Assert.IsTrue(LRecord.Value5 = 7.75, 'Currency');
-//   Assert.IsTrue(DateOf(LRecord.Value6) = EncodeDate(1982, 05, 24));
+    Assert.IsNotNull(LJSONObj);
+    Assert.IsTrue(LRecord.Value1 = 'Andrea', 'string');
+    Assert.IsTrue(LRecord.Value2 = true, 'Boolean');
+    Assert.IsTrue(LRecord.Value3 = 123, 'Integer');
+    Assert.IsTrue(SameValue(LRecord.Value4, 1234.56789), 'Float');
+    Assert.IsTrue(LRecord.Value5 = 7.75, 'Currency');
+  //   Assert.IsTrue(DateOf(LRecord.Value6) = EncodeDate(1982, 05, 24));
+  finally
+    LJSONObj.Free;
+  end;
 
+
+end;
+
+{ TMARSObjectToJSONTest }
+
+procedure TMARSObjectToJSONTest.OrderOfProperties;
+begin
+  var LObj := TObjectWithProperties.Create;
+  try
+    LObj.Prop1 := 'value 1';
+    LObj.Prop2 := 'value 2';
+    LObj.Prop3 := 'value 3';
+
+    var LSerializationOptions := DefaultMARSJSONSerializationOptions;
+    LSerializationOptions.IncludeEmptyOrNullValues;
+
+    var LJSON := TJSONObject.ObjectToJSON(LObj, LSerializationOptions);
+    try
+      Log(LJSON.ToJSON);
+      Assert.IsTrue(LJSON.Pairs[0].JsonString.Value = 'Prop1');
+      Assert.IsTrue(LJSON.Pairs[1].JsonString.Value = 'Prop2');
+      Assert.IsTrue(LJSON.Pairs[2].JsonString.Value = 'Prop3');
+    finally
+      LJSON.Free;
+    end;
+  finally
+    LObj.Free;
+  end;
+end;
+
+procedure TMARSObjectToJSONTest.TList_string_Obj;
+begin
+  var LAndrea := TPerson.Create('Andrea', 'Magni');
+  var LMarco := TPerson.Create('Marco', 'Cantù');
+  var LBob := TPerson.Create('Bob', 'Swart');
+  var LRay := TPerson.Create('Ray', 'Konopka');
+
+  var LList := TList<TPair<string,TObject>>.Create;
+  try
+
+    LList.Add(TPair<string,TObject>.Create('Andrea', LAndrea));
+    LList.Add(TPair<string,TObject>.Create('Marco', LMarco));
+    LList.Add(TPair<string,TObject>.Create('Bob', LBob));
+    LList.Add(TPair<string,TObject>.Create('Ray', LRay));
+
+    var LSerializationOptions := DefaultMARSJSONSerializationOptions;
+    LSerializationOptions.IncludeEmptyOrNullValues;
+
+    var LJSON := TJSONObject.ObjectToJSON(LList, LSerializationOptions);
+//    var LJSON := TJSONObject.ListOfPairOfStringAndTToJSON(LList, LSerializationOptions);
+    try
+
+      Assert.AreEqual('Andrea', LJSON.Pairs[0].JsonString.Value);
+      Assert.AreEqual('Marco', LJSON.Pairs[1].JsonString.Value);
+      Assert.AreEqual('Ray', LJSON.Pairs[3].JsonString.Value);
+    finally
+      LJSON.Free;
+    end;
+  finally
+    LList.Free;
+    LAndrea.Free;
+    LMarco.Free;
+    LBob.Free;
+    LRay.Free;
+  end;
 end;
 
 initialization
@@ -628,5 +799,6 @@ initialization
   TDUnitX.RegisterTestFixture(TMARSRecordToJSONTest);
   TDUnitX.RegisterTestFixture(TMARSJSONToRecordTest);
   TDUnitX.RegisterTestFixture(TMARSRecordFromDataSetTest);
+  TDUnitX.RegisterTestFixture(TMARSObjectToJSONTest);
 
 end.

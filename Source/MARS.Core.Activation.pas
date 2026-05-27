@@ -345,7 +345,7 @@ begin
   else if SameText(LFirstToken, 'FormParam') then
     Result := AActivation.Request.GetFormParamValue(LSecondTokenAndAll)
   else if SameText(LFirstToken, 'Request') then
-    Result := ReadPropertyValue(TValue.From<IMARSRequest>(AActivation.Request), LSecondTokenAndAll)
+    Result := ReadPropertyValue(TValue.From<IMARSRequest>(AActivation.Request), LSecondTokenAndAll, False)
 //  else if SameText(LFirstToken, 'Response') then
 //    Result := ReadPropertyValue(AActivation.Response, LSecondToken)
   else if SameText(LFirstToken, 'URL') then

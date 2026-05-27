@@ -111,6 +111,7 @@ type
 
     class procedure EnumerateDictionary(const ADictionary: TObject; const ADoSomething: TProc<TValue, TValue>);
     class procedure EnumerateObjectList(const AObjectList: TObject; const ADoSomething: TProc<TValue>);
+    class procedure EnumerateListOfPairOf(const AList: TObject; const ADoSomething: TProc<TValue>);
   end;
 
   TRecord<R: record> = class
@@ -135,22 +136,26 @@ type
   function StringsToRecord(const AStrings: TStrings; const ARecordType: TRttiType;
     const AOnGetFieldValue: TOnGetRecordFieldValueProc = nil): TValue; overload;
 
-function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
-  const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
+  function ExecuteMethod(const AInstance: TValue; const AMethodName: string; const AArguments: array of TValue;
+    const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
 
-function ExecuteMethod(const AInstance: TValue; AMethod: TRttiMethod; const AArguments: array of TValue;
-  const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
+  function ExecuteMethod(const AInstance: TValue; AMethod: TRttiMethod; const AArguments: array of TValue;
+    const ABeforeExecuteProc: TProc{ = nil}; const AAfterExecuteProc: TProc<TValue>{ = nil}): Boolean; overload;
 
-function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue; overload;
-function ReadPropertyValue(AInstance: TValue; const APropertyName: string): TValue; overload;
+  function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue; overload;
+  function ReadPropertyValue(AInstance: TValue; const APropertyName: string;
+    const APropertyOnly: Boolean): TValue; overload;
 
-procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: PNativeInt);
+  function ReadFieldValue(AInstance: TValue; const AMemberName: string): TValue; overload;
 
-function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
+  procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: PNativeInt);
 
-function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
-function IsObjectListOfT(const ATypeName: string): Boolean; overload;
-function IsObjectListOfT(const AType: TRttiType): Boolean; overload;
+  function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
+
+  function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
+  function IsObjectListOfT(const ATypeName: string): Boolean; overload;
+  function IsObjectListOfT(const AType: TRttiType): Boolean; overload;
+  function IsListOfPairOfStringAndT(const ATypeName: string): Boolean;
 
 implementation
 
@@ -158,6 +163,12 @@ uses
     StrUtils, DateUtils, Generics.Collections
   , MARS.Core.Utils
 ;
+
+function IsListOfPairOfStringAndT(const ATypeName: string): Boolean;
+begin
+  //AM TODO Improve this function. For example: check if it is a nested type...
+  Result := ATypeName.StartsWith('TList<System.Generics.Collections.TPair<System.string,');
+end;
 
 function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
 begin
@@ -324,6 +335,22 @@ begin
     DynArraySetLength(PPointer(AArray.GetReferenceToRawData)^, AArrayType.Handle, 1, ANewSize);
 end;
 
+function ReadFieldValue(AInstance: TValue; const AMemberName: string): TValue;
+var
+  LContext: TRttiContext;
+  LType: TRttiType;
+  LField: TRttiField;
+begin
+  Result := TValue.Empty;
+  LType := LContext.GetType(AInstance.TypeInfo);
+  if Assigned(LType) then
+  begin
+    LField := LType.GetField(AMemberName);
+    if Assigned(LField) then
+      Result := LField.GetValue(AInstance.GetReferenceToRawData);
+  end;
+end;
+
 function ReadPropertyValue(AInstance: TObject; const APropertyName: string): TValue;
 var
   LContext: TRttiContext;
@@ -340,19 +367,32 @@ begin
   end;
 end;
 
-function ReadPropertyValue(AInstance: TValue; const APropertyName: string): TValue;
+function ReadPropertyValue(AInstance: TValue; const APropertyName: string; const APropertyOnly: Boolean): TValue;
 var
   LContext: TRttiContext;
   LType: TRttiType;
   LGetter: TRttiMethod;
+  LProperty: TRttiProperty;
+  LPropertyName: string;
 begin
   Result := TValue.Empty;
   LType := LContext.GetType(AInstance.TypeInfo);
   if Assigned(LType) then
   begin
-    LGetter := LType.GetMethod('Get' + APropertyName);
-    if Assigned(LGetter) then
-      LGetter.Invoke(AInstance, []).TryAsType<TValue>(Result)
+    if APropertyOnly then
+    begin
+      LPropertyName := APropertyName;
+      LProperty := LType.GetProperty(LPropertyName);
+      Result := LProperty.GetValue(AInstance.GetReferenceToRawData);
+    end
+    else
+    begin
+      LPropertyName := 'Get' + APropertyName;
+      LGetter := LType.GetMethod(LPropertyName);
+      if Assigned(LGetter) then
+        LGetter.Invoke(AInstance, []).TryAsType<TValue>(Result)
+    end;
+
   end;
 end;
 
@@ -891,6 +931,45 @@ begin
     LEnumeratorObj.Free;
   end;
 end;
+
+class procedure TRttiHelper.EnumerateListOfPairOf(const AList: TObject;
+  const ADoSomething: TProc<TValue>);
+var
+  LObjectListType, LEnumeratorType{, LElementType}: TRttiType;
+  LGetEnumeratorMethod, LEnumeratorMoveNextMethod: TRttiMethod;
+  LEnumeratorCurrentProperty: TRttiProperty;
+  LEnumeratorValue, LEnumeratorCurrentValue, LCurrentValue: TValue;
+  LEnumeratorObj: TObject;
+begin
+  if not Assigned(AList) then
+    Exit;
+  if not Assigned(ADoSomething) then
+    Exit;
+
+  LObjectListType := TRttiContext.Create.GetType(AList.ClassType);
+  LGetEnumeratorMethod := LObjectListType.GetMethod('GetEnumerator');
+  LEnumeratorValue := LGetEnumeratorMethod.Invoke(AList, []);
+  LEnumeratorObj := LEnumeratorValue.AsObject;
+  try
+    LEnumeratorType := LGetEnumeratorMethod.ReturnType;
+    LEnumeratorMoveNextMethod := LEnumeratorType.GetMethod('MoveNext');
+    LEnumeratorCurrentProperty := LEnumeratorType.GetProperty('Current');
+
+//    LElementType := LEnumeratorCurrentProperty.PropertyType;
+
+    LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    while LEnumeratorCurrentValue.AsBoolean do
+    try
+      LCurrentValue := LEnumeratorCurrentProperty.GetValue(LEnumeratorObj);
+      ADoSomething(LCurrentValue);
+    finally
+      LEnumeratorCurrentValue := LEnumeratorMoveNextMethod.Invoke(LEnumeratorObj, []);
+    end;
+  finally
+    LEnumeratorObj.Free;
+  end;
+end;
+
 
 class procedure TRttiHelper.EnumerateObjectList(const AObjectList: TObject;
   const ADoSomething: TProc<TValue>);

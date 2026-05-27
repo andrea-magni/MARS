@@ -166,6 +166,8 @@
         <DCCReference Include="Tests.Client.TestServer.pas"/>
         <DCCReference Include="Tests.MARSParameters.pas"/>
         <DCCReference Include="Tests.Activation.pas"/>
+        <DCCReference Include="Tests.OpenAPI3.pas"/>
+        <DCCReference Include="Tests.Objects.Types.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -25,10 +25,13 @@ uses
   Tests.Client.Resources in 'Tests.Client.Resources.pas',
   Tests.Client.TestServer in 'Tests.Client.TestServer.pas',
   Tests.MARSParameters in 'Tests.MARSParameters.pas',
-  Tests.Activation in 'Tests.Activation.pas';
+  Tests.Activation in 'Tests.Activation.pas',
+  Tests.OpenAPI3 in 'Tests.OpenAPI3.pas',
+  Tests.Objects.Types in 'Tests.Objects.Types.pas';
 
 {$IFDEF TESTINSIGHT}
 begin
+  ReportMemoryLeaksOnShutdown := True;
   RunRegisteredTests;
 {$ELSE}
 var LResults: IRunResults;

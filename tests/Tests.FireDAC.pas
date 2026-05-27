@@ -246,6 +246,7 @@ begin
 
   FJSONMediaType.Free;
   FOutputStream.Free;
+  FreeAndNil(FDConnection);
 end;
 
 initialization

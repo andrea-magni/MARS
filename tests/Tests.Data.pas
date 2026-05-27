@@ -210,6 +210,7 @@ begin
   FreeAndNil(FDQuery1);
   FreeAndNil(FDQuery2);
   FreeAndNil(FDQuery3);
+  FreeAndNil(FDConnection);
 end;
 
 

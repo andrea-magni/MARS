@@ -92,6 +92,16 @@ type
     function ToRecordFilter(AMember: TRttiMember; AJSON: TJSONObject): Boolean;
   end;
 
+  TRecordMemberOrders = record
+    Field1: string;
+    Field2: Integer;
+    Field3: Boolean;
+    WithObj: TRecordWithObject;
+    Field4: Boolean;
+    Field5: Integer;
+    Field6: string;
+  end;
+
 implementation
 
 uses

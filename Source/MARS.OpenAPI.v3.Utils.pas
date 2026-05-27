@@ -23,6 +23,7 @@ type
     procedure ReadOperation(const AOperation: TOperation; const ARes: TMARSResourceMetadata;
       const AMet: TMARSMethodMetadata);
   public
+    class procedure FillSchemaForObjectOrRecord(const ASchema: TSchema; const AType: TRttiType; const AddTo: TOpenAPI);
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
     function MARSKindToOpenAPIKind(const AString: string): string;
     function MARSDataTypeToOpenAPIType(const AType: TRttiType; const ARefPrefix: string = '#/components/schemas/'): string;
@@ -98,9 +99,9 @@ function TOpenAPIHelper.EnsureTypeInComponentsSchemas(
 var
   LSchema: TSchema;
   LSchemaExists: Boolean;
-  LMember: TRttiMember;
-  LJSONName, LYAMLName: string;
-  LProperty: TSchema;
+//  LMember: TRttiMember;
+//  LJSONName, LYAMLName: string;
+//  LProperty: TSchema;
 begin
   //AM TODO Add some mechanism to deal with special types
   // (i.e. TDataset descendants, TStream descendants, TJSONValue descendants, TYamlNode descendants...)
@@ -113,16 +114,29 @@ begin
     LSchema := components.AddSchema(AType.Name);
 
     if (AType.IsInstance) or (AType.IsRecord) then
+      FillSchemaForObjectOrRecord(LSchema, AType, Self)
+    else if AType is TRttiEnumerationType then
     begin
-      LSchema.SetType('object');
+      LSchema.SetType('string');
       LSchema.description := 'Schema for type ' + AType.QualifiedName;
+      LSchema.enum := TRttiEnumerationType(AType).GetNames;
+    end;
 
-      for LMember in AType.GetPropertiesAndFields do
+  end;
+end;
+
+class procedure TOpenAPIHelper.FillSchemaForObjectOrRecord(
+  const ASchema: TSchema; const AType: TRttiType; const AddTo: TOpenAPI);
+begin
+      ASchema.SetType('object');
+      ASchema.description := 'Schema for type ' + AType.QualifiedName;
+
+      for var LMember in AType.GetPropertiesAndFields do
       begin
         if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
           Continue;
 
-        LJSONName := LMember.Name;
+        var LJSONName := LMember.Name;
         LMember.HasAttribute<JSONNameAttribute>(
           procedure (AAttr: JSONNameAttribute)
           begin
@@ -130,7 +144,7 @@ begin
           end
         );
 {$IFNDEF LINUX}
-        LYAMLName := LMember.Name;
+        var LYAMLName := LMember.Name;
         LMember.HasAttribute<YAMLNameAttribute>(
           procedure (AAttr: YAMLNameAttribute)
           begin
@@ -143,18 +157,13 @@ begin
         if (LJSONName = '') and (LYAMLName = '') then
           Continue;
 
-        LProperty := LSchema.GetProperty(LJSONName);
-        LProperty.SetType(LMember.GetRttiType, Self);
+        if Assigned(AddTo) then
+        begin
+          var LProperty := ASchema.GetProperty(LJSONName);
+          LProperty.SetType(LMember.GetRttiType, AddTo);
+        end;
       end;
-    end
-    else if AType is TRttiEnumerationType then
-    begin
-      LSchema.SetType('string');
-      LSchema.description := 'Schema for type ' + AType.QualifiedName;
-      LSchema.enum := TRttiEnumerationType(AType).GetNames;
-    end;
 
-  end;
 end;
 
 function TOpenAPIHelper.MARSDataTypeToOpenAPIType(

@@ -113,7 +113,7 @@ type
     anyOf: string; // - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
     &not: string;  //  - Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema.
     items: TSchemaBase; // - Value MUST be an object and not an array. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. items MUST be present if the type is array.
-    properties: TObjectDictionary<string,TSchema>; // - Property definitions MUST be a Schema Object and not a standard JSON Schema (inline or referenced).
+    properties: TList<TPair<string,TSchema>>; // - Property definitions MUST be a Schema Object and not a standard JSON Schema (inline or referenced).
     additionalProperties: Boolean; // - Value can be boolean or object. Inline or referenced schema MUST be of a Schema Object and not a standard JSON Schema. Consistent with JSON Schema, additionalProperties defaults to true.
     format: string; // - See Data Type Formats for further details. While relying on JSON Schema's defined formats, the OAS offers a few additional predefined formats.
     default: string; // - The default value represents what would be assumed by the consumer of the input as the value of the schema if one is not provided. Unlike JSON Schema, the value MUST conform to the defined type for the Schema Object defined at the same level. For example, if type is string, then default can be "foo" but cannot be 1.
@@ -611,23 +611,41 @@ end;
 
 function TSchema.GetProperty(const AName: string): TSchema;
 begin
-  if not properties.TryGetValue(AName, Result) then
+  Result := nil;
+  for var LProperty in properties do
+  begin
+    if SameText(LProperty.Key, AName) then
+    begin
+      Result := LProperty.Value;
+      Break;
+    end;
+  end;
+
+  if not Assigned(Result) then
   begin
     Result := TSchema.Create;
-    properties.Add(AName, Result);
+    properties.Add(TPair<string,TSchema>.Create(AName, Result));
   end;
 end;
 
 constructor TSchema.Create;
 begin
   inherited Create;
-  properties := TObjectDictionary<string, TSchema>.Create([doOwnsValues]);
+  properties := TList<TPair<string, TSchema>>.Create();
   items := TSchemaBase.Create();
 end;
 
 destructor TSchema.Destroy;
 begin
   items.Free;
+
+  while properties.Count > 0 do
+  begin
+    var LProperty := properties.ExtractAt(0);
+    if Assigned(LProperty.Value) then
+      LProperty.Value.Free;
+  end;
+
   properties.Free;
   inherited;
 end;

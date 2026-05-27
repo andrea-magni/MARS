@@ -249,14 +249,23 @@ type
     class function DictionaryToJSON(const ADictionary: TObject;
       const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
     class function DictionaryToJSON(const ADictionary: TObject): TJSONObject; overload;
+    class procedure DictionaryToJSON(const AJSONObject: TJSONObject;
+      const ADictionary: TObject; const AOptions: TMARSJSONSerializationOptions); overload;
 
     class function ObjectListToJSON(const AObjectList: TObject;
       const AOptions: TMARSJSONSerializationOptions): TJSONArray; overload;
     class function ObjectListToJSON(const AObjectList: TObject): TJSONArray; overload;
+    class procedure ObjectListToJSON(const AJSON: TJSONArray; const AObjectList: TObject;
+      const AOptions: TMARSJSONSerializationOptions); overload;
 
     class function ObjectToJSON(const AObject: TObject;
       const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
     class function ObjectToJSON(const AObject: TObject): TJSONObject; overload;
+
+    class function ListOfPairOfStringAndTToJSON(const AList: TObject;
+      const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
+    class procedure ListOfPairOfStringAndTToJSON(const AJSON: TJSONObject;
+      const AList: TObject; const AOptions: TMARSJSONSerializationOptions); overload;
 
     class function JSONToObject<T: class, constructor>(const AJSON: TJSONObject;
       const AOptions: TMARSJSONSerializationOptions): T; overload;
@@ -358,6 +367,9 @@ begin
 
   else if IsDictionaryOfStringAndT(LTypeName) then
     Result := DictionaryToJSON(AValue.AsObject)
+
+  else if IsListOfPairOfStringAndT(LTypeName) then
+    Result := ListOfPairOfStringAndTToJSON(AValue.AsObject, AOptions)
 
   else if IsObjectListOfT(LTypeName) then
     Result := ObjectListToJSON(AValue.AsObject)
@@ -890,6 +902,21 @@ begin
   Result := AJSON.ToRecord<T>(AOptions, AFilterProc);
 end;
 
+class procedure TJSONObjectHelper.ListOfPairOfStringAndTToJSON(
+  const AJSON: TJSONObject; const AList: TObject;
+  const AOptions: TMARSJSONSerializationOptions);
+begin
+  TRttiHelper.EnumerateListOfPairOf(AList,
+    procedure (APair: TValue)
+    begin
+      var LKey := ReadFieldValue(APair, 'Key');
+      var LValue := ReadFieldValue(APair, 'Value');
+
+      AJSON.AddPair(LKey.AsString, TValueToJSONValue(LValue, AOptions));
+    end
+  );
+end;
+
 class function TJSONObjectHelper.ObjectListToJSON(const AObjectList: TObject): TJSONArray;
 begin
   Result := ObjectListToJSON(AObjectList, DefaultMARSJSONSerializationOptions);
@@ -903,16 +930,23 @@ var
 begin
   LResult := TJSONArray.Create;
   LOptions := AOptions;
-  TRttiHelper.EnumerateObjectList(AObjectList,
-    procedure (AValue: TValue)
-    begin
-      LResult.AddElement(TValueToJSONValue(AValue, LOptions));
-    end
-  );
+
+  ObjectListToJSON(LResult, AObjectList, LOptions);
 
   Result := LResult;
 end;
 
+
+class procedure TJSONObjectHelper.ObjectListToJSON(const AJSON: TJSONArray;
+  const AObjectList: TObject; const AOptions: TMARSJSONSerializationOptions);
+begin
+  TRttiHelper.EnumerateObjectList(AObjectList,
+    procedure (AValue: TValue)
+    begin
+      AJSON.AddElement(TValueToJSONValue(AValue, AOptions));
+    end
+  );
+end;
 
 class function TJSONObjectHelper.ObjectToJSON(const AObject: TObject): TJSONObject;
 begin
@@ -925,6 +959,8 @@ begin
   {$IFDEF MARS_JSON_LEGACY}
   Result := TJSON.ObjectToJsonObject(AObject, AOptions);
   {$ELSE}
+
+
   Result := TJSONObject.Create;
   try
     if Assigned(AObject) then
@@ -933,6 +969,7 @@ begin
     Result.Free;
     raise;
   end;
+
   {$ENDIF}
 end;
 
@@ -1029,6 +1066,32 @@ begin
   end;
 end;
 
+class procedure TJSONObjectHelper.DictionaryToJSON(
+  const AJSONObject: TJSONObject; const ADictionary: TObject;
+  const AOptions: TMARSJSONSerializationOptions);
+begin
+  TRttiHelper.EnumerateDictionary(ADictionary,
+    procedure (AKey: TValue; AValue: TValue)
+    begin
+      AJSONObject.AddPair(AKey.ToString, TValueToJSONValue(AValue, AOptions));
+    end
+  );
+end;
+
+class function TJSONObjectHelper.ListOfPairOfStringAndTToJSON(const AList: TObject;
+  const AOptions: TMARSJSONSerializationOptions): TJSONObject;
+var
+  LResult: TJSONObject;
+  LOptions: TMARSJSONSerializationOptions;
+begin
+  LResult := TJSONObject.Create;
+  LOptions := AOptions;
+
+  ListOfPairOfStringAndTToJSON(LResult, AList, AOptions);
+
+  Result := LResult;
+end;
+
 class function TJSONObjectHelper.DictionaryToJSON(const ADictionary: TObject): TJSONObject;
 begin
   Result := DictionaryToJSON(ADictionary, DefaultMARSJSONSerializationOptions);
@@ -1043,12 +1106,7 @@ begin
   LResult := TJSONObject.Create;
   LOptions := AOptions;
 
-  TRttiHelper.EnumerateDictionary(ADictionary,
-    procedure (AKey: TValue; AValue: TValue)
-    begin
-      LResult.AddPair(AKey.ToString, TValueToJSONValue(AValue, LOptions));
-    end
-  );
+  DictionaryToJSON(LResult, ADictionary, LOptions);
 
   Result := LResult;
 end;
@@ -1073,6 +1131,7 @@ procedure TJSONObjectHelper.FromObject(const AObject: TObject;
 
 var
   LType: TRttiType;
+  LTypeName: string;
   LMember: TRttiMember;
   LFilterProc: TToJSONFilterProc;
   LAccept: Boolean;
@@ -1080,41 +1139,51 @@ var
   LJSONName: string;
 begin
   LType := TRttiContext.Create.GetType(AObject.ClassType);
+  LTypeName := LType.Name;
 
-  LFilterProc := AFilterProc;
-  if not Assigned(LFilterProc) then
-    LFilterProc := GetObjectFilterProc(LType);
-
-  for LMember in LType.GetPropertiesAndFields do
+  if IsDictionaryOfStringAndT(LTypeName) then
+    DictionaryToJSON(Self, AObject, AOptions)
+  else if IsListOfPairOfStringAndT(LTypeName) then
+    ListOfPairOfStringAndTToJSON(Self, AObject, AOptions)
+//  else if IsObjectListOfT(LTypeName) then
+//    ObjectListToJSON(Self, AObject, AOptions)
+  else
   begin
-    if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
-      Continue;
+    LFilterProc := AFilterProc;
+    if not Assigned(LFilterProc) then
+      LFilterProc := GetObjectFilterProc(LType);
 
-    LAccept := True;
-    if Assigned(LFilterProc) then
-      LFilterProc(LMember, AObject, Self, LAccept);
-
-    if LAccept then
+    for LMember in LType.GetPropertiesAndFields do
     begin
-      LJSONName := LMember.Name;
-      LMember.HasAttribute<JSONNameAttribute>(
-        procedure (AAttr: JSONNameAttribute)
-        begin
-          LJSONName := AAttr.Name;
-        end
-      );
-      if LJSONName <> '' then
-      begin
-        LValue := LMember.GetValue(AObject);
+      if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
+        Continue;
 
-        {$ifdef Delphi10Tokyo_UP}
-          if LValue.IsType<TValue>(False) and (not LValue.IsArray) then
-        {$else}
-          if LValue.IsType<TValue> and (not LValue.IsArray) then
-        {$endif}
-          WriteTValue(LJSONName, LValue.AsType<TValue>, AOptions) //unboxing TValue from TValue
-        else
-          WriteTValue(LJSONName, LValue, AOptions);
+      LAccept := True;
+      if Assigned(LFilterProc) then
+        LFilterProc(LMember, AObject, Self, LAccept);
+
+      if LAccept then
+      begin
+        LJSONName := LMember.Name;
+        LMember.HasAttribute<JSONNameAttribute>(
+          procedure (AAttr: JSONNameAttribute)
+          begin
+            LJSONName := AAttr.Name;
+          end
+        );
+        if LJSONName <> '' then
+        begin
+          LValue := LMember.GetValue(AObject);
+
+          {$ifdef Delphi10Tokyo_UP}
+            if LValue.IsType<TValue>(False) and (not LValue.IsArray) then
+          {$else}
+            if LValue.IsType<TValue> and (not LValue.IsArray) then
+          {$endif}
+            WriteTValue(LJSONName, LValue.AsType<TValue>, AOptions) //unboxing TValue from TValue
+          else
+            WriteTValue(LJSONName, LValue, AOptions);
+        end;
       end;
     end;
   end;
