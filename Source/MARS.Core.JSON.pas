@@ -224,6 +224,7 @@ type
     procedure FromObject(const AObject: TObject; const AFilterProc: TToJSONFilterProc = nil); overload;
     procedure FromObject(const AObject: TObject; const AFilterProc: TToJSONFilterProc; const AOptions: TMARSJSONSerializationOptions); overload;
     procedure FromObject<T: class>(const AObject: T; const AFilterProc: TToJSONFilterProc = nil); overload;
+    procedure ToObject<T: class>(const AInstance: TObject); overload;
     procedure ToObject<T: class>(const AInstance: TObject;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToObjectFilterProc = nil); overload;
     procedure ToObject(const AInstance: TObject; const AObjectType: TRttiType;
@@ -1535,6 +1536,11 @@ begin
   end;
   if Assigned(LAssignedValuesField) then
     LAssignedValuesField.SetValue(LObjectInstance, TValue.From<TArray<string>>(LAssignedValues));
+end;
+
+procedure TJSONObjectHelper.ToObject<T>(const AInstance: TObject);
+begin
+  ToObject<T>(AInstance, DefaultMARSJSONSerializationOptions);
 end;
 
 procedure TJSONObjectHelper.ToObject<T>(const AInstance: TObject;
