@@ -123,18 +123,12 @@ procedure TObjectWriter.WriteTo(const AValue: TValue; const AMediaType: TMediaTy
 var
   LJSON: TJSONValue;
   LSerializationOptions: TMARSJSONSerializationOptions;
-  LAttribute: TCustomAttribute;
 begin
   LSerializationOptions := DefaultMARSJSONSerializationOptions;
-
-  for LAttribute in AActivation.MethodAttributes do
-  begin
-    if LAttribute is JSONIncludeEmptyValuesAttribute then
-    begin
-      LSerializationOptions.IncludeEmptyOrNullValues;
-      Break;
-    end;
-  end;
+  if Assigned(AActivation) then
+    LSerializationOptions := LSerializationOptions
+    .AdjustWith(AActivation.ResourceAttributes)
+    .AdjustWith(AActivation.MethodAttributes);
 
   LJSON := TJSONObject.ObjectToJSON(AValue.AsObject, LSerializationOptions);
   try
@@ -154,22 +148,15 @@ var
   LIndex: Integer;
   LElement: TValue;
   LSerializationOptions: TMARSJSONSerializationOptions;
-  LAttribute: TCustomAttribute;
-
 begin
   if not AValue.IsArray then
     Exit;
 
   LSerializationOptions := DefaultMARSJSONSerializationOptions;
-
-  for LAttribute in AActivation.MethodAttributes do
-  begin
-    if LAttribute is JSONIncludeEmptyValuesAttribute then
-    begin
-      LSerializationOptions.IncludeEmptyOrNullValues;
-      Break;
-    end;
-  end;
+  if Assigned(AActivation) then
+    LSerializationOptions := LSerializationOptions
+    .AdjustWith(AActivation.ResourceAttributes)
+    .AdjustWith(AActivation.MethodAttributes);
 
   LJSONArray := TJSONArray.Create;
   try
@@ -350,22 +337,15 @@ var
   LIndex: Integer;
   LElement: TValue;
   LSerializationOptions: TMARSJSONSerializationOptions;
-  LAttribute: TCustomAttribute;
 begin
   if not AValue.IsArray then
     Exit;
 
   LSerializationOptions := DefaultMARSJSONSerializationOptions;
-
   if Assigned(AActivation) then
-    for LAttribute in AActivation.MethodAttributes do
-    begin
-      if LAttribute is JSONIncludeEmptyValuesAttribute then
-      begin
-        LSerializationOptions.IncludeEmptyOrNullValues;
-        Break;
-      end;
-    end;
+    LSerializationOptions := LSerializationOptions
+    .AdjustWith(AActivation.ResourceAttributes)
+    .AdjustWith(AActivation.MethodAttributes);
 
   LJSONArray := TJSONArray.Create;
   try
@@ -412,10 +392,17 @@ procedure TStandardMethodWriter.WriteTo(const AValue: TValue; const AMediaType: 
 var
   LResult: TJSONObject;
   LOutputParams: TJSONArray;
+  LSerializationOptions: TMARSJSONSerializationOptions;
 begin
+  LSerializationOptions := DefaultMARSJSONSerializationOptions;
+  if Assigned(AActivation) then
+    LSerializationOptions := LSerializationOptions
+    .AdjustWith(AActivation.ResourceAttributes)
+    .AdjustWith(AActivation.MethodAttributes);
+
   LResult := TJSONObject.Create;
   try
-    LResult.WriteTValue('result', AValue);
+    LResult.WriteTValue('result', AValue, LSerializationOptions);
 
     LOutputParams := nil;
     ForEachParameter(AActivation
@@ -425,8 +412,8 @@ begin
         begin
           LOutputParamJSON := TJSONObject.Create;
           try
-            LOutputParamJSON.WriteTValue('name', AParameter.Name);
-            LOutputParamJSON.WriteTValue('value', AParameterValue);
+            LOutputParamJSON.WriteTValue('name', AParameter.Name, LSerializationOptions);
+            LOutputParamJSON.WriteTValue('value', AParameterValue, LSerializationOptions);
 
             if not Assigned(LOutputParams) then
               LOutputParams := TJSONArray.Create;

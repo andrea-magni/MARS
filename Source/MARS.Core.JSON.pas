@@ -103,9 +103,13 @@ type
     function SkipEmptyValues: Boolean;
     procedure IncludeEmptyOrNullValues;
     procedure SkipAllEmptyOrNullValues;
+
+    function AdjustWith(const AAttributes: TArray<TCustomAttribute>): TMARSJSONSerializationOptions;
   end;
 
   JSONIncludeEmptyValuesAttribute = class(TCustomAttribute);
+  JSONSkipEmptyValuesAttribute = class(TCustomAttribute);
+
   {$ENDIF}
 
 {$ifndef DelphiXE6_UP}
@@ -342,12 +346,48 @@ type
   );
   {$ENDIF}
 
+  function ComputeJSONSerializationOptions(var AOptions: TMARSJSONSerializationOptions; const AAttributes: TArray<TCustomAttribute>): Boolean; overload;
+  function ComputeJSONSerializationOptions(const AAttributes: TArray<TCustomAttribute>): TMARSJSONSerializationOptions; overload;
+
 implementation
 
 uses
   System.DateUtils, System.TimeSpan, System.Variants, System.StrUtils, System.Math
 , MARS.Core.Utils, MARS.Rtti.Utils
 ;
+
+
+function ComputeJSONSerializationOptions(const AAttributes: TArray<TCustomAttribute>): TMARSJSONSerializationOptions; overload;
+begin
+  Result := DefaultMARSJSONSerializationOptions;
+  ComputeJSONSerializationOptions(Result, AAttributes);
+end;
+
+function ComputeJSONSerializationOptions(var AOptions: TMARSJSONSerializationOptions; const AAttributes: TArray<TCustomAttribute>): Boolean;
+var
+  LAttribute: TCustomAttribute;
+begin
+  Result := False;
+  for LAttribute in AAttributes do
+  begin
+    if LAttribute is JSONIncludeEmptyValuesAttribute then
+    begin
+      AOptions.IncludeEmptyOrNullValues;
+      Result := True;
+      Break;
+    end;
+  end;
+
+  for LAttribute in AAttributes do
+  begin
+    if LAttribute is JSONSkipEmptyValuesAttribute then
+    begin
+      AOptions.SkipAllEmptyOrNullValues;
+      Result := True;
+      Break;
+    end;
+  end;
+end;
 
 class function TJSONObjectHelper.TValueToJSONValue(
   const AValue: TValue; const AOptions: TMARSJSONSerializationOptions): TJSONValue;
@@ -366,13 +406,13 @@ begin
     Result := TJSONString.Create(AValue.AsString)
 
   else if IsDictionaryOfStringAndT(LTypeName) then
-    Result := DictionaryToJSON(AValue.AsObject)
+    Result := DictionaryToJSON(AValue.AsObject, AOptions)
 
   else if IsListOfPairOfStringAndT(LTypeName) then
     Result := ListOfPairOfStringAndTToJSON(AValue.AsObject, AOptions)
 
   else if IsObjectListOfT(LTypeName) then
-    Result := ObjectListToJSON(AValue.AsObject)
+    Result := ObjectListToJSON(AValue.AsObject, AOptions)
 
   else if AValue.IsArray then
   begin
@@ -389,7 +429,7 @@ begin
   end
 
   else if (AValue.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}]) then
-    Result := TJSONObject.RecordToJSON(AValue)
+    Result := TJSONObject.RecordToJSON(AValue, AOptions)
 
   else if (LTypeName = 'Boolean') then // before I was using TypeInfo(Boolean) but it caused Variants to match (?!), using type name now
     Result := BooleanToTJSON(AValue.AsType<Boolean>)
@@ -1945,6 +1985,13 @@ begin
 end;
 
 { TMARSJSONSerializationOptions }
+
+function TMARSJSONSerializationOptions.AdjustWith(
+  const AAttributes: TArray<TCustomAttribute>): TMARSJSONSerializationOptions;
+begin
+  Result := Self;
+  ComputeJSONSerializationOptions(Result, AAttributes);
+end;
 
 procedure TMARSJSONSerializationOptions.IncludeEmptyOrNullValues;
 begin

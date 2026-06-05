@@ -67,8 +67,13 @@ procedure TDataSetWriterJSON.WriteTo(const AValue: TValue; const AMediaType: TMe
   AOutputStream: TStream; const AActivation: IMARSActivation);
 var
   LResult: TJSONArray;
+  LSerializationOptions: TMARSJSONSerializationOptions;
 begin
-  LResult := DataSetToJSONArray(AValue.AsObject as TDataSet);
+  LSerializationOptions := DefaultMARSJSONSerializationOptions
+    .AdjustWith(AActivation.ResourceAttributes)
+    .AdjustWith(AActivation.MethodAttributes);
+
+  LResult := DataSetToJSONArray(AValue.AsObject as TDataSet, LSerializationOptions);
   try
     TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);
   finally
@@ -117,13 +122,18 @@ var
   LResult: TJSONObject;
   LDataSet: TDataSet;
   LIndex: Integer;
+  LSerializationOptions: TMARSJSONSerializationOptions;
 begin
+  LSerializationOptions := DefaultMARSJSONSerializationOptions
+    .AdjustWith(AActivation.ResourceAttributes)
+    .AdjustWith(AActivation.MethodAttributes);
+
   LResult := TJSONObject.Create;
   try
     for LIndex := 0 to AValue.GetArrayLength - 1 do
     begin
       LDataSet := AValue.GetArrayElement(LIndex).AsObject as TDataSet;
-      LResult.AddPair(LDataSet.Name, DataSetToJSONArray(LDataSet));
+      LResult.AddPair(LDataSet.Name, DataSetToJSONArray(LDataSet, LSerializationOptions));
     end;
 
     TJSONValueWriter.WriteJSONValue(LResult, AMediaType, AOutputStream, AActivation);

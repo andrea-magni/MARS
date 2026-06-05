@@ -53,7 +53,12 @@ procedure TMARSTokenWriterJSON.WriteTo(const AValue: TValue; const AMediaType: T
 var
   LToken: TMARSToken;
   LJSONObj: TJSONObject;
+//  LSerializationOptions: TMARSJSONSerializationOptions;
 begin
+//  LSerializationOptions := DefaultMARSJSONSerializationOptions
+//    .AdjustWith(AActivation.ResourceAttributes)
+//    .AdjustWith(AActivation.MethodAttributes);
+
   LToken := AValue.AsObject as TMARSToken;
   if Assigned(LToken) then
   begin

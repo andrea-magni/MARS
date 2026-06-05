@@ -32,14 +32,13 @@ type
 implementation
 
 uses
-  MARS.Core.Engine
-, MARS.Core.Activation, MARS.Core.Activation.Interfaces
-, MARS.Core.Application.Interfaces
+  MARS.Core.Engine, MARS.Core.Activation
+, MARS.Core.Activation.Interfaces, MARS.Core.Application.Interfaces, MARS.Core.RequestAndResponse.Interfaces
+
 , MARS.Core.Utils, MARS.Utils.Parameters.IniFile
-, MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
-, MARS.Core.MessageBodyWriter
-, MARS.Core.MessageBodyWriters
-, MARS.Data.MessageBodyWriters
+, MARS.Core.URL, MARS.Core.JSON
+
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters, MARS.Data.MessageBodyWriters
 , MARS.Core.MessageBodyReaders
 {$IFDEF MARS_FIREDAC}
 , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option
@@ -67,6 +66,9 @@ begin
 
   // Engine configuration
   FEngine.Parameters.LoadFromIniFile;
+
+  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.IncludeEmptyOrNullValues;
+//  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.SkipAllEmptyOrNullValues;
 
   // Application configuration
   FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
