@@ -16,12 +16,15 @@ type
     procedure AddToTempObjs(const AObj: TObject);
     procedure FreeAll;
   protected
-    function MockActivation: TMock<IMARSActivation>;
+    function MockActivation(const APrototypeURL, AActualURL: string): TMock<IMARSActivation>;
 
   public
-    [Setup] procedure Setup;
-    [Teardown] procedure Teardown;
-    [ Test ]
+    [Setup]
+    procedure Setup;
+    [Teardown]
+    procedure Teardown;
+
+    [Test]
     procedure GetValueByName;
   end;
 
@@ -50,7 +53,10 @@ end;
 
 procedure TMARSActivationFixture.GetValueByName;
 begin
-  var LActivation := MockActivation;
+  var LActivation := MockActivation(
+    'http://localhost:8080/rest/default/helloworld/{filename}'
+  , 'http://localhost:8080/rest/default/helloworld/myfile.txt?query1=value1&query2=value2'
+  );
 
   var LFileName := TMARSActivation.GetValueByName('PathParam_filename', LActivation).ToString();
   Assert.AreEqual('myfile.txt', LFileName);
@@ -63,16 +69,16 @@ begin
   Assert.AreEqual('query1=value1&query2=value2', LQueryString);
 end;
 
-function TMARSActivationFixture.MockActivation: TMock<IMARSActivation>;
+function TMARSActivationFixture.MockActivation(const APrototypeURL, AActualURL: string): TMock<IMARSActivation>;
 begin
-  var LURLPrototype := TMARSURL.Create('http://localhost:8080/rest/default/helloworld/{filename}');
+  var LURLPrototype := TMARSURL.Create(APrototypeURL);
   AddToTempObjs(LURLPrototype);
-  var LURL := TMARSURL.Create('http://localhost:8080/rest/default/helloworld/myfile.txt?query1=value1&query2=value2');
+  var LURL := TMARSURL.Create(AActualURL);
   AddToTempObjs(LURL);
 
   var LRequestInfo: TIdHttpRequestInfo := TIdHttpRequestInfo.Create(nil);
   AddToTempObjs(LRequestInfo);
-  LRequestInfo.QueryParams := 'query1=value1&query2=value2';
+  LRequestInfo.QueryParams := AActualURL.Substring(AActualURL.IndexOf('?') + 1); // 'query1=value1&query2=value2';
   var LResponseInfo: TIdHttpResponseInfo := nil;
 
   var LWebRequest := TMARSIdHTTPAppRequest.Create(nil, LRequestInfo, LResponseInfo);

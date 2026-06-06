@@ -15,6 +15,7 @@ type
   TNameValuePair<N,V> = record
     Name: N;
     Value: V;
+    constructor Create(AName: N; AValue: V);
   end;
 
   TMARSHeader = TNameValuePair<string, string>;
@@ -133,5 +134,13 @@ type
 
 
 implementation
+
+{ TNameValuePair<N, V> }
+
+constructor TNameValuePair<N, V>.Create(AName: N; AValue: V);
+begin
+  Name := AName;
+  Value := AValue;
+end;
 
 end.

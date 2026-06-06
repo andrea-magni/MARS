@@ -27,7 +27,12 @@ uses
   Tests.MARSParameters in 'Tests.MARSParameters.pas',
   Tests.Activation in 'Tests.Activation.pas',
   Tests.OpenAPI3 in 'Tests.OpenAPI3.pas',
-  Tests.Objects.Types in 'Tests.Objects.Types.pas';
+  Tests.Objects.Types in 'Tests.Objects.Types.pas',
+  Tests.DefaultEngine.Definition in 'Tests.DefaultEngine.Definition.pas',
+  Tests.DefaultEngine.Resources in 'Tests.DefaultEngine.Resources.pas',
+  Tests.DefaultEngine in 'Tests.DefaultEngine.pas',
+  Mock.IMARSRequest in 'Mock.IMARSRequest.pas',
+  Mock.IMARSResponse in 'Mock.IMARSResponse.pas';
 
 {$IFDEF TESTINSIGHT}
 begin

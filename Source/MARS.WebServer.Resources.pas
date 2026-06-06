@@ -195,8 +195,7 @@ begin
   Result := TMARSResponse.Create;
   Result.StatusCode := 404;
 
-  LRelativePath := SmartConcat(URL.PathTokens
-    , '/').Replace('/', PathDelim, [rfReplaceAll]);
+  LRelativePath := SmartConcat(URL.PathTokens, '/').Replace('/', PathDelim, [rfReplaceAll]);
 
   LBasePath := SmartConcat([
       Activation.Engine.BasePath, Activation.Application.BasePath, Activation.ResourcePath

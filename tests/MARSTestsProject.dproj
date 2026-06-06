@@ -168,6 +168,11 @@
         <DCCReference Include="Tests.Activation.pas"/>
         <DCCReference Include="Tests.OpenAPI3.pas"/>
         <DCCReference Include="Tests.Objects.Types.pas"/>
+        <DCCReference Include="Tests.DefaultEngine.Definition.pas"/>
+        <DCCReference Include="Tests.DefaultEngine.Resources.pas"/>
+        <DCCReference Include="Tests.DefaultEngine.pas"/>
+        <DCCReference Include="Mock.IMARSRequest.pas"/>
+        <DCCReference Include="Mock.IMARSResponse.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

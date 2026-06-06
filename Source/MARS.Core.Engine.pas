@@ -242,6 +242,9 @@ var
   LApplicationPath: string;
   LActivation: IMARSActivation;
 begin
+  Assert(Assigned(ARequest));
+  Assert(Assigned(AResponse));
+
   Result := False;
 
   PatchCORS(ARequest, AResponse);
