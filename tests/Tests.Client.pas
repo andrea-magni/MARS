@@ -17,7 +17,8 @@ uses
 
 , MARS.Client.Client, MARS.Client.Client.Indy, MARS.Client.Client.Net
 , MARS.Client.Application
-, MARS.Client.CustomResource, MARS.Client.Resource.JSON
+, MARS.Client.CustomResource, MARS.Client.Resource.JSON, MARS.Client.Resource
+, MARS.Core.MediaType
 ;
 
 type
@@ -26,42 +27,46 @@ type
   private
     FClient: C;
   protected
-    property Client: C read FClient;
+    function GetClient: C;
+    property Client: C read GetClient;
   public
-    procedure AfterConstruction; override;
-    procedure BeforeDestruction; override;
+    destructor Destroy; override;
   end;
 
   TMARSClientServerTest<C: TMARSCustomClient> = class(TMARSClientTest<C>)
   private
     FServer: TMARSTestServer;
   protected
+    function GetServer: TMARSTestServer;
     function GetEngine: IMARSEngine; virtual;
 
+    property Server: TMARSTestServer read GetServer;
     property Engine: IMARSEngine read GetEngine;
   public
-    procedure AfterConstruction; override;
-    procedure BeforeDestruction; override;
+    destructor Destroy; override;
   end;
 
-  TMARSResourceClientTest<C: TMARSCustomClient; R:TMARSClientCustomResource> = class(TMARSClientTest<C>)
+  TMARSResourceClientTest<C: TMARSCustomClient; R:TMARSClientCustomResource> = class(TMARSClientServerTest<C>)
   private
     FApplication: TMARSClientApplication;
     FRequest: R;
   protected
   public
+    [SetupFixture]
+    procedure SetupFixture;
+
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
   end;
 
   [TestFixture('Client')]
-  TSimpleClientTest = class(TMARSClientServerTest<TMARSIndyClient>)
+  TSimpleClientTest = class(TMARSResourceClientTest<TMARSIndyClient, TMARSClientResource>)
   public
     [Test]
     procedure TestHelloWorld;
   end;
 
-  [TestFixture('Client')]
+  [TestFixture('Client JSON')]
   TMARSJSONTest = class(TMARSResourceClientTest<TMARSIndyClient, TMARSClientResourceJSON>)
   public
     [Test]
@@ -71,30 +76,24 @@ type
 implementation
 
 
-{ TMARSClientTest }
-
-procedure TMARSClientTest<C>.AfterConstruction;
-begin
-  inherited;
-  FClient := C.Create(nil);
-end;
-
-procedure TMARSClientTest<C>.BeforeDestruction;
+destructor TMARSClientTest<C>.Destroy;
 begin
   FreeAndNil(FClient);
   inherited;
 end;
 
+{ TMARSClientTest }
+
+function TMARSClientTest<C>.GetClient: C;
+begin
+  if not Assigned(FClient) then
+    FClient := C.Create(nil);
+  Result := FClient;
+end;
 
 { TMARSClientServerTest<C> }
 
-procedure TMARSClientServerTest<C>.AfterConstruction;
-begin
-  inherited;
-  FServer := TMARSTestServer.Create;
-end;
-
-procedure TMARSClientServerTest<C>.BeforeDestruction;
+destructor TMARSClientServerTest<C>.Destroy;
 begin
   FreeAndNil(FServer);
   inherited;
@@ -102,9 +101,14 @@ end;
 
 function TMARSClientServerTest<C>.GetEngine: IMARSEngine;
 begin
-  Result := nil;
-  if Assigned(FServer) then
-    Result := FServer.Engine;
+  Result := Server.Engine;
+end;
+
+function TMARSClientServerTest<C>.GetServer: TMARSTestServer;
+begin
+  if not Assigned(FServer) then
+    FServer := TMARSTestServer.Create;
+  Result := FServer;
 end;
 
 { TMARSResourceClientTest<R> }
@@ -135,6 +139,11 @@ begin
   inherited;
 end;
 
+procedure TMARSResourceClientTest<C, R>.SetupFixture;
+begin
+  Engine; // causes Engine and Server initialization
+end;
+
 procedure TMARSJSONTest.CustomHeaders;
 begin
   FRequest.Resource := 'test/requestDump';
@@ -150,12 +159,20 @@ begin
   Assert.AreEqual('application/json', LAccept);
 end;
 
-
 procedure TSimpleClientTest.TestHelloWorld;
 begin
-  var LContent := Client.GetAsString('http://localhost:8080/rest/default/test/helloworld', '', 'text/plain');
-  Assert.AreEqual('Hello World!', LContent);
-end;
+  FRequest.Resource := 'test/helloworld';
+  FRequest.SpecificAccept := TMediaType.TEXT_PLAIN;
 
+  var LResponse := '';
+  FRequest.GET(nil
+  , procedure (AStream: TStream)
+    begin
+      LResponse := StreamToString(AStream);
+    end
+  );
+
+  Assert.AreEqual('Hello World!', LResponse);
+end;
 
 end.
