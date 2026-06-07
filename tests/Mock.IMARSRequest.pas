@@ -15,6 +15,7 @@ type
     FURL: TMARSURL;
     FHeaders: TMARSHeaders;
     FQueryParams: TMARSQueryParams;
+    FCookies: TMARSCookies;
     FRawContent: TBytes;
     FContent: string;
     FMethod: string;
@@ -118,6 +119,7 @@ begin
   FRawContent := TEncoding.UTF8.GetBytes(ABody);
   FContent := ABody;
   FQueryParams := [];
+  FCookies := [];
 
   FURL := TMARSURL.Create(AActualURL);
   const LQueryTokens = FURL.QueryTokens.ToArray;
@@ -153,27 +155,45 @@ end;
 
 function TMARSRequestMock.GetCookieParamCount: Integer;
 begin
-  Result := 0;
+  Result := Length(FCookies);
 end;
 
 function TMARSRequestMock.GetCookieParamIndex(const AName: string): Integer;
 begin
   Result := -1;
+  for var LIndex := Low(FCookies) to High(FCookies) do
+  begin
+    if SameText(FCookies[LIndex].Name, AName) then
+    begin
+      Result := LIndex;
+      Break;
+    end;
+  end;
 end;
 
 function TMARSRequestMock.GetCookieParamValue(const AIndex: Integer): string;
 begin
   Result := '';
+  if (AIndex >= Low(FCookies)) and (AIndex <= High(FCookies)) then
+    Result := FCookies[AIndex].Value;
 end;
 
 function TMARSRequestMock.GetCookieParamValue(const AName: string): string;
 begin
   Result := '';
+  for var LIndex := Low(FCookies) to High(FCookies) do
+  begin
+    if SameText(FCookies[LIndex].Name, AName) then
+    begin
+      Result := FCookies[LIndex].Value;
+      Break;
+    end;
+  end;
 end;
 
 function TMARSRequestMock.GetCookies: TMARSCookies;
 begin
-  Result := [];
+  Result := FCookies;
 end;
 
 function TMARSRequestMock.GetDate: TDateTime;
