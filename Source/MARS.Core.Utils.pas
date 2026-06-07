@@ -50,7 +50,8 @@ type
     constructor CreateFromRequest(const ARequest: IMARSRequest; const AFileIndex: Integer); overload;
     constructor Create(const AFieldName: string; const AValue: TValue);
     constructor CreateFile(const AFieldName: string; const AFileName: string; const ABytes: TBytes = nil; const AContentType: string = '');
-    function ToString: string;
+    function ToString: string; overload;
+    class function ToString(const AArray: TArray<TFormParam>): string; overload; static;
   end;
 
   TDump = class
@@ -682,6 +683,17 @@ begin
     Result := AsFile.ToString
   else
     Result := FieldName + '=' + Value.ToString;
+end;
+
+class function TFormParam.ToString(const AArray: TArray<TFormParam>): string;
+begin
+  var LItems: TArray<string> := [];
+  for var LIndex := Low(AArray) to High(AArray) do
+  begin
+    var LItem := AArray[LIndex].ToString;
+    LItems := LItems + [LItem];
+  end;
+  Result := string.Join(sLineBreak, LItems);
 end;
 
 { TDump }
