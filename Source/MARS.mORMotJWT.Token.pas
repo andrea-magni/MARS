@@ -89,7 +89,8 @@ begin
     LJWT.Verify(StringToUTF8(AToken), LContent);
     Result := LContent.result = jwtValid;
 
-//    LJSONString := UTF8ToString(LContent.data.ToJSON('', '', jsonCompact));
+    if not Result then
+      Exit;
 
     var LPayloadBase64 := AToken.Split(['.'])[1];
     LJSONString := TNetEncoding.Base64.Decode(LPayloadBase64);
