@@ -858,59 +858,67 @@ procedure TMARSActivation.CheckResource;
 var
   LFound: Boolean;
   LResourcesKeys: TArray<string>;
-  LBasePath, LURLPath, LRelativePath, LAppResourcePath: TArray<string>;
+  LURLBasePath, LURLPath, LURLRelativePath, LAppResourcePath: TArray<string>;
   LAppResourceKey: string;
-  LRelativePathLength, LAppResourcePathLength: Integer;
+  LURLRelativePathLength, LAppResourcePathLength: Integer;
   LCompareFunc: TStringCompareFunc;
-  LRelativePathStr, LAppResourcePathStr: string;
+  LURLRelativePathStr, LAppResourcePathStr: string;
 begin
-  LBasePath := URL.BasePath.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
+  LURLBasePath := URL.BasePath.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
   LURLPath := URL.PathTokens;
 
-  LRelativePath := [];
-  if LURLPath.StartsWith(LBasePath, True) then
-    LRelativePath := LURLPath.SubArray(Length(LBasePath));
+  LURLRelativePath := [];
+  if LURLPath.StartsWith(LURLBasePath, True) then
+    LURLRelativePath := LURLPath.SubArray(Length(LURLBasePath));
 
   LCompareFunc :=
     function (const AString1, AString2: string): Boolean
     begin
-      Result :=
-        SameText(AString1, AString2) // 1 - exact match
+      Result := SameText(AString1, AString2) // 1 - exact match
         or (
-          (Length(AString2) >= 2)
-          and (AString2[1] = '{')
-          and (AString2[High(AString2)] = '}')
+          (AString2.Length >= 2) and (AString2.StartsWith('{') and AString2.EndsWith('}'))
         );
     end;
 
   LResourcesKeys := Application.Resources.Keys.ToArray;
   LFound := False;
-  LRelativePathLength := Length(LRelativePath);
+  LURLRelativePathLength := Length(LURLRelativePath);
   for LAppResourceKey in LResourcesKeys do
   begin
     LAppResourcePath := LAppResourceKey.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
     LAppResourcePathLength := Length(LAppResourcePath);
 
-    if ((LAppResourcePathLength > 0) and (LRelativePath.StartsWith(LAppResourcePath, LCompareFunc)))
-       or ((LAppResourcePathLength = 0) and (LRelativePathLength = 0))
+    if ((LAppResourcePathLength > 0) and (LURLRelativePath.StartsWith(LAppResourcePath, LCompareFunc)))
+       or ((LAppResourcePathLength = 0) and (LURLRelativePathLength = 0))
     then
     begin
       LFound := True;
       if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
-        raise Exception.CreateFmt('Resource matching error: %s, relative path: %s', [LAppResourceKey, LRelativePath]);
+        raise Exception.CreateFmt('Resource matching error: %s, relative path: %s', [LAppResourceKey, LURLRelativePath]);
       Break;
     end
     else if LAppResourcePath.Contains(TMARSURL.PATH_PARAM_WILDCARD) then
     begin
-      LRelativePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LRelativePath);
+      LURLRelativePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LURLRelativePath);
       LAppResourcePathStr := string.join(TMARSURL.URL_PATH_SEPARATOR, LAppResourcePath);
-      if MatchesMask(LRelativePathStr, LAppResourcePathStr.Replace(TMARSURL.PATH_PARAM_WILDCARD, '*')) then
+      if MatchesMask(LURLRelativePathStr, LAppResourcePathStr.Replace(TMARSURL.PATH_PARAM_WILDCARD, '*')) then
       begin
         LFound := True;
         if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
-          raise Exception.CreateFmt('Resource matching error: %s, relative path: %s', [LAppResourcePath, LRelativePath]);
+          raise Exception.CreateFmt('Resource matching error: %s, relative path: %s', [LAppResourcePath, LURLRelativePath]);
         Break;
       end;
+
+      if LAppResourcePathStr.EndsWith(TMARSURL.URL_PATH_SEPARATOR + TMARSURL.PATH_PARAM_WILDCARD)
+         and SameText(LURLRelativePathStr, LAppResourcePathStr.Substring(0,
+               LAppResourcePathStr.Length - Length(TMARSURL.URL_PATH_SEPARATOR + TMARSURL.PATH_PARAM_WILDCARD)))
+      then begin
+        LFound := True;
+        if not Application.Resources.TryGetValue(LAppResourceKey, FConstructorInfo) then
+          raise Exception.CreateFmt('Resource matching error: %s, relative path: %s', [LAppResourcePath, LURLRelativePath]);
+        Break;
+      end;
+
     end;
   end;
 
