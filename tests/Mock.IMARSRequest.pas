@@ -127,6 +127,29 @@ begin
   const LQueryTokens = FURL.QueryTokens.ToArray;
   for var LIndex := Low(LQueryTokens) to High(LQueryTokens) do
     FQueryParams := FQueryParams + [TMARSQueryParam.Create(LQueryTokens[LIndex].Key, LQueryTokens[LIndex].Value)];
+
+  var LHostFound := False;
+  var LPortFound := False;
+  for var LIndex := Low(FHeaders) to High(FHeaders) do
+  begin
+    if SameText(FHeaders[LIndex].Name, 'Host') then
+    begin
+      FHeaders[LIndex].Value := FURL.HostName;
+      LHostFound := True;
+    end;
+
+    if SameText(FHeaders[LIndex].Name, 'Port') then
+    begin
+      FHeaders[LIndex].Value := FURL.PortNumber.ToString;
+      LPortFound := True;
+    end;
+  end;
+
+  if not LHostFound then
+    FHeaders := FHeaders + [TMARSHeader.Create('Host', FURL.HostName)];
+  if not LPortFound then
+    FHeaders := FHeaders + [TMARSHeader.Create('Port', FURL.PortNumber.ToString)];
+
 end;
 
 destructor TMARSRequestMock.Destroy;
