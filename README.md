@@ -1,4 +1,4 @@
-![GitHub Release Date](https://img.shields.io/github/release-date/andrea-magni/MARS)
+![GitHub Release](https://img.shields.io/github/v/release/andrea-magni/MARS)
 ![GitHub commits since latest release](https://img.shields.io/github/commits-since/andrea-magni/MARS/latest)
 
 
