@@ -27,6 +27,10 @@ type
     procedure FreeAll;
 
     function MockRequestAndResponse(const AMethod, AActualURL: string): TRequestAndResponse;
+    function ResourcePath(
+      const AResource: string;
+      const AProtocol: string = 'http'; const AHostName: string = 'localhost'; const APort: Integer = 8080
+    ): string;
 
 
     property DefaultEngine: TDefaultEngine read FDefaultEngine;
@@ -68,6 +72,16 @@ begin
   Result.Response := TMARSResponseMock.Create();
 end;
 
+function TMARSDefaultEngineFixture.ResourcePath(
+  const AResource: string;
+  const AProtocol: string = 'http'; const AHostName: string = 'localhost'; const APort: Integer = 8080): string;
+begin
+  // 'http://localhost:8080/rest/default/helloworld'
+  var LEngBasePath := DefaultEngine.Engine.BasePath;
+  var LAppBasePath := DefaultEngine.Engine.ApplicationByName('DefaultApp').BasePath;
+  Result := AProtocol + '://' + AHostName + ':' + APort.ToString + LEngBasePath + LAppBasePath + '/' + AResource;
+end;
+
 procedure TMARSDefaultEngineFixture.Setup;
 begin
   FTempObjs := TObjectList.Create(True);
@@ -82,26 +96,25 @@ end;
 
 procedure TMARSDefaultEngineFixture.TestHelloWorld;
 begin
-  var LMock := MockRequestAndResponse('GET', 'http://localhost:8080/rest/default/helloworld');
+  var LMock := MockRequestAndResponse('GET', ResourcePath('helloworld'));
 
   var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
 
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual('Hello, World!', LMock.Response.Content, 'Content should be Hello, World!');
-  Assert.IsNotNull(DefaultEngine.Engine, 'Engine should not be nil');
 end;
 
 procedure TMARSDefaultEngineFixture.TestWildcard;
 begin
-  var LMock := MockRequestAndResponse('GET', 'http://localhost:8080/rest/default/wildcard');
+  var LMock := MockRequestAndResponse('GET', ResourcePath('wildcard'));
 
   var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
 
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.Contains(LMock.Response.ContentType, 'text/html', 'ContentType should be HTML');
   Assert.Contains(LMock.Response.Content, '<html', 'Content should be HTML');
-  Assert.IsNotNull(DefaultEngine.Engine, 'Engine should not be nil');
 end;
 
 initialization

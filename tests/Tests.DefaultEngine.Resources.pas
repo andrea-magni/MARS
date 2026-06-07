@@ -28,7 +28,7 @@ type
   private
   protected
   public
-    [GET]
+    [GET, Produces(TMediaType.TEXT_HTML)]
     function GetContent: string;
   end;
 
