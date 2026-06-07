@@ -1,6 +1,7 @@
-![GitHub Release](https://img.shields.io/github/v/release/andrea-magni/MARS)
-![GitHub commits since latest release](https://img.shields.io/github/commits-since/andrea-magni/MARS/latest)
 
+![GitHub release](https://img.shields.io/github/release/andrea-magni/MARS)
+
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/andrea-magni/MARS/latest)
 
 
 ![MARS-curiosity logo](media/logo-small-MARS.png)
