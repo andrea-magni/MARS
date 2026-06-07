@@ -21,8 +21,6 @@ type
     function GetContent: string;
   end;
 
-
-
   [Path('wildcard/{*}')]
   TWildcardResource = class
   private
@@ -37,7 +35,6 @@ implementation
 uses
   MARS.Core.Registry
 ;
-
 
 { TWildcardResource }
 
