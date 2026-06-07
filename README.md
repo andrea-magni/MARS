@@ -1,6 +1,7 @@
-![](https://img.shields.io/github/v/release/andrea-magni/MARS)
-![](https://img.shields.io/github/release-date/andrea-magni/MARS)
-![](https://img.shields.io/github/commits-since/andrea-magni/MARS/v1.6.4)
+![GitHub Release Date](https://img.shields.io/github/release-date/andrea-magni/MARS)
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/andrea-magni/MARS/latest)
+
+
 
 ![MARS-curiosity logo](media/logo-small-MARS.png)
 
@@ -33,68 +34,6 @@
 ### Bootstrap with MARSCmd
 Check out [MARSCmd utility](Utils/Source/MARScmd). Compile and run MARSCmd to have your first MARS project up and running in just few a clicks.
 
-### Manual approach
-Building a REST server with MARS Curiosity is very easy. To run a simple REST server, just create a new Console Application and use the following code:
-
-```pascal
-program Mars1;
-
-{$APPTYPE CONSOLE}
-
-{$R *.res}
-
-uses
-  System.SysUtils,
-  MARS.Core.Engine,
-  MARS.http.Server.Indy,
-  MARS.mORMotJWT.Token,
-  MARS.Core.MessageBodyWriters,
-  MARS.Core.Attributes,
-  MARS.Core.MediaType,
-  MARS.Core.Registry;
-
-type
-  [Path('helloworld')]
-  THelloWorldResource = class
-  public
-    [GET, Produces(TMediaType.TEXT_PLAIN)]
-    function SayHelloWorld: string;
-  end;
-
-function THelloWorldResource.SayHelloWorld: string;
-begin
-  Result := 'Hello World! Here is MARS Curiosity ...';
-end;
-
-var
-  FEngine: MARS.Core.Engine.TMARSEngine;
-  FServer: MARS.http.Server.Indy.TMARShttpServerIndy;
-begin
-  // ----------------------------------
-  // Register a resource class
-  MARS.Core.Registry.TMARSResourceRegistry.Instance.
-    RegisterResource<THelloWorldResource>;
-  // ----------------------------------
-  // Build and configure the engine
-  FEngine := MARS.Core.Engine.TMARSEngine.Create;
-  FEngine.BasePath := '/rest';
-  FEngine.Port := 8080;
-  FEngine.AddApplication('DefaultAPI', '/default', ['*.THelloWorldResource']);
-  FServer := MARS.http.Server.Indy.TMARShttpServerIndy.Create(FEngine);
-  // ----------------------------------
-  // Run the REST server
-  FServer.Active := True;
-  Writeln ('Server is running ...');
-  Write ('Press Enter to stop ...');
-  Readln;
-  // ----------------------------------
-  // Close the server
-  FServer.Active := False;
-  FreeAndNil(FServer);
-  FreeAndNil(FEngine);
-end.
-```
-
 # Documentation
 
 * [Andrea Magni Blog](http://www.andreamagni.eu)
@@ -104,7 +43,7 @@ end.
 
 ## Forum
 
-Official MARS Curiosity forum at Delphi-Praxis International: https://en.delphipraxis.net/forum/34-mars-curiosity-rest-library/
+Official MARS Curiosity forum at [Delphi-Praxis International](https://en.delphipraxis.net/forum/34-mars-curiosity-rest-library/)
 
 # Contribution
 
