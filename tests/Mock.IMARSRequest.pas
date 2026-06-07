@@ -5,7 +5,7 @@ interface
 uses
   Classes, SysUtils, System.Generics.Collections
 , MARS.Core.RequestAndResponse.Interfaces
-, MARS.Core.URL
+, MARS.Core.URL, MARS.Core.Utils
 ;
 
 type
@@ -19,6 +19,7 @@ type
     FRawContent: TBytes;
     FContent: string;
     FMethod: string;
+    FFormParams: TArray<TFormParam>;
   protected
   public
     // IMARSRequest ------------------------------------------------- BEGIN ----
@@ -120,6 +121,7 @@ begin
   FContent := ABody;
   FQueryParams := [];
   FCookies := [];
+  FFormParams := [];
 
   FURL := TMARSURL.Create(AActualURL);
   const LQueryTokens = FURL.QueryTokens.ToArray;
@@ -204,6 +206,9 @@ end;
 function TMARSRequestMock.GetFilesCount: Integer;
 begin
   Result := 0;
+  for var LIndex := Low(FFormParams) to High(FFormParams) do
+    if FFormParams[LIndex].IsFile then
+      Inc(Result);
 end;
 
 function TMARSRequestMock.GetFormFileParam(const AIndex: Integer;
@@ -211,41 +216,92 @@ function TMARSRequestMock.GetFormFileParam(const AIndex: Integer;
   out AContentType: string): Boolean;
 begin
   Result := False;
+  var LFileParamIndex := 0;
+  for var LIndex := Low(FFormParams) to High(FFormParams) do
+  begin
+    if FFormParams[LIndex].IsFile then
+      Inc(LFileParamIndex);
+
+    if LFileParamIndex = AIndex then
+    begin
+      var LAsFile := FFormParams[LIndex].AsFile;
+
+      AFieldName := LAsFile.FieldName;
+      AFileName := LAsFile.FileName;
+      ABytes := LAsFile.Bytes;
+      AContentType := LAsFile.ContentType;
+      Result := True;
+      Break;
+    end;
+  end;
 end;
 
 function TMARSRequestMock.GetFormFileParamIndex(const AName: string): Integer;
 begin
   Result := -1;
+  var LFileParamIndex := 0;
+  for var LIndex := Low(FFormParams) to High(FFormParams) do
+  begin
+    if FFormParams[LIndex].IsFile then
+      Inc(LFileParamIndex);
+
+    if SameText(FFormParams[LIndex].FieldName, AName) then
+    begin
+      Result := LFileParamIndex;
+      Break;
+    end;
+  end;
 end;
 
 function TMARSRequestMock.GetFormParamCount: Integer;
 begin
-  Result := 0;
+  Result := Length(FFormParams);
 end;
 
 function TMARSRequestMock.GetFormParamIndex(const AName: string): Integer;
 begin
   Result := -1;
+  for var LIndex := Low(FFormParams) to High(FFormParams) do
+  begin
+    if SameText(FFormParams[LIndex].FieldName, AName) then
+    begin
+      Result := LIndex;
+      Break;
+    end;
+  end;
 end;
 
 function TMARSRequestMock.GetFormParamName(const AIndex: Integer): string;
 begin
   Result := '';
+  if (AIndex >= Low(FFormParams)) and (AIndex <= High(FFormParams)) then
+    Result := FFormParams[AIndex].FieldName;
 end;
 
 function TMARSRequestMock.GetFormParams: string;
 begin
-  Result := '';
+  Result := TFormParam.ToString(FFormParams);
 end;
 
 function TMARSRequestMock.GetFormParamValue(const AIndex: Integer): string;
 begin
   Result := '';
+  if (AIndex >= Low(FFormParams)) and (AIndex <= High(FFormParams)) then
+    Result := FFormParams[AIndex].Value.ToString;
 end;
 
 function TMARSRequestMock.GetFormParamValue(const AName: string): string;
 begin
   Result := '';
+  for var LIndex := Low(FFormParams) to High(FFormParams) do
+  begin
+    if SameText(FFormParams[LIndex].FieldName, AName) then
+    begin
+      Result := FFormParams[LIndex].Value.ToString;
+      Break;
+    end;
+  end;
+
 end;
 
 function TMARSRequestMock.GetHeaderParamCount: Integer;
