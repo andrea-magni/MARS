@@ -64,7 +64,7 @@ type
   [TestFixture('Client')]
   TMARSJSONTest = class(TMARSResourceClientTest<TMARSIndyClient, TMARSClientResourceJSON>)
   public
-    [Test, RepeatTest(2), Ignore('TODO')]
+    [Test]
     procedure CustomHeaders;
   end;
 
@@ -147,7 +147,7 @@ begin
   var LResponse := FRequest.Response as TJSONObject;
   var LAccept := LResponse.ReadStringValue('Accept');
 
-  Assert.AreEqual(1, Length(LAccept.Split([','])));
+  Assert.AreEqual('application/json', LAccept);
 end;
 
 
