@@ -131,6 +131,10 @@ begin
       ASchema.SetType('object');
       ASchema.description := 'Schema for type ' + AType.QualifiedName;
 
+      var LTypeDescriptionAttr := AType.GetAttribute<OAPIDescriptionAttribute>;
+      if Assigned(LTypeDescriptionAttr) then
+        ASchema.description := LTypeDescriptionAttr.Value;
+
       for var LMember in AType.GetPropertiesAndFields do
       begin
         if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
@@ -161,6 +165,38 @@ begin
         begin
           var LProperty := ASchema.GetProperty(LJSONName);
           LProperty.SetType(LMember.GetRttiType, AddTo);
+
+          var LDescriptionAttr := LMember.GetAttribute<OAPIDescriptionAttribute>;
+          if Assigned(LDescriptionAttr) then
+            LProperty.description := LDescriptionAttr.Value;
+
+          var LDefaultAttr := LMember.GetAttribute<OAPIDefaultAttribute>;
+          if Assigned(LDefaultAttr) then
+            LProperty.default := LDefaultAttr.Value;
+
+          var LPatternAttr := LMember.GetAttribute<OAPIPatternAttribute>;
+          if Assigned(LPatternAttr) then
+            LProperty.pattern := LPatternAttr.Value;
+
+          var LMinimumAttr := LMember.GetAttribute<OAPIMinimumAttribute>;
+          if Assigned(LMinimumAttr) then
+            LProperty.minimum := LMinimumAttr.Value;
+
+          var LMaximumAttr := LMember.GetAttribute<OAPIMaximumAttribute>;
+          if Assigned(LMaximumAttr) then
+            LProperty.maximum := LMaximumAttr.Value;
+
+          var LMinLengthAttr := LMember.GetAttribute<OAPIMinLengthAttribute>;
+          if Assigned(LMinLengthAttr) then
+            LProperty.minLength := LMinLengthAttr.Value;
+
+          var LMaxLengthAttr := LMember.GetAttribute<OAPIMaxLengthAttribute>;
+          if Assigned(LMaxLengthAttr) then
+            LProperty.maxLength := LMaxLengthAttr.Value;
+
+          var LRequiredAttr := LMember.GetAttribute<OAPIRequiredAttribute>;
+          if Assigned(LRequiredAttr) then
+            LProperty.required := LRequiredAttr.Value;
         end;
       end;
 

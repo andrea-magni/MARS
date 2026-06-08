@@ -6,10 +6,52 @@ uses
   Classes, SysUtils, Generics.Collections, System.Rtti, System.TypInfo
 , MARS.Core.JSON
 {$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
-, MARS.Rtti.Utils
+, MARS.Rtti.Utils, MARS.Core.Attributes
 ;
 
 type
+  OpenAPIAttribute = class(MARSAttribute);
+
+(*
+  Causes: E2086 Type 'OpenAPIValueAttribute<T>' is not yet completely defined at line
+  OpenAPIValueAttribute<T> = class(OpenAPIAttribute)
+  private
+    FValue: T;
+  public
+    constructor Create(const AValue: T);
+    property Value: T read FValue;
+  end;
+*)
+
+  OpenAPIValueAttributeString = class(OpenAPIAttribute)
+  private
+    FValue: string;
+  public
+    constructor Create(const AValue: string);
+    property Value: string read FValue;
+  end;
+
+  OpenAPIValueAttributeBoolean = class(OpenAPIAttribute)
+  private
+    FValue: Boolean;
+  public
+    constructor Create(const AValue: Boolean);
+    property Value: Boolean read FValue;
+  end;
+
+
+  OpenAPIStringValueAttribute = class(OpenAPIValueAttributeString);
+  OpenAPIBooleanValueAttribute = class(OpenAPIValueAttributeBoolean);
+
+  OAPIDescriptionAttribute = class(OpenAPIStringValueAttribute);
+  OAPIPatternAttribute = class(OpenAPIStringValueAttribute);
+  OAPIDefaultAttribute = class(OpenAPIStringValueAttribute);
+  OAPIMinimumAttribute = class(OpenAPIStringValueAttribute);
+  OAPIMaximumAttribute = class(OpenAPIStringValueAttribute);
+  OAPIMinLengthAttribute = class(OpenAPIStringValueAttribute);
+  OAPIMaxLengthAttribute = class(OpenAPIStringValueAttribute);
+  OAPIRequiredAttribute = class(OpenAPIBooleanValueAttribute);
+
   TOpenAPI = class; // fwd
 
   TReferenceableType = class
@@ -731,6 +773,32 @@ begin
     ref := '';
     &type := AType;
   end;
+end;
+
+(*
+{ OpenAPIValueAttribute<T> }
+
+constructor OpenAPIValueAttribute<T>.Create(const AValue: T);
+begin
+  inherited Create;
+  FValue := AValue;
+end;
+*)
+
+{ OpenAPIValueAttributeString }
+
+constructor OpenAPIValueAttributeString.Create(const AValue: string);
+begin
+  inherited Create;
+  FValue := AValue;
+end;
+
+{ OpenAPIValueAttributeBoolean }
+
+constructor OpenAPIValueAttributeBoolean.Create(const AValue: Boolean);
+begin
+  inherited Create;
+  FValue := AValue;
 end;
 
 end.
