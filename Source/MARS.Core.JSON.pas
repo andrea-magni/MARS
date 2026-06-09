@@ -143,7 +143,6 @@ type
     procedure FromArrayOfRecord<T{: record}>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions;
       const AFilterProc: TToJSONFilterProc = nil);
-
     procedure FromArrayOfObject<T: class>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions); overload;
     procedure FromArrayOfObject<T: class>(const AArray: TArray<T>); overload;
@@ -163,6 +162,12 @@ type
       const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
     class function ArrayOfRecordToJSON<T{: record}>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
+
+    class function ArrayOfRecordToJSONString<T{: record}>(const AArray: TArray<T>;
+      const AFilterProc: TToJSONFilterProc = nil): string; overload;
+    class function ArrayOfRecordToJSONString<T{: record}>(const AArray: TArray<T>;
+      const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil): string; overload;
+
 
     class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>): TJSONArray; overload;
     class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>;
@@ -701,6 +706,29 @@ begin
   except
     Result.Free;
     raise;
+  end;
+end;
+
+class function TJSONArrayHelper.ArrayOfRecordToJSONString<T>(
+  const AArray: TArray<T>; const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToJSONFilterProc): string;
+begin
+  var LJSONArray := ArrayOfRecordToJSON<T>(AArray, AOptions, AFilterProc);
+  try
+    Result := LJSONArray.ToJSON;
+  finally
+    FreeAndNil(LJSONArray);
+  end;
+end;
+
+class function TJSONArrayHelper.ArrayOfRecordToJSONString<T>(
+  const AArray: TArray<T>; const AFilterProc: TToJSONFilterProc): string;
+begin
+  var LJSONArray := ArrayOfRecordToJSON<T>(AArray, AFilterProc);
+  try
+    Result := LJSONArray.ToJSON;
+  finally
+    FreeAndNil(LJSONArray);
   end;
 end;
 
