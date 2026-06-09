@@ -458,7 +458,7 @@ begin
     Result.Transaction := ATransaction;
     Result.CommandText.Text := ASQL;
     InjectMacroAndParamValues(Result);
-    if AContextOwned then
+    if AContextOwned and Assigned(Activation) then
       Activation.AddToContext(Result);
   except
     Result.Free;
@@ -476,7 +476,7 @@ begin
     Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result.Command);
-    if AContextOwned then
+    if AContextOwned and Assigned(Activation) then
       Activation.AddToContext(Result);
   except
     Result.Free;
@@ -489,7 +489,7 @@ begin
   Result := TFDTransaction.Create(nil);
   try
     Result.Connection := Connection;
-    if AContextOwned then
+    if AContextOwned and Assigned(Activation) then
       Activation.AddToContext(Result);
   except
     Result.Free;
