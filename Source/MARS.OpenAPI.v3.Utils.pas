@@ -357,7 +357,6 @@ var
   LParam: TParameter;
   LRequestBody: TRequestBody;
   LContent: TMediaTypeObj;
-  LProperty: TSchema;
   LMediaType: string;
   LMetAuthorization: string;
   LHasFormParams: Boolean;
@@ -369,6 +368,45 @@ begin
   AOperation.summary := LMethodSummary;
   AOperation.description := AMet.Description;
   AOperation.tags := [ARes.Path];
+
+  const LMethod = AMet.RttiMethod;
+  var LDescriptionAttr := LMethod.GetAttribute<OAPIDescriptionAttribute>;
+  if Assigned(LDescriptionAttr) then
+    AOperation.description := LDescriptionAttr.Value;
+
+  var LSummaryAttr := LMethod.GetAttribute<OAPISummaryAttribute>;
+  if Assigned(LSummaryAttr) then
+    AOperation.summary := LSummaryAttr.Value;
+    
+
+//  var LDefaultAttr := LMethod.GetAttribute<OAPIDefaultAttribute>;
+//  if Assigned(LDefaultAttr) then
+//    AOperation.default := LDefaultAttr.Value;
+//
+//  var LPatternAttr := LMethod.GetAttribute<OAPIPatternAttribute>;
+//  if Assigned(LPatternAttr) then
+//    AOperation.pattern := LPatternAttr.Value;
+//
+//  var LMinimumAttr := LMethod.GetAttribute<OAPIMinimumAttribute>;
+//  if Assigned(LMinimumAttr) then
+//    AOperation.minimum := LMinimumAttr.Value;
+//
+//  var LMaximumAttr := LMethod.GetAttribute<OAPIMaximumAttribute>;
+//  if Assigned(LMaximumAttr) then
+//    AOperation.maximum := LMaximumAttr.Value;
+//
+//  var LMinLengthAttr := LMethod.GetAttribute<OAPIMinLengthAttribute>;
+//  if Assigned(LMinLengthAttr) then
+//    AOperation.minLength := LMinLengthAttr.Value;
+//
+//  var LMaxLengthAttr := LMethod.GetAttribute<OAPIMaxLengthAttribute>;
+//  if Assigned(LMaxLengthAttr) then
+//    AOperation.maxLength := LMaxLengthAttr.Value;
+//
+//  var LRequiredAttr := LMethod.GetAttribute<OAPIRequiredAttribute>;
+//  if Assigned(LRequiredAttr) then
+//    AOperation.required := LRequiredAttr.Value;
+ 
 
   AMet.ForEachParameter(
     procedure (AParam: TMARSRequestParamMetadata)
@@ -382,6 +420,43 @@ begin
         LParam.description := AParam.Description;
         LParam.schema.SetType(AParam.DataTypeRttiType, Self);
         LParam.required := AParam.Required;
+
+        const LParameter = AParam.RttiParameter;
+        var LDescriptionAttr := LParameter.GetAttribute<OAPIDescriptionAttribute>;
+        if Assigned(LDescriptionAttr) then
+          LParam.description := LDescriptionAttr.Value;
+        
+        var LDefaultAttr := LParameter.GetAttribute<OAPIDefaultAttribute>;
+        if Assigned(LDefaultAttr) then
+          LParam.schema.default := LDefaultAttr.Value;
+
+        var LPatternAttr := LParameter.GetAttribute<OAPIPatternAttribute>;
+        if Assigned(LPatternAttr) then
+          LParam.schema.pattern := LPatternAttr.Value;
+
+        var LMinimumAttr := LParameter.GetAttribute<OAPIMinimumAttribute>;
+        if Assigned(LMinimumAttr) then
+          LParam.schema.minimum := LMinimumAttr.Value;
+
+        var LMaximumAttr := LParameter.GetAttribute<OAPIMaximumAttribute>;
+        if Assigned(LMaximumAttr) then
+          LParam.schema.maximum := LMaximumAttr.Value;
+
+        var LMinLengthAttr := LParameter.GetAttribute<OAPIMinLengthAttribute>;
+        if Assigned(LMinLengthAttr) then
+          LParam.schema.minLength := LMinLengthAttr.Value;
+
+        var LMaxLengthAttr := LParameter.GetAttribute<OAPIMaxLengthAttribute>;
+        if Assigned(LMaxLengthAttr) then
+          LParam.schema.maxLength := LMaxLengthAttr.Value;
+
+        var LRequiredAttr := LParameter.GetAttribute<OAPIRequiredAttribute>;
+        if Assigned(LRequiredAttr) then
+        begin
+          LParam.required := LRequiredAttr.Value;
+          LParam.schema.required := LRequiredAttr.Value;          
+        end;
+
       end;
     end);
 
@@ -401,7 +476,7 @@ begin
         LHasFormParams := False;
         for LParamMD in AMet.ParametersByKind('FormParam') do
         begin
-          LProperty := LContent.schema.GetProperty(LParamMD.Name);
+          var LProperty := LContent.schema.GetProperty(LParamMD.Name);
           LProperty.description := LParamMD.Description;
           LProperty.SetType(LParamMD.DataTypeRttiType, Self);
           LHasFormParams := True;

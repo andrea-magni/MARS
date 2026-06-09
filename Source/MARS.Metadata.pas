@@ -63,6 +63,7 @@ type
     DataType: string;
     DataTypeRttiType: TRttiType;
     Required: Boolean;
+    RttiParameter: TRttiParameter;
 
     constructor Create(const AParent: TMARSMetadata); override;
   end;
@@ -81,6 +82,7 @@ type
     HttpMethod: string;
     DataType: string;
     DataTypeRttiType: TRttiType;
+    RttiMethod: TRttiMethod;
 
     constructor Create(const AParent: TMARSMetadata); override;
     destructor Destroy; override;
@@ -115,6 +117,8 @@ type
     function GetApplication: TMARSApplicationMetadata;
     property Application: TMARSApplicationMetadata read GetApplication;
   public
+    RttiType: TRttiType;
+
     constructor Create(const AParent: TMARSMetadata); override;
     destructor Destroy; override;
 

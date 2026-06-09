@@ -115,6 +115,7 @@ var
 begin
   LMethodMetadata := TMARSMethodMetadata.Create(AResourceMetadata);
   try
+    LMethodMetadata.RttiMethod := AMethod;
     LMethodMetadata.Name := AMethod.Name;
     LMethodMetadata.Path := PathAttribute.RetrieveValue(AMethod);
     LMethodMetadata.Summary := MetaSummaryAttribute.RetrieveText(AMethod);
@@ -207,6 +208,7 @@ begin
     begin
       LRequestParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
       try
+        LRequestParamMetadata.RttiParameter := AParameter;
         LRequestParamMetadata.Summary := '';
         AMethod.HasAttribute<MetaSummaryAttribute>(
           procedure (Attribute: MetaSummaryAttribute)
@@ -252,6 +254,7 @@ begin
 
   LResourceMetadata := TMARSResourceMetadata.Create(AApplicationMetadata);
   try
+    LResourceMetadata.RttiType := LResourceType;
     LResourceMetadata.Path := AResourceInfo.Path;
     LResourceMetadata.Name := LResourceType.Name;
 

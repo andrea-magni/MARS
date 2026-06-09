@@ -44,6 +44,7 @@ type
   OpenAPIBooleanValueAttribute = class(OpenAPIValueAttributeBoolean);
 
   OAPIDescriptionAttribute = class(OpenAPIStringValueAttribute);
+  OAPISummaryAttribute = class(OpenAPIStringValueAttribute);
   OAPIPatternAttribute = class(OpenAPIStringValueAttribute);
   OAPIDefaultAttribute = class(OpenAPIStringValueAttribute);
   OAPIMinimumAttribute = class(OpenAPIStringValueAttribute);
