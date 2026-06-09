@@ -168,6 +168,11 @@ type
     class function ArrayOfRecordToJSONString<T{: record}>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil): string; overload;
 
+    class function JSONStringToArrayOfRecord<T{: record}>(const AJSONString: string;
+      const AFilterProc: TToRecordFilterProc = nil): TArray<T>; overload;
+    class function JSONStringToArrayOfRecord<T{: record}>(const AJSONString: string;
+      const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToRecordFilterProc = nil): TArray<T>; overload;
+
 
     class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>): TJSONArray; overload;
     class function ArrayOfObjectToJSON<T: class>(const AArray: TArray<T>;
@@ -790,6 +795,34 @@ begin
       LObj.Free;
       raise;
     end;
+  end;
+end;
+
+
+class function TJSONArrayHelper.JSONStringToArrayOfRecord<T>(
+  const AJSONString: string; const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToRecordFilterProc): TArray<T>;
+var
+  LJSONArray: TJSONArray;
+begin
+  LJSONArray := TJSONObject.ParseJSONValue(AJSONString) as TJSONArray;
+  try
+    Result := LJSONArray.ToArrayOfRecord<T>(AOptions{, AFilterProc});
+  finally
+    LJSONArray.Free;
+  end;
+end;
+
+class function TJSONArrayHelper.JSONStringToArrayOfRecord<T>(
+  const AJSONString: string; const AFilterProc: TToRecordFilterProc): TArray<T>;
+var
+  LJSONArray: TJSONArray;
+begin
+  LJSONArray := TJSONObject.ParseJSONValue(AJSONString) as TJSONArray;
+  try
+    Result := LJSONArray.ToArrayOfRecord<T>({, AFilterProc});
+  finally
+    LJSONArray.Free;
   end;
 end;
 
