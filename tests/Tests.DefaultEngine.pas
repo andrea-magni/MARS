@@ -4,7 +4,7 @@ interface
 
 uses
   Classes, SysUtils, Rtti, Types, TypInfo, Contnrs
-, DUnitX.TestFramework, Delphi.Mocks
+, DUnitX.TestFramework
 , MARS.Core.Activation, MARS.Core.Activation.Interfaces
 , MARS.Core.RequestAndResponse.Interfaces
 
