@@ -58,6 +58,11 @@ constructor TDefaultEngine.Create;
 begin
   inherited Create;
 
+  // cleanup
+  TMARSActivation.ClearBeforeInvokes;
+  TMARSActivation.ClearAfterInvokes;
+  TMARSActivation.ClearInvokeErrors;
+
   FEngine := TMARSEngine.Create;
 
   // Engine configuration
