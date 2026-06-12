@@ -116,7 +116,10 @@ type
     procedure LoadFromINIFile(AIniFileContent: string; AMemberName: string; AMemberType: string);
 
     [Test]
-    procedure Test1;
+    procedure TestTypes;
+
+    [Test]
+    procedure TestFromJSON;
 
   end;
 
@@ -186,7 +189,69 @@ begin
   end;
 end;
 
-procedure TMARSParametersFixture.Test1;
+procedure TMARSParametersFixture.TestFromJSON;
+begin
+ const JSONString =
+ '''
+   {
+        "CO_dataInizio": "20240101",
+        "iss": "Abracadabra",
+        "CO_dataFine": "22001231",
+        "idAzienda": "142",
+        "BackOffice": "false",
+        "CO_tipoSoggetto": "operatore",
+        "duration": 10.0,
+        "RE_dataFine": "22001231",
+        "idCliente": "232",
+        "RE_tipoSoggetto": "operatore",
+        "RE_idServizio": 117,
+        "exp": 1782056814,
+        "iat": 1781192814,
+        "Roles": "user",
+        "CO_idServizio": 391,
+        "RE_dataInizio": "20240101",
+        "idUtente": 142,
+        "UserName": "aaaaaaaaaa72410BBD7EAE05C72F4bbbbbbbbbb"
+    }
+ ''';
+
+ TMARSParametersJSONReaderWriter.CustomLoadFunc :=
+   function (const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string): Boolean
+   begin
+     Result := True; // inhibits default behavior
+
+     for var LPair in ASource do
+     begin
+        var LName := AParameters.CombineSliceAndParamName(ASliceName, LPair.JsonString.Value);
+        var LValue: TValue := TValue.Empty;
+
+        if LName.StartsWith('id') then
+          LValue := StrToIntDef(ASource.ReadStringValue(LName, '0'), 0)
+        else
+          LValue := ASource.ReadValue(LName, TValue.Empty, DefaultMARSJSONSerializationOptions);
+        AParameters.Values[LName] := LValue;
+     end;
+   end;
+  try
+
+    var LParameters := TMARSParameters.Create('Test');
+    try
+      LParameters.LoadFromJSON(JSONString);
+
+      var LInteger1 := LParameters.Values[ 'idCliente' ].AsInteger;
+      var LInteger2 := LParameters.Values[ 'idAzienda' ].AsInteger;
+
+      Assert.AreEqual(232, LInteger1, 'idCliente differs');
+      Assert.AreEqual(142, LInteger2, 'idAzienda differs');
+    finally
+      FreeAndNil(LParameters);
+    end;
+  finally
+    TMARSParametersJSONReaderWriter.CustomLoadFunc := nil;
+  end;
+end;
+
+procedure TMARSParametersFixture.TestTypes;
 begin
   var LContext := TRttiContext.Create;
 

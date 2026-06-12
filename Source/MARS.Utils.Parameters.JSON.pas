@@ -11,17 +11,23 @@ uses
 
 type
   TMARSParametersJSONReaderWriter=class
+  public
+    type TCustomLoadFunc = reference to function(const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string): Boolean;
   private
+    class var FCustomLoadFunc: TCustomLoadFunc;
   protected
   public
     class procedure Load(const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string = '');
     class function Save(const AParameters: TMARSParameters): TJSONObject; overload;
     class procedure Save(const AParameters: TMARSParameters; ADestination: TJSONObject); overload;
+
+    class property CustomLoadFunc: TCustomLoadFunc read FCustomLoadFunc write FCustomLoadFunc;
   end;
 
   TMARSParametersJSONReaderWriterHelper=class helper for TMARSParameters
   public
-    procedure LoadFromJSON(const ASource: TJSONObject);
+    procedure LoadFromJSON(const AJSONString: string); overload;
+    procedure LoadFromJSON(const ASource: TJSONObject); overload;
     function SaveToJSON: TJSONObject; overload;
     procedure SaveToJSON(ADestination: TJSONObject); overload;
   end;
@@ -40,32 +46,21 @@ uses
 
 class procedure TMARSParametersJSONReaderWriter.Load(
   const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string);
-var
-  LPair: TJSONPair;
-  LValue: TValue;
-  LName: string;
-{$ifndef DelphiXE6_UP}
-  LIndex: Integer;
-{$endif}
 begin
-  if Assigned(ASource) then
-  begin
-{$ifdef DelphiXE6_UP}
-    for LPair in ASource do
+  if not Assigned(ASource) then
+    Exit;
+
+  var LDone := False;
+  if Assigned(CustomLoadFunc) then
+    LDone := CustomLoadFunc(AParameters, ASource, ASliceName);
+
+  if not LDone then
+    for var LPair in ASource do
     begin
-{$else}
-    for LIndex := 0 to ASource.Size - 1 do
-    begin
-      LPair := ASource.Get(LIndex);
-{$endif}
-
-      LName := AParameters.CombineSliceAndParamName(ASliceName, LPair.JsonString.Value);
-
-      LValue := ASource.ReadValue(LName, TValue.Empty, DefaultMARSJSONSerializationOptions);
-
+      var LName := AParameters.CombineSliceAndParamName(ASliceName, LPair.JsonString.Value);
+      var LValue := ASource.ReadValue(LName, TValue.Empty, DefaultMARSJSONSerializationOptions);
       AParameters.Values[LName] := LValue;
     end;
-  end;
 end;
 
 class function TMARSParametersJSONReaderWriter.Save(
@@ -110,6 +105,17 @@ end;
 function TMARSParametersJSONReaderWriterHelper.SaveToJSON: TJSONObject;
 begin
   Result := TMARSParametersJSONReaderWriter.Save(Self);
+end;
+
+procedure TMARSParametersJSONReaderWriterHelper.LoadFromJSON(
+  const AJSONString: string);
+begin
+  var LJSONObj := TJSONObject.ParseJSONValue(AJSONString) as TJSONObject;
+  try
+    LoadFromJSON(LJSONObj);
+  finally
+    FreeAndNil(LJSONObj);
+  end;
 end;
 
 procedure TMARSParametersJSONReaderWriterHelper.SaveToJSON(
