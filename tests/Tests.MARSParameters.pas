@@ -130,7 +130,7 @@ implementation
 uses
   IniFiles, IOUtils
 , MARS.Core.Utils
-, MARS.Core.JSON
+, System.JSON, MARS.Core.JSON
 ;
 
 { TMARSParametersFixture }
