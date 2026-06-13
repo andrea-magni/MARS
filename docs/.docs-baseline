@@ -1,0 +1,9 @@
+# Documentation sync baseline
+#
+# This is the git commit the Markdown content under docs/ is aligned to.
+# When refreshing the docs from source, diff Source/ and Demos/ against this
+# commit, update only the affected pages, then move this baseline forward to
+# the new HEAD. See REGEN.md for the workflow.
+
+commit=72d89e5ec2b629e6911a09c20b1af680e383f5b6
+date=2026-06-13
