@@ -1,0 +1,34 @@
+version: 2
+updates:
+  # Documentation toolchain (VitePress and its dependencies) under docs/.
+  # When VitePress ships a release that bumps vite/esbuild, Dependabot opens
+  # a ready-to-merge PR — review it, then run docs/build.cmd to confirm green.
+  - package-ecosystem: npm
+    directory: /docs
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - documentation
+    commit-message:
+      prefix: "docs(deps)"
+    groups:
+      # One PR for routine minor/patch bumps to keep the noise down.
+      docs-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Keep the GitHub Actions used by the Pages deploy workflow up to date.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: "ci(deps)"
