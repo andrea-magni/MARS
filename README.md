@@ -17,6 +17,8 @@
 
 [More features ...](./docs/MainFeatures.md)
 
+📖 **Read the documentation: [andrea-magni.github.io/MARS](https://andrea-magni.github.io/MARS/)**
+
 # Installation
 
 1. Just run [the setup of the latest release](https://github.com/andrea-magni/MARS/releases/latest)
@@ -37,10 +39,11 @@ Check out [MARSCmd utility](Utils/Source/MARScmd). Compile and run MARSCmd to ha
 
 # Documentation
 
+* 📖 **[MARS Documentation Site](https://andrea-magni.github.io/MARS/)** — guide, server & client reference, features and demos
 * [Andrea Magni Blog](http://www.andreamagni.eu)
 * [More demos and templates](./docs/Demos.md)
 
-* [MARS Documentation Page](./docs/README.md) TBD
+The documentation site is built with [VitePress](https://vitepress.dev/) from the [`docs/`](./docs) folder and is published automatically to GitHub Pages on every change.
 
 ## Forum
 
