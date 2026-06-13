@@ -170,33 +170,7 @@ begin
           if Assigned(LDescriptionAttr) then
             LProperty.description := LDescriptionAttr.Value;
 
-          var LDefaultAttr := LMember.GetAttribute<OAPIDefaultAttribute>;
-          if Assigned(LDefaultAttr) then
-            LProperty.default := LDefaultAttr.Value;
-
-          var LPatternAttr := LMember.GetAttribute<OAPIPatternAttribute>;
-          if Assigned(LPatternAttr) then
-            LProperty.pattern := LPatternAttr.Value;
-
-          var LMinimumAttr := LMember.GetAttribute<OAPIMinimumAttribute>;
-          if Assigned(LMinimumAttr) then
-            LProperty.minimum := LMinimumAttr.Value;
-
-          var LMaximumAttr := LMember.GetAttribute<OAPIMaximumAttribute>;
-          if Assigned(LMaximumAttr) then
-            LProperty.maximum := LMaximumAttr.Value;
-
-          var LMinLengthAttr := LMember.GetAttribute<OAPIMinLengthAttribute>;
-          if Assigned(LMinLengthAttr) then
-            LProperty.minLength := LMinLengthAttr.Value;
-
-          var LMaxLengthAttr := LMember.GetAttribute<OAPIMaxLengthAttribute>;
-          if Assigned(LMaxLengthAttr) then
-            LProperty.maxLength := LMaxLengthAttr.Value;
-
-          var LRequiredAttr := LMember.GetAttribute<OAPIRequiredAttribute>;
-          if Assigned(LRequiredAttr) then
-            LProperty.required := LRequiredAttr.Value;
+          LProperty.FillFromAttributes(LMember);
         end;
       end;
 
@@ -377,7 +351,6 @@ begin
   var LSummaryAttr := LMethod.GetAttribute<OAPISummaryAttribute>;
   if Assigned(LSummaryAttr) then
     AOperation.summary := LSummaryAttr.Value;
-    
 
 //  var LDefaultAttr := LMethod.GetAttribute<OAPIDefaultAttribute>;
 //  if Assigned(LDefaultAttr) then
@@ -425,38 +398,10 @@ begin
         var LDescriptionAttr := LParameter.GetAttribute<OAPIDescriptionAttribute>;
         if Assigned(LDescriptionAttr) then
           LParam.description := LDescriptionAttr.Value;
-        
-        var LDefaultAttr := LParameter.GetAttribute<OAPIDefaultAttribute>;
-        if Assigned(LDefaultAttr) then
-          LParam.schema.default := LDefaultAttr.Value;
 
-        var LPatternAttr := LParameter.GetAttribute<OAPIPatternAttribute>;
-        if Assigned(LPatternAttr) then
-          LParam.schema.pattern := LPatternAttr.Value;
+        LParam.schema.FillFromAttributes(LParameter);
 
-        var LMinimumAttr := LParameter.GetAttribute<OAPIMinimumAttribute>;
-        if Assigned(LMinimumAttr) then
-          LParam.schema.minimum := LMinimumAttr.Value;
-
-        var LMaximumAttr := LParameter.GetAttribute<OAPIMaximumAttribute>;
-        if Assigned(LMaximumAttr) then
-          LParam.schema.maximum := LMaximumAttr.Value;
-
-        var LMinLengthAttr := LParameter.GetAttribute<OAPIMinLengthAttribute>;
-        if Assigned(LMinLengthAttr) then
-          LParam.schema.minLength := LMinLengthAttr.Value;
-
-        var LMaxLengthAttr := LParameter.GetAttribute<OAPIMaxLengthAttribute>;
-        if Assigned(LMaxLengthAttr) then
-          LParam.schema.maxLength := LMaxLengthAttr.Value;
-
-        var LRequiredAttr := LParameter.GetAttribute<OAPIRequiredAttribute>;
-        if Assigned(LRequiredAttr) then
-        begin
-          LParam.required := LRequiredAttr.Value;
-          LParam.schema.required := LRequiredAttr.Value;          
-        end;
-
+        LParam.required := LParam.schema.required;
       end;
     end);
 
@@ -479,6 +424,16 @@ begin
           var LProperty := LContent.schema.GetProperty(LParamMD.Name);
           LProperty.description := LParamMD.Description;
           LProperty.SetType(LParamMD.DataTypeRttiType, Self);
+
+          if Assigned(LParamMD.RttiParameter) then
+          begin
+            LDescriptionAttr := LParamMD.RttiParameter.GetAttribute<OAPIDescriptionAttribute>;
+            if Assigned(LDescriptionAttr) then
+              LProperty.description := LDescriptionAttr.Value;
+
+            LContent.schema.FillFromAttributes(LParamMD.RttiParameter);
+          end;
+
           LHasFormParams := True;
         end;
         if not LHasFormParams then
@@ -492,6 +447,14 @@ begin
 //            else begin
               LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
               LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
+              if Assigned(LParamMD.RttiParameter) then
+              begin
+                LDescriptionAttr := LParamMD.RttiParameter.GetAttribute<OAPIDescriptionAttribute>;
+                if Assigned(LDescriptionAttr) then
+                  LRequestBody.description := LDescriptionAttr.Value;
+
+                LContent.schema.FillFromAttributes(LParamMD.RttiParameter);
+              end;
 //            end;
           end;
       end
@@ -504,24 +467,31 @@ begin
           LRequestBody.description := LParamMD.Description;
           if LRequestBody.description = ''then
             LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
+          if Assigned(LParamMD.RttiParameter) then
+          begin
+            LDescriptionAttr := LParamMD.RttiParameter.GetAttribute<OAPIDescriptionAttribute>;
+            if Assigned(LDescriptionAttr) then
+              LRequestBody.description := LDescriptionAttr.Value;
+
+            LContent.schema.FillFromAttributes(LParamMD.RttiParameter);
+          end;
         end;
       end;
     end;
   end;
 
+  // responses
   LResponse := AOperation.AddResponse('200');
   LResponse.description := 'Successful response';
   for LMediaType in AMet.Produces.Split([',']) do
-  begin
-    LResponse.AddContent(LMediaType)
-      .schema.SetType(AMet.DataTypeRttiType, Self)
-  end;
+    LResponse.AddContent(LMediaType).schema.SetType(AMet.DataTypeRttiType, Self);
+
   if LResponse.content.Count = 0 then
-    LResponse.AddContent('*/*')
-        .schema.SetType(AMet.DataTypeRttiType, Self);
+    LResponse.AddContent('*/*').schema.SetType(AMet.DataTypeRttiType, Self);
 
   AOperation.AddResponse('500').description := 'Internal server error';
 
+  // authorization
   LMetAuthorization := AMet.FullAuthorization;
   if LMetAuthorization <> '' then //AM TODO Check what happens with Deny DenyAll etc
   begin
