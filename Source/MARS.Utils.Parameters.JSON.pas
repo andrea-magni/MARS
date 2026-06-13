@@ -12,9 +12,12 @@ uses
 type
   TMARSParametersJSONReaderWriter=class
   public
-    type TCustomLoadFunc = reference to function(const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string): Boolean;
+    type
+      TCustomLoadFunc = reference to function(const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string): Boolean;
+      TCustomSaveFunc = reference to function(const AParameters: TMARSParameters; const ADestination: TJSONObject): Boolean;
   private
     class var FCustomLoadFunc: TCustomLoadFunc;
+    class var FCustomSaveFunc: TCustomSaveFunc;
   protected
   public
     class procedure Load(const AParameters: TMARSParameters; const ASource: TJSONObject; const ASliceName: string = '');
@@ -22,6 +25,7 @@ type
     class procedure Save(const AParameters: TMARSParameters; ADestination: TJSONObject); overload;
 
     class property CustomLoadFunc: TCustomLoadFunc read FCustomLoadFunc write FCustomLoadFunc;
+    class property CustomSaveFunc: TCustomSaveFunc read FCustomSaveFunc write FCustomSaveFunc;
   end;
 
   TMARSParametersJSONReaderWriterHelper=class helper for TMARSParameters
@@ -50,17 +54,21 @@ begin
   if not Assigned(ASource) then
     Exit;
 
+  // custom behavior?
   var LDone := False;
   if Assigned(CustomLoadFunc) then
     LDone := CustomLoadFunc(AParameters, ASource, ASliceName);
 
-  if not LDone then
-    for var LPair in ASource do
-    begin
-      var LName := AParameters.CombineSliceAndParamName(ASliceName, LPair.JsonString.Value);
-      var LValue := ASource.ReadValue(LName, TValue.Empty, DefaultMARSJSONSerializationOptions);
-      AParameters.Values[LName] := LValue;
-    end;
+  if LDone then
+    Exit;
+
+  // default behavior
+  for var LPair in ASource do
+  begin
+    var LName := AParameters.CombineSliceAndParamName(ASliceName, LPair.JsonString.Value);
+    var LValue := ASource.ReadValue(LName, TValue.Empty, DefaultMARSJSONSerializationOptions);
+    AParameters.Values[LName] := LValue;
+  end;
 end;
 
 class function TMARSParametersJSONReaderWriter.Save(
@@ -85,7 +93,15 @@ begin
   Assert(Assigned(AParameters));
   Assert(Assigned(ADestination));
 
+  // custom behavior?
+  var LDone := False;
+  if Assigned(CustomSaveFunc) then
+    LDone := CustomSaveFunc(AParameters, ADestination);
 
+  if LDone then
+    Exit;
+
+  // default behavior
   for LPair in AParameters do
   begin
     TMARSParameters.GetSliceAndParamName(LPair.Key, LSlice, LParamName);

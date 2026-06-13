@@ -119,8 +119,9 @@ type
     procedure TestTypes;
 
     [Test]
-    procedure TestFromJSON;
-
+    procedure CustomLoadFromJSON;
+    [Test]
+    procedure CustomSaveToJSON;
   end;
 
 implementation
@@ -134,62 +135,7 @@ uses
 
 { TMARSParametersFixture }
 
-procedure TMARSParametersFixture.LoadFromINIFile(AIniFileContent, AMemberName,
-  AMemberType: string);
-begin
-  const LTempIniFileName = TPath.GetTempFileName;
-
-  TFile.WriteAllText(LTempIniFileName, AIniFileContent, TEncoding.UTF8);
-  try
-    var LParameters := TMARSParameters.Create('Test');
-    try
-//      LParameters.LoadFromIniFile(LTempIniFileName);
-      TMARSParametersIniFileReaderWriter.Load(LParameters, LTempIniFileName);
-
-      var LParameterValue := LParameters.ByName(AMemberName);
-      Assert.IsFalse(LParameterValue.IsEmpty, 'Parameter value is empty');
-
-      var LContext := TRttiContext.Create;
-      var LRttiType := LContext.GetType(LParameterValue.TypeInfo);
-      var LRttiTypeName := LRttiType.Name;
-
-      Assert.AreEqual(AMemberType, LRttiTypeName, 'Type differs ' + AMemberName + ' ' + AMemberType);
-
-    finally
-      LParameters.Free;
-    end;
-  finally
-    TFIle.Delete(LTempIniFileName);
-  end;
-end;
-
-procedure TMARSParametersFixture.LoadFromJSON(AJSONString: string; AMemberName: string; AMemberType: string);
-begin
-  var LJSONObject := TJSONObject.ParseJSONValue(AJSONString) as TJSONObject;
-  try
-    var LParameters := TMARSParameters.Create('Test');
-    try
-//      LParameters.LoadFromJSON(LJSONObject);
-      TMARSParametersJSONReaderWriter.Load(LParameters, LJSONObject);
-
-      var LParameterValue := LParameters.ByName(AMemberName);
-      Assert.IsFalse(LParameterValue.IsEmpty, 'Parameter value is empty');
-
-      var LContext := TRttiContext.Create;
-      var LRttiType := LContext.GetType(LParameterValue.TypeInfo);
-      var LRttiTypeName := LRttiType.Name;
-
-      Assert.AreEqual(AMemberType, LRttiTypeName, 'Type differs');
-
-    finally
-      LParameters.Free;
-    end;
-  finally
-    LJSONObject.Free;
-  end;
-end;
-
-procedure TMARSParametersFixture.TestFromJSON;
+procedure TMARSParametersFixture.CustomLoadFromJSON;
 begin
  const JSONString =
  '''
@@ -248,6 +194,102 @@ begin
     end;
   finally
     TMARSParametersJSONReaderWriter.CustomLoadFunc := nil;
+  end;
+end;
+
+procedure TMARSParametersFixture.CustomSaveToJSON;
+begin
+  TMARSParametersJSONReaderWriter.CustomSaveFunc :=
+    function (const AParameters: TMARSParameters; const ADestination: TJSONObject): Boolean
+    begin
+      Result := True; // inhibits default behavior
+
+      for var LPair in AParameters do
+      begin
+        var LValue := LPair.Value;
+        if LValue.IsType<string> then
+          LValue := LValue.AsString.ToUpper;
+
+        ADestination.WriteTValue(LPair.Key, LValue)
+      end;
+    end;
+  try
+
+    var LParameters := TMARSParameters.Create('Test');
+    try
+     LParameters.Values[ 'idCliente' ] := 232;
+     LParameters.Values[ 'idAzienda' ] := 142;
+     LParameters.Values[ 'myString' ] := 'Andrea';
+
+      var LJSON := LParameters.SaveToJSON;
+      try
+        Assert.AreEqual(232, LJSON.ReadIntegerValue('idCliente'), 'idCliente differs');
+        Assert.AreEqual(142, LJSON.ReadIntegerValue('idAzienda'), 'idAzienda differs');
+        Assert.AreEqual('ANDREA', LJSON.ReadStringValue('myString'), False, 'myString differs');
+      finally
+        FreeAndNil(LJSON);
+      end;
+
+    finally
+      FreeAndNil(LParameters);
+    end;
+  finally
+    TMARSParametersJSONReaderWriter.CustomSaveFunc := nil;
+  end;
+end;
+
+procedure TMARSParametersFixture.LoadFromINIFile(AIniFileContent, AMemberName,
+  AMemberType: string);
+begin
+  const LTempIniFileName = TPath.GetTempFileName;
+
+  TFile.WriteAllText(LTempIniFileName, AIniFileContent, TEncoding.UTF8);
+  try
+    var LParameters := TMARSParameters.Create('Test');
+    try
+//      LParameters.LoadFromIniFile(LTempIniFileName);
+      TMARSParametersIniFileReaderWriter.Load(LParameters, LTempIniFileName);
+
+      var LParameterValue := LParameters.ByName(AMemberName);
+      Assert.IsFalse(LParameterValue.IsEmpty, 'Parameter value is empty');
+
+      var LContext := TRttiContext.Create;
+      var LRttiType := LContext.GetType(LParameterValue.TypeInfo);
+      var LRttiTypeName := LRttiType.Name;
+
+      Assert.AreEqual(AMemberType, LRttiTypeName, 'Type differs ' + AMemberName + ' ' + AMemberType);
+
+    finally
+      LParameters.Free;
+    end;
+  finally
+    TFIle.Delete(LTempIniFileName);
+  end;
+end;
+
+procedure TMARSParametersFixture.LoadFromJSON(AJSONString: string; AMemberName: string; AMemberType: string);
+begin
+  var LJSONObject := TJSONObject.ParseJSONValue(AJSONString) as TJSONObject;
+  try
+    var LParameters := TMARSParameters.Create('Test');
+    try
+//      LParameters.LoadFromJSON(LJSONObject);
+      TMARSParametersJSONReaderWriter.Load(LParameters, LJSONObject);
+
+      var LParameterValue := LParameters.ByName(AMemberName);
+      Assert.IsFalse(LParameterValue.IsEmpty, 'Parameter value is empty');
+
+      var LContext := TRttiContext.Create;
+      var LRttiType := LContext.GetType(LParameterValue.TypeInfo);
+      var LRttiTypeName := LRttiType.Name;
+
+      Assert.AreEqual(AMemberType, LRttiTypeName, 'Type differs');
+
+    finally
+      LParameters.Free;
+    end;
+  finally
+    LJSONObject.Free;
   end;
 end;
 
