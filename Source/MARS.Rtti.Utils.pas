@@ -36,6 +36,10 @@ type
 
     function GetAllAttributes(const AInherited: Boolean = False): TArray<TCustomAttribute>; inline;
 
+    {$IFNDEF Delphi11Alexandria_UP}
+    function GetAttribute<T: TCustomAttribute>(): T;
+    {$ENDIF}
+
     function ForEachAttribute<T: TCustomAttribute>(
       const ADoSomething: TProc<T>; const AInherited: Boolean = False): Integer; overload; inline;
     function ForEachAttribute<T: TCustomAttribute>(
@@ -464,6 +468,20 @@ begin
     begin
      Result := Result + LBaseType.GetAttributes;
      LBaseType := LBaseType.BaseType;
+    end;
+  end;
+end;
+
+function TRttiObjectHelper.GetAttribute<T>: T;
+var LAttribute: TCustomAttribute;
+begin
+  Result := nil;
+  for LAttribute in GetAttributes do
+  begin
+    if LAttribute is T then
+    begin
+      Result := T(LAttribute);
+      Break;
     end;
   end;
 end;
