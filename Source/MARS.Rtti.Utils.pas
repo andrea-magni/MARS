@@ -472,6 +472,7 @@ begin
   end;
 end;
 
+{$IFNDEF Delphi11Alexandria_UP}
 function TRttiObjectHelper.GetAttribute<T>: T;
 var LAttribute: TCustomAttribute;
 begin
@@ -485,6 +486,7 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
 function TRttiObjectHelper.GetRttiType: TRttiType;
 begin
