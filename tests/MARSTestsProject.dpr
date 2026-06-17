@@ -14,6 +14,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   DUnitX.Loggers.Console,
+  DUnitX.Loggers.XML.NUnit,
   Tests.Core in 'Tests.Core.pas',
   Tests.MessageBodyWriters in 'Tests.MessageBodyWriters.pas',
   Tests.MessageBodyReaders in 'Tests.MessageBodyReaders.pas',
@@ -41,7 +42,11 @@ begin
 {$ELSE}
 var LResults: IRunResults;
 begin
-  LResults := TDUnitX.CreateRunner([TDUnitXConsoleLogger.Create()]).Execute;
+  LResults := TDUnitX.CreateRunner([
+    TDUnitXConsoleLogger.Create(),
+    TDUnitXXMLNUnitFileLogger.Create()
+  ]).Execute;
+
 //  if (LResults.ErrorCount > 0) or (LResults.FailureCount > 0) then
     Readln;
 {$ENDIF}
