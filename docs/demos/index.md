@@ -25,29 +25,6 @@ raise EMARSWithResponseException.Create('Error Message!',
   TValue.From<TErrorDetails>(LErrorDetails), 530, 'The reason of the error');
 ```
 
-## NewAttributesDemo
-
-The collection parameter binders that expose *all* request values at once: `[PathParams]`, `[Headers]`, `[QueryParams]`, `[Cookies]`. See [Attributes](/server/attributes#collection-binders).
-
-```pascal
-[GET, Path('/{name}/{surname}'), Produces(TMediaType.TEXT_PLAIN)]
-function SayHelloWorld(
-  [PathParams]  AParams: TMARSPathParams;
-  [Headers]     AHeaders: TMARSHeaders;
-  [QueryParams] AQueryParams: TMARSQueryParams;
-  [Cookies]     ACookies: TMARSCookies): string;
-```
-
-## ContentTypesDemo
-
-Serving binary content (images) with explicit MIME types and content negotiation, returning a `TStream` from the file system and setting the response content type. See [Resources](/server/resources#return-types-and-serialization).
-
-```pascal
-[GET, Path('binary/{collectionName}/{itemName}'), Produces('image/jpeg')]
-function RetrieveImage([PathParam] collectionName, itemName: string;
-  [Context] Response: IMARSResponse): TStream;
-```
-
 ## SSEDemo
 
 Server-Sent Events: a resource that pushes a `heartbeat` event every second over a persistent connection, plus a static HTML page that consumes it with the browser `EventSource`. See [Server-Sent Events](/features/sse).
@@ -64,23 +41,6 @@ JWT lifecycle management: checking remaining validity and automatically re-issui
 ```pascal
 if LRemainingSecs < (Token.DurationSecs / 2) then
   Token.Build(JWTSecret);   // sliding-expiration renewal
-```
-
-## ConnectionPoolingProject
-
-FireDAC connection pooling and explicit transaction management: several queries and an update inside one transaction, with commit/rollback. See [FireDAC & Datasets](/features/firedac#transactions).
-
-```pascal
-var LTx := FD.CreateTransaction();
-LTx.StartTransaction;
-try
-  FD.Query('select * from employee', LTx);
-  FD.ExecuteSQL('update customer set address_line1 = :QueryParam_newAddress', LTx);
-  Result := FD.Query('select ... from sales left join customer ...', LTx);
-  LTx.Commit;
-except
-  LTx.Rollback; raise;
-end;
 ```
 
 ## OTPDemo
