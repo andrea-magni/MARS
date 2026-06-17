@@ -23,6 +23,7 @@ type
     procedure LoadFromIniFile(const AIniFileName: string = ''; const ABeforeLoad: TProc<TMemIniFile> = nil);
     procedure SaveToIniFile(const AIniFileName: string = '');
     function IniFileExists(const AIniFileName: string = '') : boolean;
+    function GetFileName(const AIniFileName: string = '') : string;
   end;
 
 implementation
@@ -144,6 +145,12 @@ begin
 end;
 
 { TMARSParametersIniFileReaderWriterHelper }
+
+function TMARSParametersIniFileReaderWriterHelper.GetFileName(
+  const AIniFileName: string): string;
+begin
+  Result:= TMARSParametersIniFileReaderWriter.GetActualFileName(AIniFileName);
+end;
 
 function TMARSParametersIniFileReaderWriterHelper.IniFileExists(const AIniFileName: string): boolean;
 begin
