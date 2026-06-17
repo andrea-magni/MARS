@@ -115,10 +115,6 @@ begin
 end;
 ```
 
-## Real-world projects
-
-The Demos folder also contains larger, customer-style projects — `CentroSoftwareProject`, `DocumentManagerProject`, `KaiProject`, `SIAConnectorManagerProject`, `MSSQLMyProject`, and others — that show MARS used in production-like scenarios. They are useful as broader references but are not focused single-feature tutorials.
-
 ## MARS and Embarcadero KAI
 
 There is a video walkthrough of MARS with Embarcadero KAI: [YouTube — MARS and KAI](https://www.youtube.com/watch?v=C8HvfmgnVus).
