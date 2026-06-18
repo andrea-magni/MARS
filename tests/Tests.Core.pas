@@ -91,6 +91,7 @@ type
 *)
     [Test] procedure OrderOfProperties;
     [Test] procedure TList_string_Obj;
+    [Test] procedure ArrayOfObjectToJSON;
   end;
 
 
@@ -730,6 +731,31 @@ begin
 end;
 
 { TMARSObjectToJSONTest }
+
+procedure TMARSObjectToJSONTest.ArrayOfObjectToJSON;
+begin
+  var LArray: TArray<TPerson> := [
+    TPerson.Create('Andrea', 'Magni')
+  , TPerson.Create('Marco', 'Cantù')
+  , TPerson.Create('Bob', 'Swart')
+  , TPerson.Create('Ray', 'Konopka')
+  , TPerson.Create('Cary', 'Jensen')
+  , TPerson.Create('Bruno', 'Fierens')
+  ];
+  try
+    var LJSON := TJSONArray.ArrayOfObjectToJSON<TPerson>(LArray);
+    try
+      Assert.IsNotNull(LJSON);
+      Assert.AreEqual(Length(LArray), LJSON.Count);
+    finally
+      LJSON.Free;
+    end;
+  finally
+    for var LPerson in LArray do
+      LPerson.Free;
+    LArray := [];
+  end;
+end;
 
 procedure TMARSObjectToJSONTest.OrderOfProperties;
 begin

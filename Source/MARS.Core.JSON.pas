@@ -670,7 +670,7 @@ end;
 
 class function TJSONArrayHelper.ArrayOfObjectToJSON<T>(const AArray: TArray<T>): TJSONArray;
 begin
-  Result := ArrayOfObjectToJSON<T>(AArray);
+  Result := ArrayOfObjectToJSON<T>(AArray, DefaultMARSJSONSerializationOptions);
 end;
 
 function TJSONArrayHelper.AddObject: TJSONObject;
