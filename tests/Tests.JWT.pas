@@ -27,6 +27,8 @@ type
     [Test] procedure ClaimTypes;
     [Test] procedure IatType_Built;
     [Test] procedure IatType_Parse;
+    [Test] procedure RolesParsing;
+    [Test] procedure RolesParsingAnyToken;
   end;
 
   [TestFixture('JWT.mORMotJWT')]
@@ -314,6 +316,62 @@ begin
     end;
   finally
     LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.RolesParsing;
+const
+  DUMMY_DURATION = 1;
+var
+  LParams: TMARSParameters;
+  LToken: TMARSToken;
+begin
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    LParams.Values[JWT_ISSUER_PARAM] := 'MARS-Curiosity';
+    LParams.Values[JWT_DURATION_PARAM] := DUMMY_DURATION;
+
+    LToken := T.Create('', LParams);
+    try
+      LToken.UserName := 'andrea.magni';
+      LToken.Roles := ['standard', 'extra', 'admin'];
+      LToken.Build(DUMMY_SECRET);
+      Assert.IsNotEmpty(LToken.Token);
+
+      LToken.Load(LToken.Token, DUMMY_SECRET);
+
+      Assert.AreEqual('andrea.magni', LToken.UserName);
+      Assert.AreEqual(3, Length(LToken.Roles));
+
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.RolesParsingAnyToken;
+var
+  LParams: TMARSParameters;
+  LToken: TMARSToken;
+begin
+  const LAnyToken =
+    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCwgZXh0cmEsYWRtaW4iLCJpYXQiOjE1MTA3Mzk4NDgsImV4cCI6ODc5MTA3MzYyNDgsIlVzZXJOYW1lIjoiYW5kcmVhLm1hZ25pIiwiaXNzIjoiTUFSUy1DdXJpb3NpdHkifQ.Kwpqs2LVUVEDki6KK6bdZW_kanoGCbBI11iVQl5XtP8';
+
+  LToken := T.Create('', nil);
+  try
+
+    LToken.Load(LAnyToken, DUMMY_SECRET);
+
+    Assert.AreEqual('andrea.magni', LToken.UserName);
+    Assert.AreEqual(3, Length(LToken.Roles));
+    Assert.AreEqual('standard', LToken.Roles[0]);
+    Assert.AreEqual('extra', LToken.Roles[1]);
+    Assert.AreEqual('admin', LToken.Roles[2]);
+  finally
+    LToken.Free;
   end;
 end;
 

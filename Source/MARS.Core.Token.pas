@@ -119,12 +119,17 @@ uses
 
 constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSParameters);
 begin
-  Create(
-    AToken
-  , AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
-  , AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString
-  , GetDurationFromParameters(AParameters)
-  );
+  var LSecret := JWT_SECRET_PARAM_DEFAULT;
+  var LIssuer := JWT_ISSUER_PARAM_DEFAULT;
+  var LDuration: TDateTime := JWT_DURATION_PARAM_DEFAULT;
+  if Assigned(AParameters) then
+  begin
+    LSecret := AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString;
+    LIssuer := AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
+    LDuration := GetDurationFromParameters(AParameters);
+  end;
+
+  Create(AToken, LSecret, LIssuer, LDuration);
 end;
 
 function TMARSToken.BuildJWTToken(const ASecret: string;
@@ -266,7 +271,10 @@ end;
 function TMARSToken.GetRoles: TArray<string>;
 {$ifdef DelphiXE7_UP}
 begin
-  Result := FClaims[JWT_ROLES].AsString.Split([',']); // do not localize
+  Result := FClaims[JWT_ROLES].AsString.Split([','], TStringSplitOptions.ExcludeEmpty); // do not localize
+  for var LIdx := Low(Result) to High(Result) do
+    Result[LIdx] := Result[LIdx].Trim;
+
 {$else}
 var
   LTokens: TStringList;
