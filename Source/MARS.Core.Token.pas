@@ -381,7 +381,7 @@ begin
   FClaims[JWT_DURATION_CLAIM] := TValue.From<TDateTime>(FDuration);
 
   FToken := BuildJWTToken(ASecret, FClaims);
-  FIsVerified := True;
+  FIsVerified := FToken <> '';
   UpdateCookie;
 end;
 

@@ -29,7 +29,15 @@ type
     [Test] procedure IatType_Parse;
     [Test] procedure RolesParsing;
     [Test] procedure RolesParsingAnyToken;
+    [Test] procedure EmptyToken;
   end;
+
+  [TestFixture('TMARSToken')]
+  TMARSTokenTests = class(TObject)
+  public
+    [Test] procedure BaseClassBehavior;
+  end;
+
 
   [TestFixture('JWT.mORMotJWT')]
   TMARSmORMotJWT = class(TMARSJWT<TMARSmORMotJWTToken>)
@@ -241,6 +249,21 @@ begin
   Duration(5);
 end;
 
+procedure TMARSJWT<T>.EmptyToken;
+var
+  LToken: TMARSToken;
+begin
+  LToken := T.Create('', nil);
+  try
+    Assert.IsNotNull(LToken);
+    Assert.IsTrue(LToken.Token = '', 'Token is empty');
+    Assert.IsFalse(LToken.IsVerified, 'Token is not verified');
+    Assert.IsTrue(LToken.IsExpired, 'Token is expired');
+  finally
+    LToken.Free;
+  end;
+end;
+
 function TMARSJWT<T>.GetTokenForVerifyOne: string;
 begin
   // beware: will expire one million days after Nov 15th, 2017 that is somewhere around Thu, 13 Oct 4755 :-D
@@ -354,7 +377,6 @@ end;
 
 procedure TMARSJWT<T>.RolesParsingAnyToken;
 var
-  LParams: TMARSParameters;
   LToken: TMARSToken;
 begin
   const LAnyToken =
@@ -452,8 +474,25 @@ begin
 
 end;
 
+{ TMARSTokenTests }
+
+procedure TMARSTokenTests.BaseClassBehavior;
+var
+  LToken: TMARSToken;
+begin
+  LToken := TMARSToken.Create('', nil);
+  try
+    LToken.Build('123456789012345678901234567890');
+
+    Assert.IsNotNull(LToken);
+    Assert.IsFalse(LToken.Token.IsEmpty and LToken.IsVerified, 'Token is empty but seemes verified');
+  finally
+    LToken.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSmORMotJWT);
   TDUnitX.RegisterTestFixture(TMARSJOSEJWT);
-
+  TDUnitX.RegisterTestFixture(TMARSTokenTests);
 end.
