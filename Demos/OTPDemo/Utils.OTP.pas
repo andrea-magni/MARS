@@ -6,29 +6,33 @@ uses
   System.SysUtils, System.DateUtils, System.Classes, System.NetEncoding,
   System.Hash, System.Math;
 
+const DEFAULT_DIGITS = 6;
+const DEFAULT_PERIOD = 30;
+
+
 type
   TOTP = record
   public
     class function GenerateTotp(
       const ASecret: string;
       const AUnixTime: Int64 = 0;
-      const ADigits: Integer = 6;
-      const APeriod: Integer = 30
+      const ADigits: Integer = DEFAULT_DIGITS;
+      const APeriod: Integer = DEFAULT_PERIOD
     ): string; overload; static;
 
     class function GenerateTotp(
       const ASecret: TBytes;
       const AUnixTime: Int64 = 0;
-      const ADigits: Integer = 6;
-      const APeriod: Integer = 30
+      const ADigits: Integer = DEFAULT_DIGITS;
+      const APeriod: Integer = DEFAULT_PERIOD
     ): string; overload; static;
 
     class function VerifyTotp(
       const ASecret: string;
       const ACode: string;
       const AUnixTime: Int64 = 0;
-      const ADigits: Integer = 6;
-      const APeriod: Integer = 30;
+      const ADigits: Integer = DEFAULT_DIGITS;
+      const APeriod: Integer = DEFAULT_PERIOD;
       const AAllowedDriftSteps: Integer = 1
     ): Boolean; overload; static;
 
@@ -36,8 +40,8 @@ type
       const ASecretRaw: TBytes;
       const ACode: string;
       const AUnixTime: Int64 = 0;
-      const ADigits: Integer = 6;
-      const APeriod: Integer = 30;
+      const ADigits: Integer = DEFAULT_DIGITS;
+      const APeriod: Integer = DEFAULT_PERIOD;
       const AAllowedDriftSteps: Integer = 1
     ): Boolean; overload; static;
 
@@ -46,8 +50,9 @@ type
     class function GenerateTotpSecret: string; static;
     class function SecretToOtpAuthSecret(const ASecret: string): string; overload; static;
     class function SecretToOtpAuthSecret(const ASecret: TBytes): string; overload; static;
-    class function BuildOtpAuthUri(const Issuer, Account, Secret: string): string; static;
-    class function TotpSecondsRemaining(Period: Integer = 30): Integer; static;
+    class function BuildOtpAuthUri(const Issuer, Account, Secret: string;
+      const ADigits: Integer = DEFAULT_DIGITS; const APeriod: Integer = DEFAULT_PERIOD): string; static;
+    class function TotpSecondsRemaining(const APeriod: Integer = DEFAULT_PERIOD): Integer; static;
   end;
 
 implementation
@@ -142,14 +147,16 @@ begin
 end;
 
 
-class function TOTP.BuildOtpAuthUri(const Issuer, Account, Secret: string): string;
+class function TOTP.BuildOtpAuthUri(const Issuer, Account, Secret: string; const ADigits: Integer; const APeriod: Integer): string;
 begin
   Result :=
-    'otpauth://totp/' +
-    Issuer + ':' + Account +
-    '?secret=' + Secret +
-    '&issuer=' + Issuer +
-    '&algorithm=SHA1&digits=6&period=30';
+    'otpauth://totp/'
+    + Issuer + ':' + Account
+    + '?secret=' + Secret
+    + '&issuer=' + Issuer
+    + '&algorithm=SHA1'
+    + '&digits=' + ADigits.ToString
+    + '&period=' + APeriod.ToString;
 end;
 
 class function TOTP.GenerateTotpSecret: string;
@@ -177,9 +184,9 @@ begin
   Result := Result.Replace('=', '');
 end;
 
-class function TOTP.TotpSecondsRemaining(Period: Integer): Integer;
+class function TOTP.TotpSecondsRemaining(const APeriod: Integer): Integer;
 begin
-  Result := Period - (CurrentUnixTime mod Period);
+  Result := APeriod - (CurrentUnixTime mod APeriod);
 end;
 
 class function TOTP.CurrentUnixTime: Int64;

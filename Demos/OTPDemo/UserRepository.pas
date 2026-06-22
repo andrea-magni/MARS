@@ -8,8 +8,8 @@ uses
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
 , Utils.OTP
 ;
-
 type
+
   TUser = record
     Id: Integer;
     Name: string;
@@ -24,9 +24,10 @@ type
     class function HashPassword(const APassword: string): string; static;
     class function EncodeBase32(const ASecret: string): string; static;
     class function GetOTP(const ASecret: string;
-      const ADigits: Integer = 6; const APeriod: Integer = 30): string; static;
+      const ADigits: Integer = DEFAULT_DIGITS; const APeriod: Integer = DEFAULT_PERIOD): string; static;
     class function GetOTPAuthURI(const AUserName: string;
-      const ASecret: string; const AIssuer: string): string; static;
+      const ASecret: string; const AIssuer: string;
+      const ADigits: Integer = DEFAULT_DIGITS; const APeriod: Integer = DEFAULT_PERIOD): string; static;
     class function GenerateRandomSecret: string; static;
 
     class function FindByUserName(const AUserName: string;
@@ -77,9 +78,9 @@ begin
 end;
 
 class function TUserUtils.GetOTPAuthURI(const AUserName: string;
-  const ASecret: string; const AIssuer: string): string;
+  const ASecret: string; const AIssuer: string; const ADigits: Integer; const APeriod: Integer): string;
 begin
-  Result := TOTP.BuildOtpAuthUri(AIssuer, AUserName, EncodeBase32(ASecret));
+  Result := TOTP.BuildOtpAuthUri(AIssuer, AUserName, EncodeBase32(ASecret), ADigits, APeriod);
 end;
 
 class function TUserUtils.HashPassword(const APassword: string): string;

@@ -66,15 +66,18 @@ begin
   if not TUserUtils.FindByUserName(AUserName, FD, LUser) then
     raise EMARSHttpException.Create('User not found', 404);
 
+
+  const LURI = TUserUtils.GetOTPAuthURI(LUser.Name, LUser.OTP_Secret, 'MARS');
+
   var LItem_ImgBase64 := '';
   {$IFDEF MSWINDOWS}
-  var LImgBase64 := GenerateQRCode_PNGBase64(TUserUtils.GetOTPAuthURI(LUser.Name, LUser.OTP_Secret, 'MARS'));
+  var LImgBase64 := GenerateQRCode_PNGBase64(LURI);
   LItem_ImgBase64 :=
     '<li>QR Code (link for Authenticator app):<br><img src="data:image/png;base64,%IMG_BASE64%"></li>'
     .Replace('%IMG_BASE64%', LImgBase64, []);
   {$ENDIF}
 
-  var LImgSVG := GenerateQRCode_SVG(TUserUtils.GetOTPAuthURI(LUser.Name, LUser.OTP_Secret, 'MARS'));
+  var LImgSVG := GenerateQRCode_SVG(LURI);
 
   Result :=
   '''
