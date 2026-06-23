@@ -314,8 +314,9 @@ begin
         //------------------------
         for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
         begin
-          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
-          if Assigned(LJSONObject) then
+          if LJSONArray.Items[LIndex] is TJSONObject then
+          begin
+            LJSONObject := TJSONObject(LJSONArray.Items[LIndex]);
             LArray.SetArrayElement(
                 LIndex
               , TJSONObject.JSONToObject(
@@ -323,6 +324,7 @@ begin
                 , LJSONObject
               )
             );
+          end; // else: just skip as we don't know how to handle a non-object value
         end;
       end
       else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
@@ -382,9 +384,11 @@ begin
         //------------------------
         for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
         begin
-          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
-          if Assigned(LJSONObject) then
+          if LJSONArray.Items[LIndex] is TJSONObject then
+          begin
+            LJSONObject := TJSONObject(LJSONArray.Items[LIndex]);
             LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LElementType));
+          end;
         end;
       end
       else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element

@@ -26,7 +26,11 @@ type
     procedure AddToTempObjs(const AObj: TObject);
     procedure FreeAll;
 
-    function MockRequestAndResponse(const AMethod, AActualURL: string): TRequestAndResponse;
+    function MockRequestAndResponse(const AMethod, AActualURL: string;
+      const ABody: string = ''; const AHeaders: TMARSHeaders = []): TRequestAndResponse; overload;
+    function MockRequestAndResponse(const AMethod, AActualURL: string;
+      const ABody: TBytes; const AHeaders: TMARSHeaders): TRequestAndResponse; overload;
+
     function ResourcePath(
       const AResource: string;
       const AProtocol: string = 'http'; const AHostName: string = 'localhost'; const APort: Integer = 8080
@@ -46,6 +50,8 @@ type
     [Test]
     procedure TestWildcard;
 
+    [Test]
+    procedure TestItemResourceWithInconsistentBody;
   end;
 
 implementation
@@ -66,9 +72,18 @@ begin
   FreeAndNil(FTempObjs);
 end;
 
-function TMARSDefaultEngineFixture.MockRequestAndResponse(const AMethod, AActualURL: string): TRequestAndResponse;
+function TMARSDefaultEngineFixture.MockRequestAndResponse(const AMethod,
+  AActualURL: string; const ABody: TBytes; const AHeaders: TMARSHeaders
+  ): TRequestAndResponse;
 begin
-  Result.Request := TMARSRequestMock.Create(AMethod, AActualURL, [], '');
+  Result.Request := TMARSRequestMock.Create(AMethod, AActualURL, AHeaders, ABody);
+  Result.Response := TMARSResponseMock.Create();
+end;
+
+function TMARSDefaultEngineFixture.MockRequestAndResponse(const AMethod, AActualURL: string;
+  const ABody: string; const AHeaders: TMARSHeaders): TRequestAndResponse;
+begin
+  Result.Request := TMARSRequestMock.Create(AMethod, AActualURL, AHeaders, ABody);
   Result.Response := TMARSResponseMock.Create();
 end;
 
@@ -103,6 +118,25 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual('Hello, World!', LMock.Response.Content, 'Content should be Hello, World!');
+end;
+
+procedure TMARSDefaultEngineFixture.TestItemResourceWithInconsistentBody;
+begin
+//  var LMock := MockRequestAndResponse('POST', ResourcePath('item')
+//  , '''
+//    [
+//      { "Id": 1, "Description": "Andrea" }
+//    , { "Id": 2, "Description": "Marco" }
+//    ]
+//    '''
+//  );
+  var LMock := MockRequestAndResponse('POST', ResourcePath('item'), '[1,2,3,4]');
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.AreEqual(LMock.Response.ContentType, 'application/json', 'ContentType should be JSON');
 end;
 
 procedure TMARSDefaultEngineFixture.TestWildcard;
