@@ -30,6 +30,27 @@ type
     function GetContent: string;
   end;
 
+  TItem = record
+    Id: Integer;
+    Description: string;
+  end;
+
+  [Path('item'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+  TItemResource = class
+  private
+  protected
+  public
+    [POST]
+    function ConsumeAll([BodyParam] const AData: TArray<TItem>): Integer;
+
+    [GET, Path('/{id}')]
+    function Retrieve([PathParam] id: Integer): TItem;
+
+    [GET]
+    function RetrieveAll: TArray<TItem>;
+  end;
+
+
 implementation
 
 uses
@@ -58,7 +79,31 @@ begin
   Result := 'Hello, world!';
 end;
 
+{ TItemResource }
+
+function TItemResource.ConsumeAll(const AData: TArray<TItem>): Integer;
+begin
+  Result := Length(AData);
+end;
+
+function TItemResource.Retrieve(id: Integer): TItem;
+begin
+  Result := Default(TItem);
+  Result.Id := id;
+  Result.Description := 'Item #' + id.ToString;
+end;
+
+function TItemResource.RetrieveAll: TArray<TItem>;
+begin
+  var LItem1: TItem := Default(TItem);
+  LItem1.Id := 1;
+  LItem1.Description := 'Item #1';
+  Result := [
+    LItem1
+  ];
+end;
+
 initialization
-  MARSRegister([THelloWorldResource, TWildcardResource]);
+  MARSRegister([THelloWorldResource, TWildcardResource, TItemResource]);
 
 end.
