@@ -156,7 +156,7 @@ begin
           end
         );
 {$ELSE}
-        LYAMLName := '';
+        var LYAMLName := '';
 {$ENDIF}
         if (LJSONName = '') and (LYAMLName = '') then
           Continue;
