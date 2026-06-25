@@ -19,9 +19,9 @@ type
     procedure ReadCookieSecurityScheme(const AName: string; const AParams: TMARSParameters);
     procedure ReadInfoFromParams(const AParams: TMARSParameters);
     function AddServerFromEngine(const AEngine: IMARSEngine): TServer;
-    procedure ReadApplication(const AAppMD: TMARSApplicationMetadata);
-    procedure ReadOperation(const AOperation: TOperation; const ARes: TMARSResourceMetadata;
-      const AMet: TMARSMethodMetadata);
+    procedure ReadApplication(const AApplicationMetadata: TMARSApplicationMetadata);
+    procedure ReadOperation(const AOperation: TOperation;
+      const AResourceMetadata: TMARSResourceMetadata; const AMethodMetadata: TMARSMethodMetadata);
   public
     class procedure FillSchemaForObjectOrRecord(const ASchema: TSchema; const AType: TRttiType; const AddTo: TOpenAPI);
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
@@ -234,34 +234,53 @@ begin
   Result := AString.Replace('Param', '').ToLower;
 end;
 
-procedure TOpenAPIHelper.ReadApplication(
-  const AAppMD: TMARSApplicationMetadata);
+procedure TOpenAPIHelper.ReadApplication(const AApplicationMetadata: TMARSApplicationMetadata);
 begin
-  AAppMD.ForEachResource(
-    procedure (ARes: TMARSResourceMetadata)
+  AApplicationMetadata.ForEachResource(
+    procedure (AResourceMetadata: TMARSResourceMetadata)
     begin
-      if not ARes.Visible then
+      if not AResourceMetadata.Visible then
         Exit;
 
-      AddTag(ARes.Path, StringFallback([ARes.Summary, ARes.Description, ARes.Name]));
+      var LResourceDescription := AResourceMetadata.Description;
+      const LResourceType = AResourceMetadata.RttiType;
+      const LDescriptionAttr = LResourceType.GetAttribute<OAPIDescriptionAttribute>;
+      if Assigned(LDescriptionAttr) then
+        LResourceDescription := LDescriptionAttr.Value;
 
-      ARes.ForEachMethod(
-        procedure (AMet: TMARSMethodMetadata)
+      var LResourceSummary := AResourceMetadata.Summary;
+      const LSummaryAttr = LResourceType.GetAttribute<OAPISummaryAttribute>;
+      if Assigned(LSummaryAttr) then
+        LResourceSummary := LSummaryAttr.Value;
+
+      AddTag(AResourceMetadata.Path, StringFallback([LResourceSummary, LResourceDescription, AResourceMetadata.Name]));
+
+      AResourceMetadata.ForEachMethod(
+        procedure (AMethodMetadata: TMARSMethodMetadata)
         var
           LPath: TPathItem;
           LOperation: TOperation;
         begin
-          if not AMet.Visible then
+          if not AMethodMetadata.Visible then
             Exit;
 
-          LPath := GetPath(TMARSURL.CombinePath([ARes.Path, AMet.Path], True, False));
+          const LMethod = AMethodMetadata.RttiMethod;
 
-          LPath.summary := ARes.Name + ' resource';
-          LPath.description := ARes.Description;
+          LPath := GetPath(TMARSURL.CombinePath([AResourceMetadata.Path, AMethodMetadata.Path], True, False));
 
-          LOperation := LPath.OperationByHttpMethod(AMet.HttpMethodLowerCase);
+          LPath.description := AResourceMetadata.Description;
+          const LDescriptionAttr = LMethod.GetAttribute<OAPIDescriptionAttribute>;
+          if Assigned(LDescriptionAttr) then
+            LPath.description := LDescriptionAttr.Value;
+
+          LPath.summary := AResourceMetadata.Name + ' resource';
+          const LSummaryAttr = LMethod.GetAttribute<OAPISummaryAttribute>;
+          if Assigned(LSummaryAttr) then
+            LPath.summary := LSummaryAttr.Value;
+
+          LOperation := LPath.OperationByHttpMethod(AMethodMetadata.HttpMethodLowerCase);
           if Assigned(LOperation) then
-            ReadOperation(LOperation, ARes, AMet);
+            ReadOperation(LOperation, AResourceMetadata, AMethodMetadata);
         end
       );
 
@@ -324,26 +343,17 @@ begin
 end;
 
 procedure TOpenAPIHelper.ReadOperation(const AOperation: TOperation;
-  const ARes: TMARSResourceMetadata; const AMet: TMARSMethodMetadata);
-var
-  LMethodSummary: string;
-  LParamMD: TMARSRequestParamMetadata;
-  LParam: TParameter;
-  LRequestBody: TRequestBody;
-  LContent: TMediaTypeObj;
-  LMediaType: string;
-  LMetAuthorization: string;
-  LHasFormParams: Boolean;
-  LResponse: TResponse;
+  const AResourceMetadata: TMARSResourceMetadata;
+  const AMethodMetadata: TMARSMethodMetadata);
 begin
-  LMethodSummary := StringFallback([AMet.Summary, AMet.Description, AMet.Name]);
+  var LMethodSummary := StringFallback([AMethodMetadata.Summary, AMethodMetadata.Description, AMethodMetadata.Name]);
 
-  AOperation.operationId := AMet.Name;
+  AOperation.operationId := AMethodMetadata.Name;
   AOperation.summary := LMethodSummary;
-  AOperation.description := AMet.Description;
-  AOperation.tags := [ARes.Path];
+  AOperation.description := AMethodMetadata.Description;
+  AOperation.tags := [AResourceMetadata.Path];
 
-  const LMethod = AMet.RttiMethod;
+  const LMethod = AMethodMetadata.RttiMethod;
   var LDescriptionAttr := LMethod.GetAttribute<OAPIDescriptionAttribute>;
   if Assigned(LDescriptionAttr) then
     AOperation.description := LDescriptionAttr.Value;
@@ -352,36 +362,7 @@ begin
   if Assigned(LSummaryAttr) then
     AOperation.summary := LSummaryAttr.Value;
 
-//  var LDefaultAttr := LMethod.GetAttribute<OAPIDefaultAttribute>;
-//  if Assigned(LDefaultAttr) then
-//    AOperation.default := LDefaultAttr.Value;
-//
-//  var LPatternAttr := LMethod.GetAttribute<OAPIPatternAttribute>;
-//  if Assigned(LPatternAttr) then
-//    AOperation.pattern := LPatternAttr.Value;
-//
-//  var LMinimumAttr := LMethod.GetAttribute<OAPIMinimumAttribute>;
-//  if Assigned(LMinimumAttr) then
-//    AOperation.minimum := LMinimumAttr.Value;
-//
-//  var LMaximumAttr := LMethod.GetAttribute<OAPIMaximumAttribute>;
-//  if Assigned(LMaximumAttr) then
-//    AOperation.maximum := LMaximumAttr.Value;
-//
-//  var LMinLengthAttr := LMethod.GetAttribute<OAPIMinLengthAttribute>;
-//  if Assigned(LMinLengthAttr) then
-//    AOperation.minLength := LMinLengthAttr.Value;
-//
-//  var LMaxLengthAttr := LMethod.GetAttribute<OAPIMaxLengthAttribute>;
-//  if Assigned(LMaxLengthAttr) then
-//    AOperation.maxLength := LMaxLengthAttr.Value;
-//
-//  var LRequiredAttr := LMethod.GetAttribute<OAPIRequiredAttribute>;
-//  if Assigned(LRequiredAttr) then
-//    AOperation.required := LRequiredAttr.Value;
- 
-
-  AMet.ForEachParameter(
+  AMethodMetadata.ForEachParameter(
     procedure (AParam: TMARSRequestParamMetadata)
     var
       LIn: string;
@@ -389,7 +370,7 @@ begin
       LIn := MARSKindToOpenAPIKind(AParam.Kind);
       if IndexText(LIn, ['query', 'header', 'path', 'cookie']) <> -1 then
       begin
-        LParam := AOperation.AddParameter(AParam.Name, LIn);
+        var LParam := AOperation.AddParameter(AParam.Name, LIn);
         LParam.description := AParam.Description;
         LParam.schema.SetType(AParam.DataTypeRttiType, Self);
         LParam.required := AParam.Required;
@@ -406,20 +387,20 @@ begin
     end);
 
   // REQUEST BODY
-  if AMet.Consumes <> '' then
+  if AMethodMetadata.Consumes <> '' then
   begin
-    LRequestBody := AOperation.requestBody;
+    var LRequestBody := AOperation.requestBody;
     LRequestBody.description := 'Request body';
-    for LMediaType in AMet.Consumes.Split([',']) do
+    for var LMediaType in AMethodMetadata.Consumes.Split([',']) do
     begin
-      LContent := LRequestBody.AddContent(LMediaType);
+      var LContent := LRequestBody.AddContent(LMediaType);
 
       // x-www-form-urlencoded
       if LMediaType = TMediaType.APPLICATION_FORM_URLENCODED_TYPE then
       begin
         LContent.schema.SetType('object');
-        LHasFormParams := False;
-        for LParamMD in AMet.ParametersByKind('FormParam') do
+        var LHasFormParams := False;
+        for var LParamMD in AMethodMetadata.ParametersByKind('FormParam') do
         begin
           var LProperty := LContent.schema.GetProperty(LParamMD.Name);
           LProperty.description := LParamMD.Description;
@@ -437,7 +418,7 @@ begin
           LHasFormParams := True;
         end;
         if not LHasFormParams then
-          for LParamMD in AMet.ParametersByKind('BodyParam') do
+          for var LParamMD in AMethodMetadata.ParametersByKind('BodyParam') do
           begin
 //            if LParamMD.DataTypeRttiType.Name = 'TArray<MARS.Core.Utils.TFormParam>' then
 //            begin
@@ -460,7 +441,7 @@ begin
       end
       else // all other request body types
       begin
-        LParamMD := AMet.ParameterByKind('BodyParam');
+        var LParamMD := AMethodMetadata.ParameterByKind('BodyParam');
         if Assigned(LParamMD) then
         begin
           LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
@@ -481,18 +462,18 @@ begin
   end;
 
   // responses
-  LResponse := AOperation.AddResponse('200');
+  var LResponse := AOperation.AddResponse('200');
   LResponse.description := 'Successful response';
-  for LMediaType in AMet.Produces.Split([',']) do
-    LResponse.AddContent(LMediaType).schema.SetType(AMet.DataTypeRttiType, Self);
+  for var LMediaType in AMethodMetadata.Produces.Split([',']) do
+    LResponse.AddContent(LMediaType).schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
 
   if LResponse.content.Count = 0 then
-    LResponse.AddContent('*/*').schema.SetType(AMet.DataTypeRttiType, Self);
+    LResponse.AddContent('*/*').schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
 
   AOperation.AddResponse('500').description := 'Internal server error';
 
   // authorization
-  LMetAuthorization := AMet.FullAuthorization;
+  var LMetAuthorization := AMethodMetadata.FullAuthorization;
   if LMetAuthorization <> '' then //AM TODO Check what happens with Deny DenyAll etc
   begin
     if FBearerSecurityConfigured then
