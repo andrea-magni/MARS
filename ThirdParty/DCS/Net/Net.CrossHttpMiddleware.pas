@@ -9,16 +9,28 @@
 {******************************************************************************}
 unit Net.CrossHttpMiddleware;
 
+{$I zLib.inc}
+
 interface
 
 uses
-  System.SysUtils, Net.CrossHttpServer;
+  SysUtils,
+  Classes,
+  //System.Hash,
+  //System.NetEncoding,
+
+  Utils.Utils,
+  Utils.Base64,
+  Utils.Hash,
+
+  Net.CrossHttpParams,
+  Net.CrossHttpServer;
 
 type
   /// <summary>
   ///   HTTP认证获取用户密码
   /// </summary>
-  TAuthGetPasswordProc = reference to procedure(ARequest: ICrossHttpRequest; const AUserName: string; var ACorrectPassword: string);
+  TAuthGetPasswordProc = reference to procedure(const ARequest: ICrossHttpRequest; const AUserName: string; var ACorrectPassword: string);
 
   /// <summary>
   ///   中间件
@@ -38,7 +50,7 @@ type
     ///   <see cref="https://zh.wikipedia.org/wiki/HTTP%E5%9F%BA%E6%9C%AC%E8%AE%A4%E8%AF%81">
     ///   维基百科: HTTP基本认证</see>
     /// </remarks>
-    class function AuthenticateBasic(AAuthGetPasswordProc: TAuthGetPasswordProc; const ARealm: string = ''): TCrossHttpRouterProc2; static;
+    class function AuthenticateBasic(AAuthGetPasswordProc: TAuthGetPasswordProc; const ARealm: string = ''): TCrossHttpRouterProc; static;
 
     /// <summary>
     ///   HTTP摘要认证
@@ -50,7 +62,7 @@ type
     ///   <see cref="https://zh.wikipedia.org/wiki/HTTP%E6%91%98%E8%A6%81%E8%AE%A4%E8%AF%81">
     ///   维基百科: HTTP摘要认证</see>
     /// </remarks>
-    class function AuthenticateDigest(AAuthGetPasswordProc: TAuthGetPasswordProc; const ARealm: string = ''): TCrossHttpRouterProc2; static;
+    class function AuthenticateDigest(AAuthGetPasswordProc: TAuthGetPasswordProc; const ARealm: string = ''): TCrossHttpRouterProc; static;
 
     /// <summary>
     ///   跨来源资源共享
@@ -59,7 +71,7 @@ type
     ///   <see href="https://zh.wikipedia.org/wiki/%E8%B7%A8%E4%BE%86%E6%BA%90%E8%B3%87%E6%BA%90%E5%85%B1%E4%BA%AB">
     ///   维基百科: 跨来源资源共享</see>
     /// </remarks>
-    class function CORS: TCrossHttpRouterProc2; static;
+    class function CORS: TCrossHttpRouterProc; static;
 
     /// <summary>
     ///   HTTP严格传输安全
@@ -68,21 +80,20 @@ type
     ///   <see href="https://zh.wikipedia.org/wiki/HTTP%E4%B8%A5%E6%A0%BC%E4%BC%A0%E8%BE%93%E5%AE%89%E5%85%A8">
     ///   维基百科: HTTP严格传输安全</see>
     /// </remarks>
-    class function HSTS: TCrossHttpRouterProc2; static;
+    class function HSTS: TCrossHttpRouterProc; static;
+
+    class function NoCache: TCrossHttpRouterProc; static;
   end;
 
 implementation
 
-uses
-  System.Hash, System.NetEncoding, Utils.Utils, Net.CrossHttpParams;
-
 { TNetCrossMiddleware }
 
 class function TNetCrossMiddleware.AuthenticateBasic(AAuthGetPasswordProc: TAuthGetPasswordProc;
-  const ARealm: string): TCrossHttpRouterProc2;
+  const ARealm: string): TCrossHttpRouterProc;
 begin
   Result :=
-    procedure(ARequest: ICrossHttpRequest; AResponse: ICrossHttpResponse; var AHandled: Boolean)
+    procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
     var
       LAuthStr: string;
       LStrArr: TArray<string>;
@@ -93,7 +104,7 @@ begin
       LAuthStr := ARequest.Header['Authorization'];
       if (LAuthStr <> '') then
       begin
-        if (LAuthStr.StartsWith('Basic')) then
+        if (LAuthStr.StartsWith('Basic', True)) then
           LAuthStr := LAuthStr.Substring(6)
         else
           LAuthStr := '';
@@ -102,7 +113,7 @@ begin
       LCorrectPassword := #0;
       if (LAuthStr <> '') then
       begin
-        LAuthStr := TNetEncoding.Base64.Decode(LAuthStr);
+        LAuthStr := TEncoding.UTF8.GetString(TBase64Utils.Decode(LAuthStr));
         LStrArr := LAuthStr.Split([':']);
 
         // 获取用户名对应的正确密码
@@ -124,10 +135,10 @@ begin
 end;
 
 class function TNetCrossMiddleware.AuthenticateDigest(
-  AAuthGetPasswordProc: TAuthGetPasswordProc; const ARealm: string): TCrossHttpRouterProc2;
+  AAuthGetPasswordProc: TAuthGetPasswordProc; const ARealm: string): TCrossHttpRouterProc;
 begin
   Result :=
-    procedure(ARequest: ICrossHttpRequest; AResponse: ICrossHttpResponse; var AHandled: Boolean)
+    procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
     var
       LUserName, LCorrectPassword: string;
       LNonce, LUserResponse, LCorrectResponse: string;
@@ -139,7 +150,7 @@ begin
       LAuthStr := ARequest.Header['Authorization'];
       if (LAuthStr <> '') then
       begin
-        if (LAuthStr.StartsWith('Digest')) then
+        if (LAuthStr.StartsWith('Digest', True)) then
           LAuthStr := LAuthStr.Substring(7)
         else
           LAuthStr := '';
@@ -148,9 +159,8 @@ begin
       LCorrectPassword := #0;
       if (LAuthStr <> '') then
       begin
-        LAuthParams := TDelimitParams.Create;
+        LAuthParams := TDelimitParams.Create(',', False);
         try
-          LAuthParams.Delimiter := ',';
           LAuthParams.Decode(LAuthStr);
 
           LUserName := LAuthParams['username'].Replace('"', '');
@@ -182,6 +192,8 @@ begin
       end;
 
       // 比对客户端与服务端的摘要是否匹配
+      // 当前端没有发送验证信息或者验证信息不匹配时
+      // 返回需要认证的报文
       if (LAuthStr = '') or (LUserResponse <> LCorrectResponse) then
       begin
         AHandled := True;
@@ -193,14 +205,15 @@ begin
         Exit;
       end;
 
+      // 前端的验证信息与服务端一致, 让路由继续处理
       AHandled := False;
     end;
 end;
 
-class function TNetCrossMiddleware.CORS: TCrossHttpRouterProc2;
+class function TNetCrossMiddleware.CORS: TCrossHttpRouterProc;
 begin
   Result :=
-    procedure(ARequest: ICrossHttpRequest; AResponse: ICrossHttpResponse; var AHandled: Boolean)
+    procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
     begin
       AHandled := False;
       AResponse.Header['Access-Control-Allow-Origin'] := '*';
@@ -209,13 +222,25 @@ begin
     end;
 end;
 
-class function TNetCrossMiddleware.HSTS: TCrossHttpRouterProc2;
+class function TNetCrossMiddleware.HSTS: TCrossHttpRouterProc;
 begin
   Result :=
-    procedure(ARequest: ICrossHttpRequest; AResponse: ICrossHttpResponse; var AHandled: Boolean)
+    procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
     begin
       AHandled := False;
       AResponse.Header['Strict-Transport-Security'] := 'max-age=31536000; includeSubDomains';
+    end;
+end;
+
+class function TNetCrossMiddleware.NoCache: TCrossHttpRouterProc;
+begin
+  Result :=
+    procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
+    begin
+      AHandled := False;
+      AResponse.Header['Cache-Control'] := 'no-store';
+      AResponse.Header['Pragma'] := 'no-cache';
+      AResponse.Header['Expires'] := 'Thu, 01 Jan 1970 00:00:00 GMT';
     end;
 end;
 

@@ -1,4 +1,4 @@
-{******************************************************************************}
+ï»¿{******************************************************************************}
 {                                                                              }
 {       Delphi cross platform socket library                                   }
 {                                                                              }
@@ -9,16 +9,25 @@
 {******************************************************************************}
 unit Net.CrossServer;
 
+{$I zLib.inc}
+
 interface
 
 uses
-  System.SysUtils,
+  SysUtils,
+
+  Net.SocketAPI,
   Net.CrossSocket.Base,
-  Net.CrossSocket;
+  Net.CrossSslSocket.Base,
+  Net.CrossSslSocket;
 
 type
-  ICrossServer = interface(ICrossSocket)
-  ['{78865955-48EE-4354-9B03-389025839B67}']
+  ICrossServerConnection = interface(ICrossSslConnection)
+  ['{D25E96A4-57DC-40B1-B35B-C35550A29F62}']
+  end;
+
+  ICrossServer = interface(ICrossSslSocket)
+  ['{DAEB2898-1EC4-4BCF-9BEB-078B582173AB}']
     function GetAddr: string;
     function GetPort: Word;
     function GetActive: Boolean;
@@ -27,7 +36,7 @@ type
     procedure SetPort(const Value: Word);
     procedure SetActive(const Value: Boolean);
 
-    procedure Start(const ACallback: TProc<Boolean> = nil);
+    procedure Start(const ACallback: TCrossListenCallback = nil);
     procedure Stop;
 
     property Addr: string read GetAddr write SetAddr;
@@ -36,12 +45,14 @@ type
     property Active: Boolean read GetActive write SetActive;
   end;
 
-  TCrossServer = class(TCrossSocket, ICrossServer)
+  TCrossServerConnection = class(TCrossSslConnection, ICrossServerConnection);
+
+  TCrossServer = class(TCrossSslSocket, ICrossServer)
   private
     FPort: Word;
     FAddr: string;
     FStarted: Integer;
-
+  protected
     function GetAddr: string;
     function GetPort: Word;
     function GetActive: Boolean;
@@ -49,9 +60,13 @@ type
     procedure SetAddr(const Value: string);
     procedure SetPort(const Value: Word);
     procedure SetActive(const Value: Boolean);
+  protected
+    function CreateConnection(const AOwner: TCrossSocketBase; const AClientSocket: TSocket;
+      const AConnectType: TConnectType; const AHost: string;
+      const AConnectCb: TCrossConnectionCallback): ICrossConnection; override;
   public
-    procedure Start(const ACallback: TProc<Boolean> = nil);
-    procedure Stop;
+    procedure Start(const ACallback: TCrossListenCallback = nil); virtual;
+    procedure Stop; virtual;
 
     property Addr: string read GetAddr write SetAddr;
     property Port: Word read GetPort write SetPort;
@@ -61,6 +76,18 @@ type
 implementation
 
 { TCrossServer }
+
+function TCrossServer.CreateConnection(const AOwner: TCrossSocketBase;
+  const AClientSocket: TSocket; const AConnectType: TConnectType;
+  const AHost: string; const AConnectCb: TCrossConnectionCallback): ICrossConnection;
+begin
+  Result := TCrossServerConnection.Create(
+    AOwner,
+    AClientSocket,
+    AConnectType,
+    AHost,
+    AConnectCb);
+end;
 
 function TCrossServer.GetActive: Boolean;
 begin
@@ -95,12 +122,23 @@ begin
   FPort := Value;
 end;
 
-procedure TCrossServer.Start(const ACallback: TProc<Boolean>);
+procedure TCrossServer.Start(const ACallback: TCrossListenCallback);
+var
+  LListenArr: TArray<ICrossListen>;
+  LListen: ICrossListen;
 begin
-  if (AtomicExchange(FStarted, 1) = 1) then
+  if (AtomicCmpExchange(FStarted, 0, 0) = 1) then
   begin
     if Assigned(ACallback) then
-      ACallback(False);
+    begin
+      LListenArr := LockListens.Values.ToArray;
+      try
+        for LListen in LListenArr do
+          ACallback(LListen, True);
+      finally
+        UnlockListens;
+      end;
+    end;
 
     Exit;
   end;
@@ -108,18 +146,18 @@ begin
   StartLoop;
 
   Listen(FAddr, FPort,
-    procedure(AListen: ICrossListen; ASuccess: Boolean)
+    procedure(const AListen: ICrossListen; const ASuccess: Boolean)
     begin
-      if not ASuccess then
-        AtomicExchange(FStarted, 0);
+      if ASuccess then
+        AtomicExchange(FStarted, 1);
 
-      // Èç¹ûÊÇ¼àÌıµÄËæ»ú¶Ë¿Ú
-      // ÔòÔÚ¼àÌı³É¹¦Ö®ºó½«Êµ¼ÊµÄ¶Ë¿ÚÈ¡³öÀ´
-      if (FPort = 0) then
+      // å¦‚æœæ˜¯ç›‘å¬çš„éšæœºç«¯å£
+      // åˆ™åœ¨ç›‘å¬æˆåŠŸä¹‹åå°†å®é™…çš„ç«¯å£å–å‡ºæ¥
+      if ASuccess and (FPort = 0) then
         FPort := AListen.LocalPort;
 
       if Assigned(ACallback) then
-        ACallback(ASuccess);
+        ACallback(AListen, ASuccess);
     end);
 end;
 
