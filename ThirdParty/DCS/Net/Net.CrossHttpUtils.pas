@@ -1,4 +1,4 @@
-{******************************************************************************}
+﻿{******************************************************************************}
 {                                                                              }
 {       Delphi cross platform socket library                                   }
 {                                                                              }
@@ -9,10 +9,18 @@
 {******************************************************************************}
 unit Net.CrossHttpUtils;
 
+{$I zLib.inc}
+
 interface
 
 uses
-  System.SysUtils;
+  SysUtils,
+  DateUtils,
+
+  Utils.DateTime,
+  Utils.StrUtils,
+  Utils.Utils,
+  Utils.IOUtils;
 
 type
   THttpStatus = record
@@ -25,8 +33,84 @@ type
     Value: string;
   end;
 
+  {$REGION 'Documentation'}
+  /// <summary>
+  ///   HTTP版本信息
+  /// </summary>
+  {$ENDREGION}
+  THttpVersion = (hvHttp10, hvHttp11);
+
+  {$REGION 'Documentation'}
+  /// <summary>
+  ///   压缩类型
+  /// </summary>
+  {$ENDREGION}
+  TCompressType = (ctNone, ctGZip, ctDeflate);
+
 const
-  {$REGION 'STATUS CODE CONST'}
+  HTTP               = 'http';
+  HTTPS              = 'https';
+  HTTP_DEFAULT_PORT  = 80;
+  HTTPS_DEFAULT_PORT = 443;
+  WS                 = 'ws';
+  WSS                = 'wss';
+  WEBSOCKET          = 'websocket';
+  WEBSOCKET_VERSION  = '13';
+
+  HTTP_VER_STR: array [THttpVersion] of string = ('HTTP/1.0', 'HTTP/1.1');
+
+  {$REGION '常用 HTTP 头'}
+  HEADER_ACCEPT                = 'Accept';
+  HEADER_ACCEPT_CHARSET        = 'Accept-Charset';
+  HEADER_ACCEPT_ENCODING       = 'Accept-Encoding';
+  HEADER_ACCEPT_LANGUAGE       = 'Accept-Language';
+  HEADER_ACCEPT_RANGES         = 'Accept-Ranges';
+  HEADER_AUTHORIZATION         = 'Authorization';
+  HEADER_CACHE_CONTROL         = 'Cache-Control';
+  HEADER_CONNECTION            = 'Connection';
+  HEADER_CONTENT_DISPOSITION   = 'Content-Disposition';
+  HEADER_CONTENT_ENCODING      = 'Content-Encoding';
+  HEADER_CONTENT_LANGUAGE      = 'Content-Language';
+  HEADER_CONTENT_LENGTH        = 'Content-Length';
+  HEADER_CONTENT_RANGE         = 'Content-Range';
+  HEADER_CONTENT_TYPE          = 'Content-Type';
+  HEADER_COOKIE                = 'Cookie';
+  HEADER_CROSS_HTTP_CLIENT     = 'Client';
+  HEADER_CROSS_HTTP_SERVER     = 'Server';
+  HEADER_ETAG                  = 'ETag';
+  HEADER_EXPECT                = 'Expect';
+  HEADER_HOST                  = 'Host';
+  HEADER_IF_MODIFIED_SINCE     = 'If-Modified-Since';
+  HEADER_IF_NONE_MATCH         = 'If-None-Match';
+  HEADER_IF_RANGE              = 'If-Range';
+  HEADER_LAST_MODIFIED         = 'Last-Modified';
+  HEADER_LOCATION              = 'Location';
+  HEADER_PRAGMA                = 'Pragma';
+  HEADER_PROXY_AUTHENTICATE    = 'Proxy-Authenticate';
+  HEADER_PROXY_AUTHORIZATION   = 'Proxy-Authorization';
+  HEADER_RANGE                 = 'Range';
+  HEADER_REFERER               = 'Referer';
+  HEADER_SEC_WEBSOCKET_ACCEPT  = 'Sec-WebSocket-Accept';
+  HEADER_SEC_WEBSOCKET_KEY     = 'Sec-WebSocket-Key';
+  HEADER_SEC_WEBSOCKET_VERSION = 'Sec-WebSocket-Version';
+  HEADER_SETCOOKIE             = 'Set-Cookie';
+  HEADER_TRANSFER_ENCODING     = 'Transfer-Encoding';
+  HEADER_UPGRADE               = 'Upgrade';
+  HEADER_USER_AGENT            = 'User-Agent';
+  HEADER_VARY                  = 'Vary';
+  HEADER_WWW_AUTHENTICATE      = 'WWW-Authenticate';
+  HEADER_X_METHOD_OVERRIDE     = 'x-method-override';
+  HEADER_X_FORWARDED_FOR       = 'X-Forwarded-For';
+  HEADER_X_REAL_IP             = 'X-Real-IP';
+  HEADER_X_FORWARDED_HOST      = 'X-Forwarded-Host';
+  HEADER_X_FORWARDED_SERVER    = 'X-Forwarded-Server';
+  {$ENDREGION}
+
+  ZLIB_BUF_SIZE = 32768;
+  ZLIB_WINDOW_BITS: array [TCompressType] of Integer = (0, 15 + 16{gzip}, 15{deflate});
+  ZLIB_CONTENT_ENCODING: array [TCompressType] of string = ('', 'gzip', 'deflate');
+
+  {$REGION '常用状态码'}
   STATUS_CODES: array [0..56] of THttpStatus = (
     (Code: 100; Text: 'Continue'),
     (Code: 101; Text: 'Switching Protocols'),
@@ -55,13 +139,13 @@ const
     (Code: 405; Text: 'Method Not Allowed'),
     (Code: 406; Text: 'Not Acceptable'),
     (Code: 407; Text: 'Proxy Authentication Required'),
-    (Code: 408; Text: 'Request Time-out'),
+    (Code: 408; Text: 'Request Timeout'),
     (Code: 409; Text: 'Conflict'),
     (Code: 410; Text: 'Gone'),
     (Code: 411; Text: 'Length Required'),
     (Code: 412; Text: 'Precondition Failed'),
     (Code: 413; Text: 'Request Entity Too Large'),
-    (Code: 414; Text: 'Request-URI Too Large'),
+    (Code: 414; Text: 'Request URI Too Large'),
     (Code: 415; Text: 'Unsupported Media Type'),
     (Code: 416; Text: 'Requested Range Not Satisfiable'),
     (Code: 417; Text: 'Expectation Failed'),
@@ -78,7 +162,7 @@ const
     (Code: 501; Text: 'Not Implemented'),
     (Code: 502; Text: 'Bad Gateway'),
     (Code: 503; Text: 'Service Unavailable'),
-    (Code: 504; Text: 'Gateway Time-out'),
+    (Code: 504; Text: 'Gateway Timeout'),
     (Code: 505; Text: 'HTTP Version Not Supported'),
     (Code: 506; Text: 'Variant Also Negotiates'),     // RFC 2295
     (Code: 507; Text: 'Insufficient Storage'),        // RFC 4918
@@ -89,7 +173,7 @@ const
   {$ENDREGION}
 
   {$REGION 'MIME CONST'}
-  MIME_TYPES: array[0..987] of TMimeValue = (
+  MIME_TYPES: array[0..988] of TMimeValue = (
     (Key: 'ez'; Value: 'application/andrew-inset'), // do not localize
     (Key: 'aw'; Value: 'application/applixware'), // do not localize
     (Key: 'atom'; Value: 'application/atom+xml'), // do not localize
@@ -1077,16 +1161,40 @@ const
     (Key: 'avi'; Value: 'video/x-msvideo'), // do not localize
     (Key: 'movie'; Value: 'video/x-sgi-movie'), // do not localize
     (Key: 'smv'; Value: 'video/x-smv'), // do not localize
-    (Key: 'ice'; Value: 'x-conference/x-cooltalk') // do not localize
+    (Key: 'ice'; Value: 'x-conference/x-cooltalk'), // do not localize
+    (Key: 'wasm'; Value: 'application/wasm') // do not localize
   );
   {$ENDREGION}
 
 type
+  THttpMethod = class
+  public const
+    GET      = 'GET';
+    POST     = 'POST';
+    PUT      = 'PUT';
+    DELETE   = 'DELETE';
+    HEAD     = 'HEAD';
+    OPTIONS  = 'OPTIONS';
+    TRACE    = 'TRACE';
+    CONNECT  = 'CONNECT';
+    PROPFIND = 'PROPFIND';
+    LOCK     = 'LOCK';
+    UNLOCK   = 'UNLOCK';
+    COPY     = 'COPY';
+    MOVE     = 'MOVE';
+    MKCOL    = 'MKCOL';
+  end;
+
+  {$REGION 'Documentation'}
+  /// <summary>
+  ///   常用媒体类型
+  /// </summary>
+  {$ENDREGION}
   TMediaType = class
   public const
-    DELIM_PARAMS = ';';
+    DELIM_PARAMS = '; ';
     CHARSET_NAME = 'charset';
-    CHARSET_UTF8 = 'utf-8';
+    CHARSET_UTF8 = 'UTF-8';
     CHARSET_UTF8_DEF = CHARSET_NAME + '=' +  CHARSET_UTF8;
 
     TEXT_PLAIN = 'text/plain';
@@ -1106,7 +1214,10 @@ type
 
     APPLICATION_OCTET_STREAM = 'application/octet-stream';
     APPLICATION_FORM_URLENCODED_TYPE = 'application/x-www-form-urlencoded';
+
     MULTIPART_FORM_DATA = 'multipart/form-data';
+    MULTIPART_FORM_DATA_BOUNDARY = MULTIPART_FORM_DATA + DELIM_PARAMS + 'boundary=';
+
     WILDCARD = '*/*';
   end;
 
@@ -1117,9 +1228,132 @@ type
   public
     class function GetHttpStatusText(const AStatusCode: Integer): string; static;
     class function GetFileMIMEType(const AFileName: string): string; static;
-    class function RFC1123_DateToStr(const ADate: TDateTime): string; static;
+    class function RFC1123_DateToStr(const ADate: TDateTime): string; static; inline;
     class function RFC1123_StrToDate(const ADateStr: string): TDateTime; static;
-    class function CombinePath(const APath1, APath2: string): string; static;
+
+    class function ExtractUrl(const AUrl: string; out AProtocol, AHost: string;
+      out APort: Word; out APath: string): Boolean; static;
+    class function CreateUrl(const AProtocol, AHost: string;
+      const APort: Word; const APath: string): string; static;
+
+    class function CombinePath(const APath1, APath2: string; const APathDelim: Char = '/'): string; static;
+    class function IsSamePath(const APath1, APath2: string): Boolean; static;
+
+    class function GetPathWithoutParams(const APath: string): string; static;
+
+    /// <summary>
+    ///   尝试解析本地路径，确保路径安全性
+    /// </summary>
+    /// <param name="ALocalBaseDir">
+    ///   本地基础目录
+    /// </param>
+    /// <param name="AUrlPath">
+    ///   要解析的相对路径
+    /// </param>
+    /// <param name="AResolvedPath">
+    ///   解析后的完整路径
+    /// </param>
+    /// <returns>
+    ///   如果路径有效且在基础目录内返回True，否则返回False
+    /// </returns>
+    /// <remarks>
+    ///   此函数会验证路径的安全性，防止路径遍历攻击
+    /// </remarks>
+    class function TryUrlPathToLocalPath(const ALocalBaseDir, AUrlPath: string;
+      out AResolvedPath: string): Boolean; static;
+
+    class function HtmlEncode(const AInput: string): string; static;
+    class function HtmlDecode(const AInput: string): string; static;
+
+    /// <summary>
+    ///   URL percent-encoding (RFC 3986 §2.1)
+    /// </summary>
+    /// <param name="S">
+    ///   待编码字符串(支持 unicode, 内部统一按 UTF-8 字节流处理)
+    /// </param>
+    /// <param name="ANoConversion">
+    ///   附加的"无需编码"字符集. 默认仅按 RFC 3986 unreserved 集
+    ///   (ALPHA / DIGIT / "-" / "." / "_" / "~") 不编码, 其他字符全部 percent-encode.
+    ///   调用方可据 URI 组件传入合理子集, 如 path 段内可保留 ['/', ':', '@'].
+    /// </param>
+    /// <param name="APreserveEncoded">
+    ///   是否将输入按"已含 percent-encoded 序列的 URI 组件"对待 (Normalizer 语义).
+    ///   - False (默认, Encoder 语义): 输入视作原始数据, '%' 字符按字面编码为 '%25'.
+    ///     适用于参数值/表单字段等"原始字节"场景. 与 RFC 3986 §2.1 Encoder 语义、
+    ///     主流库 (Go QueryEscape / Python quote / Java URLEncoder) 默认行为一致.
+    ///   - True (Normalizer 语义): 遇到 '%' + 2 hex 数字时保留 3 字符不再编码,
+    ///     避免二次编码 (RFC 3986 §2.4 "MUST NOT encode the same string more than once").
+    ///     适用于"用户传入的 URL 片段可能已部分编码"场景, 类似 Python requote_uri.
+    /// </param>
+    class function UrlEncode(const S: string; const ANoConversion: TSysCharSet = [];
+      const APreserveEncoded: Boolean = False): string; static;
+    class function UrlDecode(const S: string): string; static;
+
+    // Delphi 12+ 编译器将NativeInt与Integer(目标32位)和Int64(目标64位)等同
+    {$IF DEFINED(DELPHI) AND (CompilerVersion < 36)}
+    class procedure AdjustOffsetCount(const ABodySize: NativeInt; var AOffset, ACount: NativeInt); overload; static;
+    {$ENDIF}
+    class procedure AdjustOffsetCount(const ABodySize: Integer; var AOffset, ACount: Integer); overload; static;
+    class procedure AdjustOffsetCount(const ABodySize: Int64; var AOffset, ACount: Int64); overload; static;
+
+    /// <summary>
+    ///   严格解析 HTTP Range 请求头中的单一 byte-range (RFC 7233 §2.1, §3.1).
+    /// </summary>
+    /// <param name="ARangeHeader">
+    ///   原始 Range 头, 如 "bytes=0-499" / "bytes=500-" / "bytes=-200".
+    /// </param>
+    /// <param name="AContentLength">
+    ///   资源完整长度, 必须 > 0.
+    /// </param>
+    /// <param name="AStart">
+    ///   解析成功时, 输出区间起点 (含, 0-based).
+    /// </param>
+    /// <param name="AEnd">
+    ///   解析成功时, 输出区间终点 (含, 0-based, &lt; AContentLength).
+    /// </param>
+    /// <returns>
+    ///   True: 区间合法且可满足, AStart/AEnd 已正确设置.
+    ///   False: 缺前缀 / 多 range / 非法数字 / 不可满足 (start &gt; end / start &gt;= size /
+    ///   suffix=0). 调用方应返回 416 + "Content-Range: bytes */size".
+    /// </returns>
+    /// <remarks>
+    ///   不支持 multipart/byteranges (含 ',' 一律拒绝), 与 Nginx/Apache 在小文件上的常见策略一致.
+    /// </remarks>
+    class function ParseSingleByteRange(const ARangeHeader: string;
+      const AContentLength: Int64; out AStart, AEnd: Int64): Boolean; static;
+
+    /// <summary>
+    ///   校验 HTTP header field-value 是否安全, 不允许出现 CR/LF (RFC 7230 §3.2.4).
+    /// </summary>
+    /// <remarks>
+    ///   主要用于防御响应拆分 (HTTP Response Splitting) 攻击: 若业务把含 CR/LF 的用户输入
+    ///   写入响应 header, 可能被攻击者注入伪造响应行或 header.
+    /// </remarks>
+    class function IsValidHeaderValue(const AValue: string): Boolean; static;
+
+    /// <summary>
+    ///   校验 HTTP header field-name 是否符合 RFC 7230 token 字符集.
+    /// </summary>
+    class function IsValidHeaderName(const AName: string): Boolean; static;
+
+    /// <summary>
+    ///   单字符版本: 判断字符是否属于 RFC 7230 §3.2.6 token 字符集.
+    /// </summary>
+    /// <remarks>
+    ///   token = ALPHA / DIGIT / "!" "#" "$" "%" "&amp;" "'" "*" "+" "-" "." "^" "_" "`" "|" "~"
+    ///   提供给逐字节扫描场景 (如 THttpHeader.Decode 单趟状态机) 复用规则, 避免重复定义.
+    /// </remarks>
+    class function IsTokenChar(ACh: Char): Boolean; static; inline;
+
+    /// <summary>
+    ///   单字符版本: 判断字符是否是合法的 HTTP header field-value 字符.
+    /// </summary>
+    /// <remarks>
+    ///   合法: HTAB(#9) / 可见 ASCII ($20..$7E) / $80+ 高位字符 (历史宽松, 兼容 UTF-8).
+    ///   非法: NUL/CR/LF 等其他 CTL ($00..$08, $0A..$1F) 与 DEL ($7F).
+    ///   提供给逐字节扫描场景复用规则, 避免重复定义.
+    /// </remarks>
+    class function IsHeaderValueChar(ACh: Char): Boolean; static; inline;
   end;
 
 implementation
@@ -1128,76 +1362,752 @@ implementation
 
 class function TCrossHttpUtils.GetHttpStatusText(const AStatusCode: Integer): string;
 var
-  LItem: THttpStatus;
+  LStatusItem: THttpStatus;
 begin
-  for LItem in STATUS_CODES do
-    if (LItem.Code = AStatusCode) then Exit(LItem.Text);
+  for LStatusItem in STATUS_CODES do
+    if (LStatusItem.Code = AStatusCode) then Exit(LStatusItem.Text);
   Result := AStatusCode.ToString;
 end;
 
-class function TCrossHttpUtils.CombinePath(const APath1,
-  APath2: string): string;
+class function TCrossHttpUtils.GetPathWithoutParams(
+  const APath: string): string;
 var
-  LPath1Ends, LPath2Starts: string;
+  LIndex: Integer;
 begin
-  if (APath1 = '') then Exit(APath2);
-  if (APath2 = '') then Exit(APath1);
-
-  LPath1Ends := APath1.Substring(APath1.Length - 1, 1);
-  LPath2Starts := APath2.Substring(0, 1);
-  if (LPath1Ends = '/') and (LPath2Starts = '/') then
-    Result := APath1 + APath2.Substring(1)
-  else if (LPath1Ends = '/') and (LPath2Starts <> '/') then
-    Result := APath1 + APath2
-  else if (LPath1Ends <> '/') and (LPath2Starts = '/') then
-    Result := APath1 + APath2
+  LIndex := APath.IndexOf('?');
+  if (LIndex >= 0) then
+    Result := APath.Substring(0, LIndex)
   else
-    Result := APath1 + '/' + APath2;
+    Result := APath;
+end;
+
+class function TCrossHttpUtils.HtmlDecode(const AInput: string): string;
+var
+  LSp, LRp, LCp, LTp: PChar;
+  LStr: string;
+  I, LCode: Integer;
+  LValid: Boolean;
+begin
+  if (AInput = '') then Exit('');
+
+  SetLength(Result, Length(AInput));
+  LSp := PChar(AInput);
+  LRp := PChar(Result);
+  while LSp^ <> #0 do
+  begin
+    case LSp^ of
+      '&':
+        begin
+          LCp := LSp;
+          Inc(LSp);
+          LValid := False;
+          case LSp^ of
+            'a':
+              if StrLComp(LSp, 'amp;', 4) = 0 then { do not localize }
+              begin
+                Inc(LSp, 3);
+                LRp^ := '&';
+                LValid := True;
+              end
+              else if StrLComp(LSp, 'apos;', 5) = 0 then { do not localize }
+              begin
+                Inc(LSp, 4);
+                LRp^ := '''';
+                LValid := True;
+              end;
+            'l':
+              if StrLComp(LSp, 'lt;', 3) = 0 then { do not localize }
+              begin
+                Inc(LSp, 2);
+                LRp^ := '<';
+                LValid := True;
+              end;
+            'g':
+              if StrLComp(LSp, 'gt;', 3) = 0 then { do not localize }
+              begin
+                Inc(LSp, 2);
+                LRp^ := '>';
+                LValid := True;
+              end;
+            'q':
+              if StrLComp(LSp, 'quot;', 5) = 0 then { do not localize }
+              begin
+                Inc(LSp, 4);
+                LRp^ := '"';
+                LValid := True;
+              end;
+            '#':
+              begin
+                LTp := LSp;
+                Inc(LTp);
+                while (LSp^ <> ';') and (LSp^ <> #0) do
+                  Inc(LSp);
+                SetString(LStr, LTp, LSp - LTp);
+                Val(LStr, I, LCode);
+                if LCode = 0 then
+                begin
+                  if I >= $10000 then
+                  begin
+                    // DoDecode surrogate pair
+                    LRp^ := Char(((I - $10000) div $400) + $D800);
+                    Inc(LRp);
+                    LRp^ := Char(((I - $10000) and $3FF) + $DC00);
+                  end
+                  else
+                    LRp^ := Chr((I));
+                  LValid := True;
+                end
+                else
+                  LSp := LTp - 1;
+              end;
+          end;
+          if not LValid then
+          begin
+            LSp := LCp;
+            LRp^ := LSp^;
+          end;
+        end
+    else
+      LRp^ := LSp^;
+    end;
+    Inc(LRp);
+    Inc(LSp);
+  end;
+  SetLength(Result, LRp - PChar(Result));
+end;
+
+class function TCrossHttpUtils.HtmlEncode(const AInput: string): string;
+var
+  LSp, LRp: PChar;
+begin
+  if (AInput = '') then Exit('');
+
+  SetLength(Result, Length(AInput) * 10);
+  LSp := PChar(AInput);
+  LRp := PChar(Result);
+  // Convert: &, <, >, "
+  while LSp^ <> #0 do
+  begin
+    case LSp^ of
+      '&':
+        begin
+          StrMove(LRp, '&amp;', 5);
+          Inc(LRp, 5);
+        end;
+      '<':
+        begin
+          StrMove(LRp, '&lt;', 4);
+          Inc(LRp, 4);
+        end;
+       '>':
+        begin
+          StrMove(LRp, '&gt;', 4);
+          Inc(LRp, 4);
+        end;
+      '"':
+        begin
+          StrMove(LRp, '&quot;', 6);
+          Inc(LRp, 6);
+        end;
+      else
+      begin
+        LRp^ := LSp^;
+        Inc(LRp);
+      end;
+    end;
+    Inc(LSp);
+  end;
+  SetLength(Result, LRp - PChar(Result));
+end;
+
+class function TCrossHttpUtils.IsSamePath(const APath1,
+  APath2: string): Boolean;
+begin
+  if (Length(APath1) >= Length(APath2)) then
+    Result := (Pos(APath2, APath1) = 1)
+  else
+    Result := (Pos(APath1, APath2) = 1);
+end;
+
+{$IF DEFINED(DELPHI) AND (CompilerVersion < 36)}
+class procedure TCrossHttpUtils.AdjustOffsetCount(const ABodySize: NativeInt;
+  var AOffset, ACount: NativeInt);
+begin
+  {$region '修正 AOffset'}
+  // 偏移为正数, 从头部开始计算偏移
+  if (AOffset >= 0) then
+  begin
+    AOffset := AOffset;
+    if (AOffset >= ABodySize) then
+      AOffset := ABodySize - 1;
+  end else
+  // 偏移为负数, 从尾部开始计算偏移
+  begin
+    AOffset := ABodySize + AOffset;
+    if (AOffset < 0) then
+      AOffset := 0;
+  end;
+  {$endregion}
+
+  {$region '修正 ACount'}
+  // ACount<=0表示需要处理所有数据
+  if (ACount <= 0) then
+    ACount := ABodySize;
+
+  if (ABodySize - AOffset < ACount) then
+    ACount := ABodySize - AOffset;
+  {$endregion}
+end;
+{$ENDIF}
+
+class procedure TCrossHttpUtils.AdjustOffsetCount(const ABodySize: Integer;
+  var AOffset, ACount: Integer);
+begin
+  {$region '修正 AOffset'}
+  // 偏移为正数, 从头部开始计算偏移
+  if (AOffset >= 0) then
+  begin
+    AOffset := AOffset;
+    if (AOffset >= ABodySize) then
+      AOffset := ABodySize - 1;
+  end else
+  // 偏移为负数, 从尾部开始计算偏移
+  begin
+    AOffset := ABodySize + AOffset;
+    if (AOffset < 0) then
+      AOffset := 0;
+  end;
+  {$endregion}
+
+  {$region '修正 ACount'}
+  // ACount<=0表示需要处理所有数据
+  if (ACount <= 0) then
+    ACount := ABodySize;
+
+  if (ABodySize - AOffset < ACount) then
+    ACount := ABodySize - AOffset;
+  {$endregion}
+end;
+
+class procedure TCrossHttpUtils.AdjustOffsetCount(const ABodySize: Int64;
+  var AOffset, ACount: Int64);
+begin
+  {$region '修正 AOffset'}
+  // 偏移为正数, 从头部开始计算偏移
+  if (AOffset >= 0) then
+  begin
+    AOffset := AOffset;
+    if (AOffset >= ABodySize) then
+      AOffset := ABodySize - 1;
+  end else
+  // 偏移为负数, 从尾部开始计算偏移
+  begin
+    AOffset := ABodySize + AOffset;
+    if (AOffset < 0) then
+      AOffset := 0;
+  end;
+  {$endregion}
+
+  {$region '修正 ACount'}
+  // ACount<=0表示需要处理所有数据
+  if (ACount <= 0) then
+    ACount := ABodySize;
+
+  if (ABodySize - AOffset < ACount) then
+    ACount := ABodySize - AOffset;
+  {$endregion}
+end;
+
+class function TCrossHttpUtils.CombinePath(const APath1,
+  APath2: string; const APathDelim: Char): string;
+begin
+  Result := TPathUtils.Combine(APath1, APath2, APathDelim);
+end;
+
+class function TCrossHttpUtils.CreateUrl(const AProtocol, AHost: string;
+  const APort: Word; const APath: string): string;
+var
+  LPath: string;
+begin
+  if (APath = '') then
+    LPath := '/'
+  else if (APath[1] = '/') then
+    LPath := APath
+  else
+    LPath := '/' + APath;
+
+  Result := Format('%s://%s', [AProtocol, AHost]);
+
+  if (SameText(AProtocol, HTTP) and (APort = HTTP_DEFAULT_PORT))
+    or (SameText(AProtocol, HTTPS) and (APort = HTTPS_DEFAULT_PORT)) then
+    Result := Result + LPath
+  else
+    Result := Result + Format(':%d%s', [APort, LPath]);
+end;
+
+class function TCrossHttpUtils.ExtractUrl(const AUrl: string; out AProtocol,
+  AHost: string; out APort: Word; out APath: string): Boolean;
+var
+  LProtocolIndex, LIPv6Index, LPortIndex, LPathIndex, LQueryIndex, LPort: Integer;
+  LPortStr: string;
+begin
+  // http://www.test.com/abc
+  // http://www.test.com:8080/abc
+  // https://www.test.com/abc
+  // https://www.test.com:8080/abc
+  // www.test.com:8080/abc
+  // www.test.com/abc
+  // www.test.com
+  // http://[aabb::20:80:5:2]:8080/abc
+  // [aabb::20:80:5:2]
+
+  Result := False;
+
+  // 找 :// 定位协议类型
+  LProtocolIndex := AUrl.IndexOf('://');
+  if (LProtocolIndex >= 0) then
+  begin
+    // 提取协议类型
+    AProtocol := AUrl.Substring(0, LProtocolIndex).Trim;
+    Inc(LProtocolIndex, 3);
+  end else
+  begin
+    // 默认协议 http
+    AProtocol := HTTP;
+    LProtocolIndex := 0;
+  end;
+
+  // 找 ] 定位IPv6地址
+  LIPv6Index := AUrl.IndexOf(']', LProtocolIndex);
+
+  if (LIPv6Index >= 0) then
+  begin
+    // 找 : 定位端口
+    LPortIndex := AUrl.IndexOf(':', LIPv6Index + 1);
+
+    // 找 / 定位路径
+    LPathIndex := AUrl.IndexOf('/', LIPv6Index + 1);
+
+    // 避免在参数部分出现 : 被当成端口定位
+    if (LPathIndex >= 0) and (LPortIndex > LPathIndex) then
+      LPortIndex := -1;
+
+    // 找 ? 定位参数
+    LQueryIndex := AUrl.IndexOf('?', LIPv6Index + 1);
+  end else
+  begin
+    // 找 : 定位端口
+    LPortIndex := AUrl.IndexOf(':', LProtocolIndex);
+
+    // 找 / 定位路径
+    LPathIndex := AUrl.IndexOf('/', LProtocolIndex);
+
+    // 避免在参数部分出现 : 被当成端口定位
+    if (LPathIndex >= 0) and (LPortIndex > LPathIndex) then
+      LPortIndex := -1;
+
+    // 找 ? 定位参数
+    LQueryIndex := AUrl.IndexOf('?', LProtocolIndex);
+  end;
+
+  if (LPathIndex < 0) then
+  begin
+    if (LQueryIndex >= 0) then
+      LPathIndex := LQueryIndex
+    else
+      LPathIndex := Length(AUrl);
+  end;
+
+  if (LPortIndex >= 0) then
+  begin
+    // 提取主机地址
+    AHost := AUrl.Substring(LProtocolIndex, LPortIndex - LProtocolIndex);
+
+    // 提取主机端口
+    LPortStr := AUrl.Substring(LPortIndex + 1, LPathIndex - LPortIndex - 1);
+    if not TryStrToInt(LPortStr, LPort) then Exit;
+
+    APort := LPort;
+  end else
+  begin
+    // 提取主机地址
+    AHost := AUrl.Substring(LProtocolIndex, LPathIndex - LProtocolIndex);
+
+    // 根据协议类型决定默认端口
+    if TStrUtils.SameText(AProtocol, HTTPS)
+      or TStrUtils.SameText(AProtocol, WSS) then
+      APort := HTTPS_DEFAULT_PORT
+    else
+      APort := HTTP_DEFAULT_PORT;
+  end;
+
+  // 提取路径
+  APath := AUrl.Substring(LPathIndex, MaxInt);
+  if (APath = '') then
+    APath := '/'
+  else if (APath[1] <> '/') then
+    APath := '/' + APath;
+
+  Result := (AHost <> '');
 end;
 
 class function TCrossHttpUtils.GetFileMIMEType(const AFileName: string): string;
 var
-  I: Integer;
   LExt: string;
+  LMimeItem: TMimeValue;
 begin
   LExt := ExtractFileExt(AFileName).Substring(1);
-  for I := 0 to High(MIME_TYPES) do
-    if (CompareText(MIME_TYPES[I].Key, LExt) = 0) then
-      Exit(MIME_TYPES[I].Value);
+  for LMimeItem in MIME_TYPES do
+    if TStrUtils.SameText(LMimeItem.Key, LExt) then
+      Exit(LMimeItem.Value);
   Result := TMediaType.APPLICATION_OCTET_STREAM;
 end;
 
 class function TCrossHttpUtils.RFC1123_DateToStr(const ADate: TDateTime): string;
-var
-  Year, Month, Day       : Word;
-  Hour, Min,   Sec, MSec : Word;
-  DayOfWeek              : Word;
 begin
-  DecodeDate(ADate, Year, Month, Day);
-  DecodeTime(ADate, Hour, Min,   Sec, MSec);
-  DayOfWeek := ((Trunc(aDate) - 2) mod 7);
-  Result := Copy(RFC1123_StrWeekDay, 1 + DayOfWeek * 3, 3) + ', ' +
-    Format('%2.2d %s %4.4d %2.2d:%2.2d:%2.2d GMT',
-      [Day, Copy(RFC1123_StrMonth, 1 + 3 * (Month - 1), 3),
-      Year, Hour, Min, Sec]);
+  // Fri, 30 Jul 2024 10:10:35 GMT
+  Result := ADate.ToRFC1123(True);
 end;
 
 class function TCrossHttpUtils.RFC1123_StrToDate(const ADateStr: string) : TDateTime;
 var
-  Year, Month, Day : Word;
-  Hour, Min,   Sec : Word;
+  LYear, LMonth, LDay: Word;
+  LHour, LMin,   LSec: Word;
 begin
-  if (ADateStr = '') then Exit(0);
+  // Fri, 30 Jul 2024 10:10:35 GMT
+  if (Length(ADateStr) = 29) then
+  begin
+    LDay    := StrToIntDef(Copy(ADateStr, 6, 2), 0);
+    LMonth  := (Pos(Copy(ADateStr, 9, 3), RFC1123_StrMonth) + 2) div 3;
+    LYear   := StrToIntDef(Copy(ADateStr, 13, 4), 0);
+    LHour   := StrToIntDef(Copy(ADateStr, 18, 2), 0);
+    LMin    := StrToIntDef(Copy(ADateStr, 21, 2), 0);
+    LSec    := StrToIntDef(Copy(ADateStr, 24, 2), 0);
+  end else
+  // Fri, 30 Jul 24 10:10:35 GMT
+  // Fri, 30-Jul-24 10:10:35 GMT
+  if (Length(ADateStr) = 27) then
+  begin
+    LDay    := StrToIntDef(Copy(ADateStr, 6, 2), 0);
+    LMonth  := (Pos(Copy(ADateStr, 9, 3), RFC1123_StrMonth) + 2) div 3;
+    LYear   := 2000 + StrToIntDef(Copy(ADateStr, 13, 2), 0);
+    LHour   := StrToIntDef(Copy(ADateStr, 16, 2), 0);
+    LMin    := StrToIntDef(Copy(ADateStr, 19, 2), 0);
+    LSec    := StrToIntDef(Copy(ADateStr, 22, 2), 0);
+  end else
+    Exit(0);
 
-  { Fri, 30 Jul 2004 10:10:35 GMT }
-  Day    := StrToIntDef(Copy(ADateStr, 6, 2), 0);
-  Month  := (Pos(Copy(ADateStr, 9, 3), RFC1123_StrMonth) + 2) div 3;
-  Year   := StrToIntDef(Copy(ADateStr, 13, 4), 0);
-  Hour   := StrToIntDef(Copy(ADateStr, 18, 2), 0);
-  Min    := StrToIntDef(Copy(ADateStr, 21, 2), 0);
-  Sec    := StrToIntDef(Copy(ADateStr, 24, 2), 0);
-  Result := EncodeDate(Year, Month, Day);
-  Result := Result + EncodeTime(Hour, Min, Sec, 0);
+  if not TryEncodeDateTime(LYear, LMonth, LDay, LHour, LMin, LSec, 0, Result) then
+    Result := 0;
+end;
+
+class function TCrossHttpUtils.TryUrlPathToLocalPath(const ALocalBaseDir,
+  AUrlPath: string; out AResolvedPath: string): Boolean;
+begin
+  Result := TPathUtils.TryResolveLocalPath(
+    ALocalBaseDir,
+    TCrossHttpUtils.GetPathWithoutParams(AUrlPath).Trim,
+    AResolvedPath);
+end;
+
+class function TCrossHttpUtils.UrlDecode(const S: string): string;
+var
+  LSrcBytes, LDstBytes: TBytes;
+  LSrcLen, LSrcIdx, LDstIdx: Integer;
+  H, L: Byte;
+  C: Byte;
+begin
+  if (S = '') then Exit('');
+
+  // 先把输入 unicode 字符串 UTF-8 编码为字节流, 与 UrlEncode 对称.
+  // 这样允许输入混合: ASCII percent-encoded ('%E4%B8%AD') 与 unicode 原字符 ('中') 都能正确处理.
+  LSrcBytes := TEncoding.UTF8.GetBytes(S);
+  LSrcLen := Length(LSrcBytes);
+  SetLength(LDstBytes, LSrcLen);
+
+  LSrcIdx := 0;
+  LDstIdx := 0;
+  while (LSrcIdx < LSrcLen) do
+  begin
+    C := LSrcBytes[LSrcIdx];
+    case C of
+      // 兼容早期 form-urlencoded: '+' → 空格
+      Ord('+'):
+        begin
+          LDstBytes[LDstIdx] := Ord(' ');
+          Inc(LSrcIdx);
+        end;
+
+      Ord('%'):
+        begin
+          if (LSrcIdx + 2 < LSrcLen)
+            and TUtils.HexCharToByte(Char(LSrcBytes[LSrcIdx + 1]), H)
+            and TUtils.HexCharToByte(Char(LSrcBytes[LSrcIdx + 2]), L) then
+          begin
+            LDstBytes[LDstIdx] := L + (H shl 4);
+            Inc(LSrcIdx, 3);
+          end else
+          begin
+            // 非法 %xx, 原样保留 '%' 字符
+            LDstBytes[LDstIdx] := Ord('%');
+            Inc(LSrcIdx);
+          end;
+        end;
+    else
+      // 包含 ASCII 与 UTF-8 多字节序列的高字节, 都原样透传
+      LDstBytes[LDstIdx] := C;
+      Inc(LSrcIdx);
+    end;
+
+    Inc(LDstIdx);
+  end;
+  SetLength(LDstBytes, LDstIdx);
+
+  Result := TEncoding.UTF8.GetString(LDstBytes);
+end;
+
+class function TCrossHttpUtils.UrlEncode(const S: string; const ANoConversion: TSysCharSet;
+  const APreserveEncoded: Boolean): string;
+const
+  HEX_CHARS: array[0..15] of Char = (
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F');
+
+  function _IsHexByte(const AByte: Byte): Boolean; inline;
+  begin
+    case AByte of
+      Ord('0')..Ord('9'),
+      Ord('a')..Ord('f'),
+      Ord('A')..Ord('F'):
+        Result := True;
+    else
+      Result := False;
+    end;
+  end;
+
+var
+  LUTF8Bytes: TBytes;
+  LLen, I: Integer;
+  C: Byte;
+  P: PChar;
+begin
+  if (S = '') then Exit('');
+
+  // 先将 unicode 字符串编码为 utf8 字节数组
+  LUTF8Bytes := TEncoding.UTF8.GetBytes(S);
+  LLen := Length(LUTF8Bytes);
+
+  // 预分配编码字符串, 比一直累加效率高很多
+  // 预分配尺寸为 utf8 字节数组长度的 3 倍
+  // 之所以预分配 3 倍, 是因为每个 utf8 字节最长可能被编码为 %xy 这样的字符串
+  SetLength(Result, LLen * 3);
+  P := PChar(Result);
+
+  I := 0;
+  while (I < LLen) do
+  begin
+    C := LUTF8Bytes[I];
+    case C of
+      // https://datatracker.ietf.org/doc/html/rfc3986
+      // RFC 3986 中明确定义了未保留字(无需编码)包含以下这些
+      //   字母数字：大小写英文字母(A-Z, a-z)和数字(0-9)。
+      //   特殊字符：连字符(-)，下划线(_)，点号(.)，和波浪号(~)。
+      Ord('0')..Ord('9'),
+      Ord('a')..Ord('z'),
+      Ord('A')..Ord('Z'),
+      Ord('-'), Ord('_'), Ord('.'), Ord('~'):
+        begin
+          P^ := Char(C);
+          Inc(P);
+        end;
+    else
+      // RFC 3986 §2.4: 已 percent-encoded 的 %xx 序列不应被二次编码.
+      // APreserveEncoded=True 时, 遇到 % 后跟 2 个 hex 数字, 原样保留 3 字符.
+      if APreserveEncoded and (C = Ord('%')) and (I + 2 < LLen)
+        and _IsHexByte(LUTF8Bytes[I + 1])
+        and _IsHexByte(LUTF8Bytes[I + 2]) then
+      begin
+        P^ := '%';
+        Inc(P);
+        P^ := Char(LUTF8Bytes[I + 1]);
+        Inc(P);
+        P^ := Char(LUTF8Bytes[I + 2]);
+        Inc(P);
+        Inc(I, 2); // 跳过两个 hex 字节, 循环底部还会 Inc(I) 一次
+      end else
+      if CharInSet(Char(C), ANoConversion) then
+      begin
+        P^ := Char(C);
+        Inc(P);
+      end else
+      begin
+        P^ := '%';
+        Inc(P);
+
+        P^ := HEX_CHARS[C shr 4];
+        Inc(P);
+
+        P^ := HEX_CHARS[C and $F];
+        Inc(P);
+      end;
+    end;
+    Inc(I);
+  end;
+
+  // 修正编码字符串的实际长度
+  SetLength(Result, P - PChar(Result));
+end;
+
+class function TCrossHttpUtils.ParseSingleByteRange(const ARangeHeader: string;
+  const AContentLength: Int64; out AStart, AEnd: Int64): Boolean;
+const
+  PREFIX = 'bytes=';
+
+  function _IsAsciiDigits(const S: string): Boolean;
+  var
+    I: Integer;
+  begin
+    if (S = '') then Exit(False);
+    for I := 1 to Length(S) do
+      case S[I] of
+        '0'..'9': ;
+      else
+        Exit(False);
+      end;
+    Result := True;
+  end;
+
+var
+  LSpec, LStartStr, LEndStr: string;
+  LDashPos: Integer;
+  LStartVal, LEndVal: Int64;
+  LHasStart, LHasEnd: Boolean;
+begin
+  AStart := 0;
+  AEnd := 0;
+  Result := False;
+
+  // 资源长度必须 > 0
+  if (AContentLength <= 0) then Exit;
+
+  // 必须以 'bytes=' 前缀开头 (RFC 7233 §3.1, 大小写不敏感)
+  if (Length(ARangeHeader) <= Length(PREFIX))
+    or not ARangeHeader.StartsWith(PREFIX, True) then Exit;
+
+  LSpec := Copy(ARangeHeader, Length(PREFIX) + 1, MaxInt).Trim;
+  if (LSpec = '') then Exit;
+
+  // 不支持 multipart/byteranges (含 ',' 一律拒绝)
+  if (LSpec.IndexOf(',') >= 0) then Exit;
+
+  // 必须存在且仅有一个 '-'
+  LDashPos := LSpec.IndexOf('-');
+  if (LDashPos < 0) then Exit;
+  if (LSpec.LastIndexOf('-') <> LDashPos) then Exit;
+
+  // 不对子串再 Trim, 避免 'bytes=0 - 100' 内嵌空格被静默吞掉.
+  // RFC 7230 ABNF 不允许 byte-range-spec 内含 OWS/BWS.
+  LStartStr := LSpec.Substring(0, LDashPos);
+  LEndStr := LSpec.Substring(LDashPos + 1);
+
+  LHasStart := (LStartStr <> '');
+  LHasEnd := (LEndStr <> '');
+
+  // 至少要有一个端点; 'bytes=-' 是非法的
+  if (not LHasStart) and (not LHasEnd) then Exit;
+
+  // 解析 start (必须为纯 ASCII 十进制数字)
+  if LHasStart then
+  begin
+    if not _IsAsciiDigits(LStartStr) then Exit;
+    if not TryStrToInt64(LStartStr, LStartVal) then Exit;
+    if (LStartVal < 0) then Exit;
+  end else
+    LStartVal := 0;
+
+  // 解析 end (必须为纯 ASCII 十进制数字)
+  if LHasEnd then
+  begin
+    if not _IsAsciiDigits(LEndStr) then Exit;
+    if not TryStrToInt64(LEndStr, LEndVal) then Exit;
+    if (LEndVal < 0) then Exit;
+  end else
+    LEndVal := 0;
+
+  if LHasStart and LHasEnd then
+  begin
+    // bytes=start-end: 要求 0 <= start <= end < size
+    if (LStartVal > LEndVal) then Exit;
+    if (LStartVal >= AContentLength) then Exit;
+    // end 超出文件大小时按 RFC 7233 §2.1 截断到 size-1
+    if (LEndVal >= AContentLength) then
+      LEndVal := AContentLength - 1;
+    AStart := LStartVal;
+    AEnd := LEndVal;
+  end else
+  if LHasStart then
+  begin
+    // bytes=start-: 从 start 取到末尾
+    if (LStartVal >= AContentLength) then Exit;
+    AStart := LStartVal;
+    AEnd := AContentLength - 1;
+  end else
+  begin
+    // bytes=-suffix: 取末尾 suffix 字节; suffix 必须 > 0
+    if (LEndVal = 0) then Exit;
+    if (LEndVal >= AContentLength) then
+      AStart := 0
+    else
+      AStart := AContentLength - LEndVal;
+    AEnd := AContentLength - 1;
+  end;
+
+  Result := True;
+end;
+
+class function TCrossHttpUtils.IsTokenChar(ACh: Char): Boolean;
+begin
+  // RFC 7230 §3.2.6 token: ALPHA / DIGIT / "!" "#" "$" "%" "&" "'" "*" "+"
+  //   "-" "." "^" "_" "`" "|" "~"
+  case ACh of
+    'A'..'Z', 'a'..'z', '0'..'9',
+    '!', '#', '$', '%', '&', '''', '*', '+', '-', '.', '^', '_', '`', '|', '~':
+      Result := True;
+  else
+    Result := False;
+  end;
+end;
+
+class function TCrossHttpUtils.IsHeaderValueChar(ACh: Char): Boolean;
+begin
+  // RFC 7230 §3.2.4 field-value:
+  //   合法: HTAB(#9) / 可见 ASCII (#32..#126) / #128+ 高位字符 (历史宽松, 兼容 UTF-8).
+  //   非法: 其他 CTL (#0..#8, #10..#31) 与 DEL (#127), CR/LF/NUL 是响应拆分主要载体.
+  case Ord(ACh) of
+    9, 32..126, 128..$FFFF:
+      Result := True;
+  else
+    Result := False;
+  end;
+end;
+
+class function TCrossHttpUtils.IsValidHeaderName(const AName: string): Boolean;
+var
+  I: Integer;
+begin
+  if (AName = '') then Exit(False);
+  for I := 1 to Length(AName) do
+    if not IsTokenChar(AName[I]) then Exit(False);
+  Result := True;
+end;
+
+class function TCrossHttpUtils.IsValidHeaderValue(const AValue: string): Boolean;
+var
+  I: Integer;
+begin
+  for I := 1 to Length(AValue) do
+    if not IsHeaderValueChar(AValue[I]) then Exit(False);
+  Result := True;
 end;
 
 end.

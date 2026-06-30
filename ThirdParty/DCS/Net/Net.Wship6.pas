@@ -58,7 +58,7 @@ interface
 
 uses
   {$IFDEF HAS_TInterlocked}
-  syncobjs, //here to facilitate inlining with Delphi
+  System.syncobjs, //here to facilitate inlining with Delphi
   {$ENDIF}
   Windows,
   Net.Winsock2;
