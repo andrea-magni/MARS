@@ -85,6 +85,7 @@ implementation
 uses
   System.IOUtils, System.DateUtils, System.StrUtils
 , System.JSON, MARS.Core.JSON
+, MARS.Core.Attributes, MARS.Rtti.Utils
 ;
 
 const
@@ -113,6 +114,15 @@ begin
   Result := _UTF8NoBOM;
 end;
 
+// True when the resource or method opts out of logging via the [NoLog] attribute.
+function ExcludedFromLog(const AActivation: IMARSActivation): Boolean;
+begin
+  Result :=
+    (Assigned(AActivation.Resource) and AActivation.Resource.HasAttribute<NoLogAttribute>)
+    or
+    (Assigned(AActivation.Method) and AActivation.Method.HasAttribute<NoLogAttribute>);
+end;
+
 { TMARSReqRespLoggerJSON }
 
 class constructor TMARSReqRespLoggerJSON.ClassCreate;
@@ -121,6 +131,9 @@ begin
     procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
     begin
       if not AActivation.Engine.Parameters.ByName('JSONLogging.Enabled').AsBoolean then
+        Exit;
+
+      if ExcludedFromLog(AActivation) then
         Exit;
 
       TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
@@ -149,6 +162,9 @@ begin
       if not AActivation.Engine.Parameters.ByName('JSONLogging.Enabled').AsBoolean then
         Exit;
 
+      if ExcludedFromLog(AActivation) then
+        Exit;
+
       TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
       TMARSReqRespLoggerJSON.Instance.Log(
         [
@@ -175,6 +191,9 @@ begin
     procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
     begin
       if not AActivation.Engine.Parameters.ByName('JSONLogging.Enabled').AsBoolean then
+        Exit;
+
+      if ExcludedFromLog(AActivation) then
         Exit;
 
       TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
