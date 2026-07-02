@@ -47,6 +47,21 @@ Read by the [token resource](/features/authentication) and JWT backends:
 The default secret ships in the public source. Always set a strong, unique secret per deployment.
 :::
 
+## Logging parameters
+
+Read by the [request/response loggers](/features/logging) (engine section). Each logger is inert until both its unit is in the server's `uses` clause and its `Enabled` flag is set.
+
+| Parameter | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `JSONLogging.Enabled` | Boolean | `False` | Enable the NDJSON file logger (`MARS.Utils.ReqRespLogger.JSON`). |
+| `JSONLogging.Folder` | string | `<exe folder>\logs` | Target directory (created if missing). |
+| `JSONLogging.FileName` | string | `mars-reqresp.log` | Base log file name. |
+| `JSONLogging.DailyRotation` | Boolean | `True` | Insert the date before the extension for daily rotation. |
+| `LokiLogging.Enabled` | Boolean | `False` | Enable direct push to Grafana Loki (`MARS.Utils.ReqRespLogger.Loki`). |
+| `CodeSiteLogging.Enabled` | Boolean | `False` | Enable CodeSite output (`MARS.Utils.ReqRespLogger.CodeSite`). |
+
+See [Request/Response Logging](/features/logging) for the log line format and a Grafana Alloy ingestion example.
+
 ## FireDAC parameters
 
 Connection definitions live under a slice (commonly `FireDAC`) and are loaded with `TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC')`. Each named definition maps to a FireDAC `ConnectionDefName` with its usual driver-specific keys (`DriverID`, `Database`, `Server`, `User_Name`, `Password`, pooling options, …). See [FireDAC & Datasets](/features/firedac#enabling-firedac).
