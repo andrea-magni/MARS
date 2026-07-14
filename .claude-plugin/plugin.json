@@ -1,0 +1,16 @@
+{
+  "name": "mars-curiosity",
+  "displayName": "MARS-Curiosity",
+  "version": "1.0.0",
+  "description": "Agent Skills for MARS-Curiosity, the Delphi REST library: scaffold new MARS server projects and develop REST APIs with resources, attributes, JWT authentication, FireDAC, server-sent events, WebStencils, client components and deployment.",
+  "author": {
+    "name": "Andrea Magni",
+    "email": "andrea.magni@gmail.com",
+    "url": "https://github.com/andrea-magni"
+  },
+  "homepage": "https://github.com/andrea-magni/MARS",
+  "repository": "https://github.com/andrea-magni/MARS",
+  "license": "MPL-2.0",
+  "keywords": ["delphi", "rest", "mars", "firedac", "jwt", "api", "server"],
+  "skills": ["./Skills"]
+}

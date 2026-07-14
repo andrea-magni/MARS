@@ -1,0 +1,27 @@
+unit Server.Resources.Token;
+
+interface
+
+uses
+  SysUtils, Classes
+, MARS.Core.Attributes, MARS.Core.MediaType
+, MARS.Core.Token.Resource
+;
+
+type
+  [Path('token')]
+  TTokenResource = class(TMARSTokenResource)
+  protected
+    // Replace the default sample authentication with real credential checks:
+    // function Authenticate(const AUserName, APassword: string): Boolean; override;
+  end;
+
+implementation
+
+uses
+  MARS.Core.Registry;
+
+initialization
+  MARSRegister(TTokenResource);
+
+end.
