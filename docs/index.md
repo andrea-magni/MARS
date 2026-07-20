@@ -68,6 +68,7 @@ On the **client**, drop a few components on a form (or create them in code) and 
 - Building a server? Jump to the [Server section](/server/engine).
 - Consuming a REST API from Delphi? See the [Client section](/client/overview).
 - Looking for working code? Browse the [Demos](/demos/).
+- Using Claude Code or another AI coding agent? Install the [MARS Agent Skills](/guide/agent-skills).
 
 ::: tip Documentation language
 This documentation is written in English to match the rest of the MARS project (README, source comments) and its international community. Contributions and translations are welcome — open a Pull Request.

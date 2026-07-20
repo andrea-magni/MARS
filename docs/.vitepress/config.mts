@@ -47,6 +47,7 @@ export default defineConfig({
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Your First Server', link: '/guide/getting-started' },
             { text: 'Core Concepts', link: '/guide/core-concepts' },
+            { text: 'AI Agent Skills', link: '/guide/agent-skills' },
           ],
         },
       ],
