@@ -18,9 +18,11 @@ uses
 ;
 
 type
-  [Path('www'), RootFolder('.\www', True)]
+  [ Path('web')
+  , RootFolder('.\www', True)
+  , OAPIDescription('Serves static content from the www folder.')
+  ]
   TStaticContentResource = class(TFileSystemResource)
-
   end;
 
   TEndpoint = record
@@ -39,10 +41,15 @@ type
   [Path('helloworld')]
   THelloworldResource = class
   public
-    [GET]
+    [GET
+    , OAPIDescription('Retrieves the Hello world string with current timestamp')
+    ]
     function Retrieve: string;
 
-    [GET, Path('data')]
+    [GET, Path('data')
+    , OAPISummary('All paths available in this API will be listed here as they are in the OpenAPI documentation.')
+    , OAPIDescription('Retrieves all endpoints avaible in my API')
+    ]
     function RetrieveData([Context] AOpenAPI: TOpenAPI): TDataResponse;
   end;
 

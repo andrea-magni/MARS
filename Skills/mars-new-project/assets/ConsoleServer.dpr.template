@@ -1,0 +1,35 @@
+program {{PROJECT_NAME}}Server;
+
+{$APPTYPE CONSOLE}
+
+{$I MARS.inc}
+
+uses
+  System.SysUtils,
+  MARS.http.Server.Indy,
+  Server.Ignition in 'Server.Ignition.pas',
+  Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
+  Server.Resources.Token in 'Server.Resources.Token.pas';
+
+{$R *.res}
+
+var
+  LServer: TMARShttpServerIndy;
+begin
+  try
+    LServer := TMARShttpServerIndy.Create(TServerEngine.Default);
+    try
+      LServer.DefaultPort := TServerEngine.Default.Port;
+      LServer.Active := True;
+      Writeln(Format('{{PROJECT_NAME}} server running on port %d', [LServer.DefaultPort]));
+      Writeln('Press ENTER to stop.');
+      Readln;
+      LServer.Active := False;
+    finally
+      LServer.Free;
+    end;
+  except
+    on E: Exception do
+      Writeln(E.ClassName, ': ', E.Message);
+  end;
+end.

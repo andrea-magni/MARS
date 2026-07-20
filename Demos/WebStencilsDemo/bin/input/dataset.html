@@ -19,7 +19,9 @@
       @foreach (var record in dataset) {
         <tr>
           @foreach (var field in dataset.Fields) {
-            <td class="@field.DataType">@if not (field.DataType = ftBlob) { @field.AsString }</td>
+            <td class="@field.DataType">@if not (field.DataType = ftBlob) { 
+            @if not (field.DataType = ftMemo) { @field.Text } @else { @field.AsString }            
+          }</td>
           }
         </tr>
       }
