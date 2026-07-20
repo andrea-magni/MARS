@@ -9,7 +9,6 @@ All loggers implement the small `IMARSReqRespLogger` interface (`MARS.Utils.ReqR
 | Unit | Sink | Typical use |
 | --- | --- | --- |
 | `MARS.Utils.ReqRespLogger.JSON` | **JSON Lines (NDJSON) file** | Production logging, ingestion by Grafana Alloy/Promtail → Loki |
-| `MARS.Utils.ReqRespLogger.Loki` | Grafana Loki (HTTP push) | Direct push to a Loki instance |
 | `MARS.Utils.ReqRespLogger.CodeSite` | CodeSite | Development-time inspection |
 | `MARS.Utils.ReqRespLogger.Memory` | In-memory dataset | Live "last requests" views inside the app |
 
@@ -134,10 +133,6 @@ In Grafana Explore (Loki data source) you can then query e.g. `{source="MARS"}`,
 ::: warning Endpoint reachability
 `loki.write` must point at a Loki that Alloy can actually reach. If Alloy runs in a VM and Loki lives on the host, use the host address (for example `http://host.parallels:3100`) rather than `localhost`.
 :::
-
-## Pushing directly to Loki
-
-If you prefer to skip files and push straight to Loki over HTTP, use `MARS.Utils.ReqRespLogger.Loki` instead. It produces the same labels/payload but POSTs each entry to Loki's `push` API. It is controlled by the `LokiLogging.Enabled` parameter.
 
 ## In-memory logging
 
