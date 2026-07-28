@@ -5,7 +5,7 @@ interface
 uses
   Classes, SysUtils
 , MARS.Core.Attributes, MARS.Core.MediaType
-, MARS.MCP.Resource, MARS.MCP.Attributes
+, MARS.MCP.Resource, MARS.MCP.Attributes, MARS.MCP.OAuth
 ;
 
 type
@@ -45,6 +45,23 @@ type
     function PingTool: string;
   end;
 
+  // OAuth-protected endpoint: 401 + WWW-Authenticate when unauthenticated
+  [Path('mcpoauth'), MCPOAuth
+  , MCPServerInfo('OAuth MCP Test Server', '1.0.0')
+  ]
+  TOAuthProtectedMCPResource = class(TMCPResource)
+  public
+    [MCPTool('oauth_tool', 'Simple tool behind OAuth')]
+    function OAuthTool: string;
+  end;
+
+  [Path('oauth')]
+  TTestOAuthServer = class(TMCPOAuthServer)
+  protected
+    function Authenticate(const AUserName, APassword: string;
+      out ARoles: TArray<string>): Boolean; override;
+  end;
+
 implementation
 
 uses
@@ -81,7 +98,29 @@ begin
   Result := 'pong';
 end;
 
+{ TOAuthProtectedMCPResource }
+
+function TOAuthProtectedMCPResource.OAuthTool: string;
+begin
+  Result := 'oauth-ok';
+end;
+
+{ TTestOAuthServer }
+
+function TTestOAuthServer.Authenticate(const AUserName, APassword: string;
+  out ARoles: TArray<string>): Boolean;
+begin
+  Result := SameText(APassword, 'secret');
+  if Result then
+  begin
+    if SameText(AUserName, 'admin') then
+      ARoles := TArray<string>.Create('standard', 'admin')
+    else
+      ARoles := TArray<string>.Create('standard');
+  end;
+end;
+
 initialization
-  MARSRegister([TTestMCPResource, TSecuredMCPResource]);
+  MARSRegister([TTestMCPResource, TSecuredMCPResource, TOAuthProtectedMCPResource, TTestOAuthServer]);
 
 end.

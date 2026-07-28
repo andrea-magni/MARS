@@ -22,10 +22,12 @@ type
     message: string;
   end;
 
-  // whole endpoint requires a verified token with the 'standard' role
-  // (Authorization: Bearer <JWT>); get one from POST /rest/default/token
-  // with username=...&password=mars
-  [Path('mcpdb'), RolesAllowed('standard')
+  // whole endpoint requires a verified token (Authorization: Bearer <JWT>):
+  // [MCPOAuth] answers unauthenticated requests with 401 + WWW-Authenticate so
+  // OAuth-capable MCP clients auto-discover the authorization server, while
+  // statically issued tokens (POST /rest/default/token, password 'mars')
+  // keep working the same way
+  [Path('mcpdb'), MCPOAuth
   , MCPServerInfo('MARS Demo MCP DB Server', '1.0.0'
     , 'MCP server exposing a demo EMPLOYEES database (SQLite via FireDAC). '
     + 'Use the tools to browse employees; salary changes require the admin role.')

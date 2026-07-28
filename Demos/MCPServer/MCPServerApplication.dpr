@@ -19,6 +19,7 @@ uses
   Server.Resources in 'Server.Resources.pas',
   Server.Resources.Token in 'Server.Resources.Token.pas',
   Server.Resources.DB in 'Server.Resources.DB.pas',
+  Server.Resources.OAuth in 'Server.Resources.OAuth.pas',
   ServerConst in 'ServerConst.pas';
 
 procedure StartServer(const AServer: TMARShttpServerIndy);

@@ -46,6 +46,13 @@ type
     // the current token. Unauthorized tools are hidden from tools/list and
     // tools/call answers as if they did not exist.
     function CanUseTool(const ATool: TMCPTool): Boolean; virtual;
+
+    // OAuth (MCP authorization spec): with [MCPOAuth] on the resource class,
+    // unauthenticated requests get 401 + WWW-Authenticate (resource_metadata)
+    // so OAuth-capable MCP clients can start the discovery flow.
+    function HasOAuthProtection: Boolean; virtual;
+    function BuildResourceMetadataURL: string; virtual;
+    function EnsureAuthenticated: Boolean; virtual;
   public
     [POST, Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
     procedure HandleMessage([BodyParam] AMessage: TJSONValue); virtual;
@@ -163,11 +170,54 @@ begin
     Result := True;
 end;
 
+function TMCPResource.HasOAuthProtection: Boolean;
+var
+  LContext: TRttiContext;
+  LAttribute: TCustomAttribute;
+begin
+  Result := False;
+  LContext := TRttiContext.Create;
+  try
+    for LAttribute in LContext.GetType(ClassType).GetAttributes do
+      if LAttribute is MCPOAuthAttribute then
+        Exit(True);
+  finally
+    LContext.Free;
+  end;
+end;
+
+function TMCPResource.BuildResourceMetadataURL: string;
+begin
+  // RFC 9728 path-insertion convention; override when behind TLS/reverse proxy
+  Result := 'http://' + Request.HostName + ':' + Request.Port.ToString
+    + '/.well-known/oauth-protected-resource' + Request.RawPath;
+end;
+
+function TMCPResource.EnsureAuthenticated: Boolean;
+begin
+  Result := True;
+  if not HasOAuthProtection then
+    Exit;
+
+  if Assigned(Token) and Token.IsVerified and (not Token.IsExpired) then
+    Exit;
+
+  Response.StatusCode := 401;
+  Response.SetHeader('WWW-Authenticate'
+  , Format('Bearer resource_metadata="%s"', [BuildResourceMetadataURL]));
+  Response.ContentType := TMediaType.APPLICATION_JSON;
+  Response.Content := '';
+  Result := False;
+end;
+
 procedure TMCPResource.HandleMessage(AMessage: TJSONValue);
 var
   LDispatcher: TMCPDispatcher;
   LResponseJSON: TJSONObject;
 begin
+  if not EnsureAuthenticated then
+    Exit;
+
   LDispatcher := CreateDispatcher;
   try
     LResponseJSON := LDispatcher.HandleMessage(AMessage);
@@ -194,6 +244,9 @@ end;
 
 procedure TMCPResource.HandleGet;
 begin
+  if not EnsureAuthenticated then
+    Exit;
+
   // stateless implementation: no server-initiated SSE stream available
   Response.StatusCode := 405;
   Response.SetHeader('Allow', 'POST');
@@ -201,6 +254,9 @@ end;
 
 procedure TMCPResource.HandleDelete;
 begin
+  if not EnsureAuthenticated then
+    Exit;
+
   // stateless implementation: no session to terminate
   Response.StatusCode := 405;
   Response.SetHeader('Allow', 'POST');

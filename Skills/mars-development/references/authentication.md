@@ -57,7 +57,7 @@ end;
 ```
 
 - `[RolesAllowed('a,b')]` — verified token with at least one of the roles;
-- `[PermitAll]` — any verified token;
+- `[PermitAll]` — any caller, authenticated or not (overrides role checks; but if `[RolesAllowed]` is also present on the class, a valid token is still required — attributes merge);
 - `[DenyAll]` — always 403;
 - no attribute — public.
 

@@ -71,6 +71,17 @@ curl -X POST http://localhost:8080/rest/default/mcpdb -H "Content-Type: applicat
 
 Note how `tools/list` changes with the token: without the `admin` role, `raise_salary` is not listed at all and calling it answers `Unknown tool`.
 
+## OAuth 2.1
+
+The `/mcpdb` endpoint is marked `[MCPOAuth]`: unauthenticated requests answer `401` with a `WWW-Authenticate` header pointing at the discovery documents, so OAuth-capable MCP clients (Claude, ChatGPT connectors, MCP Inspector) can onboard automatically — dynamic client registration, browser login page (`Server.Resources.OAuth.pas`, same demo credentials), authorization code + PKCE, refresh tokens. Statically issued tokens keep working on the same endpoint, since the OAuth access token *is* a MARS JWT.
+
+Discovery entry points (served from `Server.Ignition.pas` / `BeforeHandleRequest`):
+
+```
+http://localhost:8080/.well-known/oauth-protected-resource/rest/default/mcpdb
+http://localhost:8080/.well-known/oauth-authorization-server
+```
+
 With Claude Code:
 
 ```bash

@@ -136,6 +136,42 @@ function RaiseSalary(const AId: Integer; const APercent: Double): TOperationResu
 
 Most MCP clients support Bearer tokens for remote servers: in Open WebUI set the token in the External Tools connection, with MCP Inspector pass `--header "Authorization: Bearer <token>"`, in a `.mcp.json` use the `headers` section.
 
+## OAuth 2.1 (automatic onboarding for MCP clients)
+
+Static tokens require copy-paste; consumer MCP clients (Claude, ChatGPT connectors) expect the [MCP authorization flow](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization) instead: automatic discovery, a browser login window, and token refresh. MARS ships a **self-contained OAuth 2.1 authorization server** in `MARS.MCP.OAuth`: authorization code + PKCE (S256), refresh token rotation, dynamic client registration (RFC 7591) and the RFC 8414/9728 metadata documents. The issued access token **is a regular MARS JWT**, so OAuth and statically issued tokens coexist on the same endpoint.
+
+Three steps:
+
+```pascal
+// 1. an authorization server resource with your credential check
+[Path('oauth')]
+TMyOAuthServer = class(TMCPOAuthServer)
+protected
+  function Authenticate(const AUserName, APassword: string;
+    out ARoles: TArray<string>): Boolean; override;
+end;
+
+// 2. mark the MCP resource: unauthenticated requests now answer
+//    401 + WWW-Authenticate (resource_metadata) instead of an error
+[Path('mcpdb'), MCPOAuth]
+TMyDBMCPResource = class(TMCPDataResource) ...
+
+// 3. serve the discovery documents (they live at the server root,
+//    outside the engine's BasePath) from BeforeHandleRequest:
+if TMCPOAuthMetadata.HandleWellKnownRequest(ARequest, AResponse
+   , FEngine.BasePath + '/default/oauth') then
+begin
+  Result := False;
+  Handled := True;
+end;
+```
+
+The user experience on an OAuth-capable client: add the connector URL → a browser window opens on your login page (override `RenderAuthorizePage` to customize it) → sign in → the client stores and refreshes tokens automatically. `Authenticate` decides the roles, so per-tool `[RolesAllowed]` filtering applies to OAuth users too.
+
+::: warning
+Run behind HTTPS in production (a TLS-terminating reverse proxy works fine — override `BuildResourceMetadataURL`/`TMCPOAuthMetadata` URLs accordingly). Client/code/refresh-token storage is in-memory by default: override the `Store*`/`Consume*` virtual methods for persistence across restarts.
+:::
+
 ## Notes and current scope
 
 - The implementation is **stateless**: no `Mcp-Session-Id` is issued, `GET`/`DELETE` answer `405` (allowed by the specification for servers that do not offer server-initiated streams). Every JSON-RPC request is answered with a single `application/json` response.

@@ -43,6 +43,11 @@ type
     property Description: string read FDescription;
   end;
 
+  // Marks a TMCPResource descendant as OAuth-protected: unauthenticated requests
+  // are answered with 401 and a WWW-Authenticate header carrying the protected
+  // resource metadata URL (MCP authorization discovery). See MARS.MCP.OAuth.
+  MCPOAuthAttribute = class(MARSAttribute);
+
   // Documents (and optionally renames) a tool parameter in the generated JSON Schema.
   MCPParamAttribute = class(MARSAttribute)
   private

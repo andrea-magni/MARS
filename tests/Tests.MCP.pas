@@ -191,13 +191,42 @@ type
     [Test] procedure Auth_SecuredEndpoint_WithToken_Returns200;
   end;
 
+  [TestFixture('MCP.OAuth')]
+  TMCPOAuthFixture = class
+  private
+    FEngine: IMARSEngine;
+  protected
+    function SendRaw(const AHttpMethod, APath, AContentType, ABody: string;
+      const AToken: string = ''): TMCPCall;
+    function ParseContent(const ACall: TMCPCall): TJSONObject;
+    function RegisterTestClient(const ARedirectURI: string): string; // returns client_id
+    function AuthorizeAndGetCode(const AClientId, ARedirectURI, ACodeChallenge,
+      APassword: string): string; // returns code ('' when no redirect happened)
+  public
+    [Setup]
+    procedure Setup;
+    [Teardown]
+    procedure Teardown;
+
+    [Test] procedure WellKnown_OpenIDConfiguration_ServedAsAlias;
+    [Test] procedure WellKnown_UnknownDocument_Returns404;
+    [Test] procedure Unauthenticated_Returns401WithResourceMetadata;
+    [Test] procedure StaticJWT_StillWorks;
+    [Test] procedure FullFlow_RegisterAuthorizeTokenCall;
+    [Test] procedure WrongVerifier_InvalidGrant;
+    [Test] procedure WrongPassword_ReRendersLoginPage;
+    [Test] procedure RefreshToken_RotatesAndWorks;
+  end;
+
 implementation
 
 uses
-  MARS.Core.Engine
+  System.NetEncoding
+, MARS.Core.Engine
 , MARS.Core.Activation
 , MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
 , MARS.Core.Token, MARS.Utils.JWT
+, MARS.MCP.OAuth
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
 {$ELSE}
@@ -1160,9 +1189,279 @@ begin
   end;
 end;
 
+{ TMCPOAuthFixture }
+
+procedure TMCPOAuthFixture.Setup;
+begin
+  TMARSActivation.ClearBeforeInvokes;
+  TMARSActivation.ClearAfterInvokes;
+  TMARSActivation.ClearInvokeErrors;
+
+  FEngine := TMARSEngine.Create;
+  FEngine.AddApplication('MCPTestApp', '/mcptest', ['Tests.MCP.Resources.*']);
+end;
+
+procedure TMCPOAuthFixture.Teardown;
+begin
+  FEngine := nil;
+end;
+
+function TMCPOAuthFixture.SendRaw(const AHttpMethod, APath, AContentType, ABody,
+  AToken: string): TMCPCall;
+begin
+  var LURL := 'http://localhost:8080' + FEngine.BasePath + '/mcptest/' + APath;
+
+  var LHeaders: TMARSHeaders := [
+    TMARSHeader.Create('Content-Type', AContentType)
+  , TMARSHeader.Create('Accept', '*/*')
+  ];
+  if AToken <> '' then
+    LHeaders := LHeaders + [TMARSHeader.Create('Authorization', 'Bearer ' + AToken)];
+
+  Result.ResponseMock := TMARSResponseMock.Create;
+  Result.Response := Result.ResponseMock;
+  Result.Handled := FEngine.HandleRequest(
+    TMARSRequestMock.Create(AHttpMethod, LURL, LHeaders, ABody)
+  , Result.Response);
+end;
+
+function TMCPOAuthFixture.ParseContent(const ACall: TMCPCall): TJSONObject;
+begin
+  Result := TJSONObject.ParseJSONValue(ACall.Response.Content) as TJSONObject;
+  Assert.IsNotNull(Result, 'response content is not a JSON object: ' + ACall.Response.Content);
+end;
+
+function TMCPOAuthFixture.RegisterTestClient(const ARedirectURI: string): string;
+begin
+  var LCall := SendRaw('POST', 'oauth/register', 'application/json'
+  , '{"redirect_uris":["' + ARedirectURI + '"],"client_name":"Test MCP Client"}');
+  Assert.AreEqual(201, LCall.Response.StatusCode, LCall.Response.Content);
+
+  var LJSON := ParseContent(LCall);
+  try
+    Result := LJSON.ReadStringValue('client_id');
+    Assert.IsNotEmpty(Result);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+function TMCPOAuthFixture.AuthorizeAndGetCode(const AClientId, ARedirectURI,
+  ACodeChallenge, APassword: string): string;
+begin
+  Result := '';
+  var LBody := 'username=guest&password=' + APassword
+    + '&client_id=' + AClientId
+    + '&redirect_uri=' + TNetEncoding.URL.Encode(ARedirectURI)
+    + '&state=xyz'
+    + '&code_challenge=' + ACodeChallenge
+    + '&code_challenge_method=S256'
+    + '&scope=mcp';
+
+  var LCall := SendRaw('POST', 'oauth/authorize', 'application/x-www-form-urlencoded', LBody);
+  if LCall.Response.StatusCode <> 302 then
+    Exit;
+
+  var LLocation := LCall.ResponseMock.GetHeaderValue('Location');
+  Assert.StartsWith(ARedirectURI, LLocation);
+  Assert.Contains(LLocation, 'state=xyz');
+
+  for var LParam in LLocation.Split(['?'])[1].Split(['&']) do
+  begin
+    var LTokens := LParam.Split(['='], 2);
+    if (Length(LTokens) = 2) and (LTokens[0] = 'code') then
+      Exit(TNetEncoding.URL.Decode(LTokens[1]));
+  end;
+end;
+
+procedure TMCPOAuthFixture.WellKnown_OpenIDConfiguration_ServedAsAlias;
+begin
+  var LResponseMock := TMARSResponseMock.Create;
+  var LResponse: IMARSResponse := LResponseMock;
+
+  Assert.IsTrue(TMCPOAuthMetadata.HandleWellKnownRequest(
+    TMARSRequestMock.Create('GET', 'http://localhost:8080/.well-known/openid-configuration', [], '')
+  , LResponse, '/rest/default/oauth'));
+
+  Assert.AreEqual(200, LResponse.StatusCode);
+  var LJSON := TJSONObject.ParseJSONValue(LResponse.Content) as TJSONObject;
+  try
+    Assert.AreEqual('http://localhost:8080', LJSON.ReadStringValue('issuer'));
+    Assert.AreEqual('http://localhost:8080/rest/default/oauth/authorize'
+    , LJSON.ReadStringValue('authorization_endpoint'));
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPOAuthFixture.WellKnown_UnknownDocument_Returns404;
+begin
+  var LResponseMock := TMARSResponseMock.Create;
+  var LResponse: IMARSResponse := LResponseMock;
+
+  // unknown well-known documents must answer a clean 404 (not a 500 from the
+  // engine), so OAuth discovery clients fall back to the next candidate URL
+  Assert.IsTrue(TMCPOAuthMetadata.HandleWellKnownRequest(
+    TMARSRequestMock.Create('GET', 'http://localhost:8080/.well-known/whatever', [], '')
+  , LResponse, '/rest/default/oauth'));
+  Assert.AreEqual(404, LResponse.StatusCode);
+
+  // non well-known paths are not handled at all
+  Assert.IsFalse(TMCPOAuthMetadata.HandleWellKnownRequest(
+    TMARSRequestMock.Create('GET', 'http://localhost:8080/anything/else', [], '')
+  , LResponse, '/rest/default/oauth'));
+end;
+
+procedure TMCPOAuthFixture.Unauthenticated_Returns401WithResourceMetadata;
+begin
+  var LCall := SendRaw('POST', 'mcpoauth', 'application/json'
+  , '{"jsonrpc":"2.0","id":1,"method":"ping"}');
+  Assert.IsTrue(LCall.Handled);
+  Assert.AreEqual(401, LCall.Response.StatusCode);
+
+  var LChallenge := LCall.ResponseMock.GetHeaderValue('WWW-Authenticate');
+  Assert.StartsWith('Bearer', LChallenge);
+  Assert.Contains(LChallenge, '/.well-known/oauth-protected-resource/rest/mcptest/mcpoauth');
+end;
+
+procedure TMCPOAuthFixture.StaticJWT_StillWorks;
+begin
+  // dual mode: a statically issued MARS JWT passes the OAuth-protected endpoint
+  var LToken: TMARSToken := {$IFDEF MSWINDOWS}TMARSmORMotJWTToken{$ELSE}TMARSJOSEJWTToken{$ENDIF}.Create(
+    '', JWT_SECRET_PARAM_DEFAULT, JWT_ISSUER_PARAM_DEFAULT, JWT_DURATION_PARAM_DEFAULT);
+  try
+    LToken.SetUserNameAndRoles('static-user', ['standard']);
+    LToken.Build(JWT_SECRET_PARAM_DEFAULT);
+
+    var LCall := SendRaw('POST', 'mcpoauth', 'application/json'
+    , '{"jsonrpc":"2.0","id":1,"method":"ping"}', LToken.Token);
+    Assert.AreEqual(200, LCall.Response.StatusCode);
+  finally
+    LToken.Free;
+  end;
+end;
+
+procedure TMCPOAuthFixture.FullFlow_RegisterAuthorizeTokenCall;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+  VERIFIER = 'test-verifier-0123456789-0123456789-0123456789';
+begin
+  var LClientId := RegisterTestClient(REDIRECT_URI);
+
+  var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+  , TMCPOAuthServer.ComputePKCES256(VERIFIER), 'secret');
+  Assert.IsNotEmpty(LCode, 'authorization code expected');
+
+  var LCall := SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+  , 'grant_type=authorization_code&code=' + LCode
+    + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
+    + '&client_id=' + LClientId
+    + '&code_verifier=' + VERIFIER);
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+
+  var LJSON := ParseContent(LCall);
+  try
+    Assert.AreEqual('Bearer', LJSON.ReadStringValue('token_type'));
+    Assert.IsNotEmpty(LJSON.ReadStringValue('refresh_token'));
+
+    var LAccessToken := LJSON.ReadStringValue('access_token');
+    Assert.IsNotEmpty(LAccessToken);
+
+    // the access token opens the OAuth-protected MCP endpoint
+    var LMCPCall := SendRaw('POST', 'mcpoauth', 'application/json'
+    , '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"oauth_tool","arguments":{}}}'
+    , LAccessToken);
+    Assert.AreEqual(200, LMCPCall.Response.StatusCode);
+    Assert.Contains(LMCPCall.Response.Content, 'oauth-ok');
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPOAuthFixture.WrongVerifier_InvalidGrant;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+begin
+  var LClientId := RegisterTestClient(REDIRECT_URI);
+  var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+  , TMCPOAuthServer.ComputePKCES256('right-verifier-0123456789-0123456789'), 'secret');
+  Assert.IsNotEmpty(LCode);
+
+  var LCall := SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+  , 'grant_type=authorization_code&code=' + LCode
+    + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
+    + '&client_id=' + LClientId
+    + '&code_verifier=wrong-verifier-0123456789-0123456789');
+  Assert.AreEqual(400, LCall.Response.StatusCode);
+
+  var LJSON := ParseContent(LCall);
+  try
+    Assert.AreEqual('invalid_grant', LJSON.ReadStringValue('error'));
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPOAuthFixture.WrongPassword_ReRendersLoginPage;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+begin
+  var LClientId := RegisterTestClient(REDIRECT_URI);
+  var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+  , TMCPOAuthServer.ComputePKCES256('any-verifier-0123456789-0123456789'), 'wrong-password');
+  Assert.IsEmpty(LCode, 'no authorization code expected with wrong credentials');
+end;
+
+procedure TMCPOAuthFixture.RefreshToken_RotatesAndWorks;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+  VERIFIER = 'refresh-verifier-0123456789-0123456789';
+begin
+  var LClientId := RegisterTestClient(REDIRECT_URI);
+  var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+  , TMCPOAuthServer.ComputePKCES256(VERIFIER), 'secret');
+
+  var LCall := SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+  , 'grant_type=authorization_code&code=' + LCode
+    + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
+    + '&client_id=' + LClientId
+    + '&code_verifier=' + VERIFIER);
+  var LJSON := ParseContent(LCall);
+  var LRefreshToken := '';
+  try
+    LRefreshToken := LJSON.ReadStringValue('refresh_token');
+  finally
+    LJSON.Free;
+  end;
+
+  // exchange the refresh token
+  var LRefreshCall := SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+  , 'grant_type=refresh_token&refresh_token=' + LRefreshToken + '&client_id=' + LClientId);
+  Assert.AreEqual(200, LRefreshCall.Response.StatusCode, LRefreshCall.Response.Content);
+
+  var LRefreshJSON := ParseContent(LRefreshCall);
+  try
+    var LNewAccess := LRefreshJSON.ReadStringValue('access_token');
+    Assert.IsNotEmpty(LNewAccess);
+    Assert.AreNotEqual(LRefreshToken, LRefreshJSON.ReadStringValue('refresh_token'), 'refresh token must rotate');
+
+    var LMCPCall := SendRaw('POST', 'mcpoauth', 'application/json'
+    , '{"jsonrpc":"2.0","id":1,"method":"ping"}', LNewAccess);
+    Assert.AreEqual(200, LMCPCall.Response.StatusCode);
+  finally
+    LRefreshJSON.Free;
+  end;
+
+  // rotation: the old refresh token is now invalid
+  var LReplayCall := SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+  , 'grant_type=refresh_token&refresh_token=' + LRefreshToken + '&client_id=' + LClientId);
+  Assert.AreEqual(400, LReplayCall.Response.StatusCode);
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMCPDispatcherFixture);
   TDUnitX.RegisterTestFixture(TMCPDataDispatcherFixture);
   TDUnitX.RegisterTestFixture(TMCPResourceFixture);
+  TDUnitX.RegisterTestFixture(TMCPOAuthFixture);
 
 end.

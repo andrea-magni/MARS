@@ -135,6 +135,7 @@
         <DCCReference Include="Server.Resources.pas"/>
         <DCCReference Include="Server.Resources.Token.pas"/>
         <DCCReference Include="Server.Resources.DB.pas"/>
+        <DCCReference Include="Server.Resources.OAuth.pas"/>
         <DCCReference Include="ServerConst.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
