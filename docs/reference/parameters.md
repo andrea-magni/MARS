@@ -57,7 +57,6 @@ Read by the [request/response loggers](/features/logging) (engine section). Each
 | `JSONLogging.Folder` | string | `<exe folder>\logs` | Target directory (created if missing). |
 | `JSONLogging.FileName` | string | `mars-reqresp.log` | Base log file name. |
 | `JSONLogging.DailyRotation` | Boolean | `True` | Insert the date before the extension for daily rotation. |
-| `LokiLogging.Enabled` | Boolean | `False` | Enable direct push to Grafana Loki (`MARS.Utils.ReqRespLogger.Loki`). |
 | `CodeSiteLogging.Enabled` | Boolean | `False` | Enable CodeSite output (`MARS.Utils.ReqRespLogger.CodeSite`). |
 
 See [Request/Response Logging](/features/logging) for the log line format and a Grafana Alloy ingestion example.

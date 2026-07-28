@@ -27,6 +27,16 @@
 ### Bootstrap with MARSCmd
 Check out [MARSCmd utility](https://andrea-magni.github.io/MARS/guide/installation#bootstrap-a-new-project-with-marscmd). Compile and run MARSCmd to have your first MARS project up and running in just few a clicks.
 
+### AI Agent Skills
+MARS ships [Agent Skills](https://andrea-magni.github.io/MARS/guide/agent-skills) for Claude Code and other AI coding agents: scaffold a new server or develop REST APIs (resources, JWT, FireDAC, SSE, ...) with an AI assistant that knows MARS. From Claude Code:
+
+```
+/plugin marketplace add andrea-magni/MARS
+/plugin install mars-curiosity@mars
+```
+
+See the [Skills folder](./Skills) or the [documentation page](https://andrea-magni.github.io/MARS/guide/agent-skills) for manual installation and usage examples.
+
 # Documentation
 * 📖 **[MARS Documentation Site](https://andrea-magni.github.io/MARS/)** — guide, server & client reference, features and demos
 * [Andrea Magni Blog](http://www.andreamagni.eu)
