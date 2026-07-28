@@ -6,7 +6,7 @@ Once a request is [authenticated](/features/authentication), MARS decides whethe
 
 | Attribute | Effect |
 | --- | --- |
-| `[PermitAll]` | Allow any caller — authenticated or not. |
+| `[PermitAll]` | Skip the role check. Note: it does **not** waive authentication when roles are declared elsewhere on the endpoint (see below). |
 | `[DenyAll]` | Deny everyone. |
 | `[RolesAllowed('a', 'b')]` | Allow callers whose token holds **at least one** of the listed roles (which implies a valid token). |
 
@@ -14,14 +14,18 @@ They can be placed on a **resource** (applies to all its methods) and/or on a **
 
 ## Resolution rules
 
-When evaluating an endpoint, MARS collects the authorization attributes from the method and the resource, then applies this precedence:
+When evaluating an endpoint, MARS **merges** the authorization attributes from the method *and* the resource class into a single set: `DenyAll`/`PermitAll` flags plus the **union** of all `[RolesAllowed]` roles from both levels. Two checks then run, in order:
+
+**Authentication first.** If the merged set contains *any* roles — whether they came from the method or from the resource class — a valid, verified token is required. A missing, invalid or expired token fails here with `403`, *before* `[PermitAll]` is even considered.
+
+**Then authorization**, with this precedence:
 
 1. **`[DenyAll]` wins** → `403 Forbidden`, always.
-2. Otherwise **`[PermitAll]`** → allowed.
+2. Otherwise **`[PermitAll]`** → allowed (the role check is skipped — but authentication above has already run).
 3. Otherwise, if there are **allowed roles**, the token must hold at least one → else `403`.
 4. With **no authorization attribute at all**, the endpoint is open (default allow).
 
-If an endpoint requires roles but the request has no valid token, authentication fails first with `403`.
+Consequence: a method-level `[PermitAll]` on a resource marked `[RolesAllowed(...)]` does **not** make that endpoint public — any valid token is still required; `[PermitAll]` only bypasses the role check. An endpoint is truly open only when no roles appear at either level.
 
 ## Example
 
@@ -33,8 +37,8 @@ protected
   [Context] Token: TMARSToken;
 public
   [GET, Path('ping')]
-  [PermitAll]                      // override: public health check
-  function Ping: string;
+  [PermitAll]                      // any valid token: skips the 'admin' role check
+  function Ping: string;           // (NOT public: resource roles still require a token)
 
   [GET, Path('stats')]
   function Stats: TStats;          // inherits resource rule: admin only
@@ -51,7 +55,8 @@ end;
 
 | Request | Outcome |
 | --- | --- |
-| `GET /admin/ping` (no token) | ✅ allowed — `[PermitAll]` |
+| `GET /admin/ping` (no token) | ⛔ 403 — authentication fails: the resource's `[RolesAllowed]` makes a token mandatory |
+| `GET /admin/ping` (token with `standard`) | ✅ allowed — `[PermitAll]` skips the role check |
 | `GET /admin/stats` (token with `standard`) | ⛔ 403 — needs `admin` |
 | `GET /admin/stats` (token with `admin`) | ✅ allowed |
 | `DELETE /admin/users/7` (token with `super`) | ✅ allowed |

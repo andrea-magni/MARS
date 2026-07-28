@@ -1,0 +1,73 @@
+unit Server.Resources.MCP;
+
+interface
+
+uses
+  SysUtils, Classes
+, MARS.Core.Attributes, MARS.Core.MediaType
+, MARS.MCP.Resource, MARS.MCP.Attributes
+;
+
+type
+  TCalculationResult = record
+    operation: string;
+    a: Double;
+    b: Double;
+    value: Double;
+  end;
+
+  TServerInfo = record
+    serverTime: TDateTime;
+    os: string;
+  end;
+
+  [Path('mcp')
+  , MCPServerInfo('My MCP Server', '1.0.0'
+    , 'Describe here what this server offers: the AI agent reads these instructions on connection.')
+  ]
+  TMyMCPResource = class(TMCPResource)
+  public
+    [MCPTool('say_hello', 'Returns a friendly greeting for the given name')]
+    function SayHello(
+      [MCPParam('name', 'Name of the person to greet')] const AName: string): string;
+
+    [MCPTool('add_numbers', 'Adds two numbers and returns a structured result')]
+    function AddNumbers(
+      [MCPParam('a', 'First operand')] const A: Double;
+      [MCPParam('b', 'Second operand')] const B: Double): TCalculationResult;
+
+    [MCPTool('server_info', 'Returns information about this server (time and OS)')]
+    function ServerInfo: TServerInfo;
+  end;
+
+implementation
+
+uses
+  MARS.Core.Registry
+;
+
+{ TMyMCPResource }
+
+function TMyMCPResource.SayHello(const AName: string): string;
+begin
+  Result := 'Hello, ' + AName + '!';
+end;
+
+function TMyMCPResource.AddNumbers(const A, B: Double): TCalculationResult;
+begin
+  Result.operation := 'add';
+  Result.a := A;
+  Result.b := B;
+  Result.value := A + B;
+end;
+
+function TMyMCPResource.ServerInfo: TServerInfo;
+begin
+  Result.serverTime := Now;
+  Result.os := TOSVersion.ToString;
+end;
+
+initialization
+  MARSRegister([TMyMCPResource]);
+
+end.

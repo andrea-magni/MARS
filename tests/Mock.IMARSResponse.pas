@@ -46,6 +46,9 @@ type
 
     constructor Create();
     destructor Destroy; override;
+
+    // test helper (not part of IMARSResponse): read back a header set by the resource
+    function GetHeaderValue(const AName: string): string;
   end;
 
 
@@ -97,6 +100,14 @@ end;
 function TMARSResponseMock.GetContentType: string;
 begin
   Result := FContentType;
+end;
+
+function TMARSResponseMock.GetHeaderValue(const AName: string): string;
+begin
+  Result := '';
+  for var LHeader in FHeaders do
+    if SameText(LHeader.Name, AName) then
+      Exit(LHeader.Value);
 end;
 
 function TMARSResponseMock.GetReasonString: string;

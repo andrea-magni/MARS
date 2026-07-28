@@ -3,7 +3,7 @@ unit Mock.IMARSRequest;
 interface
 
 uses
-  Classes, SysUtils, System.Generics.Collections
+  Classes, SysUtils, StrUtils, System.Generics.Collections, System.NetEncoding
 , MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.URL, MARS.Core.Utils
 ;
@@ -127,6 +127,20 @@ begin
   const LQueryTokens = FURL.QueryTokens.ToArray;
   for var LIndex := Low(LQueryTokens) to High(LQueryTokens) do
     FQueryParams := FQueryParams + [TMARSQueryParam.Create(LQueryTokens[LIndex].Key, LQueryTokens[LIndex].Value)];
+
+  // parse a form-urlencoded body into form params
+  if (ABody <> '') and ContainsText(GetHeaderParamValue('Content-Type'), 'application/x-www-form-urlencoded') then
+  begin
+    for var LPair in ABody.Split(['&']) do
+    begin
+      var LTokens := LPair.Split(['='], 2);
+      if Length(LTokens) = 2 then
+        FFormParams := FFormParams + [TFormParam.Create(
+          TNetEncoding.URL.Decode(LTokens[0]), TNetEncoding.URL.Decode(LTokens[1]))]
+      else if Length(LTokens) = 1 then
+        FFormParams := FFormParams + [TFormParam.Create(TNetEncoding.URL.Decode(LTokens[0]), '')];
+    end;
+  end;
 
   var LHostFound := False;
   var LPortFound := False;

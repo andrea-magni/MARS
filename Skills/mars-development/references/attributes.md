@@ -56,11 +56,11 @@ Configuration values (see `configuration.md` for the parameter system):
 
 | Attribute | Effect |
 |---|---|
-| `[PermitAll]` | any *authenticated* (verified) token passes |
+| `[PermitAll]` | any caller passes — authenticated or not; overrides role-based checks |
 | `[DenyAll]` | nobody passes |
 | `[RolesAllowed('standard')]` / `[RolesAllowed('standard,admin')]` | token must be verified and have at least one listed role (separators: comma, semicolon, space) |
 
-No authorization attribute = public endpoint. See `authentication.md`.
+No authorization attribute = public endpoint. `[PermitAll]` alone requires no token (equivalent to public); however, method and class attributes are *merged*, so a method-level `[PermitAll]` on a class that has `[RolesAllowed]` still requires a valid token — it only skips the role check. See `authentication.md`.
 
 ## Invocation events (on methods of the resource)
 
