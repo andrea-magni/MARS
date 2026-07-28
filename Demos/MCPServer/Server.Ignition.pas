@@ -161,6 +161,17 @@ begin
         Exit;
       end;
 
+      // OAuth discovery documents (RFC 9728 / RFC 8414) live at the root,
+      // outside the engine's BasePath
+      if TMCPOAuthMetadata.HandleWellKnownRequest(ARequest, AResponse
+         , FEngine.BasePath + '/default/oauth')
+      then
+      begin
+        Result := False;
+        Handled := True;
+        Exit;
+      end;
+
       // skip favicon requests (browser)
       if SameText(AURL.Document, 'favicon.ico') then
       begin
