@@ -15,7 +15,17 @@ This repository is also a Claude plugin marketplace. From Claude Code:
 /plugin install mars-curiosity@mars
 ```
 
-Skills become available automatically (also invocable as `/mars-curiosity:mars-development` and `/mars-curiosity:mars-new-project`) and get updated when new versions are published.
+Skills become available automatically (also invocable as `/mars-curiosity:mars-development`, `/mars-curiosity:mars-new-project` and `/mars-curiosity:mars-mcp-server`) and get updated when new versions are published.
+
+## Install with npx (any AI tool)
+
+If you use other agentic tools besides Claude Code (Cursor, Codex, ...) or prefer not to use plugins, the [skills CLI](https://github.com/vercel-labs/skills) installs the same skills into any compatible tool with one command (requires Node.js, no permanent install):
+
+```
+npx skills add andrea-magni/MARS
+```
+
+Pick the skills and target tools when prompted (`--all` installs everything for every detected tool), and update later with `npx skills update`.
 
 ## Manual install
 
@@ -30,6 +40,7 @@ Example (from your project root):
 git clone https://github.com/andrea-magni/MARS
 xcopy /E /I MARS\Skills\mars-development .claude\skills\mars-development
 xcopy /E /I MARS\Skills\mars-new-project .claude\skills\mars-new-project
+xcopy /E /I MARS\Skills\mars-mcp-server .claude\skills\mars-mcp-server
 ```
 
 Verify with `/skills` or just ask Claude to create a MARS server.
