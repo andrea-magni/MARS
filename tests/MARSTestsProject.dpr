@@ -32,6 +32,8 @@ uses
   Tests.DefaultEngine.Definition in 'Tests.DefaultEngine.Definition.pas',
   Tests.DefaultEngine.Resources in 'Tests.DefaultEngine.Resources.pas',
   Tests.DefaultEngine in 'Tests.DefaultEngine.pas',
+  Tests.MCP.Resources in 'Tests.MCP.Resources.pas',
+  Tests.MCP in 'Tests.MCP.pas',
   Mock.IMARSRequest in 'Mock.IMARSRequest.pas',
   Mock.IMARSResponse in 'Mock.IMARSResponse.pas';
 

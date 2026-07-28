@@ -34,6 +34,17 @@ Server-Sent Events: a resource that pushes a `heartbeat` event every second over
 function SayHelloWorld: TMARSServerSideEvent;
 ```
 
+## MCPServer
+
+An MCP (Model Context Protocol) server for AI agents: derive a resource from `TMCPResource`, mark methods with `[MCPTool]` and Claude, Claude Code or any MCP client can discover and call them over Streamable HTTP — tool list and JSON Schema are generated automatically via RTTI. See [MCP Servers](/features/mcp).
+
+```pascal
+[MCPTool('add_numbers', 'Adds two numbers and returns a structured result')]
+function AddNumbers(
+  [MCPParam('a', 'First operand')] const A: Double;
+  [MCPParam('b', 'Second operand')] const B: Double): TCalculationResult;
+```
+
 ## TokenRenew
 
 JWT lifecycle management: checking remaining validity and automatically re-issuing the token when it drops below half its duration. See [Authentication ▸ Token renewal](/features/authentication#token-renewal).
