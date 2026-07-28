@@ -19,6 +19,8 @@ type
   TServerEngine=class
   private
     class var FEngine: IMARSEngine;
+    class var FAvailableConnectionDefs: TArray<string>;
+    class procedure SetupSampleDatabase;
   public
     class constructor CreateEngine;
     class destructor DestroyEngine;
@@ -35,13 +37,20 @@ uses
 , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Core.MessageBodyWriter
 , MARS.Core.MessageBodyWriters
+, MARS.Data.MessageBodyWriters
 , MARS.Core.MessageBodyReaders
+, MARS.Data.FireDAC
+, FireDAC.Comp.Client, FireDAC.Stan.Option
+, FireDAC.Phys.SQLite, FireDAC.DApt
+, FireDAC.UI.Intf, FireDAC.ConsoleUI.Wait
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
 {$ENDIF}
 , Server.Resources
+, Server.Resources.Token
+, Server.Resources.DB
 ;
 
 { TServerEngine }
@@ -55,6 +64,10 @@ begin
 
   // Application configuration
   FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
+
+  // FireDAC connection defs (see MCPServerApplication.ini) and demo data
+  FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+  SetupSampleDatabase;
 
   FEngine.BeforeHandleRequest :=
     function (
@@ -85,8 +98,43 @@ begin
     end;
 end;
 
+class procedure TServerEngine.SetupSampleDatabase;
+var
+  LConnection: TFDConnection;
+begin
+  LConnection := TFDConnection.Create(nil);
+  try
+    LConnection.ConnectionDefName := 'MAIN_DB';
+    LConnection.Connected := True;
+
+    LConnection.ExecSQL(
+      'create table if not exists EMPLOYEES ('
+      + ' ID integer primary key autoincrement'
+      + ', NAME text not null'
+      + ', ROLE text not null'
+      + ', SALARY numeric not null'
+      + ', HIRED text not null'
+      + ')'
+    );
+
+    if LConnection.ExecSQLScalar('select count(*) from EMPLOYEES') = 0 then
+    begin
+      LConnection.ExecSQL('insert into EMPLOYEES (NAME, ROLE, SALARY, HIRED) values '
+        + '(''Ada Lovelace'', ''Analyst'', 42000, ''2021-03-15'')'
+        + ', (''Grace Hopper'', ''Developer'', 48000, ''2019-11-02'')'
+        + ', (''Alan Turing'', ''Architect'', 55000, ''2018-06-23'')'
+        + ', (''Hedy Lamarr'', ''Inventor'', 51000, ''2020-09-30'')'
+        + ', (''Niklaus Wirth'', ''Language Designer'', 60000, ''2017-02-14'')'
+      );
+    end;
+  finally
+    LConnection.Free;
+  end;
+end;
+
 class destructor TServerEngine.DestroyEngine;
 begin
+  TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
   FEngine := nil;
 end;
 

@@ -89,9 +89,52 @@ npx @modelcontextprotocol/inspector --cli http://localhost:8080/rest/default/mcp
   --transport http --method tools/list
 ```
 
-## Authentication
+## Database tools with FireDAC
 
-`TMCPResource` descendants are ordinary MARS resources: you can protect them with the standard [authorization attributes](/features/authorization) (`[PermitAll]`, `[RolesAllowed('...')]`) and a bearer token, as most MCP clients support the `Authorization` header for remote servers.
+Derive from `TMCPDataResource` (unit `MARS.MCP.Data`) and your tools can return any `TDataSet` — typically a `TFDQuery` obtained through the injected [`TMARSFireDAC`](/features/firedac). Rows are serialized automatically into the tool result as `structuredContent: { rowCount, rows }` plus a text fallback:
+
+```pascal
+uses MARS.MCP.Data, MARS.Data.FireDAC, FireDAC.Comp.Client;
+
+type
+  [Path('mcpdb'), RolesAllowed('standard')]
+  TMyDBMCPResource = class(TMCPDataResource)
+  protected
+    [Context] FD: TMARSFireDAC;
+  public
+    [MCPTool('find_employees', 'Finds employees whose name contains the given text')]
+    function FindEmployees(
+      [MCPParam('nameContains', 'Text to search for')] const AText: string): TFDQuery;
+  end;
+
+function TMyDBMCPResource.FindEmployees(const AText: string): TFDQuery;
+begin
+  Result := FD.Query(
+    'select * from EMPLOYEES where upper(NAME) like upper(:TXT)'
+  , nil, True
+  , procedure (AQuery: TFDQuery)
+    begin
+      AQuery.ParamByName('TXT').AsString := '%' + AText + '%';
+    end);
+end;
+```
+
+Dataset results returned by `TMARSFireDAC.Query` are context-owned: MARS frees them at the end of the request, the MCP dispatcher never does.
+
+## Authentication and authorization
+
+`TMCPResource` descendants are ordinary MARS resources, so both levels of the standard [authorization](/features/authorization) system apply:
+
+- **Endpoint level** — put `[RolesAllowed('standard')]` on the resource class: MARS answers `403` before any MCP message is processed unless the request carries a valid `Authorization: Bearer <JWT>` with that role. Issue tokens with a regular [token resource](/features/authentication) (`POST /rest/default/token`). Note that `[PermitAll]` alone does *not* require authentication — it allows any caller.
+- **Per-tool level** — put `[RolesAllowed('...')]` (or `[DenyAll]`) on individual tool methods: unauthorized tools are *hidden* from `tools/list` and `tools/call` answers as if they did not exist, so agents without the role never see them.
+
+```pascal
+[RolesAllowed('admin')]
+[MCPTool('raise_salary', 'Raises the salary of an employee (admin only)')]
+function RaiseSalary(const AId: Integer; const APercent: Double): TOperationResult;
+```
+
+Most MCP clients support Bearer tokens for remote servers: in Open WebUI set the token in the External Tools connection, with MCP Inspector pass `--header "Authorization: Bearer <token>"`, in a `.mcp.json` use the `headers` section.
 
 ## Notes and current scope
 

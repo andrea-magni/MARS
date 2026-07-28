@@ -48,6 +48,10 @@ type
     RttiMethod: TRttiMethod;
   end;
 
+  // returns False to hide a tool from tools/list and reject tools/call
+  // (rejected calls answer as if the tool did not exist)
+  TMCPToolFilterFunc = reference to function (const ATool: TMCPTool): Boolean;
+
   TMCPDispatcher = class
   private
     FInstance: TObject;
@@ -55,6 +59,7 @@ type
     FServerVersion: string;
     FInstructions: string;
     FTools: TArray<TMCPTool>;
+    FToolFilter: TMCPToolFilterFunc;
     // per-class tool cache: dispatchers are created per request, RTTI scan happens once per class.
     // Key is the instance class: descendants overriding ScanTools with different discovery logic
     // should not share instance classes with the base dispatcher.
@@ -68,6 +73,8 @@ type
     function ScanTools: TArray<TMCPTool>; virtual;
     procedure CollectTools; virtual;
     function FindTool(const AName: string; out ATool: TMCPTool): Boolean; virtual;
+    function IsToolAvailable(const ATool: TMCPTool): Boolean; virtual;
+    procedure DisposeToolResult(const AMethod: TRttiMethod; const AValue: TValue); virtual;
 
     function DispatchRequest(const AMethod: string; const AParams: TJSONObject): TJSONValue; virtual;
     function HandleInitialize(const AParams: TJSONObject): TJSONValue; virtual;
@@ -104,7 +111,10 @@ type
     property ServerVersion: string read FServerVersion;
     property Instructions: string read FInstructions;
     property Tools: TArray<TMCPTool> read FTools;
+    property ToolFilter: TMCPToolFilterFunc read FToolFilter write FToolFilter;
   end;
+
+  TMCPDispatcherClass = class of TMCPDispatcher;
 
 implementation
 
@@ -346,9 +356,22 @@ begin
   LResult.AddPair('tools', LToolsArray);
 
   for LTool in FTools do
-    LToolsArray.AddElement(BuildToolJSON(LTool));
+    if IsToolAvailable(LTool) then
+      LToolsArray.AddElement(BuildToolJSON(LTool));
 
   Result := LResult;
+end;
+
+function TMCPDispatcher.IsToolAvailable(const ATool: TMCPTool): Boolean;
+begin
+  Result := (not Assigned(FToolFilter)) or FToolFilter(ATool);
+end;
+
+procedure TMCPDispatcher.DisposeToolResult(const AMethod: TRttiMethod;
+  const AValue: TValue);
+begin
+  if AValue.IsObject then
+    AValue.AsObject.Free;
 end;
 
 function TMCPDispatcher.BuildToolJSON(const ATool: TMCPTool): TJSONObject;
@@ -605,7 +628,8 @@ begin
     raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Missing params');
 
   LToolName := AParams.ReadStringValue('name');
-  if not FindTool(LToolName, LTool) then
+  // filtered-out tools answer as if they did not exist (no existence leak)
+  if (not FindTool(LToolName, LTool)) or (not IsToolAvailable(LTool)) then
     raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Unknown tool: ' + LToolName);
 
   LArguments := nil;
@@ -651,8 +675,7 @@ begin
     try
       Result := BuildToolResult(LTool.RttiMethod, LResultValue);
     finally
-      if LResultValue.IsObject then
-        LResultValue.AsObject.Free;
+      DisposeToolResult(LTool.RttiMethod, LResultValue);
     end;
   finally
     LOwnedObjects.Free;

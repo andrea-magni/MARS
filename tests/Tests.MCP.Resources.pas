@@ -28,6 +28,21 @@ type
 
     [MCPTool('boom', 'Always fails')]
     procedure Boom;
+
+    [RolesAllowed('admin')]
+    [MCPTool('secret_tool', 'Admin only tool')]
+    function SecretTool: string;
+  end;
+
+  // endpoint-level authorization: verified token with the 'standard' role required
+  // (note: [PermitAll] alone does NOT require authentication in MARS)
+  [Path('mcpsec'), RolesAllowed('standard')
+  , MCPServerInfo('Secured MCP Test Server', '1.0.0')
+  ]
+  TSecuredMCPResource = class(TMCPResource)
+  public
+    [MCPTool('ping_tool', 'Simple tool')]
+    function PingTool: string;
   end;
 
 implementation
@@ -54,7 +69,19 @@ begin
   raise Exception.Create('kaboom');
 end;
 
+function TTestMCPResource.SecretTool: string;
+begin
+  Result := 'classified';
+end;
+
+{ TSecuredMCPResource }
+
+function TSecuredMCPResource.PingTool: string;
+begin
+  Result := 'pong';
+end;
+
 initialization
-  MARSRegister([TTestMCPResource]);
+  MARSRegister([TTestMCPResource, TSecuredMCPResource]);
 
 end.

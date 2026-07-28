@@ -17,6 +17,8 @@ uses
   MARS.http.Server.Indy,
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources in 'Server.Resources.pas',
+  Server.Resources.Token in 'Server.Resources.Token.pas',
+  Server.Resources.DB in 'Server.Resources.DB.pas',
   ServerConst in 'ServerConst.pas';
 
 procedure StartServer(const AServer: TMARShttpServerIndy);

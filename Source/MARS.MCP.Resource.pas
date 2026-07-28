@@ -22,6 +22,7 @@ uses
   Classes, SysUtils, System.JSON, System.Rtti
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON
 , MARS.Core.RequestAndResponse.Interfaces, MARS.Core.Activation.Interfaces
+, MARS.Core.Token
 , MARS.MCP, MARS.MCP.Attributes
 ;
 
@@ -31,12 +32,20 @@ type
     [Context] Activation: IMARSActivation;
     [Context] Request: IMARSRequest;
     [Context] Response: IMARSResponse;
+    [Context] Token: TMARSToken;
 
     function GetServerInfoAttribute: MCPServerInfoAttribute; virtual;
     function GetServerName: string; virtual;
     function GetServerVersion: string; virtual;
     function GetInstructions: string; virtual;
+    function GetDispatcherClass: TMCPDispatcherClass; virtual;
     function CreateDispatcher: TMCPDispatcher; virtual;
+
+    // per-tool authorization: evaluates MARS authorization attributes
+    // ([DenyAll], [RolesAllowed], [PermitAll]) on the tool method against
+    // the current token. Unauthorized tools are hidden from tools/list and
+    // tools/call answers as if they did not exist.
+    function CanUseTool(const ATool: TMCPTool): Boolean; virtual;
   public
     [POST, Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
     procedure HandleMessage([BodyParam] AMessage: TJSONValue); virtual;
@@ -105,9 +114,53 @@ begin
     Result := '';
 end;
 
+function TMCPResource.GetDispatcherClass: TMCPDispatcherClass;
+begin
+  Result := TMCPDispatcher;
+end;
+
 function TMCPResource.CreateDispatcher: TMCPDispatcher;
 begin
-  Result := TMCPDispatcher.Create(Self, GetServerName, GetServerVersion, GetInstructions);
+  Result := GetDispatcherClass.Create(Self, GetServerName, GetServerVersion, GetInstructions);
+  Result.ToolFilter := CanUseTool;
+end;
+
+function TMCPResource.CanUseTool(const ATool: TMCPTool): Boolean;
+var
+  LAttribute: TCustomAttribute;
+  LDenyAll, LPermitAll, LHasRoles, LRoleSatisfied: Boolean;
+begin
+  // same semantics as MARS class/method authorization (TMARSActivation.CheckAuthorization):
+  // DenyAll > PermitAll > RolesAllowed; no attributes -> public tool
+  LDenyAll := False;
+  LPermitAll := False;
+  LHasRoles := False;
+  LRoleSatisfied := False;
+
+  for LAttribute in ATool.RttiMethod.GetAttributes do
+  begin
+    if LAttribute is DenyAllAttribute then
+      LDenyAll := True
+    else if LAttribute is PermitAllAttribute then
+      LPermitAll := True
+    else if LAttribute is RolesAllowedAttribute then
+    begin
+      LHasRoles := True;
+      if Assigned(Token) and Token.IsVerified
+         and Token.HasRole(RolesAllowedAttribute(LAttribute).Roles)
+      then
+        LRoleSatisfied := True;
+    end;
+  end;
+
+  if LDenyAll then
+    Result := False
+  else if LPermitAll then
+    Result := True
+  else if LHasRoles then
+    Result := LRoleSatisfied
+  else
+    Result := True;
 end;
 
 procedure TMCPResource.HandleMessage(AMessage: TJSONValue);

@@ -5,10 +5,11 @@ interface
 uses
   Classes, SysUtils, Rtti, TypInfo, DateUtils
 , DUnitX.TestFramework
+, Data.DB, FireDAC.Comp.Client
 , MARS.Core.JSON, System.JSON
 , MARS.Core.Engine.Interfaces
 , MARS.Core.RequestAndResponse.Interfaces
-, MARS.MCP, MARS.MCP.Attributes
+, MARS.MCP, MARS.MCP.Attributes, MARS.MCP.Data
 , Mock.IMARSResponse
 ;
 
@@ -115,6 +116,36 @@ type
 
     // caching
     [Test] procedure ToolCache_SharedAcrossDispatchers;
+
+    // filtering
+    [Test] procedure ToolFilter_HidesToolsFromList;
+    [Test] procedure ToolFilter_BlockedCallAnswersUnknownTool;
+  end;
+
+  // host for TMCPDataDispatcher tests: owns the dataset returned by the tool
+  TDataToolHost = class
+  private
+    FTable: TFDMemTable;
+  public
+    destructor Destroy; override;
+
+    [MCPTool('sample_rows', 'Returns sample rows')]
+    function SampleRows: TFDMemTable;
+  end;
+
+  [TestFixture('MCP.DataDispatcher')]
+  TMCPDataDispatcherFixture = class
+  private
+    FHost: TDataToolHost;
+    FDispatcher: TMCPDispatcher;
+  public
+    [Setup]
+    procedure Setup;
+    [Teardown]
+    procedure Teardown;
+
+    [Test] procedure DataSetResult_RowsAndRowCountInStructuredContent;
+    [Test] procedure DataSetResult_NotFreedByDispatcher;
   end;
 
   TMCPCall = record
@@ -128,7 +159,9 @@ type
   private
     FEngine: IMARSEngine;
   protected
-    function SendMCP(const AHttpMethod: string; const ABody: string = ''): TMCPCall;
+    function MintToken(const AUserName: string; const ARoles: TArray<string>): string;
+    function SendMCP(const AHttpMethod: string; const ABody: string = '';
+      const AToken: string = ''; const APath: string = 'mcp'): TMCPCall;
     function ParseContent(const ACall: TMCPCall): TJSONObject;
   public
     [Setup]
@@ -145,6 +178,17 @@ type
     [Test] procedure Post_InvalidJSON_ReturnsParseError;
     [Test] procedure Get_Returns405AllowPost;
     [Test] procedure Delete_Returns405AllowPost;
+
+    // per-tool authorization ([RolesAllowed] on tool methods)
+    [Test] procedure Auth_ToolsList_NoToken_HidesRoleProtectedTool;
+    [Test] procedure Auth_ToolsList_AdminToken_ShowsRoleProtectedTool;
+    [Test] procedure Auth_SecretTool_NoToken_UnknownTool;
+    [Test] procedure Auth_SecretTool_StandardRole_UnknownTool;
+    [Test] procedure Auth_SecretTool_AdminRole_Succeeds;
+
+    // endpoint-level authorization ([PermitAll] on the resource class)
+    [Test] procedure Auth_SecuredEndpoint_NoToken_Returns403;
+    [Test] procedure Auth_SecuredEndpoint_WithToken_Returns200;
   end;
 
 implementation
@@ -153,6 +197,7 @@ uses
   MARS.Core.Engine
 , MARS.Core.Activation
 , MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
+, MARS.Core.Token, MARS.Utils.JWT
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
 {$ELSE}
@@ -708,6 +753,131 @@ begin
   end;
 end;
 
+procedure TMCPDispatcherFixture.ToolFilter_HidesToolsFromList;
+begin
+  FDispatcher.ToolFilter :=
+    function (const ATool: TMCPTool): Boolean
+    begin
+      Result := ATool.Name <> 'boom';
+    end;
+
+  var LResponse := ToolsListResponse;
+  try
+    Assert.IsNull(FindToolJSON(LResponse, 'boom'));
+
+    var LTools: TJSONArray;
+    Assert.IsTrue(LResponse.TryGetValue<TJSONArray>('result.tools', LTools));
+    Assert.AreEqual(6, LTools.Count);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPDispatcherFixture.ToolFilter_BlockedCallAnswersUnknownTool;
+begin
+  FDispatcher.ToolFilter :=
+    function (const ATool: TMCPTool): Boolean
+    begin
+      Result := ATool.Name <> 'boom';
+    end;
+
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"boom","arguments":{}}}');
+  try
+    AssertErrorCode(LResponse, JSONRPC_INVALID_PARAMS);
+    var LMessage: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('error.message', LMessage));
+    Assert.Contains(LMessage, 'Unknown tool');
+  finally
+    LResponse.Free;
+  end;
+end;
+
+{ TDataToolHost }
+
+destructor TDataToolHost.Destroy;
+begin
+  FTable.Free;
+  inherited;
+end;
+
+function TDataToolHost.SampleRows: TFDMemTable;
+begin
+  if not Assigned(FTable) then
+  begin
+    FTable := TFDMemTable.Create(nil);
+    FTable.FieldDefs.Add('ID', ftInteger);
+    FTable.FieldDefs.Add('NAME', ftString, 50);
+    FTable.CreateDataSet;
+    FTable.AppendRecord([1, 'Ada']);
+    FTable.AppendRecord([2, 'Grace']);
+  end;
+  Result := FTable;
+end;
+
+{ TMCPDataDispatcherFixture }
+
+procedure TMCPDataDispatcherFixture.Setup;
+begin
+  FHost := TDataToolHost.Create;
+  FDispatcher := TMCPDataDispatcher.Create(FHost, 'DataServer', '1.0.0', '');
+end;
+
+procedure TMCPDataDispatcherFixture.Teardown;
+begin
+  FreeAndNil(FDispatcher);
+  FreeAndNil(FHost);
+end;
+
+procedure TMCPDataDispatcherFixture.DataSetResult_RowsAndRowCountInStructuredContent;
+begin
+  var LMessage := TJSONObject.ParseJSONValue(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"sample_rows","arguments":{}}}');
+  try
+    var LResponse := FDispatcher.HandleMessage(LMessage);
+    try
+      var LRowCount: Integer;
+      Assert.IsTrue(LResponse.TryGetValue<Integer>('result.structuredContent.rowCount', LRowCount), LResponse.ToJSON);
+      Assert.AreEqual(2, LRowCount);
+
+      var LName: string;
+      Assert.IsTrue(LResponse.TryGetValue<string>('result.structuredContent.rows[0].NAME', LName));
+      Assert.AreEqual('Ada', LName);
+
+      var LText: string;
+      Assert.IsTrue(LResponse.TryGetValue<string>('result.content[0].text', LText));
+      Assert.Contains(LText, 'Grace');
+    finally
+      LResponse.Free;
+    end;
+  finally
+    LMessage.Free;
+  end;
+end;
+
+procedure TMCPDataDispatcherFixture.DataSetResult_NotFreedByDispatcher;
+begin
+  var LMessage := TJSONObject.ParseJSONValue(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"sample_rows","arguments":{}}}');
+  try
+    // two consecutive calls: would fail (freed dataset) if the dispatcher disposed the result
+    for var LRound := 1 to 2 do
+    begin
+      var LResponse := FDispatcher.HandleMessage(LMessage);
+      try
+        var LRowCount: Integer;
+        Assert.IsTrue(LResponse.TryGetValue<Integer>('result.structuredContent.rowCount', LRowCount));
+        Assert.AreEqual(2, LRowCount, 'round ' + LRound.ToString);
+      finally
+        LResponse.Free;
+      end;
+    end;
+    Assert.IsTrue(FHost.FTable.Active, 'dataset must survive the dispatcher');
+  finally
+    LMessage.Free;
+  end;
+end;
+
 { TMCPResourceFixture }
 
 procedure TMCPResourceFixture.Setup;
@@ -725,17 +895,38 @@ begin
   FEngine := nil;
 end;
 
-function TMCPResourceFixture.SendMCP(const AHttpMethod, ABody: string): TMCPCall;
+function TMCPResourceFixture.MintToken(const AUserName: string;
+  const ARoles: TArray<string>): string;
+var
+  LToken: TMARSToken;
 begin
-  var LURL := 'http://localhost:8080' + FEngine.BasePath + '/mcptest/mcp';
+  // engine has no ini: the app verifies tokens with the JWT default parameters
+  LToken := {$IFDEF MSWINDOWS}TMARSmORMotJWTToken{$ELSE}TMARSJOSEJWTToken{$ENDIF}.Create(
+    '', JWT_SECRET_PARAM_DEFAULT, JWT_ISSUER_PARAM_DEFAULT, JWT_DURATION_PARAM_DEFAULT);
+  try
+    LToken.SetUserNameAndRoles(AUserName, ARoles);
+    LToken.Build(JWT_SECRET_PARAM_DEFAULT);
+    Result := LToken.Token;
+  finally
+    LToken.Free;
+  end;
+end;
+
+function TMCPResourceFixture.SendMCP(const AHttpMethod, ABody, AToken, APath: string): TMCPCall;
+begin
+  var LURL := 'http://localhost:8080' + FEngine.BasePath + '/mcptest/' + APath;
+
+  var LHeaders: TMARSHeaders := [
+    TMARSHeader.Create('Content-Type', 'application/json')
+  , TMARSHeader.Create('Accept', 'application/json')
+  ];
+  if AToken <> '' then
+    LHeaders := LHeaders + [TMARSHeader.Create('Authorization', 'Bearer ' + AToken)];
 
   Result.ResponseMock := TMARSResponseMock.Create;
   Result.Response := Result.ResponseMock;
   Result.Handled := FEngine.HandleRequest(
-    TMARSRequestMock.Create(AHttpMethod, LURL
-    , [ TMARSHeader.Create('Content-Type', 'application/json')
-      , TMARSHeader.Create('Accept', 'application/json')]
-    , ABody)
+    TMARSRequestMock.Create(AHttpMethod, LURL, LHeaders, ABody)
   , Result.Response);
 end;
 
@@ -871,8 +1062,107 @@ begin
   Assert.AreEqual('POST', LCall.ResponseMock.GetHeaderValue('Allow'));
 end;
 
+procedure TMCPResourceFixture.Auth_ToolsList_NoToken_HidesRoleProtectedTool;
+begin
+  var LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+  var LJSON := ParseContent(LCall);
+  try
+    var LTools: TJSONArray;
+    Assert.IsTrue(LJSON.TryGetValue<TJSONArray>('result.tools', LTools));
+    Assert.AreEqual(3, LTools.Count);
+    Assert.DoesNotContain(LTools.ToJSON, 'secret_tool');
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_ToolsList_AdminToken_ShowsRoleProtectedTool;
+begin
+  var LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+  , MintToken('andrea', ['standard', 'admin']));
+  var LJSON := ParseContent(LCall);
+  try
+    var LTools: TJSONArray;
+    Assert.IsTrue(LJSON.TryGetValue<TJSONArray>('result.tools', LTools));
+    Assert.AreEqual(4, LTools.Count);
+    Assert.Contains(LTools.ToJSON, 'secret_tool');
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_SecretTool_NoToken_UnknownTool;
+begin
+  var LCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"secret_tool","arguments":{}}}');
+  var LJSON := ParseContent(LCall);
+  try
+    var LCode: Integer;
+    Assert.IsTrue(LJSON.TryGetValue<Integer>('error.code', LCode));
+    Assert.AreEqual(JSONRPC_INVALID_PARAMS, LCode);
+
+    var LMessage: string;
+    Assert.IsTrue(LJSON.TryGetValue<string>('error.message', LMessage));
+    Assert.Contains(LMessage, 'Unknown tool');
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_SecretTool_StandardRole_UnknownTool;
+begin
+  var LCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"secret_tool","arguments":{}}}'
+  , MintToken('guest', ['standard']));
+  var LJSON := ParseContent(LCall);
+  try
+    var LCode: Integer;
+    Assert.IsTrue(LJSON.TryGetValue<Integer>('error.code', LCode));
+    Assert.AreEqual(JSONRPC_INVALID_PARAMS, LCode);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_SecretTool_AdminRole_Succeeds;
+begin
+  var LCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"secret_tool","arguments":{}}}'
+  , MintToken('andrea', ['standard', 'admin']));
+  var LJSON := ParseContent(LCall);
+  try
+    var LText: string;
+    Assert.IsTrue(LJSON.TryGetValue<string>('result.content[0].text', LText), LJSON.ToJSON);
+    Assert.AreEqual('classified', LText);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_SecuredEndpoint_NoToken_Returns403;
+begin
+  var LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"ping"}', '', 'mcpsec');
+  Assert.AreEqual(403, LCall.Response.StatusCode);
+end;
+
+procedure TMCPResourceFixture.Auth_SecuredEndpoint_WithToken_Returns200;
+begin
+  var LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"ping"}'
+  , MintToken('guest', ['standard']), 'mcpsec');
+  Assert.AreEqual(200, LCall.Response.StatusCode);
+
+  var LJSON := ParseContent(LCall);
+  try
+    var LResult: TJSONObject;
+    Assert.IsTrue(LJSON.TryGetValue<TJSONObject>('result', LResult));
+  finally
+    LJSON.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMCPDispatcherFixture);
+  TDUnitX.RegisterTestFixture(TMCPDataDispatcherFixture);
   TDUnitX.RegisterTestFixture(TMCPResourceFixture);
 
 end.
