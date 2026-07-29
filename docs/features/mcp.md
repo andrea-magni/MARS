@@ -121,6 +121,36 @@ end;
 
 Dataset results returned by `TMARSFireDAC.Query` are context-owned: MARS frees them at the end of the request, the MCP dispatcher never does.
 
+## Resources and prompts
+
+Tools are what the *model* decides to call; MCP offers two more capabilities with a different controller:
+
+- **Resources** — readable content identified by a URI, that the *client or user* attaches to the conversation (in Claude they appear in the attach menu). Perfect for content the agent should *know* rather than *fetch*: database schemas, configuration, records under discussion.
+- **Prompts** — reusable, parameterized prompt templates the *user* picks from the client UI (slash-command style). The right place to encode how your tools are meant to be used.
+
+Both map to annotated methods, exactly like tools:
+
+```pascal
+// static resource: listed in resources/list
+[MCPResource('db://schema', 'schema', 'DDL of the database: read this to learn tables and columns', 'text/plain')]
+function DbSchema: string;
+
+// URI template: listed in resources/templates/list; {id} binds to the parameter
+// (placeholders match the *exposed* parameter names — rename with [MCPParam])
+[MCPResource('employees://{id}', 'employee', 'A single employee record by numeric id')]
+function EmployeeResource([MCPParam('id', 'Employee id')] const AId: Integer): TFDQuery;
+
+[MCPPrompt('salary_review', 'Guided salary review for an employee')]
+function SalaryReviewPrompt(
+  [MCPParam('employeeName', 'Employee to review')] const AName: string): string;
+```
+
+Serialization follows the return type: strings become `text/plain` text, records/arrays/`TJSONValue` become `application/json` text, `TStream` becomes a base64 `blob`, and on a `TMCPDataResource` a `TDataSet` result becomes its rows as JSON. The MIME type can be forced via the attribute, otherwise it is inferred. A prompt method returning a `string` produces a single user message; return a `TJSONArray` to provide a full `messages` array verbatim.
+
+Authorization applies here too: `[RolesAllowed]`/`[DenyAll]` on resource or prompt methods hide them from the list requests, `resources/read` answers `Resource not found` (-32002) and `prompts/get` answers `Unknown prompt` for unauthorized callers.
+
+The `initialize` response advertises the `resources` and `prompts` capabilities only when the class actually declares any. Client support varies: Claude (Desktop/Code) handles both, several other clients are tools-only — design your server so tools remain self-sufficient.
+
 ## Authentication and authorization
 
 `TMCPResource` descendants are ordinary MARS resources, so both levels of the standard [authorization](/features/authorization) system apply:
@@ -169,11 +199,11 @@ end;
 The user experience on an OAuth-capable client: add the connector URL → a browser window opens on your login page (override `RenderAuthorizePage` to customize it) → sign in → the client stores and refreshes tokens automatically. `Authenticate` decides the roles, so per-tool `[RolesAllowed]` filtering applies to OAuth users too.
 
 ::: warning
-Run behind HTTPS in production (a TLS-terminating reverse proxy works fine — override `BuildResourceMetadataURL`/`TMCPOAuthMetadata` URLs accordingly). Client/code/refresh-token storage is in-memory by default: override the `Store*`/`Consume*` virtual methods for persistence across restarts.
+Run behind HTTPS in production (a TLS-terminating reverse proxy works fine — override `BuildResourceMetadataURL`/`TMCPOAuthMetadata` URLs accordingly). Client/code/refresh-token storage is in-memory by default — call `TMCPOAuthServer.SetPersistenceFile('...')` at startup so registered clients and refresh tokens survive restarts (the file stores refresh tokens in cleartext: protect it), or override the `Store*`/`Consume*` virtual methods for a custom store.
 :::
 
 ## Notes and current scope
 
 - The implementation is **stateless**: no `Mcp-Session-Id` is issued, `GET`/`DELETE` answer `405` (allowed by the specification for servers that do not offer server-initiated streams). Every JSON-RPC request is answered with a single `application/json` response.
-- Advertised capabilities currently cover **tools**; `resources/*` and `prompts/*` are natural follow-ups and can be added by overriding `TMCPDispatcher.DispatchRequest`.
+- Advertised capabilities cover **tools**, **resources** and **prompts** (the latter two only when the resource class declares any); subscriptions and `listChanged` notifications are not offered (they require server-initiated streams). Additional protocol methods can be added by overriding `TMCPDispatcher.DispatchRequest`.
 - When exposing the server beyond localhost, follow the MCP security guidance: validate the `Origin` header (e.g. in the engine's `BeforeHandleRequest`), bind to localhost when possible and require authentication.

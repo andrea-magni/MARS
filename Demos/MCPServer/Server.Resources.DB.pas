@@ -52,6 +52,19 @@ type
     function RaiseSalary(
       [MCPParam('id', 'Employee id')] const AId: Integer;
       [MCPParam('percent', 'Percentage increase, e.g. 10 for +10%')] const APercent: Double): TEmployeeOperationResult;
+
+    // MCP resources: readable content the client can attach to the conversation
+    [MCPResource('db://schema', 'schema', 'DDL of the demo database: read this to learn tables and columns', 'text/plain')]
+    function DbSchema: string;
+
+    [MCPResource('employees://{id}', 'employee', 'A single employee record by numeric id')]
+    function EmployeeResource(
+      [MCPParam('id', 'Employee id')] const AId: Integer): TFDQuery;
+
+    // MCP prompt: a reusable, guided workflow the user can pick from the client UI
+    [MCPPrompt('salary_review', 'Guided salary review for an employee')]
+    function SalaryReviewPrompt(
+      [MCPParam('employeeName', 'Name (or part of the name) of the employee to review')] const AName: string): string;
   end;
 
 implementation
@@ -110,6 +123,41 @@ begin
     Result.message := Format('Salary of employee %d raised by %.1f%%', [AId, APercent], TFormatSettings.Invariant)
   else
     Result.message := Format('No employee found with id %d', [AId]);
+end;
+
+function TDemoDBMCPResource.DbSchema: string;
+var
+  LQuery: TFDQuery;
+begin
+  Result := '';
+  LQuery := FD.Query('select sql from sqlite_master where type = ''table'' order by name');
+  while not LQuery.Eof do
+  begin
+    Result := Result + LQuery.Fields[0].AsString + ';' + sLineBreak;
+    LQuery.Next;
+  end;
+end;
+
+function TDemoDBMCPResource.EmployeeResource(const AId: Integer): TFDQuery;
+begin
+  Result := FD.Query(
+    'select ID, NAME, ROLE, SALARY, HIRED from EMPLOYEES where ID = :ID'
+  , nil, True
+  , procedure (AQuery: TFDQuery)
+    begin
+      AQuery.ParamByName('ID').AsInteger := AId;
+    end
+  );
+end;
+
+function TDemoDBMCPResource.SalaryReviewPrompt(const AName: string): string;
+begin
+  Result :=
+    'Perform a salary review for the employee matching "' + AName + '":' + sLineBreak
+    + '1. Use the find_employees tool to locate the employee and note id, role and current salary.' + sLineBreak
+    + '2. Use list_employees to compare the salary with colleagues in similar roles.' + sLineBreak
+    + '3. Propose a fair adjustment (as a percentage) with a short motivation.' + sLineBreak
+    + '4. Only if I explicitly confirm, apply it with the raise_salary tool.';
 end;
 
 initialization

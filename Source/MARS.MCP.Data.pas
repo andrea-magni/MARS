@@ -29,6 +29,8 @@ type
   TMCPDataDispatcher = class(TMCPDispatcher)
   protected
     function BuildToolResult(const AMethod: TRttiMethod; const AValue: TValue): TJSONObject; override;
+    function BuildResourceContents(const AInfo: TMCPResourceInfo; const AURI: string;
+      const AValue: TValue): TJSONObject; override;
     procedure DisposeToolResult(const AMethod: TRttiMethod; const AValue: TValue); override;
   end;
 
@@ -79,6 +81,27 @@ begin
   end
   else
     Result := inherited BuildToolResult(AMethod, AValue);
+end;
+
+function TMCPDataDispatcher.BuildResourceContents(const AInfo: TMCPResourceInfo;
+  const AURI: string; const AValue: TValue): TJSONObject;
+var
+  LRows: TJSONArray;
+begin
+  if AValue.IsObject and (AValue.AsObject is TDataSet) then
+  begin
+    Result := TJSONObject.Create;
+    Result.AddPair('uri', AURI);
+    Result.AddPair('mimeType', 'application/json');
+    LRows := DataSetToJSONArray(TDataSet(AValue.AsObject));
+    try
+      Result.AddPair('text', LRows.ToJSON);
+    finally
+      LRows.Free;
+    end;
+  end
+  else
+    Result := inherited BuildResourceContents(AInfo, AURI, AValue);
 end;
 
 procedure TMCPDataDispatcher.DisposeToolResult(const AMethod: TRttiMethod;

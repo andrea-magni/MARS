@@ -32,6 +32,17 @@ type
     [RolesAllowed('admin')]
     [MCPTool('secret_tool', 'Admin only tool')]
     function SecretTool: string;
+
+    [MCPResource('info://server', 'Server information resource')]
+    function InfoResource: string;
+
+    [RolesAllowed('admin')]
+    [MCPResource('secret://data', 'Admin only resource')]
+    function SecretResource: string;
+
+    [MCPPrompt('greet', 'Greeting prompt')]
+    function GreetPrompt(
+      [MCPParam('name', 'Who to greet')] const AName: string): string;
   end;
 
   // endpoint-level authorization: verified token with the 'standard' role required
@@ -89,6 +100,21 @@ end;
 function TTestMCPResource.SecretTool: string;
 begin
   Result := 'classified';
+end;
+
+function TTestMCPResource.InfoResource: string;
+begin
+  Result := 'test-server-info';
+end;
+
+function TTestMCPResource.SecretResource: string;
+begin
+  Result := 'classified-resource';
+end;
+
+function TTestMCPResource.GreetPrompt(const AName: string): string;
+begin
+  Result := 'Greet ' + AName + ' warmly.';
 end;
 
 { TSecuredMCPResource }

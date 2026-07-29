@@ -70,8 +70,13 @@ type
     class var FCodes: TDictionary<string, TMCPOAuthCode>;
     class var FRefreshTokens: TDictionary<string, TMCPOAuthRefreshToken>;
     class var FCS: TCriticalSection;
+    class var FPersistenceFile: string;
+    class var FPersistenceLoaded: Boolean;
     class constructor ClassCreate;
     class destructor ClassDestroy;
+    // both assume FCS is held by the caller
+    class procedure EnsurePersistedLoaded;
+    class procedure Persist;
   protected
     [Context] Activation: IMARSActivation;
     [Context] Request: IMARSRequest;
@@ -110,6 +115,14 @@ type
     function NewRandomString: string; virtual;
   public
     class function ComputePKCES256(const ACodeVerifier: string): string;
+
+    // optional JSON-file persistence for registered clients and refresh tokens,
+    // so OAuth sessions survive server restarts (authorization codes are not
+    // persisted: they live 5 minutes). Demo-grade: the file stores refresh
+    // tokens in cleartext, protect it accordingly.
+    class procedure SetPersistenceFile(const AFileName: string);
+    // clears the in-memory stores (does not touch the persistence file)
+    class procedure ResetState;
 
     [GET, Path('authorize'), Produces(TMediaType.TEXT_HTML)]
     function AuthorizePage(
@@ -165,7 +178,7 @@ type
 implementation
 
 uses
-  StrUtils, DateUtils, System.Hash, System.NetEncoding
+  StrUtils, DateUtils, System.Hash, System.NetEncoding, System.IOUtils
 , MARS.Utils.JWT, MARS.Core.Utils
 ;
 
@@ -205,11 +218,150 @@ begin
   FreeAndNil(FCS);
 end;
 
+class procedure TMCPOAuthServer.SetPersistenceFile(const AFileName: string);
+begin
+  FCS.Enter;
+  try
+    FPersistenceFile := AFileName;
+    FPersistenceLoaded := False; // (re)load lazily on next access
+  finally
+    FCS.Leave;
+  end;
+end;
+
+class procedure TMCPOAuthServer.ResetState;
+begin
+  FCS.Enter;
+  try
+    FClients.Clear;
+    FCodes.Clear;
+    FRefreshTokens.Clear;
+    FPersistenceLoaded := False;
+  finally
+    FCS.Leave;
+  end;
+end;
+
+class procedure TMCPOAuthServer.EnsurePersistedLoaded;
+var
+  LJSON: TJSONObject;
+  LArray: TJSONArray;
+  LItem: TJSONValue;
+  LClient: TMCPOAuthClient;
+  LRefresh: TMCPOAuthRefreshToken;
+  LURIs: TJSONArray;
+  LURI: TJSONValue;
+begin
+  if FPersistenceLoaded or (FPersistenceFile = '') then
+    Exit;
+  FPersistenceLoaded := True;
+
+  if not FileExists(FPersistenceFile) then
+    Exit;
+
+  try
+    LJSON := TJSONObject.ParseJSONValue(TFile.ReadAllText(FPersistenceFile, TEncoding.UTF8)) as TJSONObject;
+    try
+      if not Assigned(LJSON) then
+        Exit;
+
+      if LJSON.TryGetValue<TJSONArray>('clients', LArray) then
+        for LItem in LArray do
+        begin
+          LClient := Default(TMCPOAuthClient);
+          LClient.ClientId := (LItem as TJSONObject).ReadStringValue('clientId');
+          LClient.ClientName := (LItem as TJSONObject).ReadStringValue('clientName');
+          LClient.RedirectURIs := [];
+          if (LItem as TJSONObject).TryGetValue<TJSONArray>('redirectURIs', LURIs) then
+            for LURI in LURIs do
+              LClient.RedirectURIs := LClient.RedirectURIs + [LURI.Value];
+          LClient.IssuedAt := ISO8601ToDate((LItem as TJSONObject).ReadStringValue('issuedAt'), False);
+          if LClient.ClientId <> '' then
+            FClients.AddOrSetValue(LClient.ClientId, LClient);
+        end;
+
+      if LJSON.TryGetValue<TJSONArray>('refreshTokens', LArray) then
+        for LItem in LArray do
+        begin
+          LRefresh := Default(TMCPOAuthRefreshToken);
+          LRefresh.Token := (LItem as TJSONObject).ReadStringValue('token');
+          LRefresh.ClientId := (LItem as TJSONObject).ReadStringValue('clientId');
+          LRefresh.Scope := (LItem as TJSONObject).ReadStringValue('scope');
+          LRefresh.UserName := (LItem as TJSONObject).ReadStringValue('userName');
+          LRefresh.Roles := (LItem as TJSONObject).ReadStringValue('roles').Split([',']);
+          LRefresh.ExpiresAt := ISO8601ToDate((LItem as TJSONObject).ReadStringValue('expiresAt'), False);
+          if (LRefresh.Token <> '') and (LRefresh.ExpiresAt > Now) then
+            FRefreshTokens.AddOrSetValue(LRefresh.Token, LRefresh);
+        end;
+    finally
+      LJSON.Free;
+    end;
+  except
+    // a corrupt store must not prevent the server from starting
+  end;
+end;
+
+class procedure TMCPOAuthServer.Persist;
+var
+  LJSON, LItem: TJSONObject;
+  LClients, LTokens, LURIs: TJSONArray;
+  LClient: TMCPOAuthClient;
+  LRefresh: TMCPOAuthRefreshToken;
+  LURI: string;
+begin
+  if FPersistenceFile = '' then
+    Exit;
+
+  LJSON := TJSONObject.Create;
+  try
+    LClients := TJSONArray.Create;
+    LJSON.AddPair('clients', LClients);
+    for LClient in FClients.Values do
+    begin
+      LItem := TJSONObject.Create;
+      LItem.AddPair('clientId', LClient.ClientId);
+      LItem.AddPair('clientName', LClient.ClientName);
+      LURIs := TJSONArray.Create;
+      for LURI in LClient.RedirectURIs do
+        LURIs.Add(LURI);
+      LItem.AddPair('redirectURIs', LURIs);
+      LItem.AddPair('issuedAt', DateToISO8601(LClient.IssuedAt, False));
+      LClients.AddElement(LItem);
+    end;
+
+    LTokens := TJSONArray.Create;
+    LJSON.AddPair('refreshTokens', LTokens);
+    for LRefresh in FRefreshTokens.Values do
+    begin
+      if LRefresh.ExpiresAt < Now then
+        Continue;
+      LItem := TJSONObject.Create;
+      LItem.AddPair('token', LRefresh.Token);
+      LItem.AddPair('clientId', LRefresh.ClientId);
+      LItem.AddPair('scope', LRefresh.Scope);
+      LItem.AddPair('userName', LRefresh.UserName);
+      LItem.AddPair('roles', string.Join(',', LRefresh.Roles));
+      LItem.AddPair('expiresAt', DateToISO8601(LRefresh.ExpiresAt, False));
+      LTokens.AddElement(LItem);
+    end;
+
+    try
+      TFile.WriteAllText(FPersistenceFile, LJSON.ToJSON, TEncoding.UTF8);
+    except
+      // persistence is best-effort: never break the request over a disk error
+    end;
+  finally
+    LJSON.Free;
+  end;
+end;
+
 procedure TMCPOAuthServer.StoreClient(const AClient: TMCPOAuthClient);
 begin
   FCS.Enter;
   try
+    EnsurePersistedLoaded;
     FClients.AddOrSetValue(AClient.ClientId, AClient);
+    Persist;
   finally
     FCS.Leave;
   end;
@@ -220,6 +372,7 @@ function TMCPOAuthServer.FindClient(const AClientId: string;
 begin
   FCS.Enter;
   try
+    EnsurePersistedLoaded;
     Result := (AClientId <> '') and FClients.TryGetValue(AClientId, AClient);
   finally
     FCS.Leave;
@@ -255,7 +408,9 @@ procedure TMCPOAuthServer.StoreRefreshToken(const AToken: TMCPOAuthRefreshToken)
 begin
   FCS.Enter;
   try
+    EnsurePersistedLoaded;
     FRefreshTokens.AddOrSetValue(AToken.Token, AToken);
+    Persist;
   finally
     FCS.Leave;
   end;
@@ -266,9 +421,13 @@ function TMCPOAuthServer.ConsumeRefreshToken(const AToken: string;
 begin
   FCS.Enter;
   try
+    EnsurePersistedLoaded;
     Result := (AToken <> '') and FRefreshTokens.TryGetValue(AToken, AData);
     if Result then
+    begin
       FRefreshTokens.Remove(AToken); // rotation: single use
+      Persist;
+    end;
   finally
     FCS.Leave;
   end;

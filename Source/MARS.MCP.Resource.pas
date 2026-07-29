@@ -41,10 +41,11 @@ type
     function GetDispatcherClass: TMCPDispatcherClass; virtual;
     function CreateDispatcher: TMCPDispatcher; virtual;
 
-    // per-tool authorization: evaluates MARS authorization attributes
-    // ([DenyAll], [RolesAllowed], [PermitAll]) on the tool method against
-    // the current token. Unauthorized tools are hidden from tools/list and
-    // tools/call answers as if they did not exist.
+    // per-member authorization: evaluates MARS authorization attributes
+    // ([DenyAll], [RolesAllowed], [PermitAll]) on the tool/resource/prompt
+    // method against the current token. Unauthorized members are hidden from
+    // the list requests and direct access answers as if they did not exist.
+    function CanUseMethod(const AMethod: TRttiMethod): Boolean; virtual;
     function CanUseTool(const ATool: TMCPTool): Boolean; virtual;
 
     // OAuth (MCP authorization spec): with [MCPOAuth] on the resource class,
@@ -130,21 +131,27 @@ function TMCPResource.CreateDispatcher: TMCPDispatcher;
 begin
   Result := GetDispatcherClass.Create(Self, GetServerName, GetServerVersion, GetInstructions);
   Result.ToolFilter := CanUseTool;
+  Result.MethodFilter := CanUseMethod;
 end;
 
 function TMCPResource.CanUseTool(const ATool: TMCPTool): Boolean;
+begin
+  Result := CanUseMethod(ATool.RttiMethod);
+end;
+
+function TMCPResource.CanUseMethod(const AMethod: TRttiMethod): Boolean;
 var
   LAttribute: TCustomAttribute;
   LDenyAll, LPermitAll, LHasRoles, LRoleSatisfied: Boolean;
 begin
   // same semantics as MARS class/method authorization (TMARSActivation.CheckAuthorization):
-  // DenyAll > PermitAll > RolesAllowed; no attributes -> public tool
+  // DenyAll > PermitAll > RolesAllowed; no attributes -> public member
   LDenyAll := False;
   LPermitAll := False;
   LHasRoles := False;
   LRoleSatisfied := False;
 
-  for LAttribute in ATool.RttiMethod.GetAttributes do
+  for LAttribute in AMethod.GetAttributes do
   begin
     if LAttribute is DenyAllAttribute then
       LDenyAll := True

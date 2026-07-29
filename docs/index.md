@@ -38,6 +38,16 @@ features:
   - icon: 📘
     title: OpenAPI 3
     details: Generate an OpenAPI 3 specification from your resources automatically and expose Swagger UI out of the box.
+  - icon: 🤖
+    title: MCP for AI Agents
+    details: Expose Delphi methods and FireDAC data as MCP tools, resources and prompts — with per-tool roles and OAuth 2.1. Claude, ChatGPT and local models can call your server.
+    link: /features/mcp
+    linkText: Build an MCP server
+  - icon: 🧠
+    title: AI Agent Skills
+    details: Official Agent Skills teach Claude Code and other AI coding agents to scaffold, develop and secure MARS servers — install them as a plugin or with npx.
+    link: /guide/agent-skills
+    linkText: Install the skills
 ---
 
 ## What is MARS-Curiosity?
@@ -68,6 +78,7 @@ On the **client**, drop a few components on a form (or create them in code) and 
 - Building a server? Jump to the [Server section](/server/engine).
 - Consuming a REST API from Delphi? See the [Client section](/client/overview).
 - Looking for working code? Browse the [Demos](/demos/).
+- Want AI agents to use your Delphi code and data? Build an [MCP server](/features/mcp).
 - Using Claude Code or another AI coding agent? Install the [MARS Agent Skills](/guide/agent-skills).
 
 ::: tip Documentation language

@@ -30,11 +30,13 @@ type
 implementation
 
 uses
-  MARS.Core.Engine
+  StrUtils
+, MARS.Core.Engine
 , MARS.Core.Activation, MARS.Core.Activation.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Utils, MARS.Utils.Parameters.IniFile
 , MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.JSON
 , MARS.Core.MessageBodyWriter
 , MARS.Core.MessageBodyWriters
 , MARS.Data.MessageBodyWriters
@@ -55,6 +57,60 @@ uses
 , Server.Resources.OAuth
 ;
 
+{$REGION 'Minimal console logging'}
+var
+  _LogLock: TObject;
+
+threadvar
+  _RequestStartTicks: UInt64;
+
+procedure LogLine(const AText: string);
+begin
+  // console output is shared across Indy worker threads: serialize writes
+  System.TMonitor.Enter(_LogLock);
+  try
+    Writeln(FormatDateTime('hh:nn:ss.zzz', Now) + ' ' + AText);
+  finally
+    System.TMonitor.Exit(_LogLock);
+  end;
+end;
+
+// for MCP requests, extract the JSON-RPC method (and tool/resource/prompt name)
+function DescribeMCPCall(const ARequest: IMARSRequest): string;
+var
+  LJSON: TJSONValue;
+  LMethod, LDetail: string;
+begin
+  Result := '';
+  if not SameText(ARequest.Method, 'POST') then
+    Exit;
+
+  try
+    LJSON := TJSONObject.ParseJSONValue(ARequest.Content);
+    try
+      if LJSON is TJSONObject then
+      begin
+        LMethod := TJSONObject(LJSON).ReadStringValue('method');
+        if LMethod = '' then
+          Exit;
+
+        LDetail := '';
+        if SameText(LMethod, 'tools/call') or SameText(LMethod, 'prompts/get') then
+          LJSON.TryGetValue<string>('params.name', LDetail)
+        else if SameText(LMethod, 'resources/read') then
+          LJSON.TryGetValue<string>('params.uri', LDetail);
+
+        Result := ' | ' + LMethod + IfThen(LDetail <> '', ' ' + LDetail);
+      end;
+    finally
+      LJSON.Free;
+    end;
+  except
+    Result := ''; // never let logging break request handling
+  end;
+end;
+{$ENDREGION}
+
 { TServerEngine }
 
 class constructor TServerEngine.CreateEngine;
@@ -71,6 +127,10 @@ begin
   FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
   SetupSampleDatabase;
 
+  // OAuth clients and refresh tokens survive server restarts
+  TMCPOAuthServer.SetPersistenceFile(
+    IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'MCPOAuthStore.json');
+
   FEngine.BeforeHandleRequest :=
     function (
       const AEngine: IMARSEngine;
@@ -80,6 +140,7 @@ begin
     ): Boolean
     begin
       Result := True;
+      _RequestStartTicks := TThread.GetTickCount64;
 
       // OAuth discovery documents (RFC 9728 / RFC 8414) live at the root,
       // outside the engine's BasePath
@@ -87,6 +148,8 @@ begin
          , FEngine.BasePath + '/default/oauth')
       then
       begin
+        LogLine(Format('%s %s -> %d (discovery)'
+        , [ARequest.Method, ARequest.RawPath, AResponse.StatusCode]));
         Result := False;
         Handled := True;
         Exit;
@@ -108,6 +171,20 @@ begin
           Result := False;
         end;
       end;
+    end;
+
+  FEngine.AfterHandleRequest :=
+    procedure (
+      const AEngine: IMARSEngine;
+      const AURL: TMARSURL;
+      const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      var Handled: Boolean
+    )
+    begin
+      LogLine(Format('%s %s -> %d (%d ms)%s'
+      , [ ARequest.Method, ARequest.RawPath, AResponse.StatusCode
+        , Int64(TThread.GetTickCount64 - _RequestStartTicks)
+        , DescribeMCPCall(ARequest)]));
     end;
 end;
 
@@ -150,5 +227,11 @@ begin
   TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
   FEngine := nil;
 end;
+
+initialization
+  _LogLock := TObject.Create;
+
+finalization
+  _LogLock.Free;
 
 end.
