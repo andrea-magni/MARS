@@ -65,7 +65,7 @@ Roles assigned in `Authenticate` flow into the JWT, so per-tool `[RolesAllowed]`
 
 Production notes:
 - run behind HTTPS (TLS-terminating reverse proxy); override `TMCPResource.BuildResourceMetadataURL` and adjust metadata URLs if the public scheme/host differs;
-- client/code/refresh-token storage is in-memory (process lifetime): override the `Store*`/`Consume*` virtual methods of `TMCPOAuthServer` for persistence;
+- client/code/refresh-token storage is in-memory by default: call `TMCPOAuthServer.SetPersistenceFile('<path>.json')` at startup or every server restart answers "Unknown client" to previously-registered MCP clients and breaks their sessions (the file stores refresh tokens in cleartext — protect it; override the `Store*`/`Consume*` virtuals for a custom store);
 - to delegate to an external IdP (Keycloak, Auth0, Entra) instead, MARS would validate RS256/JWKS tokens — not covered by the HMAC-based token layer today; the self-contained server is the supported path.
 
 ## Client-side pitfalls that look like server bugs

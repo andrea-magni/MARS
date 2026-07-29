@@ -33,6 +33,8 @@ const
   JSONRPC_INVALID_PARAMS   = -32602;
   JSONRPC_INTERNAL_ERROR   = -32603;
 
+  MCP_RESOURCE_NOT_FOUND   = -32002;
+
 type
   EMCPError = class(Exception)
   private
@@ -48,9 +50,33 @@ type
     RttiMethod: TRttiMethod;
   end;
 
+  TMCPResourceInfo = record
+    URI: string;
+    Name: string;
+    Description: string;
+    MimeType: string;
+    RttiMethod: TRttiMethod;
+    function IsTemplate: Boolean; // URI contains {param} placeholders
+  end;
+
+  TMCPPromptInfo = record
+    Name: string;
+    Description: string;
+    RttiMethod: TRttiMethod;
+  end;
+
+  TMCPCapabilities = record
+    Tools: TArray<TMCPTool>;
+    Resources: TArray<TMCPResourceInfo>;
+    Prompts: TArray<TMCPPromptInfo>;
+  end;
+
   // returns False to hide a tool from tools/list and reject tools/call
   // (rejected calls answer as if the tool did not exist)
   TMCPToolFilterFunc = reference to function (const ATool: TMCPTool): Boolean;
+
+  // same purpose, for resources and prompts (evaluated on the backing method)
+  TMCPMethodFilterFunc = reference to function (const AMethod: TRttiMethod): Boolean;
 
   TMCPDispatcher = class
   private
@@ -58,28 +84,49 @@ type
     FServerName: string;
     FServerVersion: string;
     FInstructions: string;
-    FTools: TArray<TMCPTool>;
+    FCapabilities: TMCPCapabilities;
     FToolFilter: TMCPToolFilterFunc;
-    // per-class tool cache: dispatchers are created per request, RTTI scan happens once per class.
-    // Key is the instance class: descendants overriding ScanTools with different discovery logic
-    // should not share instance classes with the base dispatcher.
-    class var FToolsCache: TDictionary<TClass, TArray<TMCPTool>>;
-    class var FToolsCacheCS: TCriticalSection;
+    FMethodFilter: TMCPMethodFilterFunc;
+    // per-class capability cache: dispatchers are created per request, RTTI scan
+    // happens once per class. Key is the instance class: descendants overriding
+    // ScanCapabilities with different discovery logic should not share instance
+    // classes with the base dispatcher.
+    class var FCapsCache: TDictionary<TClass, TMCPCapabilities>;
+    class var FCapsCacheCS: TCriticalSection;
     class constructor ClassCreate;
     class destructor ClassDestroy;
+    function GetTools: TArray<TMCPTool>;
+    function GetResources: TArray<TMCPResourceInfo>;
+    function GetPrompts: TArray<TMCPPromptInfo>;
   protected
     FRttiContext: TRttiContext;
 
-    function ScanTools: TArray<TMCPTool>; virtual;
-    procedure CollectTools; virtual;
+    function ScanCapabilities: TMCPCapabilities; virtual;
+    procedure CollectCapabilities; virtual;
     function FindTool(const AName: string; out ATool: TMCPTool): Boolean; virtual;
     function IsToolAvailable(const ATool: TMCPTool): Boolean; virtual;
+    function IsMethodAvailable(const AMethod: TRttiMethod): Boolean; virtual;
     procedure DisposeToolResult(const AMethod: TRttiMethod; const AValue: TValue); virtual;
 
     function DispatchRequest(const AMethod: string; const AParams: TJSONObject): TJSONValue; virtual;
     function HandleInitialize(const AParams: TJSONObject): TJSONValue; virtual;
     function HandleToolsList(const AParams: TJSONObject): TJSONValue; virtual;
     function HandleToolsCall(const AParams: TJSONObject): TJSONValue; virtual;
+    function HandleResourcesList(const AParams: TJSONObject): TJSONValue; virtual;
+    function HandleResourceTemplatesList(const AParams: TJSONObject): TJSONValue; virtual;
+    function HandleResourcesRead(const AParams: TJSONObject): TJSONValue; virtual;
+    function HandlePromptsList(const AParams: TJSONObject): TJSONValue; virtual;
+    function HandlePromptsGet(const AParams: TJSONObject): TJSONValue; virtual;
+
+    function FindResourceByURI(const AURI: string; out AInfo: TMCPResourceInfo;
+      out AArgs: TArray<TPair<string, string>>): Boolean; virtual;
+    class function MatchURITemplate(const ATemplate, AURI: string;
+      out AValues: TArray<TPair<string, string>>): Boolean;
+    function StringToValue(const AType: TRttiType; const AString: string): TValue; virtual;
+    function DefaultMimeTypeFor(const AType: TRttiType): string; virtual;
+    function BuildResourceContents(const AInfo: TMCPResourceInfo; const AURI: string;
+      const AValue: TValue): TJSONObject; virtual;
+    function BuildPromptResult(const AInfo: TMCPPromptInfo; const AValue: TValue): TJSONObject; virtual;
 
     function BuildToolJSON(const ATool: TMCPTool): TJSONObject; virtual;
     function BuildInputSchema(const AMethod: TRttiMethod): TJSONObject; virtual;
@@ -110,8 +157,11 @@ type
     property ServerName: string read FServerName;
     property ServerVersion: string read FServerVersion;
     property Instructions: string read FInstructions;
-    property Tools: TArray<TMCPTool> read FTools;
+    property Tools: TArray<TMCPTool> read GetTools;
+    property Resources: TArray<TMCPResourceInfo> read GetResources;
+    property Prompts: TArray<TMCPPromptInfo> read GetPrompts;
     property ToolFilter: TMCPToolFilterFunc read FToolFilter write FToolFilter;
+    property MethodFilter: TMCPMethodFilterFunc read FMethodFilter write FMethodFilter;
   end;
 
   TMCPDispatcherClass = class of TMCPDispatcher;
@@ -119,7 +169,7 @@ type
 implementation
 
 uses
-  StrUtils, DateUtils
+  StrUtils, DateUtils, System.NetEncoding
 ;
 
 { EMCPError }
@@ -141,7 +191,14 @@ begin
   FServerVersion := AServerVersion;
   FInstructions := AInstructions;
   FRttiContext := TRttiContext.Create;
-  CollectTools;
+  CollectCapabilities;
+end;
+
+{ TMCPResourceInfo }
+
+function TMCPResourceInfo.IsTemplate: Boolean;
+begin
+  Result := URI.Contains('{');
 end;
 
 destructor TMCPDispatcher.Destroy;
@@ -152,8 +209,8 @@ end;
 
 class constructor TMCPDispatcher.ClassCreate;
 begin
-  FToolsCache := TDictionary<TClass, TArray<TMCPTool>>.Create;
-  FToolsCacheCS := TCriticalSection.Create;
+  FCapsCache := TDictionary<TClass, TMCPCapabilities>.Create;
+  FCapsCacheCS := TCriticalSection.Create;
   // cached TRttiMethod references must stay valid after per-instance contexts are gone
   TRttiContext.KeepContext;
 end;
@@ -161,57 +218,94 @@ end;
 class destructor TMCPDispatcher.ClassDestroy;
 begin
   TRttiContext.DropContext;
-  FreeAndNil(FToolsCache);
-  FreeAndNil(FToolsCacheCS);
+  FreeAndNil(FCapsCache);
+  FreeAndNil(FCapsCacheCS);
 end;
 
-procedure TMCPDispatcher.CollectTools;
+function TMCPDispatcher.GetTools: TArray<TMCPTool>;
+begin
+  Result := FCapabilities.Tools;
+end;
+
+function TMCPDispatcher.GetResources: TArray<TMCPResourceInfo>;
+begin
+  Result := FCapabilities.Resources;
+end;
+
+function TMCPDispatcher.GetPrompts: TArray<TMCPPromptInfo>;
+begin
+  Result := FCapabilities.Prompts;
+end;
+
+procedure TMCPDispatcher.CollectCapabilities;
 var
   LClass: TClass;
-  LTools: TArray<TMCPTool>;
+  LCaps: TMCPCapabilities;
 begin
   LClass := FInstance.ClassType;
 
-  FToolsCacheCS.Enter;
+  FCapsCacheCS.Enter;
   try
-    if FToolsCache.TryGetValue(LClass, FTools) then
+    if FCapsCache.TryGetValue(LClass, FCapabilities) then
       Exit;
   finally
-    FToolsCacheCS.Leave;
+    FCapsCacheCS.Leave;
   end;
 
-  LTools := ScanTools; // RTTI scan outside the lock: a concurrent duplicate scan is benign
+  LCaps := ScanCapabilities; // RTTI scan outside the lock: a concurrent duplicate scan is benign
 
-  FToolsCacheCS.Enter;
+  FCapsCacheCS.Enter;
   try
-    FToolsCache.AddOrSetValue(LClass, LTools);
+    FCapsCache.AddOrSetValue(LClass, LCaps);
   finally
-    FToolsCacheCS.Leave;
+    FCapsCacheCS.Leave;
   end;
 
-  FTools := LTools;
+  FCapabilities := LCaps;
 end;
 
-function TMCPDispatcher.ScanTools: TArray<TMCPTool>;
+function TMCPDispatcher.ScanCapabilities: TMCPCapabilities;
 var
   LType: TRttiType;
   LMethod: TRttiMethod;
   LAttribute: TCustomAttribute;
   LTool: TMCPTool;
-  LTools: TArray<TMCPTool>;
+  LResource: TMCPResourceInfo;
+  LPrompt: TMCPPromptInfo;
+  LCaps: TMCPCapabilities;
 
   function ContainsTool(const AName: string): Boolean;
   var
     LExisting: TMCPTool;
   begin
     Result := False;
-    for LExisting in LTools do
+    for LExisting in LCaps.Tools do
+      if SameText(LExisting.Name, AName) then
+        Exit(True);
+  end;
+
+  function ContainsResource(const AURI: string): Boolean;
+  var
+    LExisting: TMCPResourceInfo;
+  begin
+    Result := False;
+    for LExisting in LCaps.Resources do
+      if LExisting.URI = AURI then
+        Exit(True);
+  end;
+
+  function ContainsPrompt(const AName: string): Boolean;
+  var
+    LExisting: TMCPPromptInfo;
+  begin
+    Result := False;
+    for LExisting in LCaps.Prompts do
       if SameText(LExisting.Name, AName) then
         Exit(True);
   end;
 
 begin
-  LTools := [];
+  LCaps := Default(TMCPCapabilities);
   LType := FRttiContext.GetType(FInstance.ClassType);
   for LMethod in LType.GetMethods do
   begin
@@ -226,12 +320,37 @@ begin
         LTool.RttiMethod := LMethod;
 
         if not ContainsTool(LTool.Name) then
-          LTools := LTools + [LTool];
-        Break;
+          LCaps.Tools := LCaps.Tools + [LTool];
+      end
+      else if LAttribute is MCPResourceAttribute then
+      begin
+        LResource.URI := MCPResourceAttribute(LAttribute).URI;
+        LResource.Name := MCPResourceAttribute(LAttribute).ResourceName;
+        if LResource.Name = '' then
+          LResource.Name := LMethod.Name;
+        LResource.Description := MCPResourceAttribute(LAttribute).Description;
+        LResource.MimeType := MCPResourceAttribute(LAttribute).MimeType;
+        if LResource.MimeType = '' then
+          LResource.MimeType := DefaultMimeTypeFor(LMethod.ReturnType);
+        LResource.RttiMethod := LMethod;
+
+        if (LResource.URI <> '') and (not ContainsResource(LResource.URI)) then
+          LCaps.Resources := LCaps.Resources + [LResource];
+      end
+      else if LAttribute is MCPPromptAttribute then
+      begin
+        LPrompt.Name := MCPPromptAttribute(LAttribute).PromptName;
+        if LPrompt.Name = '' then
+          LPrompt.Name := LMethod.Name;
+        LPrompt.Description := MCPPromptAttribute(LAttribute).Description;
+        LPrompt.RttiMethod := LMethod;
+
+        if not ContainsPrompt(LPrompt.Name) then
+          LCaps.Prompts := LCaps.Prompts + [LPrompt];
       end;
     end;
   end;
-  Result := LTools;
+  Result := LCaps;
 end;
 
 function TMCPDispatcher.FindTool(const AName: string; out ATool: TMCPTool): Boolean;
@@ -239,7 +358,7 @@ var
   LTool: TMCPTool;
 begin
   Result := False;
-  for LTool in FTools do
+  for LTool in FCapabilities.Tools do
   begin
     if SameText(LTool.Name, AName) then
     begin
@@ -307,6 +426,16 @@ begin
     Result := HandleToolsList(AParams)
   else if SameText(AMethod, 'tools/call') then
     Result := HandleToolsCall(AParams)
+  else if SameText(AMethod, 'resources/list') then
+    Result := HandleResourcesList(AParams)
+  else if SameText(AMethod, 'resources/templates/list') then
+    Result := HandleResourceTemplatesList(AParams)
+  else if SameText(AMethod, 'resources/read') then
+    Result := HandleResourcesRead(AParams)
+  else if SameText(AMethod, 'prompts/list') then
+    Result := HandlePromptsList(AParams)
+  else if SameText(AMethod, 'prompts/get') then
+    Result := HandlePromptsGet(AParams)
   else
     raise EMCPError.Create(JSONRPC_METHOD_NOT_FOUND, 'Method not found: ' + AMethod);
 end;
@@ -332,6 +461,19 @@ begin
   LTools := TJSONObject.Create;
   LTools.AddPair('listChanged', TJSONFalse.Create);
   LCapabilities.AddPair('tools', LTools);
+  if Length(FCapabilities.Resources) > 0 then
+  begin
+    var LResources := TJSONObject.Create;
+    LResources.AddPair('subscribe', TJSONFalse.Create);
+    LResources.AddPair('listChanged', TJSONFalse.Create);
+    LCapabilities.AddPair('resources', LResources);
+  end;
+  if Length(FCapabilities.Prompts) > 0 then
+  begin
+    var LPrompts := TJSONObject.Create;
+    LPrompts.AddPair('listChanged', TJSONFalse.Create);
+    LCapabilities.AddPair('prompts', LPrompts);
+  end;
   LResult.AddPair('capabilities', LCapabilities);
 
   LServerInfo := TJSONObject.Create;
@@ -355,7 +497,7 @@ begin
   LToolsArray := TJSONArray.Create;
   LResult.AddPair('tools', LToolsArray);
 
-  for LTool in FTools do
+  for LTool in FCapabilities.Tools do
     if IsToolAvailable(LTool) then
       LToolsArray.AddElement(BuildToolJSON(LTool));
 
@@ -365,6 +507,11 @@ end;
 function TMCPDispatcher.IsToolAvailable(const ATool: TMCPTool): Boolean;
 begin
   Result := (not Assigned(FToolFilter)) or FToolFilter(ATool);
+end;
+
+function TMCPDispatcher.IsMethodAvailable(const AMethod: TRttiMethod): Boolean;
+begin
+  Result := (not Assigned(FMethodFilter)) or FMethodFilter(AMethod);
 end;
 
 procedure TMCPDispatcher.DisposeToolResult(const AMethod: TRttiMethod;
@@ -744,6 +891,454 @@ begin
   LContent.AddElement(LBlock);
 
   Result.AddPair('isError', TJSONTrue.Create);
+end;
+
+function TMCPDispatcher.HandleResourcesList(const AParams: TJSONObject): TJSONValue;
+var
+  LResult: TJSONObject;
+  LArray: TJSONArray;
+  LInfo: TMCPResourceInfo;
+  LItem: TJSONObject;
+begin
+  LResult := TJSONObject.Create;
+  LArray := TJSONArray.Create;
+  LResult.AddPair('resources', LArray);
+
+  for LInfo in FCapabilities.Resources do
+  begin
+    if LInfo.IsTemplate or (not IsMethodAvailable(LInfo.RttiMethod)) then
+      Continue;
+    LItem := TJSONObject.Create;
+    LItem.AddPair('uri', LInfo.URI);
+    LItem.AddPair('name', LInfo.Name);
+    if LInfo.Description <> '' then
+      LItem.AddPair('description', LInfo.Description);
+    if LInfo.MimeType <> '' then
+      LItem.AddPair('mimeType', LInfo.MimeType);
+    LArray.AddElement(LItem);
+  end;
+
+  Result := LResult;
+end;
+
+function TMCPDispatcher.HandleResourceTemplatesList(const AParams: TJSONObject): TJSONValue;
+var
+  LResult: TJSONObject;
+  LArray: TJSONArray;
+  LInfo: TMCPResourceInfo;
+  LItem: TJSONObject;
+begin
+  LResult := TJSONObject.Create;
+  LArray := TJSONArray.Create;
+  LResult.AddPair('resourceTemplates', LArray);
+
+  for LInfo in FCapabilities.Resources do
+  begin
+    if (not LInfo.IsTemplate) or (not IsMethodAvailable(LInfo.RttiMethod)) then
+      Continue;
+    LItem := TJSONObject.Create;
+    LItem.AddPair('uriTemplate', LInfo.URI);
+    LItem.AddPair('name', LInfo.Name);
+    if LInfo.Description <> '' then
+      LItem.AddPair('description', LInfo.Description);
+    if LInfo.MimeType <> '' then
+      LItem.AddPair('mimeType', LInfo.MimeType);
+    LArray.AddElement(LItem);
+  end;
+
+  Result := LResult;
+end;
+
+class function TMCPDispatcher.MatchURITemplate(const ATemplate, AURI: string;
+  out AValues: TArray<TPair<string, string>>): Boolean;
+var
+  LTemplateIndex, LURIIndex, LCloseIndex, LValueEnd: Integer;
+  LName, LValue: string;
+  LNextLiteral: Char;
+begin
+  Result := False;
+  AValues := [];
+  LTemplateIndex := 1;
+  LURIIndex := 1;
+
+  while LTemplateIndex <= Length(ATemplate) do
+  begin
+    if ATemplate[LTemplateIndex] = '{' then
+    begin
+      LCloseIndex := PosEx('}', ATemplate, LTemplateIndex);
+      if LCloseIndex = 0 then
+        Exit; // malformed template
+      LName := Copy(ATemplate, LTemplateIndex + 1, LCloseIndex - LTemplateIndex - 1);
+
+      // capture until the literal character following the placeholder (or the end)
+      if LCloseIndex < Length(ATemplate) then
+      begin
+        LNextLiteral := ATemplate[LCloseIndex + 1];
+        LValueEnd := LURIIndex;
+        while (LValueEnd <= Length(AURI)) and (AURI[LValueEnd] <> LNextLiteral) do
+          Inc(LValueEnd);
+      end
+      else
+        LValueEnd := Length(AURI) + 1;
+
+      LValue := Copy(AURI, LURIIndex, LValueEnd - LURIIndex);
+      if LValue = '' then
+        Exit; // placeholders must capture at least one character
+
+      AValues := AValues + [TPair<string, string>.Create(LName, TNetEncoding.URL.Decode(LValue))];
+      LURIIndex := LValueEnd;
+      LTemplateIndex := LCloseIndex + 1;
+    end
+    else
+    begin
+      if (LURIIndex > Length(AURI)) or (AURI[LURIIndex] <> ATemplate[LTemplateIndex]) then
+        Exit;
+      Inc(LTemplateIndex);
+      Inc(LURIIndex);
+    end;
+  end;
+
+  Result := LURIIndex = Length(AURI) + 1; // the whole URI must be consumed
+end;
+
+function TMCPDispatcher.FindResourceByURI(const AURI: string;
+  out AInfo: TMCPResourceInfo; out AArgs: TArray<TPair<string, string>>): Boolean;
+var
+  LInfo: TMCPResourceInfo;
+begin
+  Result := False;
+  AArgs := [];
+
+  // exact static matches win over templates
+  for LInfo in FCapabilities.Resources do
+    if (not LInfo.IsTemplate) and (LInfo.URI = AURI) and IsMethodAvailable(LInfo.RttiMethod) then
+    begin
+      AInfo := LInfo;
+      Exit(True);
+    end;
+
+  for LInfo in FCapabilities.Resources do
+    if LInfo.IsTemplate and IsMethodAvailable(LInfo.RttiMethod)
+       and MatchURITemplate(LInfo.URI, AURI, AArgs) then
+    begin
+      AInfo := LInfo;
+      Exit(True);
+    end;
+end;
+
+function TMCPDispatcher.StringToValue(const AType: TRttiType; const AString: string): TValue;
+var
+  LJSONString: TJSONString;
+begin
+  // Boolean has no textual representation in JSONToValue: handle it here
+  if AType.Handle = TypeInfo(Boolean) then
+    Exit(SameText(AString, 'true') or (AString = '1'));
+
+  LJSONString := TJSONString.Create(AString);
+  try
+    Result := JSONToValue(AType, LJSONString, nil);
+  finally
+    LJSONString.Free;
+  end;
+end;
+
+function TMCPDispatcher.DefaultMimeTypeFor(const AType: TRttiType): string;
+begin
+  if not Assigned(AType) then
+    Exit('');
+  case AType.TypeKind of
+    tkString, tkLString, tkUString, tkWString, tkChar, tkWChar:
+      Result := 'text/plain';
+    tkClass:
+      if AType.AsInstance.MetaclassType.InheritsFrom(TStream) then
+        Result := 'application/octet-stream'
+      else
+        Result := 'application/json';
+    else
+      Result := 'application/json';
+  end;
+end;
+
+function TMCPDispatcher.BuildResourceContents(const AInfo: TMCPResourceInfo;
+  const AURI: string; const AValue: TValue): TJSONObject;
+var
+  LMimeType: string;
+  LJSONValue: TJSONValue;
+  LStream: TStream;
+  LBytes: TBytes;
+begin
+  LMimeType := AInfo.MimeType;
+  Result := TJSONObject.Create;
+  Result.AddPair('uri', AURI);
+
+  case AValue.Kind of
+    tkString, tkLString, tkUString, tkWString, tkChar, tkWChar:
+    begin
+      if LMimeType = '' then
+        LMimeType := 'text/plain';
+      Result.AddPair('mimeType', LMimeType);
+      Result.AddPair('text', AValue.AsString);
+    end;
+
+    tkClass:
+    begin
+      if AValue.AsObject = nil then
+        Result.AddPair('text', '')
+      else if AValue.AsObject is TJSONValue then
+      begin
+        if LMimeType = '' then
+          LMimeType := 'application/json';
+        Result.AddPair('mimeType', LMimeType);
+        Result.AddPair('text', TJSONValue(AValue.AsObject).ToJSON);
+      end
+      else if AValue.AsObject is TStream then
+      begin
+        LStream := TStream(AValue.AsObject);
+        LStream.Position := 0;
+        SetLength(LBytes, LStream.Size);
+        if LStream.Size > 0 then
+          LStream.ReadBuffer(LBytes[0], LStream.Size);
+        if LMimeType = '' then
+          LMimeType := 'application/octet-stream';
+        Result.AddPair('mimeType', LMimeType);
+        Result.AddPair('blob', TNetEncoding.Base64.EncodeBytesToString(LBytes)
+          .Replace(#13, '').Replace(#10, ''));
+      end
+      else
+      begin
+        if LMimeType = '' then
+          LMimeType := 'application/json';
+        Result.AddPair('mimeType', LMimeType);
+      begin
+        var LObjectJSON := TJSONObject.ObjectToJSON(AValue.AsObject);
+        try
+          Result.AddPair('text', LObjectJSON.ToJSON);
+        finally
+          LObjectJSON.Free;
+        end;
+      end;
+      end;
+    end;
+
+    else
+    begin
+      if LMimeType = '' then
+        LMimeType := 'application/json';
+      Result.AddPair('mimeType', LMimeType);
+      LJSONValue := TJSONObject.TValueToJSONValue(AValue);
+      try
+        Result.AddPair('text', LJSONValue.ToJSON);
+      finally
+        LJSONValue.Free;
+      end;
+    end;
+  end;
+end;
+
+function TMCPDispatcher.HandleResourcesRead(const AParams: TJSONObject): TJSONValue;
+var
+  LURI: string;
+  LInfo: TMCPResourceInfo;
+  LArgs: TArray<TPair<string, string>>;
+  LParams: TArray<TRttiParameter>;
+  LValues: TArray<TValue>;
+  LIndex: Integer;
+  LParamName, LParamValue: string;
+  LFound: Boolean;
+  LArg: TPair<string, string>;
+  LResultValue: TValue;
+  LResult, LContents: TJSONObject;
+  LContentsArray: TJSONArray;
+begin
+  if not Assigned(AParams) then
+    raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Missing params');
+
+  LURI := AParams.ReadStringValue('uri');
+  if not FindResourceByURI(LURI, LInfo, LArgs) then
+    raise EMCPError.Create(MCP_RESOURCE_NOT_FOUND, 'Resource not found: ' + LURI);
+
+  LParams := LInfo.RttiMethod.GetParameters;
+  SetLength(LValues, Length(LParams));
+  for LIndex := 0 to High(LParams) do
+  begin
+    LParamName := GetParamName(LParams[LIndex]);
+    LFound := False;
+    for LArg in LArgs do
+      if SameText(LArg.Key, LParamName) then
+      begin
+        LParamValue := LArg.Value;
+        LFound := True;
+        Break;
+      end;
+    if not LFound then
+      raise EMCPError.Create(MCP_RESOURCE_NOT_FOUND
+      , Format('Resource template parameter [%s] not found in URI', [LParamName]));
+    try
+      LValues[LIndex] := StringToValue(LParams[LIndex].ParamType, LParamValue);
+    except
+      on E: Exception do
+        raise EMCPError.Create(MCP_RESOURCE_NOT_FOUND
+        , Format('Invalid value for template parameter [%s]: %s', [LParamName, E.Message]));
+    end;
+  end;
+
+  LResultValue := LInfo.RttiMethod.Invoke(FInstance, LValues);
+  try
+    LContents := BuildResourceContents(LInfo, LURI, LResultValue);
+  finally
+    DisposeToolResult(LInfo.RttiMethod, LResultValue);
+  end;
+
+  LResult := TJSONObject.Create;
+  LContentsArray := TJSONArray.Create;
+  LContentsArray.AddElement(LContents);
+  LResult.AddPair('contents', LContentsArray);
+  Result := LResult;
+end;
+
+function TMCPDispatcher.HandlePromptsList(const AParams: TJSONObject): TJSONValue;
+var
+  LResult: TJSONObject;
+  LArray, LArguments: TJSONArray;
+  LInfo: TMCPPromptInfo;
+  LItem, LArgument: TJSONObject;
+  LParam: TRttiParameter;
+begin
+  LResult := TJSONObject.Create;
+  LArray := TJSONArray.Create;
+  LResult.AddPair('prompts', LArray);
+
+  for LInfo in FCapabilities.Prompts do
+  begin
+    if not IsMethodAvailable(LInfo.RttiMethod) then
+      Continue;
+    LItem := TJSONObject.Create;
+    LItem.AddPair('name', LInfo.Name);
+    if LInfo.Description <> '' then
+      LItem.AddPair('description', LInfo.Description);
+
+    LArguments := TJSONArray.Create;
+    for LParam in LInfo.RttiMethod.GetParameters do
+    begin
+      LArgument := TJSONObject.Create;
+      LArgument.AddPair('name', GetParamName(LParam));
+      if GetParamDescription(LParam) <> '' then
+        LArgument.AddPair('description', GetParamDescription(LParam));
+      LArgument.AddPair('required', TJSONTrue.Create);
+      LArguments.AddElement(LArgument);
+    end;
+    LItem.AddPair('arguments', LArguments);
+    LArray.AddElement(LItem);
+  end;
+
+  Result := LResult;
+end;
+
+function TMCPDispatcher.BuildPromptResult(const AInfo: TMCPPromptInfo;
+  const AValue: TValue): TJSONObject;
+var
+  LMessages: TJSONArray;
+  LMessage, LContent: TJSONObject;
+  LText: string;
+  LJSONValue: TJSONValue;
+begin
+  Result := TJSONObject.Create;
+  if AInfo.Description <> '' then
+    Result.AddPair('description', AInfo.Description);
+
+  // a TJSONArray result is used verbatim as the messages array
+  if AValue.IsObject and (AValue.AsObject is TJSONArray) then
+  begin
+    Result.AddPair('messages', TJSONArray(AValue.AsObject).Clone as TJSONArray);
+    Exit;
+  end;
+
+  case AValue.Kind of
+    tkString, tkLString, tkUString, tkWString, tkChar, tkWChar:
+      LText := AValue.AsString;
+    else
+    begin
+      LJSONValue := TJSONObject.TValueToJSONValue(AValue);
+      try
+        LText := LJSONValue.ToJSON;
+      finally
+        LJSONValue.Free;
+      end;
+    end;
+  end;
+
+  LMessages := TJSONArray.Create;
+  LMessage := TJSONObject.Create;
+  LMessage.AddPair('role', 'user');
+  LContent := TJSONObject.Create;
+  LContent.AddPair('type', 'text');
+  LContent.AddPair('text', LText);
+  LMessage.AddPair('content', LContent);
+  LMessages.AddElement(LMessage);
+  Result.AddPair('messages', LMessages);
+end;
+
+function TMCPDispatcher.HandlePromptsGet(const AParams: TJSONObject): TJSONValue;
+var
+  LName: string;
+  LInfo, LFound: TMCPPromptInfo;
+  LIsFound: Boolean;
+  LArguments: TJSONObject;
+  LParams: TArray<TRttiParameter>;
+  LValues: TArray<TValue>;
+  LIndex: Integer;
+  LParamName: string;
+  LJSONArg: TJSONValue;
+  LResultValue: TValue;
+begin
+  if not Assigned(AParams) then
+    raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Missing params');
+
+  LName := AParams.ReadStringValue('name');
+  LIsFound := False;
+  for LInfo in FCapabilities.Prompts do
+    if SameText(LInfo.Name, LName) and IsMethodAvailable(LInfo.RttiMethod) then
+    begin
+      LFound := LInfo;
+      LIsFound := True;
+      Break;
+    end;
+  // filtered-out prompts answer as if they did not exist (no existence leak)
+  if not LIsFound then
+    raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Unknown prompt: ' + LName);
+
+  LArguments := nil;
+  if AParams.GetValue('arguments') is TJSONObject then
+    LArguments := TJSONObject(AParams.GetValue('arguments'));
+
+  LParams := LFound.RttiMethod.GetParameters;
+  SetLength(LValues, Length(LParams));
+  for LIndex := 0 to High(LParams) do
+  begin
+    LParamName := GetParamName(LParams[LIndex]);
+    LJSONArg := nil;
+    if Assigned(LArguments) then
+      LJSONArg := LArguments.GetValue(LParamName);
+    if (not Assigned(LJSONArg)) or (LJSONArg is TJSONNull) then
+      raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Missing argument: ' + LParamName);
+    try
+      // prompt argument values are strings per MCP spec
+      LValues[LIndex] := StringToValue(LParams[LIndex].ParamType, LJSONArg.Value);
+    except
+      on E: EMCPError do
+        raise;
+      on E: Exception do
+        raise EMCPError.Create(JSONRPC_INVALID_PARAMS
+        , Format('Invalid argument [%s]: %s', [LParamName, E.Message]));
+    end;
+  end;
+
+  LResultValue := LFound.RttiMethod.Invoke(FInstance, LValues);
+  try
+    Result := BuildPromptResult(LFound, LResultValue);
+  finally
+    DisposeToolResult(LFound.RttiMethod, LResultValue);
+  end;
 end;
 
 function TMCPDispatcher.BuildResponse(const AId: TJSONValue): TJSONObject;

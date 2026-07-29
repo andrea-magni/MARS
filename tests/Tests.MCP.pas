@@ -95,6 +95,7 @@ type
     [Test] procedure Initialize_DefaultProtocolVersion;
     [Test] procedure Initialize_NegotiatesRequestedVersion;
     [Test] procedure Initialize_ServerInfoAndInstructions;
+    [Test] procedure Initialize_ToolOnlyHost_NoResourceOrPromptCapabilities;
     [Test] procedure Ping_ReturnsEmptyObject;
     [Test] procedure UnknownMethod_MethodNotFound;
     [Test] procedure Notification_ReturnsNil;
@@ -122,6 +123,55 @@ type
     [Test] procedure ToolFilter_BlockedCallAnswersUnknownTool;
   end;
 
+  // host for resources/prompts tests (kept separate from TTestToolHost so the
+  // conditional capabilities in initialize can be verified on both)
+  TResourcePromptHost = class
+  public
+    [MCPResource('info://greeting', 'A static text resource')]
+    function Greeting: string;
+
+    [MCPResource('data://config', 'config', 'Configuration as a record')]
+    function Config: TTestRec;
+
+    // template placeholders bind to the exposed parameter names:
+    // rename Delphi-convention names with [MCPParam]
+    [MCPResource('items://{id}/name', 'Item name by numeric id')]
+    function ItemName([MCPParam('id', 'Item id')] const AId: Integer): string;
+
+    [MCPPrompt('review', 'Guided review of a topic')]
+    function ReviewPrompt(
+      [MCPParam('topic', 'What to review')] const ATopic: string): string;
+  end;
+
+  [TestFixture('MCP.ResourcesPrompts')]
+  TMCPResourcesPromptsFixture = class
+  private
+    FHost: TResourcePromptHost;
+    FDispatcher: TMCPDispatcher;
+  protected
+    function ParseAndHandle(const AJSON: string): TJSONObject;
+    procedure AssertErrorCode(const AResponse: TJSONObject; const ACode: Integer);
+  public
+    [Setup]
+    procedure Setup;
+    [Teardown]
+    procedure Teardown;
+
+    [Test] procedure Initialize_CapabilitiesIncludeResourcesAndPrompts;
+    [Test] procedure ResourcesList_StaticOnly_WithMimeTypes;
+    [Test] procedure TemplatesList_TemplatesOnly;
+    [Test] procedure Read_StaticText;
+    [Test] procedure Read_RecordAsJSON;
+    [Test] procedure Read_TemplateWithCoercion;
+    [Test] procedure Read_UnknownURI_ResourceNotFound;
+    [Test] procedure Read_TemplateTypeMismatch_ResourceNotFound;
+    [Test] procedure PromptsList_WithArguments;
+    [Test] procedure PromptsGet_TextMessage;
+    [Test] procedure PromptsGet_MissingArgument_InvalidParams;
+    [Test] procedure PromptsGet_Unknown_InvalidParams;
+    [Test] procedure MethodFilter_HidesResourcesAndPrompts;
+  end;
+
   // host for TMCPDataDispatcher tests: owns the dataset returned by the tool
   TDataToolHost = class
   private
@@ -131,6 +181,9 @@ type
 
     [MCPTool('sample_rows', 'Returns sample rows')]
     function SampleRows: TFDMemTable;
+
+    [MCPResource('table://sample', 'Sample rows as a resource')]
+    function SampleTable: TFDMemTable;
   end;
 
   [TestFixture('MCP.DataDispatcher')]
@@ -146,6 +199,7 @@ type
 
     [Test] procedure DataSetResult_RowsAndRowCountInStructuredContent;
     [Test] procedure DataSetResult_NotFreedByDispatcher;
+    [Test] procedure DataSetResource_RowsAsJSONContents;
   end;
 
   TMCPCall = record
@@ -189,6 +243,12 @@ type
     // endpoint-level authorization ([PermitAll] on the resource class)
     [Test] procedure Auth_SecuredEndpoint_NoToken_Returns403;
     [Test] procedure Auth_SecuredEndpoint_WithToken_Returns200;
+
+    // resources and prompts through the engine
+    [Test] procedure Post_ResourcesRead_Works;
+    [Test] procedure Post_PromptsGet_Works;
+    [Test] procedure Auth_Resource_HiddenWithoutAdminRole;
+    [Test] procedure Auth_Resource_ReadableWithAdminRole;
   end;
 
   [TestFixture('MCP.OAuth')]
@@ -216,12 +276,13 @@ type
     [Test] procedure WrongVerifier_InvalidGrant;
     [Test] procedure WrongPassword_ReRendersLoginPage;
     [Test] procedure RefreshToken_RotatesAndWorks;
+    [Test] procedure Persistence_ClientsSurviveRestart;
   end;
 
 implementation
 
 uses
-  System.NetEncoding
+  System.NetEncoding, System.IOUtils
 , MARS.Core.Engine
 , MARS.Core.Activation
 , MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
@@ -561,6 +622,20 @@ begin
   end;
 end;
 
+procedure TMCPDispatcherFixture.Initialize_ToolOnlyHost_NoResourceOrPromptCapabilities;
+begin
+  // capabilities are declared only when the class actually offers them
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
+  try
+    var LDummy: TJSONValue;
+    Assert.IsTrue(LResponse.TryGetValue<TJSONValue>('result.capabilities.tools', LDummy));
+    Assert.IsFalse(LResponse.TryGetValue<TJSONValue>('result.capabilities.resources', LDummy));
+    Assert.IsFalse(LResponse.TryGetValue<TJSONValue>('result.capabilities.prompts', LDummy));
+  finally
+    LResponse.Free;
+  end;
+end;
+
 procedure TMCPDispatcherFixture.Ping_ReturnsEmptyObject;
 begin
   var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"ping"}');
@@ -575,7 +650,7 @@ end;
 
 procedure TMCPDispatcherFixture.UnknownMethod_MethodNotFound;
 begin
-  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"resources/list"}');
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"completion/complete"}');
   try
     AssertErrorCode(LResponse, JSONRPC_METHOD_NOT_FOUND);
   finally
@@ -822,6 +897,259 @@ begin
   end;
 end;
 
+{ TResourcePromptHost }
+
+function TResourcePromptHost.Greeting: string;
+begin
+  Result := 'hello resource';
+end;
+
+function TResourcePromptHost.Config: TTestRec;
+begin
+  Result.id := 7;
+  Result.name := 'config-name';
+end;
+
+function TResourcePromptHost.ItemName(const AId: Integer): string;
+begin
+  Result := 'item-' + AId.ToString;
+end;
+
+function TResourcePromptHost.ReviewPrompt(const ATopic: string): string;
+begin
+  Result := 'Please review the following topic in depth: ' + ATopic;
+end;
+
+{ TMCPResourcesPromptsFixture }
+
+procedure TMCPResourcesPromptsFixture.Setup;
+begin
+  FHost := TResourcePromptHost.Create;
+  FDispatcher := TMCPDispatcher.Create(FHost, 'ResourceServer', '1.0.0', '');
+end;
+
+procedure TMCPResourcesPromptsFixture.Teardown;
+begin
+  FreeAndNil(FDispatcher);
+  FreeAndNil(FHost);
+end;
+
+function TMCPResourcesPromptsFixture.ParseAndHandle(const AJSON: string): TJSONObject;
+begin
+  var LMessage := TJSONObject.ParseJSONValue(AJSON);
+  try
+    Result := FDispatcher.HandleMessage(LMessage);
+  finally
+    LMessage.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.AssertErrorCode(const AResponse: TJSONObject;
+  const ACode: Integer);
+begin
+  Assert.IsNotNull(AResponse, 'response expected');
+  var LCode: Integer;
+  Assert.IsTrue(AResponse.TryGetValue<Integer>('error.code', LCode), 'error.code missing: ' + AResponse.ToJSON);
+  Assert.AreEqual(ACode, LCode);
+end;
+
+procedure TMCPResourcesPromptsFixture.Initialize_CapabilitiesIncludeResourcesAndPrompts;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
+  try
+    var LDummy: TJSONValue;
+    Assert.IsTrue(LResponse.TryGetValue<TJSONValue>('result.capabilities.resources', LDummy));
+    Assert.IsTrue(LResponse.TryGetValue<TJSONValue>('result.capabilities.prompts', LDummy));
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.ResourcesList_StaticOnly_WithMimeTypes;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"resources/list"}');
+  try
+    var LResources: TJSONArray;
+    Assert.IsTrue(LResponse.TryGetValue<TJSONArray>('result.resources', LResources));
+    Assert.AreEqual(2, LResources.Count); // templates excluded
+    Assert.Contains(LResources.ToJSON, 'info://greeting');
+    Assert.Contains(LResources.ToJSON, 'data://config');
+    Assert.DoesNotContain(LResources.ToJSON, 'items://');
+    Assert.Contains(LResources.ToJSON, 'text/plain');
+    Assert.Contains(LResources.ToJSON, 'application/json');
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.TemplatesList_TemplatesOnly;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"resources/templates/list"}');
+  try
+    var LTemplates: TJSONArray;
+    Assert.IsTrue(LResponse.TryGetValue<TJSONArray>('result.resourceTemplates', LTemplates));
+    Assert.AreEqual(1, LTemplates.Count);
+    var LTemplate: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.resourceTemplates[0].uriTemplate', LTemplate));
+    Assert.AreEqual('items://{id}/name', LTemplate);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Read_StaticText;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"info://greeting"}}');
+  try
+    var LValue: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].text', LValue), LResponse.ToJSON);
+    Assert.AreEqual('hello resource', LValue);
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].mimeType', LValue));
+    Assert.AreEqual('text/plain', LValue);
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].uri', LValue));
+    Assert.AreEqual('info://greeting', LValue);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Read_RecordAsJSON;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"data://config"}}');
+  try
+    var LValue: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].mimeType', LValue));
+    Assert.AreEqual('application/json', LValue);
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].text', LValue));
+    Assert.Contains(LValue, 'config-name');
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Read_TemplateWithCoercion;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"items://42/name"}}');
+  try
+    var LValue: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].text', LValue), LResponse.ToJSON);
+    Assert.AreEqual('item-42', LValue);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Read_UnknownURI_ResourceNotFound;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"info://nope"}}');
+  try
+    AssertErrorCode(LResponse, MCP_RESOURCE_NOT_FOUND);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Read_TemplateTypeMismatch_ResourceNotFound;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"items://abc/name"}}');
+  try
+    AssertErrorCode(LResponse, MCP_RESOURCE_NOT_FOUND);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.PromptsList_WithArguments;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"prompts/list"}');
+  try
+    var LValue: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.prompts[0].name', LValue));
+    Assert.AreEqual('review', LValue);
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.prompts[0].arguments[0].name', LValue));
+    Assert.AreEqual('topic', LValue);
+    var LRequired: Boolean;
+    Assert.IsTrue(LResponse.TryGetValue<Boolean>('result.prompts[0].arguments[0].required', LRequired));
+    Assert.IsTrue(LRequired);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.PromptsGet_TextMessage;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"review","arguments":{"topic":"salaries"}}}');
+  try
+    var LValue: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.messages[0].role', LValue), LResponse.ToJSON);
+    Assert.AreEqual('user', LValue);
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.messages[0].content.text', LValue));
+    Assert.Contains(LValue, 'salaries');
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.PromptsGet_MissingArgument_InvalidParams;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"review","arguments":{}}}');
+  try
+    AssertErrorCode(LResponse, JSONRPC_INVALID_PARAMS);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.PromptsGet_Unknown_InvalidParams;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"nope"}}');
+  try
+    AssertErrorCode(LResponse, JSONRPC_INVALID_PARAMS);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.MethodFilter_HidesResourcesAndPrompts;
+begin
+  FDispatcher.MethodFilter :=
+    function (const AMethod: TRttiMethod): Boolean
+    begin
+      Result := (AMethod.Name <> 'Greeting') and (AMethod.Name <> 'ReviewPrompt');
+    end;
+
+  var LListResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"resources/list"}');
+  try
+    Assert.DoesNotContain(LListResponse.ToJSON, 'info://greeting');
+  finally
+    LListResponse.Free;
+  end;
+
+  var LReadResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"info://greeting"}}');
+  try
+    AssertErrorCode(LReadResponse, MCP_RESOURCE_NOT_FOUND);
+  finally
+    LReadResponse.Free;
+  end;
+
+  var LPromptResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":3,"method":"prompts/get","params":{"name":"review","arguments":{"topic":"x"}}}');
+  try
+    AssertErrorCode(LPromptResponse, JSONRPC_INVALID_PARAMS);
+  finally
+    LPromptResponse.Free;
+  end;
+end;
+
 { TDataToolHost }
 
 destructor TDataToolHost.Destroy;
@@ -842,6 +1170,11 @@ begin
     FTable.AppendRecord([2, 'Grace']);
   end;
   Result := FTable;
+end;
+
+function TDataToolHost.SampleTable: TFDMemTable;
+begin
+  Result := SampleRows;
 end;
 
 { TMCPDataDispatcherFixture }
@@ -900,6 +1233,28 @@ begin
       finally
         LResponse.Free;
       end;
+    end;
+    Assert.IsTrue(FHost.FTable.Active, 'dataset must survive the dispatcher');
+  finally
+    LMessage.Free;
+  end;
+end;
+
+procedure TMCPDataDispatcherFixture.DataSetResource_RowsAsJSONContents;
+begin
+  var LMessage := TJSONObject.ParseJSONValue(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"table://sample"}}');
+  try
+    var LResponse := FDispatcher.HandleMessage(LMessage);
+    try
+      var LValue: string;
+      Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].mimeType', LValue), LResponse.ToJSON);
+      Assert.AreEqual('application/json', LValue);
+      Assert.IsTrue(LResponse.TryGetValue<string>('result.contents[0].text', LValue));
+      Assert.Contains(LValue, 'Ada');
+      Assert.Contains(LValue, 'Grace');
+    finally
+      LResponse.Free;
     end;
     Assert.IsTrue(FHost.FTable.Active, 'dataset must survive the dispatcher');
   finally
@@ -1458,8 +1813,105 @@ begin
   Assert.AreEqual(400, LReplayCall.Response.StatusCode);
 end;
 
+procedure TMCPResourceFixture.Post_ResourcesRead_Works;
+begin
+  var LCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"info://server"}}');
+  Assert.AreEqual(200, LCall.Response.StatusCode);
+
+  var LJSON := ParseContent(LCall);
+  try
+    var LValue: string;
+    Assert.IsTrue(LJSON.TryGetValue<string>('result.contents[0].text', LValue), LJSON.ToJSON);
+    Assert.AreEqual('test-server-info', LValue);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Post_PromptsGet_Works;
+begin
+  var LCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"greet","arguments":{"name":"Andrea"}}}');
+  Assert.AreEqual(200, LCall.Response.StatusCode);
+
+  var LJSON := ParseContent(LCall);
+  try
+    var LValue: string;
+    Assert.IsTrue(LJSON.TryGetValue<string>('result.messages[0].content.text', LValue), LJSON.ToJSON);
+    Assert.Contains(LValue, 'Andrea');
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_Resource_HiddenWithoutAdminRole;
+begin
+  var LListCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"resources/list"}');
+  var LListJSON := ParseContent(LListCall);
+  try
+    Assert.DoesNotContain(LListJSON.ToJSON, 'secret://data');
+    Assert.Contains(LListJSON.ToJSON, 'info://server');
+  finally
+    LListJSON.Free;
+  end;
+
+  var LReadCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"secret://data"}}');
+  var LReadJSON := ParseContent(LReadCall);
+  try
+    var LCode: Integer;
+    Assert.IsTrue(LReadJSON.TryGetValue<Integer>('error.code', LCode));
+    Assert.AreEqual(MCP_RESOURCE_NOT_FOUND, LCode);
+  finally
+    LReadJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_Resource_ReadableWithAdminRole;
+begin
+  var LCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"secret://data"}}'
+  , MintToken('andrea', ['standard', 'admin']));
+
+  var LJSON := ParseContent(LCall);
+  try
+    var LValue: string;
+    Assert.IsTrue(LJSON.TryGetValue<string>('result.contents[0].text', LValue), LJSON.ToJSON);
+    Assert.AreEqual('classified-resource', LValue);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPOAuthFixture.Persistence_ClientsSurviveRestart;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+begin
+  var LStoreFile := TPath.Combine(TPath.GetTempPath
+  , 'mars-mcp-oauth-test-' + TGUID.NewGuid.ToString + '.json');
+  TMCPOAuthServer.SetPersistenceFile(LStoreFile);
+  try
+    var LClientId := RegisterTestClient(REDIRECT_URI);
+
+    // simulate a server restart: in-memory stores wiped, file kept
+    TMCPOAuthServer.ResetState;
+
+    // the client is transparently reloaded from the persistence file
+    var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+    , TMCPOAuthServer.ComputePKCES256('persist-verifier-0123456789-0123456789'), 'secret');
+    Assert.IsNotEmpty(LCode, 'client must survive the simulated restart');
+  finally
+    TMCPOAuthServer.SetPersistenceFile('');
+    TMCPOAuthServer.ResetState;
+    if TFile.Exists(LStoreFile) then
+      TFile.Delete(LStoreFile);
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMCPDispatcherFixture);
+  TDUnitX.RegisterTestFixture(TMCPResourcesPromptsFixture);
   TDUnitX.RegisterTestFixture(TMCPDataDispatcherFixture);
   TDUnitX.RegisterTestFixture(TMCPResourceFixture);
   TDUnitX.RegisterTestFixture(TMCPOAuthFixture);

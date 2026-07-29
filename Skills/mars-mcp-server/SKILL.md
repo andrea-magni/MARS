@@ -1,6 +1,6 @@
 ---
 name: mars-mcp-server
-description: Build MCP (Model Context Protocol) servers in Delphi with MARS-Curiosity, so AI agents (Claude, ChatGPT, Open WebUI/Ollama, MCP Inspector) can discover and call Delphi code as tools. Use this skill whenever the user wants to expose Delphi/MARS functionality to an AI agent or LLM, mentions MCP, MCP server, MCP tools, tool calling, function calling, AI agents, connectors, or wants Claude/ChatGPT/a local model to query their Delphi application or database; also when working with MARS.MCP.* units, TMCPResource, [MCPTool], TMCPOAuthServer, or debugging an MCP client that cannot connect or authenticate to a MARS server.
+description: Build MCP (Model Context Protocol) servers in Delphi with MARS-Curiosity, so AI agents (Claude, ChatGPT, Open WebUI/Ollama, MCP Inspector) can discover and call Delphi code as tools, read MCP resources and use MCP prompts. Use this skill whenever the user wants to expose Delphi/MARS functionality to an AI agent or LLM, mentions MCP, MCP server, MCP tools, resources, prompts, tool calling, function calling, AI agents, connectors, or wants Claude/ChatGPT/a local model to query their Delphi application or database; also when working with MARS.MCP.* units, TMCPResource, [MCPTool], [MCPResource], [MCPPrompt], TMCPOAuthServer, or debugging an MCP client that cannot connect or authenticate to a MARS server.
 ---
 
 # Build an MCP server with MARS-Curiosity
@@ -75,6 +75,8 @@ A complete starting unit is available in `assets/Server.Resources.MCP.pas.templa
 | `MCPServerInfo(name, version, instructions)` | resource class | identity returned by `initialize`; instructions are read by the agent |
 | `MCPTool(description)` / `MCPTool(name, description)` | public method | exposes the method as a tool (name defaults to the method name) |
 | `MCPParam(description)` / `MCPParam(name, description)` | parameter | documents and optionally renames the parameter in the JSON Schema (rename it: Delphi convention names like `AValue` leak otherwise) |
+| `MCPResource(uri, [name,] description [, mimeType])` | public method | exposes readable content by URI; `{param}` placeholders make it a template — see `references/resources-prompts.md` |
+| `MCPPrompt([name,] description)` | public method | exposes a reusable prompt template; parameters become the prompt arguments — see `references/resources-prompts.md` |
 | `RolesAllowed('...')` / `DenyAll` | tool method | per-tool authorization — see `references/authorization.md` |
 | `MCPOAuth` | resource class | 401 + OAuth discovery for unauthenticated requests — see `references/authorization.md` |
 
@@ -84,7 +86,7 @@ Parameter/field types map to JSON Schema automatically: strings → `string`, in
 
 ## Protocol facts worth knowing
 
-- Supported JSON-RPC methods: `initialize` (protocol versions 2025-06-18, 2025-03-26, 2024-11-05), `ping`, `tools/list`, `tools/call`. Notifications answer `202` with no body; `GET`/`DELETE` answer `405` (stateless server, allowed by spec). `resources/*` and `prompts/*` are not implemented yet — extend `TMCPDispatcher.DispatchRequest` if needed.
+- Supported JSON-RPC methods: `initialize` (protocol versions 2025-06-18, 2025-03-26, 2024-11-05), `ping`, `tools/list`, `tools/call`, `resources/list`, `resources/templates/list`, `resources/read`, `prompts/list`, `prompts/get`. Notifications answer `202` with no body; `GET`/`DELETE` answer `405` (stateless server, allowed by spec). The `resources`/`prompts` capabilities are advertised only when the class declares any. Extend `TMCPDispatcher.DispatchRequest` for additional methods.
 - Tool discovery is cached per resource class (thread-safe, RTTI scanned once). The authorization filter is evaluated per request, so caching never leaks role-protected tools.
 - The dispatcher class is pluggable: override `GetDispatcherClass` on the resource (that is how `TMCPDataResource` adds dataset support).
 
@@ -92,6 +94,7 @@ Parameter/field types map to JSON Schema automatically: strings → `string`, in
 
 - **Any authentication requirement** — Bearer tokens, roles, hiding tools per user, OAuth login window for Claude/ChatGPT/Open WebUI: read `references/authorization.md` first, it also lists client-specific pitfalls that look like server bugs.
 - **Tools that query a database** (FireDAC, TFDQuery, TMARSFireDAC): read `references/database-tools.md` — dataset ownership rules matter.
+- **MCP resources or prompts** (attachable content like DB schemas, URI templates, reusable prompt templates): read `references/resources-prompts.md`.
 
 ## Verify the server
 
