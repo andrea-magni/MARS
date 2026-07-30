@@ -148,13 +148,14 @@ function GetEncodingName(const AEncoding: TEncoding): string;
 begin
   Result := '';
 
+  // IANA charset names (ANSI and Default have none, being system dependent)
   if AEncoding = TEncoding.ANSI then Result := 'ANSI'
-  else if AEncoding = TEncoding.ASCII then Result := 'ASCII'
-  else if AEncoding = TEncoding.BigEndianUnicode then Result :='BigEndianUnicode'
-  else if AEncoding = TEncoding.Unicode then Result :='Unicode'
-  else if AEncoding = TEncoding.UTF7 then Result :='UTF7'
-  else if AEncoding = TEncoding.UTF8 then Result :='UTF8'
-  else if AEncoding = TEncoding.Default then Result :='Default';
+  else if AEncoding = TEncoding.ASCII then Result := 'us-ascii'
+  else if AEncoding = TEncoding.BigEndianUnicode then Result := 'utf-16be'
+  else if AEncoding = TEncoding.Unicode then Result := 'utf-16le'
+  else if AEncoding = TEncoding.UTF7 then Result := 'utf-7'
+  else if AEncoding = TEncoding.UTF8 then Result := 'utf-8'
+  else if AEncoding = TEncoding.Default then Result := 'Default';
 end;
 
 

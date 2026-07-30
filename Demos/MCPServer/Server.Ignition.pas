@@ -131,6 +131,12 @@ begin
   TMCPOAuthServer.SetPersistenceFile(
     IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'MCPOAuthStore.json');
 
+  // custom login page from an HTML file on disk (edit while the server runs,
+  // falls back to the built-in page when missing). CustomAuthorizePage.html in
+  // the demo sources documents the available placeholders.
+  TMCPOAuthServer.SetAuthorizePageTemplateFile(
+    IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'CustomAuthorizePage.html');
+
   FEngine.BeforeHandleRequest :=
     function (
       const AEngine: IMARSEngine;

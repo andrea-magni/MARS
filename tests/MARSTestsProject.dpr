@@ -44,6 +44,7 @@ begin
 {$ELSE}
 var LResults: IRunResults;
 begin
+  ReportMemoryLeaksOnShutdown := True;
   LResults := TDUnitX.CreateRunner([
     TDUnitXConsoleLogger.Create(),
     TDUnitXXMLNUnitFileLogger.Create()
