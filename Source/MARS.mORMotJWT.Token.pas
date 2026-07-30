@@ -31,6 +31,19 @@ uses
 , MARS.mORMotJWT.Token.InjectionService
 ;
 
+function Base64UrlDecode(const AValue: string): string;
+var
+  LBase64: string;
+begin
+  // JWT parts are base64url encoded, without padding (RFC 7515)
+  LBase64 := AValue.Replace('-', '+').Replace('_', '/');
+  case Length(LBase64) mod 4 of
+    2: LBase64 := LBase64 + '==';
+    3: LBase64 := LBase64 + '=';
+  end;
+  Result := TEncoding.UTF8.GetString(TNetEncoding.Base64.DecodeStringToBytes(LBase64));
+end;
+
 { TMARSmORMotJWTToken }
 
 function TMARSmORMotJWTToken.BuildJWTToken(const ASecret: string;
@@ -92,8 +105,10 @@ begin
     if not Result then
       Exit;
 
-    var LPayloadBase64 := AToken.Split(['.'])[1];
-    LJSONString := TNetEncoding.Base64.Decode(LPayloadBase64);
+    var LParts := AToken.Split(['.']);
+    if Length(LParts) < 2 then
+      Exit(False);
+    LJSONString := Base64UrlDecode(LParts[1]);
     LPayloadJSON := TJSONObject.ParseJSONValue(LJSONString) as TJSONObject;
     try
       AClaims.LoadFromJSON(LPayloadJSON);
