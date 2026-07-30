@@ -493,8 +493,6 @@ begin
   else
     AActivation.Response.ContentType := 'text/plain; charset=' + LEncodingName; // default: text/plain
 
-  AActivation.Response.ContentEncoding := LEncodingName;
-
   LContent := TValueToString(AValue);
 
   LContentBytes := LEncoding.GetBytes(LContent);
