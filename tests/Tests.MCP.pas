@@ -1634,9 +1634,12 @@ begin
   var LResponseMock := TMARSResponseMock.Create;
   var LResponse: IMARSResponse := LResponseMock;
 
+  // HandleWellKnownRequest takes a const interface parameter: an inline
+  // constructed mock would never be reference-counted (and leak)
+  var LRequest: IMARSRequest := TMARSRequestMock.Create(
+    'GET', 'http://localhost:8080/.well-known/openid-configuration', [], '');
   Assert.IsTrue(TMCPOAuthMetadata.HandleWellKnownRequest(
-    TMARSRequestMock.Create('GET', 'http://localhost:8080/.well-known/openid-configuration', [], '')
-  , LResponse, '/rest/default/oauth'));
+    LRequest, LResponse, '/rest/default/oauth'));
 
   Assert.AreEqual(200, LResponse.StatusCode);
   var LJSON := TJSONObject.ParseJSONValue(LResponse.Content) as TJSONObject;
@@ -1656,15 +1659,17 @@ begin
 
   // unknown well-known documents must answer a clean 404 (not a 500 from the
   // engine), so OAuth discovery clients fall back to the next candidate URL
+  var LUnknownRequest: IMARSRequest := TMARSRequestMock.Create(
+    'GET', 'http://localhost:8080/.well-known/whatever', [], '');
   Assert.IsTrue(TMCPOAuthMetadata.HandleWellKnownRequest(
-    TMARSRequestMock.Create('GET', 'http://localhost:8080/.well-known/whatever', [], '')
-  , LResponse, '/rest/default/oauth'));
+    LUnknownRequest, LResponse, '/rest/default/oauth'));
   Assert.AreEqual(404, LResponse.StatusCode);
 
   // non well-known paths are not handled at all
+  var LOtherRequest: IMARSRequest := TMARSRequestMock.Create(
+    'GET', 'http://localhost:8080/anything/else', [], '');
   Assert.IsFalse(TMCPOAuthMetadata.HandleWellKnownRequest(
-    TMARSRequestMock.Create('GET', 'http://localhost:8080/anything/else', [], '')
-  , LResponse, '/rest/default/oauth'));
+    LOtherRequest, LResponse, '/rest/default/oauth'));
 end;
 
 procedure TMCPOAuthFixture.Unauthenticated_Returns401WithResourceMetadata;
