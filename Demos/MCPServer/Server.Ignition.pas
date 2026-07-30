@@ -167,6 +167,8 @@ begin
          , FEngine.BasePath + '/default/oauth')
       then
       begin
+        LogLine(Format('%s %s -> %d (discovery)'
+        , [ARequest.Method, ARequest.RawPath, AResponse.StatusCode]));
         Result := False;
         Handled := True;
         Exit;
