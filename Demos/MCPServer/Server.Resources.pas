@@ -30,7 +30,7 @@ type
 
   [Path('mcp')
   , MCPServerInfo('MARS Demo MCP Server', '1.0.0'
-    , 'Demo MCP server built with MARS-Curiosity (Delphi). '
+  , 'Demo MCP server built with MARS-Curiosity (Delphi). '
     + 'Use the available tools to greet people, do some math and inspect the server.')
   ]
   TDemoMCPResource = class(TMCPResource)

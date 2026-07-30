@@ -38,9 +38,9 @@ begin
   begin
     Token.UserName := AUserName;
     if SameText(AUserName, 'admin') then
-      Token.Roles := TArray<string>.Create('standard', 'admin')
+      Token.Roles := ['standard', 'admin']
     else
-      Token.Roles := TArray<string>.Create('standard');
+      Token.Roles := ['standard'];
   end;
 end;
 
