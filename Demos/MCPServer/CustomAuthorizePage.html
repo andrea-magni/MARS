@@ -1,0 +1,58 @@
+<!--
+  Sample custom OAuth login page for the MCP demo server.
+
+  Copy this file next to the server executable (see Server.Ignition.pas:
+  TMCPOAuthServer.SetAuthorizePageTemplateFile) to replace the built-in page.
+  When the file is missing the built-in page is served, so the demo works out
+  of the box. The file is read on each render: edit it while the server runs.
+
+  Placeholders replaced by MARS at render time:
+    {client_name}   - HTML-encoded client name (client_id when unnamed)
+    {scope}         - HTML-encoded requested scope (may be empty)
+    {scope_note}    - ' (scope: ...)' when a scope was requested, else empty
+    {error}         - '<div class="err">...</div>' block, empty when no error
+    {hidden_fields} - REQUIRED inside the form: hidden inputs carrying the
+                      OAuth request parameters through the POST
+    {mars_footer}   - 'built with MARS-Curiosity' badge (logo + GitHub link)
+
+  The form must POST to "authorize" and provide username and password inputs.
+-->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ACME - Sign in</title>
+  <style>
+    body { font-family: Georgia, serif; background: #1d2733; color: #eee;
+           display: flex; flex-direction: column; align-items: center;
+           justify-content: center; min-height: 100vh; margin: 0 }
+    form { background: #263240; padding: 2.5rem; border-radius: 8px; width: 22rem }
+    h1 { font-size: 1.3rem; margin: 0 0 .5rem; color: #ffb454 }
+    p { color: #aab; font-size: .9rem; margin: 0 0 1.25rem }
+    input { width: 100%; box-sizing: border-box; margin: .25rem 0 .75rem;
+            padding: .6rem; border: 1px solid #445; border-radius: 4px;
+            background: #1d2733; color: #eee }
+    button { width: 100%; padding: .7rem; border: 0; border-radius: 4px;
+             background: #ffb454; color: #1d2733; font-weight: 700; cursor: pointer }
+    .err { color: #ff7b72; font-size: .85rem; margin-bottom: .75rem }
+    .mars-footer { margin-top: 1.5rem; font-size: .75rem }
+    .mars-footer a { color: #778; text-decoration: none; display: inline-flex;
+                     align-items: center; gap: .5rem }
+    .mars-footer a:hover { color: #ffb454 }
+    .mars-footer img { height: 22px; width: 22px; border-radius: 5px }
+  </style>
+</head>
+<body>
+  <form method="post" action="authorize">
+    <h1>ACME Sign in</h1>
+    <p><strong>{client_name}</strong> is requesting access{scope_note}.</p>
+    {error}
+    <input name="username" placeholder="Username" autofocus>
+    <input name="password" type="password" placeholder="Password">
+    {hidden_fields}
+    <button type="submit">Sign in and authorize</button>
+  </form>
+  {mars_footer}
+</body>
+</html>

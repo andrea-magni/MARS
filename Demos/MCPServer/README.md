@@ -87,6 +87,8 @@ curl -X POST http://localhost:8080/rest/default/mcpdb -H "Content-Type: applicat
 
 The `/mcpdb` endpoint is marked `[MCPOAuth]`: unauthenticated requests answer `401` with a `WWW-Authenticate` header pointing at the discovery documents, so OAuth-capable MCP clients (Claude, ChatGPT connectors, MCP Inspector) can onboard automatically — dynamic client registration, browser login page (`Server.Resources.OAuth.pas`, same demo credentials), authorization code + PKCE, refresh tokens. Statically issued tokens keep working on the same endpoint, since the OAuth access token *is* a MARS JWT.
 
+The login page can be customized without recompiling: copy `CustomAuthorizePage.html` next to the server executable (the demo already calls `TMCPOAuthServer.SetAuthorizePageTemplateFile` pointing there) and edit it freely — the file is read on each render and, when missing, the built-in page is served.
+
 Discovery entry points (served from `Server.Ignition.pas` / `BeforeHandleRequest`):
 
 ```

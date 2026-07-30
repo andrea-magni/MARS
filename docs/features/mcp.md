@@ -196,7 +196,9 @@ begin
 end;
 ```
 
-The user experience on an OAuth-capable client: add the connector URL → a browser window opens on your login page (override `RenderAuthorizePage` to customize it) → sign in → the client stores and refreshes tokens automatically. `Authenticate` decides the roles, so per-tool `[RolesAllowed]` filtering applies to OAuth users too.
+The user experience on an OAuth-capable client: add the connector URL → a browser window opens on your login page → sign in → the client stores and refreshes tokens automatically. `Authenticate` decides the roles, so per-tool `[RolesAllowed]` filtering applies to OAuth users too.
+
+The built-in login page carries a small *built with MARS-Curiosity* badge. To customize the page, either override `RenderAuthorizePage` or point `TMCPOAuthServer.SetAuthorizePageTemplateFile('...')` to an HTML file on disk: the file is read on each render (so it can be edited while the server runs) and falls back to the built-in page when missing. The template must contain a `<form method="post" action="authorize">` with `username`/`password` inputs and supports these placeholders: `{client_name}`, `{scope}`, `{scope_note}`, `{error}`, `{hidden_fields}` (required inside the form: the hidden inputs carrying the OAuth request parameters), `{mars_footer}` (the MARS badge). See `Demos/MCPServer/CustomAuthorizePage.html` for a complete example.
 
 ::: warning
 Run behind HTTPS in production (a TLS-terminating reverse proxy works fine — override `BuildResourceMetadataURL`/`TMCPOAuthMetadata` URLs accordingly). Client/code/refresh-token storage is in-memory by default — call `TMCPOAuthServer.SetPersistenceFile('...')` at startup so registered clients and refresh tokens survive restarts (the file stores refresh tokens in cleartext: protect it), or override the `Store*`/`Consume*` virtual methods for a custom store.

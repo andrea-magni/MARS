@@ -277,6 +277,8 @@ type
     [Test] procedure WrongPassword_ReRendersLoginPage;
     [Test] procedure RefreshToken_RotatesAndWorks;
     [Test] procedure Persistence_ClientsSurviveRestart;
+    [Test] procedure AuthorizePage_DefaultContainsMARSFooter;
+    [Test] procedure AuthorizePage_TemplateFileOverride;
   end;
 
 implementation
@@ -1911,6 +1913,64 @@ begin
     TMCPOAuthServer.ResetState;
     if TFile.Exists(LStoreFile) then
       TFile.Delete(LStoreFile);
+  end;
+end;
+
+procedure TMCPOAuthFixture.AuthorizePage_DefaultContainsMARSFooter;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+begin
+  var LClientId := RegisterTestClient(REDIRECT_URI);
+
+  var LCall := SendRaw('GET', 'oauth/authorize?client_id=' + LClientId
+    + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
+    + '&response_type=code&scope=mcp', 'text/html', '');
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.Contains(LCall.Response.Content, 'Test MCP Client');
+  Assert.Contains(LCall.Response.Content, '(scope: mcp)');
+  Assert.Contains(LCall.Response.Content, 'name="client_id" value="' + LClientId + '"');
+
+  // 'built with MARS-Curiosity' badge linking to the project home
+  Assert.Contains(LCall.Response.Content, 'github.com/andrea-magni/MARS');
+  Assert.Contains(LCall.Response.Content, 'built with MARS-Curiosity');
+
+  // every placeholder must have been substituted
+  Assert.IsFalse(LCall.Response.Content.Contains('{client_name}'), 'unreplaced {client_name}');
+  Assert.IsFalse(LCall.Response.Content.Contains('{hidden_fields}'), 'unreplaced {hidden_fields}');
+  Assert.IsFalse(LCall.Response.Content.Contains('{mars_footer}'), 'unreplaced {mars_footer}');
+end;
+
+procedure TMCPOAuthFixture.AuthorizePage_TemplateFileOverride;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+begin
+  var LTemplateFile := TPath.Combine(TPath.GetTempPath
+  , 'mars-mcp-oauth-authorize-' + TGUID.NewGuid.ToString + '.html');
+  TFile.WriteAllText(LTemplateFile
+  , '<html><body><h1>ACME corporate login</h1><p>{client_name}</p>'
+    + '<form method="post" action="authorize">{hidden_fields}</form>'
+    + '{mars_footer}</body></html>'
+  , TEncoding.UTF8);
+  TMCPOAuthServer.SetAuthorizePageTemplateFile(LTemplateFile);
+  try
+    var LClientId := RegisterTestClient(REDIRECT_URI);
+
+    var LCall := SendRaw('GET', 'oauth/authorize?client_id=' + LClientId
+      + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
+      + '&response_type=code', 'text/html', '');
+    Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+    Assert.Contains(LCall.Response.Content, 'ACME corporate login');
+    Assert.Contains(LCall.Response.Content, 'Test MCP Client');
+    Assert.Contains(LCall.Response.Content, 'name="client_id" value="' + LClientId + '"');
+    Assert.Contains(LCall.Response.Content, 'built with MARS-Curiosity');
+
+    // the on-disk template must still yield a working flow end to end
+    var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+    , TMCPOAuthServer.ComputePKCES256('template-verifier-0123456789-0123456789'), 'secret');
+    Assert.IsNotEmpty(LCode);
+  finally
+    TMCPOAuthServer.SetAuthorizePageTemplateFile('');
+    TFile.Delete(LTemplateFile);
   end;
 end;
 

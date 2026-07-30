@@ -17,6 +17,9 @@
   engine's BeforeHandleRequest via TMCPOAuthMetadata.HandleWellKnownRequest.
   Mark the MCP resources to protect with [MCPOAuth] (see MARS.MCP.Resource).
 
+  The login/consent page can be customized with an HTML template file on disk
+  (SetAuthorizePageTemplateFile) or by overriding RenderAuthorizePage.
+
   NOTE: intended to run behind HTTPS in production. Storage of clients, codes
   and refresh tokens is in-memory (process lifetime); override the *Store*
   virtual methods for persistence.
@@ -72,6 +75,7 @@ type
     class var FCS: TCriticalSection;
     class var FPersistenceFile: string;
     class var FPersistenceLoaded: Boolean;
+    class var FAuthorizePageTemplateFile: string;
     class constructor ClassCreate;
     class destructor ClassDestroy;
     // both assume FCS is held by the caller
@@ -102,6 +106,9 @@ type
     function GetCodeDuration: TDateTime; virtual;          // default 5 minutes
     function GetRefreshTokenDuration: TDateTime; virtual;  // default 30 days
 
+    // HTML template for the login & consent page: the file configured via
+    // SetAuthorizePageTemplateFile when readable, the built-in page otherwise
+    function GetAuthorizePageTemplate: string; virtual;
     // HTML login & consent page, override to customize
     function RenderAuthorizePage(const AClient: TMCPOAuthClient;
       const ARedirectURI, AState, ACodeChallenge, ACodeChallengeMethod, AScope,
@@ -123,6 +130,21 @@ type
     class procedure SetPersistenceFile(const AFileName: string);
     // clears the in-memory stores (does not touch the persistence file)
     class procedure ResetState;
+
+    // optional HTML file on disk overriding the built-in login & consent page.
+    // The file is read (UTF-8) on each render, so it can be edited while the
+    // server runs; when missing or unreadable the built-in page is served.
+    // Placeholders replaced at render time:
+    //   {client_name}   - HTML-encoded client name (client_id when unnamed)
+    //   {scope}         - HTML-encoded requested scope (may be empty)
+    //   {scope_note}    - ' (scope: ...)' when a scope was requested, else empty
+    //   {error}         - '<div class="err">...</div>' block, empty when no error
+    //   {hidden_fields} - REQUIRED inside the form: the hidden inputs carrying
+    //                     the OAuth request parameters through the POST
+    //   {mars_footer}   - 'built with MARS-Curiosity' badge (logo + GitHub link)
+    // The template must contain a <form method="post" action="authorize"> with
+    // username and password inputs plus the {hidden_fields} placeholder.
+    class procedure SetAuthorizePageTemplateFile(const AFileName: string);
 
     [GET, Path('authorize'), Produces(TMediaType.TEXT_HTML)]
     function AuthorizePage(
@@ -187,6 +209,103 @@ const
   WELLKNOWN_PROTECTED_RESOURCE = '/.well-known/oauth-protected-resource';
   WELLKNOWN_AUTHORIZATION_SERVER = '/.well-known/oauth-authorization-server';
   WELLKNOWN_OPENID_CONFIGURATION = '/.well-known/openid-configuration';
+
+  // media/logo_d_nb_t_48.png embedded as base64, so the login page stays
+  // self-contained (no extra endpoint or file needed to show the logo)
+  MARS_LOGO_PNG_B64 =
+      'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAFzUkdCAK7OHOkAAAAEZ0FNQQAAsY8L'
+    + '/GEFAAAACXBIWXMAAEsXAABLFwHL9uOzAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAYdpVFh0WE1MOmNv'
+    + 'bS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0n77u/JyBpZD0nVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkJz8+DQo8eDp4'
+    + 'bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIj48cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkv'
+    + 'MDIvMjItcmRmLXN5bnRheC1ucyMiPjxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSJ1dWlkOmZhZjViZGQ1LWJhM2QtMTFkYS1h'
+    + 'ZDMxLWQzM2Q3NTE4MmYxYiIgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPjx0aWZmOk9yaWVudGF0'
+    + 'aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+PC9yZGY6RGVzY3JpcHRpb24+PC9yZGY6UkRGPjwveDp4bXBtZXRhPg0KPD94cGFja2V0'
+    + 'IGVuZD0ndyc/PiyUmAsAAA5GSURBVGhDpZhbbFzHecd/M+fsnrO73KVkSaQpUaJE2ZQsyRfJrenUcoBEcOokcGLHjv3QoDVgo+lr'
+    + 'iz7lIXXQpxQ1GvitQB9iwEDtAIaNpm5sIIEd1LJdSZapiyuJ4kU0xau4JJd7OWfPZaYPPLM6XFEU03zAh5kz5/b/zXzzzZwjAM0m'
+    + 'TAixpm5cStkq0/X09QBaa5RSrTJd11q3PH39ZkxsBmA98UawlBLLstaUaRjaxMdxTBzHKKVaZRroD4W4I8DtxBuxtm1jWRa2bbfq'
+    + '5lw7gBEfRRFRFLXqaZg/FGLTAO3i06IzmUzLTdt6AEZ4GIYtT8OsB/FHAbSLF0LcIjybzZLNZnEch2w224IwowC0etiID4KAZrNJ'
+    + 'EAQEQXALiAHYDMSmAUxcG/FGuOu6OI7TKtMQaYB28b7vt0oDYiDSc4I/FqA9dIx4IzqXy7U8DbHeCKTFe57XcgNjINpDaSMAC3il'
+    + 'vZHb9L5lWa1Yd123BZDP59f4ekDpsErPDTM/1stEpjTXr2ebAjCxbwBM6Liu2xJdKBQoFAotgPVCKj0qRmg6pRqYdHknW33aBtYe'
+    + 'RmYeGBATSmnP5XI4jtO63nGcFlTa2wHN9el33sk2BGgfBRNGZi60ZyEDY1kWjuNw+PBhDh8+jOM4WJbVEp0Wnh6ddIil372RbRhC'
+    + '6V5Px/96E9j0sG3bdHR08OKLL3LixAmOHTvG3r17uXz5MmEYwjppNZ1GTRbazATmTiOQtvVGIw1nPAxDHn/8cfr7+1v37t+/n+PH'
+    + 'jxOG4Zpr089Ih82dej1tmwZIWztMul0IQVdXV+rqVevq6rpFWPr+9nObtf8XQHp4066UAmB4eLj9llZb+z2bDZXb2aYB0iKNm/1L'
+    + '2m3b5tSpU3z00UesrKywsrLChx9+yOnTp7Ft+5brTRrdaB3YyG67Eqfj0WQdk21M3u/o6KBYLFIsFlvrgOu6ZDIZ4jims7MTgEql'
+    + '0pofvu9Tr9ep1+tUq1Wq1Sq1Wo16vU6j0bhlRb7TCG2YhUwp2rKRKdvTH2bnmbys0WjQ8Dy01qvbCN/HTzy9jTBbCZON2rcSG9kd'
+    + 'AUw9DWGyRhTHNOMYX0oix0EUCtilEk6xiFss4nZ0kC0UkLkcUSZDQwgqYUi5XmexUmGlUsFrNAjbdqVpgDvZhiFkShNGQghCpSCf'
+    + 'Z/vOnQzs2cP9O3ZwOJejX2vubjbZ4nnkPY9sECDjGABlWQTZLF4ux1Iux6zjMCYEX3oeF27cYPirr1iYnoZGg4yU6GSLsZn5cFsA'
+    + 'UhDm5mxPD4P79/PnO3bwuNYMlMtsnZ/HKpdR9TpRGBJrjZISLQTadILWCK2RSmEJgZ3JIAsF4m3bWOruZviuu/hvIfjgxg3+Z3SU'
+    + 'YGZm3fevZxsCGNt14ADP9ffzjBAcmZrCnZyksbyMB0SOg3ZdsG2EZYGUkIRYGkBrDUqBUug4hihC+D52s0kOyG/Zgrd7Nxd37eId'
+    + 'rXl7bIypK1fapdxiGwLsPXSIl/v7eXp5me7hYerz81SlJM7n0ZkM2rLQlgVGuGUh0gDJc4TpRaXQSkEcr8LEMcJ4GGI1GhSVotDd'
+    + 'zdzAAO+USvzb2BgTly61Kbtp6wIUe3v5myNH+ItKha0XL7JUreK5LspxUFKiLAst5U2ARHyr96WE9pVV61XxZgTiGKHUqid1Gcer'
+    + 'HgTkfJ+txSJLR47wRmcn/3rxItXr19c+8xYA2+bEI4/w947D/qEhFpeWqAKxZSFKJZRlEUu5GuOWReD7aCnJlEqr4ZIAIARCSsJG'
+    + 'A7Qmk8+jtUYAse8jgEw+T1yvE1YqSCDrOFhao6pVZBiSsSxkEOAoxY5CgfHBQf7Z9/ndqVMQRbcCODt28LdHj/L8tWv4w8OsOA5+'
+    + 'FNHzzDNQKDD2q18hOztbAM1Gg31PP40WgtH33iNTKq32egIR1Ovc+9RTZAoFLr31FplcjjgIKHR1MfDcczSXlrBsG91ssnzhAjMn'
+    + 'TyKjiJ5HHqHr4YdBKaRSUK+z/PvfIy9dIj8wwFt79/IvZ88SLCyAWQd6+vv5+YEDfOPUKeamp6kUCjSEwOrr464nn0Ru3055eppK'
+    + 'rUbTtvG0xurpoeeJJ8h0dTE7MUG10SCwLJpCUPU8th07RungQULbRuXzTI2M4IUhu7/1LcqTkwy9+Sbzw8NUl5bYNjjI1gcewAtD'
+    + 'dn3721x55x3mh4ZYvHyZZrPJjqeeYnFujqUrV/jThQWOHjvGGSGoLS1h9Q0MvPJPO3bQ+8knTMcxXj5P07ZZ8Tx2/eAHTH3xBUvX'
+    + 'r9Nx5AgTQ0NEuRwrnseeJ55gdmSEG9euseXwYcbOnSNyXZpC4EUR97/wAqfffpuJc+e473vfY/jMGbwo4u6jR5kfH2dxcZFQCCo3'
+    + 'bjDy4Yd07NvHgy+9xBevv87U+fMoy6Lp+1QmJpj97DOCZpNASiq+z67xcR4/eJDTrov8h44O3E8/5XomQ911qVkWVcuiWSqR6e1l'
+    + '8upVpiYmcHbvpuG61KSkkcmQ27OHyWvXGB8ZId/bi+c4VLWm3Giw7eGHKZfLXBkeZnxqipnJSboffZQb9TqhbVMJQ2pCUJMSL5ej'
+    + 'kctxfXSUleVluo4fp1kscqNWYwXwSyXqjkMljqnZNnXH4bpt437yCa+USkjr7Fnmcznqtk1NSmqWRSWOcQ8coNpoML+4yMzcHH4c'
+    + 'k+nroxKG2Dt3EgjB1MwMMwsL1JtNCvv2UQlDKlFE9/33c+bMaXqOHqXnyBE+O3mS7ffdR01IAiGoRRF1IVhqNplbXqZwzz088MIL'
+    + '/Oa115gYGeH4T37Cvc8+S2bPHsr1OpUoWqOvnskw77pYn3+O9Q3XfaVp2zQta9WlZMXz6DtxgoXZWabGx/G0pnP3bqzOTq4MDbHv'
+    + 'a18j0Jor588TSkl+2zaKO3fyv2fPsr2/n75HBxlYXOHZrl6+/thxMlu3UCsWKM/Ps7W3l7mpKeZnZ7l7YIBHn3uO3ceO8cm77zI9'
+    + 'Osrs2BjTV6/S0dPD7sFB9h4/Tnl6mqW5OYTjEAEREAtBICWyblnUpVx1IagLgZ/Nku/tZfzyZcJcjsB1GRseprOvj+UgYMu+fYxf'
+    + 'vUqQzRI6DlcuXaJz506WPI/uhx5iT6z5MyXp/Ou/JPf4II9euEy3gu6HHqTaaLBYq7F3cJBj3/8+p0+e5N9ffZWRy5eJCwXiYpGF'
+    + '5WU+/fWv+Y9f/ILTH3zAsZdfpnToEMtBsKrR6LUsZF0IGimvKYXT20sATE1N4ds2QSbD+Pg4VqFAsa+PTKnE6OgoYSZDU0quTU4S'
+    + 'Al0DA5T69lA59Tn5IwNkH7iXcGKEaHSU2peXcbq6KN19N77Wq4uj53H+889pAHEuR0MpGlrjWxaqWESXSly9cIHf/vKXHPjOd6hG'
+    + '0RqtdSGQDSnXNFaaTbYfPMjczAwrYYinNT6wUKkwNzvLn3z3u5TLZebKZXyt8ZRixfcZGx3lyR/9iIkrw3y8tIB1bZLGP/6c5n++'
+    + 'T75nF2eqy4xc/JIHH3uMhlKcPXOGC+fP89LPfkbnrl3MlcuUazUW23y52STKZgm0pgFrtDakxPaEIBKCGIiBulLsGBhg6OOPiR0H'
+    + 'T+vVc9ksX5w6xd+9+iqv/fSnhFIilEIBOpvlwrlzPP/jH/Pm668zV6lwT3cP3/ziCtl79/FuocRv/us9XEBYFiEgCwV+9/77TE9N'
+    + '8c0f/pCVcpnpsTEkYAuBBKTWFEsl9h0+zEdvvEGQySCTxcsSAlsIxF91dupYSqJkhQ2Brb29zMzNsfqJDpEQhMm3wP4DBxi/epVm'
+    + 'Am1pjQZirdm2ezezX30FcUzTkvTs60eHITOTk+S0Jtaart5evKUlomYTS0rqnkdWCO5/8EG6d+5EWxZCa5xk39So1RgbGqK5tESH'
+    + '6yKTFdpWCkspxPMJQCwlsRDEUhKEId2WRc2yKEuJDRSSkZgJAoTrcpdSaKAsJREglGKr51F1XRpSorSm0/fRwIrrIoWgoDUFz6Pi'
+    + 'uijLwtaaXUqxLCUrQYAIQ3ZGERK4YVkAbAMK2SzasmjCqnCtsRIA6QM+4GuNrzU1rdkmJbHWNJXC1xodx+SiiHwUYWezNLRmSxhy'
+    + 'yPchivDjmIZSbLUsAqXw4xgniuiUkq1Skoki6nFMLgzZlYSeuceNIsI4Rmcy2Pk823M5tudy2Pk8olDAdRz64nh1cqc90S1NQzPx'
+    + 'QGtWtAat8bQmVIqV5HdKoDU1pQjjmKbWzMFquMQxUbItVnFMEMfUze/DRGgYx8RKEShFrNTNe5LfKYFSVJViASgDVa2JlGIJqAJL'
+    + 'WhMo1dJpdIuvl0paCUEsBCrxUAjyWuML0Yr1rNZEgC8EWmtsrWkKAVoTsrrfzymFDwSAAnLJ/PCTSekCmSSDSCGwgA4gTN4hk/fK'
+    + 'pE0CGa1xk3eYiS21xkpKMVgsaiNcJQ9SSWbSyV5bJaufTr6sVJKxlPlnk9TjBITkG9YkgdbfMyEgES6FQCRtlmlLvoNNppGpe20j'
+    + 'OgUhtUY8VChoJSUqEa6EWE2N5jgR0vKUYGWAUm0GqP1DXCSCRdL7wkCYlJlqM8JbnnwMrREPSKUQh/L5myMAaCM6GQEjfI3oNpA0'
+    + 'hPkVslb+6peT+UWzRnz62IhM15N7jWjRNgpify6njVgj3vS+AWiVKYBWfSMAMwqp3jcuU8etuhFs2toAWsemrjVit+OsAdBtAC1P'
+    + 'izdCUyPREr5OGKXDZ42nert1TQrCHKcBRDtAdzarVdJLLXFJpmkBmboRlgJYIz5Vx4xCIqYF0g5jRLXXtb7ZZuopCExIbbFtnRZP'
+    + 'updTf8baz6XbdfJAA9A6lx6BNMRqZY1gTD159pr2tPD0dVoj8lJqI5Q2iHR52zYj+GbDmvNpM8Jb9ZTINW2tllvb1pzTmv8D2i2m'
+    + '1FdvyJ4AAAAASUVORK5CYII=';
+
+  // 'built with MARS-Curiosity' badge, exposed to templates as {mars_footer}
+  MARS_FOOTER_HTML =
+      '<div class="mars-footer"><a href="https://github.com/andrea-magni/MARS" target="_blank" rel="noopener">'
+    + '<img src="data:image/png;base64,' + MARS_LOGO_PNG_B64 + '" alt="MARS logo">'
+    + '<span>built with MARS-Curiosity</span></a></div>';
+
+  // built-in login & consent page; same placeholders as an on-disk template
+  // (see SetAuthorizePageTemplateFile)
+  DEFAULT_AUTHORIZE_PAGE_HTML =
+      '<!doctype html><html><head><meta charset="utf-8"><title>Sign in</title>'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    + '<style>body{font-family:system-ui,sans-serif;background:#f4f4f5;display:flex;flex-direction:column;'
+    + 'align-items:center;justify-content:center;min-height:100vh;margin:0}'
+    + 'form{background:#fff;padding:2rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);'
+    + 'width:20rem}h1{font-size:1.1rem;margin:0 0 .25rem}p{color:#555;font-size:.9rem;margin:0 0 1rem}'
+    + 'input{width:100%;box-sizing:border-box;margin:.25rem 0 .75rem;padding:.5rem;'
+    + 'border:1px solid #ccc;border-radius:6px}button{width:100%;padding:.6rem;border:0;'
+    + 'border-radius:6px;background:#e23c2e;color:#fff;font-weight:600;cursor:pointer}'
+    + '.err{color:#c00;font-size:.85rem;margin-bottom:.5rem}'
+    + '.mars-footer{margin-top:1.25rem;font-size:.75rem}'
+    + '.mars-footer a{color:#888;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem}'
+    + '.mars-footer a:hover{color:#e23c2e}'
+    + '.mars-footer img{height:22px;width:22px;border-radius:5px}'
+    + '</style></head><body>'
+    + '<form method="post" action="authorize">'
+    + '<h1>Sign in</h1>'
+    + '<p><strong>{client_name}</strong> is requesting access{scope_note}.</p>'
+    + '{error}'
+    + '<input name="username" placeholder="Username" autofocus>'
+    + '<input name="password" type="password" placeholder="Password">'
+    + '{hidden_fields}'
+    + '<button type="submit">Sign in and authorize</button>'
+    + '</form>'
+    + '{mars_footer}'
+    + '</body></html>';
 
 { TMCPOAuthClient }
 
@@ -473,6 +592,37 @@ begin
     .TrimRight(['=']);
 end;
 
+class procedure TMCPOAuthServer.SetAuthorizePageTemplateFile(const AFileName: string);
+begin
+  FCS.Enter;
+  try
+    FAuthorizePageTemplateFile := AFileName;
+  finally
+    FCS.Leave;
+  end;
+end;
+
+function TMCPOAuthServer.GetAuthorizePageTemplate: string;
+var
+  LFileName: string;
+begin
+  FCS.Enter;
+  try
+    LFileName := FAuthorizePageTemplateFile;
+  finally
+    FCS.Leave;
+  end;
+
+  if (LFileName <> '') and FileExists(LFileName) then
+    try
+      Exit(TFile.ReadAllText(LFileName, TEncoding.UTF8));
+    except
+      // unreadable template must not break the OAuth flow: serve the built-in page
+    end;
+
+  Result := DEFAULT_AUTHORIZE_PAGE_HTML;
+end;
+
 function TMCPOAuthServer.RenderAuthorizePage(const AClient: TMCPOAuthClient;
   const ARedirectURI, AState, ACodeChallenge, ACodeChallengeMethod, AScope,
   AErrorMessage: string): string;
@@ -483,38 +633,27 @@ function TMCPOAuthServer.RenderAuthorizePage(const AClient: TMCPOAuthClient;
   end;
 
 var
-  LClientName: string;
+  LClientName, LHiddenFields: string;
 begin
   LClientName := AClient.ClientName;
   if LClientName = '' then
     LClientName := AClient.ClientId;
 
-  Result :=
-    '<!doctype html><html><head><meta charset="utf-8"><title>Sign in</title>'
-    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
-    + '<style>body{font-family:system-ui,sans-serif;background:#f4f4f5;display:flex;'
-    + 'align-items:center;justify-content:center;min-height:100vh;margin:0}'
-    + 'form{background:#fff;padding:2rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);'
-    + 'width:20rem}h1{font-size:1.1rem;margin:0 0 .25rem}p{color:#555;font-size:.9rem;margin:0 0 1rem}'
-    + 'input{width:100%;box-sizing:border-box;margin:.25rem 0 .75rem;padding:.5rem;'
-    + 'border:1px solid #ccc;border-radius:6px}button{width:100%;padding:.6rem;border:0;'
-    + 'border-radius:6px;background:#e23c2e;color:#fff;font-weight:600;cursor:pointer}'
-    + '.err{color:#c00;font-size:.85rem;margin-bottom:.5rem}</style></head><body>'
-    + '<form method="post" action="authorize">'
-    + '<h1>Sign in</h1>'
-    + '<p><strong>' + E(LClientName) + '</strong> is requesting access'
-    + IfThen(AScope <> '', ' (scope: ' + E(AScope) + ')') + '.</p>'
-    + IfThen(AErrorMessage <> '', '<div class="err">' + E(AErrorMessage) + '</div>')
-    + '<input name="username" placeholder="Username" autofocus>'
-    + '<input name="password" type="password" placeholder="Password">'
-    + '<input type="hidden" name="client_id" value="' + E(AClient.ClientId) + '">'
+  LHiddenFields :=
+      '<input type="hidden" name="client_id" value="' + E(AClient.ClientId) + '">'
     + '<input type="hidden" name="redirect_uri" value="' + E(ARedirectURI) + '">'
     + '<input type="hidden" name="state" value="' + E(AState) + '">'
     + '<input type="hidden" name="code_challenge" value="' + E(ACodeChallenge) + '">'
     + '<input type="hidden" name="code_challenge_method" value="' + E(ACodeChallengeMethod) + '">'
-    + '<input type="hidden" name="scope" value="' + E(AScope) + '">'
-    + '<button type="submit">Sign in and authorize</button>'
-    + '</form></body></html>';
+    + '<input type="hidden" name="scope" value="' + E(AScope) + '">';
+
+  Result := GetAuthorizePageTemplate
+    .Replace('{client_name}', E(LClientName), [rfReplaceAll])
+    .Replace('{scope}', E(AScope), [rfReplaceAll])
+    .Replace('{scope_note}', IfThen(AScope <> '', ' (scope: ' + E(AScope) + ')'), [rfReplaceAll])
+    .Replace('{error}', IfThen(AErrorMessage <> '', '<div class="err">' + E(AErrorMessage) + '</div>'), [rfReplaceAll])
+    .Replace('{hidden_fields}', LHiddenFields, [rfReplaceAll])
+    .Replace('{mars_footer}', MARS_FOOTER_HTML, [rfReplaceAll]);
 end;
 
 function TMCPOAuthServer.AuthorizePage(const AClientId, ARedirectURI,

@@ -59,7 +59,7 @@ begin
 end;
 ```
 
-Roles assigned in `Authenticate` flow into the JWT, so per-tool `[RolesAllowed]` filtering applies to OAuth users too. The login/consent page is plain HTML built by `TMCPOAuthServer.RenderAuthorizePage` — override it for branding (or render with WebStencils).
+Roles assigned in `Authenticate` flow into the JWT, so per-tool `[RolesAllowed]` filtering applies to OAuth users too. The login/consent page is plain HTML built by `TMCPOAuthServer.RenderAuthorizePage` (includes a small "built with MARS-Curiosity" badge) — override it for branding (or render with WebStencils), or call `TMCPOAuthServer.SetAuthorizePageTemplateFile('...')` to serve an HTML template file from disk (read on each render, falls back to the built-in page when missing; placeholders: `{client_name}`, `{scope}`, `{scope_note}`, `{error}`, `{hidden_fields}` — required inside the `<form method="post" action="authorize">` — and `{mars_footer}`; example: `Demos/MCPServer/CustomAuthorizePage.html`).
 
 `HandleWellKnownRequest` serves `oauth-protected-resource`, `oauth-authorization-server` AND `openid-configuration` (alias — several clients prefer OIDC-style discovery), and answers a clean **404 for any other `/.well-known/*` path**. That 404 matters: without the handler the engine answers 500 to unknown root paths and OAuth clients abort discovery instead of falling back.
 
