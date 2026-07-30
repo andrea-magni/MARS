@@ -28,6 +28,7 @@ uses
 type
   TMCPDataDispatcher = class(TMCPDispatcher)
   protected
+    function SerializationOptionsFor(const AMethod: TRttiMethod): TMARSJSONSerializationOptions; virtual;
     function BuildToolResult(const AMethod: TRttiMethod; const AValue: TValue): TJSONObject; override;
     function BuildResourceContents(const AInfo: TMCPResourceInfo; const AURI: string;
       const AValue: TValue): TJSONObject; override;
@@ -47,6 +48,17 @@ uses
 
 { TMCPDataDispatcher }
 
+function TMCPDataDispatcher.SerializationOptionsFor(
+  const AMethod: TRttiMethod): TMARSJSONSerializationOptions;
+begin
+  // same adjustment chain as TDataSetWriterJSON (resource then method attributes),
+  // so serialization attributes affect MCP results like standard HTTP responses
+  Result := DefaultMARSJSONSerializationOptions
+    .AdjustWith(FRttiContext.GetType(Instance.ClassType).GetAttributes);
+  if Assigned(AMethod) then
+    Result := Result.AdjustWith(AMethod.GetAttributes);
+end;
+
 function TMCPDataDispatcher.BuildToolResult(const AMethod: TRttiMethod;
   const AValue: TValue): TJSONObject;
 var
@@ -61,7 +73,7 @@ begin
 
     LStructured := TJSONObject.Create;
     try
-      LStructured.AddPair('rows', DataSetToJSONArray(LDataSet));
+      LStructured.AddPair('rows', DataSetToJSONArray(LDataSet, SerializationOptionsFor(AMethod)));
       LStructured.AddPair('rowCount', TJSONNumber.Create(LDataSet.RecordCount));
 
       Result := TJSONObject.Create;
@@ -93,7 +105,7 @@ begin
     Result := TJSONObject.Create;
     Result.AddPair('uri', AURI);
     Result.AddPair('mimeType', 'application/json');
-    LRows := DataSetToJSONArray(TDataSet(AValue.AsObject));
+    LRows := DataSetToJSONArray(TDataSet(AValue.AsObject), SerializationOptionsFor(AInfo.RttiMethod));
     try
       Result.AddPair('text', LRows.ToJSON);
     finally
