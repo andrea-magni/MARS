@@ -52,6 +52,12 @@ type
 
     [Test]
     procedure TestItemResourceWithInconsistentBody;
+
+    [Test]
+    procedure TestSpecificSiblingBeatsCatchAll;
+
+    [Test]
+    procedure TestCatchAllFallback;
   end;
 
 implementation
@@ -137,6 +143,31 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual(LMock.Response.ContentType, 'application/json', 'ContentType should be JSON');
+end;
+
+procedure TMARSDefaultEngineFixture.TestSpecificSiblingBeatsCatchAll;
+begin
+  // 'images/{*}' must win over the '{*}' catch-all, regardless of registration
+  // (dictionary) order: resource keys are sorted by specificity in CheckResource
+  var LMock := MockRequestAndResponse('GET', ResourcePath('images/logo.png'));
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.AreEqual('images', LMock.Response.Content, 'Request should be routed to TImagesResource, not to the catch-all');
+end;
+
+procedure TMARSDefaultEngineFixture.TestCatchAllFallback;
+begin
+  // URLs not matching any specific resource fall back to '{*}' (SPA scenario)
+  var LMock := MockRequestAndResponse('GET', ResourcePath('some/client/side/route'));
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.AreEqual('catch-all', LMock.Response.Content, 'Request should be routed to TCatchAllResource');
 end;
 
 procedure TMARSDefaultEngineFixture.TestWildcard;

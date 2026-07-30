@@ -30,6 +30,26 @@ type
     function GetContent: string;
   end;
 
+  // catch-all resource (SPA scenario: serve index.html for client-side routes)
+  [Path('{*}')]
+  TCatchAllResource = class
+  private
+  protected
+  public
+    [GET, Produces(TMediaType.TEXT_PLAIN)]
+    function GetContent: string;
+  end;
+
+  // specific sibling of the catch-all: must win over '{*}' on /images/* URLs
+  [Path('images/{*}')]
+  TImagesResource = class
+  private
+  protected
+  public
+    [GET, Produces(TMediaType.TEXT_PLAIN)]
+    function GetContent: string;
+  end;
+
   TItem = record
     Id: Integer;
     Description: string;
@@ -72,6 +92,20 @@ begin
     ''';
 end;
 
+{ TCatchAllResource }
+
+function TCatchAllResource.GetContent: string;
+begin
+  Result := 'catch-all';
+end;
+
+{ TImagesResource }
+
+function TImagesResource.GetContent: string;
+begin
+  Result := 'images';
+end;
+
 { THelloWorldResource }
 
 function THelloWorldResource.GetContent: string;
@@ -104,6 +138,7 @@ begin
 end;
 
 initialization
-  MARSRegister([THelloWorldResource, TWildcardResource, TItemResource]);
+  MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
+  , TCatchAllResource, TImagesResource]);
 
 end.

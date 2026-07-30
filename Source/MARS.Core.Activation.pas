@@ -182,7 +182,7 @@ type
 implementation
 
 uses
-  TypInfo, StrUtils
+  TypInfo, StrUtils, Generics.Defaults
 , MARS.Core.Attributes, MARS.Core.Response, MARS.Core.MessageBodyReader
 , MARS.Core.Exceptions, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Rtti.Utils
 , MARS.Core.Injection, MARS.Core.Activation.InjectionService
@@ -881,6 +881,20 @@ begin
     end;
 
   LResourcesKeys := Application.Resources.Keys.ToArray;
+  // sort by specificity: more segments first, non-wildcard before wildcard,
+  // so the most specific resource wins regardless of dictionary ordering
+  TArray.Sort<string>(LResourcesKeys, TComparer<string>.Construct(
+    function(const ALeft, ARight: string): Integer
+    begin
+      Result :=
+        Length(ARight.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty)) -
+        Length(ALeft.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty));
+      if Result = 0 then
+        Result := Ord(ALeft.Contains(TMARSURL.PATH_PARAM_WILDCARD)) -
+          Ord(ARight.Contains(TMARSURL.PATH_PARAM_WILDCARD));
+      if Result = 0 then
+        Result := CompareText(ALeft, ARight);
+    end));
   LFound := False;
   LURLRelativePathLength := Length(LURLRelativePath);
   for LAppResourceKey in LResourcesKeys do
