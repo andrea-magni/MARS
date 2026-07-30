@@ -24,12 +24,12 @@ type
   public
     constructor Create(const AMessage: string;
       const AStatus: Integer = 500;
-      const AContentType: string = TMediaType.TEXT_PLAIN;
+      const AContentType: string = TMediaType.TEXT_PLAIN_UTF8;
       const AReasonString: string = ''
     ); reintroduce; virtual;
     constructor CreateFmt(const AMessage: string; const Args: array of const;
       const AStatus: Integer = 500;
-      const AContentType: string = TMediaType.TEXT_PLAIN;
+      const AContentType: string = TMediaType.TEXT_PLAIN_UTF8;
       const AReasonString: string = ''
     ); reintroduce; virtual;
 

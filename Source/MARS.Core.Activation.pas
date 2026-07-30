@@ -756,7 +756,8 @@ procedure TMARSActivation.Invoke;
       {$IFDEF DEBUG}
       Response.Content := 'Internal server error: [' + AException.ClassName + '] ' + AException.Message;
       {$ENDIF}
-      Response.ContentType := TMediaType.TEXT_PLAIN;
+      // explicit charset: the message may contain non-ASCII characters (i.e. localized exception text)
+      Response.ContentType := TMediaType.TEXT_PLAIN_UTF8;
     end;
 
     DoInvokeError(AException);

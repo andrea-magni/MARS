@@ -66,6 +66,7 @@ type
     const CHARSET_UTF16_DEF = CHARSET_NAME + '=' +  CHARSET_UTF16;
 
     const TEXT_PLAIN = 'text/plain';
+    const TEXT_PLAIN_UTF8 = TEXT_PLAIN + DELIM_PARAMS + ' ' + CHARSET_UTF8_DEF;
     const TEXT_XML = 'text/xml';
     const TEXT_HTML = 'text/html';
     const TEXT_YAML = 'text/yaml';
