@@ -55,6 +55,11 @@ Registered by `MARS.Core.MessageBodyReaders.pas` (and data units):
 | `TStreamReader` | `TStream` | `application/octet-stream`, `*/*` |
 | `TFormParamReader` / `TArrayOfTFormParamReader` | `TFormParam`(s) | urlencoded, multipart |
 
+The JSON readers validate what they receive: if the body is missing or cannot be parsed as JSON
+where a record or object is expected, they raise `EMARSHttpException` with status `400`, and MARS
+keeps that status while wrapping the failure (see
+[Error Handling ▸ Errors while binding parameters](/server/error-handling#errors-while-binding-parameters)).
+
 So this method round-trips JSON with no extra code:
 
 ```pascal
@@ -131,3 +136,7 @@ Registering a custom **reader** follows the same shape with `TMARSMessageBodyRea
 ## Where this fits in the pipeline
 
 Readers run during **setup** (when binding `[BodyParam]` and friends); writers run during **invocation**, right after your method returns, to fill `Response.ContentStream`. See [Request Lifecycle](/server/request-lifecycle).
+
+Because readers run before your method body, an exception raised there never reaches your code: it
+becomes the response. Raise `EMARSHttpException.Create('…', 400)` from a custom reader to reject
+invalid input with a proper client-error status.

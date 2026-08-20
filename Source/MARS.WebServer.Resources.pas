@@ -217,9 +217,9 @@ begin
 
   LFullPath := RootFolder;
   // MF20260319
-  // NON usare SmartConcat per costruire il path finale: su Linux stripa il '/' iniziale
-  // rendendo il path relativo invece che assoluto (es. 'app/swagger...' invece di '/app/swagger...').
-  // Usiamo concatenazione diretta preservando il path assoluto.
+  // Do NOT use SmartConcat to build the final path: on Linux it strips the leading '/'
+  // making the path relative instead of absolute (i.e. 'app/swagger...' instead of '/app/swagger...').
+  // Direct concatenation is used instead, preserving the absolute path.
   if not LFullPath.EndsWith(PathDelim) then
     LFullPath := LFullPath + PathDelim;
   LFullPath := LFullPath + LRelativePath;
@@ -354,11 +354,11 @@ function RootFolderAttribute.ExpandMacros(const AString: string): string;
 begin
   Result := AString
     .Replace('{bin}', ExtractFilePath(ParamStr(0)))
-    .Replace('\\', PathDelim, [rfReplaceAll])  // doppio backslash → separatore
-    .Replace('\', PathDelim, [rfReplaceAll]);   // backslash singolo → separatore
+    .Replace('\\', PathDelim, [rfReplaceAll])  // double backslash -> path separator
+    .Replace('\', PathDelim, [rfReplaceAll]);   // single backslash -> path separator
   // MF20260319
-  // Su Windows PathDelim = '\', comportamento invariato.
-  // Su Linux   PathDelim = '/', converte i backslash in slash.
+  // On Windows PathDelim = '\', behavior unchanged.
+  // On Linux   PathDelim = '/', backslashes are converted to slashes.
 end;
 
 { ContentTypeForFileExt }
@@ -367,7 +367,9 @@ procedure ContentTypeForFileExt.ApplyToResource(
   const AResource: TFileSystemResource);
 begin
   inherited;
-  AResource.ContentTypesForExt.Add(FFileExt, FContentType);
+  // AddOrSetValue (not Add): the defaults set by InitContentTypesForExt are already
+  // there, so this attribute can both add a new extension and override a known one.
+  AResource.ContentTypesForExt.AddOrSetValue(FFileExt, FContentType);
 end;
 
 constructor ContentTypeForFileExt.Create(AContentType: string;

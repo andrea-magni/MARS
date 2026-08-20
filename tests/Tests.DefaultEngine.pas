@@ -51,7 +51,19 @@ type
     procedure TestWildcard;
 
     [Test]
+    procedure TestItemResourceWithValidBody;
+
+    [Test]
     procedure TestItemResourceWithInconsistentBody;
+
+    [Test]
+    procedure TestItemResourceWithEmptyBody;
+
+    [Test]
+    procedure TestSingleItemResourceWithValidBody;
+
+    [Test]
+    procedure TestSingleItemResourceWithNonObjectBody;
 
     [Test]
     procedure TestSpecificSiblingBeatsCatchAll;
@@ -126,22 +138,63 @@ begin
   Assert.AreEqual('Hello, World!', LMock.Response.Content, 'Content should be Hello, World!');
 end;
 
+procedure TMARSDefaultEngineFixture.TestItemResourceWithValidBody;
+begin
+  var LMock := MockRequestAndResponse('POST', ResourcePath('item')
+  , '[{ "Id": 1, "Description": "Andrea" }, { "Id": 2, "Description": "Marco" }]');
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.AreEqual('{"result":2}', LMock.Response.Content, 'Both items should be bound to the array parameter');
+end;
+
 procedure TMARSDefaultEngineFixture.TestItemResourceWithInconsistentBody;
 begin
-//  var LMock := MockRequestAndResponse('POST', ResourcePath('item')
-//  , '''
-//    [
-//      { "Id": 1, "Description": "Andrea" }
-//    , { "Id": 2, "Description": "Marco" }
-//    ]
-//    '''
-//  );
+  // a JSON array whose items are not objects cannot fill a TArray<TItem>: client error
   var LMock := MockRequestAndResponse('POST', ResourcePath('item'), '[1,2,3,4]');
 
   var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
 
   Assert.IsTrue(LHandled, 'Request should be handled');
-  Assert.AreEqual(500, LMock.Response.StatusCode, 'Status code should be 500 (malformed body)');
+  Assert.AreEqual(400, LMock.Response.StatusCode, 'Status code should be 400 (malformed body)');
+  Assert.AreEqual(TMediaType.TEXT_PLAIN_UTF8, LMock.Response.ContentType, 'ContentType should be text UTF8');
+end;
+
+procedure TMARSDefaultEngineFixture.TestItemResourceWithEmptyBody;
+begin
+  // a record parameter cannot be filled without a body (an array one just stays empty)
+  var LMock := MockRequestAndResponse('POST', ResourcePath('item/single'), '');
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(400, LMock.Response.StatusCode, 'Status code should be 400 (missing body)');
+  Assert.AreEqual(TMediaType.TEXT_PLAIN_UTF8, LMock.Response.ContentType, 'ContentType should be text UTF8');
+end;
+
+procedure TMARSDefaultEngineFixture.TestSingleItemResourceWithValidBody;
+begin
+  var LMock := MockRequestAndResponse('POST', ResourcePath('item/single')
+  , '{ "Id": 123, "Description": "Andrea" }');
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.AreEqual('{"result":123}', LMock.Response.Content, 'The record parameter should be bound');
+end;
+
+procedure TMARSDefaultEngineFixture.TestSingleItemResourceWithNonObjectBody;
+begin
+  // valid JSON, but not an object: a record parameter cannot be filled with it
+  var LMock := MockRequestAndResponse('POST', ResourcePath('item/single'), '[1,2]');
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(400, LMock.Response.StatusCode, 'Status code should be 400 (malformed body)');
   Assert.AreEqual(TMediaType.TEXT_PLAIN_UTF8, LMock.Response.ContentType, 'ContentType should be text UTF8');
 end;
 

@@ -218,7 +218,7 @@ function TRecordReader.ReadFrom(
   const AActivation: IMARSActivation
 ): TValue;
 var
-  LJSON: TJSONObject;
+  LJSON: TJSONValue;
   LRequest: IMARSRequest;
 begin
   Result := TValue.Empty;
@@ -240,17 +240,22 @@ begin
   end
   else
   begin
+    // Missing body, or body not parsable as JSON. Without this guard the reader
+    // returned TValue.Empty, the record parameter of the resource method was
+    // injected as a "ghost" value and the first access to its fields ended up in
+    // an Access Violation (500). A malformed body is a client error: 400.
     LJSON := TJSONValueReader.ReadJSONValue(
-      AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
-    // Patch locale: body assente o non parsabile come oggetto JSON. Senza questo
-    // guard il reader ritornava TValue.Empty, il parametro record del metodo
-    // resource veniva iniettato "fantasma" e il primo accesso ai campi finiva in
-    // Access Violation (500). Un body malformato è un errore del client: 400.
+      AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
     if not Assigned(LJSON) then
       raise EMARSHttpException.Create(
         'Malformed or missing request body (JSON object expected)', 400);
     try
-      Result := LJSON.ToRecord(ADestination.GetRttiType);
+      // valid JSON, but not an object where a record is expected: still a client error
+      if not (LJSON is TJSONObject) then
+        raise EMARSHttpException.Create(
+          'Malformed request body (JSON object expected)', 400);
+
+      Result := TJSONObject(LJSON).ToRecord(ADestination.GetRttiType);
     finally
       LJSON.Free;
     end;
@@ -269,10 +274,10 @@ begin
   Result := TValue.Empty;
 
   LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
-  // Patch locale: body assente o non parsabile, o JSON che non è un oggetto, per
-  // un parametro [BodyParam] di tipo classe. Senza questo guard il reader
-  // ritornava TValue.Empty, il metodo resource riceveva un'istanza nil e il primo
-  // accesso ai campi finiva in Access Violation (500). Errore del client: 400.
+  // Missing body, body not parsable, or JSON that is not an object, for a
+  // [BodyParam] of a class type. Without this guard the reader returned
+  // TValue.Empty, the resource method received a nil instance and the first
+  // access to its fields ended up in an Access Violation (500). Client error: 400.
   if not Assigned(LJSON) then
     raise EMARSHttpException.Create(
       'Malformed or missing request body (JSON expected)', 400);
@@ -316,48 +321,60 @@ begin
   if not (LElementType is TRttiInstanceType) then
     Exit;
 
+  // A missing (or unparsable) body keeps yielding an empty array, but a body the
+  // client got wrong (JSON that is not an array of objects) is a 400, not a 500.
   LJSONValue := TJSONValueReader.ReadJSONValue(
     AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
-  if Assigned(LJSONValue) then
-    try
-      TValue.Make(nil, LArrayType.Handle, LArray);
-      if LJSONValue is TJSONArray then
+  if not Assigned(LJSONValue) then
+    Exit;
+  try
+    TValue.Make(nil, LArrayType.Handle, LArray);
+    if LJSONValue is TJSONArray then
+    begin
+      LJSONArray := TJSONArray(LJSONValue);
+      // validate the whole array before building anything: a partially built
+      // array would leak the elements created so far
+      for LIndex := 0 to LJSONArray.Count-1 do
+        if not (LJSONArray.Items[LIndex] is TJSONObject) then
+          raise EMARSHttpException.CreateFmt(
+            'Malformed request body (JSON object expected at index %d)', [LIndex], 400);
+
+      LNewLength := LJSONArray.Count;
+      SetArrayLength(LArray, LArrayType, @LNewLength);
+      //------------------------
+      for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
       begin
-        LJSONArray := TJSONArray(LJSONValue);
-        LNewLength := LJSONArray.Count;
-        SetArrayLength(LArray, LArrayType, @LNewLength);
-        //------------------------
-        for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
-        begin
-          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
-          if Assigned(LJSONObject) then
-            LArray.SetArrayElement(
-                LIndex
-              , TJSONObject.JSONToObject(
-                  TRttiInstanceType(LElementType).MetaclassType
-                , LJSONObject
-              )
-            );
-        end;
-      end
-      else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
-      begin
-        LNewLength := 1;
-        SetArrayLength(LArray, LArrayType, @LNewLength);
-        //------------------------
+        LJSONObject := TJSONObject(LJSONArray.Items[LIndex]);
         LArray.SetArrayElement(
-            0
+            LIndex
           , TJSONObject.JSONToObject(
-                TRttiInstanceType(LElementType).MetaclassType
-              , TJSONObject(LJSONValue)
-            )
+              TRttiInstanceType(LElementType).MetaclassType
+            , LJSONObject
+          )
         );
       end;
+    end
+    else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
+    begin
+      LNewLength := 1;
+      SetArrayLength(LArray, LArrayType, @LNewLength);
+      //------------------------
+      LArray.SetArrayElement(
+          0
+        , TJSONObject.JSONToObject(
+              TRttiInstanceType(LElementType).MetaclassType
+            , TJSONObject(LJSONValue)
+          )
+      );
+    end
+    else
+      raise EMARSHttpException.Create(
+        'Malformed request body (JSON array expected)', 400);
 
-      Result := LArray;
-    finally
-      LJSONValue.Free;
-    end;
+    Result := LArray;
+  finally
+    LJSONValue.Free;
+  end;
 end;
 
 
@@ -384,36 +401,47 @@ begin
   if not Assigned(LElementType) then
     Exit;
 
+  // A missing (or unparsable) body keeps yielding an empty array, but a body the
+  // client got wrong (JSON that is not an array of objects) is a 400, not a 500.
   LJSONValue := TJSONValueReader.ReadJSONValue(
     AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
-  if Assigned(LJSONValue) then
-    try
-      TValue.Make(nil, LArrayType.Handle, LArray);
-      if LJSONValue is TJSONArray then
-      begin
-        LJSONArray := TJSONArray(LJSONValue);
-        LNewLength := LJSONArray.Count;
-        SetArrayLength(LArray, LArrayType, @LNewLength);
-        //------------------------
-        for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
-        begin
-          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
-          if Assigned(LJSONObject) then
-            LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LElementType));
-        end;
-      end
-      else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
-      begin
-        LNewLength := 1;
-        SetArrayLength(LArray, LArrayType, @LNewLength);
-        //------------------------
-        LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LElementType));
-      end;
+  if not Assigned(LJSONValue) then
+    Exit;
+  try
+    TValue.Make(nil, LArrayType.Handle, LArray);
+    if LJSONValue is TJSONArray then
+    begin
+      LJSONArray := TJSONArray(LJSONValue);
+      // validate the whole array before building anything, as in TArrayOfObjectReader
+      for LIndex := 0 to LJSONArray.Count-1 do
+        if not (LJSONArray.Items[LIndex] is TJSONObject) then
+          raise EMARSHttpException.CreateFmt(
+            'Malformed request body (JSON object expected at index %d)', [LIndex], 400);
 
-      Result := LArray;
-    finally
-      LJSONValue.Free;
-    end;
+      LNewLength := LJSONArray.Count;
+      SetArrayLength(LArray, LArrayType, @LNewLength);
+      //------------------------
+      for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
+      begin
+        LJSONObject := TJSONObject(LJSONArray.Items[LIndex]);
+        LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LElementType));
+      end;
+    end
+    else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
+    begin
+      LNewLength := 1;
+      SetArrayLength(LArray, LArrayType, @LNewLength);
+      //------------------------
+      LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LElementType));
+    end
+    else
+      raise EMARSHttpException.Create(
+        'Malformed request body (JSON array expected)', 400);
+
+    Result := LArray;
+  finally
+    LJSONValue.Free;
+  end;
 end;
 
 { TStringReader }

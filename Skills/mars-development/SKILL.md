@@ -59,7 +59,7 @@ Records, arrays of records, objects, `TJSONObject`/`TJSONArray`, strings, number
 
 Returned objects (class instances) are freed by MARS after writing the response. Mark the method `[IsReference]` when returning a shared/long-lived instance that must NOT be freed.
 
-Raise `EMARSHttpException.Create('Not found', 404)` for error statuses; raise `EMARSWithResponseException` to return a structured (JSON) error body. Both are in `MARS.Core.Exceptions`.
+Raise `EMARSHttpException.Create('Not found', 404)` for error statuses; raise `EMARSWithResponseException` to return a structured (JSON) error body. Both are in `MARS.Core.Exceptions`. Exceptions raised while binding parameters (custom MessageBodyReaders included) keep their status if they are `EMARSHttpException`, otherwise they become a 500: the built-in JSON readers use this to answer 400 when the request body is missing or malformed.
 
 ## Reference files — read the one matching the task
 

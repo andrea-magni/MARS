@@ -16,10 +16,66 @@ type
 ```
 
 - `{*}` captures the remainder of the URL as the file path within the root.
-- The second `[RootFolder]` argument (`True`) enables serving an index document for directory requests.
+- The second `[RootFolder]` argument is `IncludeSubFolders`.
 - `[RootFolder]` supports placeholders like `{bin}` for the executable folder, e.g. `RootFolder('{bin}\..\..\..\www\swagger-ui-3.52.5-dist', True)` — used to ship Swagger UI (see [OpenAPI](/features/openapi)).
 
+A request pointing at a directory serves the first match among `IndexFileNames`
+(`index.html`, `index.htm`, `default.html`, `default.htm`) and, failing that, a minimal HTML listing
+of the directory. Non-matching paths produce a `404`.
+
 This is also how the [SSEDemo](/demos/#ssedemo) and OpenAPI/Swagger setup serve their HTML/JS assets.
+
+### Content types and charset
+
+The extension of the file selects the `Content-Type` header, from a dictionary initialized in the
+virtual `InitContentTypesForExt` method; unknown extensions fall back to
+`application/octet-stream`. **Textual types are declared as UTF-8**:
+
+| Extension | Content-Type |
+| --- | --- |
+| `.htm`, `.html` | `text/html; charset=utf-8` |
+| `.css` | `text/css; charset=utf-8` |
+| `.js` | `application/javascript; charset=utf-8` |
+| `.txt` | `text/plain; charset=utf-8` |
+| `.jpg`, `.jpeg` | `image/jpeg` |
+| `.png` | `image/png` |
+| `.pdf` | `application/pdf` |
+
+The explicit `charset` matters: an HTTP `text/*` response that does not declare one is interpreted by
+the client with its own default (historically ISO-8859-1), and the header wins over the file's BOM,
+over a page's `<meta charset>` and over a stylesheet's `@charset`. Since files on disk are UTF-8
+nowadays, declaring it here is what keeps accented characters intact. The bytes of the file are
+served untouched — only the declaration changed. The HTML directory listing is served as
+`text/html; charset=utf-8` for the same reason (entry names may contain non-ASCII characters).
+
+Add or override a mapping with `[ContentTypeForFileExt]`, which is applied after the defaults:
+
+```pascal
+type
+  [ Path('www/{*}'), RootFolder('.\www', True)
+  , ContentTypeForFileExt('image/svg+xml', '.svg')          // new extension
+  , ContentTypeForFileExt('text/plain; charset=iso-8859-1', '.txt')  // override
+  ]
+  TStaticContentResource = class(TFileSystemResource)
+  end;
+```
+
+The dictionary is also reachable in code: override the virtual `InitContentTypesForExt` when the
+mapping is easier to express there (e.g. serving legacy files in another encoding):
+
+```pascal
+type
+  TLegacyContentResource = class(TFileSystemResource)
+  protected
+    procedure InitContentTypesForExt; override;
+  end;
+
+procedure TLegacyContentResource.InitContentTypesForExt;
+begin
+  inherited;
+  ContentTypesForExt.AddOrSetValue('.txt', 'text/plain; charset=iso-8859-1');
+end;
+```
 
 ## Returning HTML from a method
 

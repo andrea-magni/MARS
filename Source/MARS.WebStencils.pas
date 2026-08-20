@@ -144,8 +144,8 @@ function TMARSWebStencils.ExpandMacros(const AString: string): string;
 begin
   Result := AString
     .Replace('{bin}', ExtractFilePath(ParamStr(0)))
-    .Replace('\\', PathDelim, [rfReplaceAll])  // doppio backslash → separatore
-    .Replace('\', PathDelim, [rfReplaceAll]);   // backslash singolo → separatore
+    .Replace('\\', PathDelim, [rfReplaceAll])  // double backslash -> path separator
+    .Replace('\', PathDelim, [rfReplaceAll]);   // single backslash -> path separator
 end;
 
 

@@ -136,7 +136,7 @@ function Search(
 ): TResult;
 ```
 
-`[BodyParam]` deserializes the whole request body (using a [MessageBodyReader](/server/content-negotiation)) into the parameter type — a record, object, `TJSONValue`, `TArray<…>`, `TStream`, etc.
+`[BodyParam]` deserializes the whole request body (using a [MessageBodyReader](/server/content-negotiation)) into the parameter type — a record, object, `TJSONValue`, `TArray<…>`, `TStream`, etc. If the body is missing or cannot be parsed where JSON is expected, the request is rejected with `400 Bad Request` before the method runs (see [Error Handling](/server/error-handling#errors-while-binding-parameters)).
 
 ## Resource state and `[Context]` fields
 

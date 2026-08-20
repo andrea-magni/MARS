@@ -375,12 +375,13 @@ begin
       FMethodArguments[LIndex] := GetMethodArgument(LParameter);
     end;
   except
-    // Preserve status of HTTP exceptions (i.e. 400 of
-    // malformed body raised by MessageBodyReader) instead of 
+    // Preserve status, content type and reason of HTTP exceptions (i.e. 400 of
+    // malformed body raised by MessageBodyReader) instead of
     // raising default 500 status in all cases.
     on E: EMARSHttpException do
       raise EMARSApplicationException.CreateFmt(
-        'Bad parameter value for method %s.%s (%s). %s', [FResource.Name, FMethod.Name, FURLPrototype.Path, E.Message], E.Status);
+        'Bad parameter value for method %s.%s (%s). %s', [FResource.Name, FMethod.Name, FURLPrototype.Path, E.Message]
+      , E.Status, E.ContentType, E.ReasonString);
     on E: Exception do
       raise EMARSApplicationException.CreateFmt(
         'Bad parameter value for method %s.%s (%s). %s', [FResource.Name, FMethod.Name, FURLPrototype.Path, E.Message]);

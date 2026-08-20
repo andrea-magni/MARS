@@ -36,7 +36,7 @@ If your method raises, control jumps to **error handling** (see below and [Error
 4. **Authentication** — if the endpoint requires it, the [token](/features/authentication) must be present, verified and not expired; otherwise `403` is raised. Expired tokens are cleared.
 5. **Authorization** — `[DenyAll]` always denies; `[PermitAll]` always allows; otherwise the token must hold at least one allowed role. See [Authorization](/features/authorization).
 6. **Instantiation** — the resource class is constructed for this request.
-7. **Argument resolution** — each method parameter is filled by binding (`[PathParam]`, `[QueryParam]`, `[BodyParam]`, …) or by `[Context]` injection.
+7. **Argument resolution** — each method parameter is filled by binding (`[PathParam]`, `[QueryParam]`, `[BodyParam]`, …) or by `[Context]` injection. A failure here never reaches your method: it becomes an `EMARSApplicationException` naming resource, method and path, keeping the status of the original exception when it is an `EMARSHttpException` (so a malformed body is a `400`, not a `500`) — see [Error Handling](/server/error-handling#errors-while-binding-parameters).
 8. **Context injection** — `[Context]` fields and properties on the resource are set.
 
 ## Invocation phase

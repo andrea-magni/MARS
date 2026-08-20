@@ -17,7 +17,9 @@ Exception
          └─ EMARSWithResponseException    (status + structured body)
 ```
 
-Any exception that is **not** a MARS HTTP exception becomes `500 Internal Server Error`.
+Any exception that is **not** a MARS HTTP exception becomes `500 Internal Server Error`, with a
+generic `Internal server error` body (the exception class and message are appended only in `DEBUG`
+builds, so production servers do not leak internals).
 
 ## `EMARSHttpException` — status + message
 
@@ -26,7 +28,7 @@ The workhorse. Raise it to return a specific HTTP status with a plain-text (or c
 ```pascal
 constructor Create(const AMessage: string;
   const AStatus: Integer = 500;
-  const AContentType: string = TMediaType.TEXT_PLAIN;
+  const AContentType: string = TMediaType.TEXT_PLAIN_UTF8;
   const AReasonString: string = '');
 ```
 
@@ -46,6 +48,12 @@ raise EMARSHttpException.CreateFmt('Item %d not found', [id], 404);
 ```
 
 The exception's `Status`, `ContentType` and `ReasonString` map directly onto the response.
+
+::: tip Charset
+The default content type is `text/plain; charset=utf-8` (`TMediaType.TEXT_PLAIN_UTF8`), so a message
+containing non-ASCII characters (a localized exception text, a file name, …) reaches the client
+intact. The same applies to the generic `500` body produced for non-MARS exceptions.
+:::
 
 ## `EMARSWithResponseException` — structured error body
 
@@ -98,8 +106,48 @@ The client receives status `530` and a JSON body describing the error.
 | `EMARSMethodNotFoundException` | 404 | No method matches the verb/path. |
 | `EMARSAuthenticationException` | 403 | Authentication required but the token is missing/invalid/expired. |
 | `EMARSAuthorizationException` | 403 | The token lacks an allowed role. |
+| `EMARSApplicationException` | 400 | A parameter could not be bound because the request body is missing or malformed (see below). |
+| `EMARSApplicationException` | 500 | Any other failure while binding a parameter value. |
 
 You can catch and re-map these in an invoke-error hook if you want different status codes or bodies.
+
+## Errors while binding parameters
+
+Parameter binding happens during the setup phase, before your method body runs (see
+[Request Lifecycle](/server/request-lifecycle)). When a binder or a
+[MessageBodyReader](/server/content-negotiation) raises, MARS wraps the failure in an
+`EMARSApplicationException` whose message names the resource, the method and the path:
+
+```
+Bad parameter value for method TItemResource.Create (/items).
+Malformed or missing request body (JSON object expected)
+```
+
+If the original exception is an `EMARSHttpException`, **its status is preserved** through the
+wrapping; anything else falls back to `500`. This is what lets a reader classify bad input as a
+client error:
+
+```pascal
+// inside a custom IMessageBodyReader
+if not Assigned(LJSON) then
+  raise EMARSHttpException.Create('Malformed or missing request body', 400);
+```
+
+The built-in JSON readers already do this. A body that the client got wrong — absent, not parsable,
+or not shaped like the parameter it has to fill — produces a clean `400 Bad Request`, instead of the
+`500` (or the silently empty value, later surfacing as an access violation on first field access) of
+earlier versions:
+
+| `POST /items` body | `[BodyParam] AItem: TItem` (record or class) | `[BodyParam] AItems: TArray<TItem>` |
+| --- | --- | --- |
+| `{"id":1,…}` | bound | bound (array of one element) |
+| `[{"id":1,…},{"id":2,…}]` | `400` — JSON object expected | bound |
+| `[1,2,3]` | `400` — JSON object expected | `400` — JSON object expected at index 0 |
+| `42`, `"text"` | `400` — JSON object expected | `400` — JSON array expected |
+| *(empty body)*, `not json at all` | `400` — malformed or missing body | empty array |
+
+Follow the same convention in your own readers: raise `EMARSHttpException` with `400` for input the
+client got wrong, and let genuinely unexpected failures surface as `500`.
 
 ## Centralized error handling
 

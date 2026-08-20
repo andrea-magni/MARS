@@ -12,6 +12,7 @@ function GetData: TData;
 | Constant | Value |
 | --- | --- |
 | `TMediaType.TEXT_PLAIN` | `text/plain` |
+| `TMediaType.TEXT_PLAIN_UTF8` | `text/plain; charset=utf-8` |
 | `TMediaType.TEXT_XML` | `text/xml` |
 | `TMediaType.TEXT_HTML` | `text/html` |
 | `TMediaType.TEXT_YAML` | `text/yaml` |
@@ -29,6 +30,24 @@ function GetData: TData;
 | `TMediaType.APPLICATION_PDF` | `application/pdf` |
 | `TMediaType.MULTIPART_FORM_DATA` | `multipart/form-data` |
 | `TMediaType.WILDCARD` | `*/*` |
+
+## Charset constants
+
+| Constant | Value |
+| --- | --- |
+| `TMediaType.CHARSET_NAME` | `charset` |
+| `TMediaType.CHARSET_UTF8` | `utf-8` |
+| `TMediaType.CHARSET_UTF8_DEF` | `charset=utf-8` |
+| `TMediaType.CHARSET_UTF16` / `…_DEF` | `utf-16` / `charset=utf-16` |
+| `TMediaType.CHARSET_ISO_8859_1` / `…_DEF` | `iso-8859-1` / `charset=iso-8859-1` |
+
+Use them to build a content type that declares its encoding, e.g.
+`TMediaType.TEXT_HTML + '; ' + TMediaType.CHARSET_UTF8_DEF`. This matters for textual responses:
+without an explicit `charset`, the client applies its own default (historically ISO-8859-1) and
+non-ASCII characters get mangled. MARS declares UTF-8 on the error responses it produces
+(`TEXT_PLAIN_UTF8` is the default content type of [`EMARSHttpException`](/server/error-handling)) and
+on the textual files served by `TFileSystemResource` (see
+[HTML & Templates](/features/templates#content-types-and-charset)).
 
 ## Notes
 

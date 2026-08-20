@@ -63,6 +63,9 @@ type
     [POST]
     function ConsumeAll([BodyParam] const AData: TArray<TItem>): Integer;
 
+    [POST, Path('/single')]
+    function ConsumeOne([BodyParam] const AItem: TItem): Integer;
+
     [GET, Path('/{id}')]
     function Retrieve([PathParam] id: Integer): TItem;
 
@@ -118,6 +121,11 @@ end;
 function TItemResource.ConsumeAll(const AData: TArray<TItem>): Integer;
 begin
   Result := Length(AData);
+end;
+
+function TItemResource.ConsumeOne(const AItem: TItem): Integer;
+begin
+  Result := AItem.Id;
 end;
 
 function TItemResource.Retrieve(id: Integer): TItem;
