@@ -146,7 +146,7 @@ uses
   StrUtils, NetEncoding, Generics.Collections
 {$ifdef DelphiXE7_UP}, System.JSON {$endif}
 , Xml.XMLIntf, XMLDoc
-, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions
 ;
 
 { TJSONValueReader }
@@ -242,12 +242,18 @@ begin
   begin
     LJSON := TJSONValueReader.ReadJSONValue(
       AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
-    if Assigned(LJSON) then
-      try
-        Result := LJSON.ToRecord(ADestination.GetRttiType);
-      finally
-        LJSON.Free;
-      end;
+    // Patch locale: body assente o non parsabile come oggetto JSON. Senza questo
+    // guard il reader ritornava TValue.Empty, il parametro record del metodo
+    // resource veniva iniettato "fantasma" e il primo accesso ai campi finiva in
+    // Access Violation (500). Un body malformato è un errore del client: 400.
+    if not Assigned(LJSON) then
+      raise EMARSHttpException.Create(
+        'Malformed or missing request body (JSON object expected)', 400);
+    try
+      Result := LJSON.ToRecord(ADestination.GetRttiType);
+    finally
+      LJSON.Free;
+    end;
   end;
 end;
 
@@ -263,16 +269,25 @@ begin
   Result := TValue.Empty;
 
   LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
-  if Assigned(LJSON) then
-    try
-      if (LJSON is TJSONObject) and (ADestination.GetRttiType is TRttiInstanceType) then
-        Result := TJSONObject.JSONToObject(
-          TRttiInstanceType(ADestination.GetRttiType).MetaclassType
-          , TJSONObject(LJSON)
-          );
-    finally
-      LJSON.Free;
-    end;
+  // Patch locale: body assente o non parsabile, o JSON che non è un oggetto, per
+  // un parametro [BodyParam] di tipo classe. Senza questo guard il reader
+  // ritornava TValue.Empty, il metodo resource riceveva un'istanza nil e il primo
+  // accesso ai campi finiva in Access Violation (500). Errore del client: 400.
+  if not Assigned(LJSON) then
+    raise EMARSHttpException.Create(
+      'Malformed or missing request body (JSON expected)', 400);
+  try
+    if (LJSON is TJSONObject) and (ADestination.GetRttiType is TRttiInstanceType) then
+      Result := TJSONObject.JSONToObject(
+        TRttiInstanceType(ADestination.GetRttiType).MetaclassType
+        , TJSONObject(LJSON)
+        )
+    else
+      raise EMARSHttpException.Create(
+        'Malformed request body (JSON object expected)', 400);
+  finally
+    LJSON.Free;
+  end;
 end;
 
 
@@ -314,9 +329,8 @@ begin
         //------------------------
         for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
         begin
-          if LJSONArray.Items[LIndex] is TJSONObject then
-          begin
-            LJSONObject := TJSONObject(LJSONArray.Items[LIndex]);
+          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
+          if Assigned(LJSONObject) then
             LArray.SetArrayElement(
                 LIndex
               , TJSONObject.JSONToObject(
@@ -324,7 +338,6 @@ begin
                 , LJSONObject
               )
             );
-          end; // else: just skip as we don't know how to handle a non-object value
         end;
       end
       else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
@@ -384,11 +397,9 @@ begin
         //------------------------
         for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
         begin
-          if LJSONArray.Items[LIndex] is TJSONObject then
-          begin
-            LJSONObject := TJSONObject(LJSONArray.Items[LIndex]);
+          LJSONObject := LJSONArray.Items[LIndex] as TJSONObject;
+          if Assigned(LJSONObject) then
             LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LElementType));
-          end;
         end;
       end
       else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element

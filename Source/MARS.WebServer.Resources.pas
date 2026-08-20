@@ -253,17 +253,26 @@ begin
 end;
 
 procedure TFileSystemResource.InitContentTypesForExt;
+// Explicit charset on TEXTUAL types. Without it, the HTTP layer (Indy) applies
+// its own default to a text/* that doesn't declare one — ISO-8859-1, the HTTP/1.0 default
+// that RFC 7231 removed — and files, which today are UTF-8, reach the client corrupted.
+// It has to be declared HERE because the header takes precedence over everything else: over
+// the BOM, over a page's `<meta charset>`, and over a stylesheet's `@charset`. The content is
+// not touched — these are the file's bytes, which the resource does not decode: we are simply
+// no longer declaring them as something they aren't. Anyone serving files in a legacy encoding
+// remaps the extension: the method is virtual for that very reason.
+const
+  UTF8 = '; ' + TMediaType.CHARSET_UTF8_DEF;
 begin
   ContentTypesForExt.Add('.jpg', 'image/jpeg');
   ContentTypesForExt.Add('.jpeg', 'image/jpeg');
   ContentTypesForExt.Add('.png', 'image/png');
   ContentTypesForExt.Add('.pdf', 'application/pdf');
-  ContentTypesForExt.Add('.htm', 'text/html');
-  ContentTypesForExt.Add('.html', 'text/html');
-  ContentTypesForExt.Add('.js', 'application/javascript');
-  ContentTypesForExt.Add('.css', 'text/css');
-  ContentTypesForExt.Add('.txt', 'text/plain');
-
+  ContentTypesForExt.Add('.htm', 'text/html' + UTF8);
+  ContentTypesForExt.Add('.html', 'text/html' + UTF8);
+  ContentTypesForExt.Add('.js', 'application/javascript' + UTF8);
+  ContentTypesForExt.Add('.css', 'text/css' + UTF8);
+  ContentTypesForExt.Add('.txt', 'text/plain' + UTF8);
 end;
 
 procedure TFileSystemResource.InitIndexFileNames;
@@ -284,7 +293,10 @@ var
   LIsFolder: Boolean;
 begin
   AResponse.StatusCode := 200;
-  AResponse.ContentType := TMediaType.TEXT_HTML;
+// Explicit charset, same as for files. Here the content is composed by MARS and
+// the NAMES of the directory entries end up in it — outside ASCII, without this they would
+// come out as ISO-8859-1 (or mangled, if they don't fit that encoding).
+  AResponse.ContentType := TMediaType.TEXT_HTML + '; ' + TMediaType.CHARSET_UTF8_DEF;
   AResponse.Content := '<html><body><ul>';
 
   LEntries := TDirectory.GetFileSystemEntries(ADirectory);
