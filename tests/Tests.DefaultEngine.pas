@@ -6,7 +6,7 @@ uses
   Classes, SysUtils, Rtti, Types, TypInfo, Contnrs
 , DUnitX.TestFramework
 , MARS.Core.Activation, MARS.Core.Activation.Interfaces
-, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.RequestAndResponse.Interfaces, MARS.Core.MediaType
 
 , Tests.DefaultEngine.Definition
 ;
@@ -141,8 +141,8 @@ begin
   var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
 
   Assert.IsTrue(LHandled, 'Request should be handled');
-  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
-  Assert.AreEqual(LMock.Response.ContentType, 'application/json', 'ContentType should be JSON');
+  Assert.AreEqual(500, LMock.Response.StatusCode, 'Status code should be 500 (malformed body)');
+  Assert.AreEqual(TMediaType.TEXT_PLAIN_UTF8, LMock.Response.ContentType, 'ContentType should be text UTF8');
 end;
 
 procedure TMARSDefaultEngineFixture.TestSpecificSiblingBeatsCatchAll;
