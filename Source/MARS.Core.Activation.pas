@@ -375,6 +375,12 @@ begin
       FMethodArguments[LIndex] := GetMethodArgument(LParameter);
     end;
   except
+    // Preserve status of HTTP exceptions (i.e. 400 of
+    // malformed body raised by MessageBodyReader) instead of 
+    // raising default 500 status in all cases.
+    on E: EMARSHttpException do
+      raise EMARSApplicationException.CreateFmt(
+        'Bad parameter value for method %s.%s (%s). %s', [FResource.Name, FMethod.Name, FURLPrototype.Path, E.Message], E.Status);
     on E: Exception do
       raise EMARSApplicationException.CreateFmt(
         'Bad parameter value for method %s.%s (%s). %s', [FResource.Name, FMethod.Name, FURLPrototype.Path, E.Message]);
@@ -882,8 +888,13 @@ begin
     end;
 
   LResourcesKeys := Application.Resources.Keys.ToArray;
-  // sort by specificity: more segments first, non-wildcard before wildcard,
-  // so the most specific resource wins regardless of dictionary ordering
+  // ND20260729: Dictionary key order is not deterministic; 
+  // if the application registers a catch-all {*} alongside more 
+  // specific resources (e.g. '{*}' and 'images/{*}'), the catch-all 
+  // could intercept everything. We sort by specificity: keys 
+  // with more segments first, and among those with the same 
+  // number of segments, the ones without wildcards first
+  // so the most specific match always wins.
   TArray.Sort<string>(LResourcesKeys, TComparer<string>.Construct(
     function(const ALeft, ARight: string): Integer
     begin
