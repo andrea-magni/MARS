@@ -136,7 +136,7 @@ See [Authorization](/features/authorization).
 | --- | --- |
 | `[ContentType('media/type')]` | Force the response `Content-Type`. |
 | `[CustomHeader('Name','Value')]` | Add a fixed response header. |
-| `[Encoding('UTF8')]` | Set the text encoding used when serializing. |
+| `[Encoding('UTF8')]` | Set the text encoding used when serializing (see below). |
 | `[IsReference]` | The returned object is a reference MARS must **not** free. |
 | `[JSONP(True)]` | Wrap a JSON response as JSONP using a `callback` query parameter. |
 
@@ -162,7 +162,8 @@ From `MARS.Metadata.Attributes.pas` and the OpenAPI units — they enrich the ge
 | `[MetaSummary('...')]` | Short summary for a resource/method. |
 | `[MetaDescription('...')]` | Longer description for a resource/method/parameter. |
 | `[MetaVisible(False)]` | Hide the resource/method from metadata and OpenAPI. |
-| `[OAPIDescription]`, `[OAPIRequired]`, `[OAPIPattern]`, `[OAPIMinimum]`, `[OAPIMaximum]` | Per-field JSON-schema hints on records/classes. |
+| `[OAPISummary]`, `[OAPIDescription]` | OpenAPI-only text for a resource, method, type, field or parameter. |
+| `[OAPIRequired]`, `[OAPIDefault]`, `[OAPIPattern]`, `[OAPIMinimum]`, `[OAPIMaximum]`, `[OAPIMinLength]`, `[OAPIMaxLength]` | JSON-schema hints on record/class fields and method parameters. |
 
 ## JSON serialization control
 

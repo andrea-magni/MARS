@@ -121,6 +121,8 @@ end;
 
 Dataset results returned by `TMARSFireDAC.Query` are context-owned: MARS frees them at the end of the request, the MCP dispatcher never does.
 
+Rows go through the same [serialization options](/features/serialization) as an HTTP dataset response: the dispatcher applies the attributes found on the resource class first, then those on the tool method, exactly like `TDataSetWriterJSON`. So date formats, field-name casing and the other serialization attributes you already use on REST endpoints behave identically when the same data is exposed as an MCP tool.
+
 ## Resources and prompts
 
 Tools are what the *model* decides to call; MCP offers two more capabilities with a different controller:

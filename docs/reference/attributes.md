@@ -15,7 +15,7 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | --- | --- | --- |
 | `[Produces('type')]` | method, writer | Response media type(s). |
 | `[Consumes('type')]` | method, reader | Accepted request body media type(s). |
-| `[Encoding('UTF8')]` | method | Text encoding for serialization. |
+| `[Encoding('UTF8')]` | method, resource | Text encoding for serialization: `UTF8` (default), `ANSI`, `ASCII`, `Unicode`, `BigEndianUnicode`, `UTF7`, `Default`. |
 
 ## Parameter binding (on method parameters)
 
@@ -72,7 +72,8 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | `[MetaSummary('...')]` | resource, method | Short summary. |
 | `[MetaDescription('...')]` | resource, method, parameter | Longer description. |
 | `[MetaVisible(False)]` | resource, method | Hide from metadata/OpenAPI. |
-| `[OAPIDescription]` `[OAPIRequired]` `[OAPIPattern]` `[OAPIMinimum]` `[OAPIMaximum]` | record/class field | JSON-schema hints. |
+| `[OAPISummary]` `[OAPIDescription]` | resource, method, type, field, parameter | Text used in the OpenAPI document only (overrides `[Meta…]`). |
+| `[OAPIRequired]` `[OAPIDefault]` `[OAPIPattern]` `[OAPIMinimum]` `[OAPIMaximum]` `[OAPIMinLength]` `[OAPIMaxLength]` | record/class field, parameter | JSON-schema hints. |
 
 ## JSON serialization (`MARS.Core.JSON`)
 

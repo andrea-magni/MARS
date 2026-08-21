@@ -41,6 +41,11 @@ Registered by `MARS.Core.MessageBodyWriters.pas` (and data units):
 | `TStandardMethodWriter` | wraps result + output params as JSON | `application/json` |
 | `TDataSetWriter` / `TArrayDataSetWriter` (data units) | `TDataSet`/`TFDDataSet` | JSON / FireDAC formats |
 
+Textual responses declare their encoding: the primitive-types writer appends `charset=…` to the
+content type (defaulting to `text/plain`) using the IANA name of the encoding — `utf-8` unless an
+`[Encoding('…')]` attribute on the method or the resource says otherwise. An explicit `charset` in
+`[Produces]` is left untouched.
+
 ## Built-in readers
 
 Registered by `MARS.Core.MessageBodyReaders.pas` (and data units):

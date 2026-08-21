@@ -15,6 +15,24 @@ JWT.Duration=1
 
 When `AddApplication` runs, the engine copies the matching `.ini` section (by application name) into the application's parameters.
 
+## Which `.ini` file is used
+
+`LoadFromIniFile` (and `SaveToIniFile` / `IniFileExists`) accept an explicit file name. Called
+without one, they resolve it in this order:
+
+1. the `-configFileName <path>` command-line switch, if present — handy to run the same binary
+   against different configurations (dev, staging, service instances);
+2. otherwise the module name with the extension changed to `.ini` — `MyServer.exe` → `MyServer.ini`,
+   an ISAPI DLL → `<dllname>.ini`.
+
+`Parameters.GetFileName` returns the path that would be used, with the same rules, which is what to
+log or display when a server starts up with unexpected settings:
+
+```pascal
+if not FEngine.Parameters.IniFileExists then
+  Writeln('No configuration file at ' + FEngine.Parameters.GetFileName);
+```
+
 ## Engine parameters
 
 | Parameter | Type | Default | Purpose |

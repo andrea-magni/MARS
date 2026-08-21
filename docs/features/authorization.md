@@ -71,7 +71,7 @@ Token.UserName := AUserName;
 Token.Roles := ['standard', 'admin'];   // becomes the "Roles" claim
 ```
 
-At request time MARS reads them back from the verified token and checks them against `[RolesAllowed]` via `Token.HasRole`.
+At request time MARS reads them back from the verified token and checks them against `[RolesAllowed]` via `Token.HasRole`. The claim is stored as a comma-separated string, so a token issued elsewhere with `"Roles": "admin, manager"` works too: entries are trimmed and empty ones are dropped when the claim is parsed.
 
 ## Fine-grained checks in code
 

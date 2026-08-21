@@ -72,7 +72,8 @@ The generator reads metadata and JSON-schema attributes so you can produce a ric
 
 - **Summaries / descriptions** — `[MetaSummary('...')]`, `[MetaDescription('...')]` on resources, methods and parameters.
 - **Visibility** — `[MetaVisible(False)]` hides a resource or method.
-- **Schema hints** on record/class fields — `[OAPIDescription]`, `[OAPIRequired]`, `[OAPIPattern]`, `[OAPIMinimum]`, `[OAPIMaximum]`.
+- **OpenAPI-specific text** — `[OAPISummary]` and `[OAPIDescription]` override the `[Meta…]` values in the generated document only; they can be put on a resource class, on a method, on a record/class type or one of its fields, and on a method parameter.
+- **Schema hints** — `[OAPIRequired]`, `[OAPIDefault]`, `[OAPIPattern]`, `[OAPIMinimum]`, `[OAPIMaximum]`, `[OAPIMinLength]`, `[OAPIMaxLength]` on record/class fields and on method parameters.
 - **Security** — `[RolesAllowed]` / `[PermitAll]` / `[DenyAll]` are reflected as security requirements; when JWT is configured, Bearer and cookie security schemes are added automatically.
 
 ```pascal
@@ -93,6 +94,35 @@ end;
 ```
 
 Parameter kinds (`[PathParam]`, `[QueryParam]`, `[HeaderParam]`, `[BodyParam]`) and their Delphi types become the corresponding OpenAPI parameters, request bodies and schemas.
+
+Where each `[OAPI…]` attribute is read:
+
+| Placement | Attributes honored |
+| --- | --- |
+| Resource class | `[OAPISummary]`, `[OAPIDescription]` (become the tag's text) |
+| Method | `[OAPISummary]`, `[OAPIDescription]` (path item and operation) |
+| Record/class type | `[OAPIDescription]` (component schema) |
+| Record/class field or property | `[OAPIDescription]` + all schema hints |
+| Method parameter | `[OAPIDescription]` + all schema hints |
+
+```pascal
+type
+  [OAPIDescription('An application user')]
+  TUser = record
+    [OAPIRequired(True)] Name: string;
+    [OAPIPattern('^[0-9]{5}$')] ZipCode: string;
+  end;
+
+  ...
+
+  [GET, Path('search')]
+  [OAPISummary('Full-text search')]
+  function Search(
+    [QueryParam] [OAPIDescription('Text to look for')] [OAPIMinLength('3')] q: string
+  ): TArray<TUser>;
+```
+
+`[OAPIRequired]` takes a Boolean, every other `[OAPI…]` attribute takes a string.
 
 ## Metadata
 
