@@ -1,0 +1,31 @@
+<!-- templates/layouts/application.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@page.Title - Creator</title>
+  <link rel="stylesheet" href="@page.BasePath/static/css/output.css">
+
+  <script src="@page.BasePath/static/js/htmx.min.js"></script>
+  <script src="@page.BasePath/static/js/elements@1.js" type="module"></script>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="min-h-screen lg:flex">
+    @Import  partials/sidebar.html
+
+    <div class="min-w-0 flex-1">
+      @Import  partials/topbar.html
+
+      <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        @Import  partials/flash-message.html
+        @RenderBody
+      </main>
+    </div>
+  </div>
+
+  <div id="modal"></div>
+  
+</body>
+</html>

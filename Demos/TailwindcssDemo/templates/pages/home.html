@@ -1,0 +1,12 @@
+@LayoutPage layouts/application.html
+
+<section class="rounded-xl bg-white p-6 shadow">
+  <h1 class="text-xl font-bold text-slate-800">Welcome, @session.RealName (@session.UserName)</h1>
+
+  @if (session.RoleCount() > 0) {
+    <p class="text-xs text-gray-500 dark:text-gray-400">
+      Roles (@(session.RoleCount())): @(session.RolesDisplay())
+    </p>
+  }
+  <p class="mt-2 text-slate-600">Use the sidebar to manage users.</p>
+</section>
