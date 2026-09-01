@@ -86,6 +86,24 @@ begin
 end;
 ```
 
+## TailwindcssDemo
+
+A complete server-rendered web application rather than a single feature: users sign in against a
+FireDAC-queried table, confirm a time-based one-time password, and reach a styled dashboard where
+they can browse and manage users. Pages are rendered with WebStencils, updated with
+[htmx](https://htmx.org/) and styled with [Tailwind CSS](https://tailwindcss.com/). The token issued
+after the password step carries an `mfa_pending` claim, so a half-authenticated session cannot reach
+the application until the second factor clears it. A step-by-step walkthrough is in
+[Tailwind CSS for Delphi developers](/demos/tailwindcss-tutorial).
+
+```pascal
+function IsFullyAuthenticated(const AToken: TMARSToken): Boolean;
+begin
+  Result := AToken.IsVerified
+    and not AToken.Claims.ByNameText('mfa_pending', False).AsBoolean;
+end;
+```
+
 ## MARS and Embarcadero KAI
 
 There is a video walkthrough of MARS with Embarcadero KAI: [YouTube — MARS and KAI](https://www.youtube.com/watch?v=C8HvfmgnVus).
