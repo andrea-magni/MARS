@@ -6,6 +6,7 @@
 - [OTPDemo](https://github.com/andrea-magni/MARS/tree/master/Demos/OTPDemo): shows a full implementation (client and server) of One Time Password, fully compatible with third-party applications (Microsoft Authenticator, Google Authenticator...). QR-Code generation included;
 - [SSEDemo](https://github.com/andrea-magni/MARS/tree/master/Demos/SSEDemo): showcase some functionalities borrowed by recently introduced SSE support in WebBroker technology;
 - [TokenRenew](https://github.com/andrea-magni/MARS/tree/master/Demos/TokenRenew): shows how to deal with JWT token duration and automatic renewal strategy;
+- [TailwindcssDemo](https://github.com/andrea-magni/MARS/tree/master/Demos/TailwindcssDemo): a full web application combining DB-backed login, JWT token auth, OTP two-factor authentication, WebStencils templates, htmx and Tailwind CSS ([tutorial](https://andrea-magni.github.io/MARS/demos/tailwindcss-tutorial));
 - [WebStencilsDemo](https://github.com/andrea-magni/MARS/tree/master/Demos/WebStencilsDemo): showcase available integration between MARS and Embarcadero's WebStencils technology.
 
 
