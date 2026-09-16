@@ -47,6 +47,19 @@ type
     Tag: string;
   end;
 
+  // constructor defaults and an owned sub-object: JSON keys left out must not touch them
+  TOwnerWithDefaults = class
+  private
+    FDetail: TTag;
+  public
+    Name: string;
+    Enabled: Boolean;
+    Retries: Integer;
+    constructor Create;
+    destructor Destroy; override;
+    property Detail: TTag read FDetail write FDetail;
+  end;
+
   TPerson = class
   private
     FName: string;
@@ -63,6 +76,23 @@ type
 
 implementation
 
+
+{ TOwnerWithDefaults }
+
+constructor TOwnerWithDefaults.Create;
+begin
+  inherited Create;
+  FDetail := TTag.Create;
+  FDetail.Name := 'from constructor';
+  Enabled := True;
+  Retries := 3;
+end;
+
+destructor TOwnerWithDefaults.Destroy;
+begin
+  FDetail.Free;
+  inherited;
+end;
 
 { TPerson }
 

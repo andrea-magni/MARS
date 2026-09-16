@@ -1702,13 +1702,15 @@ begin
       if LJSONName <> '' then
       begin
         LValue := LMember.GetValue(LObjectInstance);
+        // a member whose key is not in the JSON keeps its current value: constructor
+        // defaults survive, sub-objects created by the constructor are neither orphaned
+        // nor nil-ed, and filling an existing instance is a merge. _AssignedValues tells
+        // which members actually came from the JSON.
         if ReadValue(LJSONName, LMember.GetRttiType, True, LValue, AOptions) then
         begin
           LMember.SetValue(LObjectInstance, LValue);
           LAssignedValues := LAssignedValues + [LMember.Name];
-        end
-        else
-          LMember.SetValue(LObjectInstance, TValue.Empty);
+        end;
       end;
     end;
   end;
@@ -1807,9 +1809,8 @@ begin
               raise EInvalidCast.Create(E.Message + sLineBreak + LDetails);
             end;
           end;
-        end
-        else
-          LMember.SetValue(LRecordInstance, TValue.Empty);
+        end;
+        // members missing from the JSON are left as they are (the record starts zeroed)
       end;
     end;
   end;

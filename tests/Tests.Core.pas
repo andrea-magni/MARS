@@ -95,6 +95,14 @@ type
     [Test] procedure ArrayOfObjectToJSON;
   end;
 
+  [TestFixture('JSONToObject')]
+  TMARSJSONToObjectTest = class(TObject)
+  public
+    [Test] procedure MissingKeysKeepCurrentValues;
+    [Test] procedure MissingKeysKeepValuesOnExistingInstance;
+    [Test] procedure PresentNestedObjectIsFilledInPlace;
+  end;
+
 
 implementation
 
@@ -910,6 +918,78 @@ begin
   end;
 end;
 
+{ TMARSJSONToObjectTest }
+
+procedure TMARSJSONToObjectTest.MissingKeysKeepCurrentValues;
+var
+  LJSONObj: TJSONObject;
+begin
+  // used to: Detail nil-ed without Free (leak), Enabled False, Retries 0
+  LJSONObj := TJSONObject.ParseJSONValue('{"Name":"x"}') as TJSONObject;
+  try
+    var LOwner := TJSONObject.JSONToObject<TOwnerWithDefaults>(LJSONObj);
+    try
+      Assert.AreEqual('x', LOwner.Name);
+      Assert.IsNotNull(LOwner.Detail, 'sub-object created by the constructor must survive');
+      Assert.AreEqual('from constructor', LOwner.Detail.Name);
+      Assert.IsTrue(LOwner.Enabled, 'constructor default must survive');
+      Assert.AreEqual(3, LOwner.Retries, 'constructor default must survive');
+    finally
+      LOwner.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
+procedure TMARSJSONToObjectTest.MissingKeysKeepValuesOnExistingInstance;
+var
+  LJSONObj: TJSONObject;
+begin
+  // filling an existing instance is a merge: only the keys present are applied
+  LJSONObj := TJSONObject.ParseJSONValue('{"Retries":9}') as TJSONObject;
+  try
+    var LOwner := TOwnerWithDefaults.Create;
+    try
+      LOwner.Name := 'before';
+      var LDetail := LOwner.Detail;
+
+      LJSONObj.ToObject<TOwnerWithDefaults>(LOwner);
+
+      Assert.AreEqual(9, LOwner.Retries);
+      Assert.AreEqual('before', LOwner.Name, 'a key not in the JSON must not wipe the value');
+      Assert.IsTrue(LOwner.Enabled);
+      Assert.IsTrue(LOwner.Detail = LDetail, 'same sub-object instance');
+    finally
+      LOwner.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
+procedure TMARSJSONToObjectTest.PresentNestedObjectIsFilledInPlace;
+var
+  LJSONObj: TJSONObject;
+begin
+  LJSONObj := TJSONObject.ParseJSONValue('{"Detail":{"Name":"sent"}}') as TJSONObject;
+  try
+    var LOwner := TOwnerWithDefaults.Create;
+    try
+      var LDetail := LOwner.Detail;
+
+      LJSONObj.ToObject<TOwnerWithDefaults>(LOwner);
+
+      Assert.IsTrue(LOwner.Detail = LDetail, 'the existing instance is filled, not replaced');
+      Assert.AreEqual('sent', LOwner.Detail.Name);
+    finally
+      LOwner.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSCoreTest);
   TDUnitX.RegisterTestFixture(TMARSCoreUtilsTest);
@@ -917,5 +997,6 @@ initialization
   TDUnitX.RegisterTestFixture(TMARSJSONToRecordTest);
   TDUnitX.RegisterTestFixture(TMARSRecordFromDataSetTest);
   TDUnitX.RegisterTestFixture(TMARSObjectToJSONTest);
+  TDUnitX.RegisterTestFixture(TMARSJSONToObjectTest);
 
 end.
