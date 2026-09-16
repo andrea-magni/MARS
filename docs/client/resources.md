@@ -12,8 +12,14 @@ procedure POST (ABeforeExecute; AAfterExecute; AOnException);   // also POST(ABo
 procedure PUT  (ABeforeExecute; AAfterExecute; AOnException);
 procedure DELETE(ABeforeExecute; AAfterExecute; AOnException);
 procedure PATCH(ABeforeExecute; AAfterExecute; AOnException);
+procedure QUERY(ABeforeExecute; AAfterExecute; AOnException);   // HTTP QUERY: fill the body in ABeforeExecute
 function  GETAsString(AEncoding = nil; ABeforeExecute = nil; AOnException = nil): string;
 ```
+
+`QUERY` sends the HTTP `QUERY` method (a safe request carrying its query in the body, see
+[Resources ▸ HTTP verbs](/server/resources#http-verbs)); write the query into the stream handed to
+the *before-execute* callback. `POST`, `PUT`, `DELETE`, `PATCH` and `QUERY` have an `…Async`
+counterpart too.
 
 The simplest possible call:
 

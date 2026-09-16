@@ -275,6 +275,7 @@ type
     head: TOperation;
     patch: TOperation;
     trace: TOperation;
+    query: TOperation; // OpenAPI 3.2+
     servers: TObjectList<TServer>;
     parameters: TObjectList<TParameter>;
 
@@ -449,6 +450,7 @@ begin
   head := TOperation.Create;
   patch := TOperation.Create;
   trace := TOperation.Create;
+  query := TOperation.Create;
   parameters := TObjectList<TParameter>.Create(True);
   servers := TObjectList<TServer>.Create(True);
 end;
@@ -457,6 +459,7 @@ destructor TPathItem.Destroy;
 begin
   servers.Free;
   parameters.Free;
+  query.Free;
   trace.Free;
   patch.Free;
   head.Free;
@@ -487,6 +490,8 @@ begin
     Result := Result + ['OPTIONS'];
   if not trace.operationId.IsEmpty then
     Result := Result + ['TRACE'];
+  if not query.operationId.IsEmpty then
+    Result := Result + ['QUERY'];
 end;
 
 function TPathItem.OperationByHttpMethod(const AHttpMethod: string): TOperation;
@@ -511,7 +516,9 @@ begin
   else if LHttpMethod = 'patch' then
     Result := patch
   else if LHttpMethod = 'trace' then
-    Result := trace;
+    Result := trace
+  else if LHttpMethod = 'query' then
+    Result := query;
 end;
 
 { TOpenAPI }

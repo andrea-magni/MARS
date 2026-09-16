@@ -38,6 +38,9 @@ type
     property Engine: IMARSEngine read FEngine;
   end;
 
+// one server (port 8080) shared by every client fixture: a second instance could not bind
+function SharedTestServer: TMARSTestServer;
+
 
 implementation
 
@@ -58,6 +61,16 @@ uses
 , MARS.JOSEJWT.Token
 {$ENDIF}
 ;
+
+var
+  GSharedTestServer: TMARSTestServer = nil;
+
+function SharedTestServer: TMARSTestServer;
+begin
+  if not Assigned(GSharedTestServer) then
+    GSharedTestServer := TMARSTestServer.Create;
+  Result := GSharedTestServer;
+end;
 
 { TMARSTestServer }
 
@@ -171,6 +184,11 @@ begin
   FHttpServer.Active := False;
   FreeAndNil(FHttpServer);
 end;
+
+initialization
+
+finalization
+  FreeAndNil(GSharedTestServer);
 
 end.
 

@@ -99,8 +99,10 @@ end;
 ```
 
 The Indy and DCS hosts accept the verb out of the box. On IIS the verb has to be allowed in the
-handler mapping, or IIS rejects it with `405` before MARS sees the request. OpenAPI 3.0 has no
-`query` operation, so `[QUERY]` endpoints are left out of the generated document.
+handler mapping, or IIS rejects it with `405` before MARS sees the request. The `query` operation
+only exists since OpenAPI 3.2, so `[QUERY]` endpoints are left out of the generated document unless
+you raise its version with the `OpenAPI.openapi` parameter (see [OpenAPI](/features/openapi)).
+On the client side, `TMARSClientCustomResource` has matching `QUERY` and `QUERYAsync` methods.
 
 ## Return types and serialization
 

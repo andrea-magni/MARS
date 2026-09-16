@@ -15,6 +15,7 @@ type
   private
   public
     [Test] procedure Basic;
+    [Test] procedure QueryOperationNeedsOpenAPI32;
   end;
 
 implementation
@@ -22,8 +23,16 @@ implementation
 uses
   System.Rtti, System.TypInfo
 , System.JSON, MARS.Core.JSON
-, Tests.Objects.Types
+, Tests.Objects.Types, Tests.DefaultEngine.Definition
 ;
+
+function QueryOperationIds(const AOpenAPI: TOpenAPI): TArray<string>;
+begin
+  Result := [];
+  for var LPath in AOpenAPI.paths.Values do
+    if not LPath.query.operationId.IsEmpty then
+      Result := Result + [LPath.query.operationId];
+end;
 
 { TMARSOpenAPI3Test }
 
@@ -49,6 +58,38 @@ begin
     end;
   finally
     LOpenAPI.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.QueryOperationNeedsOpenAPI32;
+begin
+  // TItemResource (Tests.DefaultEngine.Resources) exposes a [QUERY] Search method
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LApp := LEngine.Engine.ApplicationByName('DefaultApp');
+
+    // default document version (3.0.x): no query operation exists, the endpoint is left out
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LApp);
+    try
+      Assert.AreEqual('3.0.2', LOpenAPI.openapi);
+      Assert.AreEqual(0, Length(QueryOperationIds(LOpenAPI)), 'QUERY endpoints must not appear in a 3.0 document');
+    finally
+      LOpenAPI.Free;
+    end;
+
+    // OpenAPI 3.2 has the query operation
+    LEngine.Engine.Parameters.Values['OpenAPI.openapi'] := '3.2.0';
+    LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LApp);
+    try
+      Assert.AreEqual('3.2.0', LOpenAPI.openapi);
+      var LIds := QueryOperationIds(LOpenAPI);
+      Assert.AreEqual(1, Length(LIds), 'The QUERY endpoint should be documented');
+      Assert.AreEqual('Search', LIds[0]);
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
   end;
 end;
 

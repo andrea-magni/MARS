@@ -97,6 +97,7 @@ type
   protected
     procedure AfterGET(const AContent: TStream); override;
     procedure AfterPATCH(const AContent: TStream); override;
+    procedure AfterQUERY(const AContent: TStream); override;
     procedure AfterPOST(const AContent: TStream); override;
     procedure AfterPUT(const AContent: TStream); override;
     procedure AfterDELETE(const AContent: TStream); override;
@@ -233,6 +234,12 @@ begin
 end;
 
 procedure TMARSClientResourceJSON.AfterPATCH(const AContent: TStream);
+begin
+  inherited;
+  RefreshResponse(AContent);
+end;
+
+procedure TMARSClientResourceJSON.AfterQUERY(const AContent: TStream);
 begin
   inherited;
   RefreshResponse(AContent);

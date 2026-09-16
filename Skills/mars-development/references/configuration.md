@@ -26,6 +26,7 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 | `Compression.Enabled` | false | used by the template's gzip `AfterInvoke` handler |
 | `Indy.SSL.RootCertFile` / `CertFile` / `KeyFile` / `Version` / `Mode` | localhost.* | standalone Indy SSL |
 | `OpenAPI.info.*` | — | title, description, version, contact.*, license.* for the OpenAPI document |
+| `OpenAPI.openapi` | 3.0.2 | OpenAPI document version; `3.2.0` or later also documents `[QUERY]` endpoints |
 | `FireDAC.<DefName>.<Param>` | — | connection definitions (see `firedac.md`) |
 
 ## Application parameters (prefix `<AppName>.` in the ini)

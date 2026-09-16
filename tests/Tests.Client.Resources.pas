@@ -26,6 +26,10 @@ type
 
     [GET, Path('requestDump')]
     function GetRequestDump: TRequestDump;
+
+    // HTTP QUERY: the filter travels in the body
+    [QUERY, Path('search')]
+    function Search([BodyParam] const AFilter: string): string;
   end;
 
 
@@ -40,6 +44,11 @@ uses
 function TTestResource.GetHelloWorld: string;
 begin
   Result := 'Hello World!';
+end;
+
+function TTestResource.Search(const AFilter: string): string;
+begin
+  Result := 'found: ' + AFilter;
 end;
 
 function TTestResource.GetRequestDump: TRequestDump;

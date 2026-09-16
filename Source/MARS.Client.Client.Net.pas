@@ -52,6 +52,8 @@ type
 
     procedure Patch(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
+    procedure Query(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
 
     procedure Post(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
@@ -376,6 +378,17 @@ begin
   FHttpClient.ContentType := AContentType;
   AContent.Position := 0;
   FLastResponse := FHttpClient.Patch(AURL, AContent, AResponse);
+  CheckLastCmdSuccess;
+end;
+
+procedure TMARSNetClient.Query(const AURL: string; AContent, AResponse: TStream;
+  const AAuthToken, AAccept, AContentType: string);
+begin
+  inherited;
+  FHttpClient.Accept := AAccept;
+  FHttpClient.ContentType := AContentType;
+  AContent.Position := 0;
+  FLastResponse := FHttpClient.Execute('QUERY', AURL, AContent, AResponse);
   CheckLastCmdSuccess;
 end;
 

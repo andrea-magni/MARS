@@ -27,6 +27,8 @@ type
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
     function MARSKindToOpenAPIKind(const AString: string): string;
     function MARSDataTypeToOpenAPIType(const AType: TRttiType; const ARefPrefix: string = '#/components/schemas/'): string;
+    // the QUERY operation exists since OpenAPI 3.2 (see the OpenAPI.openapi parameter)
+    function SupportsQueryOperation: Boolean;
     class function BuildFrom(const AEngine: IMARSEngine; const AApplication: IMARSApplication): TOpenAPI; overload;
     class function BuildFrom(const AActivation: IMARSActivation): TOpenAPI; overload;
   end;
@@ -56,7 +58,8 @@ begin
 
   LOpenAPI := TOpenAPI.Create;
   try
-    LOpenAPI.openapi := '3.0.2';
+    // 3.0.2 keeps the bundled Swagger UI happy; raise it to 3.2.0 to document QUERY endpoints
+    LOpenAPI.openapi := AEngine.Parameters.ByNameText('OpenAPI.openapi', '3.0.2').AsString;
     LOpenAPI.ReadInfoFromParams(AEngine.Parameters);
 
     LServer := LOpenAPI.AddServerFromEngine(AEngine);
@@ -264,6 +267,10 @@ begin
           if not AMethodMetadata.Visible then
             Exit;
 
+          // OpenAPI added the QUERY operation in 3.2: leave it out of older documents
+          if SameText(AMethodMetadata.HttpMethodLowerCase, 'query') and not SupportsQueryOperation then
+            Exit;
+
           const LMethod = AMethodMetadata.RttiMethod;
 
           LPath := GetPath(TMARSURL.CombinePath([AResourceMetadata.Path, AMethodMetadata.Path], True, False));
@@ -286,6 +293,17 @@ begin
 
     end
   );
+end;
+
+function TOpenAPIHelper.SupportsQueryOperation: Boolean;
+var
+  LParts: TArray<string>;
+  LMajor, LMinor: Integer;
+begin
+  LParts := openapi.Split(['.']);
+  Result := (Length(LParts) >= 2)
+    and TryStrToInt(LParts[0], LMajor) and TryStrToInt(LParts[1], LMinor)
+    and ((LMajor > 3) or ((LMajor = 3) and (LMinor >= 2)));
 end;
 
 procedure TOpenAPIHelper.ReadBearerSecurityScheme(const AName: string;
@@ -375,14 +393,18 @@ begin
         LParam.schema.SetType(AParam.DataTypeRttiType, Self);
         LParam.required := AParam.Required;
 
+        // path params coming from the resource's [Path] (e.g. '{id}', '{*}') have no method parameter
         const LParameter = AParam.RttiParameter;
-        var LDescriptionAttr := LParameter.GetAttribute<OAPIDescriptionAttribute>;
-        if Assigned(LDescriptionAttr) then
-          LParam.description := LDescriptionAttr.Value;
+        if Assigned(LParameter) then
+        begin
+          var LDescriptionAttr := LParameter.GetAttribute<OAPIDescriptionAttribute>;
+          if Assigned(LDescriptionAttr) then
+            LParam.description := LDescriptionAttr.Value;
 
-        LParam.schema.FillFromAttributes(LParameter);
+          LParam.schema.FillFromAttributes(LParameter);
 
-        LParam.required := LParam.schema.required;
+          LParam.required := LParam.schema.required;
+        end;
       end;
     end);
 

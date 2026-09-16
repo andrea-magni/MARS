@@ -124,6 +124,18 @@ type
 
 `[OAPIRequired]` takes a Boolean, every other `[OAPI…]` attribute takes a string.
 
+### Document version and `[QUERY]` endpoints
+
+The generated document declares OpenAPI `3.0.2`, the version the bundled Swagger UI renders. The
+engine parameter `OpenAPI.openapi` overrides it. This matters for `[QUERY]` endpoints: the `query`
+operation only exists since OpenAPI 3.2, so they are left out of the document unless the version is
+`3.2.0` or later:
+
+```ini
+[Engine]
+OpenAPI.openapi=3.2.0
+```
+
 ## Metadata
 
 OpenAPI generation is built on a general **metadata** layer (`MARS.Metadata.*`) that models your API as a tree of `TMARSApplicationMetadata` → `TMARSResourceMetadata` → `TMARSMethodMetadata` → `TMARSRequestParamMetadata`. `TMARSMetadataReader` populates it by RTTI reflection over the engine's applications.
