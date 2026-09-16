@@ -36,6 +36,10 @@ type
       const AProtocol: string = 'http'; const AHostName: string = 'localhost'; const APort: Integer = 8080
     ): string;
 
+    // writes AContent (UTF-8) next to the test executable, returns the byte count
+    function WriteStaticFile(const AFileName, AContent: string): Integer;
+    procedure DeleteStaticFile(const AFileName: string);
+
 
     property DefaultEngine: TDefaultEngine read FDefaultEngine;
   public
@@ -70,13 +74,27 @@ type
 
     [Test]
     procedure TestCatchAllFallback;
+
+    [Test]
+    procedure TestStaticFileGet;
+
+    [Test]
+    procedure TestStaticFileHead;
+
+    [Test]
+    procedure TestStaticFileHeadNotFound;
   end;
 
 implementation
 
 uses
-  IdCustomHTTPServer, Web.HTTPApp, MARS.http.Server.Indy
+  IOUtils
+, IdCustomHTTPServer, Web.HTTPApp, MARS.http.Server.Indy
 , Mock.IMARSRequest, Mock.IMARSResponse;
+
+const
+  STATIC_FILE_NAME = 'mars-static-test.txt';
+  STATIC_FILE_CONTENT = 'Hello, static world! (' + #$00E0#$00E8#$00EC + ')'; // non-ASCII: byte count <> char count
 
 { TMARSDefaultEngineFixture }
 
@@ -125,6 +143,18 @@ procedure TMARSDefaultEngineFixture.Teardown;
 begin
   FreeAndNil(FDefaultEngine);
   FreeAll;
+end;
+
+function TMARSDefaultEngineFixture.WriteStaticFile(const AFileName, AContent: string): Integer;
+begin
+  var LBytes := TEncoding.UTF8.GetBytes(AContent);
+  TFile.WriteAllBytes(TPath.Combine(ExtractFilePath(ParamStr(0)), AFileName), LBytes);
+  Result := Length(LBytes);
+end;
+
+procedure TMARSDefaultEngineFixture.DeleteStaticFile(const AFileName: string);
+begin
+  TFile.Delete(TPath.Combine(ExtractFilePath(ParamStr(0)), AFileName));
 end;
 
 procedure TMARSDefaultEngineFixture.TestHelloWorld;
@@ -221,6 +251,54 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual('catch-all', LMock.Response.Content, 'Request should be routed to TCatchAllResource');
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticFileGet;
+begin
+  WriteStaticFile(STATIC_FILE_NAME, STATIC_FILE_CONTENT);
+  try
+    var LMock := MockRequestAndResponse('GET', ResourcePath('static/' + STATIC_FILE_NAME));
+
+    var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+    Assert.IsTrue(LHandled, 'Request should be handled');
+    Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+    Assert.Contains(LMock.Response.ContentType, 'text/plain', 'ContentType should come from the file extension');
+    Assert.AreEqual(STATIC_FILE_CONTENT, LMock.Response.Content, 'Content should be the file content');
+  finally
+    DeleteStaticFile(STATIC_FILE_NAME);
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticFileHead;
+begin
+  // HEAD must answer like GET (status, Content-Type, Content-Length) without a body
+  var LSize := WriteStaticFile(STATIC_FILE_NAME, STATIC_FILE_CONTENT);
+  try
+    var LMock := MockRequestAndResponse('HEAD', ResourcePath('static/' + STATIC_FILE_NAME));
+
+    var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+    Assert.IsTrue(LHandled, 'Request should be handled');
+    Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+    Assert.Contains(LMock.Response.ContentType, 'text/plain', 'ContentType should come from the file extension');
+    Assert.AreEqual(LSize, LMock.Response.ContentLength, 'Content-Length should be the file size in bytes');
+    Assert.IsNull(LMock.Response.ContentStream, 'HEAD should not send the file');
+    Assert.AreEqual('', LMock.Response.Content, 'HEAD should have no body');
+  finally
+    DeleteStaticFile(STATIC_FILE_NAME);
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticFileHeadNotFound;
+begin
+  var LMock := MockRequestAndResponse('HEAD', ResourcePath('static/does-not-exist.txt'));
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(404, LMock.Response.StatusCode, 'Status code should be 404 for a missing file');
+  Assert.AreEqual('', LMock.Response.Content, 'HEAD should have no body');
 end;
 
 procedure TMARSDefaultEngineFixture.TestWildcard;

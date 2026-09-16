@@ -96,6 +96,10 @@ type
     [GET]
     function GetContent: TMARSResponse; virtual;
 
+    // Same status, Content-Type and Content-Length as GET, no body (RFC 9110 9.3.2)
+    [HEAD]
+    procedure HeadContent; virtual;
+
     // PROPERTIES
     property RootFolder: string read FRootFolder write FRootFolder;
     property IncludeSubFolders: Boolean read FIncludeSubFolders write FIncludeSubFolders;
@@ -236,6 +240,32 @@ begin
       else
         ServeDirectoryContent(LFullPath, Result);
     end;
+  end;
+end;
+
+procedure TFileSystemResource.HeadContent;
+var
+  LResponse: TMARSResponse;
+begin
+  // Reuses GetContent (so subclasses overriding it get HEAD for free) and discards
+  // the body: the file gets opened, to report its size, but never read.
+  // Headers go straight to Activation.Response instead of through a TMARSResponse
+  // result: on the WebBroker/Indy host assigning a (blank) Content resets Content-Length
+  // to 0, so the length has to be set with no body assignment following it.
+  LResponse := GetContent;
+  try
+    LResponse.FreeContentStream := True;
+
+    Activation.Response.StatusCode := LResponse.StatusCode;
+    if LResponse.ContentType <> '' then
+      Activation.Response.ContentType := LResponse.ContentType;
+
+    if Assigned(LResponse.ContentStream) then
+      Activation.Response.ContentLength := LResponse.ContentStream.Size
+    else if LResponse.Content <> '' then // directory listing, declared UTF-8
+      Activation.Response.ContentLength := TEncoding.UTF8.GetByteCount(LResponse.Content);
+  finally
+    LResponse.Free;
   end;
 end;
 

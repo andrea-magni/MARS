@@ -50,6 +50,11 @@ type
     function GetContent: string;
   end;
 
+  // static files rooted at the test executable folder (files are created by the tests)
+  [Path('static/{*}'), RootFolder('{bin}', False)]
+  TStaticResource = class(TFileSystemResource)
+  end;
+
   TItem = record
     Id: Integer;
     Description: string;
@@ -147,6 +152,6 @@ end;
 
 initialization
   MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
-  , TCatchAllResource, TImagesResource]);
+  , TCatchAllResource, TImagesResource, TStaticResource]);
 
 end.

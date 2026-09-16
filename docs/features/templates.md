@@ -23,6 +23,11 @@ A request pointing at a directory serves the first match among `IndexFileNames`
 (`index.html`, `index.htm`, `default.html`, `default.htm`) and, failing that, a minimal HTML listing
 of the directory. Non-matching paths produce a `404`.
 
+`HEAD` requests are answered too, with the same status, `Content-Type` and `Content-Length` a
+`GET` would produce and no body: useful for link checkers, CDNs and clients probing a file's size
+before downloading it. The implementation reuses `GetContent`, so a subclass overriding it gets
+`HEAD` support for free.
+
 This is also how the [SSEDemo](/demos/#ssedemo) and OpenAPI/Swagger setup serve their HTML/JS assets.
 
 ### Content types and charset
