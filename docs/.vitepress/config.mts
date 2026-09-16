@@ -113,6 +113,7 @@ export default defineConfig({
           text: 'Demos',
           items: [
             { text: 'Overview', link: '/demos/' },
+            { text: 'Tailwind CSS tutorial', link: '/demos/tailwindcss-tutorial' },
           ],
         },
       ],

@@ -1,0 +1,17 @@
+<!-- templates/layouts/public.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@page.Title - MARS TailwindcssDemo</title>
+  <link rel="stylesheet" href="@page.BasePath/static/css/output.css">
+  <script src="@page.BasePath/static/js/htmx.min.js"></script>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <main class="min-h-screen grid place-items-center px-4 py-10">
+    @RenderBody
+  </main>
+</body>
+</html>

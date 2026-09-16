@@ -1,0 +1,120 @@
+<!--
+  Navigation sidebar, built from plain Tailwind utility classes.
+
+  Below the xl breakpoint it is an off-canvas drawer opened by the hamburger
+  button in topbar.html; from xl up it is a static column. The open/close
+  behaviour lives in www/js/ui.js, so no component library is required.
+-->
+
+<!-- Off-canvas drawer, small screens -->
+<div id="mobile-sidebar" hidden class="relative z-50 xl:hidden">
+  <div data-sidebar-close class="fixed inset-0 bg-gray-900/80"></div>
+
+  <div class="fixed inset-0 flex">
+    <div role="dialog" aria-modal="true" aria-label="Navigation" class="relative mr-16 flex w-full max-w-xs flex-1">
+      <div class="absolute top-0 left-full flex w-16 justify-center pt-5">
+        <button type="button" data-sidebar-close class="-m-2.5 p-2.5 text-white">
+          <span class="sr-only">Close navigation</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6">
+            <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-50 px-6 ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-white/10">
+        <div class="flex h-16 shrink-0 items-center gap-3">
+          <svg viewBox="0 0 32 32" class="h-8 w-8 shrink-0" role="img" aria-label="MARS Demo"><rect width="32" height="32" rx="8" class="fill-emerald-600 dark:fill-emerald-500"/><path d="M8 23V10h3.2l4.8 7.6L20.8 10H24v13h-3v-8l-5 7.7-5-7.7v8H8Z" class="fill-white"/></svg>
+          <span class="text-lg font-semibold text-emerald-600 dark:text-white">MARS Demo</span>
+        </div>
+
+        <nav class="flex flex-1 flex-col">
+          <ul role="list" class="flex flex-1 flex-col gap-y-7">
+            <li>
+              <ul role="list" class="-mx-2 space-y-1">
+                <li>
+                  <a href="@page.BasePath/app/home" class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold @(page.NavStateClass('home'))">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-6 shrink-0 @(page.NavIconStateClass('home'))">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                    </svg>
+                    Home
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <div class="text-xs/6 font-semibold text-gray-500 dark:text-gray-400">Administration</div>
+              <ul role="list" class="-mx-2 mt-2 space-y-1">
+                <li>
+                  <a href="@page.BasePath/users" class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold @(page.NavStateClass('users'))">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-6 shrink-0 @(page.NavIconStateClass('users'))">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                    </svg>
+                    <span class="truncate">Users</span>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <li class="-mx-6 mt-auto">
+              <a href="@page.BasePath/users/@session.UserId" class="flex items-center gap-x-4 px-6 py-3 text-sm/6 font-semibold text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-white/5">
+                <span aria-hidden="true" class="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="size-5"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z" /></svg>
+                </span>
+                <span class="sr-only">Your profile</span>
+                <span class="truncate">@session.RealName</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Static sidebar, xl and up -->
+<div class="hidden xl:fixed xl:inset-y-0 xl:z-50 xl:flex xl:w-72 xl:flex-col">
+  <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-50 px-6 ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-white/5">
+    <div class="flex h-16 shrink-0 items-center gap-3">
+      <svg viewBox="0 0 32 32" class="h-8 w-8 shrink-0" role="img" aria-label="MARS Demo"><rect width="32" height="32" rx="8" class="fill-emerald-600 dark:fill-emerald-500"/><path d="M8 23V10h3.2l4.8 7.6L20.8 10H24v13h-3v-8l-5 7.7-5-7.7v8H8Z" class="fill-white"/></svg>
+      <span class="text-lg font-semibold text-emerald-600 dark:text-white">MARS Demo</span>
+    </div>
+
+    <nav class="flex flex-1 flex-col">
+      <ul role="list" class="flex flex-1 flex-col gap-y-7">
+        <li>
+          <ul role="list" class="-mx-2 space-y-1">
+            <li>
+              <a href="@page.BasePath/app/home" class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold @(page.NavStateClass('home'))">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-6 shrink-0 @(page.NavIconStateClass('home'))">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+                Home
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <div class="text-xs/6 font-semibold text-gray-500 dark:text-gray-400">Administration</div>
+          <ul role="list" class="-mx-2 mt-2 space-y-1">
+            <li>
+              <a href="@page.BasePath/users" class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold @(page.NavStateClass('users'))">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-6 shrink-0 @(page.NavIconStateClass('users'))">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                </svg>
+                <span class="truncate">Users</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li class="-mx-6 mt-auto">
+          <a href="@page.BasePath/users/@session.UserId" class="flex items-center gap-x-4 px-6 py-3 text-sm/6 font-semibold text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-white/5">
+            <span aria-hidden="true" class="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+              <svg viewBox="0 0 24 24" fill="currentColor" class="size-5"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z" /></svg>
+            </span>
+            <span class="sr-only">Your profile</span>
+            <span class="truncate">@session.RealName</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>

@@ -1,0 +1,23 @@
+@LayoutPage layouts/public.html
+
+<div id="login-box" class="w-full max-w-sm rounded-xl bg-white p-8 shadow">
+  <h1 class="mb-6 text-center text-2xl font-bold text-slate-800">Sign in</h1>
+
+  <form hx-post="@page.BasePath/app/login"
+        hx-target="#login-box"
+        hx-swap="outerHTML"
+        class="space-y-4">
+    <input type="text" name="username" placeholder="Username" required
+           class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-sky-500">
+    <input type="password" name="password" placeholder="Password" required
+           class="w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-sky-500">
+    <button type="submit"
+            class="w-full rounded-lg bg-sky-600 py-2 font-medium text-white hover:bg-sky-700">
+      Continue
+    </button>
+  </form>
+
+  @if page.HasError {
+    <p class="mt-3 text-sm text-red-600">@page.Error</p>
+  }
+</div>
