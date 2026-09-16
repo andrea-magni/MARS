@@ -23,6 +23,12 @@ A request pointing at a directory serves the first match among `IndexFileNames`
 (`index.html`, `index.htm`, `default.html`, `default.htm`) and, failing that, a minimal HTML listing
 of the directory. Non-matching paths produce a `404`.
 
+The listing can be switched off with `[DirectoryListing(False)]` (or the `DirectoryListingEnabled`
+property): directories without an index file then answer `404`. Entry names are HTML-encoded in the
+page and percent-encoded in the links, so a file dropped in the folder cannot inject markup. Every
+response of the resource carries `X-Content-Type-Options: nosniff`, so browsers stick to the
+declared content type instead of guessing one from the bytes.
+
 `HEAD` requests are answered too, with the same status, `Content-Type` and `Content-Length` a
 `GET` would produce and no body: useful for link checkers, CDNs and clients probing a file's size
 before downloading it. The implementation reuses `GetContent`, so a subclass overriding it gets

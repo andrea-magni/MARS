@@ -64,6 +64,17 @@ type
     procedure ApplyToResource(const AResource: TFileSystemResource); override;
   end;
 
+  // [DirectoryListing(False)] answers 404 for directories without an index file
+  DirectoryListingAttribute = class(WebAttribute)
+  private
+    FEnabled: Boolean;
+  public
+    constructor Create(const AEnabled: Boolean = True);
+    procedure ApplyToResource(const AResource: TFileSystemResource); override;
+
+    property Enabled: Boolean read FEnabled;
+  end;
+
   ExcludeAttribute = class(WebFilterAttribute)
   public
     procedure ApplyToResource(const AResource: TFileSystemResource); override;
@@ -78,6 +89,7 @@ type
     FExclusionFilters: TStringList;
     FInclusionFilters: TStringList;
     FIndexFileNames: TStringList;
+    FDirectoryListingEnabled: Boolean;
   protected
     [Context] URL: TMARSURL;
     [Context] Activation: IMARSActivation;
@@ -94,6 +106,8 @@ type
     // resolve to something inside RootFolder (or violates IncludeSubFolders): the
     // caller answers 404 and never touches the file system.
     function ResolveFullPath(out AFullPath: string): Boolean; virtual;
+    // percent-encodes a single path segment for use in an href
+    class function EncodePathSegment(const ASegment: string): string;
     procedure ServeFileContent(const AFileName: string; const AResponse: TMARSResponse); virtual;
     procedure ServeDirectoryContent(const ADirectory: string; const AResponse: TMARSResponse); virtual;
     function DirectoryHasIndexFile(const ADirectory: string; out AIndexFullPath: string): Boolean; virtual;
@@ -116,6 +130,8 @@ type
     property InclusionFilters: TStringList read FInclusionFilters;
     property ExclusionFilters: TStringList read FExclusionFilters;
     property IndexFileNames: TStringList read FIndexFileNames;
+    // HTML listing for directories without an index file (default True; see [DirectoryListing])
+    property DirectoryListingEnabled: Boolean read FDirectoryListingEnabled write FDirectoryListingEnabled;
   end;
 
 function AtLeastOneMatch(const ASample: string; const AValues: TStringList): Boolean;
@@ -123,7 +139,7 @@ function AtLeastOneMatch(const ASample: string; const AValues: TStringList): Boo
 implementation
 
 uses
-  System.Types, IOUtils, Masks, StrUtils
+  System.Types, IOUtils, Masks, StrUtils, NetEncoding
 , MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions
 ;
 
@@ -166,6 +182,7 @@ begin
   FInclusionFilters := TStringList.Create;
   FExclusionFilters := TStringList.Create;
   FIndexFileNames := TStringList.Create;
+  FDirectoryListingEnabled := True;
 
   Init;
 end;
@@ -300,6 +317,9 @@ begin
   if not ResolveFullPath(LFullPath) then
     Exit;
 
+  // served content is user-provided: browsers must trust the declared Content-Type
+  Activation.Response.SetHeader('X-Content-Type-Options', 'nosniff');
+
   if CheckFilters(LFullPath) then
   begin
     if FileExists(LFullPath) then
@@ -309,10 +329,26 @@ begin
       LIndexFileFullPath := '';
       if DirectoryHasIndexFile(LFullPath, LIndexFileFullPath) then
         ServeFileContent(LIndexFileFullPath, Result)
-      else
+      else if DirectoryListingEnabled then
         ServeDirectoryContent(LFullPath, Result);
     end;
   end;
+end;
+
+class function TFileSystemResource.EncodePathSegment(const ASegment: string): string;
+const
+  HEX: array[0..15] of Char = '0123456789ABCDEF';
+var
+  LByte: Byte;
+begin
+  // RFC 3986 unreserved characters pass through, everything else is %XX-encoded (UTF-8)
+  Result := '';
+  for LByte in TEncoding.UTF8.GetBytes(ASegment) do
+    if (LByte in [Ord('A')..Ord('Z'), Ord('a')..Ord('z'), Ord('0')..Ord('9')])
+      or (LByte in [Ord('-'), Ord('.'), Ord('_'), Ord('~')]) then
+      Result := Result + Char(LByte)
+    else
+      Result := Result + '%' + HEX[LByte shr 4] + HEX[LByte and $F];
 end;
 
 procedure TFileSystemResource.HeadContent;
@@ -390,8 +426,7 @@ procedure TFileSystemResource.ServeDirectoryContent(const ADirectory: string;
 var
   LEntries: TStringDynArray;
   LIndex: Integer;
-  LEntry: string;
-  LEntryRelativePath: string;
+  LEntry, LEntryName, LHrefPrefix, LHref: string;
   LIsFolder: Boolean;
 begin
   AResponse.StatusCode := 200;
@@ -401,17 +436,26 @@ begin
   AResponse.ContentType := TMediaType.TEXT_HTML + '; ' + TMediaType.CHARSET_UTF8_DEF;
   AResponse.Content := '<html><body><ul>';
 
+  // links are relative to the listed directory: when the request URL has no trailing '/'
+  // the browser would resolve them against the parent, so the last segment is repeated
+  LHrefPrefix := '';
+  if (not URL.Path.EndsWith(TMARSURL.URL_PATH_SEPARATOR)) and (Length(URL.PathTokens) > 0) then
+    LHrefPrefix := EncodePathSegment(URL.PathTokens[High(URL.PathTokens)]) + TMARSURL.URL_PATH_SEPARATOR;
+
   LEntries := TDirectory.GetFileSystemEntries(ADirectory);
   for LIndex := Low(LEntries) to High(LEntries) do
   begin
     LEntry := LEntries[LIndex];
     if CheckFilters(LEntry) then
     begin
-      LEntryRelativePath := ExtractRelativePath(CanonicalRootFolder, LEntry);
+      // entry names are untrusted (whoever can drop a file in the folder chooses them):
+      // percent-encoded in the href, HTML-encoded in the text
+      LEntryName := ExtractFileName(LEntry);
       LIsFolder := TDirectory.Exists(LEntry);
+      LHref := LHrefPrefix + EncodePathSegment(LEntryName) + IfThen(LIsFolder, TMARSURL.URL_PATH_SEPARATOR);
       AResponse.Content := AResponse.Content
         + '<li>'
-        + '<a href="' + LEntryRelativePath + IfThen(LIsFolder, '/') + '">' + LEntryRelativePath + '</a>'
+        + '<a href="' + LHref + '">' + TNetEncoding.HTML.Encode(LEntryName) + '</a>'
         + IfThen(LIsFolder, ' (folder)')
         + '</li>';
     end;
@@ -513,6 +557,21 @@ procedure ExcludeAttribute.ApplyToResource(
 begin
   inherited;
   AResource.ExclusionFilters.Add(Pattern);
+end;
+
+{ DirectoryListingAttribute }
+
+constructor DirectoryListingAttribute.Create(const AEnabled: Boolean);
+begin
+  inherited Create;
+  FEnabled := AEnabled;
+end;
+
+procedure DirectoryListingAttribute.ApplyToResource(
+  const AResource: TFileSystemResource);
+begin
+  inherited;
+  AResource.DirectoryListingEnabled := Enabled;
 end;
 
 end.

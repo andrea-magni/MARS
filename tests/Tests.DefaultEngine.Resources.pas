@@ -60,6 +60,11 @@ type
   TStaticTreeResource = class(TFileSystemResource)
   end;
 
+  // same root, no directory listing
+  [Path('staticnolist/{*}'), RootFolder('{bin}', True), DirectoryListing(False)]
+  TStaticNoListResource = class(TFileSystemResource)
+  end;
+
   TItem = record
     Id: Integer;
     Description: string;
@@ -169,6 +174,6 @@ end;
 
 initialization
   MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
-  , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource]);
+  , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource]);
 
 end.
