@@ -35,6 +35,18 @@ type
     property IdReparto: string read FIdReparto write FIdReparto;
   end;
 
+  // plain classes with public fields, used as record members
+  TTag = class
+  public
+    Name: string;
+  end;
+
+  TCode = class
+  public
+    Code: Integer;
+    Tag: string;
+  end;
+
   TPerson = class
   private
     FName: string;

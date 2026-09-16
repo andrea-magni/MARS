@@ -6,6 +6,7 @@ uses
   Classes, SysUtils, Generics.Collections
 , System.Rtti
 , MARS.Core.JSON
+, Tests.Objects.Types
 ;
 
 type
@@ -75,6 +76,28 @@ type
     Name: string;
     Instance: TObject;
     constructor Create(const AName: string; const AInstance: TObject);
+  end;
+
+  // records with class-typed members (JSONToRecord must create one instance per member)
+  TRecordWithTwoObjects = record
+    A: TTag;
+    B: TTag;
+  end;
+
+  TRecordWithMixedObjects = record
+    A: TTag;
+    B: TCode;
+  end;
+
+  TRecordWithPrimitiveThenObject = record
+    Id: Integer;
+    Item: TTag;
+  end;
+
+  TRecordWithThreeObjects = record
+    A: TTag;
+    B: TTag;
+    C: TTag;
   end;
 
   TRecordWithCustomDate = record
