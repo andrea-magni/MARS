@@ -36,9 +36,11 @@ type
       const AProtocol: string = 'http'; const AHostName: string = 'localhost'; const APort: Integer = 8080
     ): string;
 
-    // writes AContent (UTF-8) next to the test executable, returns the byte count
+    // writes AContent (UTF-8) next to the test executable (AFileName may contain a
+    // relative folder, created on demand), returns the byte count
     function WriteStaticFile(const AFileName, AContent: string): Integer;
     procedure DeleteStaticFile(const AFileName: string);
+    function StaticRequestStatus(const AMethod, AResourcePath: string): Integer;
 
 
     property DefaultEngine: TDefaultEngine read FDefaultEngine;
@@ -83,6 +85,18 @@ type
 
     [Test]
     procedure TestStaticFileHeadNotFound;
+
+    [Test]
+    procedure TestStaticPathTraversalRejected;
+
+    [Test]
+    procedure TestStaticReservedSegmentsRejected;
+
+    [Test]
+    procedure TestStaticSubFoldersHonourIncludeSubFolders;
+
+    [Test]
+    procedure TestDuplicateQueryParamIsNot500;
 
     [Test]
     procedure TestQueryWithBody;
@@ -157,8 +171,17 @@ end;
 function TMARSDefaultEngineFixture.WriteStaticFile(const AFileName, AContent: string): Integer;
 begin
   var LBytes := TEncoding.UTF8.GetBytes(AContent);
-  TFile.WriteAllBytes(TPath.Combine(ExtractFilePath(ParamStr(0)), AFileName), LBytes);
+  var LFullName := TPath.Combine(ExtractFilePath(ParamStr(0)), AFileName);
+  TDirectory.CreateDirectory(ExtractFileDir(LFullName));
+  TFile.WriteAllBytes(LFullName, LBytes);
   Result := Length(LBytes);
+end;
+
+function TMARSDefaultEngineFixture.StaticRequestStatus(const AMethod, AResourcePath: string): Integer;
+begin
+  var LMock := MockRequestAndResponse(AMethod, ResourcePath(AResourcePath));
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response), 'Request should be handled: ' + AResourcePath);
+  Result := LMock.Response.StatusCode;
 end;
 
 procedure TMARSDefaultEngineFixture.DeleteStaticFile(const AFileName: string);
@@ -343,6 +366,76 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.Contains(LMock.Response.Content, '"Item #1"', 'GET should still be routed to RetrieveAll');
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticPathTraversalRejected;
+const
+  TRAVERSAL_FILE = 'mars-traversal-test.txt';
+begin
+  // the file exists one level above the root: every way of climbing there must yield 404
+  WriteStaticFile('..' + PathDelim + TRAVERSAL_FILE, 'must never be served');
+  try
+    for var LVector in [
+      'static/../' + TRAVERSAL_FILE            // literal dot-segment
+    , 'static/..%2f' + TRAVERSAL_FILE          // encoded '/', decoded inside the segment
+    , 'static/..%5c' + TRAVERSAL_FILE          // encoded ''
+    , 'static/%2e%2e/' + TRAVERSAL_FILE        // encoded dots
+    , 'static/sub/../../' + TRAVERSAL_FILE     // dot-segments after a valid one
+    , 'statictree/../' + TRAVERSAL_FILE        // IncludeSubFolders = True must not matter
+    ] do
+    begin
+      Assert.AreEqual(404, StaticRequestStatus('GET', LVector), 'GET ' + LVector);
+      Assert.AreEqual(404, StaticRequestStatus('HEAD', LVector), 'HEAD ' + LVector);
+    end;
+  finally
+    DeleteStaticFile('..' + PathDelim + TRAVERSAL_FILE);
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticReservedSegmentsRejected;
+begin
+  WriteStaticFile(STATIC_FILE_NAME, STATIC_FILE_CONTENT);
+  try
+    Assert.AreEqual(200, StaticRequestStatus('GET', 'static/' + STATIC_FILE_NAME), 'plain name is served');
+    // NTFS alternate data stream syntax and trailing dot (Windows strips the dot, so the
+    // real file would be opened). Trailing spaces and control characters are not testable
+    // this way: the URL joiner trims them off the tokens before the resource sees them, so
+    // the plain name is served.
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'static/' + STATIC_FILE_NAME + '::$DATA'), 'ADS syntax');
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'static/' + STATIC_FILE_NAME + '.'), 'trailing dot');
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'static/mars%00' + STATIC_FILE_NAME), 'embedded control character');
+    // a drive-absolute path and a sibling folder sharing the root's prefix
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'static/C:%5cWindows%5cwin.ini'), 'absolute path');
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'static/..%5c' + ExtractFileName(ExcludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0)))) + '2%5c' + STATIC_FILE_NAME), 'sibling with same prefix');
+  finally
+    DeleteStaticFile(STATIC_FILE_NAME);
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticSubFoldersHonourIncludeSubFolders;
+const
+  SUB_FOLDER = 'mars-static-sub';
+begin
+  WriteStaticFile(SUB_FOLDER + PathDelim + STATIC_FILE_NAME, STATIC_FILE_CONTENT);
+  try
+    // RootFolder('{bin}', False): only the root itself is served
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'static/' + SUB_FOLDER + '/' + STATIC_FILE_NAME), 'IncludeSubFolders = False');
+    // RootFolder('{bin}', True): subfolders are served
+    Assert.AreEqual(200, StaticRequestStatus('GET', 'statictree/' + SUB_FOLDER + '/' + STATIC_FILE_NAME), 'IncludeSubFolders = True');
+  finally
+    TDirectory.Delete(TPath.Combine(ExtractFilePath(ParamStr(0)), SUB_FOLDER), True);
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestDuplicateQueryParamIsNot500;
+begin
+  // used to raise "Duplicates not allowed" while parsing the URL, before any resource code
+  var LMock := MockRequestAndResponse('GET', ResourcePath('helloworld?a=1&a=2'));
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
 end;
 
 procedure TMARSDefaultEngineFixture.TestWildcard;

@@ -28,6 +28,23 @@ of the directory. Non-matching paths produce a `404`.
 before downloading it. The implementation reuses `GetContent`, so a subclass overriding it gets
 `HEAD` support for free.
 
+### Path safety
+
+The request path is validated before the file system is touched, and anything that fails
+the checks is answered with `404`:
+
+- every segment is checked in isolation: `.` and `..` are rejected, so are segments containing a
+  separator (an encoded `%2f` or `%5c`), `:` (drive letters, NTFS alternate data streams such as
+  `file.txt::$DATA`), the characters `* ? " < > |`, control characters, and segments ending with a
+  dot (which Windows silently strips; leading and trailing whitespace is trimmed off the URL tokens
+  before they reach the resource);
+- the resulting path is canonicalized and must still lie under the canonical `RootFolder`;
+- with `IncludeSubFolders = False` only files directly in the root are served.
+
+The two checks are independent on purpose. Both are virtual (`CheckPathSegment`,
+`ResolveFullPath`), so a subclass can tighten them further, for instance by limiting the allowed
+extensions.
+
 This is also how the [SSEDemo](/demos/#ssedemo) and OpenAPI/Swagger setup serve their HTML/JS assets.
 
 ### Content types and charset

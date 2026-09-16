@@ -184,6 +184,19 @@ begin
     LURL.Free;
   end;
 
+  // repeated names must not raise (they used to: TDictionary.Add -> 500), first value wins;
+  // empty names ('&&') are ignored
+  LURL := TMARSURL.Create(
+    'http://localhost:8080/rest/default/helloworld?a=1&a=2&&b=3'
+  );
+  try
+    Assert.AreEqual(2, LURL.QueryTokens.Count, 'QueryTokens.Count with duplicates');
+    Assert.AreEqual('1', LURL.QueryTokenByName('a', False, False), 'first value of a repeated name wins');
+    Assert.AreEqual('3', LURL.QueryTokenByName('b', False, False), 'QueryTokenByName b');
+  finally
+    LURL.Free;
+  end;
+
   LURL := TMARSURL.Create(
     'http://localhost:8080/rest/default/helloworld?first=This%20is%20with%20spaces'
   );

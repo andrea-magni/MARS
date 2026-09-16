@@ -55,6 +55,11 @@ type
   TStaticResource = class(TFileSystemResource)
   end;
 
+  // same root, subfolders allowed
+  [Path('statictree/{*}'), RootFolder('{bin}', True)]
+  TStaticTreeResource = class(TFileSystemResource)
+  end;
+
   TItem = record
     Id: Integer;
     Description: string;
@@ -164,6 +169,6 @@ end;
 
 initialization
   MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
-  , TCatchAllResource, TImagesResource, TStaticResource]);
+  , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource]);
 
 end.

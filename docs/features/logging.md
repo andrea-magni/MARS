@@ -138,6 +138,23 @@ In Grafana Explore (Loki data source) you can then query e.g. `{source="MARS"}`,
 
 `MARS.Utils.ReqRespLogger.Memory` keeps recent requests/responses in a `TFDMemTable` (status code, content, timing, remote IP, cookies, …), which you can surface through a resource for a live "last requests" panel. It honors the `[NoLog]` attribute: mark a resource or method with it to exclude that endpoint from the in-memory log.
 
+Linking the unit registers the hooks, but nothing is retained until you switch it on:
+
+```ini
+[Engine]
+MemoryLogging.Enabled=True
+```
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `MemoryLogging.Enabled` | Boolean | `False` | Master switch, checked on every activation. |
+
+::: warning Clear-text retention
+The buffer holds complete requests and responses (bodies, cookies, token claims, login forms) in
+clear text, without a size limit, for the life of the process. Keep it off in production builds,
+or enable it only while diagnosing.
+:::
+
 ## See also
 
 - [Request Lifecycle](/server/request-lifecycle) — the hooks these loggers build on.

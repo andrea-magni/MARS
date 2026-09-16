@@ -94,4 +94,4 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 
 | Attribute | Target | Purpose |
 | --- | --- | --- |
-| `[RootFolder('path', AServeIndex)]` | resource | Map a `TFileSystemResource` to a disk folder. |
+| `[RootFolder('path', AIncludeSubFolders)]` | resource | Map a `TFileSystemResource` to a disk folder; `AIncludeSubFolders = False` serves the root folder only. |

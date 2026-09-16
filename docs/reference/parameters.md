@@ -72,6 +72,7 @@ Read by the [request/response loggers](/features/logging) (engine section). Each
 | Parameter | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `JSONLogging.Enabled` | Boolean | `False` | Enable the NDJSON file logger (`MARS.Utils.ReqRespLogger.JSON`). |
+| `MemoryLogging.Enabled` | Boolean | `False` | Enable the in-memory logger (`MARS.Utils.ReqRespLogger.Memory`); it retains whole requests and responses in clear text. |
 | `JSONLogging.Folder` | string | `<exe folder>\logs` | Target directory (created if missing). |
 | `JSONLogging.FileName` | string | `mars-reqresp.log` | Base log file name. |
 | `JSONLogging.DailyRotation` | Boolean | `True` | Insert the date before the extension for daily rotation. |

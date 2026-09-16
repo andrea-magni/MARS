@@ -85,6 +85,15 @@ type
     procedure InitContentTypesForExt; virtual;
     procedure InitIndexFileNames; virtual;
     function CheckFilters(const AString: string): Boolean; virtual;
+    // RootFolder in canonical, delimiter-terminated form
+    function CanonicalRootFolder: string; virtual;
+    // True if the segment may be part of a served path (no dot-segments, separators,
+    // reserved characters, trailing dots or spaces)
+    function CheckPathSegment(const ASegment: string): Boolean; virtual;
+    // Maps the request URL to a path under RootFolder. False when the request does not
+    // resolve to something inside RootFolder (or violates IncludeSubFolders): the
+    // caller answers 404 and never touches the file system.
+    function ResolveFullPath(out AFullPath: string): Boolean; virtual;
     procedure ServeFileContent(const AFileName: string; const AResponse: TMARSResponse); virtual;
     procedure ServeDirectoryContent(const ADirectory: string; const AResponse: TMARSResponse); virtual;
     function DirectoryHasIndexFile(const ADirectory: string; out AIndexFullPath: string): Boolean; virtual;
@@ -191,13 +200,44 @@ begin
   end;
 end;
 
-function TFileSystemResource.GetContent: TMARSResponse;
-var
-  LRelativePath, LBasePath, LFullPath, LIndexFileFullPath: string;
-  LWildcardPosition: Integer;
+function TFileSystemResource.CanonicalRootFolder: string;
 begin
-  Result := TMARSResponse.Create;
-  Result.StatusCode := 404;
+  Result := IncludeTrailingPathDelimiter(TPath.GetFullPath(RootFolder));
+end;
+
+function TFileSystemResource.CheckPathSegment(const ASegment: string): Boolean;
+const
+  // separators (a '%2f' or '%5c' decoded inside a segment), Windows reserved characters
+  // and ':' (drive letters, NTFS alternate data streams such as 'file.txt::$DATA')
+  FORBIDDEN_CHARS = [':', '*', '?', '"', '<', '>', '|', '/', '\'];
+var
+  LChar: Char;
+begin
+  // '.' and '..' would climb out of RootFolder (or are pointless)
+  Result := (ASegment <> '') and (ASegment <> '.') and (ASegment <> '..');
+  if not Result then
+    Exit;
+
+  for LChar in ASegment do
+    if CharInSet(LChar, FORBIDDEN_CHARS) or (LChar < #32) then
+      Exit(False);
+
+  // Windows silently strips trailing dots and spaces ('config.ini.' opens 'config.ini'),
+  // which would let a request slip past the extension filters
+  Result := not (ASegment.EndsWith('.') or ASegment.EndsWith(' '));
+end;
+
+function TFileSystemResource.ResolveFullPath(out AFullPath: string): Boolean;
+var
+  LRelativePath, LBasePath, LRootPath, LCandidate: string;
+  LSegments: TArray<string>;
+  LIndex, LSegmentCount, LWildcardPosition: Integer;
+begin
+  Result := False;
+  AFullPath := '';
+
+  if RootFolder = '' then
+    Exit;
 
   LRelativePath := SmartConcat(URL.PathTokens, '/').Replace('/', PathDelim, [rfReplaceAll]);
 
@@ -219,14 +259,46 @@ begin
   if LRelativePath.StartsWith(PathDelim) then
     LRelativePath := LRelativePath.Substring(string(PathDelim).Length);
 
-  LFullPath := RootFolder;
-  // MF20260319
-  // Do NOT use SmartConcat to build the final path: on Linux it strips the leading '/'
-  // making the path relative instead of absolute (i.e. 'app/swagger...' instead of '/app/swagger...').
-  // Direct concatenation is used instead, preserving the absolute path.
-  if not LFullPath.EndsWith(PathDelim) then
-    LFullPath := LFullPath + PathDelim;
-  LFullPath := LFullPath + LRelativePath;
+  // 1) every segment is validated before the file system is involved; a trailing empty
+  //    segment (request ending with '/') is allowed and means "directory"
+  if LRelativePath = '' then
+    LSegments := []
+  else
+    LSegments := LRelativePath.Split([PathDelim]);
+  LSegmentCount := 0;
+  for LIndex := 0 to High(LSegments) do
+  begin
+    if (LSegments[LIndex] = '') and (LIndex = High(LSegments)) then
+      Continue;
+    if not CheckPathSegment(LSegments[LIndex]) then
+      Exit;
+    Inc(LSegmentCount);
+  end;
+
+  // 2) IncludeSubFolders = False confines requests to the root folder itself
+  if (not IncludeSubFolders) and (LSegmentCount > 1) then
+    Exit;
+
+  // 3) the canonical candidate must still lie under the canonical root: a second,
+  //    independent guard should some platform quirk get past the segment checks
+  LRootPath := CanonicalRootFolder;
+  LCandidate := TPath.GetFullPath(LRootPath + LRelativePath);
+  if not IncludeTrailingPathDelimiter(LCandidate).StartsWith(LRootPath, {$IFDEF MSWINDOWS}True{$ELSE}False{$ENDIF}) then
+    Exit;
+
+  AFullPath := LCandidate;
+  Result := True;
+end;
+
+function TFileSystemResource.GetContent: TMARSResponse;
+var
+  LFullPath, LIndexFileFullPath: string;
+begin
+  Result := TMARSResponse.Create;
+  Result.StatusCode := 404;
+
+  if not ResolveFullPath(LFullPath) then
+    Exit;
 
   if CheckFilters(LFullPath) then
   begin
@@ -335,7 +407,7 @@ begin
     LEntry := LEntries[LIndex];
     if CheckFilters(LEntry) then
     begin
-      LEntryRelativePath := ExtractRelativePath(RootFolder, LEntry);
+      LEntryRelativePath := ExtractRelativePath(CanonicalRootFolder, LEntry);
       LIsFolder := TDirectory.Exists(LEntry);
       AResponse.Content := AResponse.Content
         + '<li>'
