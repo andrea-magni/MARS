@@ -83,7 +83,24 @@ A method without a `[Path]` answers the resource root for its verb.
 
 ## HTTP verbs
 
-One verb attribute per endpoint: `[GET]`, `[POST]`, `[PUT]`, `[DELETE]`, `[PATCH]`, `[HEAD]`, `[OPTIONS]`. The same path can be served by several methods differing only by verb.
+One verb attribute per endpoint: `[GET]`, `[POST]`, `[PUT]`, `[DELETE]`, `[PATCH]`, `[HEAD]`, `[OPTIONS]`, `[QUERY]`. The same path can be served by several methods differing only by verb.
+
+`[QUERY]` maps the HTTP `QUERY` method (IETF draft *safe method with body*): a safe, idempotent
+request whose query travels in the body, like a `GET` with a payload. Bind the body with
+`[BodyParam]` exactly as for `POST`:
+
+```pascal
+[Path('items'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+TItemsResource = class
+public
+  [QUERY]
+  function Search([BodyParam] const AFilter: TItemFilter): TArray<TItem>;
+end;
+```
+
+The Indy and DCS hosts accept the verb out of the box. On IIS the verb has to be allowed in the
+handler mapping, or IIS rejects it with `405` before MARS sees the request. OpenAPI 3.0 has no
+`query` operation, so `[QUERY]` endpoints are left out of the generated document.
 
 ## Return types and serialization
 

@@ -7,7 +7,7 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | Attribute | Target | Purpose |
 | --- | --- | --- |
 | `[Path('seg')]` | class, method | Route segment (supports `{token}` and `{*}`). |
-| `[GET]` `[POST]` `[PUT]` `[DELETE]` `[PATCH]` `[HEAD]` `[OPTIONS]` | method | HTTP verb. |
+| `[GET]` `[POST]` `[PUT]` `[DELETE]` `[PATCH]` `[HEAD]` `[OPTIONS]` `[QUERY]` | method | HTTP verb (`QUERY`: safe method with a body, bind it with `[BodyParam]`). |
 
 ## Content negotiation
 

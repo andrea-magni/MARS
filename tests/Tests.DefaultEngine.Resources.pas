@@ -76,6 +76,10 @@ type
 
     [GET]
     function RetrieveAll: TArray<TItem>;
+
+    // HTTP QUERY: safe request whose query is carried in the body
+    [QUERY]
+    function Search([BodyParam] const AFilter: TItem): TArray<TItem>;
   end;
 
 
@@ -148,6 +152,14 @@ begin
   Result := [
     LItem1
   ];
+end;
+
+function TItemResource.Search(const AFilter: TItem): TArray<TItem>;
+begin
+  Result := [];
+  for var LItem in RetrieveAll do
+    if LItem.Description.Contains(AFilter.Description) then
+      Result := Result + [LItem];
 end;
 
 initialization

@@ -83,6 +83,15 @@ type
 
     [Test]
     procedure TestStaticFileHeadNotFound;
+
+    [Test]
+    procedure TestQueryWithBody;
+
+    [Test]
+    procedure TestQueryNoMatch;
+
+    [Test]
+    procedure TestQueryDoesNotShadowGet;
   end;
 
 implementation
@@ -299,6 +308,41 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(404, LMock.Response.StatusCode, 'Status code should be 404 for a missing file');
   Assert.AreEqual('', LMock.Response.Content, 'HEAD should have no body');
+end;
+
+procedure TMARSDefaultEngineFixture.TestQueryWithBody;
+begin
+  // HTTP QUERY: the filter travels in the body, bound through [BodyParam]
+  var LMock := MockRequestAndResponse('QUERY', ResourcePath('item'), '{ "Description": "#1" }');
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.Contains(LMock.Response.Content, '"Item #1"', 'The matching item should be returned');
+end;
+
+procedure TMARSDefaultEngineFixture.TestQueryNoMatch;
+begin
+  var LMock := MockRequestAndResponse('QUERY', ResourcePath('item'), '{ "Description": "nothing like this" }');
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.AreEqual('[]', LMock.Response.Content, 'No item should match');
+end;
+
+procedure TMARSDefaultEngineFixture.TestQueryDoesNotShadowGet;
+begin
+  // GET and QUERY share the same path: the verb must select the method
+  var LMock := MockRequestAndResponse('GET', ResourcePath('item'));
+
+  var LHandled := DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response);
+
+  Assert.IsTrue(LHandled, 'Request should be handled');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
+  Assert.Contains(LMock.Response.Content, '"Item #1"', 'GET should still be routed to RetrieveAll');
 end;
 
 procedure TMARSDefaultEngineFixture.TestWildcard;
