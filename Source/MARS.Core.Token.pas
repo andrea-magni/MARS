@@ -27,6 +27,11 @@ uses
 ;
 
 type
+  // What TMARSToken.SecretFromParameters does when JWT.Secret is missing or still the public
+  // default and JWT.AllowDefaultSecret is not set: Generate a per-process random secret (DEBUG
+  // builds, tokens do not survive a restart) or Refuse with an exception (RELEASE builds).
+  TMARSDefaultSecretPolicy = (Generate, Refuse);
+
   TMARSToken = class
   public
   private
@@ -74,6 +79,14 @@ type
     procedure Build(const ASecret: string);
     procedure Load(const AToken, ASecret: string);
     procedure Clear;
+
+    // The HMAC secret to sign and verify tokens for AParameters: JWT.Secret when set to
+    // something other than the public default, the default only with JWT.AllowDefaultSecret=true,
+    // otherwise whatever DefaultSecretPolicy dictates. Every reader of JWT.Secret goes through here.
+    class function SecretFromParameters(const AParameters: TMARSParameters): string;
+    class var DefaultSecretPolicy: TMARSDefaultSecretPolicy;
+    // True once the per-process random secret has been handed out (Generate policy)
+    class var GeneratedSecretInUse: Boolean;
     function Clone(const AIgnoreRequestResponse: Boolean = True): TMARSToken; virtual;
 
     function HasRole(const ARole: string): Boolean; overload; virtual;
@@ -112,19 +125,63 @@ uses
   , System.NetEncoding
   {$endif}
 
-  , MARS.Core.Utils, MARS.Utils.Parameters.JSON, MARS.Utils.JWT
+  , MARS.Core.Utils, MARS.Utils.Parameters.JSON, MARS.Utils.JWT, MARS.Core.Exceptions
+{$IFDEF MSWINDOWS}, Winapi.Windows{$ENDIF}
 ;
+
+var
+  // per-process secret for the Generate policy, created once at start-up (no lazy init:
+  // two threads must never see two different secrets)
+  _ProcessSecret: string;
 
 { TMARSToken }
 
+class function TMARSToken.SecretFromParameters(const AParameters: TMARSParameters): string;
+const
+  MESSAGE_TEXT = 'JWT.Secret is not configured (or is still the public default). '
+    + 'Set a strong, unique ' + JWT_SECRET_PARAM + ' for the application, or set '
+    + JWT_ALLOWDEFAULTSECRET_PARAM + '=true to knowingly use the public default.';
+var
+  LAllowDefault: Boolean;
+begin
+  Result := '';
+  LAllowDefault := False;
+  if Assigned(AParameters) then
+  begin
+    Result := AParameters.ByName(JWT_SECRET_PARAM, '').AsString;
+    LAllowDefault := AParameters.ByName(JWT_ALLOWDEFAULTSECRET_PARAM, False).AsBoolean;
+  end;
+
+  if (Result <> '') and (Result <> JWT_SECRET_PARAM_DEFAULT) then
+    Exit;
+
+  if LAllowDefault then
+    Exit(JWT_SECRET_PARAM_DEFAULT);
+
+  case DefaultSecretPolicy of
+    Generate:
+    begin
+      if not GeneratedSecretInUse then
+      begin
+        GeneratedSecretInUse := True;
+        {$IFDEF MSWINDOWS}
+        OutputDebugString(PChar('MARS: ' + MESSAGE_TEXT + ' Using a random per-process secret (DEBUG policy).'));
+        {$ENDIF}
+      end;
+      Result := _ProcessSecret;
+    end;
+  else
+    raise EMARSException.Create(MESSAGE_TEXT);
+  end;
+end;
+
 constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSParameters);
 begin
-  var LSecret := JWT_SECRET_PARAM_DEFAULT;
+  var LSecret := SecretFromParameters(AParameters);
   var LIssuer := JWT_ISSUER_PARAM_DEFAULT;
   var LDuration: TDateTime := JWT_DURATION_PARAM_DEFAULT;
   if Assigned(AParameters) then
   begin
-    LSecret := AParameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString;
     LIssuer := AParameters.ByName(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
     LDuration := GetDurationFromParameters(AParameters);
   end;
@@ -444,5 +501,9 @@ begin
     end;
   end;
 end;
+
+initialization
+  _ProcessSecret := GenerateRandomSecret;
+  TMARSToken.DefaultSecretPolicy := {$IFDEF DEBUG}TMARSDefaultSecretPolicy.Generate{$ELSE}TMARSDefaultSecretPolicy.Refuse{$ENDIF};
 
 end.

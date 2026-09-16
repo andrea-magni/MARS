@@ -8,7 +8,9 @@ interface
     const JWT_ISSUER_PARAM = 'JWT.Issuer';
     const JWT_ISSUER_PARAM_DEFAULT = 'MARS-Curiosity';
     const JWT_SECRET_PARAM = 'JWT.Secret';
+    // public, therefore never used unless JWT.AllowDefaultSecret=true (see TMARSToken.SecretFromParameters)
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
+    const JWT_ALLOWDEFAULTSECRET_PARAM = 'JWT.AllowDefaultSecret';
     const JWT_COOKIEENABLED_PARAM = 'JWT.CookieEnabled';
     const JWT_COOKIEENABLED_PARAM_DEFAULT = true;
     const JWT_COOKIENAME_PARAM = 'JWT.CookieName';

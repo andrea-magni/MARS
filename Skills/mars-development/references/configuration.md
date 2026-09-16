@@ -33,7 +33,7 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 
 | Parameter | Notes |
 |---|---|
-| `JWT.Secret` | signing secret — always set your own |
+| `JWT.Secret` | signing secret — always set your own (MARSCmd generates one); missing/default: DEBUG builds use a random per-process secret, RELEASE builds raise unless `JWT.AllowDefaultSecret=true` |
 | `JWT.Issuer` | default `MARS-Curiosity` |
 | `JWT.Duration` | days; alternatives `JWT.Duration.InSeconds`, `JWT.Duration.InMinutes` |
 | `JWT.CookieEnabled`, `JWT.CookieName`, `JWT.CookieDomain`, `JWT.CookiePath`, `JWT.CookieSecure` | cookie-based token transport |

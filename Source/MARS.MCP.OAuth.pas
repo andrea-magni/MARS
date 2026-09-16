@@ -556,7 +556,7 @@ end;
 
 function TMCPOAuthServer.GetSecret: string;
 begin
-  Result := App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString;
+  Result := TMARSToken.SecretFromParameters(App.Parameters);
 end;
 
 function TMCPOAuthServer.GetAccessTokenDurationSeconds: Integer;

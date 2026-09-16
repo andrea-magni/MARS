@@ -108,9 +108,7 @@ begin
   try
     if Authenticate(LUserName, LPassword) then
     begin
-      Token.Build(
-        App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
-      );
+      Token.Build(TMARSToken.SecretFromParameters(App.Parameters));
       Result := Token;
     end
     else
