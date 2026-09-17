@@ -39,13 +39,27 @@ before downloading it. The implementation reuses `GetContent`, so a subclass ove
 The request path is validated before the file system is touched, and anything that fails
 the checks is answered with `404`:
 
-- every segment is checked in isolation: `.` and `..` are rejected, so are segments containing a
+- every segment is checked in isolation: `.` and `..` are rejected (by default, see below), so are segments containing a
   separator (an encoded `%2f` or `%5c`), `:` (drive letters, NTFS alternate data streams such as
   `file.txt::$DATA`), the characters `* ? " < > |`, control characters, and segments ending with a
   dot (which Windows silently strips; leading and trailing whitespace is trimmed off the URL tokens
   before they reach the resource);
 - the resulting path is canonicalized and must still lie under the canonical `RootFolder`;
 - with `IncludeSubFolders = False` only files directly in the root are served.
+
+Some front-ends and generated pages rely on relative links such as `css/../img/logo.png`. Mark
+the resource with `[DotSegments]` (or set the `AllowDotSegments` property) to accept `.` and `..`
+segments: every other rule still applies, and the path may never climb above `RootFolder`, not even
+halfway through (`../<root name>/file` is a `404`, although it would resolve inside the root).
+`IncludeSubFolders = False` is evaluated on the resolved path. Note that browsers and most HTTP
+clients collapse dot-segments before sending the request, so the option mostly matters for other
+kinds of clients.
+
+```pascal
+[Path('www/{*}'), RootFolder('{bin}\www', True), DotSegments]
+TWebResource = class(TFileSystemResource)
+end;
+```
 
 The two checks are independent on purpose. Both are virtual (`CheckPathSegment`,
 `ResolveFullPath`), so a subclass can tighten them further, for instance by limiting the allowed

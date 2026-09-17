@@ -65,6 +65,16 @@ type
   TStaticNoListResource = class(TFileSystemResource)
   end;
 
+  // same root, subfolders and dot-segments allowed (still confined to the root)
+  [Path('staticdots/{*}'), RootFolder('{bin}', True), DotSegments]
+  TStaticDotsResource = class(TFileSystemResource)
+  end;
+
+  // dot-segments allowed, root folder only
+  [Path('staticdotsflat/{*}'), RootFolder('{bin}', False), DotSegments]
+  TStaticDotsFlatResource = class(TFileSystemResource)
+  end;
+
   TItem = record
     Id: Integer;
     Description: string;
@@ -174,6 +184,7 @@ end;
 
 initialization
   MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
-  , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource]);
+  , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
+  , TStaticDotsResource, TStaticDotsFlatResource]);
 
 end.

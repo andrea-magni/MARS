@@ -96,3 +96,4 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | --- | --- | --- |
 | `[RootFolder('path', AIncludeSubFolders)]` | resource | Map a `TFileSystemResource` to a disk folder; `AIncludeSubFolders = False` serves the root folder only. |
 | `[DirectoryListing(False)]` | resource | Disable the HTML listing of directories without an index file (`404` instead). |
+| `[DotSegments]` | resource | Accept `.` and `..` in the paths of a `TFileSystemResource`, as long as they stay inside the root folder (default: `404`). |

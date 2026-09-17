@@ -89,6 +89,8 @@ type
 
     [Test]
     procedure TestStaticPathTraversalRejected;
+    [Test]
+    procedure TestStaticDotSegmentsAllowedInsideRoot;
 
     [Test]
     procedure TestStaticReservedSegmentsRejected;
@@ -384,6 +386,58 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.Contains(LMock.Response.Content, '"Item #1"', 'GET should still be routed to RetrieveAll');
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticDotSegmentsAllowedInsideRoot;
+const
+  TRAVERSAL_FILE = 'mars-dots-traversal-test.txt';
+  SUB_FOLDER = 'mars-dots-sub';
+var
+  LRootName: string;
+begin
+  LRootName := ExtractFileName(ExcludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))));
+  WriteStaticFile(STATIC_FILE_NAME, STATIC_FILE_CONTENT);
+  WriteStaticFile(SUB_FOLDER + PathDelim + STATIC_FILE_NAME, STATIC_FILE_CONTENT);
+  WriteStaticFile('..' + PathDelim + TRAVERSAL_FILE, 'must never be served');
+  try
+    // [DotSegments]: dot-segments resolving inside the root are served
+    for var LVector in [
+      'staticdots/./' + STATIC_FILE_NAME
+    , 'staticdots/' + SUB_FOLDER + '/../' + STATIC_FILE_NAME
+    , 'staticdots/' + SUB_FOLDER + '/./' + STATIC_FILE_NAME
+    , 'staticdots/' + SUB_FOLDER + '/../' + SUB_FOLDER + '/' + STATIC_FILE_NAME
+    , 'staticdots/' + SUB_FOLDER + '/%2e%2e/' + STATIC_FILE_NAME   // encoded dots
+    , 'staticdotsflat/' + SUB_FOLDER + '/../' + STATIC_FILE_NAME   // resolves to the root folder itself
+    ] do
+    begin
+      Assert.AreEqual(200, StaticRequestStatus('GET', LVector), 'GET ' + LVector);
+      Assert.AreEqual(200, StaticRequestStatus('HEAD', LVector), 'HEAD ' + LVector);
+    end;
+
+    // ...but nothing above the root, not even halfway through the path
+    for var LVector in [
+      'staticdots/../' + TRAVERSAL_FILE
+    , 'staticdots/' + SUB_FOLDER + '/../../' + TRAVERSAL_FILE
+    , 'staticdots/%2e%2e/' + TRAVERSAL_FILE
+    , 'staticdots/..%2f' + TRAVERSAL_FILE                          // separators are still rejected
+    , 'staticdots/..%5c' + TRAVERSAL_FILE
+    , 'staticdots/../' + LRootName + '/' + STATIC_FILE_NAME        // back inside, but climbed out first
+    , 'staticdots/.../' + STATIC_FILE_NAME                         // not a dot-segment: trailing dot rule
+    , 'staticdotsflat/./' + SUB_FOLDER + '/' + STATIC_FILE_NAME    // IncludeSubFolders = False still applies
+    ] do
+    begin
+      Assert.AreEqual(404, StaticRequestStatus('GET', LVector), 'GET ' + LVector);
+      Assert.AreEqual(404, StaticRequestStatus('HEAD', LVector), 'HEAD ' + LVector);
+    end;
+
+    // default resources keep rejecting dot-segments, even harmless ones
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'statictree/' + SUB_FOLDER + '/../' + STATIC_FILE_NAME), 'default: no dot-segments');
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'statictree/./' + STATIC_FILE_NAME), 'default: no dot-segments');
+  finally
+    DeleteStaticFile('..' + PathDelim + TRAVERSAL_FILE);
+    DeleteStaticFile(STATIC_FILE_NAME);
+    TDirectory.Delete(TPath.Combine(ExtractFilePath(ParamStr(0)), SUB_FOLDER), True);
+  end;
 end;
 
 procedure TMARSDefaultEngineFixture.TestStaticPathTraversalRejected;

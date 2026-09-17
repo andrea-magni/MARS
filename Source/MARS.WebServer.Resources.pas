@@ -80,6 +80,18 @@ type
     procedure ApplyToResource(const AResource: TFileSystemResource); override;
   end;
 
+  // [DotSegments(True)] accepts '.' and '..' in the request path, as long as the path
+  // never climbs above RootFolder (default: any dot-segment answers 404)
+  DotSegmentsAttribute = class(WebAttribute)
+  private
+    FAllowed: Boolean;
+  public
+    constructor Create(const AAllowed: Boolean = True);
+    procedure ApplyToResource(const AResource: TFileSystemResource); override;
+
+    property Allowed: Boolean read FAllowed;
+  end;
+
 
   TFileSystemResource = class
   private
@@ -90,6 +102,7 @@ type
     FInclusionFilters: TStringList;
     FIndexFileNames: TStringList;
     FDirectoryListingEnabled: Boolean;
+    FAllowDotSegments: Boolean;
   protected
     [Context] URL: TMARSURL;
     [Context] Activation: IMARSActivation;
@@ -99,8 +112,8 @@ type
     function CheckFilters(const AString: string): Boolean; virtual;
     // RootFolder in canonical, delimiter-terminated form
     function CanonicalRootFolder: string; virtual;
-    // True if the segment may be part of a served path (no dot-segments, separators,
-    // reserved characters, trailing dots or spaces)
+    // True if the segment may be part of a served path (no separators, reserved characters,
+    // trailing dots or spaces; no dot-segments unless AllowDotSegments)
     function CheckPathSegment(const ASegment: string): Boolean; virtual;
     // Maps the request URL to a path under RootFolder. False when the request does not
     // resolve to something inside RootFolder (or violates IncludeSubFolders): the
@@ -132,6 +145,8 @@ type
     property IndexFileNames: TStringList read FIndexFileNames;
     // HTML listing for directories without an index file (default True; see [DirectoryListing])
     property DirectoryListingEnabled: Boolean read FDirectoryListingEnabled write FDirectoryListingEnabled;
+    // accept '.' and '..' segments that stay inside RootFolder (default False; see [DotSegments])
+    property AllowDotSegments: Boolean read FAllowDotSegments write FAllowDotSegments;
   end;
 
 function AtLeastOneMatch(const ASample: string; const AValues: TStringList): Boolean;
@@ -183,6 +198,7 @@ begin
   FExclusionFilters := TStringList.Create;
   FIndexFileNames := TStringList.Create;
   FDirectoryListingEnabled := True;
+  FAllowDotSegments := False;
 
   Init;
 end;
@@ -230,10 +246,13 @@ const
 var
   LChar: Char;
 begin
-  // '.' and '..' would climb out of RootFolder (or are pointless)
-  Result := (ASegment <> '') and (ASegment <> '.') and (ASegment <> '..');
-  if not Result then
-    Exit;
+  if ASegment = '' then
+    Exit(False);
+
+  // '.' and '..' are rejected by default; with AllowDotSegments they are accepted here
+  // and ResolveFullPath checks they never climb above RootFolder
+  if (ASegment = '.') or (ASegment = '..') then
+    Exit(AllowDotSegments);
 
   for LChar in ASegment do
     if CharInSet(LChar, FORBIDDEN_CHARS) or (LChar < #32) then
@@ -282,6 +301,9 @@ begin
     LSegments := []
   else
     LSegments := LRelativePath.Split([PathDelim]);
+  //    LSegmentCount is the depth below the root once dot-segments (AllowDotSegments) are
+  //    applied: it must never go negative, not even halfway through the path
+  //    ('../<root name>/file' would otherwise probe the name of the root folder)
   LSegmentCount := 0;
   for LIndex := 0 to High(LSegments) do
   begin
@@ -289,7 +311,14 @@ begin
       Continue;
     if not CheckPathSegment(LSegments[LIndex]) then
       Exit;
-    Inc(LSegmentCount);
+    if LSegments[LIndex] = '..' then
+    begin
+      Dec(LSegmentCount);
+      if LSegmentCount < 0 then
+        Exit;
+    end
+    else if LSegments[LIndex] <> '.' then
+      Inc(LSegmentCount);
   end;
 
   // 2) IncludeSubFolders = False confines requests to the root folder itself
@@ -557,6 +586,21 @@ procedure ExcludeAttribute.ApplyToResource(
 begin
   inherited;
   AResource.ExclusionFilters.Add(Pattern);
+end;
+
+{ DotSegmentsAttribute }
+
+constructor DotSegmentsAttribute.Create(const AAllowed: Boolean);
+begin
+  inherited Create;
+  FAllowed := AAllowed;
+end;
+
+procedure DotSegmentsAttribute.ApplyToResource(
+  const AResource: TFileSystemResource);
+begin
+  inherited;
+  AResource.AllowDotSegments := Allowed;
 end;
 
 { DirectoryListingAttribute }
