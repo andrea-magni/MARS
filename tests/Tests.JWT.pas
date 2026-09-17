@@ -7,6 +7,7 @@ uses
 , DUnitX.TestFramework
 , MARS.Core.Token
 , MARS.mORMotJWT.Token, MARS.JOSEJWT.Token
+, MARS.Utils.Parameters, MARS.Core.Exceptions
 ;
 
 type
@@ -32,6 +33,23 @@ type
     [Test] procedure EmptyToken;
   end;
 
+  [TestFixture('TMARSToken.Secret')]
+  TMARSTokenSecretTests = class(TObject)
+  private
+    FSavedPolicy: TMARSDefaultSecretPolicy;
+    function ParamsWith(const ASecret: string; const AAllowDefault: Boolean = False): TMARSParameters;
+  public
+    [Setup] procedure Setup;
+    [TearDown] procedure TearDown;
+    [Test] procedure ConfiguredSecretWins;
+    [Test] procedure RefuseWithoutSecret;
+    [Test] procedure RefuseDefaultSecret;
+    [Test] procedure AllowDefaultSecretOptIn;
+    [Test] procedure GenerateIsStableWithinProcess;
+    [Test] procedure GeneratedSecretRoundTrip;
+    [Test] procedure RandomSecretsDiffer;
+  end;
+
   [TestFixture('TMARSToken')]
   TMARSTokenTests = class(TObject)
   public
@@ -52,7 +70,7 @@ implementation
 
 uses
   Math, TimeSpan
-, MARS.Utils.Parameters, MARS.Utils.JWT, MARS.Core.Utils
+, MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
 , SynCommons, SynCrypto, Generics.Collections
 ;
@@ -491,7 +509,162 @@ begin
   end;
 end;
 
+{ TMARSTokenSecretTests }
+
+function TMARSTokenSecretTests.ParamsWith(const ASecret: string; const AAllowDefault: Boolean): TMARSParameters;
+begin
+  Result := TMARSParameters.Create('');
+  if ASecret <> '' then
+    Result.Values[JWT_SECRET_PARAM] := ASecret;
+  if AAllowDefault then
+    Result.Values[JWT_ALLOWDEFAULTSECRET_PARAM] := True;
+end;
+
+procedure TMARSTokenSecretTests.Setup;
+begin
+  FSavedPolicy := TMARSToken.DefaultSecretPolicy;
+end;
+
+procedure TMARSTokenSecretTests.TearDown;
+begin
+  TMARSToken.DefaultSecretPolicy := FSavedPolicy;
+end;
+
+procedure TMARSTokenSecretTests.ConfiguredSecretWins;
+begin
+  var LParams := ParamsWith('my-own-secret');
+  try
+    TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Refuse;
+    Assert.AreEqual('my-own-secret', TMARSToken.SecretFromParameters(LParams));
+    TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Generate;
+    Assert.AreEqual('my-own-secret', TMARSToken.SecretFromParameters(LParams));
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.RefuseWithoutSecret;
+var
+  LParams: TMARSParameters; // not an inline var: captured by the anonymous methods below
+begin
+  TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Refuse;
+  LParams := ParamsWith('');
+  try
+    Assert.WillRaise(
+      procedure
+      begin
+        TMARSToken.SecretFromParameters(LParams);
+      end
+    , EMARSException, 'missing secret');
+    Assert.WillRaise(
+      procedure
+      begin
+        TMARSToken.SecretFromParameters(nil);
+      end
+    , EMARSException, 'no parameters at all');
+    // the constructor used by the injection goes through the same check
+    Assert.WillRaise(
+      procedure
+      begin
+        TMARSmORMotJWTToken.Create('', LParams).Free;
+      end
+    , EMARSException, 'token creation');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.RefuseDefaultSecret;
+var
+  LParams: TMARSParameters;
+begin
+  TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Refuse;
+  LParams := ParamsWith(JWT_SECRET_PARAM_DEFAULT);
+  try
+    Assert.WillRaise(
+      procedure
+      begin
+        TMARSToken.SecretFromParameters(LParams);
+      end
+    , EMARSException, 'the public default counts as not configured');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.AllowDefaultSecretOptIn;
+begin
+  TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Refuse;
+  var LParams := ParamsWith('', True);
+  try
+    Assert.AreEqual(JWT_SECRET_PARAM_DEFAULT, TMARSToken.SecretFromParameters(LParams), 'explicit opt-in');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.GenerateIsStableWithinProcess;
+begin
+  TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Generate;
+  var LParams := ParamsWith('');
+  try
+    var LFirst := TMARSToken.SecretFromParameters(LParams);
+    Assert.IsTrue(Length(LFirst) >= 64, 'at least 32 random bytes');
+    Assert.AreNotEqual(JWT_SECRET_PARAM_DEFAULT, LFirst);
+    Assert.AreEqual(LFirst, TMARSToken.SecretFromParameters(LParams), 'same secret for the whole process');
+    Assert.AreEqual(LFirst, TMARSToken.SecretFromParameters(nil), 'same secret without parameters');
+    Assert.IsTrue(TMARSToken.GeneratedSecretInUse);
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.GeneratedSecretRoundTrip;
+begin
+  // a token issued under the Generate policy verifies in the same process
+  TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Generate;
+  var LParams := ParamsWith('');
+  try
+    var LIssued := TMARSmORMotJWTToken.Create('', LParams);
+    try
+      LIssued.UserName := 'Andrea';
+      LIssued.Build(TMARSToken.SecretFromParameters(LParams));
+      Assert.IsNotEmpty(LIssued.Token);
+
+      var LVerified := TMARSmORMotJWTToken.Create(LIssued.Token, LParams);
+      try
+        Assert.IsTrue(LVerified.IsVerified, 'verified with the process secret');
+        Assert.AreEqual('Andrea', LVerified.UserName);
+      finally
+        LVerified.Free;
+      end;
+
+      // and never with the public default
+      var LForged := TMARSmORMotJWTToken.Create(LIssued.Token, JWT_SECRET_PARAM_DEFAULT, 'MARS-Curiosity', 1);
+      try
+        Assert.IsFalse(LForged.IsVerified, 'the public default must not verify it');
+      finally
+        LForged.Free;
+      end;
+    finally
+      LIssued.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.RandomSecretsDiffer;
+begin
+  var LOne := GenerateRandomSecret;
+  var LTwo := GenerateRandomSecret;
+  Assert.AreEqual(64, Length(LOne));
+  Assert.AreNotEqual(LOne, LTwo);
+  Assert.AreEqual(16, Length(GenerateRandomSecret(8)));
+end;
+
 initialization
+  TDUnitX.RegisterTestFixture(TMARSTokenSecretTests);
   TDUnitX.RegisterTestFixture(TMARSmORMotJWT);
   TDUnitX.RegisterTestFixture(TMARSJOSEJWT);
   TDUnitX.RegisterTestFixture(TMARSTokenTests);

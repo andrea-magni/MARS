@@ -63,11 +63,17 @@ uses
 
 { TMARSReqRespLoggerMemory }
 
+// Linking this unit registers the hooks, but nothing is retained until the engine
+// parameter MemoryLogging.Enabled is True: the buffer keeps whole requests and responses
+// (bodies, cookies, claims, login forms) in clear text for the life of the process.
 class constructor TMARSReqRespLoggerMemory.ClassCreate;
 begin
   TMARSActivation.RegisterBeforeInvoke(
     procedure (const AR: IMARSActivation; out AIsAllowed: Boolean)
     begin
+      if not AR.Engine.Parameters.ByName('MemoryLogging.Enabled').AsBoolean then
+        Exit;
+
       TMARSReqRespLoggerMemory.Instance.LogIncoming(AR);
     end
   );
@@ -75,6 +81,9 @@ begin
   TMARSActivation.RegisterAfterInvoke(
     procedure (const AR: IMARSActivation)
     begin
+      if not AR.Engine.Parameters.ByName('MemoryLogging.Enabled').AsBoolean then
+        Exit;
+
       TMARSReqRespLoggerMemory.Instance.LogOutgoing(AR);
     end
   );

@@ -50,6 +50,31 @@ type
     function GetContent: string;
   end;
 
+  // static files rooted at the test executable folder (files are created by the tests)
+  [Path('static/{*}'), RootFolder('{bin}', False)]
+  TStaticResource = class(TFileSystemResource)
+  end;
+
+  // same root, subfolders allowed
+  [Path('statictree/{*}'), RootFolder('{bin}', True)]
+  TStaticTreeResource = class(TFileSystemResource)
+  end;
+
+  // same root, no directory listing
+  [Path('staticnolist/{*}'), RootFolder('{bin}', True), DirectoryListing(False)]
+  TStaticNoListResource = class(TFileSystemResource)
+  end;
+
+  // same root, subfolders and dot-segments allowed (still confined to the root)
+  [Path('staticdots/{*}'), RootFolder('{bin}', True), DotSegments]
+  TStaticDotsResource = class(TFileSystemResource)
+  end;
+
+  // dot-segments allowed, root folder only
+  [Path('staticdotsflat/{*}'), RootFolder('{bin}', False), DotSegments]
+  TStaticDotsFlatResource = class(TFileSystemResource)
+  end;
+
   TItem = record
     Id: Integer;
     Description: string;
@@ -71,6 +96,10 @@ type
 
     [GET]
     function RetrieveAll: TArray<TItem>;
+
+    // HTTP QUERY: safe request whose query is carried in the body
+    [QUERY]
+    function Search([BodyParam] const AFilter: TItem): TArray<TItem>;
   end;
 
 
@@ -145,8 +174,17 @@ begin
   ];
 end;
 
+function TItemResource.Search(const AFilter: TItem): TArray<TItem>;
+begin
+  Result := [];
+  for var LItem in RetrieveAll do
+    if LItem.Description.Contains(AFilter.Description) then
+      Result := Result + [LItem];
+end;
+
 initialization
   MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
-  , TCatchAllResource, TImagesResource]);
+  , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
+  , TStaticDotsResource, TStaticDotsFlatResource]);
 
 end.

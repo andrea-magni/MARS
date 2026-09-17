@@ -64,6 +64,8 @@ type
     procedure Put(const AURL: string; const AFormData: TArray<TFormParam>;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
+    procedure Query(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
 
     function LastCmdSuccess: Boolean; override;
     function ResponseStatusCode: Integer; override;
@@ -92,6 +94,10 @@ uses
 ;
 
 { TMARSIndyClient }
+
+type
+  // grants access to the protected DoRequest, for verbs TIdHTTP has no wrapper for
+  TIdHTTPAccess = class(TIdHTTP);
 
 procedure TMARSIndyClient.ApplyCustomHeaders(const AHeaders: TStrings);
 var
@@ -304,6 +310,15 @@ begin
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
   FHttpClient.Put(AURL, AContent, AResponse);
+end;
+
+procedure TMARSIndyClient.Query(const AURL: string; AContent, AResponse: TStream;
+  const AAuthToken: string; const AAccept: string; const AContentType: string);
+begin
+  inherited;
+  FHttpClient.Request.Accept := AAccept;
+  FHttpClient.Request.ContentType := AContentType;
+  TIdHTTPAccess(FHttpClient).DoRequest('QUERY', AURL, AContent, AResponse, []);
 end;
 
 function TMARSIndyClient.ResponseStatusCode: Integer;

@@ -4,7 +4,7 @@ All core attributes live in `MARS.Core.Attributes` (base class `MARSAttribute`).
 
 ## HTTP methods (on methods)
 
-`[GET]`, `[POST]`, `[PUT]`, `[DELETE]`, `[PATCH]`, `[HEAD]`, `[OPTIONS]`
+`[GET]`, `[POST]`, `[PUT]`, `[DELETE]`, `[PATCH]`, `[HEAD]`, `[OPTIONS]`, `[QUERY]` (HTTP QUERY: safe method with a body, bind it with `[BodyParam]`)
 
 ## Routing and content negotiation
 

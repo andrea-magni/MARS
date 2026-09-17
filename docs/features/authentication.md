@@ -85,7 +85,7 @@ The base `TMARSTokenResource.Authenticate` is a **demo stub** that accepts any u
 
 ```ini
 [DefaultApp]
-JWT.Secret={788A2FD0-8E93-4C11-B5AF-51867CF26EE7}
+JWT.Secret=<a long random value, MARSCmd generates one for new projects>
 JWT.Issuer=MARS-Curiosity
 JWT.Duration=1                 ; days (also JWT.Duration.InMinutes / .InSeconds)
 JWT.CookieEnabled=true
@@ -93,8 +93,21 @@ JWT.CookieName=access_token
 JWT.CookieSecure=false
 ```
 
-::: danger Change the secret
-The default `JWT.Secret` is public. Set a strong, unique secret per application before deploying.
+::: danger The public default is never used silently
+`JWT_SECRET_PARAM_DEFAULT` ships in the public source, so MARS does not fall back to it. When
+`JWT.Secret` is missing, or still equal to that default, `TMARSToken.SecretFromParameters`
+applies `TMARSToken.DefaultSecretPolicy`:
+
+- `Generate` (the default in `DEBUG` builds): a random secret is created once per process and
+  used to sign and verify; tokens do not survive a restart. `TMARSToken.GeneratedSecretInUse`
+  tells you it happened, and a debug message is emitted on Windows.
+- `Refuse` (the default in `RELEASE` builds): the first operation that needs the secret raises
+  `EMARSException` with an explicit message.
+
+Set `JWT.AllowDefaultSecret=true` to knowingly keep the public default (never in production).
+Every reader of the secret, the token resource, the MCP OAuth server and the test helpers,
+goes through the same function. Projects created with MARSCmd get a random `JWT.Secret` in their
+`.ini` files.
 :::
 
 ## Reading the identity in a resource

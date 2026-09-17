@@ -34,7 +34,7 @@ type
   end;
 
   TMARSAuthEndorsement = (Cookie, AuthorizationBearer);
-  TMARSHttpVerb = (Get, Put, Post, Head, Delete, Patch);
+  TMARSHttpVerb = (Get, Put, Post, Head, Delete, Patch, Query);
   TMARSClientErrorEvent = procedure (
     AResource: TObject; AException: Exception; AVerb: TMARSHttpVerb;
     const AAfterExecute: TMARSClientResponseProc; var AHandled: Boolean) of object;
@@ -108,6 +108,9 @@ type
       const AAuthToken: string; const AAccept: string; const AContentType: string); virtual;
     procedure Patch(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
+    // HTTP QUERY (safe method with a body): AContent carries the query
+    procedure Query(const AURL: string; AContent, AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); virtual;
     procedure Post(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
     procedure Post(const AURL: string; const AFormData: TArray<TFormParam>;
@@ -680,6 +683,14 @@ begin
 end;
 
 procedure TMARSCustomClient.Patch(const AURL: string; AContent,
+  AResponse: TStream; const AAuthToken, AAccept, AContentType: string);
+begin
+  FAuthToken := AAuthToken;
+  BeforeExecute;
+  FireBeforeExecute(AURL, Self);
+end;
+
+procedure TMARSCustomClient.Query(const AURL: string; AContent,
   AResponse: TStream; const AAuthToken, AAccept, AContentType: string);
 begin
   FAuthToken := AAuthToken;

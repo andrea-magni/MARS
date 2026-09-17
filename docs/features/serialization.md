@@ -38,6 +38,12 @@ var LCustomer := TJSONObject.JSONToObject<TCustomer>(LJson);
 var LValue := TJSONObject.TValueToJSONValue(TValue.From(LPerson), DefaultMARSJSONSerializationOptions);
 ```
 
+When mapping JSON to an object, a member whose key is not in the JSON keeps its current value:
+defaults set by the constructor survive, sub-objects the constructor created stay in place (a
+nested JSON object fills them, it does not replace them), and `ToObject` on an existing instance
+merges the keys present into it. Declare a `_AssignedValues: TArray<string>` field to be told which
+members actually came from the JSON. Members of a record start zeroed, so the same rule applies.
+
 ## Serialization options
 
 `TMARSJSONSerializationOptions` controls how empty/null values and dates are emitted. There is a global default you can tune once during ignition:

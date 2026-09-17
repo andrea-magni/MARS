@@ -26,13 +26,14 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 | `Compression.Enabled` | false | used by the template's gzip `AfterInvoke` handler |
 | `Indy.SSL.RootCertFile` / `CertFile` / `KeyFile` / `Version` / `Mode` | localhost.* | standalone Indy SSL |
 | `OpenAPI.info.*` | — | title, description, version, contact.*, license.* for the OpenAPI document |
+| `OpenAPI.openapi` | 3.0.2 | OpenAPI document version; `3.2.0` or later also documents `[QUERY]` endpoints |
 | `FireDAC.<DefName>.<Param>` | — | connection definitions (see `firedac.md`) |
 
 ## Application parameters (prefix `<AppName>.` in the ini)
 
 | Parameter | Notes |
 |---|---|
-| `JWT.Secret` | signing secret — always set your own |
+| `JWT.Secret` | signing secret — always set your own (MARSCmd generates one); missing/default: DEBUG builds use a random per-process secret, RELEASE builds raise unless `JWT.AllowDefaultSecret=true` |
 | `JWT.Issuer` | default `MARS-Curiosity` |
 | `JWT.Duration` | days; alternatives `JWT.Duration.InSeconds`, `JWT.Duration.InMinutes` |
 | `JWT.CookieEnabled`, `JWT.CookieName`, `JWT.CookieDomain`, `JWT.CookiePath`, `JWT.CookieSecure` | cookie-based token transport |

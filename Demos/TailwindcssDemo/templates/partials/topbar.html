@@ -1,0 +1,46 @@
+<!--
+  Top bar: the hamburger that opens the sidebar drawer below xl, the page title,
+  and the account menu. Built from plain Tailwind utility classes; the toggles
+  are handled by www/js/ui.js, so no component library is required.
+-->
+<nav class="relative bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none">
+  <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+    <div class="flex h-16 items-center justify-between gap-x-4">
+
+      <div class="flex min-w-0 items-center gap-x-3">
+        <button type="button" data-sidebar-open aria-controls="mobile-sidebar"
+                class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 xl:hidden dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white">
+          <span class="sr-only">Open navigation</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6">
+            <path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+
+        <svg viewBox="0 0 32 32" class="h-8 w-8 shrink-0 xl:hidden" role="img" aria-label="MARS Demo"><rect width="32" height="32" rx="8" class="fill-emerald-600 dark:fill-emerald-500"/><path d="M8 23V10h3.2l4.8 7.6L20.8 10H24v13h-3v-8l-5 7.7-5-7.7v8H8Z" class="fill-white"/></svg>
+
+        <h1 class="truncate text-sm font-semibold text-gray-900 dark:text-white">@page.Title</h1>
+      </div>
+
+      <div class="relative shrink-0">
+        <button type="button" data-menu-button aria-controls="account-menu" aria-expanded="false" aria-haspopup="true"
+                class="flex items-center gap-x-2 rounded-full p-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+          <span class="sr-only">Open account menu</span>
+          <span aria-hidden="true" class="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="size-5"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z" /></svg>
+          </span>
+          <span class="hidden max-w-40 truncate text-sm font-medium text-gray-700 sm:block dark:text-gray-200">@session.RealName</span>
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-4 text-gray-400">
+            <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+          </svg>
+        </button>
+
+        <div id="account-menu" data-menu-panel hidden
+             class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
+          <a href="@page.BasePath/users/@session.UserId" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5">Settings</a>
+          <a href="@page.BasePath/app/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5">Sign out</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</nav>

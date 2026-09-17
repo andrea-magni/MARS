@@ -15,7 +15,7 @@ uses
 
 , Tests.Client.TestServer
 
-, MARS.Client.Client, MARS.Client.Client.Indy, MARS.Client.Client.Net
+, MARS.Client.Client, MARS.Client.Client.Indy, MARS.Client.Client.Net, MARS.Client.Client.Http
 , MARS.Client.Application
 , MARS.Client.CustomResource, MARS.Client.Resource.JSON, MARS.Client.Resource
 , MARS.Core.MediaType
@@ -35,15 +35,12 @@ type
 
   TMARSClientServerTest<C: TMARSCustomClient> = class(TMARSClientTest<C>)
   private
-    FServer: TMARSTestServer;
   protected
     function GetServer: TMARSTestServer;
     function GetEngine: IMARSEngine; virtual;
 
     property Server: TMARSTestServer read GetServer;
     property Engine: IMARSEngine read GetEngine;
-  public
-    destructor Destroy; override;
   end;
 
   TMARSResourceClientTest<C: TMARSCustomClient; R:TMARSClientCustomResource> = class(TMARSClientServerTest<C>)
@@ -59,11 +56,25 @@ type
     procedure BeforeDestruction; override;
   end;
 
-  [TestFixture('Client')]
-  TSimpleClientTest = class(TMARSResourceClientTest<TMARSIndyClient, TMARSClientResource>)
+  // same tests against every client implementation
+  TSimpleClientTestBase<C: TMARSCustomClient> = class(TMARSResourceClientTest<C, TMARSClientResource>)
   public
     [Test]
     procedure TestHelloWorld;
+    [Test]
+    procedure TestQuery;
+  end;
+
+  [TestFixture('Client')]
+  TSimpleClientTest = class(TSimpleClientTestBase<TMARSIndyClient>)
+  end;
+
+  [TestFixture('Client Net')]
+  TSimpleNetClientTest = class(TSimpleClientTestBase<TMARSNetClient>)
+  end;
+
+  [TestFixture('Client Http')]
+  TSimpleHttpClientTest = class(TSimpleClientTestBase<TMARSHttpClient>)
   end;
 
   [TestFixture('Client JSON')]
@@ -93,12 +104,6 @@ end;
 
 { TMARSClientServerTest<C> }
 
-destructor TMARSClientServerTest<C>.Destroy;
-begin
-  FreeAndNil(FServer);
-  inherited;
-end;
-
 function TMARSClientServerTest<C>.GetEngine: IMARSEngine;
 begin
   Result := Server.Engine;
@@ -106,9 +111,7 @@ end;
 
 function TMARSClientServerTest<C>.GetServer: TMARSTestServer;
 begin
-  if not Assigned(FServer) then
-    FServer := TMARSTestServer.Create;
-  Result := FServer;
+  Result := SharedTestServer;
 end;
 
 { TMARSResourceClientTest<R> }
@@ -159,7 +162,7 @@ begin
   Assert.AreEqual('application/json', LAccept);
 end;
 
-procedure TSimpleClientTest.TestHelloWorld;
+procedure TSimpleClientTestBase<C>.TestHelloWorld;
 begin
   FRequest.Resource := 'test/helloworld';
   FRequest.SpecificAccept := TMediaType.TEXT_PLAIN;
@@ -174,5 +177,33 @@ begin
 
   Assert.AreEqual('Hello World!', LResponse);
 end;
+
+procedure TSimpleClientTestBase<C>.TestQuery;
+begin
+  FRequest.Resource := 'test/search';
+  FRequest.SpecificAccept := TMediaType.TEXT_PLAIN;
+  FRequest.SpecificContentType := TMediaType.TEXT_PLAIN;
+
+  var LResponse := '';
+  FRequest.QUERY(
+    procedure (AContent: TMemoryStream)
+    begin
+      var LBytes := TEncoding.UTF8.GetBytes('name like ''a%''');
+      AContent.WriteBuffer(LBytes, Length(LBytes));
+    end
+  , procedure (AStream: TStream)
+    begin
+      LResponse := StreamToString(AStream);
+    end
+  );
+
+  Assert.AreEqual('found: name like ''a%''', LResponse);
+end;
+
+initialization
+  TDUnitX.RegisterTestFixture(TSimpleClientTest);
+  TDUnitX.RegisterTestFixture(TSimpleNetClientTest);
+  TDUnitX.RegisterTestFixture(TSimpleHttpClientTest);
+  TDUnitX.RegisterTestFixture(TMARSJSONTest);
 
 end.

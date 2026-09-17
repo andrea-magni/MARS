@@ -306,7 +306,7 @@ begin
   FApplication := FEngine.ApplicationByName(ApplicationName);
   FAppParameters := FApplication.Parameters;
 
-  FTokenSecret := FAppParameters.ByNameText(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString;
+  FTokenSecret := TMARSToken.SecretFromParameters(FAppParameters);
   FTokenIssuer := FAppParameters.ByNameText(JWT_ISSUER_PARAM, JWT_ISSUER_PARAM_DEFAULT).AsString;
   FTokenDuration := FAppParameters.ByNameText(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsType<TDateTime>;
   FTokenCookieName := FAppParameters.ByNameText(JWT_COOKIENAME_PARAM, JWT_COOKIENAME_PARAM_DEFAULT).AsString;

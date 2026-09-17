@@ -50,7 +50,8 @@ Read by the [token resource](/features/authentication) and JWT backends:
 
 | Parameter | Default | Purpose |
 | --- | --- | --- |
-| `JWT.Secret` | *(a fixed GUID — change it!)* | HMAC signing secret. |
+| `JWT.Secret` | — | HMAC signing secret. Missing or equal to the public default: see `JWT.AllowDefaultSecret`. |
+| `JWT.AllowDefaultSecret` | `false` | Knowingly use the public default secret. Otherwise a `DEBUG` build generates a random per-process secret and a `RELEASE` build raises (`TMARSToken.DefaultSecretPolicy`). |
 | `JWT.Issuer` | `MARS-Curiosity` | `iss` claim. |
 | `JWT.Duration` | `1` | Token lifetime in **days**. |
 | `JWT.Duration.InMinutes` | — | Lifetime in minutes (alternative). |
@@ -61,8 +62,10 @@ Read by the [token resource](/features/authentication) and JWT backends:
 | `JWT.CookiePath` | — | Cookie path. |
 | `JWT.CookieSecure` | `false` | Mark the cookie `Secure` (HTTPS only). |
 
-::: danger Change `JWT.Secret`
-The default secret ships in the public source. Always set a strong, unique secret per deployment.
+::: danger Set `JWT.Secret`
+The default secret ships in the public source and is never used unless you opt in with
+`JWT.AllowDefaultSecret`. Set a strong, unique secret per deployment; MARSCmd writes a random one
+into the `.ini` files of every project it creates.
 :::
 
 ## Logging parameters
@@ -72,6 +75,7 @@ Read by the [request/response loggers](/features/logging) (engine section). Each
 | Parameter | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `JSONLogging.Enabled` | Boolean | `False` | Enable the NDJSON file logger (`MARS.Utils.ReqRespLogger.JSON`). |
+| `MemoryLogging.Enabled` | Boolean | `False` | Enable the in-memory logger (`MARS.Utils.ReqRespLogger.Memory`); it retains whole requests and responses in clear text. |
 | `JSONLogging.Folder` | string | `<exe folder>\logs` | Target directory (created if missing). |
 | `JSONLogging.FileName` | string | `mars-reqresp.log` | Base log file name. |
 | `JSONLogging.DailyRotation` | Boolean | `True` | Insert the date before the extension for daily rotation. |

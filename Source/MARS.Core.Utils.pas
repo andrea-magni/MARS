@@ -61,6 +61,8 @@ type
 
 
   function CreateCompactGuidStr: string;
+  // ABytes random bytes (system GUID generator) as lower-case hex, e.g. for JWT.Secret
+  function GenerateRandomSecret(const ABytes: Integer = 32): string;
 
   function BooleanToTJSON(AValue: Boolean): TJSONValue;
 
@@ -557,6 +559,21 @@ begin
     Result := TJSONTrue.Create
   else
     Result := TJSONFalse.Create;
+end;
+
+function GenerateRandomSecret(const ABytes: Integer): string;
+var
+  LGuidBytes: TBytes;
+  LIndex: Integer;
+begin
+  Result := '';
+  LGuidBytes := [];
+  for LIndex := 0 to ABytes - 1 do
+  begin
+    if LIndex mod 16 = 0 then
+      LGuidBytes := TGUID.NewGuid.ToByteArray;
+    Result := Result + LowerCase(IntToHex(LGuidBytes[LIndex mod 16], 2));
+  end;
 end;
 
 function CreateCompactGuidStr: string;

@@ -64,7 +64,7 @@ Roles assigned in `Authenticate` flow into the JWT, so per-tool `[RolesAllowed]`
 `HandleWellKnownRequest` serves `oauth-protected-resource`, `oauth-authorization-server` AND `openid-configuration` (alias — several clients prefer OIDC-style discovery), and answers a clean **404 for any other `/.well-known/*` path**. That 404 matters: without the handler the engine answers 500 to unknown root paths and OAuth clients abort discovery instead of falling back.
 
 Production notes:
-- run behind HTTPS (TLS-terminating reverse proxy); override `TMCPResource.BuildResourceMetadataURL` and adjust metadata URLs if the public scheme/host differs;
+- run behind HTTPS (TLS-terminating reverse proxy); public URLs in the metadata and in the 401 challenge are built by `TMCPOAuthMetadata.BaseURL`, which honors `X-Forwarded-Proto`/`-Host`/`-Port` (nginx, IIS ARR, ngrok...): make sure the proxy sets them, or override `TMCPResource.BuildResourceMetadataURL`;
 - client/code/refresh-token storage is in-memory by default: call `TMCPOAuthServer.SetPersistenceFile('<path>.json')` at startup or every server restart answers "Unknown client" to previously-registered MCP clients and breaks their sessions (the file stores refresh tokens in cleartext — protect it; override the `Store*`/`Consume*` virtuals for a custom store);
 - to delegate to an external IdP (Keycloak, Auth0, Entra) instead, MARS would validate RS256/JWKS tokens — not covered by the HMAC-based token layer today; the self-contained server is the supported path.
 

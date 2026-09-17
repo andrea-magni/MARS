@@ -185,9 +185,12 @@ type
 
   TMCPOAuthMetadata = class
   protected
-    class function BaseURL(const ARequest: IMARSRequest): string;
     class procedure WriteJSON(const AResponse: IMARSResponse; const AJSON: TJSONObject);
   public
+    // public base URL (scheme://host[:port]) of the server as seen by the client:
+    // honors X-Forwarded-Proto/-Host/-Port set by reverse proxies and tunnels
+    // (nginx, IIS ARR, ngrok...), falls back to plain http on the local port.
+    class function BaseURL(const ARequest: IMARSRequest): string;
     // serves /.well-known/oauth-protected-resource* and
     // /.well-known/oauth-authorization-server* documents; call from the
     // engine's BeforeHandleRequest, returns True when the request was handled.
@@ -556,7 +559,7 @@ end;
 
 function TMCPOAuthServer.GetSecret: string;
 begin
-  Result := App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString;
+  Result := TMARSToken.SecretFromParameters(App.Parameters);
 end;
 
 function TMCPOAuthServer.GetAccessTokenDurationSeconds: Integer;
@@ -829,9 +832,39 @@ end;
 { TMCPOAuthMetadata }
 
 class function TMCPOAuthMetadata.BaseURL(const ARequest: IMARSRequest): string;
+
+  function FirstValue(const AHeaderName: string): string;
+  begin
+    // proxies chain values as a comma-separated list: the first one is the client-facing
+    Result := ARequest.GetHeaderParamValue(AHeaderName).Split([','])[0].Trim;
+  end;
+
+var
+  LProto, LHost, LPort: string;
 begin
-  // http assumed: place a TLS terminator in front for production use
-  Result := 'http://' + ARequest.HostName + ':' + ARequest.Port.ToString;
+  LProto := '';
+  if ARequest.GetHeaderParamValue('X-Forwarded-Proto') <> '' then
+    LProto := FirstValue('X-Forwarded-Proto').ToLower;
+
+  if LProto = '' then
+    // no proxy in front: http assumed on the local port
+    Exit('http://' + ARequest.HostName + ':' + ARequest.Port.ToString);
+
+  LHost := '';
+  if ARequest.GetHeaderParamValue('X-Forwarded-Host') <> '' then
+    LHost := FirstValue('X-Forwarded-Host');
+  if LHost = '' then
+    LHost := ARequest.HostName;
+
+  LPort := '';
+  if ARequest.GetHeaderParamValue('X-Forwarded-Port') <> '' then
+    LPort := FirstValue('X-Forwarded-Port');
+
+  Result := LProto + '://' + LHost;
+  if (LPort <> '') and (not LHost.Contains(':'))
+    and (not (((LProto = 'https') and (LPort = '443')) or ((LProto = 'http') and (LPort = '80'))))
+  then
+    Result := Result + ':' + LPort;
 end;
 
 class procedure TMCPOAuthMetadata.WriteJSON(const AResponse: IMARSResponse;

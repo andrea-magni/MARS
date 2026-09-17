@@ -388,6 +388,7 @@ var
   LQuery: string;
   LStrings: TStringList;
   LIndex: Integer;
+  LName: string;
 begin
   FQueryTokens.Clear;
 
@@ -404,7 +405,13 @@ begin
       LStrings.StrictDelimiter := True;
       LStrings.DelimitedText := LQuery;
       for LIndex := 0 to LStrings.Count - 1 do
-        FQueryTokens.Add(URLDecode(LStrings.Names[LIndex]), URLDecode(LStrings.ValueFromIndex[LIndex]));
+      begin
+        LName := URLDecode(LStrings.Names[LIndex]);
+        // a repeated name (?a=1&a=2) keeps its first value, as TStrings.Values does;
+        // TDictionary.Add would raise and turn the request into a 500. '?&&' is ignored.
+        if (LName <> '') and not FQueryTokens.ContainsKey(LName) then
+          FQueryTokens.Add(LName, URLDecode(LStrings.ValueFromIndex[LIndex]));
+      end;
     finally
       LStrings.Free;
     end;

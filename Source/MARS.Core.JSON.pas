@@ -1598,7 +1598,15 @@ begin
       ATValue := TJSONObject(AValue).ToRecord(ADesiredType, AOptions)
     else if ADesiredType.IsInstance then
     begin
-      LInstance := ATValue.AsObject;
+      // an instance already in ATValue is filled in place, but only if it really is of the
+      // desired class: whatever else a caller left there (a primitive, an instance of another
+      // class) must not be reused
+      LInstance := nil;
+      if ATValue.Kind = tkClass then
+        LInstance := ATValue.AsObject;
+      if Assigned(LInstance) and not LInstance.InheritsFrom(ADesiredType.AsInstance.MetaclassType) then
+        LInstance := nil;
+
       if Assigned(LInstance) then
         TJSONObject(AValue).ToObject(LInstance, ADesiredType, AOptions)
       else
@@ -1694,13 +1702,15 @@ begin
       if LJSONName <> '' then
       begin
         LValue := LMember.GetValue(LObjectInstance);
+        // a member whose key is not in the JSON keeps its current value: constructor
+        // defaults survive, sub-objects created by the constructor are neither orphaned
+        // nor nil-ed, and filling an existing instance is a merge. _AssignedValues tells
+        // which members actually came from the JSON.
         if ReadValue(LJSONName, LMember.GetRttiType, True, LValue, AOptions) then
         begin
           LMember.SetValue(LObjectInstance, LValue);
           LAssignedValues := LAssignedValues + [LMember.Name];
-        end
-        else
-          LMember.SetValue(LObjectInstance, TValue.Empty);
+        end;
       end;
     end;
   end;
@@ -1782,6 +1792,10 @@ begin
       );
       if LJSONName <> '' then
       begin
+        // every member starts from a clean TValue: a class instance left over from the
+        // previous member would otherwise be filled in place and shared (see ToObject, which
+        // loads the member's current value instead)
+        LValue := TValue.Empty;
         if ReadValue(LJSONName, LMember.GetRttiType, True, LValue, AOptions) then
         begin
           try
@@ -1795,9 +1809,8 @@ begin
               raise EInvalidCast.Create(E.Message + sLineBreak + LDetails);
             end;
           end;
-        end
-        else
-          LMember.SetValue(LRecordInstance, TValue.Empty);
+        end;
+        // members missing from the JSON are left as they are (the record starts zeroed)
       end;
     end;
   end;

@@ -1,0 +1,39 @@
+<!-- templates/layouts/application.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@page.Title - MARS TailwindcssDemo</title>
+  <link rel="stylesheet" href="@page.BasePath/static/css/output.css">
+
+  <script src="@page.BasePath/static/js/htmx.min.js"></script>
+
+  <!--
+    ui.js drives the off-canvas sidebar and the account menu with plain DOM calls,
+    so this demo has no component-library dependency.
+
+    Tailwind Plus Elements is the alternative if you hold a licence for it: see
+    "Interactive components: two options" in the tutorial for the markup that
+    variant needs. Do not simply add the script - the two approaches use
+    different attributes.
+  -->
+  <script src="@page.BasePath/static/js/ui.js" defer></script>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-gray-950 dark:text-gray-100">
+  @Import partials/sidebar.html
+
+  <!-- the xl sidebar is fixed and 18rem wide, so the content is inset to match -->
+  <div class="xl:pl-72">
+    @Import partials/topbar.html
+
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      @Import partials/flash-message.html
+      @RenderBody
+    </main>
+  </div>
+
+  <div id="modal"></div>
+</body>
+</html>

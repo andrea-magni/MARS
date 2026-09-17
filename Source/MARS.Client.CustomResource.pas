@@ -132,6 +132,9 @@ type
     procedure BeforePATCH(const AContent: TStream); virtual;
     procedure AfterPATCH(const AContent: TStream); virtual;
 
+    procedure BeforeQUERY(const AContent: TStream); virtual;
+    procedure AfterQUERY(const AContent: TStream); virtual;
+
     procedure DoError(const AException: Exception; const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
     procedure AssignTo(Dest: TPersistent); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -169,6 +172,10 @@ type
     procedure PATCH(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+    // HTTP QUERY (safe method with a body): fill the query in ABeforeExecute
+    procedure QUERY(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
 //    procedure HEAD(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
 //      const AAfterExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
 //      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
@@ -198,6 +205,11 @@ type
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
       const ASynchronize: Boolean = True); overload; virtual;
     procedure PATCHAsync(
+      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ASynchronize: Boolean = True); overload; virtual;
+    procedure QUERYAsync(
       const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
       const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
       const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
@@ -253,6 +265,11 @@ begin
 
 end;
 
+procedure TMARSClientCustomResource.AfterQUERY(const AContent: TStream);
+begin
+
+end;
+
 procedure TMARSClientCustomResource.AfterPOST(const AContent: TStream);
 begin
 
@@ -301,6 +318,12 @@ begin
 end;
 
 procedure TMARSClientCustomResource.BeforePATCH(const AContent: TStream);
+begin
+  ApplyCustomHeaders;
+
+end;
+
+procedure TMARSClientCustomResource.BeforeQUERY(const AContent: TStream);
 begin
   ApplyCustomHeaders;
 
@@ -796,7 +819,53 @@ begin
       if Assigned(AOnException) then
         AOnException(E)
       else
-        DoError(E, TMARSHttpVerb.Delete
+        DoError(E, TMARSHttpVerb.Patch
+          , procedure (AStream: TStream)
+            begin
+              if Assigned(AAfterExecute) then
+                AAfterExecute(AStream);
+            end);
+    end;
+  end;
+end;
+
+procedure TMARSClientCustomResource.QUERY(
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const AAfterExecute: TMARSClientResponseProc;
+  const AOnException: TMARSClientExecptionProc);
+var
+  LResponseStream: TMemoryStream;
+  LContent: TMemoryStream;
+begin
+  try
+    LContent := TMemoryStream.Create;
+    try
+      BeforeQUERY(LContent);
+
+      if Assigned(ABeforeExecute) then
+        ABeforeExecute(LContent);
+
+      LResponseStream := TMemoryStream.Create;
+      try
+        Client.Query(URL, LContent, LResponseStream, AuthToken, Accept, ContentType);
+
+        AfterQUERY(LResponseStream);
+
+        if Assigned(AAfterExecute) then
+          AAfterExecute(LResponseStream);
+      finally
+        LResponseStream.Free;
+      end;
+    finally
+      LContent.Free;
+    end;
+  except
+    on E:Exception do
+    begin
+      if Assigned(AOnException) then
+        AOnException(E)
+      else
+        DoError(E, TMARSHttpVerb.Query
           , procedure (AStream: TStream)
             begin
               if Assigned(AAfterExecute) then
@@ -899,6 +968,94 @@ begin
                   end;
 
               LResource.PATCH(
+                ABeforeExecute
+              , procedure (AStream: TStream)
+                begin
+                  CloneStatus(LResource);
+
+                  if Assigned(ACompletionHandler) then
+                  begin
+                    if ASynchronize then
+                      TThread.Synchronize(nil
+                        , procedure
+                          begin
+                            ACompletionHandler(LResource);
+                          end
+                      )
+                    else
+                      ACompletionHandler(LResource);
+                  end;
+                end
+              , LOnException
+              );
+            finally
+              FreeAndNil(LResource);
+              FreeAndNil(LApplication);
+              FreeAndNil(LClient);
+            end;
+          end
+        );
+      except
+        LResource.Free;
+        raise;
+      end;
+    except
+      LApplication.Free;
+      raise;
+    end;
+  except
+    LClient.Free;
+    raise;
+  end;
+end;
+
+procedure TMARSClientCustomResource.QUERYAsync(
+  const ABeforeExecute: TProc<TMemoryStream>;
+  const ACompletionHandler: TProc<TMARSClientCustomResource>;
+  const AOnException: TMARSClientExecptionProc; const ASynchronize: Boolean);
+var
+  LClient: TMARSCustomClient;
+  LApplication: TMARSClientApplication;
+  LResource: TMARSClientCustomResource;
+begin
+  LClient := TMARSCustomClientClass(Client.ClassType).Create(nil);
+  try
+    LClient.CloneSetup(Client);
+
+    LApplication := TMARSClientApplication.Create(nil);
+    try
+      LApplication.CloneSetup(Application);
+      LApplication.Client := LClient;
+
+      LResource := TMARSClientCustomResourceClass(ClassType).Create(nil);
+      try
+        LResource.CloneSetup(Self);
+        LResource.SpecificClient := nil;
+        LResource.Application := LApplication;
+
+        TTask.Run(
+          procedure
+          var
+            LOnException: TProc<Exception>;
+          begin
+            try
+              LOnException := nil;
+              if Assigned(AOnException) then
+                LOnException :=
+                  procedure (AException: Exception)
+                  begin
+                    if ASynchronize then
+                      TThread.Synchronize(nil
+                        , procedure
+                          begin
+                            AOnException(AException);
+                          end
+                      )
+                    else
+                      AOnException(AException);
+                  end;
+
+              LResource.QUERY(
                 ABeforeExecute
               , procedure (AStream: TStream)
                 begin

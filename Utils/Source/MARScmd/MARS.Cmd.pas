@@ -33,6 +33,10 @@ type
     function MatchAtLeastOnePattern(const APatterns: TArray<string>; const AFileName: string): Boolean;
     procedure ReplaceEverywhere;
     procedure ReplaceInFile(const AFileName: string);
+    // writes a fresh random JWT.Secret into every .ini of the new project
+    procedure ConfigureSecrets;
+    function ReadTextFile(const AFileName: string; out AEncoding: TEncoding): string;
+    procedure WriteTextFile(const AFileName: string; const AContent: string; const AEncoding: TEncoding);
   public
     constructor Create(const ABasePath: string);
     destructor Destroy; override;
@@ -44,6 +48,8 @@ type
     function CanExecute: Boolean;
 
     class function Current: TMARSCmd;
+    // 32 random bytes (system GUID generator) as hex
+    class function GenerateSecret: string;
 
     property BasePath: string read FBasePath;
     property TemplatePath: string read GetTemplatePath write SetTemplatePath;
@@ -137,6 +143,73 @@ begin
     , True);
 
   ReplaceEverywhere;
+  ConfigureSecrets;
+end;
+
+class function TMARSCmd.GenerateSecret: string;
+var
+  LGuidBytes: TBytes;
+  LIndex: Integer;
+begin
+  Result := '';
+  for LIndex := 0 to 31 do
+  begin
+    if LIndex mod 16 = 0 then
+      LGuidBytes := TGUID.NewGuid.ToByteArray;
+    Result := Result + LowerCase(IntToHex(LGuidBytes[LIndex mod 16], 2));
+  end;
+end;
+
+procedure TMARSCmd.ConfigureSecrets;
+var
+  LSecret, LFile, LContent, LNewContent: string;
+  LEncoding: TEncoding;
+begin
+  // the template ships ';DefaultApp.JWT.Secret=' (commented, empty): every such line, whatever
+  // the application prefix, becomes an active setting with one fresh secret shared by all the
+  // server flavours of the project
+  LSecret := GenerateSecret;
+  for LFile in TDirectory.GetFiles(DestinationPath, '*.ini', TSearchOption.soAllDirectories) do
+  begin
+    LContent := ReadTextFile(LFile, LEncoding);
+    LNewContent := TRegEx.Replace(LContent, '^[ \t]*;?[ \t]*([\w.]*JWT\.Secret)[ \t]*=.*$'
+      , '$1=' + LSecret, [roMultiLine]);
+    if LNewContent <> LContent then
+      WriteTextFile(LFile, LNewContent, LEncoding);
+  end;
+end;
+
+function TMARSCmd.ReadTextFile(const AFileName: string; out AEncoding: TEncoding): string;
+var
+  LReader: TStreamReader;
+begin
+  LReader := TStreamReader.Create(AFileName, True);
+  try
+    Result := LReader.ReadToEnd;
+    AEncoding := LReader.CurrentEncoding;
+  finally
+    LReader.Free;
+  end;
+end;
+
+procedure TMARSCmd.WriteTextFile(const AFileName: string; const AContent: string;
+  const AEncoding: TEncoding);
+var
+  LFileStream: TFileStream;
+  LWriter: TStreamWriter;
+begin
+  LFileStream := TFileStream.Create(AFileName, fmOpenReadWrite or fmShareDenyWrite);
+  try
+    LFileStream.Size := 0;
+    LWriter := TStreamWriter.Create(LFileStream, AEncoding);
+    try
+      LWriter.Write(AContent);
+    finally
+      LWriter.Free;
+    end;
+  finally
+    LFileStream.Free;
+  end;
 end;
 
 function TMARSCmd.GetDestinationPath: string;

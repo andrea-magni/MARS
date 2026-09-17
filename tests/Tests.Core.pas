@@ -59,6 +59,7 @@ type
     [Test] procedure Basic;
     [Test] procedure Variants;
     [Test] procedure FilterProc;
+    [Test] procedure ClassMembersGetDistinctInstances;
   end;
 
   [TestFixture('RecordFromDataSet')]
@@ -92,6 +93,14 @@ type
     [Test] procedure OrderOfProperties;
     [Test] procedure TList_string_Obj;
     [Test] procedure ArrayOfObjectToJSON;
+  end;
+
+  [TestFixture('JSONToObject')]
+  TMARSJSONToObjectTest = class(TObject)
+  public
+    [Test] procedure MissingKeysKeepCurrentValues;
+    [Test] procedure MissingKeysKeepValuesOnExistingInstance;
+    [Test] procedure PresentNestedObjectIsFilledInPlace;
   end;
 
 
@@ -180,6 +189,19 @@ begin
 
     Assert.AreEqual('One', LURL.QueryTokenByName('FirSt', True, False), 'QueryTokenByName FirSt');
     Assert.AreEqual('Two', LURL.QueryTokenByName('seConD', True, False), 'QueryTokenByName seConD');
+  finally
+    LURL.Free;
+  end;
+
+  // repeated names must not raise (they used to: TDictionary.Add -> 500), first value wins;
+  // empty names ('&&') are ignored
+  LURL := TMARSURL.Create(
+    'http://localhost:8080/rest/default/helloworld?a=1&a=2&&b=3'
+  );
+  try
+    Assert.AreEqual(2, LURL.QueryTokens.Count, 'QueryTokens.Count with duplicates');
+    Assert.AreEqual('1', LURL.QueryTokenByName('a', False, False), 'first value of a repeated name wins');
+    Assert.AreEqual('3', LURL.QueryTokenByName('b', False, False), 'QueryTokenByName b');
   finally
     LURL.Free;
   end;
@@ -681,6 +703,83 @@ begin
 
 end;
 
+procedure TMARSJSONToRecordTest.ClassMembersGetDistinctInstances;
+var
+  LJSONObj: TJSONObject;
+begin
+  // two members of the same class: used to share one instance (the second's data, double free)
+  LJSONObj := TJSONObject.ParseJSONValue('{"A":{"Name":"first"},"B":{"Name":"second"}}') as TJSONObject;
+  try
+    var LTwo := LJSONObj.ToRecord<TRecordWithTwoObjects>();
+    try
+      Assert.IsNotNull(LTwo.A, 'A');
+      Assert.IsNotNull(LTwo.B, 'B');
+      Assert.IsFalse(LTwo.A = LTwo.B, 'A and B must be distinct instances');
+      Assert.AreEqual('first', LTwo.A.Name);
+      Assert.AreEqual('second', LTwo.B.Name);
+    finally
+      if LTwo.B <> LTwo.A then
+        LTwo.B.Free;
+      LTwo.A.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+
+  // members of different classes: used to raise EInvalidCast
+  LJSONObj := TJSONObject.ParseJSONValue('{"A":{"Name":"first"},"B":{"Code":7,"Tag":"t"}}') as TJSONObject;
+  try
+    var LMixed := LJSONObj.ToRecord<TRecordWithMixedObjects>();
+    try
+      Assert.IsNotNull(LMixed.A, 'A');
+      Assert.IsNotNull(LMixed.B, 'B');
+      Assert.AreEqual('first', LMixed.A.Name);
+      Assert.AreEqual(7, LMixed.B.Code);
+      Assert.AreEqual('t', LMixed.B.Tag);
+    finally
+      LMixed.B.Free;
+      LMixed.A.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+
+  // a primitive member before a class member: used to raise EInvalidCast
+  LJSONObj := TJSONObject.ParseJSONValue('{"Id":5,"Item":{"Name":"x"}}') as TJSONObject;
+  try
+    var LMixedKinds := LJSONObj.ToRecord<TRecordWithPrimitiveThenObject>();
+    try
+      Assert.AreEqual(5, LMixedKinds.Id);
+      Assert.IsNotNull(LMixedKinds.Item, 'Item');
+      Assert.AreEqual('x', LMixedKinds.Item.Name);
+    finally
+      LMixedKinds.Item.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+
+  // a member missing from the JSON stays nil and must not leak the previous instance into the next
+  LJSONObj := TJSONObject.ParseJSONValue('{"A":{"Name":"first"},"C":{"Name":"third"}}') as TJSONObject;
+  try
+    var LThree := LJSONObj.ToRecord<TRecordWithThreeObjects>();
+    try
+      Assert.IsNotNull(LThree.A, 'A');
+      Assert.IsNull(LThree.B, 'B is not in the JSON');
+      Assert.IsNotNull(LThree.C, 'C');
+      Assert.IsFalse(LThree.A = LThree.C, 'A and C must be distinct instances');
+      Assert.AreEqual('first', LThree.A.Name);
+      Assert.AreEqual('third', LThree.C.Name);
+    finally
+      if LThree.C <> LThree.A then
+        LThree.C.Free;
+      LThree.A.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
 procedure TMARSJSONToRecordTest.FilterProc;
 var
   LJSONObj: TJSONObject;
@@ -819,6 +918,78 @@ begin
   end;
 end;
 
+{ TMARSJSONToObjectTest }
+
+procedure TMARSJSONToObjectTest.MissingKeysKeepCurrentValues;
+var
+  LJSONObj: TJSONObject;
+begin
+  // used to: Detail nil-ed without Free (leak), Enabled False, Retries 0
+  LJSONObj := TJSONObject.ParseJSONValue('{"Name":"x"}') as TJSONObject;
+  try
+    var LOwner := TJSONObject.JSONToObject<TOwnerWithDefaults>(LJSONObj);
+    try
+      Assert.AreEqual('x', LOwner.Name);
+      Assert.IsNotNull(LOwner.Detail, 'sub-object created by the constructor must survive');
+      Assert.AreEqual('from constructor', LOwner.Detail.Name);
+      Assert.IsTrue(LOwner.Enabled, 'constructor default must survive');
+      Assert.AreEqual(3, LOwner.Retries, 'constructor default must survive');
+    finally
+      LOwner.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
+procedure TMARSJSONToObjectTest.MissingKeysKeepValuesOnExistingInstance;
+var
+  LJSONObj: TJSONObject;
+begin
+  // filling an existing instance is a merge: only the keys present are applied
+  LJSONObj := TJSONObject.ParseJSONValue('{"Retries":9}') as TJSONObject;
+  try
+    var LOwner := TOwnerWithDefaults.Create;
+    try
+      LOwner.Name := 'before';
+      var LDetail := LOwner.Detail;
+
+      LJSONObj.ToObject<TOwnerWithDefaults>(LOwner);
+
+      Assert.AreEqual(9, LOwner.Retries);
+      Assert.AreEqual('before', LOwner.Name, 'a key not in the JSON must not wipe the value');
+      Assert.IsTrue(LOwner.Enabled);
+      Assert.IsTrue(LOwner.Detail = LDetail, 'same sub-object instance');
+    finally
+      LOwner.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
+procedure TMARSJSONToObjectTest.PresentNestedObjectIsFilledInPlace;
+var
+  LJSONObj: TJSONObject;
+begin
+  LJSONObj := TJSONObject.ParseJSONValue('{"Detail":{"Name":"sent"}}') as TJSONObject;
+  try
+    var LOwner := TOwnerWithDefaults.Create;
+    try
+      var LDetail := LOwner.Detail;
+
+      LJSONObj.ToObject<TOwnerWithDefaults>(LOwner);
+
+      Assert.IsTrue(LOwner.Detail = LDetail, 'the existing instance is filled, not replaced');
+      Assert.AreEqual('sent', LOwner.Detail.Name);
+    finally
+      LOwner.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSCoreTest);
   TDUnitX.RegisterTestFixture(TMARSCoreUtilsTest);
@@ -826,5 +997,6 @@ initialization
   TDUnitX.RegisterTestFixture(TMARSJSONToRecordTest);
   TDUnitX.RegisterTestFixture(TMARSRecordFromDataSetTest);
   TDUnitX.RegisterTestFixture(TMARSObjectToJSONTest);
+  TDUnitX.RegisterTestFixture(TMARSJSONToObjectTest);
 
 end.

@@ -82,6 +82,13 @@ type
     function Matches(const ARequest: IMARSRequest): Boolean; override;
   end;
 
+  // HTTP QUERY (IETF draft-ietf-httpbis-safe-method-w-body): safe and idempotent
+  // like GET, but the query travels in the request body (bind it with [BodyParam])
+  QUERYAttribute   = class(HttpMethodAttribute)
+  public
+    function Matches(const ARequest: IMARSRequest): Boolean; override;
+  end;
+
   ConsumesAttribute = class(MARSAttribute)
   private
     FValue: string;
@@ -557,6 +564,13 @@ end;
 function HEADAttribute.Matches(const ARequest: IMARSRequest): Boolean;
 begin
   Result := SameText(ARequest.Method, 'HEAD');
+end;
+
+{ QUERYAttribute }
+
+function QUERYAttribute.Matches(const ARequest: IMARSRequest): Boolean;
+begin
+  Result := SameText(ARequest.Method, 'QUERY');
 end;
 
 { CustomHeaderAttribute }

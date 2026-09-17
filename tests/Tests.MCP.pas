@@ -1285,13 +1285,16 @@ function TMCPResourceFixture.MintToken(const AUserName: string;
   const ARoles: TArray<string>): string;
 var
   LToken: TMARSToken;
+  LSecret: string;
 begin
-  // engine has no ini: the app verifies tokens with the JWT default parameters
+  // engine has no ini: sign with the secret the app actually verifies with (no JWT.Secret
+  // configured means the per-process random secret of the Generate policy)
+  LSecret := TMARSToken.SecretFromParameters(FEngine.ApplicationByName('MCPTestApp').Parameters);
   LToken := {$IFDEF MSWINDOWS}TMARSmORMotJWTToken{$ELSE}TMARSJOSEJWTToken{$ENDIF}.Create(
-    '', JWT_SECRET_PARAM_DEFAULT, JWT_ISSUER_PARAM_DEFAULT, JWT_DURATION_PARAM_DEFAULT);
+    '', LSecret, JWT_ISSUER_PARAM_DEFAULT, JWT_DURATION_PARAM_DEFAULT);
   try
     LToken.SetUserNameAndRoles(AUserName, ARoles);
-    LToken.Build(JWT_SECRET_PARAM_DEFAULT);
+    LToken.Build(LSecret);
     Result := LToken.Token;
   finally
     LToken.Free;
@@ -1689,11 +1692,12 @@ end;
 procedure TMCPOAuthFixture.StaticJWT_StillWorks;
 begin
   // dual mode: a statically issued MARS JWT passes the OAuth-protected endpoint
+  var LSecret := TMARSToken.SecretFromParameters(FEngine.ApplicationByName('MCPTestApp').Parameters);
   var LToken: TMARSToken := {$IFDEF MSWINDOWS}TMARSmORMotJWTToken{$ELSE}TMARSJOSEJWTToken{$ENDIF}.Create(
-    '', JWT_SECRET_PARAM_DEFAULT, JWT_ISSUER_PARAM_DEFAULT, JWT_DURATION_PARAM_DEFAULT);
+    '', LSecret, JWT_ISSUER_PARAM_DEFAULT, JWT_DURATION_PARAM_DEFAULT);
   try
     LToken.SetUserNameAndRoles('static-user', ['standard']);
-    LToken.Build(JWT_SECRET_PARAM_DEFAULT);
+    LToken.Build(LSecret);
 
     var LCall := SendRaw('POST', 'mcpoauth', 'application/json'
     , '{"jsonrpc":"2.0","id":1,"method":"ping"}', LToken.Token);

@@ -20,7 +20,7 @@ end;
 
 ### HTTP method attributes
 
-`[GET]`, `[POST]`, `[PUT]`, `[DELETE]`, `[PATCH]`, `[HEAD]`, `[OPTIONS]`. Exactly one per endpoint method. Internally each derives from `HttpMethodAttribute` and matches the request's HTTP method.
+`[GET]`, `[POST]`, `[PUT]`, `[DELETE]`, `[PATCH]`, `[HEAD]`, `[OPTIONS]`, `[QUERY]`. Exactly one per endpoint method. Internally each derives from `HttpMethodAttribute` and matches the request's HTTP method.
 
 ## Content negotiation
 
