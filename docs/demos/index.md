@@ -94,7 +94,8 @@ they can browse and manage users. Pages are rendered with WebStencils, updated w
 [htmx](https://htmx.org/) and styled with [Tailwind CSS](https://tailwindcss.com/). The token issued
 after the password step carries an `mfa_pending` claim, so a half-authenticated session cannot reach
 the application until the second factor clears it. A step-by-step walkthrough is in
-[Tailwind CSS for Delphi developers](/docs/demos/tailwindcss-tutorial.md).
+[Tailwind CSS for Delphi developers](https://github.com/andrea-magni/MARS/blob/master/docs/demos/tailwindcss-tutorial.md).
+
 
 ```pascal
 function IsFullyAuthenticated(const AToken: TMARSToken): Boolean;

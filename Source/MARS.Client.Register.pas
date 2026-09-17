@@ -25,7 +25,7 @@ uses
 ;
 
 const
-  MARSVersion = '1.6.4';
+  MARSVersion = '1.7.0';
   Component_Docs_URL = 'https://github.com/andrea-magni/MARS/Wiki/';
   {$IFDEF Delphi11Alexandria_UP}
   ABOUT_RES_NAME = 'MARSSPLASH48PNG';
