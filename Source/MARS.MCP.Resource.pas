@@ -67,6 +67,9 @@ type
 
 implementation
 
+uses
+  MARS.MCP.OAuth;
+
 { TMCPResource }
 
 function TMCPResource.GetServerInfoAttribute: MCPServerInfoAttribute;
@@ -195,8 +198,8 @@ end;
 
 function TMCPResource.BuildResourceMetadataURL: string;
 begin
-  // RFC 9728 path-insertion convention; override when behind TLS/reverse proxy
-  Result := 'http://' + Request.HostName + ':' + Request.Port.ToString
+  // RFC 9728 path-insertion convention (X-Forwarded-* aware, see BaseURL)
+  Result := TMCPOAuthMetadata.BaseURL(Request)
     + '/.well-known/oauth-protected-resource' + Request.RawPath;
 end;
 
