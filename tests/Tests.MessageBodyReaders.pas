@@ -81,6 +81,35 @@ type
 
     [Test]
     procedure NestedArrays;
+
+    // the reader locates the elements scanning the raw bytes: structural characters
+    // inside strings, escapes, whitespace and non-ASCII text must not fool it
+    [Test]
+    procedure TrickyContent;
+
+    // bodies the element-wise path gives up on: same outcome as the full parse
+    [Test]
+    procedure SingleObject;
+    [Test]
+    procedure ElementNotAnObject;
+    [Test]
+    procedure Malformed;
+  end;
+
+  [TestFixture('JSONArrayElements')]
+  TMARSJSONArrayElementsTest = class(TObject)
+  private
+    function Count(const AJSON: string): Integer;
+    function Dump(const AJSON: string; out ADump: string): Boolean;
+  public
+    [Test]
+    procedure WellFormed;
+    [Test]
+    procedure NotWellFormed;
+    [Test]
+    procedure BrokenElement;
+    [Test]
+    procedure StopOnDemand;
   end;
 
 
@@ -91,7 +120,9 @@ type
 
 implementation
 
-uses DateUtils;
+uses DateUtils
+, MARS.Core.JSON, MARS.Core.Exceptions
+;
 
 function GetRecordMBR: IMessageBodyReader;
 begin
@@ -330,8 +361,146 @@ begin
   FJSONMediaType.Free;
 end;
 
+procedure TMARSArrayOfRecordReaderTest.TrickyContent;
+var
+  LValue: TArray<TNamedIntegerRecord>;
+  LData: TBytes;
+begin
+  LData := TEncoding.UTF8.GetBytes(
+      #13#10'  [ {"Name": "a,b]}{[", "Value": 1} ,'#9
+    + ' {"Value": 2, "Name": "quote \" and backslash \\"},'
+    + ' {"Name": "'#$00E8' '#$20AC'", "Value": 3}  ]  '#13#10
+  );
+  LValue := FMBR.ReadFrom(LData, FNamedIntegerArrayRttiObject, FJSONMediaType, nil).AsType<TArray<TNamedIntegerRecord>>;
+
+  Assert.AreEqual(3, Length(LValue));
+  Assert.AreEqual('a,b]}{[', LValue[0].Name);
+  Assert.AreEqual(1, LValue[0].Value);
+  Assert.AreEqual('quote " and backslash \', LValue[1].Name);
+  Assert.AreEqual(2, LValue[1].Value);
+  Assert.AreEqual(#$00E8' '#$20AC, LValue[2].Name);
+  Assert.AreEqual(3, LValue[2].Value);
+end;
+
+procedure TMARSArrayOfRecordReaderTest.SingleObject;
+var
+  LValue: TArray<TNamedIntegerRecord>;
+begin
+  LValue := FMBR.ReadFrom(TEncoding.UTF8.GetBytes('{"Name": "One", "Value": 1}')
+    , FNamedIntegerArrayRttiObject, FJSONMediaType, nil).AsType<TArray<TNamedIntegerRecord>>;
+
+  Assert.AreEqual(1, Length(LValue));
+  Assert.AreEqual('One', LValue[0].Name);
+  Assert.AreEqual(1, LValue[0].Value);
+end;
+
+procedure TMARSArrayOfRecordReaderTest.ElementNotAnObject;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      FMBR.ReadFrom(TEncoding.UTF8.GetBytes('[{"Name": "One", "Value": 1}, 2]')
+        , FNamedIntegerArrayRttiObject, FJSONMediaType, nil);
+    end
+  , EMARSHttpException
+  );
+end;
+
+procedure TMARSArrayOfRecordReaderTest.Malformed;
+var
+  LValue: TArray<TNamedIntegerRecord>;
+begin
+  // not parsable: keeps yielding an empty array
+  LValue := FMBR.ReadFrom(TEncoding.UTF8.GetBytes('[{"Name": "One", "Value": 1},]')
+    , FNamedIntegerArrayRttiObject, FJSONMediaType, nil).AsType<TArray<TNamedIntegerRecord>>;
+  Assert.AreEqual(0, Length(LValue));
+
+  LValue := FMBR.ReadFrom(TEncoding.UTF8.GetBytes('[{"Name": "One", "Value": }]')
+    , FNamedIntegerArrayRttiObject, FJSONMediaType, nil).AsType<TArray<TNamedIntegerRecord>>;
+  Assert.AreEqual(0, Length(LValue));
+end;
+
+{ TMARSJSONArrayElementsTest }
+
+function TMARSJSONArrayElementsTest.Count(const AJSON: string): Integer;
+begin
+  Result := CountJSONArrayElements(TEncoding.UTF8.GetBytes(AJSON));
+end;
+
+function TMARSJSONArrayElementsTest.Dump(const AJSON: string; out ADump: string): Boolean;
+var
+  LDump: string;
+begin
+  LDump := '';
+  Result := ForEachJSONArrayElement(TEncoding.UTF8.GetBytes(AJSON)
+    , function (AElement: TJSONValue): Boolean
+      begin
+        LDump := LDump + '<' + AElement.ToJSON + '>';
+        Result := True;
+      end
+  );
+  ADump := LDump;
+end;
+
+procedure TMARSJSONArrayElementsTest.WellFormed;
+var
+  LDump: string;
+begin
+  Assert.AreEqual(0, Count('[]'));
+  Assert.AreEqual(0, Count(' [ ] '));
+  Assert.AreEqual(1, Count('[{"a":1}]'));
+  Assert.AreEqual(6, Count('[1, "two", true, null, 2.5e3, [1,2]]'));
+  Assert.AreEqual(3, Count(' [ {"a":1} , {"b":"x,y]}{[\"\\"} ,{"c":[1,[2,3],{"d":[]}]} ] '#13#10));
+
+  Assert.IsTrue(Dump(' [ {"a":1} , {"b":"x,y]}{[\"\\"} ,{"c":[1,[2,3],{"d":[]}]} ] ', LDump));
+  Assert.AreEqual('<{"a":1}><{"b":"x,y]}{[\"\\"}><{"c":[1,[2,3],{"d":[]}]}>', LDump);
+
+  Assert.IsTrue(Dump('[]', LDump));
+  Assert.AreEqual('', LDump);
+end;
+
+procedure TMARSJSONArrayElementsTest.NotWellFormed;
+begin
+  Assert.AreEqual(-1, Count(''));
+  Assert.AreEqual(-1, Count('{"a":1}'));
+  Assert.AreEqual(-1, Count('['));
+  Assert.AreEqual(-1, Count('[{"a":1}'));
+  Assert.AreEqual(-1, Count('[,]'));
+  Assert.AreEqual(-1, Count('[1,]'));
+  Assert.AreEqual(-1, Count('[1}]'));
+  Assert.AreEqual(-1, Count('[1] x'));
+  Assert.AreEqual(-1, Count('["unterminated]'));
+end;
+
+procedure TMARSJSONArrayElementsTest.BrokenElement;
+var
+  LDump: string;
+begin
+  // top level structure is fine, the second element is not
+  Assert.AreEqual(2, Count('[{"a":1},{"b":}]'));
+  Assert.IsFalse(Dump('[{"a":1},{"b":}]', LDump));
+end;
+
+procedure TMARSJSONArrayElementsTest.StopOnDemand;
+var
+  LSeen: Integer;
+begin
+  LSeen := 0;
+  Assert.IsFalse(
+    ForEachJSONArrayElement(TEncoding.UTF8.GetBytes('[1,2,3]')
+      , function (AElement: TJSONValue): Boolean
+        begin
+          Inc(LSeen);
+          Result := LSeen < 2;
+        end
+    )
+  );
+  Assert.AreEqual(2, LSeen);
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRecordReaderTest);
   TDUnitX.RegisterTestFixture(TMARSArrayOfRecordReaderTest);
+  TDUnitX.RegisterTestFixture(TMARSJSONArrayElementsTest);
 
 end.

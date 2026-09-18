@@ -349,6 +349,18 @@ type
   function IntegerArrayToJsonArray(const AIntegerArray: TArray<Integer>): TJSONArray;
   function JsonArrayToIntegerArray(const AJSONArray: TJSONArray): TArray<Integer>;
 
+  // Element-wise access to a (UTF-8 encoded) JSON array, without building the JSON tree
+  // of the whole array: large arrays would exhaust memory on 32 bit targets otherwise.
+  // Both functions locate the top level elements only, anything else is left to the parser.
+
+  // number of elements, -1 if AData is not a well-formed top level JSON array
+  function CountJSONArrayElements(const AData: TBytes): Integer;
+  // parses one element at a time and hands it to AElementFunc (the element is freed afterwards).
+  // Returns False if AData is not a well-formed JSON array, an element is not parsable
+  // or AElementFunc returned False (stop): callers should fall back to a full parse then.
+  function ForEachJSONArrayElement(const AData: TBytes;
+    const AElementFunc: TFunc<TJSONValue, Boolean>): Boolean;
+
   {$IFDEF MARS_JSON_LEGACY}
   var DefaultMARSJSONSerializationOptions: TJSONOptions = [joDateIsUTC, joDateFormatISO8601, joBytesFormatArray, joIndentCaseCamel];
   {$ELSE}
@@ -374,6 +386,140 @@ uses
   System.DateUtils, System.TimeSpan, System.Variants, System.StrUtils, System.Math
 , MARS.Core.Utils, MARS.Rtti.Utils
 ;
+
+type
+  // AStart (inclusive) and AEnd (exclusive) delimit the element, whitespace trimmed
+  TJSONArrayElementBoundsFunc = reference to function (const AStart, AEnd: Integer): Boolean;
+
+// Structural characters are plain ASCII and every byte of a UTF-8 multi-byte sequence
+// is >= $80, so the top level elements can be located scanning bytes.
+function ScanJSONArrayElements(const AData: TBytes;
+  const ABoundsFunc: TJSONArrayElementBoundsFunc): Boolean;
+var
+  LPos, LLen, LStart, LEnd, LDepth: Integer;
+  LInString, LEscaped, LLast: Boolean;
+
+  function IsWhitespace(const AByte: Byte): Boolean;
+  begin
+    Result := (AByte = 32) or (AByte = 9) or (AByte = 10) or (AByte = 13);
+  end;
+
+  procedure SkipWhitespace;
+  begin
+    while (LPos < LLen) and IsWhitespace(AData[LPos]) do
+      Inc(LPos);
+  end;
+
+begin
+  Result := False;
+  LLen := Length(AData);
+  LPos := 0;
+
+  SkipWhitespace;
+  if (LPos >= LLen) or (AData[LPos] <> Ord('[')) then
+    Exit;
+  Inc(LPos);
+
+  SkipWhitespace;
+  if (LPos < LLen) and (AData[LPos] = Ord(']')) then // empty array
+    Inc(LPos)
+  else
+  begin
+    LLast := False;
+    while not LLast do
+    begin
+      SkipWhitespace;
+      LStart := LPos;
+      LDepth := 0;
+      LInString := False;
+      LEscaped := False;
+      while LPos < LLen do
+      begin
+        if LInString then
+        begin
+          if LEscaped then
+            LEscaped := False
+          else if AData[LPos] = Ord('\') then
+            LEscaped := True
+          else if AData[LPos] = Ord('"') then
+            LInString := False;
+        end
+        else
+          case AData[LPos] of
+            Ord('"'): LInString := True;
+            Ord('{'), Ord('['): Inc(LDepth);
+            Ord('}'), Ord(']'):
+              if LDepth > 0 then
+                Dec(LDepth)
+              else if AData[LPos] = Ord(']') then
+                Break // end of the array
+              else
+                Exit;
+            Ord(','):
+              if LDepth = 0 then
+                Break; // end of the element
+          end;
+        Inc(LPos);
+      end;
+      if LPos >= LLen then // unterminated
+        Exit;
+
+      LEnd := LPos;
+      while (LEnd > LStart) and IsWhitespace(AData[LEnd - 1]) do
+        Dec(LEnd);
+      if LEnd = LStart then // missing element: "[,]", "[1,]"
+        Exit;
+
+      if not ABoundsFunc(LStart, LEnd) then
+        Exit;
+
+      LLast := AData[LPos] = Ord(']');
+      Inc(LPos);
+    end;
+  end;
+
+  SkipWhitespace;
+  Result := LPos = LLen; // nothing but whitespace is allowed after the array
+end;
+
+function CountJSONArrayElements(const AData: TBytes): Integer;
+var
+  LCount: Integer;
+begin
+  LCount := 0;
+  if ScanJSONArrayElements(AData
+    , function (const AStart, AEnd: Integer): Boolean
+      begin
+        Inc(LCount);
+        Result := True;
+      end
+  ) then
+    Result := LCount
+  else
+    Result := -1;
+end;
+
+function ForEachJSONArrayElement(const AData: TBytes;
+  const AElementFunc: TFunc<TJSONValue, Boolean>): Boolean;
+begin
+  Result := ScanJSONArrayElements(AData
+    , function (const AStart, AEnd: Integer): Boolean
+      var
+        LElement: TJSONValue;
+      begin
+        // the element only: the meaning of the ALength argument of ParseJSONValue
+        // is not the same across Delphi versions
+        LElement := TJSONObject.ParseJSONValue(Copy(AData, AStart, AEnd - AStart), 0);
+        Result := Assigned(LElement);
+        if Result then
+          try
+            Result := AElementFunc(LElement);
+          finally
+            LElement.Free;
+          end;
+      end
+  );
+end;
 
 
 function ComputeJSONSerializationOptions(const AAttributes: TArray<TCustomAttribute>): TMARSJSONSerializationOptions; overload;

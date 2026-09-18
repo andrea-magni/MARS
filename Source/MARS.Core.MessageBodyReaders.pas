@@ -401,6 +401,36 @@ begin
   if not Assigned(LElementType) then
     Exit;
 
+{$ifdef Delphi10Berlin_UP}
+  // Fast path: one element at a time, the JSON tree of the whole array is never built
+  // (large arrays would exhaust memory on 32 bit targets otherwise). Anything unexpected
+  // (not an array, malformed JSON, an element that is not an object) falls through the
+  // full parse here below, that knows how to deal with it.
+  LNewLength := CountJSONArrayElements(AInputData);
+  if LNewLength >= 0 then
+  begin
+    TValue.Make(nil, LArrayType.Handle, LArray);
+    SetArrayLength(LArray, LArrayType, @LNewLength);
+    LIndex := 0;
+    if ForEachJSONArrayElement(AInputData
+      , function (AElement: TJSONValue): Boolean
+        begin
+          Result := AElement is TJSONObject;
+          if Result then
+          begin
+            LArray.SetArrayElement(LIndex, TJSONObject(AElement).ToRecord(LElementType));
+            Inc(LIndex);
+          end;
+        end
+    ) then
+    begin
+      Result := LArray;
+      Exit;
+    end;
+    LArray := TValue.Empty;
+  end;
+{$endif}
+
   // A missing (or unparsable) body keeps yielding an empty array, but a body the
   // client got wrong (JSON that is not an array of objects) is a 400, not a 500.
   LJSONValue := TJSONValueReader.ReadJSONValue(
