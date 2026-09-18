@@ -18,7 +18,7 @@ uses
 {$else}
   DBXJSON
 {$endif}
-  , SysUtils
+  , Classes, SysUtils
 {$ifdef DelphiXE2_UP}
   , System.Rtti
 {$else}
@@ -162,6 +162,15 @@ type
       const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
     class function ArrayOfRecordToJSON<T{: record}>(const AArray: TArray<T>;
       const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
+
+    // serializes one record at a time directly to the stream: same output of
+    // ArrayOfRecordToJSON + ToJSON but without building the whole JSON tree (and string) in memory
+    class procedure ArrayOfRecordToStream<T{: record}>(const AArray: TArray<T>;
+      const ADestStream: TStream; const AFilterProc: TToJSONFilterProc = nil;
+      const AEncoding: TEncoding = nil); overload;
+    class procedure ArrayOfRecordToStream<T{: record}>(const AArray: TArray<T>;
+      const ADestStream: TStream; const AOptions: TMARSJSONSerializationOptions;
+      const AFilterProc: TToJSONFilterProc = nil; const AEncoding: TEncoding = nil); overload;
 
     class function ArrayOfRecordToJSONString<T{: record}>(const AArray: TArray<T>;
       const AFilterProc: TToJSONFilterProc = nil): string; overload;
@@ -712,6 +721,47 @@ begin
     Result.Free;
     raise;
   end;
+end;
+
+class procedure TJSONArrayHelper.ArrayOfRecordToStream<T>(const AArray: TArray<T>;
+  const ADestStream: TStream; const AFilterProc: TToJSONFilterProc;
+  const AEncoding: TEncoding);
+begin
+  ArrayOfRecordToStream<T>(AArray, ADestStream, DefaultMARSJSONSerializationOptions
+  , AFilterProc, AEncoding);
+end;
+
+class procedure TJSONArrayHelper.ArrayOfRecordToStream<T>(const AArray: TArray<T>;
+  const ADestStream: TStream; const AOptions: TMARSJSONSerializationOptions;
+  const AFilterProc: TToJSONFilterProc; const AEncoding: TEncoding);
+var
+  LEncoding: TEncoding;
+  LIndex: Integer;
+  LObj: TJSONObject;
+  LBytes: TBytes;
+begin
+  LEncoding := AEncoding;
+  if not Assigned(LEncoding) then
+    LEncoding := TEncoding.UTF8;
+
+  LBytes := LEncoding.GetBytes('[');
+  ADestStream.WriteBuffer(LBytes[0], Length(LBytes));
+  for LIndex := Low(AArray) to High(AArray) do
+  begin
+    LObj := TJSONObject.Create;
+    try
+      LObj.FromRecord<T>(AArray[LIndex], AOptions, AFilterProc);
+      if LIndex > Low(AArray) then
+        LBytes := LEncoding.GetBytes(',' + LObj.ToJSON)
+      else
+        LBytes := LEncoding.GetBytes(LObj.ToJSON);
+      ADestStream.WriteBuffer(LBytes[0], Length(LBytes));
+    finally
+      LObj.Free;
+    end;
+  end;
+  LBytes := LEncoding.GetBytes(']');
+  ADestStream.WriteBuffer(LBytes[0], Length(LBytes));
 end;
 
 class function TJSONArrayHelper.ArrayOfRecordToJSONString<T>(

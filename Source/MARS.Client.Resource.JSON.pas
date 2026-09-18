@@ -402,15 +402,9 @@ procedure TMARSClientResourceJSON.POST<R>(const AArrayOfRecord: TArray<R>;
 begin
   POST(
     procedure (AContent: TMemoryStream)
-    var
-      LJSONValue: TJSONValue;
     begin
-      LJSONValue := TJSONArray.ArrayOfRecordToJSON<R>(AArrayOfRecord);
-      try
-        JSONValueToStream(LJSONValue, AContent);
-      finally
-        LJSONValue.Free;
-      end;
+      // streamed, one record at a time (large arrays would exhaust memory on 32 bit targets otherwise)
+      TJSONArray.ArrayOfRecordToStream<R>(AArrayOfRecord, AContent);
       AContent.Position := 0;
       if Assigned(ABeforeExecute) then
         ABeforeExecute(AContent);
@@ -447,15 +441,9 @@ procedure TMARSClientResourceJSON.POSTAsync<R>(const AArrayOfRecord: TArray<R>;
 begin
   POSTAsync(
     procedure (AContent: TMemoryStream)
-    var
-      LJSONValue: TJSONValue;
     begin
-      LJSONValue := TJSONArray.ArrayOfRecordToJSON<R>(AArrayOfRecord);
-      try
-        JSONValueToStream(LJSONValue, AContent);
-      finally
-        LJSONValue.Free;
-      end;
+      // streamed, one record at a time (large arrays would exhaust memory on 32 bit targets otherwise)
+      TJSONArray.ArrayOfRecordToStream<R>(AArrayOfRecord, AContent);
       AContent.Position := 0;
       if Assigned(ABeforeExecute) then
         ABeforeExecute(AContent);
@@ -542,15 +530,9 @@ procedure TMARSClientResourceJSON.PUT<R>(const AArrayOfRecord: TArray<R>;
 begin
   PUT(
     procedure (AContent: TMemoryStream)
-    var
-      LJSONValue: TJSONValue;
     begin
-      LJSONValue := TJSONArray.ArrayOfRecordToJSON<R>(AArrayOfRecord);
-      try
-        JSONValueToStream(LJSONValue, AContent);
-      finally
-        LJSONValue.Free;
-      end;
+      // streamed, one record at a time (large arrays would exhaust memory on 32 bit targets otherwise)
+      TJSONArray.ArrayOfRecordToStream<R>(AArrayOfRecord, AContent);
       AContent.Position := 0;
       if Assigned(ABeforeExecute) then
         ABeforeExecute(AContent);
@@ -612,15 +594,9 @@ procedure TMARSClientResourceJSON.PUTAsync<R>(const AArrayOfRecord: TArray<R>;
 begin
   PUTAsync(
     procedure (AContent: TMemoryStream)
-    var
-      LJSONValue: TJSONValue;
     begin
-      LJSONValue := TJSONArray.ArrayOfRecordToJSON<R>(AArrayOfRecord);
-      try
-        JSONValueToStream(LJSONValue, AContent);
-      finally
-        LJSONValue.Free;
-      end;
+      // streamed, one record at a time (large arrays would exhaust memory on 32 bit targets otherwise)
+      TJSONArray.ArrayOfRecordToStream<R>(AArrayOfRecord, AContent);
       AContent.Position := 0;
       if Assigned(ABeforeExecute) then
         ABeforeExecute(AContent);
