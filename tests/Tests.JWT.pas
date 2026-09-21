@@ -44,6 +44,8 @@ type
     [Test] procedure ConfiguredSecretWins;
     [Test] procedure RefuseWithoutSecret;
     [Test] procedure RefuseDefaultSecret;
+    [Test] procedure NoTokenNeedsNoSecret;
+    [Test] procedure IncomingTokenWithoutSecretStaysUnverified;
     [Test] procedure AllowDefaultSecretOptIn;
     [Test] procedure GenerateIsStableWithinProcess;
     [Test] procedure GeneratedSecretRoundTrip;
@@ -562,15 +564,59 @@ begin
         TMARSToken.SecretFromParameters(nil);
       end
     , EMARSException, 'no parameters at all');
-    // the constructor used by the injection goes through the same check
-    Assert.WillRaise(
-      procedure
-      begin
-        TMARSmORMotJWTToken.Create('', LParams).Free;
-      end
-    , EMARSException, 'token creation');
+    var LSecret: string;
+    Assert.IsFalse(TMARSToken.TrySecretFromParameters(LParams, LSecret), 'Try variant does not raise');
+    Assert.IsEmpty(LSecret);
   finally
     LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.NoTokenNeedsNoSecret;
+begin
+  // applications not using JWT at all: the constructor used by the injection must not
+  // require JWT.Secret when the request carries no token
+  TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Refuse;
+  var LParams := ParamsWith('');
+  try
+    var LToken := TMARSmORMotJWTToken.Create('', LParams);
+    try
+      Assert.IsEmpty(LToken.Token);
+      Assert.IsFalse(LToken.IsVerified);
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSTokenSecretTests.IncomingTokenWithoutSecretStaysUnverified;
+begin
+  // a valid token signed with the public default secret
+  var LIssued := TMARSmORMotJWTToken.Create('', JWT_SECRET_PARAM_DEFAULT, 'issuer', 1);
+  try
+    LIssued.UserName := 'Andrea';
+    LIssued.Build(JWT_SECRET_PARAM_DEFAULT);
+    Assert.IsNotEmpty(LIssued.Token);
+
+    TMARSToken.DefaultSecretPolicy := TMARSDefaultSecretPolicy.Refuse;
+    var LParams := ParamsWith('');
+    try
+      // no secret available: no exception, but the token is never trusted
+      var LToken := TMARSmORMotJWTToken.Create(LIssued.Token, LParams);
+      try
+        Assert.AreEqual(LIssued.Token, LToken.Token);
+        Assert.IsFalse(LToken.IsVerified, 'cannot be verified without a secret');
+        Assert.IsEmpty(LToken.UserName, 'claims are not loaded');
+      finally
+        LToken.Free;
+      end;
+    finally
+      LParams.Free;
+    end;
+  finally
+    LIssued.Free;
   end;
 end;
 

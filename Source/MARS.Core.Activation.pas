@@ -835,11 +835,17 @@ begin
     Token.Clear;
 
   if FAuthorizationInfo.NeedsAuthentication then
+  begin
+    // a protected resource needs a usable JWT.Secret: raises when it is not configured
+    // (public resources never get here, so applications not using JWT need no JWT setup)
+    TMARSToken.SecretFromParameters(Application.Parameters);
+
     if ((Token.Token = '') or not Token.IsVerified) then
     begin
       Token.Clear;
       raise EMARSAuthenticationException.Create('Token missing, not valid or expired', 403);
     end;
+  end;
 end;
 
 procedure TMARSActivation.CheckAuthorization;

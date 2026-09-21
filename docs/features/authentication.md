@@ -104,6 +104,12 @@ applies `TMARSToken.DefaultSecretPolicy`:
 - `Refuse` (the default in `RELEASE` builds): the first operation that needs the secret raises
   `EMARSException` with an explicit message.
 
+The secret is required only where JWT is actually used: a request to a protected resource
+(`[RolesAllowed]`, `[PermitAll]`, `[DenyAll]`), or the issuing of a token. An application whose
+resources are all public needs no JWT configuration at all, even in `RELEASE` builds; a token
+sent to such an application cannot be verified and is simply never trusted
+(`IsVerified = False`).
+
 Set `JWT.AllowDefaultSecret=true` to knowingly keep the public default (never in production).
 Every reader of the secret, the token resource, the MCP OAuth server and the test helpers,
 goes through the same function. Projects created with MARSCmd get a random `JWT.Secret` in their

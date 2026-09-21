@@ -84,6 +84,10 @@ type
     // something other than the public default, the default only with JWT.AllowDefaultSecret=true,
     // otherwise whatever DefaultSecretPolicy dictates. Every reader of JWT.Secret goes through here.
     class function SecretFromParameters(const AParameters: TMARSParameters): string;
+    // Same as SecretFromParameters but returns False (and an empty ASecret) instead of raising
+    // when the Refuse policy applies
+    class function TrySecretFromParameters(const AParameters: TMARSParameters;
+      out ASecret: string): Boolean;
     class var DefaultSecretPolicy: TMARSDefaultSecretPolicy;
     // True once the per-process random secret has been handed out (Generate policy)
     class var GeneratedSecretInUse: Boolean;
@@ -136,27 +140,33 @@ var
 
 { TMARSToken }
 
-class function TMARSToken.SecretFromParameters(const AParameters: TMARSParameters): string;
 const
-  MESSAGE_TEXT = 'JWT.Secret is not configured (or is still the public default). '
+  SECRET_NOT_CONFIGURED_MESSAGE = 'JWT.Secret is not configured (or is still the public default). '
     + 'Set a strong, unique ' + JWT_SECRET_PARAM + ' for the application, or set '
     + JWT_ALLOWDEFAULTSECRET_PARAM + '=true to knowingly use the public default.';
+
+class function TMARSToken.TrySecretFromParameters(const AParameters: TMARSParameters;
+  out ASecret: string): Boolean;
 var
   LAllowDefault: Boolean;
 begin
-  Result := '';
+  Result := True;
+  ASecret := '';
   LAllowDefault := False;
   if Assigned(AParameters) then
   begin
-    Result := AParameters.ByName(JWT_SECRET_PARAM, '').AsString;
+    ASecret := AParameters.ByName(JWT_SECRET_PARAM, '').AsString;
     LAllowDefault := AParameters.ByName(JWT_ALLOWDEFAULTSECRET_PARAM, False).AsBoolean;
   end;
 
-  if (Result <> '') and (Result <> JWT_SECRET_PARAM_DEFAULT) then
+  if (ASecret <> '') and (ASecret <> JWT_SECRET_PARAM_DEFAULT) then
     Exit;
 
   if LAllowDefault then
-    Exit(JWT_SECRET_PARAM_DEFAULT);
+  begin
+    ASecret := JWT_SECRET_PARAM_DEFAULT;
+    Exit;
+  end;
 
   case DefaultSecretPolicy of
     Generate:
@@ -165,19 +175,26 @@ begin
       begin
         GeneratedSecretInUse := True;
         {$IFDEF MSWINDOWS}
-        OutputDebugString(PChar('MARS: ' + MESSAGE_TEXT + ' Using a random per-process secret (DEBUG policy).'));
+        OutputDebugString(PChar('MARS: ' + SECRET_NOT_CONFIGURED_MESSAGE
+          + ' Using a random per-process secret (DEBUG policy).'));
         {$ENDIF}
       end;
-      Result := _ProcessSecret;
+      ASecret := _ProcessSecret;
     end;
   else
-    raise EMARSException.Create(MESSAGE_TEXT);
+    ASecret := '';
+    Result := False;
   end;
+end;
+
+class function TMARSToken.SecretFromParameters(const AParameters: TMARSParameters): string;
+begin
+  if not TrySecretFromParameters(AParameters, Result) then
+    raise EMARSException.Create(SECRET_NOT_CONFIGURED_MESSAGE);
 end;
 
 constructor TMARSToken.Create(const AToken: string; const AParameters: TMARSParameters);
 begin
-  var LSecret := SecretFromParameters(AParameters);
   var LIssuer := JWT_ISSUER_PARAM_DEFAULT;
   var LDuration: TDateTime := JWT_DURATION_PARAM_DEFAULT;
   if Assigned(AParameters) then
@@ -186,7 +203,22 @@ begin
     LDuration := GetDurationFromParameters(AParameters);
   end;
 
-  Create(AToken, LSecret, LIssuer, LDuration);
+  // The secret is needed only to verify an incoming token: an application not using JWT at
+  // all (every request comes without a token) is not forced to configure JWT.Secret.
+  // A token coming in while no secret is available (Refuse policy) cannot be verified and
+  // stays unverified, never checked against an empty secret. The configuration error is
+  // raised where JWT is actually used: protected resources (TMARSActivation.CheckAuthentication)
+  // and token issuers (SecretFromParameters before Build).
+  var LSecret := '';
+  if (AToken = '') or TrySecretFromParameters(AParameters, LSecret) then
+    Create(AToken, LSecret, LIssuer, LDuration)
+  else
+  begin
+    Create;
+    FIssuer := LIssuer;
+    FDuration := LDuration;
+    FToken := AToken;
+  end;
 end;
 
 function TMARSToken.BuildJWTToken(const ASecret: string;
