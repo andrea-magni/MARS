@@ -1461,7 +1461,7 @@ begin
       Result := True;
 
       if Assigned(ADoSomething) then
-        ADoSomething(LAttribute);
+        ADoSomething(LAttribute as T);
 
       if not ACheckAllOccurrences then
         Break;
