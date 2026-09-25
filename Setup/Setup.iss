@@ -70,7 +70,7 @@
 #define LibraryPackagesFolder "Packages"
 #define LibrarySourceFolder "Source"
 #define LibraryDCUFolder "Lib"
-#define LibraryDocumentationURL "https://github.com/andrea-magni/MARS/wiki/"
+#define LibraryDocumentationURL "https://andrea-magni.github.io/MARS/"
 #define LibrarySupportURL "https://github.com/andrea-magni/MARS/issues/"
 #define LibraryUpdatesURL "https://github.com/andrea-magni/MARS/releases/"
 #define LibraryLicenseFileName "..\LICENSE"
