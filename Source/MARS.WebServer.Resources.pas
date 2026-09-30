@@ -154,9 +154,30 @@ function AtLeastOneMatch(const ASample: string; const AValues: TStringList): Boo
 implementation
 
 uses
-  System.Types, IOUtils, Masks, StrUtils, NetEncoding
+  {$IFDEF MSWINDOWS}Winapi.Windows, {$ENDIF}System.Types, IOUtils, Masks, StrUtils, NetEncoding
 , MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions
 ;
+
+// Expands 8.3 short names; a path that does not exist comes back unchanged
+function LongPathName(const APath: string): string;
+{$IFDEF MSWINDOWS}
+var
+  LBuffer: string;
+  LLength: DWORD;
+{$ENDIF}
+begin
+  Result := APath;
+{$IFDEF MSWINDOWS}
+  // first call: required size, terminator included (0 = not found)
+  LLength := GetLongPathName(PChar(APath), nil, 0);
+  if LLength = 0 then
+    Exit;
+  SetLength(LBuffer, LLength);
+  LLength := GetLongPathName(PChar(APath), PChar(LBuffer), LLength);
+  if (LLength > 0) and (LLength < DWORD(Length(LBuffer))) then
+    Result := Copy(LBuffer, 1, LLength);
+{$ENDIF}
+end;
 
 function AtLeastOneMatch(const ASample: string; const AValues: TStringList): Boolean;
 var
@@ -345,6 +366,10 @@ begin
 
   if not ResolveFullPath(LFullPath) then
     Exit;
+
+  // an 8.3 alias ('WEB~1.CON') opens the same file under a name that neither the
+  // filters nor the content types expect: from here on, the long name
+  LFullPath := LongPathName(LFullPath);
 
   // served content is user-provided: browsers must trust the declared Content-Type
   Activation.Response.SetHeader('X-Content-Type-Options', 'nosniff');

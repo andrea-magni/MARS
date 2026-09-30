@@ -111,6 +111,9 @@ type
     procedure TestStaticResponsesCarryNosniff;
 
     [Test]
+    procedure TestStaticExclusionFiltersSeeTheLongName;
+
+    [Test]
     procedure TestQueryWithBody;
 
     [Test]
@@ -123,7 +126,7 @@ type
 implementation
 
 uses
-  IOUtils
+  {$IFDEF MSWINDOWS}Winapi.Windows, {$ENDIF}IOUtils
 , IdCustomHTTPServer, Web.HTTPApp, MARS.http.Server.Indy
 , Mock.IMARSRequest, Mock.IMARSResponse;
 
@@ -558,6 +561,32 @@ begin
     Assert.AreEqual('nosniff', LResponseMock.GetHeaderValue('X-Content-Type-Options'), 'X-Content-Type-Options: nosniff expected');
   finally
     DeleteStaticFile(STATIC_FILE_NAME);
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestStaticExclusionFiltersSeeTheLongName;
+const
+  EXCLUDED_FILE = 'mars-exclude-test.secret'; // longer than 8.3: gets an alias like MARS-E~1.SEC
+begin
+  WriteStaticFile(EXCLUDED_FILE, 'must never be served');
+  try
+    Assert.AreEqual(200, StaticRequestStatus('GET', 'static/' + EXCLUDED_FILE), 'no filter: served');
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'staticexclude/' + EXCLUDED_FILE), 'excluded');
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'staticexclude/' + UpperCase(EXCLUDED_FILE)), 'excluded, other case');
+
+{$IFDEF MSWINDOWS}
+    // the 8.3 alias opens the same file under a name the mask does not match
+    var LFullName := TPath.Combine(ExtractFilePath(ParamStr(0)), EXCLUDED_FILE);
+    var LShort: array[0..MAX_PATH] of Char;
+    var LLength := GetShortPathName(PChar(LFullName), LShort, Length(LShort));
+    var LAlias := ExtractFileName(Copy(LShort, 1, LLength));
+    if (LLength = 0) or SameText(LAlias, EXCLUDED_FILE) then
+      Exit; // no 8.3 names on this volume: nothing to bypass the mask with
+    Assert.AreEqual(200, StaticRequestStatus('GET', 'static/' + LAlias), 'no filter: the alias reaches the file');
+    Assert.AreEqual(404, StaticRequestStatus('GET', 'staticexclude/' + LAlias), 'excluded, 8.3 alias ' + LAlias);
+{$ENDIF}
+  finally
+    DeleteStaticFile(EXCLUDED_FILE);
   end;
 end;
 
