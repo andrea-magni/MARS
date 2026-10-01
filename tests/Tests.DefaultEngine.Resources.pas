@@ -75,6 +75,11 @@ type
   TStaticDotsFlatResource = class(TFileSystemResource)
   end;
 
+  // same root, files matching the mask are never served
+  [Path('staticexclude/{*}'), RootFolder('{bin}', False), Exclude('*.secret')]
+  TStaticExcludeResource = class(TFileSystemResource)
+  end;
+
   TItem = record
     Id: Integer;
     Description: string;
@@ -185,6 +190,6 @@ end;
 initialization
   MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
-  , TStaticDotsResource, TStaticDotsFlatResource]);
+  , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);
 
 end.

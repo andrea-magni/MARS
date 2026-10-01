@@ -34,6 +34,17 @@ declared content type instead of guessing one from the bytes.
 before downloading it. The implementation reuses `GetContent`, so a subclass overriding it gets
 `HEAD` support for free.
 
+`[Exclude('mask')]` and `[Include('mask')]` (both repeatable, or the `ExclusionFilters` and
+`InclusionFilters` lists) restrict what the resource serves. Masks are matched case-insensitively
+against the full path of the file: an exclusion always wins and, once an inclusion is declared, only
+matching files are served. Filtered files answer `404` and are left out of the directory listing.
+
+```pascal
+[Path('app/{*}'), RootFolder('{bin}\app', True), Exclude('*\web.config'), Exclude('*.map')]
+TAppResource = class(TFileSystemResource)
+end;
+```
+
 ### Path safety
 
 The request path is validated before the file system is touched, and anything that fails
@@ -45,7 +56,10 @@ the checks is answered with `404`:
   dot (which Windows silently strips; leading and trailing whitespace is trimmed off the URL tokens
   before they reach the resource);
 - the resulting path is canonicalized and must still lie under the canonical `RootFolder`;
-- with `IncludeSubFolders = False` only files directly in the root are served.
+- with `IncludeSubFolders = False` only files directly in the root are served;
+- on Windows, 8.3 short names are expanded before the filters and the content-type lookup:
+  `WEB~1.CON` opens the same file as `web.config`, and would otherwise slip past
+  `[Exclude('*\web.config')]`.
 
 Some front-ends and generated pages rely on relative links such as `css/../img/logo.png`. Mark
 the resource with `[DotSegments]` (or set the `AllowDotSegments` property) to accept `.` and `..`
