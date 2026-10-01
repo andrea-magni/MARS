@@ -54,6 +54,12 @@ type
     [MCPTool('pick', 'Single enum argument')]
     function Pick(const E: TTestEnum): string;
 
+    [MCPTool('optional_args', 'Required name plus optional arguments with defaults')]
+    function OptionalArgs(const N: string;
+      [MCPDefault('3')] const I: Integer;
+      [MCPParam('loud', 'shout'), MCPDefault('true')] const B: Boolean;
+      [MCPDefault('"teTwo"')] const E: TTestEnum): string;
+
     [MCPTool('boom', 'Always fails')]
     procedure Boom;
 
@@ -90,6 +96,7 @@ type
     [Test] procedure Schema_DynArrayWithItems;
     [Test] procedure Schema_MCPParamRenameAndDescription;
     [Test] procedure Schema_RequiredContainsAllParams;
+    [Test] procedure Schema_MCPDefault_NotRequiredAndAdvertised;
 
     // protocol
     [Test] procedure Initialize_DefaultProtocolVersion;
@@ -110,6 +117,10 @@ type
     [Test] procedure ToolsCall_RecordResult_StructuredContent;
     [Test] procedure ToolsCall_CoercesAllArgumentTypes;
     [Test] procedure ToolsCall_MissingArgument_InvalidParams;
+    [Test] procedure ToolsCall_MissingOptionalArguments_UseDefaults;
+    [Test] procedure ToolsCall_GivenOptionalArguments_OverrideDefaults;
+    [Test] procedure ToolsCall_NullOptionalArgument_UsesDefault;
+    [Test] procedure ToolsCall_MissingRequiredWithOptionals_InvalidParams;
     [Test] procedure ToolsCall_InvalidEnumArgument_InvalidParams;
     [Test] procedure ToolsCall_ArgumentsNotAnObject_InvalidParams;
     [Test] procedure ToolsCall_UnknownTool_InvalidParams;
@@ -299,6 +310,24 @@ uses
 , Tests.MCP.Resources
 ;
 
+// True when an item of AItems has AField equal to AValue (or starting with it,
+// when APrefix): checks the parsed values, ToJSON escapes '/' as '\/'
+function HasItemValue(const AItems: TJSONArray; const AField, AValue: string;
+  const APrefix: Boolean = False): Boolean;
+var
+  LItem: TJSONValue;
+  LValue: string;
+begin
+  Result := False;
+  if not Assigned(AItems) then
+    Exit;
+  for LItem in AItems do
+    if LItem.TryGetValue<string>(AField, LValue)
+      and ((LValue = AValue) or (APrefix and LValue.StartsWith(AValue)))
+    then
+      Exit(True);
+end;
+
 { TTestToolHost }
 
 function TTestToolHost.SayHello(const AName: string): string;
@@ -344,6 +373,12 @@ begin
     + '|' + FormatDateTime('yyyy-mm-dd hh:nn', W)
     + '|' + R.id.ToString + ':' + R.name
     + '|' + Length(A).ToString + ':' + LSum.ToString;
+end;
+
+function TTestToolHost.OptionalArgs(const N: string; const I: Integer;
+  const B: Boolean; const E: TTestEnum): string;
+begin
+  Result := Format('%s|%d|%s|%s', [N, I, BoolToStr(B, True), GetEnumName(TypeInfo(TTestEnum), Ord(E))]);
 end;
 
 function TTestToolHost.Pick(const E: TTestEnum): string;
@@ -457,7 +492,7 @@ begin
 
     var LTools: TJSONArray;
     Assert.IsTrue(LResponse.TryGetValue<TJSONArray>('result.tools', LTools));
-    Assert.AreEqual(7, LTools.Count); // say_hello, MethodNamed, dup, add_numbers, kitchen, pick, boom
+    Assert.AreEqual(8, LTools.Count); // say_hello, MethodNamed, dup, add_numbers, kitchen, pick, optional_args, boom
   finally
     LResponse.Free;
   end;
@@ -772,6 +807,86 @@ begin
   end;
 end;
 
+procedure TMCPDispatcherFixture.Schema_MCPDefault_NotRequiredAndAdvertised;
+begin
+  var LResponse := ToolsListResponse;
+  try
+    var LTool := FindToolJSON(LResponse, 'optional_args');
+    var LRequired: TJSONArray;
+    Assert.IsTrue(LTool.TryGetValue<TJSONArray>('inputSchema.required', LRequired));
+    Assert.AreEqual(1, LRequired.Count, 'only the parameter without MCPDefault is required');
+    Assert.AreEqual('N', LRequired.Items[0].Value);
+
+    var LInt: Integer;
+    Assert.IsTrue(LTool.TryGetValue<Integer>('inputSchema.properties.I.default', LInt));
+    Assert.AreEqual(3, LInt);
+    var LBool: Boolean;
+    Assert.IsTrue(LTool.TryGetValue<Boolean>('inputSchema.properties.loud.default', LBool),
+      'default under the renamed parameter');
+    Assert.IsTrue(LBool);
+    var LDescription: string;
+    Assert.IsTrue(LTool.TryGetValue<string>('inputSchema.properties.loud.description', LDescription));
+    Assert.AreEqual('shout', LDescription);
+    var LEnum: string;
+    Assert.IsTrue(LTool.TryGetValue<string>('inputSchema.properties.E.default', LEnum));
+    Assert.AreEqual('teTwo', LEnum);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPDispatcherFixture.ToolsCall_MissingOptionalArguments_UseDefaults;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"optional_args","arguments":{"N":"x"}}}');
+  try
+    var LText: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.content[0].text', LText), LResponse.ToJSON);
+    Assert.AreEqual('x|3|True|teTwo', LText);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPDispatcherFixture.ToolsCall_GivenOptionalArguments_OverrideDefaults;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"optional_args",'
+    + '"arguments":{"N":"x","I":9,"loud":false,"E":"teThree"}}}');
+  try
+    var LText: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.content[0].text', LText), LResponse.ToJSON);
+    Assert.AreEqual('x|9|False|teThree', LText);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPDispatcherFixture.ToolsCall_NullOptionalArgument_UsesDefault;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"optional_args",'
+    + '"arguments":{"N":"x","I":null}}}');
+  try
+    var LText: string;
+    Assert.IsTrue(LResponse.TryGetValue<string>('result.content[0].text', LText), LResponse.ToJSON);
+    Assert.AreEqual('x|3|True|teTwo', LText);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPDispatcherFixture.ToolsCall_MissingRequiredWithOptionals_InvalidParams;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"optional_args","arguments":{"I":1}}}');
+  try
+    AssertErrorCode(LResponse, JSONRPC_INVALID_PARAMS);
+  finally
+    LResponse.Free;
+  end;
+end;
+
 procedure TMCPDispatcherFixture.ToolsCall_MissingArgument_InvalidParams;
 begin
   var LResponse := ParseAndHandle(
@@ -873,7 +988,7 @@ begin
 
     var LTools: TJSONArray;
     Assert.IsTrue(LResponse.TryGetValue<TJSONArray>('result.tools', LTools));
-    Assert.AreEqual(6, LTools.Count);
+    Assert.AreEqual(7, LTools.Count);
   finally
     LResponse.Free;
   end;
@@ -974,11 +1089,11 @@ begin
     var LResources: TJSONArray;
     Assert.IsTrue(LResponse.TryGetValue<TJSONArray>('result.resources', LResources));
     Assert.AreEqual(2, LResources.Count); // templates excluded
-    Assert.Contains(LResources.ToJSON, 'info://greeting');
-    Assert.Contains(LResources.ToJSON, 'data://config');
-    Assert.DoesNotContain(LResources.ToJSON, 'items://');
-    Assert.Contains(LResources.ToJSON, 'text/plain');
-    Assert.Contains(LResources.ToJSON, 'application/json');
+    Assert.IsTrue(HasItemValue(LResources, 'uri', 'info://greeting'), LResources.ToJSON);
+    Assert.IsTrue(HasItemValue(LResources, 'uri', 'data://config'), LResources.ToJSON);
+    Assert.IsFalse(HasItemValue(LResources, 'uri', 'items://', True), LResources.ToJSON);
+    Assert.IsTrue(HasItemValue(LResources, 'mimeType', 'text/plain'), LResources.ToJSON);
+    Assert.IsTrue(HasItemValue(LResources, 'mimeType', 'application/json'), LResources.ToJSON);
   finally
     LResponse.Free;
   end;
@@ -1130,7 +1245,11 @@ begin
 
   var LListResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"resources/list"}');
   try
-    Assert.DoesNotContain(LListResponse.ToJSON, 'info://greeting');
+    var LResources: TJSONArray;
+    Assert.IsTrue(LListResponse.TryGetValue<TJSONArray>('result.resources', LResources), LListResponse.ToJSON);
+    Assert.IsFalse(HasItemValue(LResources, 'uri', 'info://greeting'), LListResponse.ToJSON);
+    // the filter hides only what it rejects
+    Assert.IsTrue(HasItemValue(LResources, 'uri', 'data://config'), LListResponse.ToJSON);
   finally
     LListResponse.Free;
   end;
@@ -1861,8 +1980,10 @@ begin
   var LListCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"resources/list"}');
   var LListJSON := ParseContent(LListCall);
   try
-    Assert.DoesNotContain(LListJSON.ToJSON, 'secret://data');
-    Assert.Contains(LListJSON.ToJSON, 'info://server');
+    var LResources: TJSONArray;
+    Assert.IsTrue(LListJSON.TryGetValue<TJSONArray>('result.resources', LResources), LListJSON.ToJSON);
+    Assert.IsFalse(HasItemValue(LResources, 'uri', 'secret://data'), LListJSON.ToJSON);
+    Assert.IsTrue(HasItemValue(LResources, 'uri', 'info://server'), LListJSON.ToJSON);
   finally
     LListJSON.Free;
   end;

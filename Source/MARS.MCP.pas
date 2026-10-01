@@ -138,6 +138,9 @@ type
 
     function GetParamName(const AParam: TRttiParameter): string; virtual;
     function GetParamDescription(const AParam: TRttiParameter): string; virtual;
+    // default value of an optional parameter ([MCPDefault]): True and a new JSON
+    // value (owned by the caller) when the parameter has one
+    function GetParamDefault(const AParam: TRttiParameter; out ADefault: TJSONValue): Boolean; virtual;
 
     function BuildResponse(const AId: TJSONValue): TJSONObject; virtual;
     function BuildResultResponse(const AId: TJSONValue; const AResult: TJSONValue): TJSONObject; virtual;
@@ -532,10 +535,11 @@ end;
 
 function TMCPDispatcher.BuildInputSchema(const AMethod: TRttiMethod): TJSONObject;
 var
-  LProperties: TJSONObject;
+  LProperties, LParamSchema: TJSONObject;
   LRequired: TJSONArray;
   LParam: TRttiParameter;
   LParamName: string;
+  LDefault: TJSONValue;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('type', 'object');
@@ -546,8 +550,12 @@ begin
     for LParam in AMethod.GetParameters do
     begin
       LParamName := GetParamName(LParam);
-      LProperties.AddPair(LParamName, TypeToSchema(LParam.ParamType, GetParamDescription(LParam)));
-      LRequired.Add(LParamName);
+      LParamSchema := TypeToSchema(LParam.ParamType, GetParamDescription(LParam));
+      LProperties.AddPair(LParamName, LParamSchema);
+      if GetParamDefault(LParam, LDefault) then
+        LParamSchema.AddPair('default', LDefault) // optional: not in "required"
+      else
+        LRequired.Add(LParamName);
     end;
 
     Result.AddPair('properties', LProperties);
@@ -671,6 +679,25 @@ begin
       Result := MCPParamAttribute(LAttribute).Description;
 end;
 
+function TMCPDispatcher.GetParamDefault(const AParam: TRttiParameter;
+  out ADefault: TJSONValue): Boolean;
+var
+  LAttribute: TCustomAttribute;
+begin
+  ADefault := nil;
+  for LAttribute in AParam.GetAttributes do
+    if LAttribute is MCPDefaultAttribute then
+    begin
+      ADefault := TJSONObject.ParseJSONValue(MCPDefaultAttribute(LAttribute).DefaultJSON);
+      if not Assigned(ADefault) then
+        raise EMCPError.Create(JSONRPC_INTERNAL_ERROR
+        , Format('Invalid MCPDefault JSON [%s] for parameter [%s]'
+          , [MCPDefaultAttribute(LAttribute).DefaultJSON, AParam.Name]));
+      Exit(True);
+    end;
+  Result := False;
+end;
+
 function TMCPDispatcher.JSONToValue(const AType: TRttiType;
   const AJSONValue: TJSONValue; const AOwnedObjects: TObjectList<TObject>): TValue;
 var
@@ -767,7 +794,7 @@ var
   LValues: TArray<TValue>;
   LIndex: Integer;
   LParamName: string;
-  LJSONArg: TJSONValue;
+  LJSONArg, LDefault: TJSONValue;
   LOwnedObjects: TObjectList<TObject>;
   LResultValue: TValue;
 begin
@@ -799,7 +826,12 @@ begin
         LJSONArg := LArguments.GetValue(LParamName);
 
       if (not Assigned(LJSONArg)) or (LJSONArg is TJSONNull) then
-        raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Missing argument: ' + LParamName);
+      begin
+        if not GetParamDefault(LParams[LIndex], LDefault) then
+          raise EMCPError.Create(JSONRPC_INVALID_PARAMS, 'Missing argument: ' + LParamName);
+        LOwnedObjects.Add(LDefault);
+        LJSONArg := LDefault;
+      end;
 
       try
         LValues[LIndex] := JSONToValue(LParams[LIndex].ParamType, LJSONArg, LOwnedObjects);

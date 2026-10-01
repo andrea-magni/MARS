@@ -95,6 +95,19 @@ type
     property Description: string read FDescription;
   end;
 
+  // Makes a tool parameter optional: it is left out of the "required" list, the
+  // JSON Schema advertises the value as "default", and a missing (or null)
+  // argument is bound to it. ADefaultJSON is a JSON literal converted like any
+  // argument: 'true', '7', '"value_date"', '""', '[]'.
+  MCPDefaultAttribute = class(MARSAttribute)
+  private
+    FDefaultJSON: string;
+  public
+    constructor Create(const ADefaultJSON: string);
+
+    property DefaultJSON: string read FDefaultJSON;
+  end;
+
 implementation
 
 { MCPServerInfoAttribute }
@@ -169,6 +182,14 @@ begin
   inherited Create;
   FParamName := AParamName;
   FDescription := ADescription;
+end;
+
+{ MCPDefaultAttribute }
+
+constructor MCPDefaultAttribute.Create(const ADefaultJSON: string);
+begin
+  inherited Create;
+  FDefaultJSON := ADefaultJSON;
 end;
 
 end.
