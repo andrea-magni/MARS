@@ -1,6 +1,6 @@
 # Installation
 
-MARS-Curiosity can be installed either with the executable installer (recommended) or manually from sources.
+MARS-Curiosity can be installed with the executable installer (recommended), with [TMS Smart Setup](https://github.com/tmssoftware/smartsetup), or manually from sources.
 
 ## Option 1 — Executable installer
 
@@ -9,7 +9,41 @@ The fastest way to get started:
 1. Download the setup from the [latest release page](https://github.com/andrea-magni/MARS/releases/latest).
 2. Run it. The installer configures the library paths and installs the design-time packages for your RAD Studio version.
 
-## Option 2 — Manual installation
+## Option 2 — TMS Smart Setup {#tms-smart-setup}
+
+[TMS Smart Setup](https://doc.tmssoftware.com/smartsetup/) is a free, open-source command-line tool that downloads, builds and registers Delphi libraries. MARS ships a `tmsbuild.yaml`, so Smart Setup can build it from sources for every supported Delphi version installed on your machine (**10.4 Sydney** and newer, Win32/Win64).
+
+1. [Download and install Smart Setup](https://doc.tmssoftware.com/smartsetup/download/).
+2. The community server, where open-source libraries are listed, is disabled by default. Enable it once:
+
+   ```bash
+   tms server-enable community true
+   ```
+
+3. Install MARS:
+
+   ```bash
+   tms install andreamagni.mars
+   ```
+
+Smart Setup clones the repository, compiles the runtime and design-time packages (Debug and Release), installs the design-time packages in the IDE and adds the MARS source folders to the library path. Later on, `tms update andreamagni.mars` gets the latest version and rebuilds it, and `tms uninstall andreamagni.mars` removes it.
+
+::: tip Not listed yet?
+If `tms install andreamagni.mars` reports that the product is unknown, it has not reached the community server yet. In the meantime, clone MARS into your Smart Setup folder (the folder containing `tms.config.yaml`; `tms config -print` shows it) and build it, running both commands from that folder:
+
+```bash
+git clone https://github.com/andrea-magni/MARS.git
+tms build
+```
+:::
+
+::: warning
+Use one installation method only. If MARS is already installed with the executable installer or manually, remove it first, so the IDE doesn't load two copies of the same packages.
+:::
+
+`MARS.UniDAC` is not built by Smart Setup, because it requires Devart UniDAC: if you need it, build it manually from the `Packages` folder.
+
+## Option 3 — Manual installation
 
 1. Get a copy of MARS (`git clone` or download the ZIP). Remember to initialize submodules if cloning:
 

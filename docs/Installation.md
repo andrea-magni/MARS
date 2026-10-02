@@ -1,6 +1,7 @@
 # MARS Curiosity Installation
 
 * MARS has an executable installer. Check [latest release page](https://github.com/andrea-magni/MARS/releases/latest).
+* MARS can also be installed with [TMS Smart Setup](https://github.com/tmssoftware/smartsetup) (Delphi 10.4 and newer): `tms server-enable community true`, then `tms install andreamagni.mars`. See the [installation guide](https://andrea-magni.github.io/MARS/guide/installation#tms-smart-setup).
 
 # MARS Curiosity Manual Installation
 

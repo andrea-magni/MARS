@@ -20,7 +20,8 @@
 
 # Installation
 1. Just run [the setup of the latest release](https://github.com/andrea-magni/MARS/releases/latest)
-2. More info at [documentation page](https://andrea-magni.github.io/MARS/guide/installation#installation)
+2. Or use [TMS Smart Setup](https://github.com/tmssoftware/smartsetup) (Delphi 10.4 and newer): `tms server-enable community true`, then `tms install andreamagni.mars`
+3. More info at [documentation page](https://andrea-magni.github.io/MARS/guide/installation#installation)
 
 # Get started
 
