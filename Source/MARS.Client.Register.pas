@@ -3,7 +3,7 @@ unit MARS.Client.Register;
 interface
 
 {$I MARS.inc}
-{$R ..\MARSSplash.res}
+{$R MARSSplash.res}
 
 procedure Register;
 

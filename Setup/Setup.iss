@@ -154,7 +154,7 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl,.\InnoSetupSc
   Source: ".\InnoSetupScripts\Style\*"; DestDir: "{app}\{#SetupFolder}\Style"; Flags: ignoreversion
 #endif
 Source: "..\{#LibraryPackagesFolder}\*"; Excludes: "{#CommonRADStudioFilesExcludes}"; DestDir: "{app}\{#LibraryPackagesFolder}"; Flags: recursesubdirs ignoreversion
-Source: "..\{#LibraryPackagesFolder}\MARSSplash.res"; DestDir: "{app}\{#LibraryPackagesFolder}"; Flags: ignoreversion
+Source: "..\{#LibrarySourceFolder}\MARSSplash.res"; DestDir: "{app}\{#LibrarySourceFolder}"; Flags: ignoreversion
 Source: "..\ThirdParty\mORMot\Source\SynEcc64O2.o"; DestDir: "{app}\ThirdParty\mORMot\Source"; Flags: ignoreversion
 Source: "..\*.rc"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "..\*"; Excludes: "{#CommonRADStudioFilesExcludes},*.gitattributes,*.gitignore,*.gitmodules,\.github\*,\.history\*,\Documents\*,\Externals\*,\{#LibraryDCUFolder}\*,Logs\*,*.Logs.txt,Objects\*,\{#SetupFolder}\*,\{#LibraryPackagesFolder}\*,\Test"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
