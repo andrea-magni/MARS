@@ -75,7 +75,9 @@ begin
     if Assigned(LJWT) then
     begin
       try
-        Result := LJWT.Verified;
+        // MARS signs HS256 only: never let the token header pick the algorithm
+        // (JOSE would verify HS384/HS512/RS* too), as the mORMot backend already does
+        Result := LJWT.Verified and (LJWT.Header.Algorithm = TJOSEAlgorithmId.HS256.AsString);
         if Result then
           AClaims.LoadFromJSON(LJWT.Claims.JSON);
       finally

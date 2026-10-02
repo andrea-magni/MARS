@@ -14,6 +14,8 @@ type
   TJWTTestUtils = class
   public
     class function Base64UrlEncode(const AValue: string): string;
+    // a valid token for user Andrea, signed HS512 (not HS256) with ASecret
+    class function HS512Token(const ASecret: string): string;
   end;
 
   TMARSJWT<T: TMARSToken> = class(TObject)
@@ -52,6 +54,7 @@ type
     [Test] procedure TamperedKeyId;
     [Test] procedure InvalidKeyIdRefusedOnBuild;
     [Test] procedure PublicDefaultAsPreviousSecret;
+    [Test] procedure OnlyHS256Accepted;
   end;
 
   [TestFixture('TMARSToken.Secret')]
@@ -96,6 +99,7 @@ implementation
 
 uses
   Math, TimeSpan, NetEncoding
+, JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA
 , MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
 , SynCommons, SynCrypto, Generics.Collections
@@ -480,6 +484,29 @@ begin
   end;
 end;
 
+class function TJWTTestUtils.HS512Token(const ASecret: string): string;
+begin
+  var LJWT := JOSE.Core.JWT.TJWT.Create(JOSE.Core.JWT.TJWTClaims); // SynCrypto has a TJWTClaims too
+  try
+    LJWT.Claims.JSON.AddPair('UserName', 'Andrea');
+    LJWT.Claims.JSON.AddPair('exp', TJSONNumber.Create(87910736248)); // year 4755
+    var LSigner := TJWS.Create(LJWT);
+    try
+      var LKey := TJWK.Create(ASecret);
+      try
+        LSigner.Sign(LKey, TJOSEAlgorithmId.HS512);
+        Result := LSigner.CompactToken;
+      finally
+        LKey.Free;
+      end;
+    finally
+      LSigner.Free;
+    end;
+  finally
+    LJWT.Free;
+  end;
+end;
+
 { TMARSJWT<T>: key rotation }
 
 function TMARSJWT<T>.KeyParams(const ASecret, AKeyId: string;
@@ -721,6 +748,19 @@ begin
     Assert.IsFalse(IsVerifiedWith(LTokenString, LParams), 'the public default is not a usable key');
     LParams.Values[JWT_ALLOWDEFAULTSECRET_PARAM] := True;
     Assert.IsTrue(IsVerifiedWith(LTokenString, LParams), 'unless explicitly allowed');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.OnlyHS256Accepted;
+begin
+  const LSecret = DUMMY_SECRET + DUMMY_SECRET; // 64 bytes, long enough for HS512
+  var LParams := KeyParams(LSecret, '', []);
+  try
+    Assert.IsTrue(IsVerifiedWith(IssueToken(LParams), LParams), 'HS256 with the same secret');
+    Assert.IsFalse(IsVerifiedWith(TJWTTestUtils.HS512Token(LSecret), LParams),
+      'right secret, but the header must not choose the algorithm');
   finally
     LParams.Free;
   end;

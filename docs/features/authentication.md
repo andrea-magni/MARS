@@ -223,7 +223,7 @@ Two interchangeable signing backends are provided; pick one by adding the corres
 {$ENDIF}
 ```
 
-Both produce standard HS256 tokens; they differ only in the underlying library.
+Both produce standard HS256 tokens and accept only HS256 tokens (the `alg` in the token header never selects the algorithm); they differ only in the underlying library.
 
 ## Token renewal
 
