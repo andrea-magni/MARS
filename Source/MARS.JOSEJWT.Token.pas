@@ -41,6 +41,8 @@ begin
   LJWT := TJWT.Create(TJWTClaims);
   try
     AClaims.SaveToJSON(LJWT.Claims.JSON);
+    if KeyId <> '' then
+      LJWT.Header.KeyID := KeyId;
 
     LSigner := TJWS.Create(LJWT);
     try

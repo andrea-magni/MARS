@@ -11,6 +11,12 @@ interface
     // public, therefore never used unless JWT.AllowDefaultSecret=true (see TMARSToken.SecretFromParameters)
     const JWT_SECRET_PARAM_DEFAULT = '{788A2FD0-8E93-4C11-B5AF-51867CF26EE7}';
     const JWT_ALLOWDEFAULTSECRET_PARAM = 'JWT.AllowDefaultSecret';
+    // key rotation: JWT.KeyId names JWT.Secret (written as "kid" in the header of new tokens),
+    // JWT.PreviousSecret.<kid> keeps a retired key valid for verification only,
+    // JWT.PreviousSecret (no kid) does the same for tokens issued without a "kid"
+    const JWT_KEYID_PARAM = 'JWT.KeyId';
+    const JWT_PREVIOUSSECRET_PARAM = 'JWT.PreviousSecret';
+    const JWT_KEYID_HEADER = 'kid';
     const JWT_COOKIEENABLED_PARAM = 'JWT.CookieEnabled';
     const JWT_COOKIEENABLED_PARAM_DEFAULT = true;
     const JWT_COOKIENAME_PARAM = 'JWT.CookieName';

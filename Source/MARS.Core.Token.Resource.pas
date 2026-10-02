@@ -108,7 +108,7 @@ begin
   try
     if Authenticate(LUserName, LPassword) then
     begin
-      Token.Build(TMARSToken.SecretFromParameters(App.Parameters));
+      Token.Build(App.Parameters);
       Result := Token;
     end
     else

@@ -11,13 +11,23 @@ uses
 ;
 
 type
+  TJWTTestUtils = class
+  public
+    class function Base64UrlEncode(const AValue: string): string;
+  end;
+
   TMARSJWT<T: TMARSToken> = class(TObject)
   private
   protected
     procedure Duration(const ASeconds: Int64);
     function GetTokenForVerifyOne: string; virtual;
+    function KeyParams(const ASecret, AKeyId: string;
+      const APrevious: array of string): TMARSParameters;
+    function IssueToken(const AParameters: TMARSParameters): string;
+    function IsVerifiedWith(const AToken: string; const AParameters: TMARSParameters): Boolean;
   public
     const DUMMY_SECRET = '12345678901234567890123456789012';
+    const OTHER_SECRET = 'abcdefghijabcdefghijabcdefghijab';
 
     [Test] procedure BuildOne;
     [Test] procedure VerifyOne;
@@ -31,6 +41,17 @@ type
     [Test] procedure RolesParsing;
     [Test] procedure RolesParsingAnyToken;
     [Test] procedure EmptyToken;
+
+    // key rotation (issue #82)
+    [Test] procedure KeyIdInHeader;
+    [Test] procedure NoKeyIdNoHeader;
+    [Test] procedure RetiredKeyStillVerifies;
+    [Test] procedure RemovedKeyNoLongerVerifies;
+    [Test] procedure KeyIdMustMatch;
+    [Test] procedure TokenWithoutKeyId;
+    [Test] procedure TamperedKeyId;
+    [Test] procedure InvalidKeyIdRefusedOnBuild;
+    [Test] procedure PublicDefaultAsPreviousSecret;
   end;
 
   [TestFixture('TMARSToken.Secret')]
@@ -56,6 +77,9 @@ type
   TMARSTokenTests = class(TObject)
   public
     [Test] procedure BaseClassBehavior;
+    [Test] procedure KeyIdFromMalformedTokens;
+    [Test] procedure ValidKeyIds;
+    [Test] procedure CustomKeyProvider;
   end;
 
 
@@ -71,7 +95,7 @@ type
 implementation
 
 uses
-  Math, TimeSpan
+  Math, TimeSpan, NetEncoding
 , MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
 , SynCommons, SynCrypto, Generics.Collections
@@ -443,6 +467,265 @@ begin
   end;
 end;
 
+{ TJWTTestUtils }
+
+class function TJWTTestUtils.Base64UrlEncode(const AValue: string): string;
+begin
+  var LEncoding := TBase64Encoding.Create(0); // no line breaks
+  try
+    Result := LEncoding.EncodeBytesToString(TEncoding.UTF8.GetBytes(AValue))
+      .Replace('+', '-').Replace('/', '_').Replace('=', '');
+  finally
+    LEncoding.Free;
+  end;
+end;
+
+{ TMARSJWT<T>: key rotation }
+
+function TMARSJWT<T>.KeyParams(const ASecret, AKeyId: string;
+  const APrevious: array of string): TMARSParameters;
+var
+  LIndex: Integer;
+begin
+  // APrevious: pairs of key id ('' = no kid) and secret
+  Result := TMARSParameters.Create('');
+  Result.Values[JWT_SECRET_PARAM] := ASecret;
+  if AKeyId <> '' then
+    Result.Values[JWT_KEYID_PARAM] := AKeyId;
+  LIndex := 0;
+  while LIndex < Length(APrevious) - 1 do
+  begin
+    if APrevious[LIndex] = '' then
+      Result.Values[JWT_PREVIOUSSECRET_PARAM] := APrevious[LIndex + 1]
+    else
+      Result.Values[JWT_PREVIOUSSECRET_PARAM + '.' + APrevious[LIndex]] := APrevious[LIndex + 1];
+    Inc(LIndex, 2);
+  end;
+end;
+
+function TMARSJWT<T>.IssueToken(const AParameters: TMARSParameters): string;
+begin
+  var LToken := T.Create('', AParameters);
+  try
+    LToken.UserName := 'Andrea';
+    LToken.Build(AParameters);
+    Result := LToken.Token;
+  finally
+    LToken.Free;
+  end;
+end;
+
+function TMARSJWT<T>.IsVerifiedWith(const AToken: string; const AParameters: TMARSParameters): Boolean;
+begin
+  var LToken := T.Create(AToken, AParameters);
+  try
+    Result := LToken.IsVerified;
+    if Result then
+      Assert.AreEqual('Andrea', LToken.UserName, 'claims loaded');
+  finally
+    LToken.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.KeyIdInHeader;
+begin
+  var LParams := KeyParams(DUMMY_SECRET, 'k1', []);
+  try
+    var LTokenString := IssueToken(LParams);
+    Assert.AreEqual('k1', TMARSToken.KeyIdFromToken(LTokenString), 'kid in the header');
+
+    var LToken := T.Create(LTokenString, LParams);
+    try
+      Assert.IsTrue(LToken.IsVerified, 'verified with the active key');
+      Assert.AreEqual('k1', LToken.KeyId);
+      Assert.AreEqual('Andrea', LToken.UserName);
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.NoKeyIdNoHeader;
+begin
+  var LParams := KeyParams(DUMMY_SECRET, '', []);
+  try
+    var LTokenString := IssueToken(LParams);
+    Assert.AreEqual('', TMARSToken.KeyIdFromToken(LTokenString), 'no JWT.KeyId, no kid');
+    Assert.IsTrue(IsVerifiedWith(LTokenString, LParams));
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.RetiredKeyStillVerifies;
+begin
+  var LOld := KeyParams(DUMMY_SECRET, 'k1', []);
+  var LRotated := KeyParams(OTHER_SECRET, 'k2', ['k1', DUMMY_SECRET]);
+  try
+    var LOldToken := IssueToken(LOld);
+    Assert.IsTrue(IsVerifiedWith(LOldToken, LRotated), 'k1 token accepted after the rotation');
+
+    var LNewToken := IssueToken(LRotated);
+    Assert.AreEqual('k2', TMARSToken.KeyIdFromToken(LNewToken), 'new tokens signed with k2');
+    Assert.IsTrue(IsVerifiedWith(LNewToken, LRotated));
+    Assert.IsFalse(IsVerifiedWith(LNewToken, LOld), 'k2 unknown to the old configuration');
+  finally
+    LRotated.Free;
+    LOld.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.RemovedKeyNoLongerVerifies;
+begin
+  var LOld := KeyParams(DUMMY_SECRET, 'k1', []);
+  var LRotated := KeyParams(OTHER_SECRET, 'k2', []);
+  try
+    Assert.IsFalse(IsVerifiedWith(IssueToken(LOld), LRotated), 'k1 removed from the ring');
+  finally
+    LRotated.Free;
+    LOld.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.KeyIdMustMatch;
+begin
+  // same secret, different id: a token is checked only against the key its kid names
+  var LIssuer := KeyParams(DUMMY_SECRET, 'k1', []);
+  var LVerifier := KeyParams(DUMMY_SECRET, 'k2', []);
+  try
+    Assert.IsFalse(IsVerifiedWith(IssueToken(LIssuer), LVerifier), 'kid k1 is unknown');
+  finally
+    LVerifier.Free;
+    LIssuer.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.TokenWithoutKeyId;
+var
+  LTokenString: string;
+  LVerifier: TMARSParameters;
+begin
+  var LIssuer := KeyParams(DUMMY_SECRET, '', []);
+  try
+    LTokenString := IssueToken(LIssuer);
+  finally
+    LIssuer.Free;
+  end;
+
+  // key ids introduced, same secret: tokens issued before keep working
+  LVerifier := KeyParams(DUMMY_SECRET, 'k1', []);
+  try
+    Assert.IsTrue(IsVerifiedWith(LTokenString, LVerifier), 'active secret, legacy token');
+  finally
+    LVerifier.Free;
+  end;
+
+  // rotated, old secret kept as JWT.PreviousSecret (no kid)
+  LVerifier := KeyParams(OTHER_SECRET, 'k2', ['', DUMMY_SECRET]);
+  try
+    Assert.IsTrue(IsVerifiedWith(LTokenString, LVerifier), 'JWT.PreviousSecret');
+  finally
+    LVerifier.Free;
+  end;
+
+  // a key with an id does not verify tokens without kid
+  LVerifier := KeyParams(OTHER_SECRET, 'k2', ['k1', DUMMY_SECRET]);
+  try
+    Assert.IsFalse(IsVerifiedWith(LTokenString, LVerifier), 'JWT.PreviousSecret.k1 is for kid k1 only');
+  finally
+    LVerifier.Free;
+  end;
+
+  LVerifier := KeyParams(OTHER_SECRET, 'k2', []);
+  try
+    Assert.IsFalse(IsVerifiedWith(LTokenString, LVerifier), 'old secret gone');
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.TamperedKeyId;
+var
+  LParts: TArray<string>;
+  LTampered: string;
+  LVerifier: TMARSParameters;
+begin
+  var LIssuer := KeyParams(DUMMY_SECRET, 'k1', []);
+  try
+    LParts := IssueToken(LIssuer).Split(['.']);
+  finally
+    LIssuer.Free;
+  end;
+  Assert.AreEqual(3, Length(LParts));
+
+  // the header is signed too: changing the kid breaks the signature, whatever key it names
+  LTampered := TJWTTestUtils.Base64UrlEncode('{"alg":"HS256","typ":"JWT","kid":"k2"}')
+    + '.' + LParts[1] + '.' + LParts[2];
+  Assert.AreEqual('k2', TMARSToken.KeyIdFromToken(LTampered));
+
+  LVerifier := KeyParams(DUMMY_SECRET, 'k2', []);
+  try
+    Assert.IsFalse(IsVerifiedWith(LTampered, LVerifier), 'k2 has the very same secret');
+  finally
+    LVerifier.Free;
+  end;
+  LVerifier := KeyParams(OTHER_SECRET, 'k2', ['k1', DUMMY_SECRET]);
+  try
+    Assert.IsFalse(IsVerifiedWith(LTampered, LVerifier), 'k2 is the active key');
+  finally
+    LVerifier.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.InvalidKeyIdRefusedOnBuild;
+var
+  LParams: TMARSParameters; // not inline vars: captured by the anonymous method below
+  LToken: TMARSToken;
+begin
+  LParams := KeyParams(DUMMY_SECRET, 'bad kid!', []);
+  try
+    LToken := T.Create('', LParams);
+    try
+      Assert.WillRaise(
+        procedure
+        begin
+          LToken.Build(LParams);
+        end
+      , EMARSException, 'invalid JWT.KeyId');
+      Assert.IsEmpty(LToken.Token);
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.PublicDefaultAsPreviousSecret;
+var
+  LTokenString: string;
+begin
+  var LIssued := T.Create('', nil);
+  try
+    LIssued.UserName := 'Andrea';
+    LIssued.Build(TMARSTokenKey.Create('old', JWT_SECRET_PARAM_DEFAULT));
+    LTokenString := LIssued.Token;
+  finally
+    LIssued.Free;
+  end;
+
+  var LParams := KeyParams(DUMMY_SECRET, 'k2', ['old', JWT_SECRET_PARAM_DEFAULT]);
+  try
+    Assert.IsFalse(IsVerifiedWith(LTokenString, LParams), 'the public default is not a usable key');
+    LParams.Values[JWT_ALLOWDEFAULTSECRET_PARAM] := True;
+    Assert.IsTrue(IsVerifiedWith(LTokenString, LParams), 'unless explicitly allowed');
+  finally
+    LParams.Free;
+  end;
+end;
+
 { TMARSmORMotJWT }
 
 procedure TMARSmORMotJWT.mORMotJSON_Types;
@@ -508,6 +791,85 @@ begin
     Assert.IsFalse(LToken.Token.IsEmpty and LToken.IsVerified, 'Token is empty but seemes verified');
   finally
     LToken.Free;
+  end;
+end;
+
+procedure TMARSTokenTests.KeyIdFromMalformedTokens;
+begin
+  Assert.AreEqual('', TMARSToken.KeyIdFromToken(''));
+  Assert.AreEqual('', TMARSToken.KeyIdFromToken('no-dots-at-all'));
+  Assert.AreEqual('', TMARSToken.KeyIdFromToken('.payload.signature'), 'empty header');
+  Assert.AreEqual('', TMARSToken.KeyIdFromToken('!!!.payload.signature'), 'not base64url');
+  Assert.AreEqual('', TMARSToken.KeyIdFromToken(TJWTTestUtils.Base64UrlEncode('not json') + '.p.s'));
+  Assert.AreEqual('', TMARSToken.KeyIdFromToken(TJWTTestUtils.Base64UrlEncode('{"alg":"HS256"}') + '.p.s'), 'no kid');
+  Assert.AreEqual('', TMARSToken.KeyIdFromToken(TJWTTestUtils.Base64UrlEncode('{"alg":"HS256","kid":5}') + '.p.s'), 'kid not a string');
+  Assert.AreEqual('k1', TMARSToken.KeyIdFromToken(TJWTTestUtils.Base64UrlEncode('{"alg":"HS256","kid":"k1"}') + '.p.s'));
+end;
+
+procedure TMARSTokenTests.ValidKeyIds;
+begin
+  Assert.IsTrue(TMARSToken.IsValidKeyId('k1'));
+  Assert.IsTrue(TMARSToken.IsValidKeyId('2026-10_main.v2'));
+  Assert.IsTrue(TMARSToken.IsValidKeyId(StringOfChar('a', 64)));
+  Assert.IsFalse(TMARSToken.IsValidKeyId(''));
+  Assert.IsFalse(TMARSToken.IsValidKeyId(StringOfChar('a', 65)));
+  Assert.IsFalse(TMARSToken.IsValidKeyId('two words'));
+  Assert.IsFalse(TMARSToken.IsValidKeyId('quote"'));
+  Assert.IsFalse(TMARSToken.IsValidKeyId('perch' + #$00E9));
+end;
+
+type
+  TFixedKeyProvider = class(TInterfacedObject, IMARSTokenKeyProvider)
+  public
+    function TryGetSigningKey(const AParameters: TMARSParameters; out AKey: TMARSTokenKey): Boolean;
+    function GetVerificationKeys(const AParameters: TMARSParameters;
+      const AKeyId: string): TArray<TMARSTokenKey>;
+  end;
+
+function TFixedKeyProvider.TryGetSigningKey(const AParameters: TMARSParameters;
+  out AKey: TMARSTokenKey): Boolean;
+begin
+  AKey := TMARSTokenKey.Create('custom', 'a-secret-that-lives-somewhere-else');
+  Result := True;
+end;
+
+function TFixedKeyProvider.GetVerificationKeys(const AParameters: TMARSParameters;
+  const AKeyId: string): TArray<TMARSTokenKey>;
+var
+  LKey: TMARSTokenKey;
+begin
+  Result := [];
+  if (AKeyId = 'custom') and TryGetSigningKey(AParameters, LKey) then
+    Result := [LKey];
+end;
+
+procedure TMARSTokenTests.CustomKeyProvider;
+var
+  LNoParameters: TMARSParameters;
+begin
+  LNoParameters := nil;
+  var LSaved := TMARSToken.KeyProvider;
+  TMARSToken.KeyProvider := TFixedKeyProvider.Create;
+  try
+    var LIssued := TMARSJOSEJWTToken.Create('', LNoParameters);
+    try
+      LIssued.UserName := 'Andrea';
+      LIssued.Build(LNoParameters);
+      Assert.AreEqual('custom', TMARSToken.KeyIdFromToken(LIssued.Token));
+
+      // issued by one backend, verified by the other: same key ring, same "kid"
+      var LVerified := TMARSmORMotJWTToken.Create(LIssued.Token, LNoParameters);
+      try
+        Assert.IsTrue(LVerified.IsVerified, 'verified through the custom provider');
+        Assert.AreEqual('Andrea', LVerified.UserName);
+      finally
+        LVerified.Free;
+      end;
+    finally
+      LIssued.Free;
+    end;
+  finally
+    TMARSToken.KeyProvider := LSaved;
   end;
 end;
 

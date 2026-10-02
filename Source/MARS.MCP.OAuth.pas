@@ -101,7 +101,7 @@ type
     function ConsumeRefreshToken(const AToken: string; out AData: TMCPOAuthRefreshToken): Boolean; virtual;
 
     // configuration (defaults from the application's JWT parameters)
-    function GetSecret: string; virtual;
+    function GetSigningKey: TMARSTokenKey; virtual; // key ring from JWT.Secret / JWT.KeyId
     function GetAccessTokenDurationSeconds: Integer; virtual;
     function GetCodeDuration: TDateTime; virtual;          // default 5 minutes
     function GetRefreshTokenDuration: TDateTime; virtual;  // default 30 days
@@ -557,9 +557,9 @@ begin
     Result := False;
 end;
 
-function TMCPOAuthServer.GetSecret: string;
+function TMCPOAuthServer.GetSigningKey: TMARSTokenKey;
 begin
-  Result := TMARSToken.SecretFromParameters(App.Parameters);
+  Result := TMARSToken.SigningKeyFromParameters(App.Parameters);
 end;
 
 function TMCPOAuthServer.GetAccessTokenDurationSeconds: Integer;
@@ -727,7 +727,7 @@ var
   LRefresh: TMCPOAuthRefreshToken;
 begin
   Token.SetUserNameAndRoles(AUserName, ARoles);
-  Token.Build(GetSecret); // the OAuth access token IS a MARS JWT
+  Token.Build(GetSigningKey); // the OAuth access token IS a MARS JWT
 
   LRefresh.Token := NewRandomString;
   LRefresh.ClientId := AClientId;

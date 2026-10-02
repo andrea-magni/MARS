@@ -63,6 +63,8 @@ type
   function CreateCompactGuidStr: string;
   // ABytes random bytes (system GUID generator) as lower-case hex, e.g. for JWT.Secret
   function GenerateRandomSecret(const ABytes: Integer = 32): string;
+  // base64url (RFC 4648 §5, padding optional, as in JWT parts) to UTF-8 text
+  function Base64UrlDecodeToString(const AValue: string): string;
 
   function BooleanToTJSON(AValue: Boolean): TJSONValue;
 
@@ -574,6 +576,18 @@ begin
       LGuidBytes := TGUID.NewGuid.ToByteArray;
     Result := Result + LowerCase(IntToHex(LGuidBytes[LIndex mod 16], 2));
   end;
+end;
+
+function Base64UrlDecodeToString(const AValue: string): string;
+var
+  LBase64: string;
+begin
+  LBase64 := AValue.Replace('-', '+').Replace('_', '/');
+  case Length(LBase64) mod 4 of
+    2: LBase64 := LBase64 + '==';
+    3: LBase64 := LBase64 + '=';
+  end;
+  Result := TEncoding.UTF8.GetString(TNetEncoding.Base64.DecodeStringToBytes(LBase64));
 end;
 
 function CreateCompactGuidStr: string;

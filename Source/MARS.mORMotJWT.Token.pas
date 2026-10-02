@@ -31,17 +31,21 @@ uses
 , MARS.mORMotJWT.Token.InjectionService
 ;
 
-function Base64UrlDecode(const AValue: string): string;
-var
-  LBase64: string;
-begin
-  // JWT parts are base64url encoded, without padding (RFC 7515)
-  LBase64 := AValue.Replace('-', '+').Replace('_', '/');
-  case Length(LBase64) mod 4 of
-    2: LBase64 := LBase64 + '==';
-    3: LBase64 := LBase64 + '=';
+type
+  // TJWTHS256 writing a "kid" (key id) in the header: TJWTAbstract builds the default header
+  // only when fHeader is still empty, so it is set before the inherited constructor runs.
+  // Verification does not need it: joHeaderParse accepts any header carrying "alg":"HS256".
+  TMARSJWTHS256 = class(TJWTHS256)
+  public
+    constructor CreateWithKeyId(const AKeyId, ASecret: RawUTF8; AClaims: TJWTClaims);
   end;
-  Result := TEncoding.UTF8.GetString(TNetEncoding.Base64.DecodeStringToBytes(LBase64));
+
+constructor TMARSJWTHS256.CreateWithKeyId(const AKeyId, ASecret: RawUTF8; AClaims: TJWTClaims);
+begin
+  // AKeyId is restricted to [A-Za-z0-9._-] (TMARSToken.IsValidKeyId): no JSON escaping needed
+  if AKeyId <> '' then
+    FormatUTF8('{"alg":"HS256","typ":"JWT","kid":"%"}', [AKeyId], fHeader);
+  Create(ASecret, 0, AClaims, []);
 end;
 
 { TMARSmORMotJWTToken }
@@ -60,7 +64,7 @@ var
 begin
 //  LContext := TRttiContext.Create;
 
-  LJWT := TJWTHS256.Create(StringToUTF8(ASecret), 0, [jrcIssuer], []);
+  LJWT := TMARSJWTHS256.CreateWithKeyId(StringToUTF8(KeyId), StringToUTF8(ASecret), [jrcIssuer]);
   try
 
     LClaimsValues.Init([], dvArray);
@@ -108,7 +112,7 @@ begin
     var LParts := AToken.Split(['.']);
     if Length(LParts) < 2 then
       Exit(False);
-    LJSONString := Base64UrlDecode(LParts[1]);
+    LJSONString := Base64UrlDecodeToString(LParts[1]);
     LPayloadJSON := TJSONObject.ParseJSONValue(LJSONString) as TJSONObject;
     try
       AClaims.LoadFromJSON(LPayloadJSON);

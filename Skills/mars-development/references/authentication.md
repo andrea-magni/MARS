@@ -2,9 +2,10 @@
 
 MARS auth is JWT-based. The pieces:
 
-- `TMARSToken` (`MARS.Core.Token`) — the authenticated principal. Key members: `Token` (raw JWT string), `UserName`, `Roles: TArray<string>`, `IsVerified`, `IsExpired`, `Claims: TMARSParameters`, `Expiration`, `IssuedAt`, `HasRole(...)`, `SetUserNameAndRoles(...)`, `Build(ASecret)`, `Load(AToken, ASecret)`, `Clear`. The token is read from the `Authorization: Bearer <jwt>` header or from a cookie.
+- `TMARSToken` (`MARS.Core.Token`) — the authenticated principal. Key members: `Token` (raw JWT string), `UserName`, `Roles: TArray<string>`, `IsVerified`, `IsExpired`, `Claims: TMARSParameters`, `Expiration`, `IssuedAt`, `HasRole(...)`, `SetUserNameAndRoles(...)`, `KeyId`, `Build(App.Parameters)` / `Load(AToken, App.Parameters)` (application key ring, preferred), `Build(ASecret)` / `Load(AToken, ASecret)` (explicit secret), `Clear`. The token is read from the `Authorization: Bearer <jwt>` header or from a cookie.
 - A **JWT backend unit** must be in the server's uses clause (typically in `Server.Ignition.pas`): `MARS.mORMotJWT.Token` (Windows) or `MARS.JOSEJWT.Token` (all platforms). Without one, tokens can't be signed/verified.
 - Config comes from application-level parameters (ini prefix `<AppName>.`): `JWT.Secret`, `JWT.Issuer`, `JWT.Duration` (days; also `JWT.Duration.InSeconds` / `.InMinutes`), `JWT.CookieEnabled`, `JWT.CookieName`, `JWT.CookieDomain`, `JWT.CookiePath`, `JWT.CookieSecure`. Constants in `MARS.Utils.JWT`. Always set a real `JWT.Secret` — there is a well-known default.
+- Key rotation: `JWT.KeyId` names the active `JWT.Secret` and goes in the `kid` header of new tokens; `JWT.PreviousSecret.<kid>` keeps a retired key valid for verification of tokens with that `kid`; `JWT.PreviousSecret` (no suffix) does the same for tokens without `kid`. Keys come from `TMARSToken.KeyProvider` (`IMARSTokenKeyProvider`, default `TMARSParametersTokenKeyProvider`): assign a custom provider to load keys from elsewhere.
 
 ## The login endpoint: TMARSTokenResource
 
@@ -34,7 +35,7 @@ initialization
 The base class provides (all `[Produces(APPLICATION_JSON)]`, returning the token as JSON):
 
 - `[GET]` `GetCurrent` — current token state (verified or not);
-- `[POST, Consumes(APPLICATION_FORM_URLENCODED_TYPE)]` `DoLogin` — reads form fields `username` and `password` (override `GetCredentials` to change), calls `Authenticate`, then `Token.Build(<JWT.Secret>)`;
+- `[POST, Consumes(APPLICATION_FORM_URLENCODED_TYPE)]` `DoLogin` — reads form fields `username` and `password` (override `GetCredentials` to change), calls `Authenticate`, then `Token.Build(App.Parameters)` (signs with the active key);
 - `[DELETE]` `Logout` — clears the token (and cookie if enabled).
 
 Overridable hooks: `Authenticate`, `GetCredentials`, `BeforeLogin`/`AfterLogin`, `BeforeLogout`/`AfterLogout`.

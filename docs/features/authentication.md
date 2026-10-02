@@ -81,7 +81,7 @@ The base `TMARSTokenResource.Authenticate` is a **demo stub** that accepts any u
 
 ## What `Token.Build` does
 
-`Token.Build(secret)` writes the standard claims (`iat`, `exp`, `iss`) plus `UserName` and `Roles`, signs the payload with HMAC-SHA256 and marks the token verified. Duration and other settings come from the application [parameters](/reference/parameters):
+`Token.Build(App.Parameters)` writes the standard claims (`iat`, `exp`, `iss`) plus `UserName` and `Roles`, signs the payload with HMAC-SHA256 using the application's signing key (see [Key rotation](#key-rotation)) and marks the token verified. `Token.Build(secret)` signs with an explicit secret instead. Duration and other settings come from the application [parameters](/reference/parameters):
 
 ```ini
 [DefaultApp]
@@ -116,6 +116,52 @@ goes through the same function. Projects created with MARSCmd get a random `JWT.
 `.ini` files.
 :::
 
+## Key rotation
+
+A secret should not live forever: rotate it periodically, and immediately if it may have leaked.
+Replacing `JWT.Secret` alone invalidates every token already issued, logging everybody out.
+To rotate without that, give each key an id and keep the previous key around for verification
+only, until the tokens it signed have expired:
+
+```ini
+[DefaultApp]
+; the active key: signs new tokens, its id goes in the "kid" header
+JWT.KeyId=2026-10
+JWT.Secret=<new long random value>
+; retired keys: accepted only for tokens carrying that "kid"
+JWT.PreviousSecret.2026-07=<the secret used until now>
+```
+
+The `kid` (key id, [RFC 7515](https://www.rfc-editor.org/rfc/rfc7515#section-4.1.4)) in the
+header of each token tells MARS which key signed it:
+
+- a token with a `kid` is checked only against the key with that id (the active one or a
+  `JWT.PreviousSecret.<kid>`); an unknown `kid` makes it invalid;
+- a token without a `kid`, issued before key ids were configured, is checked against
+  `JWT.Secret`, then against `JWT.PreviousSecret` (no suffix), if set.
+
+A rotation, step by step:
+
+1. Generate a new secret and pick a new id (a date works well). Key ids use 1 to 64 characters among
+   `A-Z a-z 0-9 . _ -`.
+2. Move the current secret to `JWT.PreviousSecret.<current id>` (or to `JWT.PreviousSecret`
+   if you were not using key ids yet), then set `JWT.KeyId` and `JWT.Secret` to the new ones.
+3. After one token lifetime (`JWT.Duration`), remove the previous secret.
+
+If the old secret leaked, skip the waiting: drop it right away and accept that its tokens stop
+working.
+
+::: warning Several servers
+Every server verifying the tokens must know the same keys. Update all of them before tokens
+signed with the new key reach them, for example by distributing the new key as
+`JWT.PreviousSecret.<new id>` first, then making it the active key everywhere.
+:::
+
+Keys are read through `TMARSToken.KeyProvider` (`IMARSTokenKeyProvider`); the default
+`TMARSParametersTokenKeyProvider` implements the parameters above. Assign your own provider at
+startup to keep keys elsewhere, for example in a database or a secrets vault, or to rotate them
+automatically.
+
 ## Reading the identity in a resource
 
 Inject `TMARSToken` with `[Context]` to read the authenticated user and claims:
@@ -148,7 +194,9 @@ Useful `TMARSToken` members:
 | `HasRole(role)` | Membership test. |
 | `Claims` | All JWT claims as name/value pairs. |
 | `Expiration`, `IssuedAt`, `Duration`, `DurationSecs` | Lifetime info. |
-| `Build(secret)` / `Load(token, secret)` | Issue / verify a token. |
+| `KeyId` | Id of the key that signed the token (`kid` header), empty when it has none. |
+| `Build(App.Parameters)` / `Load(token, App.Parameters)` | Issue / verify a token with the application's keys. |
+| `Build(secret)` / `Load(token, secret)` | Issue / verify a token with an explicit secret. |
 | `Clear` | Drop the token (and cookie). |
 
 ## Bearer header vs cookie
@@ -183,13 +231,13 @@ To keep a session alive without a fresh login, re-`Build` the token when it is c
 
 ```pascal
 [Context] Token: TMARSToken;
-[ApplicationParam('JWT.Secret')] JWTSecret: string;
+[Context] App: IMARSApplication;
 // ...
 if Token.IsVerified then
 begin
   var LRemaining := Round(TTimeSpan.Subtract(Token.Expiration, Now).TotalSeconds);
   if LRemaining < (Token.DurationSecs / 2) then
-    Token.Build(JWTSecret);   // issue a fresh token, resetting the clock
+    Token.Build(App.Parameters);   // issue a fresh token (with the active key), resetting the clock
 end;
 ```
 

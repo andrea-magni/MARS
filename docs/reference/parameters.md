@@ -52,6 +52,9 @@ Read by the [token resource](/features/authentication) and JWT backends:
 | --- | --- | --- |
 | `JWT.Secret` | — | HMAC signing secret. Missing or equal to the public default: see `JWT.AllowDefaultSecret`. |
 | `JWT.AllowDefaultSecret` | `false` | Knowingly use the public default secret. Otherwise a `DEBUG` build generates a random per-process secret and a `RELEASE` build raises (`TMARSToken.DefaultSecretPolicy`). |
+| `JWT.KeyId` | — | Id of `JWT.Secret`, written as `kid` in the header of new tokens. See [Key rotation](/features/authentication#key-rotation). |
+| `JWT.PreviousSecret.<kid>` | — | A retired key, accepted only to verify tokens whose `kid` is `<kid>`. |
+| `JWT.PreviousSecret` | — | A retired key for tokens without `kid` (issued before `JWT.KeyId` was set). |
 | `JWT.Issuer` | `MARS-Curiosity` | `iss` claim. |
 | `JWT.Duration` | `1` | Token lifetime in **days**. |
 | `JWT.Duration.InMinutes` | — | Lifetime in minutes (alternative). |

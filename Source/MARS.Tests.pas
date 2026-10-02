@@ -196,7 +196,7 @@ begin
   try
     LToken.UserName := AUserName;
     LToken.Roles := ARoles;
-    LToken.Build(FTokenSecret);
+    LToken.Build(TMARSToken.SigningKeyFromParameters(FAppParameters)); // same key (and "kid") as the server
     Result := LToken.Token;
   finally
     LToken.Free;
