@@ -45,6 +45,8 @@ function AddNumbers(
   [MCPParam('b', 'Second operand')] const B: Double): TCalculationResult;
 ```
 
+The `server_dashboard` tool is an [MCP App](/features/mcp#mcp-apps-interactive-uis): hosts supporting the extension render its result with an interactive view (`bin/ServerDashboard.html`, plain JavaScript) whose Refresh button calls the view-only `dashboard_refresh` tool.
+
 ## TokenRenew
 
 JWT lifecycle management: checking remaining validity and automatically re-issuing the token when it drops below half its duration. See [Authentication ▸ Token renewal](/features/authentication#token-renewal).

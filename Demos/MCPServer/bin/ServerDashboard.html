@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+  MCP Apps view for the server_dashboard tool of the MARS MCPServer demo.
+  Served by TDemoMCPResource.DashboardView as ui://mars-demo/server-dashboard.html.
+
+  No SDK and no external resources (the host's default Content Security Policy blocks
+  them unless the resource declares [MCPAppCSP]): the view talks MCP Apps directly,
+  JSON-RPC 2.0 over postMessage with the host:
+    view -> host  ui/initialize, ui/notifications/initialized, tools/call,
+                  ui/notifications/size-changed
+    host -> view  ui/notifications/tool-input, ui/notifications/tool-result, ...
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MARS server dashboard</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1d1d1f; --muted: #6b6b70; --card: #f4f4f6; --accent: #c1440e;
+    font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  }
+  :root[data-theme="dark"] { --bg: #1e1e20; --fg: #f2f2f4; --muted: #a0a0a8; --card: #2a2a2e; --accent: #ff7a45; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  main { padding: 16px; }
+  h1 { font-size: 16px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 0;
+       background: var(--card); border-radius: 8px; padding: 12px 16px; }
+  dt { color: var(--muted); font-size: 13px; }
+  dd { margin: 0; font-size: 14px; font-variant-numeric: tabular-nums; word-break: break-word; }
+  footer { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
+  button { font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+           border: 1px solid var(--accent); background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span class="dot"></span>MARS-Curiosity MCP server</h1>
+  <dl>
+    <dt>Server time</dt><dd id="serverTime">waiting for the tool result...</dd>
+    <dt>Operating system</dt><dd id="os">-</dd>
+    <dt>Library</dt><dd id="libraryName">-</dd>
+  </dl>
+  <footer>
+    <button id="refresh" disabled>Refresh</button>
+    <span id="status"></span>
+  </footer>
+</main>
+<script>
+  let nextId = 1;
+  const pending = new Map();
+
+  function send(message) { window.parent.postMessage(Object.assign({ jsonrpc: "2.0" }, message), "*"); }
+
+  function request(method, params) {
+    const id = nextId++;
+    send({ id, method, params });
+    return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+  }
+
+  function notify(method, params) { send({ method, params }); }
+
+  function show(info) {
+    if (!info) return;
+    document.getElementById("serverTime").textContent = info.serverTime ?? "-";
+    document.getElementById("os").textContent = info.os ?? "-";
+    document.getElementById("libraryName").textContent = info.libraryName ?? "-";
+    document.getElementById("status").textContent = "Updated " + new Date().toLocaleTimeString();
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
+    const msg = event.data;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+
+    if (msg.id !== undefined && !msg.method) {          // response to one of our requests
+      const call = pending.get(msg.id);
+      if (!call) return;
+      pending.delete(msg.id);
+      msg.error ? call.reject(new Error(msg.error.message)) : call.resolve(msg.result);
+      return;
+    }
+    if (msg.method === "ui/notifications/tool-result") {  // result of server_dashboard
+      show(msg.params && msg.params.structuredContent);
+      return;
+    }
+    if (msg.method === "ui/notifications/host-context-changed") {
+      applyTheme(msg.params);
+      return;
+    }
+    if (msg.id !== undefined && msg.method) {            // host requests (ping, teardown, ...)
+      send({ id: msg.id, result: {} });
+    }
+  });
+
+  function applyTheme(context) {
+    if (context && context.theme)
+      document.documentElement.dataset.theme = context.theme;
+  }
+
+  document.getElementById("refresh").addEventListener("click", async () => {
+    const button = document.getElementById("refresh");
+    button.disabled = true;
+    try {
+      // app-only tool ([MCPToolUI(..., 'app')]): the host proxies the call to the MARS server
+      const result = await request("tools/call", { name: "dashboard_refresh", arguments: {} });
+      show(result && result.structuredContent);
+    } catch (e) {
+      document.getElementById("status").textContent = "Refresh failed: " + e.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  // let the host size the iframe to the content
+  new ResizeObserver(() => {
+    const rect = document.documentElement.getBoundingClientRect();
+    notify("ui/notifications/size-changed", { width: Math.ceil(rect.width), height: Math.ceil(rect.height) });
+  }).observe(document.documentElement);
+
+  (async () => {
+    const result = await request("ui/initialize", {
+      appInfo: { name: "MARS server dashboard", version: "1.0.0" },
+      appCapabilities: {},
+      protocolVersion: "2026-01-26"
+    });
+    applyTheme(result && result.hostContext);
+    notify("ui/notifications/initialized", {});
+    document.getElementById("refresh").disabled = false;
+  })().catch((e) => {
+    document.getElementById("status").textContent = "Not running inside an MCP Apps host (" + e.message + ")";
+  });
+</script>
+</body>
+</html>

@@ -105,6 +105,28 @@ claude mcp add --transport http mars-db --header "Authorization: Bearer <TOKEN>"
 
 Then ask Claude something like *"use the add_numbers tool to sum 39.5 and 2.5"* or *"find employees named Ada and tell me their role"*.
 
+## MCP Apps
+
+`server_dashboard` is an [MCP App](https://github.com/modelcontextprotocol/ext-apps): next to its JSON result, hosts supporting the extension (e.g. Claude) render an interactive view, `bin/ServerDashboard.html`, declared as the `ui://mars-demo/server-dashboard.html` resource:
+
+```pascal
+[MCPTool('server_dashboard', 'Shows an interactive dashboard with information about this server')
+, MCPToolUI(DASHBOARD_VIEW_URI)]
+function ServerDashboard: TServerInfo;
+
+[MCPTool('dashboard_refresh', 'Refreshes the server dashboard')
+, MCPToolUI(DASHBOARD_VIEW_URI, 'app')]   // callable by the view only
+function DashboardRefresh: TServerInfo;
+
+[MCPAppResource(DASHBOARD_VIEW_URI, 'server_dashboard_view', 'Interactive server dashboard')
+, MCPAppBorder(True)]
+function DashboardView: string;            // returns the HTML file
+```
+
+The view is plain HTML and JavaScript (no SDK, no external resources) talking to the host with JSON-RPC over `postMessage`; its Refresh button calls `dashboard_refresh`, which hosts hide from the model. The file is read on every request: edit it while the server runs.
+
+To try it locally without Claude, use `basic-host` from the [ext-apps repository](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-host): it runs in the browser, so first enable CORS in `bin/MCPServerApplication.ini` (`CORS.Enabled=True`, `CORS.Origin=*`, `CORS.Headers=Content-Type,Authorization,Accept,mcp-protocol-version`), and since it uses port 8080 itself, move the MARS server to another port (e.g. `Port=8090`), then start it with `SERVERS='["http://localhost:8090/rest/default/mcp"]'`.
+
 ## Docs
 
 See the [MCP Servers page](https://andrea-magni.github.io/MARS/features/mcp) of the MARS documentation.
