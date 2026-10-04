@@ -28,11 +28,7 @@ type
 implementation
 
 uses
-{$ifdef DelphiXE7_UP}
   VCL.Dialogs
-{$else}
-  Dialogs
-{$endif}
   , Windows, IdHTTP
 ;
 

@@ -129,11 +129,7 @@ begin
   FURL := '';
   FPath := '';
 
-  {$ifndef DelphiXE7_UP}
-  SetLength(FPathTokens, 0);
-  {$else}
   FPathTokens := [];
-  {$endif}
 
   FSubResources := TDictionary<Integer, string>.Create;
   FPathParams := TDictionary<Integer, string>.Create;

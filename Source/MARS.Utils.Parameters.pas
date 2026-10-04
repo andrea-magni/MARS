@@ -69,11 +69,6 @@ type
 
 implementation
 
-{$ifdef DelphiXE2_UP}
-{$else}
-uses
-  StrUtils;
-{$endif}
 
 { TMARSParametersSlice }
 
@@ -226,11 +221,7 @@ begin
   ASliceName := '';
   AParamName := AName;
 
-  {$ifdef DelphiXE2_UP}
   LTokens := AName.Split([SLICE_SEPARATOR]);
-  {$else}
-  LTokens := TArray<string>(SplitString(AName, SLICE_SEPARATOR));
-  {$endif}
   if Length(LTokens) > 1 then
   begin
     ASliceName := LTokens[0];

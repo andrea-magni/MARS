@@ -13,9 +13,7 @@ uses
   Classes, SysUtils
   , Rtti
   , Generics.Collections
-{$ifdef DelphiXE7_UP}
   , Threading
-{$endif}
   , SyncObjs
 
   , MARS.Core.Utils
@@ -29,9 +27,7 @@ type
     FSubscribers: TList<IMARSMessageSubscriber>;
     FQueue: TThreadedQueue<TMARSMessage>;
     FCriticalSection: TCriticalSection;
-{$ifdef DelphiXE7_UP}
     FWorkerTask: ITask;
-{$endif}
   protected
     class var _Instance: TMARSMessageDispatcher;
     class function GetInstance: TMARSMessageDispatcher; static;
@@ -72,7 +68,6 @@ begin
   FQueue := TThreadedQueue<TMARSMessage>.Create(MESSAGE_QUEUE_DEPTH);
   FCriticalSection := TCriticalSection.Create;
 
-{$ifdef DelphiXE7_UP}
   FWorkerTask := TTask.Create(
     procedure
     var
@@ -104,15 +99,12 @@ begin
   );
 
   FWorkerTask.Start;
-{$endif}
 end;
 
 destructor TMARSMessageDispatcher.Destroy;
 begin
-{$ifdef DelphiXE7_UP}
   if Assigned(FWorkerTask) and (FWorkerTask.Status < TTaskStatus.Canceled) then
     FWorkerTask.Cancel;
-{$endif}
 
   FCriticalSection.Free;
   FSubscribers.Free;

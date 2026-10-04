@@ -14,9 +14,6 @@ uses
 , MARS.Core.JSON
 ;
 
-{$IFNDEF Delphi10Rio_UP}
-const pidAllPlatforms = $FFFF;
-{$ENDIF}
 
 type
   EMARSClientException = class(Exception);

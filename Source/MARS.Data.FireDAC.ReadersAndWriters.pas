@@ -24,7 +24,7 @@ type
   TArrayFDMemTableReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -57,7 +57,7 @@ uses
 , FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Intf
 , FireDAC.Stan.StorageBIN, FireDAC.Stan.StorageJSON, FireDAC.Stan.StorageXML
 
-, MARS.Core.JSON {$ifdef DelphiXE7_UP}, System.JSON {$endif}
+, MARS.Core.JSON, System.JSON
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders, MARS.Data.MessageBodyWriters
 , MARS.Core.Exceptions, MARS.Core.RequestAndResponse.Interfaces
 , MARS.Rtti.Utils, MARS.Data.FireDAC.Utils
@@ -127,7 +127,7 @@ end;
 { TArrayFDMemTableReader }
 
 function TArrayFDMemTableReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation
 ): TValue;

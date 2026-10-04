@@ -24,7 +24,7 @@ uses
 type
   IMessageBodyReader = interface ['{C22068E1-3085-482D-9EAB-4829C7AE87C0}']
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue;
@@ -93,7 +93,7 @@ type
   protected
   public
     class function ReadWith<T: class, constructor, IMessageBodyReader>(
-      {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const AInputData: TBytes;
         const ADestination: TRttiObject; const AMediaType: TMediaType;
         const AActivation: IMARSActivation): TValue; inline;
     class function GetDesiredEncoding(const AActivation: IMARSActivation;
@@ -188,11 +188,7 @@ begin
     if LConsumesMediaTypes.Count > 0 then
       LAllowedMediaTypes := LConsumesMediaTypes.ToArrayOfString
     else
-{$ifdef DelphiXE7_UP}
       LAllowedMediaTypes := [];
-{$else}
-      SetLength(LAllowedMediaTypes, 0);
-{$endif}
 
     if (Length(LAllowedMediaTypes) = 0)
       or ((Length(LAllowedMediaTypes) = 1) and (LAllowedMediaTypes[0] = TMediaType.WILDCARD))
@@ -425,7 +421,7 @@ begin
 end;
 
 class function TMARSMessageBodyReader.ReadWith<T>(
-  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation): TValue;
 var

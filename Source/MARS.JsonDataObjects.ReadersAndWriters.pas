@@ -28,7 +28,7 @@ type
   TJsonDataObjectsReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue;
@@ -61,7 +61,7 @@ end;
 { TJsonDataObjectsReader }
 
 function TJsonDataObjectsReader.ReadFrom(
-  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const AInputData: TBytes;
     const ADestination: TRttiObject; const AMediaType: TMediaType;
     const AActivation: IMARSActivation
   ): TValue;

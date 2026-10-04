@@ -124,13 +124,8 @@ begin
         WriteStatus(LServer)
       else if sametext(LResponse, cCommandStop) then
         StopServer(LServer)
-    {$ifdef DelphiXE3_UP}
       else if LResponse.StartsWith(cCommandSetPort, True) then
         SetPort(LServer, LResponse.Split([' '])[2])
-    {$else}
-      else if AnsiStartsText(cCommandSetPort, LResponse) then
-        SetPort(LServer, Copy(LResponse, Length(cCommandSetPort)+1, MAXINT))
-    {$endif}
 
       else if sametext(LResponse, cCommandHelp) then
         WriteCommands

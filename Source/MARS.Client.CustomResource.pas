@@ -148,73 +148,62 @@ type
     procedure CloneStatus(const ASource: TMARSClientCustomResource); virtual;
 
     // http verbs
-    procedure GET(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
-    {$ifndef DelphiXE2_UP}
-    function GETAsString: string; overload;
-    {$endif}
-    function GETAsString(AEncoding: TEncoding {$ifdef DelphiXE2_UP} = nil{$endif};
-      const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}): string; {$ifndef DelphiXE2_UP}overload;{$endif} virtual;
-    procedure POST(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
+    procedure GET(const ABeforeExecute: TMARSClientProc = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
+    function GETAsString(AEncoding: TEncoding = nil;
+      const ABeforeExecute: TMARSClientProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil): string; virtual;
+    procedure POST(const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; virtual;
     procedure POST(const ABody: TStream;
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
-    procedure PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
-    procedure DELETE(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
-    procedure PATCH(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; virtual;
+    procedure PUT(const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; virtual;
+    procedure DELETE(const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; virtual;
+    procedure PATCH(const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
     // HTTP QUERY (safe method with a body): fill the query in ABeforeExecute
-    procedure QUERY(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
-//    procedure HEAD(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
-//      const AAfterExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
-//      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
-//    procedure OPTIONS(const ABeforeExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
-//      const AAfterExecute: TMARSClientProc{$ifdef DelphiXE2_UP} = nil{$endif};
-//      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+    procedure QUERY(const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
-{$ifdef DelphiXE7_UP}
     procedure DELETEAsync(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
     procedure GETAsync(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
     procedure POSTAsync(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
     procedure PUTAsync(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
     procedure PATCHAsync(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
     procedure QUERYAsync(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
-{$endif}
 
     property Accept: string read GetAccept;
     property ContentType: string read GetContentType;
@@ -243,7 +232,7 @@ type
 implementation
 
 uses
-  {$ifdef DelphiXE7_UP}System.Threading,{$endif}
+  System.Threading,
   MARS.Core.URL, MARS.Core.Utils, MARS.Client.Token
 , MARS.Client.Resource, MARS.Core.MediaType
 ;
@@ -501,7 +490,6 @@ begin
   end;
 end;
 
-{$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.DELETEAsync(
   const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
@@ -590,7 +578,6 @@ begin
     raise;
   end;
 end;
-{$endif}
 
 
 destructor TMARSClientCustomResource.Destroy;
@@ -651,12 +638,6 @@ begin
   end;
 end;
 
-{$ifndef DelphiXE2_UP}
-function TMARSClientCustomResource.GETAsString: string;
-begin
-  Result := GetAsString(nil, nil, nil);
-end;
-{$endif}
 
 function TMARSClientCustomResource.GETAsString(AEncoding: TEncoding;
   const ABeforeExecute: TMARSClientProc;
@@ -692,7 +673,6 @@ begin
   Result := FApplication;
 end;
 
-{$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.GETAsync(
   const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
@@ -781,7 +761,6 @@ begin
     raise;
   end;
 end;
-{$endif}
 
 procedure TMARSClientCustomResource.PATCH(
   const ABeforeExecute: TProc<TMemoryStream>;
@@ -920,7 +899,6 @@ begin
   end;
 end;
 
-{$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.PATCHAsync(
   const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
@@ -1096,7 +1074,6 @@ begin
     raise;
   end;
 end;
-{$endif}
 
 procedure TMARSClientCustomResource.POST(
   const ABeforeExecute: TProc<TMemoryStream>;
@@ -1139,7 +1116,6 @@ begin
   end;
 end;
 
-{$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.POSTAsync(
   const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
@@ -1228,11 +1204,10 @@ begin
     raise;
   end;
 end;
-{$endif}
 
-procedure TMARSClientCustomResource.PUT(const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}
+procedure TMARSClientCustomResource.PUT(const ABeforeExecute: TProc<TMemoryStream> = nil;
+  const AAfterExecute: TMARSClientResponseProc = nil;
+  const AOnException: TMARSClientExecptionProc = nil
 );
 var
   LResponseStream: TMemoryStream;
@@ -1271,7 +1246,6 @@ begin
   end;
 end;
 
-{$ifdef DelphiXE7_UP}
 procedure TMARSClientCustomResource.PUTAsync(
   const ABeforeExecute: TProc<TMemoryStream>;
   const ACompletionHandler: TProc<TMARSClientCustomResource>;
@@ -1360,7 +1334,6 @@ begin
     raise;
   end;
 end;
-{$endif}
 
 procedure TMARSClientCustomResource.SetApplication(
   const Value: TMARSClientApplication);

@@ -11,7 +11,7 @@ uses
   Classes, SysUtils, Rtti
 , FireDAC.Comp.Client
 , MARS.Core.JSON
-  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
+  , System.JSON
 , MARS.Client.Resource, MARS.Client.Client, MARS.Client.Utils
 , MARS.Data.FireDAC.Utils
 ;

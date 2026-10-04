@@ -32,37 +32,37 @@ type
     destructor Destroy; override;
 
     procedure POST(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; override;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; override;
     procedure POST(
       const AFormData: TArray<TFormParam>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; virtual;
 
     procedure POSTAsync(
       const AFormData: TArray<TFormParam>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
 
     procedure PUT(
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; override;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; override;
     procedure PUT(
       const AFormData: TArray<TFormParam>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload; virtual;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload; virtual;
 
     procedure PUTAsync(
       const AFormData: TArray<TFormParam>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload; virtual;
 
     function ResponseAsJSON: TJSONValue;

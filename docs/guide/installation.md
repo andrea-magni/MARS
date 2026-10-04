@@ -71,7 +71,7 @@ Use one installation method only. If MARS is already installed with the executab
    Adjust the package folder to match your Delphi version.
 
 ::: tip Compatibility
-Recent Delphi versions (from **10.4 Sydney** up to **13 Florence**) are fully supported. Older versions are largely compatible, down to **XE7**.
+MARS supports Delphi **10.4 Sydney** up to **13 Florence**. Earlier versions are not supported: compiling MARS with them stops with an explicit error.
 :::
 
 ## Bootstrap a new project with MARSCmd

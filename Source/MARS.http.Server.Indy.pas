@@ -300,11 +300,7 @@ procedure TMARShttpServerIndy.SetCookies(
   const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse);
 var
   LCookie: TCookie;
-{$ifdef DelphiXE7_UP}
   LIdCookie: TIdCookie;
-{$else}
-  LIdCookie: TIdCookieRFC2109;
-{$endif}
   LIndex: Integer;
 begin
   for LIndex := 0 to AResponse.Cookies.Count-1 do

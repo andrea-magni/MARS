@@ -35,7 +35,7 @@ type
   TArrayUniMemTableReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -67,7 +67,7 @@ uses
 
   , MARS.Core.JSON
   , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
-  {$ifdef DelphiXE7_UP}, System.JSON {$endif}
+  , System.JSON
   , MARS.Core.Exceptions
   , MARS.Rtti.Utils
 ;
@@ -126,7 +126,7 @@ end;
 { TArrayFDMemTableReader }
 
 function TArrayUniMemTableReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation
 ): TValue;

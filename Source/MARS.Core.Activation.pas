@@ -630,11 +630,7 @@ var
   LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
   LAllowedRoles: TStringList;
 begin
-{$ifdef DelphiXE7_UP}
   FAuthorizationInfo := TMARSAuthorizationInfo.Create(False, False, []);
-{$else}
-  FAuthorizationInfo := TMARSAuthorizationInfo.Create(False, False, nil);
-{$endif}
 
   LAllowedRoles := TStringList.Create;
   try

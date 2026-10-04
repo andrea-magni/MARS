@@ -22,4 +22,4 @@
 
 (please adjust according to your Delphi version)
 
-> Compatibility: **Recent Delphi versions (from 10.4 up to 13 Florence)** (older versions should be quite compatible, down to XE7)
+> Compatibility: **Delphi 10.4 Sydney up to 13 Florence**. Earlier versions are not supported.

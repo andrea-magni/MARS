@@ -11,13 +11,7 @@ program MARSTemplateServerDCSConsoleApplication;
 {$I MARS.inc}
 
 uses
-  {$ifdef DelphiXE3_UP}
   System.SysUtils,
-  {$else}
-  SysUtils,
-  StrUtils,
-  Types,
-  {$endif }
   MARS.http.Server.DCS,
   ServerConst in 'ServerConst.pas',
   Server.Ignition in 'Server.Ignition.pas',
@@ -109,13 +103,8 @@ begin
         WriteStatus(LServer)
       else if sametext(LResponse, cCommandStop) then
         StopServer(LServer)
-{$ifdef DelphiXE3_UP}
       else if LResponse.StartsWith(cCommandSetPort, True) then
         SetPort(LServer, LResponse.Split([' '])[2])
-{$else}
-      else if AnsiStartsText(cCommandSetPort, LResponse) then
-        SetPort(LServer, Copy(LResponse, Length(cCommandSetPort)+1, MAXINT))
-{$endif}
 
       else if sametext(LResponse, cCommandHelp) then
         WriteCommands

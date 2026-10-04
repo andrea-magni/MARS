@@ -9,11 +9,7 @@ program OTPDemoServerService;
 {$I MARS.inc}
 
 uses
-  {$ifdef DelphiXE3_UP}
   Vcl.SvcMgr,
-  {$else}
-  SvcMgr,
-  {$endif }
   Server.Service in 'Server.Service.pas' {ServerService: TService},
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.OTP in 'Server.Resources.OTP.pas',

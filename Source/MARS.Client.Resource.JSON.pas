@@ -28,24 +28,20 @@ type
     FResource: TMARSClientResourceJSON;
     type
       TResourceMethod<T> = reference to procedure(const AArgument: T;
-        const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-        const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-        const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+        const ABeforeExecute: TProc<TMemoryStream> = nil;
+        const AAfterExecute: TMARSClientResponseProc = nil;
+        const AOnException: TMARSClientExecptionProc = nil);
     // Implements all sync calls except the <R> methods with an array argument
     // as there's no way to disambiguate them from those with a record argument.
     function Call<T>(const AMethod: TResourceMethod<T>;
       const AArgument: T): IMARSClientSyncParams;
   public
     function POST(const AJSONValue: TJSONValue): IMARSClientSyncParams; overload;
-{$ifdef Delphi10Tokyo_UP}
     function POST<R: record>(const ARecord: R): IMARSClientSyncParams; overload;
     function POST<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientSyncParams; overload;
-{$endif}
     function PUT(const AJSONValue: TJSONValue): IMARSClientSyncParams; overload;
-{$ifdef Delphi10Tokyo_UP}
     function PUT<R: record>(const ARecord: R): IMARSClientSyncParams; overload;
     function PUT<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientSyncParams; overload;
-{$endif}
   end;
 
   // A namespace for async fluent calls to a JSON resource.
@@ -56,14 +52,14 @@ type
     FResource: TMARSClientResourceJSON;
     type
       TResourceMethod<T> = reference to procedure(const AArgument: T;
-        const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-        const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-        const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+        const ABeforeExecute: TProc<TMemoryStream> = nil;
+        const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+        const AOnException: TMARSClientExecptionProc = nil;
         const ASynchronize: Boolean = True);
       TResourceMethodNoArg = reference to procedure(
-        const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-        const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-        const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+        const ABeforeExecute: TProc<TMemoryStream> = nil;
+        const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+        const AOnException: TMARSClientExecptionProc = nil;
         const ASynchronize: Boolean = True);
 
     // Implements all async calls except the <R> methods with an array argument
@@ -73,15 +69,11 @@ type
     function CallNoArg(const AMethod: TResourceMethodNoArg): IMARSClientAsyncParams; overload;
   public
     function POST(const AJSONValue: TJSONValue): IMARSClientAsyncParams; overload;
-{$ifdef Delphi10Tokyo_UP}
     function POST<R: record>(const ARecord: R): IMARSClientAsyncParams; overload;
     function POST<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientAsyncParams; overload;
-{$endif}
     function PUT(const AJSONValue: TJSONValue): IMARSClientAsyncParams; overload;
-{$ifdef Delphi10Tokyo_UP}
     function PUT<R: record>(const ARecord: R): IMARSClientAsyncParams; overload;
     function PUT<R: record>(const AArrayOfRecord: TArray<R>): IMARSClientAsyncParams; overload;
-{$endif}
     function GET(): IMARSClientAsyncParams; overload;
   end;
 
@@ -125,75 +117,75 @@ type
     property Async: TMARSClientResourceJSONAsync read _GetAsync;
 
     procedure POST(const AJSONValue: TJSONValue;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
     // Don't swap the following two declarations as the latter hides the former
     // for the fluent calls.
     procedure POST<R: record>(const AArrayOfRecord: TArray<R>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
     procedure POST<R: record>(const ARecord: R;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
     procedure POSTAsync(const AJSONValue: TJSONValue;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload;
 
     // Don't swap the following two declarations as the latter hides the former
     // for the fluent calls.
     procedure POSTAsync<R: record>(const AArrayOfRecord: TArray<R>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload;
 
     procedure POSTAsync<R: record>(const ARecord: R;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload;
 
     procedure PUT(const AJSONValue: TJSONValue;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
     procedure PUT<R: record>(const AArrayOfRecord: TArray<R>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
     procedure PUT<R: record>(const ARecord: R;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
     procedure PUTAsync(const AJSONValue: TJSONValue;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload;
 
     // Don't swap the following two declarations as the latter hides the former
     // for the fluent calls.
     procedure PUTAsync<R: record>(const AArrayOfRecord: TArray<R>;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload;
 
     procedure PUTAsync<R: record>(const ARecord: R;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const ASynchronize: Boolean = True); overload;
 
     function ResponseAs<T: record>: T;
@@ -353,9 +345,9 @@ begin
 end;
 
 procedure TMARSClientResourceJSON.POST(const AJSONValue: TJSONValue;
-  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+  const ABeforeExecute: TProc<TMemoryStream> = nil;
+  const AAfterExecute: TMARSClientResponseProc = nil;
+  const AOnException: TMARSClientExecptionProc = nil);
 begin
   POST(
     procedure (AContent: TMemoryStream)
@@ -371,9 +363,9 @@ begin
 end;
 
 procedure TMARSClientResourceJSON.POST<R>(const ARecord: R;
-  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+  const ABeforeExecute: TProc<TMemoryStream> = nil;
+  const AAfterExecute: TMARSClientResponseProc = nil;
+  const AOnException: TMARSClientExecptionProc = nil);
 begin
   POST(
     procedure (AContent: TMemoryStream)
@@ -396,9 +388,9 @@ begin
 end;
 
 procedure TMARSClientResourceJSON.POST<R>(const AArrayOfRecord: TArray<R>;
-  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif});
+  const ABeforeExecute: TProc<TMemoryStream> = nil;
+  const AAfterExecute: TMARSClientResponseProc = nil;
+  const AOnException: TMARSClientExecptionProc = nil);
 begin
   POST(
     procedure (AContent: TMemoryStream)
@@ -415,9 +407,9 @@ begin
 end;
 
 procedure TMARSClientResourceJSON.POSTAsync(const AJSONValue: TJSONValue;
-  const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-  const ACompletionHandler: TProc<TMARSClientCustomResource>{$ifdef DelphiXE2_UP} = nil{$endif};
-  const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+  const ABeforeExecute: TProc<TMemoryStream> = nil;
+  const ACompletionHandler: TProc<TMARSClientCustomResource> = nil;
+  const AOnException: TMARSClientExecptionProc = nil;
   const ASynchronize: Boolean = True);
 begin
   POSTAsync(
@@ -707,7 +699,6 @@ begin
   Result := Call<TJSONValue>(LResource.POSTAsync, AJSONValue);
 end;
 
-{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONAsync.POST<R>(const ARecord: R): IMARSClientAsyncParams;
 var
   LResource: TMARSClientResourceJSON;
@@ -736,7 +727,6 @@ begin
         AParams.Synchronize);
     end);
 end;
-{$endif}
 
 function TMARSClientResourceJSONAsync.PUT(
   const AJSONValue: TJSONValue): IMARSClientAsyncParams;
@@ -749,7 +739,6 @@ begin
   Result := Call<TJSONValue>(LResource.PUTAsync, AJSONValue);
 end;
 
-{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONAsync.PUT<R>(
   const ARecord: R): IMARSClientAsyncParams;
 var
@@ -779,7 +768,6 @@ begin
         AParams.Synchronize);
     end);
 end;
-{$endif}
 
 { TMARSClientResourceJSONSync }
 
@@ -809,7 +797,6 @@ begin
   Result := Call<TJSONValue>(LResource.POST, AJSONValue);
 end;
 
-{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONSync.POST<R>(
   const AArrayOfRecord: TArray<R>): IMARSClientSyncParams;
 var
@@ -827,7 +814,6 @@ begin
         AParams.OnExceptionHandler);
     end);
 end;
-{$endif}
 
 function TMARSClientResourceJSONSync.PUT(
   const AJSONValue: TJSONValue): IMARSClientSyncParams;
@@ -840,7 +826,6 @@ begin
   Result := Call<TJSONValue>(LResource.PUT, AJSONValue);
 end;
 
-{$ifdef Delphi10Tokyo_UP}
 function TMARSClientResourceJSONSync.PUT<R>(
   const ARecord: R): IMARSClientSyncParams;
 var
@@ -880,7 +865,6 @@ begin
   LResource := FResource;
   Result := Call<R>(LResource.POST<R>, ARecord);
 end;
-{$endif}
 {$ENDREGION}
 
 end.

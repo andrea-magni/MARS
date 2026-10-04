@@ -10,41 +10,27 @@ unit MARS.Core.JSON;
 interface
 
 uses
-{$IFDEF Delphi10Rio_UP}
   Generics.Collections,
-{$ENDIF}
-{$ifdef DelphiXE6_UP}
   JSON
-{$else}
-  DBXJSON
-{$endif}
   , Classes, SysUtils
-{$ifdef DelphiXE2_UP}
   , System.Rtti
-{$else}
-  , Rtti
-{$endif}
   , TypInfo, REST.JSON
 ;
 
 type
-  TJSONAncestor = {$ifdef DelphiXE6_UP}JSON.TJSONAncestor{$else}DBXJSON.TJSONAncestor{$endif};
-  TJSONPair = {$ifdef DelphiXE6_UP}JSON.TJSONPair{$else}DBXJSON.TJSONPair{$endif};
-  TJSONValue = {$ifdef DelphiXE6_UP}JSON.TJSONValue{$else}DBXJSON.TJSONValue{$endif};
-  TJSONTrue = {$ifdef DelphiXE6_UP}JSON.TJSONTrue{$else}DBXJSON.TJSONTrue{$endif};
-  TJSONString = {$ifdef DelphiXE6_UP}JSON.TJSONString{$else}DBXJSON.TJSONString{$endif};
-  TJSONNumber = {$ifdef DelphiXE6_UP}JSON.TJSONNumber{$else}DBXJSON.TJSONNumber{$endif};
-  TJSONObject = {$ifdef DelphiXE6_UP}JSON.TJSONObject{$else}DBXJSON.TJSONObject{$endif};
-  TJSONNull = {$ifdef DelphiXE6_UP}JSON.TJSONNull{$else}DBXJSON.TJSONNull{$endif};
-  TJSONFalse = {$ifdef DelphiXE6_UP}JSON.TJSONFalse{$else}DBXJSON.TJSONFalse{$endif};
-  TJSONArray = {$ifdef DelphiXE6_UP}JSON.TJSONArray{$else}DBXJSON.TJSONArray{$endif};
+  TJSONAncestor = JSON.TJSONAncestor;
+  TJSONPair = JSON.TJSONPair;
+  TJSONValue = JSON.TJSONValue;
+  TJSONTrue = JSON.TJSONTrue;
+  TJSONString = JSON.TJSONString;
+  TJSONNumber = JSON.TJSONNumber;
+  TJSONObject = JSON.TJSONObject;
+  TJSONNull = JSON.TJSONNull;
+  TJSONFalse = JSON.TJSONFalse;
+  TJSONArray = JSON.TJSONArray;
 
   TJSONValueHelper = class helper for TJSONValue
   public
-{$ifndef DelphiXE7_UP}
-    function TryGetValue<T: TJSONValue>(const APath: string; out AValue: T): Boolean; overload;
-    function ToJSON: string;
-{$endif}
   end;
 
   JSONNameAttribute = class(TCustomAttribute)
@@ -112,25 +98,9 @@ type
 
   {$ENDIF}
 
-{$ifndef DelphiXE6_UP}
-  TJSONArrayEnumerator = class
-  private
-    FIndex: Integer;
-    FArray: TJSONArray;
-  public
-    constructor Create(const AArray: TJSONArray);
-    function GetCurrent: TJSONValue; inline;
-    function MoveNext: Boolean;
-    property Current: TJSONValue read GetCurrent;
-  end;
-{$endif}
 
   TJSONArrayHelper= class helper for TJSONArray
   private
-    {$ifndef DelphiXE6_UP}
-    function GetCount: Integer; inline;
-    function GetValue(const Index: Integer): TJSONValue; inline;
-    {$endif}
   public
     function AddObject(): TJSONObject; overload;
     function AddObject(const AElement: TJSONObject): TJSONArray; overload;
@@ -151,12 +121,6 @@ type
     // for complex types like objects and arrays)
     function ToArrayOfTValue: TArray<TValue>;
 
-    {$ifndef DelphiXE6_UP}
-    function GetEnumerator: TJSONArrayEnumerator;
-
-    property Count: Integer read GetCount;
-    property Items[const Index: Integer]: TJSONValue read GetValue;
-    {$endif}
 
     class function ArrayOfRecordToJSON<T{: record}>(const AArray: TArray<T>;
       const AFilterProc: TToJSONFilterProc = nil): TJSONArray; overload;
@@ -190,10 +154,6 @@ type
 
   TJSONObjectHelper = class helper(TJSONValueHelper) for TJSONObject
   private
-{$ifndef DelphiXE6_UP}
-    function GetCount: Integer; inline;
-    function GetPair(const Index: Integer): TJSONPair; inline;
-{$endif}
     function GetExactPairName(const ACaseInsensitiveName: string): string;
   public
     function AddObject(const AName: string): TJSONObject;
@@ -201,9 +161,7 @@ type
 
     function ReadStringValue(const AName: string; const ADefault: string = ''): string;
     function ReadIntegerValue(const AName: string; const ADefault: Integer = 0): Integer;
-{$ifdef DelphiXE6_UP}
     function ReadInt64Value(const AName: string; const ADefault: Int64 = 0): Int64;
-{$endif}
     function ReadDoubleValue(const AName: string; const ADefault: Double = 0.0): Double;
     function ReadBoolValue(const AName: string; const ADefault: Boolean = False): Boolean;
     function ReadDateTimeValue(const AName: string; const ADefault: TDateTime;
@@ -264,10 +222,6 @@ type
       const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
     function ToRecord(const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
-{$ifndef DelphiXE6_UP}
-    property Count: Integer read GetCount;
-    property Pairs[const Index: Integer]: TJSONPair read GetPair;
-{$endif}
 
     class function DictionaryToJSON(const ADictionary: TObject;
       const AOptions: TMARSJSONSerializationOptions): TJSONObject; overload;
@@ -567,7 +521,7 @@ begin
 
   LTypeName := string(AValue.TypeInfo^.Name);
 
-  if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
+  if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString]) then
     Result := TJSONString.Create(AValue.AsString)
 
   else if IsDictionaryOfStringAndT(LTypeName) then
@@ -723,65 +677,10 @@ end;
 
 
 { TJSONValueHelper }
-{$ifndef DelphiXE7_UP}
-function TJSONValueHelper.TryGetValue<T>(const APath: string;
-  out AValue: T): Boolean;
-var
-  LJSONValue: TJSONValue;
-  LPair: TJSONPair;
-begin
-  LJSONValue := nil;
-  if Self is TJSONObject then
-  begin
-    LPair := TJSONObject(Self).Get(APath);
-    if Assigned(LPair) then
-      LJSONValue := LPair.JsonValue;
-  end;
-  Result := LJSONValue <> nil;
-  if Result then
-  begin
-    try
-      AValue := T(LJSONValue);
-    except
-      Result := False;
-    end;
-  end;
-end;
-{$endif}
 
-{$ifndef DelphiXE7_UP}
-function TJSONValueHelper.ToJSON: string;
-var
-  LBytes: TBytes;
-begin
-  SetLength(LBytes, Length(ToString) * 6);
-  SetLength(LBytes, ToBytes(LBytes, 0));
-  Result := TEncoding.Default.GetString(LBytes);
-end;
-{$endif}
 
 { TJSONArrayEnumerator }
 
-{$ifndef DelphiXE6_UP}
-constructor TJSONArrayEnumerator.Create(const AArray: TJSONArray);
-begin
-  inherited Create;
-  FIndex := -1;
-  FArray := AArray;
-end;
-
-function TJSONArrayEnumerator.GetCurrent: TJSONValue;
-begin
-  Result := FArray.GetValue(FIndex);
-end;
-
-function TJSONArrayEnumerator.MoveNext: Boolean;
-begin
-  Result := FIndex < FArray.Count - 1;
-  if Result then
-    Inc(FIndex);
-end;
-{$endif}
 
 { TJSONArrayHelper }
 
@@ -1023,37 +922,9 @@ begin
 end;
 
 
-{$ifndef DelphiXE6_UP}
-
-function TJSONArrayHelper.GetCount: Integer;
-begin
-  Result := Size;
-end;
-
-function TJSONArrayHelper.GetEnumerator: TJSONArrayEnumerator;
-begin
-  Result := TJSONArrayEnumerator.Create(Self);
-end;
-
-function TJSONArrayHelper.GetValue(const Index: Integer): TJSONValue;
-begin
-  Result := Get(Index);
-end;
-{$endif}
 
 { TJSONObjectHelper }
 
-{$ifndef DelphiXE6_UP}
-function TJSONObjectHelper.GetCount: Integer;
-begin
-  Result := Size;
-end;
-
-function TJSONObjectHelper.GetPair(const Index: Integer): TJSONPair;
-begin
-  Result := Get(Index);
-end;
-{$endif}
 
 function TJSONObjectHelper.GetExactPairName(
   const ACaseInsensitiveName: string): string;
@@ -1294,7 +1165,6 @@ begin
 end;
 
 function TJSONObjectHelper.ReadBoolValue(const AName: string; const ADefault: Boolean): Boolean;
-{$ifdef Delphi10Seattle_UP}
 var
   LValue: TJSONBool;
 begin
@@ -1302,15 +1172,6 @@ begin
   if Assigned(Self) and TryGetValue<TJSONBool>(AName, LValue) then
     Result := LValue is TJSONTrue;
 end;
-{$else}
-var
-  LValue: TJSONValue;
-begin
-  Result := ADefault;
-  if Assigned(Self) and TryGetValue<TJSONValue>(AName, LValue) then
-    Result := LValue is TJSONTrue;
-end;
-{$endif}
 
 
 function TJSONObjectHelper.ReadDateTimeValue(const AName: string; const ADefault: TDateTime): TDateTime;
@@ -1356,7 +1217,7 @@ begin
   if Values[AName] <> nil then
   begin
     LPair := RemovePair(AName);
-    if {$ifdef Delphi10Rio_UP} LPair.Owned {$else} LPair.GetOwned {$endif}
+    if LPair.Owned
     then
       FreeAndNil(LPair);
     Result := True;
@@ -1472,11 +1333,7 @@ begin
         begin
           LValue := LMember.GetValue(AObject);
 
-          {$ifdef Delphi10Tokyo_UP}
             if LValue.IsType<TValue>(False) and (not LValue.IsArray) then
-          {$else}
-            if LValue.IsType<TValue> and (not LValue.IsArray) then
-          {$endif}
             WriteTValue(LJSONName, LValue.AsType<TValue>, AOptions) //unboxing TValue from TValue
           else
             WriteTValue(LJSONName, LValue, AOptions);
@@ -1555,11 +1412,7 @@ begin
       begin
         LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
 
-        {$ifdef Delphi10Tokyo_UP}
           if LValue.IsType<TValue>(False) and (not LValue.IsArray) then
-        {$else}
-          if LValue.IsType<TValue> and (not LValue.IsArray) then
-        {$endif}
           WriteTValue(LJSONName, LValue.AsType<TValue>, AOptions) //unboxing TValue from TValue
         else
           WriteTValue(LJSONName, LValue, AOptions);
@@ -1574,7 +1427,6 @@ begin
   FromRecord(TValue.From<T>(ARecord), AOptions, AFilterProc);
 end;
 
-{$ifdef DelphiXE6_UP}
 function TJSONObjectHelper.ReadInt64Value(const AName: string;
   const ADefault: Int64): Int64;
 var
@@ -1584,7 +1436,6 @@ begin
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
     Result := LValue.AsInt64;
 end;
-{$endif}
 
 function TJSONObjectHelper.ReadIntegerValue(const AName: string;
   const ADefault: Integer): Integer;
@@ -1605,11 +1456,7 @@ begin
   if not Assigned(Self) then
     Exit;
 
-{$ifdef DelphiXE6_UP}
   LPair := GetPairByName(AName);
-{$else}
-  LPair := Get(AName);
-{$endif}
   if Assigned(LPair) and (not (LPair.JsonValue is TJSONNull)) then
     Result := LPair.JsonValue.Value;
 end;
@@ -1621,11 +1468,7 @@ var
   LValue: Int64;
 begin
   Result := ADefault;
-{$ifdef DelphiXE6_UP}
   LValue := ReadInt64Value(AName);
-{$else}
-  LValue := ReadIntegerValue(AName);
-{$endif}
   if LValue <> 0 then
     Result := UnixToDateTime(LValue)
 end;
@@ -1742,22 +1585,15 @@ var
   LNewLength: NativeInt;
   LInstance: TObject;
 begin
-{$ifdef Delphi10Berlin_UP}
   if AValue is TJSONBool then // Boolean
     ATValue := TJSONBool(AValue).AsBoolean
-{$else}
-  if (AValue is TJSONTrue) or (AValue is TJSONFalse) then
-    ATValue := AValue is TJSONTrue
-{$endif}
 //  else if ADesiredType.Handle = TypeInfo(Variant) then
 //    Result := TValue.
   else if AValue is TJSONNumber then // Numbers (Integer and Float)
   begin
-{$ifdef DelphiXE6_UP}
     if ADesiredType.TypeKind in [tkInt64] then
       ATValue := TJSONNumber(AValue).AsInt64
     else
-{$endif}
     if ADesiredType.TypeKind in [tkInteger] then
       ATValue := TJSONNumber(AValue).AsInt
     else

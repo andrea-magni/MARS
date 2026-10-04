@@ -430,11 +430,7 @@ end;
 
 function TMARSHttpClient.GetReadTimeout: Integer;
 begin
-  {$ifdef Delphi10Berlin_UP}
     Result := FHttpClient.ResponseTimeout;
-  {$else}
-    Result := -1;
-  {$endif}
 end;
 
 function TMARSHttpClient.GetReceiveDataCallback: TReceiveDataCallback;
@@ -607,11 +603,7 @@ end;
 
 procedure TMARSHttpClient.SetReadTimeout(const Value: Integer);
 begin
-  {$ifdef Delphi10Berlin_UP}
     FHttpClient.ResponseTimeout := Value;
-  {$else}
-    // not available!
-  {$endif}
 end;
 
 procedure TMARSHttpClient.SetReceiveDataCallback(

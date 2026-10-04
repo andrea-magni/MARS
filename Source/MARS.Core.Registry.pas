@@ -40,29 +40,11 @@ type
   procedure MARSRegister(const AResource: TClass; const AConstructorFunc: TMARSConstructorFunc = nil); overload;
   procedure MARSRegister(const AResources: TArray<TClass>); overload;
 
-{$ifdef DelphiXE}
-type
-  TObjectHelper = class helper for TObject
-    class function QualifiedClassName: string;
-  end;
-{$endif}
 
 implementation
 
 uses MARS.Core.Attributes;
 
-{$ifdef DelphiXE}
-class function TObjectHelper.QualifiedClassName: string;
-var
-  LScope: string;
-begin
-  LScope := UnitName;
-  if LScope = '' then
-    Result := ClassName
-  else
-    Result := LScope + '.' + ClassName;
-end;
-{$endif}
 
 procedure MARSRegister(const AResource: TClass; const AConstructorFunc: TMARSConstructorFunc);
 begin

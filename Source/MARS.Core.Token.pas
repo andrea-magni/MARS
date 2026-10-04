@@ -182,11 +182,7 @@ implementation
 uses
   System.DateUtils, System.TimeSpan
 
-  {$ifndef DelphiXE7_UP}
-  , IdCoderMIME, IdUri
-  {$else}
   , System.NetEncoding
-  {$endif}
 
   , System.JSON
   , MARS.Core.Utils, MARS.Utils.Parameters.JSON, MARS.Utils.JWT, MARS.Core.Exceptions
@@ -522,7 +518,7 @@ var
 begin
   LUnixValue := FClaims.ByName(JWT_EXPIRATION_CLAIM, 0).AsInt64;
   if LUnixValue > 0 then
-    Result := UnixToDateTime(LUnixValue {$ifdef DelphiXE7_UP}, False {$endif})
+    Result := UnixToDateTime(LUnixValue, False)
   else
     Result := 0.0;
 end;
@@ -533,32 +529,17 @@ var
 begin
   LUnixValue := FClaims.ByName(JWT_ISSUED_AT_CLAIM, 0).AsInt64;
   if LUnixValue > 0 then
-    Result := UnixToDateTime(LUnixValue {$ifdef DelphiXE7_UP}, False {$endif})
+    Result := UnixToDateTime(LUnixValue, False)
   else
     Result := 0.0;
 end;
 
 function TMARSToken.GetRoles: TArray<string>;
-{$ifdef DelphiXE7_UP}
 begin
   Result := FClaims[JWT_ROLES].AsString.Split([','], TStringSplitOptions.ExcludeEmpty); // do not localize
   for var LIdx := Low(Result) to High(Result) do
     Result[LIdx] := Result[LIdx].Trim;
 
-{$else}
-var
-  LTokens: TStringList;
-begin
-  LTokens := TStringList.Create;
-  try
-    LTokens.Delimiter := ',';
-    LTokens.StrictDelimiter := True;
-    LTokens.DelimitedText := FClaims[JWT_ROLES].AsString;
-    Result := LTokens.ToStringArray;
-  finally
-    LTokens.Free;
-  end;
-{$endif}
 end;
 
 function TMARSToken.GetToken(const ARequest: IMARSRequest): string;
@@ -576,25 +557,10 @@ function TMARSToken.GetTokenFromBearer(const ARequest: IMARSRequest): string;
 var
   LAuth: string;
   LAuthTokens: TArray<string>;
-{$ifndef DelphiXE7_UP}
-  LTokens: TStringList;
-{$endif}
 begin
   Result := '';
   LAuth := ARequest.Authorization;
-{$ifdef DelphiXE7_UP}
   LAuthTokens := LAuth.Split([' ']);
-{$else}
-  LTokens := TStringList.Create;
-  try
-    LTokens.Delimiter := ' ';
-    LTokens.StrictDelimiter := True;
-    LTokens.DelimitedText := LAuth;
-    LAuthTokens := LTokens.ToStringArray;
-  finally
-    LTokens.Free;
-  end;
-{$endif}
   if (Length(LAuthTokens) >= 2) then
     if SameText(LAuthTokens[0], 'Bearer') then
       Result := LAuthTokens[1];
@@ -604,11 +570,7 @@ function TMARSToken.GetTokenFromCookie(const ARequest: IMARSRequest): string;
 begin
   Result := '';
   if CookieEnabled and (CookieName <> '') then
-{$ifdef DelphiXE7_UP}
     Result := TNetEncoding.URL.Decode(ARequest.GetCookieParamValue(CookieName));
-{$else}
-    Result := TIdURI.URLDecode(ARequest.CookieFields.Values[CookieName]);
-{$endif}
 end;
 
 function TMARSToken.GetUserName: string;
@@ -659,8 +621,8 @@ begin
   FKeyId := AKey.KeyId;
   LIssuedAt := Now;
 
-  FClaims[JWT_ISSUED_AT_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt {$ifdef DelphiXE7_UP}, False{$endif}));
-  FClaims[JWT_EXPIRATION_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt + Duration {$ifdef DelphiXE7_UP}, False{$endif}));
+  FClaims[JWT_ISSUED_AT_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt, False));
+  FClaims[JWT_EXPIRATION_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt + Duration, False));
   FClaims[JWT_ISSUER_CLAIM] := FIssuer;
   FClaims[JWT_DURATION_CLAIM] := TValue.From<TDateTime>(FDuration);
 

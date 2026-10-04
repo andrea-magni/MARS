@@ -538,7 +538,7 @@ begin
   else if (AValue.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}]) then
     Result := RecordToYaml(ARoot, AKeyName, AValue)
 
-  else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE6_UP} tkWideChar, {$endif} tkLString, tkWString])  then
+  else if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString]) then
   begin
     LString := AValue.AsString;
     if LString <> '' then

@@ -86,15 +86,7 @@ type
   procedure CopyStream(ASourceStream, ADestStream: TStream;
     AOverWriteDest: Boolean = True; AThenResetDestPosition: Boolean = True);
 
-{$ifndef DelphiXE6_UP}
-  function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
-  function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = False): TDateTime;
-{$endif}
 
-{$ifndef DelphiXE8_UP}
-  // https://github.com/andrea-magni/MARS/issues/76#issuecomment-589954750
-  function TryISO8601ToDate(const AISODate: string; out Value: TDateTime; AReturnUTC: Boolean = True): Boolean;
-{$endif}
 
   function DateToJSON(const ADate: TDateTime): string; overload;
   function DateToJSON(const ADate: TDateTime; const AOptions: TMARSJSONSerializationOptions): string; overload;
@@ -122,9 +114,6 @@ implementation
 
 uses
   TypInfo
-{$ifndef DelphiXE6_UP}
-  , XSBuiltIns
-{$endif}
   , StrUtils, DateUtils, Masks
 {$IFDEF MARS_ZLIB}, ZLib {$ENDIF}
 {$IFDEF MARS_ZIP}, Zip {$ENDIF}
@@ -319,7 +308,7 @@ begin
     end;
     Result := '(' + Result + ')';
   end
-  else if (AValue.Kind in [tkString, tkUString, tkChar, {$ifdef DelphiXE7_UP}tkWideChar,{$endif} tkLString, tkWString]) then
+  else if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString]) then
     Result := AValue.AsString
   else if (AValue.IsType<Boolean>) then
     Result := BoolToStr(AValue.AsType<Boolean>, True)
@@ -423,31 +412,7 @@ begin
 
 end;
 
-{$ifndef DelphiXE6_UP}
-function DateToISO8601(const ADate: TDateTime; AInputIsUTC: Boolean = False): string;
-begin
-  Result := DateTimeToXMLTime(ADate, not AInputIsUTC);
-end;
 
-function ISO8601ToDate(const AISODate: string; AReturnUTC: Boolean = False): TDateTime;
-begin
-  Result := XMLTimeToDateTime(AISODate, AReturnUTC);
-end;
-{$endif}
-
-{$ifndef DelphiXE8_UP}
-// https://github.com/andrea-magni/MARS/issues/76#issuecomment-589954750
-function TryISO8601ToDate(const AISODate: string; out Value: TDateTime; AReturnUTC: Boolean = True): Boolean;
-begin
-  Result := False;
-  try
-    Value := ISO8601ToDate(AISODate, AReturnUTC);
-    Result := True
-  except
-
-  end;
-end;
-{$endif}
 
 procedure CopyStream(ASourceStream, ADestStream: TStream;
   AOverWriteDest: Boolean = True; AThenResetDestPosition: Boolean = True);
@@ -736,15 +701,12 @@ var
   LSS: TStringStream;
   LHeaders: string;
   LRawString: string;
-  {$ifdef Delphi10Berlin_UP}
   LBytesStream: TBytesStream;
-  {$endif}
 begin
   try
     try
       LRawString := 'Content: ' + ARequest.Content;
     except
-      {$IFDEF Delphi10Berlin_UP}
       try
         LRawString := TEncoding.UTF8.GetString(ARequest.RawContent);
       except
@@ -759,9 +721,6 @@ begin
           LRawString := 'Unable to read content: ' + Length(ARequest.RawContent).ToString + ' bytes';
         end;
       end;
-      {$ELSE}
-      LRawString := ARequest.RawContent;
-      {$ENDIF}
     end;
 
     LHeaders := string.join(sLineBreak, [

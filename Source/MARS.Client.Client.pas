@@ -147,14 +147,12 @@ type
       const AIgnoreResult: Boolean = False): T; overload;
 
 
-{$ifdef DelphiXE7_UP}
     class procedure GetJSONAsync<T: TJSONValue>(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
-      const ACompletionHandler: TProc<T>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<T> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const AToken: string = '';
       const ASynchronize: Boolean = True); overload;
-{$endif}
 
     class function GetAsString(const AURL: string;
       const AToken: string = ''; const AAccept: string = TMediaType.WILDCARD): string; overload;
@@ -166,19 +164,17 @@ type
     class function PostJSON(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const AContent: TJSONValue;
-      const ACompletionHandler: TProc<TJSONValue>{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<TJSONValue> = nil;
       const AToken: string = ''
     ): Boolean;
 
-{$ifdef DelphiXE7_UP}
     class procedure PostJSONAsync(const AEngineURL, AAppName, AResourceName: string;
       const APathParams: TArray<string>; const AQueryParams: TStrings;
       const AContent: TJSONValue;
-      const ACompletionHandler: TProc<TJSONValue>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif};
+      const ACompletionHandler: TProc<TJSONValue> = nil;
+      const AOnException: TMARSClientExecptionProc = nil;
       const AToken: string = '';
       const ASynchronize: Boolean = True);
-{$endif}
 
     class function GetStream(const AEngineURL, AAppName, AResourceName: string;
       const AToken: string = ''): TStream; overload;
@@ -227,11 +223,7 @@ end;
 
 function TMARSHttpVerbToString(const AVerb: TMARSHttpVerb): string;
 begin
-{$ifdef DelphiXE7_UP}
   Result := TRttiEnumerationType.GetName<TMARSHttpVerb>(AVerb);
-{$else}
-  Result := GetEnumName(TypeInfo(TMARSHttpVerb), Integer(AVerb));
-{$endif}
 end;
 
 { TMARSCustomClient }
@@ -544,7 +536,6 @@ begin
   end;
 end;
 
-{$ifdef DelphiXE7_UP}
 class procedure TMARSCustomClient.GetJSONAsync<T>(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const ACompletionHandler: TProc<T>;
@@ -608,7 +599,6 @@ begin
       raise;
     end;
 end;
-{$endif}
 
 class function TMARSCustomClient.GetStream(const AEngineURL, AAppName,
   AResourceName: string; const AToken: string): TStream;
@@ -762,7 +752,6 @@ begin
 end;
 
 
-{$ifdef DelphiXE7_UP}
 class procedure TMARSCustomClient.PostJSONAsync(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;
   const AQueryParams: TStrings; const AContent: TJSONValue;
@@ -829,7 +818,6 @@ begin
     raise;
   end;
 end;
-{$endif}
 
 class function TMARSCustomClient.PostStream(const AEngineURL, AAppName,
   AResourceName: string; const APathParams: TArray<string>;

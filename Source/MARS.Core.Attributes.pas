@@ -357,9 +357,6 @@ uses
   MARS.Rtti.Utils
 , MARS.Core.MessageBodyReader
 , MARS.Core.MediaType
-{$ifndef DelphiXE7_UP}
-, TypInfo
-{$endif}
 ;
 
 { ContentTypeAttribute }
@@ -411,21 +408,8 @@ end;
 { RolesAllowedAttribute }
 
 constructor RolesAllowedAttribute.Create(const ARoleNames: string);
-{$ifdef DelphiXE7_UP}
 begin
   Create(ARoleNames.Split([',', ' ', ';'], TStringSplitOptions.ExcludeEmpty));
-{$else}
-var
-  LTokens: TStringList;
-begin
-  LTokens := TStringList.Create;
-  try
-    ExtractStrings([',', ' ', ';'], [], PChar(ARoleNames), LTokens);
-    Create(LTokens.ToStringArray);
-  finally
-    LTokens.Free;
-  end;
-{$endif}
 end;
 
 constructor RolesAllowedAttribute.Create(const ARoleNames: TArray<string>);
@@ -479,7 +463,6 @@ begin
     end
   else // 2 - fallback (raw)
   begin
-{$ifdef Delphi10Berlin_UP}
     case ADestination.GetRttiType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
       , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
@@ -491,20 +474,6 @@ begin
       else
         Result := TValue.From<TBytes>(AActivation.Request.RawContent);
     end;
-{$else}
-    case ADestination.GetRttiType.TypeKind of
-      tkInt64, tkInteger, tkFloat, tkChar
-      , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
-
-      tkUString: Result := AActivation.Request.RawContent;
-
-      tkClass: Result := nil;
-
-      else
-        Result := AActivation.Request.RawContent;
-    end;
-
-{$endif}
   end;
 end;
 
@@ -512,11 +481,7 @@ end;
 
 function HttpMethodAttribute.GetHttpMethodName: string;
 begin
-{$ifdef DelphiXE7_UP}
   Result := ClassName.Replace('Attribute', '');
-{$else}
-  Result := StringReplace(ClassName, 'Attribute', '', [rfIgnoreCase]);
-{$endif}
 end;
 
 function HttpMethodAttribute.Matches(const ARequest: IMARSRequest): Boolean;
@@ -617,11 +582,7 @@ end;
 
 function RequestParamAttribute.GetKind: string;
 begin
-{$ifdef DelphiXE7_UP}
   Result := ClassName.Replace('Attribute', '');
-{$else}
-  Result := StringReplace(ClassName, 'Attribute', '', [rfIgnoreCase]);
-{$endif}
 end;
 
 function RequestParamAttribute.GetSwaggerKind: string;
@@ -659,9 +620,9 @@ begin
     if Assigned(LReader) then
       try
         Result := LReader.ReadFrom(
-          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+           TEncoding.UTF8.GetBytes(
           AActivation.Request.GetQueryParamValue(LIndex)
-          {$ifdef Delphi10Berlin_UP} ) {$endif}
+           )
           , ADestination, LMediaType, AActivation);
       finally
         FreeAndNil(LMediaType);
@@ -704,15 +665,15 @@ begin
       try
         if LParamIndex <> -1 then
           Result := LReader.ReadFrom(
-            {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+             TEncoding.UTF8.GetBytes(
             AActivation.Request.GetFormParamValue(LParamIndex)
-            {$ifdef Delphi10Berlin_UP} ) {$endif}
+             )
           , ADestination, LMediaType, AActivation)
         else if LFileIndex <> -1 then
           Result := LReader.ReadFrom(
-            {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+             TEncoding.UTF8.GetBytes(
             ''
-            {$ifdef Delphi10Berlin_UP} ) {$endif}
+             )
           , ADestination, LMediaType, AActivation);
       finally
         FreeAndNil(LMediaType);
@@ -748,9 +709,9 @@ function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
     if Assigned(LReader) then
       try
         Result := LReader.ReadFrom(
-          {$ifdef Delphi10Berlin_UP} TEncoding.UTF8.GetBytes( {$endif}
+           TEncoding.UTF8.GetBytes(
           LValue
-          {$ifdef Delphi10Berlin_UP} ) {$endif}
+           )
           , TheDestination, LMediaType, AActivation);
       finally
         FreeAndNil(LMediaType);
@@ -921,7 +882,7 @@ begin
     if Assigned(LReader) then
       try
 
-        Result := LReader.ReadFrom({$ifdef Delphi10Berlin_UP}nil{$else}''{$endif}
+        Result := LReader.ReadFrom(nil
           , ADestination, LMediaType, AActivation);
       finally
         FreeAndNil(LMediaType);

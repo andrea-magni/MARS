@@ -148,13 +148,8 @@ begin
     LResponse := LowerCase(LResponse);
     if LResponse.StartsWith(cCommandSetLog) then
       SetLog(LServer, LResponse)
-    {$ifdef DelphiXE3_UP}
     else if LResponse.StartsWith(cCommandSetPort, True) then
       SetPort(LServer, LResponse.Split([' '])[2])
-    {$else}
-    else if AnsiStartsText(cCommandSetPort, LResponse) then
-      SetPort(LServer, Copy(LResponse, Length(cCommandSetPort)+1, MAXINT))
-    {$endif}
     else if sametext(LResponse, cCommandStart) then
       StartServer(LServer)
     else if sametext(LResponse, cCommandStatus) then

@@ -7,247 +7,52 @@
 {$define MARS_ZLIB}
 {$define MARS_ZIP}
 
-{$if compilerversion = 22}
-  {$define DelphiXE}
-{$ENDIF}
+// MARS-Curiosity supports Delphi 10.4 Sydney and later
+{$if CompilerVersion < 34}
+  {$message fatal 'MARS-Curiosity requires Delphi 10.4 Sydney or later'}
+{$endif}
 
-{$if compilerversion = 23}
-  {$define DelphiXE2}
-{$ENDIF}
+// Delphi version symbols.
+// MARS tests the ones from Delphi 11 on; the older *_UP symbols are always defined (10.4 is the
+// minimum) and kept for application code that still tests them.
+{$define DelphiXE_UP}
+{$define DelphiXE2_UP}
+{$define DelphiXE3_UP}
+{$define DelphiXE4_UP}
+{$define DelphiXE5_UP}
+{$define DelphiXE6_UP}
+{$define DelphiXE7_UP}
+{$define DelphiXE8_UP}
+{$define Delphi10Seattle_UP}
+{$define Delphi10Berlin_UP}
+{$define Delphi10Tokyo_UP}
+{$define Delphi10Rio_UP}
+{$define Delphi10Sydney_UP}
 
-{$if compilerversion = 24}
-  {$define DelphiXE3}
-{$ENDIF}
-
-{$if compilerversion = 25}
-  {$define DelphiXE4}
-{$ENDIF}
-
-{$if compilerversion = 26}
-  {$define DelphiXE5}
-{$ENDIF}
-
-{$if compilerversion = 27}
-  {$define DelphiXE6}
-{$ENDIF}
-
-{$if compilerversion = 28}
-  {$define DelphiXE7}
-{$ENDIF}
-
-{$if compilerversion = 29}
-  {$define DelphiXE8}
-{$ENDIF}
-
-{$if compilerversion = 30}
-  {$define Delphi10Seattle}
-{$ENDIF}
-
-{$if compilerversion = 31}
-  {$define Delphi10Berlin}
-{$ENDIF}
-
-{$if compilerversion = 32}
-  {$define Delphi10Tokyo}
-{$ENDIF}
-
-{$if compilerversion = 33}
-  {$define Delphi10Rio}
-{$ENDIF}
-
-{$if compilerversion = 34}
+{$if CompilerVersion = 34}
   {$define Delphi10Sydney}
-{$ENDIF}
+{$endif}
 
-{$if compilerversion = 35}
+{$if CompilerVersion = 35}
   {$define Delphi11Alexandria}
-{$ENDIF}
+{$endif}
 
-{$if compilerversion = 36}
+{$if CompilerVersion = 36}
   {$define Delphi12Athens}
-{$ENDIF}
+{$endif}
 
+{$if CompilerVersion = 37}
+  {$define Delphi13Florence}
+{$endif}
 
-{$if compilerversion >= 22}
-  {$define DelphiXE_UP}
-{$ENDIF}
-
-{$if compilerversion >= 23}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-{$ENDIF}
-
-{$if compilerversion >= 24}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-{$ENDIF}
-
-{$if compilerversion >= 25}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-{$ENDIF}
-
-{$if compilerversion >= 26}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-{$ENDIF}
-
-{$if compilerversion >= 27}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-{$ENDIF}
-
-{$if compilerversion >= 28}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-{$ENDIF}
-
-{$if compilerversion >= 29}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-{$ENDIF}
-
-{$if compilerversion >= 30}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-{$ENDIF}
-
-{$if compilerversion >= 31}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-  {$define Delphi10Berlin_UP}
-{$ENDIF}
-
-{$if compilerversion >= 32}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-  {$define Delphi10Berlin_UP}
-  {$define Delphi10Tokyo_UP}  
-{$ENDIF}
-
-{$if compilerversion >= 33}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-  {$define Delphi10Berlin_UP}
-  {$define Delphi10Tokyo_UP}
-  {$define Delphi10Rio_UP}
-{$ENDIF}
-
-{$if compilerversion >= 34}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-  {$define Delphi10Berlin_UP}
-  {$define Delphi10Tokyo_UP}
-  {$define Delphi10Rio_UP}
-  {$define Delphi10Sydney_UP}
-{$ENDIF}
-
-{$if compilerversion >= 35}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-  {$define Delphi10Berlin_UP}
-  {$define Delphi10Tokyo_UP}
-  {$define Delphi10Rio_UP}
-  {$define Delphi10Sydney_UP}
+{$if CompilerVersion >= 35}
   {$define Delphi11Alexandria_UP}
-{$ENDIF}
+{$endif}
 
-{$if compilerversion >= 36}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-  {$define Delphi10Berlin_UP}
-  {$define Delphi10Tokyo_UP}
-  {$define Delphi10Rio_UP}
-  {$define Delphi10Sydney_UP}
-  {$define Delphi11Alexandria_UP}
+{$if CompilerVersion >= 36}
   {$define Delphi12Athens_UP}
-{$ENDIF}
+{$endif}
 
-{$if compilerversion >= 37}
-  {$define DelphiXE_UP}
-  {$define DelphiXE2_UP}
-  {$define DelphiXE3_UP}
-  {$define DelphiXE4_UP}
-  {$define DelphiXE5_UP}
-  {$define DelphiXE6_UP}
-  {$define DelphiXE7_UP}
-  {$define DelphiXE8_UP}
-  {$define Delphi10Seattle_UP}
-  {$define Delphi10Berlin_UP}
-  {$define Delphi10Tokyo_UP}
-  {$define Delphi10Rio_UP}
-  {$define Delphi10Sydney_UP}
-  {$define Delphi11Alexandria_UP}
-  {$define Delphi12Athens_UP}
+{$if CompilerVersion >= 37}
   {$define Delphi13Florence_UP}
-{$ENDIF}
+{$endif}

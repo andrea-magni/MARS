@@ -1,6 +1,6 @@
 # Introduction
 
-**MARS-Curiosity** is a lightweight, Delphi-native library for building RESTful web services and the clients that consume them. It targets recent Delphi versions (from 10.4 up to 13 Florence; older versions back to XE7 are largely compatible) and runs on Windows and Linux.
+**MARS-Curiosity** is a lightweight, Delphi-native library for building RESTful web services and the clients that consume them. It supports Delphi 10.4 Sydney up to 13 Florence and runs on Windows and Linux.
 
 ## Why MARS?
 

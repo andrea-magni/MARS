@@ -121,7 +121,7 @@ DocResource.POST;
 
 ## Asynchronous calls
 
-Each verb has an `…Async` counterpart (Delphi XE7+) taking a completion handler and an `ASynchronize` flag (when `True`, the completion runs in the main thread — safe for UI updates):
+Each verb has an `…Async` counterpart taking a completion handler and an `ASynchronize` flag (when `True`, the completion runs in the main thread — safe for UI updates):
 
 ```pascal
 PeopleResource.GETAsync(

@@ -31,9 +31,9 @@ type
     destructor Destroy; override;
 
     procedure POST(const AStream: TStream;
-      const ABeforeExecute: TProc<TMemoryStream>{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AAfterExecute: TMARSClientResponseProc{$ifdef DelphiXE2_UP} = nil{$endif};
-      const AOnException: TMARSClientExecptionProc{$ifdef DelphiXE2_UP} = nil{$endif}); overload;
+      const ABeforeExecute: TProc<TMemoryStream> = nil;
+      const AAfterExecute: TMARSClientResponseProc = nil;
+      const AOnException: TMARSClientExecptionProc = nil); overload;
 
   published
     property Response: TStream read FResponse;

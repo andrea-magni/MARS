@@ -209,11 +209,7 @@ begin
   inherited;
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
-{$ifdef DelphiXE7_UP}
   FHttpClient.Delete(AURL, AResponse);
-{$else}
-  FHttpClient.Delete(AURL{, AResponse});
-{$endif}
 end;
 
 destructor TMARSIndyClient.Destroy;

@@ -22,7 +22,7 @@ type
   TObjectReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -32,7 +32,7 @@ type
   TArrayOfObjectReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -43,13 +43,13 @@ type
   TJSONValueReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
 
     class function ReadJSONValue(
-      {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue;
@@ -60,13 +60,13 @@ type
   TXMLReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
 
     class function ReadXML(
-      {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+      const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue;
@@ -79,7 +79,7 @@ type
   TRecordReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -89,7 +89,7 @@ type
   TArrayOfRecordReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -99,7 +99,7 @@ type
   TStreamReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -109,7 +109,7 @@ type
   TStringReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -121,7 +121,7 @@ type
   TFormParamReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -133,7 +133,7 @@ type
   TArrayOfTFormParamReader = class(TInterfacedObject, IMessageBodyReader)
   public
     function ReadFrom(
-    {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+    const AInputData: TBytes;
       const ADestination: TRttiObject; const AMediaType: TMediaType;
       const AActivation: IMARSActivation
     ): TValue; virtual;
@@ -144,7 +144,7 @@ implementation
 
 uses
   StrUtils, NetEncoding, Generics.Collections
-{$ifdef DelphiXE7_UP}, System.JSON {$endif}
+, System.JSON
 , Xml.XMLIntf, XMLDoc
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions
 ;
@@ -153,7 +153,7 @@ uses
 
 
 function TJSONValueReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation
 ): TValue;
@@ -162,17 +162,13 @@ var
 begin
   Result := TValue.Empty;
 
-{$ifdef Delphi10Berlin_UP}
   LJSONValue := TJSONObject.ParseJSONValue(AInputData, 0);
-{$else}
-  LJSONValue := TJSONObject.ParseJSONValue(string(AInputData));
-{$endif}
   if Assigned(LJSONValue) then
     Result := LJSONValue;
 end;
 
 class function TJSONValueReader.ReadJSONValue(
-  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation): TValue;
 var
@@ -189,18 +185,14 @@ end;
 { TStreamReader }
 
 function TStreamReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation
 ): TValue;
 var
   LStream: TStream;
 begin
-{$ifdef Delphi10Berlin_UP}
   LStream := TBytesStream.Create(AInputData);
-{$else}
-  LStream := TStringStream.Create(AInputData);
-{$endif}
   try
     LStream.Position := 0;
     Result := LStream;
@@ -213,7 +205,7 @@ end;
 { TRecordReader }
 
 function TRecordReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation
 ): TValue;
@@ -265,7 +257,7 @@ end;
 { TObjectReader }
 
 function TObjectReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation): TValue;
 var
@@ -299,7 +291,7 @@ end;
 { TArrayOfObjectReader }
 
 function TArrayOfObjectReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation): TValue;
 var
@@ -381,7 +373,7 @@ end;
 { TArrayOfRecordReader }
 
 function TArrayOfRecordReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation
 ): TValue;
@@ -401,7 +393,6 @@ begin
   if not Assigned(LElementType) then
     Exit;
 
-{$ifdef Delphi10Berlin_UP}
   // Fast path: one element at a time, the JSON tree of the whole array is never built
   // (large arrays would exhaust memory on 32 bit targets otherwise). Anything unexpected
   // (not an array, malformed JSON, an element that is not an object) falls through the
@@ -429,7 +420,6 @@ begin
     end;
     LArray := TValue.Empty;
   end;
-{$endif}
 
   // A missing (or unparsable) body keeps yielding an empty array, but a body the
   // client got wrong (JSON that is not an array of objects) is a 400, not a 500.
@@ -477,7 +467,7 @@ end;
 { TStringReader }
 
 function TStringReader.ReadFrom(
-  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation): TValue;
 var
@@ -488,13 +478,9 @@ begin
   Result := TValue.Empty;
   LType := ADestination.GetRttiType;
 
-  {$ifdef Delphi10Berlin_UP}
   if not TMARSMessageBodyReader.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
   LText := LEncoding.GetString(AInputData);
-  {$else}
-  LText := string(AInputData);
- {$endif}
 
   if LType.IsDynamicArrayOf<string> then
     Result := TValue.From<TArray<string>>( LText.Split([sLineBreak]) )
@@ -505,7 +491,7 @@ end;
 { TFormParamReader }
 
 function TFormParamReader.ReadFrom(
-  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const AInputData: TBytes;
     const ADestination: TRttiObject; const AMediaType: TMediaType;
     const AActivation: IMARSActivation
 ): TValue;
@@ -535,7 +521,7 @@ end;
 { TArrayOfTFormParamReader }
 
 function TArrayOfTFormParamReader.ReadFrom(
-  {$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+  const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation
 ): TValue;
@@ -566,7 +552,7 @@ end;
 { TXMLReader }
 
 function TXMLReader.ReadFrom(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation): TValue;
 var
@@ -578,16 +564,12 @@ begin
   LEncoding := TEncoding.UTF8;
 
   LXMLDoc := TXMLDocument.Create(nil);
-{$ifdef Delphi10Berlin_UP}
   LXMLDoc.LoadFromXML(LEncoding.GetString(AInputData));
-{$else}
-  LXMLDoc.LoadFromXML(AInputData);
-{$endif}
   Result := TValue.From<IXMLDocument>(LXMLDoc);
 end;
 
 class function TXMLReader.ReadXML(
-{$ifdef Delphi10Berlin_UP}const AInputData: TBytes;{$else}const AInputData: AnsiString;{$endif}
+const AInputData: TBytes;
   const ADestination: TRttiObject; const AMediaType: TMediaType;
   const AActivation: IMARSActivation): TValue;
 var

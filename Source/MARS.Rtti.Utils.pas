@@ -312,16 +312,12 @@ begin
         end;
       end;
 
-  {$ifdef DelphiXE7_UP}
       tkChar: begin
                 if AString.IsEmpty then
                   Result := ''
                 else
                   Result := TValue.From(AString.Chars[0]);
               end;
-  {$else}
-      tkChar: Result := TValue.From(Copy(AString, 1, 1));
-  {$endif}
       else
         Result := AString;
     end;
@@ -1194,22 +1190,13 @@ begin
   else
     ADataSet.First;
 
-{$ifdef DelphiXE7_UP}
   Result := [];
-{$else}
-  SetLength(Result, 0);
-{$endif}
 
   while not ADataSet.Eof do
   begin
     TRecord<R>.FromDataSet(LItem, ADataSet);
 
-{$ifdef DelphiXE7_UP}
     Result := Result + [LItem];
-{$else}
-    SetLength(Result, Length(Result) + 1);
-    Result[Length(Result)-1] := LItem;
-{$endif}
 
     ADataSet.Next;
   end;
