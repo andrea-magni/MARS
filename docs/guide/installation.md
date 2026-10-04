@@ -45,10 +45,10 @@ Use one installation method only. If MARS is already installed with the executab
 
 ## Option 3 — Manual installation
 
-1. Get a copy of MARS (`git clone` or download the ZIP). Remember to initialize submodules if cloning:
+1. Get a copy of MARS (`git clone` or download the ZIP). The third-party libraries are included:
 
    ```bash
-   git clone --recurse-submodules https://github.com/andrea-magni/MARS.git
+   git clone https://github.com/andrea-magni/MARS.git
    ```
 
 2. Add the following folders to your RAD Studio **Library Path** (Tools ▸ Options ▸ Language ▸ Delphi ▸ Library):
@@ -93,5 +93,5 @@ After installation, the repository layout is:
 | `Packages` | RAD Studio packages, one subfolder per Delphi version. |
 | `Demos` | Ready-to-run sample projects (see [Demos](/demos/)). |
 | `Utils` | Tools, including the `MARSCmd` project bootstrapper. |
-| `ThirdParty` | Bundled dependencies (JOSE-JWT, mORMot, Neslib.Yaml, …). |
+| `ThirdParty` | Bundled dependencies (Delphi-Cross-Socket, JOSE-JWT, mORMot, Neslib.Yaml): origin, version and license of each in [`ThirdParty/README.md`](https://github.com/andrea-magni/MARS/blob/master/ThirdParty/README.md). |
 | `tests` | DUnitX test suite. |
