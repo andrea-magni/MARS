@@ -19,8 +19,6 @@ uses
 type
   [Path('token')]
   TTokenResource = class(TMARSTokenResource)
-  protected
-    [ApplicationParam('JWT.Secret')] JWTSecret: string;
   public
     [GET, Path('renew'), RolesAllowed('standard')]
     function Renew: TMARSToken;
@@ -37,11 +35,9 @@ uses
 
 function TTokenResource.Renew: TMARSToken;
 begin
-  if JWTSecret.IsEmpty then
-    raise EMARSHttpException.Create('JWT secret unavailable', 500);
   var LRemainingSecs := TTimeSpan.Subtract(Token.Expiration, Now).TotalSeconds;
   if  LRemainingSecs < (Token.DurationSecs / 2) then
-    Token.Build(JWTSecret);
+    Token.Build(App.Parameters); // active key (JWT.Secret / JWT.KeyId)
   Result := Token;
 end;
 

@@ -51,7 +51,7 @@ JWT lifecycle management: checking remaining validity and automatically re-issui
 
 ```pascal
 if LRemainingSecs < (Token.DurationSecs / 2) then
-  Token.Build(JWTSecret);   // sliding-expiration renewal
+  Token.Build(App.Parameters);   // sliding-expiration renewal, with the active key
 ```
 
 ## OTPDemo

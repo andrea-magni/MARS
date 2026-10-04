@@ -12,7 +12,7 @@ uses
   SysUtils, Classes
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Core.JSON, MARS.Core.Response
-, MARS.Core.Token
+, MARS.Core.Token, MARS.Core.Application.Interfaces
 , MARS.Data.FireDAC
 , MARS.Utils.Parameters
 , FireDAC.Comp.DataSet
@@ -41,6 +41,7 @@ type
   protected
     [Context] FD: TMARSFireDAC;
     [Context] Token: TMARSToken;
+    [Context] App: IMARSApplication;
     // grab access to Application's parameters (including JWT secret)
     [Context, ApplicationParamFunc] AppParamFunc: TConfigParamFunc;
     function RetrieveUserByUserId(const AUserId: Integer; const ARaiseIfNotFound: Boolean = True): TUser;
@@ -226,14 +227,9 @@ begin
 
   if LIsSelfChange then
   begin
-    LToken := TMARSmORMotJWTToken.Create(
-      Token.Token,
-      AppParamFunc('JWT.Secret').AsString,
-      AppParamFunc('JWT.Issuer').AsString,
-      AppParamFunc('JWT.Duration').AsExtended
-    );
+    LToken := TMARSmORMotJWTToken.Create(Token.Token, App.Parameters);
     try
-      LToken.Build(AppParamFunc('JWT.Secret').AsString);
+      LToken.Build(App.Parameters);
       Result.newToken := LToken.Token;
     finally
       LToken.Free;

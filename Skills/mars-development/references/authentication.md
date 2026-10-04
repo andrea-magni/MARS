@@ -89,7 +89,7 @@ Custom claims: write into `Token.Claims` before `Token.Build`, read them on late
 
 ## Token renewal
 
-See `Demos/TokenRenew`: a custom `[TokenAutoRenew]` attribute plus a global `AfterInvoke` handler renews the token when its remaining lifetime falls below a threshold (default: 50% of duration), reading the secret from `Activation.Application.Parameters.ByNameText(JWT_SECRET_PARAM)` and calling `Token.Build`. The demo's resources also show manual rebuilding inside a method, with the secret injected via `[ApplicationParam('JWT.Secret')] JWTSecret: string`.
+See `Demos/TokenRenew`: a custom `[TokenAutoRenew]` attribute plus a global `AfterInvoke` handler renews the token when its remaining lifetime falls below a threshold (default: 50% of duration), calling `Activation.Token.Build(Activation.Application.Parameters)` (signs with the active key, `kid` included). The demo's resources also show manual rebuilding inside a method with `Token.Build(App.Parameters)`, `App` injected as `[Context] App: IMARSApplication`.
 
 ## Client side
 

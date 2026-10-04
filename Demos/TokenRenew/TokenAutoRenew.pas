@@ -34,7 +34,6 @@ implementation
 
 uses
   TimeSpan, System.Rtti
-, MARS.Utils.JWT
 ;
 
 { TokenAutoRenewAttribute }
@@ -61,11 +60,8 @@ begin
 end;
 
 procedure TokenAutoRenewAttribute.Renew(const AActivation: IMARSActivation);
-var
-  LSecret: string;
 begin
-  LSecret := AActivation.Application.Parameters.ByNameText(JWT_SECRET_PARAM).AsString;
-  AActivation.Token.Build(LSecret);
+  AActivation.Token.Build(AActivation.Application.Parameters); // active key (JWT.Secret / JWT.KeyId)
 end;
 
 function TokenAutoRenewAttribute.RenewalThresholdSeconds(

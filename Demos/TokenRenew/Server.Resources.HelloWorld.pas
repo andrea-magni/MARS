@@ -12,7 +12,7 @@ uses
   SysUtils, Classes
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Core.JSON, MARS.Core.Response
-, MARS.Core.Token
+, MARS.Core.Token, MARS.Core.Application.Interfaces
 , TokenAutoRenew
 ;
 
@@ -21,7 +21,7 @@ type
   THelloWorldResource = class
   protected
     [Context] Token: TMARSToken;
-    [ApplicationParam('JWT.Secret')] JWTSecret: string;
+    [Context] App: IMARSApplication;
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
@@ -66,12 +66,9 @@ begin
       + ' - Expiration: ' + DateTimeToStr(Token.Expiration) + sLineBreak
       + ' - Expires in: ' + LRemainingSecs.ToString + ' seconds';
 
-    if JWTSecret.IsEmpty then
-      raise EMARSHttpException.Create('JWT secret unavailable', 500);
-
     if  LRemainingSecs < (Token.DurationSecs / 2) then
     begin
-      Token.Build(JWTSecret);
+      Token.Build(App.Parameters); // active key (JWT.Secret / JWT.KeyId)
       Result := Result + sLineBreak + 'Token rebuilt. New expiration: ' + DateTimeToStr(Token.Expiration);
     end;
 

@@ -12,7 +12,6 @@ uses
   System.SysUtils, System.Hash, System.NetEncoding,
   MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Token,
   MARS.Core.Application.Interfaces,
-  MARS.Utils.JWT,
   MARS.Core.RequestAndResponse.Interfaces,
   MARS.Data.FireDAC, MARS.Core.Exceptions,
   FireDAC.Comp.Client, FireDAC.Stan.Param, Data.DB,
@@ -210,9 +209,7 @@ begin
   Token.Claims['RealName']:= LRealName;
   Token.Claims['mfa_pending'] := True;
 
-  Token.Build(
-    App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
-  );
+  Token.Build(App.Parameters);
 
   SetAuthCookie(Token.Token);
 
@@ -342,9 +339,7 @@ begin
    Token.Roles := LRoles;
 
   // rebuild explicitly.
-  Token.Build(
-    App.Parameters.ByName(JWT_SECRET_PARAM, JWT_SECRET_PARAM_DEFAULT).AsString
-  );
+  Token.Build(App.Parameters);
   SetAuthCookie(Token.Token);
 
   Response.SetHeader('HX-Redirect', '/rest/default/app/home');
