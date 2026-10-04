@@ -83,6 +83,9 @@
 #if !FileExists(AddBackslash(SourcePath) + "..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj")
   #error ThirdParty\delphi-jose-jwt is empty: run "git submodule update --init" before building the setup
 #endif
+// MARS.groupproj builds the JOSE package from ThirdParty\delphi-jose-jwt\Packages: the setup must
+// extract those projects too when it reads the group projects (see InitializeSetup)
+#define ExtraProjectFiles "{app}\ThirdParty\delphi-jose-jwt\Packages\*"
 //you can choose your preferred Style contained in folder: InnoSetupScripts\Style 
 #define VclStyle "RubyGraphite.vsf"
 

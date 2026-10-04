@@ -168,6 +168,10 @@ begin
   #ifdef FilesEmbedded
   LPackagesPath := AddBackslash(CombinePath('{app}', LPackagesPath));
   ExtractTemporaryFiles(LPackagesPath + '*');
+  #ifdef ExtraProjectFiles
+  // projects that the group projects reference outside the packages folder
+  ExtractTemporaryFiles('{#ExtraProjectFiles}');
+  #endif
   LPackagesPath := ExpandConstant('{tmp}\') + LPackagesPath;
   #else
   LPackagesPath := CombinePath(GetCurrentDir, LPackagesPath);
