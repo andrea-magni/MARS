@@ -37,7 +37,7 @@ const
   RsAboutTitle = 'MARS-Curiosity REST Library';
   RsAboutDescription = 'MARS-Curiosity REST Library - Client library Components - https://github.com/andrea-magni/MARS' + sLineBreak +
     'Delphi components implementing REST client library for MARS Application as well as standard REST applications.';
-  RsAboutLicense = 'Apache 2.0 (Free/Opensource)';
+  RsAboutLicense = 'Mozilla Public License 2.0 (Free/Opensource)';
 var
   AboutBoxServices: IOTAAboutBoxServices = nil;
   AboutBoxIndex: Integer;
