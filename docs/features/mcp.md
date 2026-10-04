@@ -51,6 +51,7 @@ http://localhost:8080/rest/default/mcp
 
 - the **tool name** comes from `[MCPTool('name', 'description')]`, or the method name when omitted;
 - each **parameter** becomes a property of the tool's `inputSchema`, with the name and description taken from `[MCPParam('name', 'description')]` (parameter name when omitted);
+- parameters are **required**, unless marked `[MCPDefault('<JSON literal>')]`: the parameter is left out of `required`, the schema advertises the value as `default`, and a missing or `null` argument is bound to it. The literal is converted like any argument: `[MCPDefault('true')]`, `[MCPDefault('7')]`, `[MCPDefault('"value_date"')]`, `[MCPDefault('[]')]`;
 - Delphi types map to JSON Schema: strings → `string`, integers → `integer`, floats → `number`, `Boolean` → `boolean`, enumerations → `string` with `enum` values, `TDateTime` → `string` with `format: date-time`, dynamic arrays → `array`, records → `object` (fields included recursively).
 
 ## Tool results

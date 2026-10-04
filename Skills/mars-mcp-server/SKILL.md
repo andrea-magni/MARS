@@ -75,6 +75,7 @@ A complete starting unit is available in `assets/Server.Resources.MCP.pas.templa
 | `MCPServerInfo(name, version, instructions)` | resource class | identity returned by `initialize`; instructions are read by the agent |
 | `MCPTool(description)` / `MCPTool(name, description)` | public method | exposes the method as a tool (name defaults to the method name) |
 | `MCPParam(description)` / `MCPParam(name, description)` | parameter | documents and optionally renames the parameter in the JSON Schema (rename it: Delphi convention names like `AValue` leak otherwise) |
+| `MCPDefault('<JSON literal>')` | tool parameter | makes the parameter optional, with that default value |
 | `MCPResource(uri, [name,] description [, mimeType])` | public method | exposes readable content by URI; `{param}` placeholders make it a template — see `references/resources-prompts.md` |
 | `MCPPrompt([name,] description)` | public method | exposes a reusable prompt template; parameters become the prompt arguments — see `references/resources-prompts.md` |
 | `RolesAllowed('...')` / `DenyAll` | tool method | per-tool authorization — see `references/authorization.md` |
@@ -85,7 +86,7 @@ A complete starting unit is available in `assets/Server.Resources.MCP.pas.templa
 
 Tool results: a `string` becomes a text content block; records (and arrays, numbers...) are serialized with the MARS JSON serializer and records also become `structuredContent`. Exceptions raised inside a tool are reported as tool execution errors (`isError: true`), not protocol errors. `TDataSet` results need `TMCPDataResource` — see `references/database-tools.md`.
 
-Parameter/field types map to JSON Schema automatically: strings → `string`, integers → `integer`, floats → `number`, `Boolean` → `boolean`, enums → `string` + `enum` values, `TDateTime` → `string`/`date-time`, dynamic arrays → `array`, records → nested `object`. All parameters are listed as `required` — model optional inputs as explicit values (e.g. empty string) and document them in the description.
+Parameter/field types map to JSON Schema automatically: strings → `string`, integers → `integer`, floats → `number`, `Boolean` → `boolean`, enums → `string` + `enum` values, `TDateTime` → `string`/`date-time`, dynamic arrays → `array`, records → nested `object`. Parameters are listed as `required`, except those marked `[MCPDefault('<JSON literal>')]`: they are left out of `required`, the schema advertises the value as `default`, and a missing or `null` argument is bound to it (`[MCPDefault('true')]`, `('7')`, `('"value_date"')`, `('""')`, `('[]')` — the literal is converted like any argument).
 
 ## Protocol facts worth knowing
 
