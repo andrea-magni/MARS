@@ -79,7 +79,7 @@
 #define SetupFolder "Setup"
 #define FilesEmbedded
 
-; ThirdParty\delphi-jose-jwt is a git submodule: the packages cannot be built without it
+// ThirdParty\delphi-jose-jwt is a git submodule: the packages cannot be built without it
 #if !FileExists(AddBackslash(SourcePath) + "..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj")
   #error ThirdParty\delphi-jose-jwt is empty: run "git submodule update --init" before building the setup
 #endif
