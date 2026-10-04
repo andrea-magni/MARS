@@ -81,7 +81,7 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <DCC_DcuOutput>.\lib\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\bin</DCC_ExeOutput>
-        <DCC_UnitSearchPath>..\..\Source;..\..\ThirdParty\delphi-jose-jwt;..\..\ThirdParty\DCS;..\..\ThirdParty\mORMot\Source;..\..\ThirdParty\DCS\Net;..\..\ThirdParty\DCS\Utils;..\..\ThirdParty\Neslib.Yaml;..\..\ThirdParty\Neslib.Yaml\Neslib;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\Common;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\Crypto;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Source;..\..\ThirdParty\delphi-jose-jwt\Source\Common;..\..\ThirdParty\delphi-jose-jwt\Source\JOSE;..\..\ThirdParty\DCS;..\..\ThirdParty\mORMot\Source;..\..\ThirdParty\DCS\Net;..\..\ThirdParty\DCS\Utils;..\..\ThirdParty\Neslib.Yaml;..\..\ThirdParty\Neslib.Yaml\Neslib;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\Common;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\Crypto;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
         <Android_LauncherIcon192>$(BDS)\bin\Artwork\Android\FM_LauncherIcon_192x192.png</Android_LauncherIcon192>

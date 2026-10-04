@@ -16,6 +16,11 @@ application:
   docs: https://andrea-magni.github.io/MARS/
   version file: version.txt
 
+# delphi-jose-jwt (ThirdParty/delphi-jose-jwt) is a git submodule for manual installs; with Smart
+# Setup it comes from its own product, rossi.delphi-jose-jwt, so the submodule is not fetched.
+fetch options:
+  skip submodules: true
+
 supported frameworks:
   rtl:
     ide since: delphisydney
@@ -23,11 +28,21 @@ supported frameworks:
       - win32intel
       - win64intel
 
+  # weak dependency: MARS.JOSE (JOSE JWT backend) is built only when rossi.delphi-jose-jwt is installed;
+  # the mORMot JWT backend (MARS.mORMot) needs nothing else
+  jose:
+    ide since: delphisydney
+    platforms:
+      - win32intel
+      - win64intel
+    dependencies:
+      - rossi.delphi-jose-jwt
+
 packages:
   - MARS.Utils: [runtime, rtl]
   - MARS.Core: [runtime, rtl]
   - MARS.ReadersAndWriters: [runtime, rtl]
-  - MARS.JOSE: [runtime, rtl]
+  - MARS.JOSE: [runtime, jose]
   - MARS.mORMot: [runtime, rtl]
   - MARS.DCS: [runtime, rtl]
   - MARS.FireDAC: [runtime, rtl]
@@ -49,7 +64,6 @@ paths:
   # and are compiled directly into the user's projects, so the sources must be reachable from the library path.
   extra library paths:
     - Source
-    - ThirdParty/delphi-jose-jwt/Source
     - ThirdParty/mORMot/Source
     - ThirdParty/Neslib.Yaml
     - ThirdParty/Neslib.Yaml/Neslib

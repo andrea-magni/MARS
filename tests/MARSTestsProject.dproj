@@ -60,7 +60,7 @@
         <VerInfo_Locale>1040</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <DCC_DUPLICATE_CTOR_DTOR>false</DCC_DUPLICATE_CTOR_DTOR>
-        <DCC_UnitSearchPath>..\Source;..\ThirdParty\delphi-jose-jwt\Source;..\ThirdParty\DCS;..\ThirdParty\mORMot\Source;..\ThirdParty\DCS\Net;..\ThirdParty\DCS\Utils;..\..\Delphi-Mocks\Source;..\ThirdParty\Neslib.Yaml;..\ThirdParty\Neslib.Yaml\NesLib;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\Source;..\ThirdParty\delphi-jose-jwt\Source\Common;..\ThirdParty\delphi-jose-jwt\Source\JOSE;..\ThirdParty\DCS;..\ThirdParty\mORMot\Source;..\ThirdParty\DCS\Net;..\ThirdParty\DCS\Utils;..\..\Delphi-Mocks\Source;..\ThirdParty\Neslib.Yaml;..\ThirdParty\Neslib.Yaml\NesLib;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_Define>x;TESTINSIGHT;$(DCC_Define)</DCC_Define>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">

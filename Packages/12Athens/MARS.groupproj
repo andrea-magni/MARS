@@ -15,6 +15,9 @@
         <Projects Include="MARS.mORMot.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="..\..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="MARS.JOSE.dproj">
             <Dependencies/>
         </Projects>
@@ -71,6 +74,15 @@
     <Target Name="MARS_mORMot:Make">
         <MSBuild Projects="MARS.mORMot.dproj" Targets="Make"/>
     </Target>
+    <Target Name="JOSE">
+        <MSBuild Projects="..\..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj"/>
+    </Target>
+    <Target Name="JOSE:Clean">
+        <MSBuild Projects="..\..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="JOSE:Make">
+        <MSBuild Projects="..\..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj" Targets="Make"/>
+    </Target>
     <Target Name="MARS_JOSE">
         <MSBuild Projects="MARS.JOSE.dproj"/>
     </Target>
@@ -108,13 +120,13 @@
         <MSBuild Projects="MARS.UniDAC.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARS_Utils;MARS_Core;MARS_DCS;MARS_mORMot;MARS_JOSE;MARS_ReadersAndWriters;MARS_FireDAC;MARS_UniDAC"/>
+        <CallTarget Targets="MARS_Utils;MARS_Core;MARS_DCS;MARS_mORMot;JOSE;MARS_JOSE;MARS_ReadersAndWriters;MARS_FireDAC;MARS_UniDAC"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARS_Utils:Clean;MARS_Core:Clean;MARS_DCS:Clean;MARS_mORMot:Clean;MARS_JOSE:Clean;MARS_ReadersAndWriters:Clean;MARS_FireDAC:Clean;MARS_UniDAC:Clean"/>
+        <CallTarget Targets="MARS_Utils:Clean;MARS_Core:Clean;MARS_DCS:Clean;MARS_mORMot:Clean;JOSE:Clean;MARS_JOSE:Clean;MARS_ReadersAndWriters:Clean;MARS_FireDAC:Clean;MARS_UniDAC:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARS_Utils:Make;MARS_Core:Make;MARS_DCS:Make;MARS_mORMot:Make;MARS_JOSE:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make;MARS_UniDAC:Make"/>
+        <CallTarget Targets="MARS_Utils:Make;MARS_Core:Make;MARS_DCS:Make;MARS_mORMot:Make;JOSE:Make;MARS_JOSE:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make;MARS_UniDAC:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
     <ItemGroup Condition="'$(BuildGroup)'=='ALL'">
@@ -138,6 +150,12 @@
         </BuildGroupProject>
         <BuildGroupProject Include="MARS.mORMot.dproj">
             <ProjectGuid>{CFDDCD9D-D0A9-42FE-8036-193E21B00BD9}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="..\..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj">
+            <ProjectGuid>{6C9DE12E-3603-42EF-921C-877D0FB57D60}</ProjectGuid>
             <Configurations>Release</Configurations>
             <Platforms>Win32;Win64</Platforms>
             <Enabled>True</Enabled>

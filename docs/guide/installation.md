@@ -28,6 +28,14 @@ The fastest way to get started:
 
 Smart Setup clones the repository, compiles the runtime and design-time packages (Debug and Release), installs the design-time packages in the IDE and adds the MARS source folders to the library path. Later on, `tms update andreamagni.mars` gets the latest version and rebuilds it, and `tms uninstall andreamagni.mars` removes it.
 
+The JOSE [JWT backend](/features/authentication#jwt-backends) (`MARS.JOSE` package) uses the [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) library, which Smart Setup installs as a product of its own: `MARS.JOSE` is built only when it is installed. The mORMot backend, the default on Windows, needs nothing else. To use JOSE:
+
+```bash
+tms install rossi.delphi-jose-jwt
+```
+
+Installing it after MARS is fine: Smart Setup rebuilds MARS and adds `MARS.JOSE`.
+
 ::: tip Not listed yet?
 If `tms install andreamagni.mars` reports that the product is unknown, it has not reached the community server yet. In the meantime, clone MARS into your Smart Setup folder (the folder containing `tms.config.yaml`; `tms config -print` shows it) and build it, running both commands from that folder:
 
@@ -45,16 +53,19 @@ Use one installation method only. If MARS is already installed with the executab
 
 ## Option 3 — Manual installation
 
-1. Get a copy of MARS (`git clone` or download the ZIP). The third-party libraries are included:
+1. Get a copy of MARS with `git clone`, including its submodule ([delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt), used by the JOSE JWT backend; the other third-party libraries are part of the repository):
 
    ```bash
-   git clone https://github.com/andrea-magni/MARS.git
+   git clone --recurse-submodules https://github.com/andrea-magni/MARS.git
    ```
+
+   In a clone made without `--recurse-submodules`, run `git submodule update --init`. The **Download ZIP** button of GitHub leaves `ThirdParty\delphi-jose-jwt` empty: download [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) at the tag shown in [`ThirdParty/README.md`](https://github.com/andrea-magni/MARS/blob/master/ThirdParty/README.md) and extract it there.
 
 2. Add the following folders to your RAD Studio **Library Path** (Tools ▸ Options ▸ Language ▸ Delphi ▸ Library):
 
    - `[MARS Folder]\Source`
-   - `[MARS Folder]\ThirdParty\delphi-jose-jwt\Source`
+   - `[MARS Folder]\ThirdParty\delphi-jose-jwt\Source\Common`
+   - `[MARS Folder]\ThirdParty\delphi-jose-jwt\Source\JOSE`
    - `[MARS Folder]\ThirdParty\mORMot\Source`
    - `[MARS Folder]\ThirdParty\Neslib.Yaml`
    - `[MARS Folder]\ThirdParty\Neslib.Yaml\Neslib`
@@ -62,7 +73,7 @@ Use one installation method only. If MARS is already installed with the executab
 3. Build the runtime/design-time packages. For example, on **13 Florence**:
 
    - Open `[MARS Folder]\Packages\13Florence\MARS.groupproj`
-     - **Build All**
+     - **Build All** (it also builds the `JOSE` package of delphi-jose-jwt, required by `MARS.JOSE`)
    - Open `[MARS Folder]\Packages\13Florence\MARSClient.groupproj`
      - **Build All**
      - **Install** `MARSClient.CoreDesign`

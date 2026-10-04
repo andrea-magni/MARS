@@ -5,10 +5,11 @@
 
 # MARS Curiosity Manual Installation
 
-1. Grab a copy of MARS (git clone or download ZIP)
-1. Add five folders to your Library Path:
+1. Grab a copy of MARS: `git clone --recurse-submodules https://github.com/andrea-magni/MARS.git` (ThirdParty\delphi-jose-jwt is a git submodule)
+1. Add six folders to your Library Path:
     * [MARS Folder]\Source
-    * [MARS Folder]\ThirdParty\delphi-jose-jwt\Source
+    * [MARS Folder]\ThirdParty\delphi-jose-jwt\Source\Common
+    * [MARS Folder]\ThirdParty\delphi-jose-jwt\Source\JOSE
     * [MARS Folder]\ThirdParty\mORMot\Source
     * [MARS Folder]\ThirdParty\Neslib.Yaml
     * [MARS Folder]\ThirdParty\Neslib.Yaml\Neslib
