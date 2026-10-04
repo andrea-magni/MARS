@@ -292,10 +292,81 @@ type
     [Test] procedure AuthorizePage_TemplateFileOverride;
   end;
 
+  // host for MCP Apps tests: tools linked to a ui:// resource, generic _meta
+  TAppHost = class
+  public
+    [MCPTool('show_chart', 'Shows the chart'), MCPToolUI('ui://charts/view.html')]
+    function ShowChart: TSumRec;
+
+    [MCPTool('refresh_chart', 'Refreshes the chart (view only)'), MCPToolUI('ui://charts/view.html', 'app')]
+    function RefreshChart: TSumRec;
+
+    [MCPTool('plain_tool', 'A tool without UI')]
+    function PlainTool: string;
+
+    [MCPTool('tagged_tool', 'Generic metadata merged with the UI link')
+    , MCPMeta('{"custom":{"a":1},"ui":{"visibility":["model"]}}')
+    , MCPToolUI('ui://charts/view.html')]
+    function TaggedTool: string;
+
+    [MCPAppResource('ui://charts/view.html', 'chart_view', 'Interactive chart')
+    , MCPAppCSP('https://api.example.com', 'https://cdn.jsdelivr.net, https://*.cloudflare.com')
+    , MCPAppBorder(True)
+    , MCPMeta('{"ui":{"permissions":{"clipboardWrite":{}}}}')]
+    function ChartView: string;
+
+    [MCPResource('info://plain', 'A plain resource')]
+    function PlainResource: string;
+  end;
+
+  // invalid MCP Apps declarations: the dispatcher refuses them when scanning
+  TBadAppURIHost = class
+  public
+    [MCPAppResource('https://example.com/view.html', 'Not a ui:// URI')]
+    function View: string;
+  end;
+
+  TBadVisibilityHost = class
+  public
+    [MCPTool('t', 'Bad visibility'), MCPToolUI('ui://v', 'model,everyone')]
+    function T: string;
+  end;
+
+  TBadMetaHost = class
+  public
+    [MCPTool('t', 'Bad meta'), MCPMeta('[1,2]')]
+    function T: string;
+  end;
+
+  [TestFixture('MCP.Apps')]
+  TMCPAppsFixture = class
+  private
+    FHost: TAppHost;
+    FDispatcher: TMCPDispatcher;
+  protected
+    function ParseAndHandle(const AJSON: string): TJSONObject;
+    function ToolMeta(const AToolsResponse: TJSONObject; const AName: string): TJSONObject;
+  public
+    [Setup]
+    procedure Setup;
+    [Teardown]
+    procedure Teardown;
+
+    [Test] procedure ToolsList_ResourceUriAndLegacyKey;
+    [Test] procedure ToolsList_AppOnlyVisibility;
+    [Test] procedure ToolsList_NoMetaWithoutAttributes;
+    [Test] procedure ToolsList_MetaMergedWithUIAttributes;
+    [Test] procedure ResourcesList_AppResourceMeta;
+    [Test] procedure ResourcesRead_AppResourceContents;
+    [Test] procedure ResourcesRead_NoMetaWithoutAttributes;
+    [Test] procedure ToolsCall_StructuredContentForTheView;
+    [Test] procedure InvalidDeclarationsRefused;
+  end;
+
 implementation
 
 uses
-  System.NetEncoding, System.IOUtils
+  System.NetEncoding, System.IOUtils, System.Generics.Collections
 , MARS.Core.Engine
 , MARS.Core.Activation
 , MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
@@ -2099,11 +2170,266 @@ begin
   end;
 end;
 
+{ TAppHost }
+
+function TAppHost.ShowChart: TSumRec;
+begin
+  Result.a := 1;
+  Result.b := 2;
+  Result.total := 3;
+end;
+
+function TAppHost.RefreshChart: TSumRec;
+begin
+  Result := ShowChart;
+end;
+
+function TAppHost.PlainTool: string;
+begin
+  Result := 'plain';
+end;
+
+function TAppHost.TaggedTool: string;
+begin
+  Result := 'tagged';
+end;
+
+function TAppHost.ChartView: string;
+begin
+  Result := '<!DOCTYPE html><html><body>chart</body></html>';
+end;
+
+function TAppHost.PlainResource: string;
+begin
+  Result := 'plain resource';
+end;
+
+function TBadAppURIHost.View: string;
+begin
+  Result := '';
+end;
+
+function TBadVisibilityHost.T: string;
+begin
+  Result := '';
+end;
+
+function TBadMetaHost.T: string;
+begin
+  Result := '';
+end;
+
+{ TMCPAppsFixture }
+
+procedure TMCPAppsFixture.Setup;
+begin
+  FHost := TAppHost.Create;
+  FDispatcher := TMCPDispatcher.Create(FHost, 'AppServer', '1.0.0', '');
+end;
+
+procedure TMCPAppsFixture.Teardown;
+begin
+  FreeAndNil(FDispatcher);
+  FreeAndNil(FHost);
+end;
+
+function TMCPAppsFixture.ParseAndHandle(const AJSON: string): TJSONObject;
+begin
+  var LMessage := TJSONObject.ParseJSONValue(AJSON);
+  try
+    Result := FDispatcher.HandleMessage(LMessage);
+  finally
+    LMessage.Free;
+  end;
+end;
+
+function TMCPAppsFixture.ToolMeta(const AToolsResponse: TJSONObject; const AName: string): TJSONObject;
+var
+  LTools: TJSONArray;
+  LTool: TJSONValue;
+begin
+  Result := nil;
+  Assert.IsTrue(AToolsResponse.TryGetValue<TJSONArray>('result.tools', LTools), AToolsResponse.ToJSON);
+  for LTool in LTools do
+    if (LTool as TJSONObject).GetValue<string>('name') = AName then
+      Exit(TJSONObject(LTool).GetValue('_meta') as TJSONObject); // nil when missing
+  Assert.Fail('tool not listed: ' + AName);
+end;
+
+procedure TMCPAppsFixture.ToolsList_ResourceUriAndLegacyKey;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+  try
+    var LMeta := ToolMeta(LResponse, 'show_chart');
+    Assert.IsNotNull(LMeta, '_meta expected');
+    Assert.AreEqual('ui://charts/view.html', LMeta.GetValue<string>('ui.resourceUri'));
+    // deprecated flat key, written as the reference SDK does
+    Assert.IsNotNull(LMeta.GetValue('ui/resourceUri'), 'legacy key');
+    Assert.AreEqual('ui://charts/view.html', LMeta.GetValue('ui/resourceUri').Value);
+    Assert.IsNull((LMeta.GetValue('ui') as TJSONObject).GetValue('visibility'), 'default visibility left implicit');
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.ToolsList_AppOnlyVisibility;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+  try
+    // still listed by the server: hiding app-only tools from the model is up to the host
+    var LMeta := ToolMeta(LResponse, 'refresh_chart');
+    Assert.IsNotNull(LMeta);
+    var LVisibility := LMeta.GetValue<TJSONArray>('ui.visibility');
+    Assert.AreEqual(1, LVisibility.Count);
+    Assert.AreEqual('app', LVisibility.Items[0].Value);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.ToolsList_NoMetaWithoutAttributes;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+  try
+    Assert.IsNull(ToolMeta(LResponse, 'plain_tool'), 'no _meta for a plain tool');
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.ToolsList_MetaMergedWithUIAttributes;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+  try
+    var LMeta := ToolMeta(LResponse, 'tagged_tool');
+    Assert.IsNotNull(LMeta);
+    Assert.AreEqual(1, LMeta.GetValue<Integer>('custom.a'), 'generic metadata kept');
+    Assert.AreEqual('ui://charts/view.html', LMeta.GetValue<string>('ui.resourceUri'), 'added by [MCPToolUI]');
+    var LVisibility := LMeta.GetValue<TJSONArray>('ui.visibility');
+    Assert.AreEqual(1, LVisibility.Count, 'ui object merged, not replaced');
+    Assert.AreEqual('model', LVisibility.Items[0].Value);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.ResourcesList_AppResourceMeta;
+var
+  LResources: TJSONArray;
+  LItem: TJSONValue;
+  LView: TJSONObject;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"resources/list"}');
+  try
+    Assert.IsTrue(LResponse.TryGetValue<TJSONArray>('result.resources', LResources), LResponse.ToJSON);
+    LView := nil;
+    for LItem in LResources do
+      if LItem.GetValue<string>('uri') = 'ui://charts/view.html' then
+        LView := LItem as TJSONObject;
+    Assert.IsNotNull(LView, 'ui:// resource listed');
+    Assert.AreEqual('chart_view', LView.GetValue<string>('name'));
+    Assert.AreEqual(MCP_APP_MIME_TYPE, LView.GetValue<string>('mimeType'));
+
+    var LCSP := LView.GetValue<TJSONObject>('_meta.ui.csp');
+    Assert.AreEqual(1, LCSP.GetValue<TJSONArray>('connectDomains').Count);
+    Assert.AreEqual('https://api.example.com', LCSP.GetValue<TJSONArray>('connectDomains').Items[0].Value);
+    var LResourceDomains := LCSP.GetValue<TJSONArray>('resourceDomains');
+    Assert.AreEqual(2, LResourceDomains.Count, 'comma separated list');
+    Assert.AreEqual('https://*.cloudflare.com', LResourceDomains.Items[1].Value, 'trimmed');
+    Assert.IsNull(LCSP.GetValue('frameDomains'), 'empty lists omitted');
+    Assert.IsTrue(LView.GetValue<Boolean>('_meta.ui.prefersBorder'));
+    Assert.IsNotNull(LView.GetValue<TJSONObject>('_meta.ui.permissions').GetValue('clipboardWrite'), '[MCPMeta] merged');
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.ResourcesRead_AppResourceContents;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"ui://charts/view.html"}}');
+  try
+    var LContent := LResponse.GetValue<TJSONObject>('result.contents[0]');
+    Assert.AreEqual('ui://charts/view.html', LContent.GetValue<string>('uri'));
+    Assert.AreEqual(MCP_APP_MIME_TYPE, LContent.GetValue<string>('mimeType'));
+    Assert.AreEqual('<!DOCTYPE html><html><body>chart</body></html>', LContent.GetValue<string>('text'));
+    // hosts read the security and rendering settings from the contents
+    Assert.AreEqual('https://api.example.com', LContent.GetValue<TJSONArray>('_meta.ui.csp.connectDomains').Items[0].Value);
+    Assert.IsTrue(LContent.GetValue<Boolean>('_meta.ui.prefersBorder'));
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.ResourcesRead_NoMetaWithoutAttributes;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"info://plain"}}');
+  try
+    var LContent := LResponse.GetValue<TJSONObject>('result.contents[0]');
+    Assert.AreEqual('plain resource', LContent.GetValue<string>('text'));
+    Assert.IsNull(LContent.GetValue('_meta'));
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.ToolsCall_StructuredContentForTheView;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"show_chart","arguments":{}}}');
+  try
+    // the host passes content and structuredContent to the view (ui/notifications/tool-result)
+    Assert.IsNotEmpty(LResponse.GetValue<string>('result.content[0].text'), 'text fallback');
+    Assert.AreEqual(3.0, LResponse.GetValue<Double>('result.structuredContent.total'), 0.0001);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPAppsFixture.InvalidDeclarationsRefused;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      var LHost := TBadAppURIHost.Create;
+      try
+        TMCPDispatcher.Create(LHost, 'Bad', '1.0.0', '').Free;
+      finally
+        LHost.Free;
+      end;
+    end
+  , EMCPError, 'MCPAppResource needs a ui:// URI');
+  Assert.WillRaise(
+    procedure
+    begin
+      var LHost := TBadVisibilityHost.Create;
+      try
+        TMCPDispatcher.Create(LHost, 'Bad', '1.0.0', '').Free;
+      finally
+        LHost.Free;
+      end;
+    end
+  , EMCPError, 'unknown visibility value');
+  Assert.WillRaise(
+    procedure
+    begin
+      var LHost := TBadMetaHost.Create;
+      try
+        TMCPDispatcher.Create(LHost, 'Bad', '1.0.0', '').Free;
+      finally
+        LHost.Free;
+      end;
+    end
+  , EMCPError, '[MCPMeta] must be a JSON object');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMCPDispatcherFixture);
   TDUnitX.RegisterTestFixture(TMCPResourcesPromptsFixture);
   TDUnitX.RegisterTestFixture(TMCPDataDispatcherFixture);
   TDUnitX.RegisterTestFixture(TMCPResourceFixture);
   TDUnitX.RegisterTestFixture(TMCPOAuthFixture);
+  TDUnitX.RegisterTestFixture(TMCPAppsFixture);
 
 end.

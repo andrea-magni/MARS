@@ -1,6 +1,6 @@
 ---
 name: mars-mcp-server
-description: Build MCP (Model Context Protocol) servers in Delphi with MARS-Curiosity, so AI agents (Claude, ChatGPT, Open WebUI/Ollama, MCP Inspector) can discover and call Delphi code as tools, read MCP resources and use MCP prompts. Use this skill whenever the user wants to expose Delphi/MARS functionality to an AI agent or LLM, mentions MCP, MCP server, MCP tools, resources, prompts, tool calling, function calling, AI agents, connectors, or wants Claude/ChatGPT/a local model to query their Delphi application or database; also when working with MARS.MCP.* units, TMCPResource, [MCPTool], [MCPResource], [MCPPrompt], TMCPOAuthServer, or debugging an MCP client that cannot connect or authenticate to a MARS server.
+description: Build MCP (Model Context Protocol) servers in Delphi with MARS-Curiosity, so AI agents (Claude, ChatGPT, Open WebUI/Ollama, MCP Inspector) can discover and call Delphi code as tools, read MCP resources, use MCP prompts and show interactive views (MCP Apps). Use this skill whenever the user wants to expose Delphi/MARS functionality to an AI agent or LLM, mentions MCP, MCP server, MCP tools, resources, prompts, tool calling, function calling, AI agents, connectors, or wants Claude/ChatGPT/a local model to query their Delphi application or database; also when working with MARS.MCP.* units, TMCPResource, [MCPTool], [MCPResource], [MCPPrompt], [MCPToolUI], [MCPAppResource], TMCPOAuthServer, MCP Apps / interactive UIs rendered by Claude next to a tool result, or debugging an MCP client that cannot connect or authenticate to a MARS server.
 ---
 
 # Build an MCP server with MARS-Curiosity
@@ -79,6 +79,9 @@ A complete starting unit is available in `assets/Server.Resources.MCP.pas.templa
 | `MCPPrompt([name,] description)` | public method | exposes a reusable prompt template; parameters become the prompt arguments — see `references/resources-prompts.md` |
 | `RolesAllowed('...')` / `DenyAll` | tool method | per-tool authorization — see `references/authorization.md` |
 | `MCPOAuth` | resource class | 401 + OAuth discovery for unauthenticated requests — see `references/authorization.md` |
+| `MCPToolUI(uri [, visibility])` | tool method | MCP Apps: links the tool to an interactive `ui://` view — see `references/mcp-apps.md` |
+| `MCPAppResource(uri, [name,] description)`, `MCPAppCSP(...)`, `MCPAppBorder(...)` | public method | MCP Apps: the HTML view (`text/html;profile=mcp-app`) and its CSP/border settings — see `references/mcp-apps.md` |
+| `MCPMeta('<JSON object>')` | tool/resource method | free-form `_meta`, merged with the MCP Apps attributes |
 
 Tool results: a `string` becomes a text content block; records (and arrays, numbers...) are serialized with the MARS JSON serializer and records also become `structuredContent`. Exceptions raised inside a tool are reported as tool execution errors (`isError: true`), not protocol errors. `TDataSet` results need `TMCPDataResource` — see `references/database-tools.md`.
 
@@ -95,6 +98,7 @@ Parameter/field types map to JSON Schema automatically: strings → `string`, in
 - **Any authentication requirement** — Bearer tokens, roles, hiding tools per user, OAuth login window for Claude/ChatGPT/Open WebUI: read `references/authorization.md` first, it also lists client-specific pitfalls that look like server bugs.
 - **Tools that query a database** (FireDAC, TFDQuery, TMARSFireDAC): read `references/database-tools.md` — dataset ownership rules matter.
 - **MCP resources or prompts** (attachable content like DB schemas, URI templates, reusable prompt templates): read `references/resources-prompts.md`.
+- **Interactive UIs / MCP Apps** (a chart, form or dashboard rendered by Claude or another host next to a tool result, `ui://` resources): read `references/mcp-apps.md`.
 
 ## Verify the server
 

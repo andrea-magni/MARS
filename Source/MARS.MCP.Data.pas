@@ -111,6 +111,7 @@ begin
     finally
       LRows.Free;
     end;
+    AddMeta(Result, AInfo.Meta);
   end
   else
     Result := inherited BuildResourceContents(AInfo, AURI, AValue);

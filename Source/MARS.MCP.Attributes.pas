@@ -14,6 +14,11 @@ uses
 , MARS.Core.Attributes
 ;
 
+const
+  // MCP Apps (extension io.modelcontextprotocol/ui): MIME type of an HTML view
+  MCP_APP_MIME_TYPE = 'text/html;profile=mcp-app';
+  MCP_APP_URI_SCHEME = 'ui://';
+
 type
   // Declares MCP server identity (initialize response). Apply to a TMCPResource descendant.
   MCPServerInfoAttribute = class(MARSAttribute)
@@ -108,6 +113,75 @@ type
     property DefaultJSON: string read FDefaultJSON;
   end;
 
+  // Adds metadata to the "_meta" of a tool or resource (tools/list, resources/list,
+  // resources/templates/list and resources/read contents). AMetaJSON is a JSON object
+  // literal, e.g. '{"ui":{"permissions":{"clipboardWrite":{}}}}'. Several attributes
+  // are merged; the MCPToolUI / MCPApp* attributes below are applied on top.
+  MCPMetaAttribute = class(MARSAttribute)
+  private
+    FMetaJSON: string;
+  public
+    constructor Create(const AMetaJSON: string);
+
+    property MetaJSON: string read FMetaJSON;
+  end;
+
+  // MCP Apps: links a tool to the UI resource (an MCPAppResource) that renders its
+  // results: _meta.ui.resourceUri. AVisibility, comma separated, sets _meta.ui.visibility:
+  // 'model,app' (the default when empty), 'app' (callable by the view only, hidden from
+  // the model) or 'model'.
+  MCPToolUIAttribute = class(MARSAttribute)
+  private
+    FResourceURI: string;
+    FVisibility: string;
+  public
+    constructor Create(const AResourceURI: string; const AVisibility: string = '');
+
+    property ResourceURI: string read FResourceURI;
+    property Visibility: string read FVisibility;
+  end;
+
+  // MCP Apps: a UI resource, an MCPResource with a ui:// URI whose method returns the
+  // HTML document of the view (MIME type text/html;profile=mcp-app).
+  MCPAppResourceAttribute = class(MCPResourceAttribute)
+  public
+    constructor Create(const AURI, ADescription: string); overload;
+    constructor Create(const AURI, AResourceName, ADescription: string); overload;
+  end;
+
+  // MCP Apps: origins the view of a UI resource may reach (_meta.ui.csp), each a comma
+  // separated list. Without it the host blocks every external origin.
+  //   AConnectDomains   fetch/XHR/WebSocket (connect-src)
+  //   AResourceDomains  scripts, styles, images, fonts, media (script-src, style-src, ...)
+  //   AFrameDomains     nested iframes (frame-src)
+  //   ABaseUriDomains   base URIs of the document (base-uri)
+  MCPAppCSPAttribute = class(MARSAttribute)
+  private
+    FConnectDomains: string;
+    FResourceDomains: string;
+    FFrameDomains: string;
+    FBaseUriDomains: string;
+  public
+    constructor Create(const AConnectDomains: string; const AResourceDomains: string = '';
+      const AFrameDomains: string = ''; const ABaseUriDomains: string = '');
+
+    property ConnectDomains: string read FConnectDomains;
+    property ResourceDomains: string read FResourceDomains;
+    property FrameDomains: string read FFrameDomains;
+    property BaseUriDomains: string read FBaseUriDomains;
+  end;
+
+  // MCP Apps: whether the host should draw a border and background around the view of a
+  // UI resource (_meta.ui.prefersBorder). Without it the host decides.
+  MCPAppBorderAttribute = class(MARSAttribute)
+  private
+    FPrefersBorder: Boolean;
+  public
+    constructor Create(const APrefersBorder: Boolean);
+
+    property PrefersBorder: Boolean read FPrefersBorder;
+  end;
+
 implementation
 
 { MCPServerInfoAttribute }
@@ -190,6 +264,55 @@ constructor MCPDefaultAttribute.Create(const ADefaultJSON: string);
 begin
   inherited Create;
   FDefaultJSON := ADefaultJSON;
+end;
+
+{ MCPMetaAttribute }
+
+constructor MCPMetaAttribute.Create(const AMetaJSON: string);
+begin
+  inherited Create;
+  FMetaJSON := AMetaJSON;
+end;
+
+{ MCPToolUIAttribute }
+
+constructor MCPToolUIAttribute.Create(const AResourceURI, AVisibility: string);
+begin
+  inherited Create;
+  FResourceURI := AResourceURI;
+  FVisibility := AVisibility;
+end;
+
+{ MCPAppResourceAttribute }
+
+constructor MCPAppResourceAttribute.Create(const AURI, ADescription: string);
+begin
+  Create(AURI, '', ADescription);
+end;
+
+constructor MCPAppResourceAttribute.Create(const AURI, AResourceName, ADescription: string);
+begin
+  inherited Create(AURI, AResourceName, ADescription, MCP_APP_MIME_TYPE);
+end;
+
+{ MCPAppCSPAttribute }
+
+constructor MCPAppCSPAttribute.Create(const AConnectDomains, AResourceDomains,
+  AFrameDomains, ABaseUriDomains: string);
+begin
+  inherited Create;
+  FConnectDomains := AConnectDomains;
+  FResourceDomains := AResourceDomains;
+  FFrameDomains := AFrameDomains;
+  FBaseUriDomains := ABaseUriDomains;
+end;
+
+{ MCPAppBorderAttribute }
+
+constructor MCPAppBorderAttribute.Create(const APrefersBorder: Boolean);
+begin
+  inherited Create;
+  FPrefersBorder := APrefersBorder;
 end;
 
 end.

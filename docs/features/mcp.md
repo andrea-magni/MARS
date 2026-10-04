@@ -153,6 +153,55 @@ Authorization applies here too: `[RolesAllowed]`/`[DenyAll]` on resource or prom
 
 The `initialize` response advertises the `resources` and `prompts` capabilities only when the class actually declares any. Client support varies: Claude (Desktop/Code) handles both, several other clients are tools-only — design your server so tools remain self-sufficient.
 
+## MCP Apps (interactive UIs)
+
+[MCP Apps](https://github.com/modelcontextprotocol/ext-apps) (extension `io.modelcontextprotocol/ui`) lets a tool come with an interactive HTML view that the host renders inline in the conversation, in a sandboxed iframe: charts, forms, dashboards. On the server side it takes two pieces, both plain attributes:
+
+- a **UI resource**: a `ui://` resource whose method returns the HTML document of the view (MIME type `text/html;profile=mcp-app`);
+- a **link** from the tool to that resource (`_meta.ui.resourceUri` in `tools/list`).
+
+```pascal
+const
+  DASHBOARD_VIEW = 'ui://my-server/dashboard.html';
+
+// the host renders the result of this tool with the view below
+[MCPTool('server_dashboard', 'Shows an interactive dashboard about this server')
+, MCPToolUI(DASHBOARD_VIEW)]
+function ServerDashboard: TServerInfo;
+
+// called by the view only (e.g. a Refresh button): hidden from the model
+[MCPTool('dashboard_refresh', 'Refreshes the dashboard'), MCPToolUI(DASHBOARD_VIEW, 'app')]
+function DashboardRefresh: TServerInfo;
+
+// the view
+[MCPAppResource(DASHBOARD_VIEW, 'dashboard_view', 'Interactive server dashboard')
+, MCPAppCSP('https://api.example.com', 'https://cdn.jsdelivr.net')
+, MCPAppBorder(True)]
+function DashboardView: string;
+```
+
+How the pieces work together:
+
+1. The host reads `tools/list`, sees `_meta.ui.resourceUri` and fetches the view with `resources/read`.
+2. When the model calls the tool, the host shows the view and passes it the tool arguments and the result. The view uses `structuredContent`, so return a record or an object: MARS sends it both as `structuredContent` and as JSON text in `content`, the text being what the model and the hosts without MCP Apps support see.
+3. The view can call tools of the same server (the host forwards a regular `tools/call`): with `MCPToolUI(uri, 'app')` a tool is reserved to the view and hosts hide it from the model.
+
+| Attribute | Where | Effect |
+| --- | --- | --- |
+| `MCPToolUI(uri [, visibility])` | tool method | `_meta.ui.resourceUri` (plus the deprecated `_meta["ui/resourceUri"]`, as the reference SDK does). `visibility`: `'model,app'` (default), `'app'` or `'model'`. |
+| `MCPAppResource(uri, [name,] description)` | method returning the HTML | a resource with MIME type `text/html;profile=mcp-app`; the URI must start with `ui://`. |
+| `MCPAppCSP(connect [, resource, frame, baseUri])` | UI resource | `_meta.ui.csp`: comma separated origins the view may reach (fetch/XHR/WebSocket, scripts/styles/images/fonts, nested iframes, base URIs). Without it the host blocks every external origin. |
+| `MCPAppBorder(Boolean)` | UI resource | `_meta.ui.prefersBorder`. |
+| `MCPMeta('<JSON object>')` | any tool or resource | free-form `_meta`, merged with the attributes above, e.g. `MCPMeta('{"ui":{"permissions":{"clipboardWrite":{}}}}')` or a host-specific `"domain"`. |
+
+The view talks to the host with JSON-RPC over `postMessage` (`ui/initialize`, then the `ui/notifications/tool-input` and `ui/notifications/tool-result` notifications, `tools/call` for interactions). It can use the [`@modelcontextprotocol/ext-apps`](https://www.npmjs.com/package/@modelcontextprotocol/ext-apps) SDK, or a few lines of plain JavaScript like the view of the [MCPServer demo](/demos/#mcpserver), which needs no external resource at all.
+
+::: tip Testing
+The ext-apps repository includes `basic-host`, a minimal MCP Apps host to try your views locally. It listens on ports 8080 and 8081, so move the MARS server to another port (e.g. `Port=8090`) and start the host with `SERVERS='["http://localhost:8090/rest/default/mcp"]'`. It runs in the browser: enable CORS on the MARS engine (`CORS.Enabled=True`, with `mcp-protocol-version` among the `CORS.Headers`).
+:::
+
+Since the server is stateless it does not look at the `io.modelcontextprotocol/ui` capability the client declares in `initialize`: UI metadata is always sent, hosts without MCP Apps support ignore it and use the text content.
+
 ## Authentication and authorization
 
 `TMCPResource` descendants are ordinary MARS resources, so both levels of the standard [authorization](/features/authorization) system apply:

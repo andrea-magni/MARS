@@ -48,6 +48,7 @@ type
     Name: string;
     Description: string;
     RttiMethod: TRttiMethod;
+    Meta: string; // "_meta" JSON object ('' = none), see BuildMeta
   end;
 
   TMCPResourceInfo = record
@@ -56,6 +57,7 @@ type
     Description: string;
     MimeType: string;
     RttiMethod: TRttiMethod;
+    Meta: string; // "_meta" JSON object ('' = none), see BuildMeta
     function IsTemplate: Boolean; // URI contains {param} placeholders
   end;
 
@@ -102,6 +104,11 @@ type
     FRttiContext: TRttiContext;
 
     function ScanCapabilities: TMCPCapabilities; virtual;
+    // "_meta" of a tool or resource from the attributes of its method ([MCPMeta],
+    // [MCPToolUI], [MCPAppCSP], [MCPAppBorder]): JSON object text, '' when there is none
+    function BuildMeta(const AMethod: TRttiMethod): string; virtual;
+    // adds "_meta" to AJSON when AMeta is not empty
+    procedure AddMeta(const AJSON: TJSONObject; const AMeta: string); virtual;
     procedure CollectCapabilities; virtual;
     function FindTool(const AName: string; out ATool: TMCPTool): Boolean; virtual;
     function IsToolAvailable(const ATool: TMCPTool): Boolean; virtual;
@@ -321,6 +328,7 @@ begin
           LTool.Name := LMethod.Name;
         LTool.Description := MCPToolAttribute(LAttribute).Description;
         LTool.RttiMethod := LMethod;
+        LTool.Meta := BuildMeta(LMethod);
 
         if not ContainsTool(LTool.Name) then
           LCaps.Tools := LCaps.Tools + [LTool];
@@ -336,6 +344,12 @@ begin
         if LResource.MimeType = '' then
           LResource.MimeType := DefaultMimeTypeFor(LMethod.ReturnType);
         LResource.RttiMethod := LMethod;
+        LResource.Meta := BuildMeta(LMethod);
+        if (LAttribute is MCPAppResourceAttribute)
+          and not LResource.URI.StartsWith(MCP_APP_URI_SCHEME, True) then
+          raise EMCPError.Create(JSONRPC_INTERNAL_ERROR, Format(
+            'MCP App resource "%s" (%s.%s): the URI must start with %s'
+            , [LResource.URI, LType.Name, LMethod.Name, MCP_APP_URI_SCHEME]));
 
         if (LResource.URI <> '') and (not ContainsResource(LResource.URI)) then
           LCaps.Resources := LCaps.Resources + [LResource];
@@ -354,6 +368,163 @@ begin
     end;
   end;
   Result := LCaps;
+end;
+
+// Copies the pairs of ASource into ATarget: nested objects are merged, any other value
+// replaces the existing one
+procedure MergeJSONObjects(const ATarget, ASource: TJSONObject);
+var
+  LPair: TJSONPair;
+  LName: string;
+  LExisting: TJSONValue;
+begin
+  for LPair in ASource do
+  begin
+    LName := LPair.JsonString.Value;
+    LExisting := ATarget.GetValue(LName);
+    if (LExisting is TJSONObject) and (LPair.JsonValue is TJSONObject) then
+      MergeJSONObjects(TJSONObject(LExisting), TJSONObject(LPair.JsonValue))
+    else
+    begin
+      if Assigned(LExisting) then
+        ATarget.RemovePair(LName).Free;
+      ATarget.AddPair(LName, LPair.JsonValue.Clone as TJSONValue);
+    end;
+  end;
+end;
+
+procedure SetJSONPair(const ATarget: TJSONObject; const AName: string; const AValue: TJSONValue);
+begin
+  ATarget.RemovePair(AName).Free;
+  ATarget.AddPair(AName, AValue);
+end;
+
+function CommaListToJSONArray(const AList: string): TJSONArray;
+var
+  LItem: string;
+begin
+  Result := TJSONArray.Create;
+  for LItem in AList.Split([',']) do
+    if LItem.Trim <> '' then
+      Result.Add(LItem.Trim);
+end;
+
+function TMCPDispatcher.BuildMeta(const AMethod: TRttiMethod): string;
+var
+  LMeta, LUI, LCSP: TJSONObject;
+  LAttribute: TCustomAttribute;
+  LParsed: TJSONValue;
+  LVisibility: TJSONArray;
+  LItem: TJSONValue;
+  LWhere, LInvalid: string;
+
+  // _meta.ui, created when missing
+  function UI: TJSONObject;
+  var
+    LValue: TJSONValue;
+  begin
+    LValue := LMeta.GetValue('ui');
+    if not Assigned(LValue) then
+    begin
+      Result := TJSONObject.Create;
+      LMeta.AddPair('ui', Result);
+    end
+    else if LValue is TJSONObject then
+      Result := TJSONObject(LValue)
+    else
+      raise EMCPError.Create(JSONRPC_INTERNAL_ERROR, LWhere + ': _meta.ui must be a JSON object');
+  end;
+
+  procedure AddCSPList(const AName, AList: string);
+  var
+    LArray: TJSONArray;
+  begin
+    LArray := CommaListToJSONArray(AList);
+    if LArray.Count > 0 then
+      LCSP.AddPair(AName, LArray)
+    else
+      LArray.Free;
+  end;
+
+begin
+  Result := '';
+  LWhere := Format('%s.%s', [AMethod.Parent.Name, AMethod.Name]);
+  LMeta := TJSONObject.Create;
+  try
+    // generic metadata first, the MCP Apps attributes below win over it
+    for LAttribute in AMethod.GetAttributes do
+      if LAttribute is MCPMetaAttribute then
+      begin
+        LParsed := TJSONObject.ParseJSONValue(MCPMetaAttribute(LAttribute).MetaJSON);
+        try
+          if not (LParsed is TJSONObject) then
+            raise EMCPError.Create(JSONRPC_INTERNAL_ERROR, Format(
+              '[MCPMeta] on %s is not a JSON object: %s', [LWhere, MCPMetaAttribute(LAttribute).MetaJSON]));
+          MergeJSONObjects(LMeta, TJSONObject(LParsed));
+        finally
+          LParsed.Free;
+        end;
+      end;
+
+    for LAttribute in AMethod.GetAttributes do
+      if LAttribute is MCPToolUIAttribute then
+      begin
+        SetJSONPair(UI, 'resourceUri', TJSONString.Create(MCPToolUIAttribute(LAttribute).ResourceURI));
+        if MCPToolUIAttribute(LAttribute).Visibility <> '' then
+        begin
+          LVisibility := CommaListToJSONArray(MCPToolUIAttribute(LAttribute).Visibility);
+          LInvalid := '';
+          for LItem in LVisibility do
+            if IndexStr(LItem.Value, ['model', 'app']) < 0 then
+              LInvalid := LItem.Value;
+          if LInvalid <> '' then
+          begin
+            LVisibility.Free;
+            raise EMCPError.Create(JSONRPC_INTERNAL_ERROR, Format(
+              '[MCPToolUI] on %s: invalid visibility "%s" (use model, app or both)', [LWhere, LInvalid]));
+          end;
+          SetJSONPair(UI, 'visibility', LVisibility);
+        end;
+      end
+      else if LAttribute is MCPAppCSPAttribute then
+      begin
+        LCSP := TJSONObject.Create;
+        SetJSONPair(UI, 'csp', LCSP);
+        AddCSPList('connectDomains', MCPAppCSPAttribute(LAttribute).ConnectDomains);
+        AddCSPList('resourceDomains', MCPAppCSPAttribute(LAttribute).ResourceDomains);
+        AddCSPList('frameDomains', MCPAppCSPAttribute(LAttribute).FrameDomains);
+        AddCSPList('baseUriDomains', MCPAppCSPAttribute(LAttribute).BaseUriDomains);
+      end
+      else if LAttribute is MCPAppBorderAttribute then
+        SetJSONPair(UI, 'prefersBorder', TJSONBool.Create(MCPAppBorderAttribute(LAttribute).PrefersBorder));
+
+    // deprecated flat key, still written by the reference SDK for hosts not reading
+    // _meta.ui.resourceUri yet
+    LUI := nil;
+    if LMeta.GetValue('ui') is TJSONObject then
+      LUI := TJSONObject(LMeta.GetValue('ui'));
+    if Assigned(LUI) and (LUI.GetValue('resourceUri') is TJSONString)
+       and not Assigned(LMeta.GetValue('ui/resourceUri')) then
+      LMeta.AddPair('ui/resourceUri', LUI.GetValue('resourceUri').Value);
+
+    if LMeta.Count > 0 then
+      Result := LMeta.ToJSON;
+  finally
+    LMeta.Free;
+  end;
+end;
+
+procedure TMCPDispatcher.AddMeta(const AJSON: TJSONObject; const AMeta: string);
+var
+  LMeta: TJSONValue;
+begin
+  if AMeta = '' then
+    Exit;
+  LMeta := TJSONObject.ParseJSONValue(AMeta);
+  if LMeta is TJSONObject then
+    AJSON.AddPair('_meta', LMeta)
+  else
+    LMeta.Free;
 end;
 
 function TMCPDispatcher.FindTool(const AName: string; out ATool: TMCPTool): Boolean;
@@ -531,6 +702,7 @@ begin
   if ATool.Description <> '' then
     Result.AddPair('description', ATool.Description);
   Result.AddPair('inputSchema', BuildInputSchema(ATool.RttiMethod));
+  AddMeta(Result, ATool.Meta);
 end;
 
 function TMCPDispatcher.BuildInputSchema(const AMethod: TRttiMethod): TJSONObject;
@@ -947,6 +1119,7 @@ begin
       LItem.AddPair('description', LInfo.Description);
     if LInfo.MimeType <> '' then
       LItem.AddPair('mimeType', LInfo.MimeType);
+    AddMeta(LItem, LInfo.Meta);
     LArray.AddElement(LItem);
   end;
 
@@ -975,6 +1148,7 @@ begin
       LItem.AddPair('description', LInfo.Description);
     if LInfo.MimeType <> '' then
       LItem.AddPair('mimeType', LInfo.MimeType);
+    AddMeta(LItem, LInfo.Meta);
     LArray.AddElement(LItem);
   end;
 
@@ -1165,6 +1339,9 @@ begin
       end;
     end;
   end;
+
+  // MCP Apps: hosts read _meta.ui (csp, prefersBorder, ...) from the contents
+  AddMeta(Result, AInfo.Meta);
 end;
 
 function TMCPDispatcher.HandleResourcesRead(const AParams: TJSONObject): TJSONValue;
