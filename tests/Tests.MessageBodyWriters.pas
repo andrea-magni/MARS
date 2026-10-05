@@ -61,6 +61,27 @@ type
     procedure NestedArrays;
   end;
 
+  // TJSONValueWriter output options (issue #208: JSON.EscapeNonASCII)
+  [TestFixture('MBW_JSONValue')]
+  TMARSJSONValueWriterTest = class(TObject)
+  private
+    FSavedDefault: Boolean;
+    function WriteJSON(const AText: string): string;
+    function Params(const AEscapeNonASCII: Boolean): TObject;
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+
+    [Test] procedure EscapesByDefault;
+    [Test] procedure ParameterFalseWithUnicodeEncodings;
+    [Test] procedure NonUnicodeEncodingKeepsEscapes;
+    [Test] procedure ParameterOverridesDefault;
+    [Test] procedure WritesRawUTF8WhenNotEscaping;
+    [Test] procedure ControlCharactersAlwaysEscaped;
+  end;
+
   function GetRecordMBW: IMessageBodyWriter;
   function GetArrayOfRecordMBW: IMessageBodyWriter;
 
@@ -68,9 +89,13 @@ implementation
 
 uses
   DateUtils, Rtti, Generics.Collections
-, System.JSON, MARS.Core.JSON
+, System.JSON, MARS.Core.JSON, MARS.Utils.Parameters
 , Tests.Records.Types
 ;
+
+const
+  // "Gardero", Cyrillic (U+0413 U+0430 U+0440 U+0434 U+0435 U+0440 U+043E)
+  CYRILLIC_TEXT = #$0413#$0430#$0440#$0434#$0435#$0440#$043E;
 
 function GetRecordMBW: IMessageBodyWriter;
 begin
@@ -418,8 +443,130 @@ begin
   end;
 end;
 
+{ TMARSJSONValueWriterTest }
+
+procedure TMARSJSONValueWriterTest.Setup;
+begin
+  FSavedDefault := TJSONValueWriter.DefaultEscapeNonASCII;
+end;
+
+procedure TMARSJSONValueWriterTest.TearDown;
+begin
+  TJSONValueWriter.DefaultEscapeNonASCII := FSavedDefault;
+end;
+
+function TMARSJSONValueWriterTest.Params(const AEscapeNonASCII: Boolean): TObject;
+var
+  LParams: TMARSParameters;
+begin
+  LParams := TMARSParameters.Create('');
+  LParams.Values[JSON_ESCAPENONASCII_PARAM] := AEscapeNonASCII; // what the ini reader produces for true/false
+  Result := LParams;
+end;
+
+function TMARSJSONValueWriterTest.WriteJSON(const AText: string): string;
+var
+  LWriter: IMessageBodyWriter;
+  LMediaType: TMediaType;
+  LJSON: TJSONObject;
+  LStream: TBytesStream;
+begin
+  LWriter := TJSONValueWriter.Create;
+  LMediaType := TMediaType.Create(TMediaType.APPLICATION_JSON);
+  LJSON := TJSONObject.Create;
+  LStream := TBytesStream.Create;
+  try
+    LJSON.AddPair('name', AText);
+    LWriter.WriteTo(LJSON, LMediaType, LStream, nil); // no activation: UTF-8, DefaultEscapeNonASCII
+    Result := TEncoding.UTF8.GetString(LStream.Bytes, 0, LStream.Size);
+  finally
+    LStream.Free;
+    LJSON.Free;
+    LMediaType.Free;
+  end;
+end;
+
+procedure TMARSJSONValueWriterTest.EscapesByDefault;
+begin
+  Assert.IsTrue(TJSONValueWriter.DefaultEscapeNonASCII, 'default unchanged for existing applications');
+  Assert.IsTrue(TJSONValueWriter.JSONOutputOptions(nil, TEncoding.UTF8)
+    = [TJSONAncestor.TJSONOutputOption.EncodeBelow32, TJSONAncestor.TJSONOutputOption.EncodeAbove127]);
+  Assert.AreEqual('{"name":"\u0413\u0430\u0440\u0434\u0435\u0440\u043E"}', WriteJSON(CYRILLIC_TEXT));
+end;
+
+procedure TMARSJSONValueWriterTest.ParameterFalseWithUnicodeEncodings;
+var
+  LParams: TMARSParameters;
+begin
+  LParams := Params(False) as TMARSParameters;
+  try
+    Assert.IsTrue(TJSONValueWriter.JSONOutputOptions(LParams, TEncoding.UTF8)
+      = [TJSONAncestor.TJSONOutputOption.EncodeBelow32], 'UTF-8');
+    Assert.IsTrue(TJSONValueWriter.JSONOutputOptions(LParams, TEncoding.Unicode)
+      = [TJSONAncestor.TJSONOutputOption.EncodeBelow32], 'UTF-16 LE');
+    Assert.IsTrue(TJSONValueWriter.JSONOutputOptions(LParams, TEncoding.BigEndianUnicode)
+      = [TJSONAncestor.TJSONOutputOption.EncodeBelow32], 'UTF-16 BE');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONValueWriterTest.NonUnicodeEncodingKeepsEscapes;
+var
+  LParams: TMARSParameters;
+begin
+  // ASCII cannot represent the characters: escaping them is the only way not to lose them
+  LParams := Params(False) as TMARSParameters;
+  try
+    Assert.IsTrue(TEncoding.ASCII.CodePage <> 65001);
+    Assert.IsTrue(TJSONAncestor.TJSONOutputOption.EncodeAbove127
+      in TJSONValueWriter.JSONOutputOptions(LParams, TEncoding.ASCII));
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONValueWriterTest.ParameterOverridesDefault;
+var
+  LParams: TMARSParameters;
+begin
+  TJSONValueWriter.DefaultEscapeNonASCII := False;
+  LParams := Params(True) as TMARSParameters;
+  try
+    Assert.IsTrue(TJSONAncestor.TJSONOutputOption.EncodeAbove127
+      in TJSONValueWriter.JSONOutputOptions(LParams, TEncoding.UTF8), 'JSON.EscapeNonASCII=true wins');
+    Assert.IsFalse(TJSONAncestor.TJSONOutputOption.EncodeAbove127
+      in TJSONValueWriter.JSONOutputOptions(nil, TEncoding.UTF8), 'no parameters: the default applies');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONValueWriterTest.WritesRawUTF8WhenNotEscaping;
+var
+  LJSON: string;
+begin
+  TJSONValueWriter.DefaultEscapeNonASCII := False;
+  LJSON := WriteJSON(CYRILLIC_TEXT);
+  Assert.AreEqual('{"name":"' + CYRILLIC_TEXT + '"}', LJSON, 'UTF-8 text, no \u escapes');
+  var LParsed := TJSONObject.ParseJSONValue(LJSON);
+  try
+    Assert.AreEqual(CYRILLIC_TEXT, (LParsed as TJSONObject).GetValue<string>('name'), 'still valid JSON');
+  finally
+    LParsed.Free;
+  end;
+end;
+
+procedure TMARSJSONValueWriterTest.ControlCharactersAlwaysEscaped;
+begin
+  // JSON requires U+0000..U+001F to be escaped: ToJSON([]) would not, [EncodeBelow32] does
+  TJSONValueWriter.DefaultEscapeNonASCII := False;
+  Assert.AreEqual('{"name":"a\u0001b\nc' + CYRILLIC_TEXT + '"}', WriteJSON('a'#1'b'#10'c' + CYRILLIC_TEXT));
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRecordWriterTest);
+  TDUnitX.RegisterTestFixture(TMARSJSONValueWriterTest);
   TDUnitX.RegisterTestFixture(TMARSArrayOfRecordWriterTest);
 
 

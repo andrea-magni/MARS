@@ -8,14 +8,20 @@ unit MARS.Core.MessageBodyWriters;
 interface
 
 uses
-  Classes, SysUtils, Rtti
+  Classes, SysUtils, Rtti, System.JSON
 
   , MARS.Core.Attributes
   , MARS.Core.Declarations
   , MARS.Core.MediaType
   , MARS.Core.MessageBodyWriter
   , MARS.Core.Activation.Interfaces
+  , MARS.Utils.Parameters
 ;
+
+const
+  // Application parameter: false writes the characters above 127 as they are instead of
+  // \uXXXX escapes (only when the response encoding is Unicode, UTF-8 by default)
+  JSON_ESCAPENONASCII_PARAM = 'JSON.EscapeNonASCII';
 
 type
   [Produces(TMediaType.APPLICATION_JSON)]
@@ -42,8 +48,17 @@ type
   TJSONValueWriter = class(TInterfacedObject, IMessageBodyWriter)
   protected
   public
+    // Used when the application does not set JSON.EscapeNonASCII (and without an activation)
+    class var DefaultEscapeNonASCII: Boolean;
+
     procedure WriteTo(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation);
+
+    // How JSON text is written for AParameters (application parameters, may be nil) and
+    // AEncoding: characters below 32 are always escaped (required by JSON), characters above 127
+    // unless JSON.EscapeNonASCII is false and AEncoding is Unicode (UTF-8, UTF-16 or UTF-32)
+    class function JSONOutputOptions(const AParameters: TMARSParameters;
+      const AEncoding: TEncoding): TJSONAncestor.TJSONOutputOptions;
 
     class procedure WriteJSONValue(const AValue: TValue; const AMediaType: TMediaType;
       AOutputStream: TStream; const AActivation: IMARSActivation); inline;
@@ -111,7 +126,7 @@ type
 implementation
 
 uses
-  System.TypInfo, Xml.XMLIntf, System.JSON
+  System.TypInfo, Xml.XMLIntf
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
 //, CodeSiteLogging
 ;
@@ -175,6 +190,27 @@ end;
 
 { TJSONValueWriter }
 
+class function TJSONValueWriter.JSONOutputOptions(const AParameters: TMARSParameters;
+  const AEncoding: TEncoding): TJSONAncestor.TJSONOutputOptions;
+var
+  LEscapeNonASCII: Boolean;
+begin
+  LEscapeNonASCII := DefaultEscapeNonASCII;
+  if Assigned(AParameters) then
+    LEscapeNonASCII := AParameters.ByName(JSON_ESCAPENONASCII_PARAM, LEscapeNonASCII).AsBoolean;
+
+  // an encoding that cannot represent every character keeps the escapes: nothing gets lost
+  if not LEscapeNonASCII then
+    LEscapeNonASCII := not (Assigned(AEncoding)
+      and ((AEncoding.CodePage = 65001) // UTF-8
+        or (AEncoding.CodePage = 1200) or (AEncoding.CodePage = 1201) // UTF-16 LE/BE
+        or (AEncoding.CodePage = 12000) or (AEncoding.CodePage = 12001))); // UTF-32 LE/BE
+
+  Result := [TJSONAncestor.TJSONOutputOption.EncodeBelow32];
+  if LEscapeNonASCII then
+    Include(Result, TJSONAncestor.TJSONOutputOption.EncodeAbove127);
+end;
+
 class procedure TJSONValueWriter.WriteJSONValue(const AValue: TValue;
   const AMediaType: TMediaType; AOutputStream: TStream;
   const AActivation: IMARSActivation);
@@ -195,9 +231,16 @@ var
   LEncoding: TEncoding;
   LContentBytes: TBytes;
   LJSONArray: TJSONArray;
+  LParameters: TMARSParameters;
+  LOutputOptions: TJSONAncestor.TJSONOutputOptions;
 begin
   if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
+
+  LParameters := nil;
+  if Assigned(AActivation) and Assigned(AActivation.Application) then
+    LParameters := AActivation.Application.Parameters;
+  LOutputOptions := JSONOutputOptions(LParameters, LEncoding);
 
   LJSONString := '';
   if AValue.IsType<string> then
@@ -206,7 +249,7 @@ begin
   begin
     LJSONArray := StringArrayToJsonArray(AValue.AsType<TArray<string>>);
     try
-      LJSONString := LJSONArray.ToJSON;
+      LJSONString := LJSONArray.ToJSON(LOutputOptions);
     finally
       LJSONArray.Free;
     end;
@@ -214,7 +257,7 @@ begin
   else if AValue.IsType<TJSONValue> then
   begin
     LJSONValue := AValue.AsObject as TJSONValue;
-    LJSONString := LJSONValue.ToJSON;
+    LJSONString := LJSONValue.ToJSON(LOutputOptions);
   end;
   if LJSONString = '' then
     Exit;
@@ -686,6 +729,7 @@ begin
 end;
 
 initialization
+  TJSONValueWriter.DefaultEscapeNonASCII := True;
   RegisterWriters;
 
 end.

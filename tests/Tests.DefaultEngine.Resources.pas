@@ -12,6 +12,14 @@ uses
 ;
 
 type
+  // a JSON response with non-ASCII text (issue #208, JSON.EscapeNonASCII)
+  [Path('unicodejson')]
+  TUnicodeJSONResource = class
+  public
+    [GET, Produces(TMediaType.APPLICATION_JSON)]
+    function GetContent: TJSONObject;
+  end;
+
   [Path('helloworld')]
   THelloWorldResource = class
   private
@@ -145,6 +153,14 @@ end;
 
 { THelloWorldResource }
 
+{ TUnicodeJSONResource }
+
+function TUnicodeJSONResource.GetContent: TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Result.AddPair('name', #$0413#$0430#$0440#$0434#$0435#$0440#$043E); // Cyrillic
+end;
+
 function THelloWorldResource.GetContent: string;
 begin
   Result := 'Hello, world!';
@@ -188,7 +204,7 @@ begin
 end;
 
 initialization
-  MARSRegister([THelloWorldResource, TWildcardResource, TItemResource
+  MARSRegister([THelloWorldResource, TUnicodeJSONResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);
 

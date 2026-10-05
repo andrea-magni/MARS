@@ -73,6 +73,30 @@ The fields you can set:
 
 The default is "skip most empty/null values, ISO-8601 UTC dates".
 
+## Non-ASCII characters
+
+By default the JSON text of a response escapes every character above 127: `"Città"` is sent as
+`"Citt\u00E0"`. It is valid JSON and every client decodes it, but it is hard to read while
+debugging and takes more bytes. Set the `JSON.EscapeNonASCII` [application parameter](/reference/parameters#json-parameters-per-application)
+to `false` to send the characters as they are:
+
+```ini
+[DefaultEngine]
+DefaultApp.JSON.EscapeNonASCII=false
+```
+
+or change the default for every application in code, during ignition:
+
+```pascal
+uses MARS.Core.MessageBodyWriters;
+
+TJSONValueWriter.DefaultEscapeNonASCII := False;
+```
+
+Control characters (below 32) are always escaped, as JSON requires. When a resource sets a
+non-Unicode response encoding with `[Encoding]`, the escapes are kept, so no character is lost.
+The setting applies to every JSON response written by MARS: objects, records, arrays, datasets.
+
 ## Per-field control attributes
 
 Annotate record/class fields to override the global behavior:

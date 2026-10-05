@@ -20,6 +20,9 @@ ThreadPoolSize=100
 ;DefaultApp.JWT.Duration.InMinutes=60
 ;DefaultApp.JWT.CookieSecure=false
 
+;JSON responses: false writes non-ASCII characters as they are instead of \uXXXX escapes
+;DefaultApp.JSON.EscapeNonASCII=true
+
 ;Compression.Enabled=True
 
 ;CORS.Enabled=True

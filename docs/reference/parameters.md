@@ -71,6 +71,12 @@ The default secret ships in the public source and is never used unless you opt i
 into the `.ini` files of every project it creates.
 :::
 
+## JSON parameters (per application)
+
+| Parameter | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `JSON.EscapeNonASCII` | Boolean | `True` | Escape the characters above 127 as `\uXXXX` in JSON responses. `False` writes them as they are (Unicode response encodings only). See [Non-ASCII characters](/features/serialization#non-ascii-characters). |
+
 ## Logging parameters
 
 Read by the [request/response loggers](/features/logging) (engine section). Each logger is inert until both its unit is in the server's `uses` clause and its `Enabled` flag is set.

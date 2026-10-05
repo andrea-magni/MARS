@@ -55,6 +55,9 @@ type
     procedure TestHelloWorld;
 
     [Test]
+    procedure TestJSONEscapeNonASCIIParameter;
+
+    [Test]
     procedure TestWildcard;
 
     [Test]
@@ -221,6 +224,29 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual('Hello, World!', LMock.Response.Content, 'Content should be Hello, World!');
+end;
+
+procedure TMARSDefaultEngineFixture.TestJSONEscapeNonASCIIParameter;
+const
+  CYRILLIC_TEXT = #$0413#$0430#$0440#$0434#$0435#$0440#$043E;
+begin
+  // default: non-ASCII characters escaped, as before
+  var LMock := MockRequestAndResponse('GET', ResourcePath('unicodejson'));
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('{"name":"\u0413\u0430\u0440\u0434\u0435\u0440\u043E"}', LMock.Response.Content);
+
+  // DefaultApp.JSON.EscapeNonASCII=false: plain UTF-8
+  var LParameters := DefaultEngine.Engine.ApplicationByName('DefaultApp').Parameters;
+  LParameters.Values['JSON.EscapeNonASCII'] := False;
+  try
+    LMock := MockRequestAndResponse('GET', ResourcePath('unicodejson'));
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.AreEqual('{"name":"' + CYRILLIC_TEXT + '"}', LMock.Response.Content);
+  finally
+    LParameters.Values['JSON.EscapeNonASCII'] := True;
+  end;
 end;
 
 procedure TMARSDefaultEngineFixture.TestItemResourceWithValidBody;

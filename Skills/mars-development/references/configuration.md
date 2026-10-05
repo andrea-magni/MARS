@@ -39,6 +39,7 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 | `JWT.Issuer` | default `MARS-Curiosity` |
 | `JWT.Duration` | days; alternatives `JWT.Duration.InSeconds`, `JWT.Duration.InMinutes` |
 | `JWT.CookieEnabled`, `JWT.CookieName`, `JWT.CookieDomain`, `JWT.CookiePath`, `JWT.CookieSecure` | cookie-based token transport |
+| `JSON.EscapeNonASCII` | default `true` (characters above 127 sent as `\uXXXX` in JSON responses); `false` writes them as they are (Unicode response encodings only); code-level default `TJSONValueWriter.DefaultEscapeNonASCII` |
 
 ## Reading parameters in code
 
