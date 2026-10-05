@@ -2,7 +2,7 @@
 # See https://doc.tmssoftware.com/smartsetup/guide/creating-bundles.html
 # yaml-language-server: $schema=https://raw.githubusercontent.com/tmssoftware/smartsetup/refs/heads/main/tms/example-config/tmsbuild.schema.json
 
-minimum required tmsbuild version: 2.1
+minimum required tmsbuild version: 3.5
 
 application:
   id: andreamagni.mars
@@ -17,7 +17,7 @@ application:
   version file: version.txt
 
 # delphi-jose-jwt (ThirdParty/delphi-jose-jwt) is a git submodule for manual installs; with Smart
-# Setup it comes from its own product, rossi.delphi-jose-jwt, so the submodule is not fetched.
+# Setup it comes from its own product, paolo-rossi.delphi-jose-jwt, so the submodule is not fetched.
 fetch options:
   skip submodules: true
 
@@ -28,7 +28,7 @@ supported frameworks:
       - win32intel
       - win64intel
 
-  # weak dependency: MARS.JOSE (JOSE JWT backend) is built only when rossi.delphi-jose-jwt is installed;
+  # weak dependency: MARS.JOSE (JOSE JWT backend) is built only when paolo-rossi.delphi-jose-jwt is installed;
   # the mORMot JWT backend (MARS.mORMot) needs nothing else
   jose:
     ide since: delphisydney
@@ -36,7 +36,7 @@ supported frameworks:
       - win32intel
       - win64intel
     dependencies:
-      - rossi.delphi-jose-jwt
+      - paolo-rossi.delphi-jose-jwt
 
 packages:
   - MARS.Utils: [runtime, rtl]
@@ -67,3 +67,10 @@ paths:
     - ThirdParty/mORMot/Source
     - ThirdParty/Neslib.Yaml
     - ThirdParty/Neslib.Yaml/Neslib
+
+  build-only library paths:
+    - ThirdParty/DCS
+    - ThirdParty/DCS/Utils
+    - ThirdParty/DCS/Net
+    - ThirdParty/DCS/ThirdParty/cnvcl/Source/Crypto
+    - ThirdParty/DCS/ThirdParty/cnvcl/Source/Common

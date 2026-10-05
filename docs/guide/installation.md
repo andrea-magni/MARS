@@ -13,7 +13,7 @@ The fastest way to get started:
 
 [TMS Smart Setup](https://doc.tmssoftware.com/smartsetup/) is a free, open-source command-line tool that downloads, builds and registers Delphi libraries. MARS ships a `tmsbuild.yaml`, so Smart Setup can build it from sources for every supported Delphi version installed on your machine (**10.4 Sydney** and newer, Win32/Win64).
 
-1. [Download and install Smart Setup](https://doc.tmssoftware.com/smartsetup/download/).
+1. [Download and install Smart Setup](https://doc.tmssoftware.com/smartsetup/download/) (version 3.5 or later).
 2. The community server, where open-source libraries are listed, is disabled by default. Enable it once:
 
    ```bash
@@ -31,19 +31,10 @@ Smart Setup clones the repository, compiles the runtime and design-time packages
 The JOSE [JWT backend](/features/authentication#jwt-backends) (`MARS.JOSE` package) uses the [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) library, which Smart Setup installs as a product of its own: `MARS.JOSE` is built only when it is installed. The mORMot backend, the default on Windows, needs nothing else. To use JOSE:
 
 ```bash
-tms install rossi.delphi-jose-jwt
+tms install paolo-rossi.delphi-jose-jwt
 ```
 
 Installing it after MARS is fine: Smart Setup rebuilds MARS and adds `MARS.JOSE`.
-
-::: tip Not listed yet?
-If `tms install andreamagni.mars` reports that the product is unknown, it has not reached the community server yet. In the meantime, clone MARS into your Smart Setup folder (the folder containing `tms.config.yaml`; `tms config -print` shows it) and build it, running both commands from that folder:
-
-```bash
-git clone https://github.com/andrea-magni/MARS.git
-tms build
-```
-:::
 
 ::: warning
 Use one installation method only. If MARS is already installed with the executable installer or manually, remove it first, so the IDE doesn't load two copies of the same packages.

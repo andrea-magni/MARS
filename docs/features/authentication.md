@@ -225,7 +225,7 @@ Two interchangeable signing backends are provided; pick one by adding the corres
 
 Both produce standard HS256 tokens and accept only HS256 tokens (the `alg` in the token header never selects the algorithm); they differ only in the underlying library.
 
-The mORMot units ship with MARS. The JOSE backend relies on the [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) library: a git submodule of the MARS repository (`ThirdParty\delphi-jose-jwt`) and, with [TMS Smart Setup](/guide/installation#tms-smart-setup), the `rossi.delphi-jose-jwt` product. The `MARS.JOSE` package requires its `JOSE` package.
+The mORMot units ship with MARS. The JOSE backend relies on the [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) library: a git submodule of the MARS repository (`ThirdParty\delphi-jose-jwt`) and, with [TMS Smart Setup](/guide/installation#tms-smart-setup), the `paolo-rossi.delphi-jose-jwt` product. The `MARS.JOSE` package requires its `JOSE` package.
 
 ## Token renewal
 
