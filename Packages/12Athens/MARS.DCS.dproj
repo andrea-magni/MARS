@@ -28,7 +28,7 @@
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
-        <DCC_UnitSearchPath>..\..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\Source;..\..\ThirdParty\DCS;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\Crypto;..\..\ThirdParty\DCS\ThirdParty\cnvcl\Source\Common;..\..\ThirdParty\DCS\Utils;..\..\ThirdParty\DCS\Net;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DllSuffix>$(Auto)</DllSuffix>
         <DCC_Description>MARS-Curiosity REST Library - DelphiCrossSocket support</DCC_Description>
         <GenPackage>true</GenPackage>
