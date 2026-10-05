@@ -76,6 +76,17 @@ into the `.ini` files of every project it creates.
 | Parameter | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `JSON.EscapeNonASCII` | Boolean | `True` | Escape the characters above 127 as `\uXXXX` in JSON responses. `False` writes them as they are (Unicode response encodings only). See [Non-ASCII characters](/features/serialization#non-ascii-characters). |
+| `JSON.SkipEmptyValues` | Boolean | — | Shortcut: sets all the `JSON.Skip*` options below. |
+| `JSON.SkipEmptyStrings` | Boolean | `True` | Omit `""` values. |
+| `JSON.SkipEmptyNumbers` | Boolean | `False` | Omit zero numbers. |
+| `JSON.SkipEmptyBooleans` | Boolean | `True` | Omit `false` values. |
+| `JSON.SkipEmptyObjects` | Boolean | `True` | Omit empty `{}`. |
+| `JSON.SkipEmptyArrays` | Boolean | `True` | Omit empty `[]`. |
+| `JSON.SkipNullValues` | Boolean | `True` | Omit `null`. |
+| `JSON.DateIsUTC` | Boolean | `True` only on a UTC+0 machine | Write and read `TDateTime` values as UTC. |
+| `JSON.UseDisplayFormatForNumericFields` | Boolean | `False` | Use the display format of dataset numeric fields. |
+
+Defaults are those of `DefaultMARSJSONSerializationOptions`; resource and method attributes win over these parameters. See [Serialization options](/features/serialization#serialization-options).
 
 ## Logging parameters
 

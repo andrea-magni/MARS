@@ -15,7 +15,22 @@ uses
   , Classes, SysUtils
   , System.Rtti
   , TypInfo, REST.JSON
+  , MARS.Utils.Parameters
 ;
+
+const
+  // Application parameters for the JSON serialization options (see
+  // TMARSJSONSerializationOptions.AdjustWith(AParameters)). JSON.SkipEmptyValues sets all the
+  // Skip* options at once; the specific ones, when present, win over it.
+  JSON_SKIPEMPTYVALUES_PARAM = 'JSON.SkipEmptyValues';
+  JSON_SKIPEMPTYSTRINGS_PARAM = 'JSON.SkipEmptyStrings';
+  JSON_SKIPEMPTYNUMBERS_PARAM = 'JSON.SkipEmptyNumbers';
+  JSON_SKIPEMPTYBOOLEANS_PARAM = 'JSON.SkipEmptyBooleans';
+  JSON_SKIPEMPTYOBJECTS_PARAM = 'JSON.SkipEmptyObjects';
+  JSON_SKIPEMPTYARRAYS_PARAM = 'JSON.SkipEmptyArrays';
+  JSON_SKIPNULLVALUES_PARAM = 'JSON.SkipNullValues';
+  JSON_DATEISUTC_PARAM = 'JSON.DateIsUTC';
+  JSON_USEDISPLAYFORMATFORNUMERICFIELDS_PARAM = 'JSON.UseDisplayFormatForNumericFields';
 
 type
   TJSONAncestor = JSON.TJSONAncestor;
@@ -71,7 +86,7 @@ type
     SkipNullValues: Boolean;
 
     DateIsUTC: Boolean;
-    DateFormat: TMARSJSONDateFormat;
+    DateFormat: TMARSJSONDateFormat; // not used yet: dates are always ISO 8601
 //    joDateFormatUnix
 //    joDateFormatISO8601
 //    joDateFormatMongo
@@ -90,7 +105,10 @@ type
     procedure IncludeEmptyOrNullValues;
     procedure SkipAllEmptyOrNullValues;
 
-    function AdjustWith(const AAttributes: TArray<TCustomAttribute>): TMARSJSONSerializationOptions;
+    function AdjustWith(const AAttributes: TArray<TCustomAttribute>): TMARSJSONSerializationOptions; overload;
+    // applies the JSON.* parameters present in AParameters (application parameters, may be
+    // nil); raises EArgumentException for a value that is not a boolean
+    function AdjustWith(const AParameters: TMARSParameters): TMARSJSONSerializationOptions; overload;
   end;
 
   JSONIncludeEmptyValuesAttribute = class(TCustomAttribute);
@@ -2097,6 +2115,56 @@ function TMARSJSONSerializationOptions.AdjustWith(
 begin
   Result := Self;
   ComputeJSONSerializationOptions(Result, AAttributes);
+end;
+
+function TMARSJSONSerializationOptions.AdjustWith(
+  const AParameters: TMARSParameters): TMARSJSONSerializationOptions;
+
+  // True and the value when AName is present (a Boolean from the .ini reader, or a string)
+  function TryGetBoolean(const AName: string; out AValue: Boolean): Boolean;
+  var
+    LValue: TValue;
+  begin
+    Result := AParameters.ContainsParam(AName);
+    if not Result then
+      Exit;
+    LValue := AParameters.ByName(AName);
+    if LValue.TypeInfo = TypeInfo(Boolean) then
+      AValue := LValue.AsBoolean
+    else if not TryStrToBool(LValue.ToString, AValue) then
+      raise EArgumentException.CreateFmt('Invalid value for %s: "%s" (expected true or false)'
+        , [AName, LValue.ToString]);
+  end;
+
+var
+  LBoolean: Boolean;
+begin
+  Result := Self;
+  if not Assigned(AParameters) then
+    Exit;
+
+  if TryGetBoolean(JSON_SKIPEMPTYVALUES_PARAM, LBoolean) then
+    if LBoolean then
+      Result.SkipAllEmptyOrNullValues
+    else
+      Result.IncludeEmptyOrNullValues;
+
+  if TryGetBoolean(JSON_SKIPEMPTYSTRINGS_PARAM, LBoolean) then
+    Result.SkipEmptyStrings := LBoolean;
+  if TryGetBoolean(JSON_SKIPEMPTYNUMBERS_PARAM, LBoolean) then
+    Result.SkipEmptyNumbers := LBoolean;
+  if TryGetBoolean(JSON_SKIPEMPTYBOOLEANS_PARAM, LBoolean) then
+    Result.SkipEmptyBooleans := LBoolean;
+  if TryGetBoolean(JSON_SKIPEMPTYOBJECTS_PARAM, LBoolean) then
+    Result.SkipEmptyObjects := LBoolean;
+  if TryGetBoolean(JSON_SKIPEMPTYARRAYS_PARAM, LBoolean) then
+    Result.SkipEmptyArrays := LBoolean;
+  if TryGetBoolean(JSON_SKIPNULLVALUES_PARAM, LBoolean) then
+    Result.SkipNullValues := LBoolean;
+  if TryGetBoolean(JSON_DATEISUTC_PARAM, LBoolean) then
+    Result.DateIsUTC := LBoolean;
+  if TryGetBoolean(JSON_USEDISPLAYFORMATFORNUMERICFIELDS_PARAM, LBoolean) then
+    Result.UseDisplayFormatForNumericFields := LBoolean;
 end;
 
 procedure TMARSJSONSerializationOptions.IncludeEmptyOrNullValues;

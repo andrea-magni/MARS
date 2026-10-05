@@ -51,9 +51,10 @@ uses
 function TMCPDataDispatcher.SerializationOptionsFor(
   const AMethod: TRttiMethod): TMARSJSONSerializationOptions;
 begin
-  // same adjustment chain as TDataSetWriterJSON (resource then method attributes),
-  // so serialization attributes affect MCP results like standard HTTP responses
+  // same adjustment chain as TDataSetWriterJSON (JSON.* application parameters, then
+  // resource and method attributes), so MCP results serialize like standard HTTP responses
   Result := DefaultMARSJSONSerializationOptions
+    .AdjustWith(ApplicationParameters)
     .AdjustWith(FRttiContext.GetType(Instance.ClassType).GetAttributes);
   if Assigned(AMethod) then
     Result := Result.AdjustWith(AMethod.GetAttributes);

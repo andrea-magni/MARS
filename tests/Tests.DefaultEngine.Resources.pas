@@ -12,6 +12,30 @@ uses
 ;
 
 type
+  TJSONOptionsRecord = record
+    name: string;
+    note: string; // left empty: shows the effect of JSON.SkipEmptyStrings
+  end;
+
+  TDateRecord = record
+    when: TDateTime;
+  end;
+
+  // JSON serialization options from the application parameters (JSON.*)
+  [Path('jsonoptions')]
+  TJSONOptionsResource = class
+  public
+    [GET, Produces(TMediaType.APPLICATION_JSON)]
+    function GetRecord: TJSONOptionsRecord;
+
+    [GET, Path('skip'), Produces(TMediaType.APPLICATION_JSON), JSONSkipEmptyValues]
+    function GetRecordSkip: TJSONOptionsRecord;
+
+    // the reader uses the same options: JSON.DateIsUTC decides how "...Z" dates are read
+    [POST, Path('hour'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.TEXT_PLAIN)]
+    function PostHour([BodyParam] const AData: TDateRecord): string;
+  end;
+
   // a JSON response with non-ASCII text (issue #208, JSON.EscapeNonASCII)
   [Path('unicodejson')]
   TUnicodeJSONResource = class
@@ -153,6 +177,24 @@ end;
 
 { THelloWorldResource }
 
+{ TJSONOptionsResource }
+
+function TJSONOptionsResource.GetRecord: TJSONOptionsRecord;
+begin
+  Result.name := 'MARS';
+  Result.note := '';
+end;
+
+function TJSONOptionsResource.GetRecordSkip: TJSONOptionsRecord;
+begin
+  Result := GetRecord;
+end;
+
+function TJSONOptionsResource.PostHour(const AData: TDateRecord): string;
+begin
+  Result := FormatDateTime('hh', AData.when);
+end;
+
 { TUnicodeJSONResource }
 
 function TUnicodeJSONResource.GetContent: TJSONObject;
@@ -204,7 +246,7 @@ begin
 end;
 
 initialization
-  MARSRegister([THelloWorldResource, TUnicodeJSONResource, TWildcardResource, TItemResource
+  MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);
 

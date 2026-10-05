@@ -58,6 +58,12 @@ type
     procedure TestJSONEscapeNonASCIIParameter;
 
     [Test]
+    procedure TestJSONSerializationParameters;
+
+    [Test]
+    procedure TestJSONReaderUsesParameters;
+
+    [Test]
     procedure TestWildcard;
 
     [Test]
@@ -129,7 +135,8 @@ type
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}Winapi.Windows, {$ENDIF}IOUtils
+  {$IFDEF MSWINDOWS}Winapi.Windows, {$ENDIF}IOUtils, DateUtils, System.TimeSpan
+, MARS.Core.JSON
 , IdCustomHTTPServer, Web.HTTPApp, MARS.http.Server.Indy
 , Mock.IMARSRequest, Mock.IMARSResponse;
 
@@ -246,6 +253,60 @@ begin
     Assert.AreEqual('{"name":"' + CYRILLIC_TEXT + '"}', LMock.Response.Content);
   finally
     LParameters.Values['JSON.EscapeNonASCII'] := True;
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestJSONSerializationParameters;
+
+  function GetJSON(const APath: string): string;
+  begin
+    var LMock := MockRequestAndResponse('GET', ResourcePath(APath));
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+    Assert.AreEqual(200, LMock.Response.StatusCode, APath);
+    Result := LMock.Response.Content;
+  end;
+
+begin
+  // global default: empty strings are skipped
+  Assert.AreEqual('{"name":"MARS"}', GetJSON('jsonoptions'));
+
+  var LParameters := DefaultEngine.Engine.ApplicationByName('DefaultApp').Parameters;
+  LParameters.Values['JSON.SkipEmptyStrings'] := False;
+  try
+    // DefaultApp.JSON.SkipEmptyStrings=false
+    Assert.AreEqual('{"name":"MARS","note":""}', GetJSON('jsonoptions'));
+    // attributes still win over the parameters
+    Assert.AreEqual('{"name":"MARS"}', GetJSON('jsonoptions/skip'));
+  finally
+    LParameters.Values['JSON.SkipEmptyStrings'] := True;
+  end;
+end;
+
+procedure TMARSDefaultEngineFixture.TestJSONReaderUsesParameters;
+
+  function PostHour: string;
+  begin
+    var LMock := MockRequestAndResponse('POST', ResourcePath('jsonoptions/hour')
+      , '{"when":"2026-10-05T10:00:00.000Z"}');
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+    Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+    Result := LMock.Response.Content;
+  end;
+
+begin
+  var LParameters := DefaultEngine.Engine.ApplicationByName('DefaultApp').Parameters;
+  var LSaved := DefaultMARSJSONSerializationOptions.DateIsUTC;
+  try
+    // dates kept in UTC
+    LParameters.Values['JSON.DateIsUTC'] := True;
+    Assert.AreEqual('10', PostHour, 'JSON.DateIsUTC=true');
+
+    // dates converted to local time
+    LParameters.Values['JSON.DateIsUTC'] := False;
+    var LLocal := TTimeZone.Local.ToLocalTime(EncodeDateTime(2026, 10, 5, 10, 0, 0, 0));
+    Assert.AreEqual(FormatDateTime('hh', LLocal), PostHour, 'JSON.DateIsUTC=false');
+  finally
+    LParameters.Values['JSON.DateIsUTC'] := LSaved;
   end;
 end;
 

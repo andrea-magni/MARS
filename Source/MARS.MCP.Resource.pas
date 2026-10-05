@@ -135,6 +135,8 @@ begin
   Result := GetDispatcherClass.Create(Self, GetServerName, GetServerVersion, GetInstructions);
   Result.ToolFilter := CanUseTool;
   Result.MethodFilter := CanUseMethod;
+  if Assigned(Activation) and Assigned(Activation.Application) then
+    Result.ApplicationParameters := Activation.Application.Parameters;
 end;
 
 function TMCPResource.CanUseTool(const ATool: TMCPTool): Boolean;

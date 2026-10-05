@@ -139,11 +139,7 @@ var
   LJSON: TJSONValue;
   LSerializationOptions: TMARSJSONSerializationOptions;
 begin
-  LSerializationOptions := DefaultMARSJSONSerializationOptions;
-  if Assigned(AActivation) then
-    LSerializationOptions := LSerializationOptions
-    .AdjustWith(AActivation.ResourceAttributes)
-    .AdjustWith(AActivation.MethodAttributes);
+  LSerializationOptions := JSONSerializationOptionsFor(AActivation);
 
   LJSON := TJSONObject.ObjectToJSON(AValue.AsObject, LSerializationOptions);
   try
@@ -167,11 +163,7 @@ begin
   if not AValue.IsArray then
     Exit;
 
-  LSerializationOptions := DefaultMARSJSONSerializationOptions;
-  if Assigned(AActivation) then
-    LSerializationOptions := LSerializationOptions
-    .AdjustWith(AActivation.ResourceAttributes)
-    .AdjustWith(AActivation.MethodAttributes);
+  LSerializationOptions := JSONSerializationOptionsFor(AActivation);
 
   LJSONArray := TJSONArray.Create;
   try
@@ -341,21 +333,10 @@ var
   LJSONObj: TJSONObject;
   LJSONWriter: TJSONValueWriter;
   LSerializationOptions: TMARSJSONSerializationOptions;
-  LAttribute: TCustomAttribute;
 begin
   if not AValue.IsEmpty then
   begin
-    LSerializationOptions := DefaultMARSJSONSerializationOptions;
-
-    if Assigned(AActivation) then
-      for LAttribute in AActivation.MethodAttributes do
-      begin
-        if LAttribute is JSONIncludeEmptyValuesAttribute then
-        begin
-          LSerializationOptions.IncludeEmptyOrNullValues;
-          Break;
-        end;
-      end;
+    LSerializationOptions := JSONSerializationOptionsFor(AActivation);
 
     LJSONObj := TJSONObject.RecordToJSON(AValue, LSerializationOptions);
     try
@@ -384,11 +365,7 @@ begin
   if not AValue.IsArray then
     Exit;
 
-  LSerializationOptions := DefaultMARSJSONSerializationOptions;
-  if Assigned(AActivation) then
-    LSerializationOptions := LSerializationOptions
-    .AdjustWith(AActivation.ResourceAttributes)
-    .AdjustWith(AActivation.MethodAttributes);
+  LSerializationOptions := JSONSerializationOptionsFor(AActivation);
 
   LJSONArray := TJSONArray.Create;
   try
@@ -437,11 +414,7 @@ var
   LOutputParams: TJSONArray;
   LSerializationOptions: TMARSJSONSerializationOptions;
 begin
-  LSerializationOptions := DefaultMARSJSONSerializationOptions;
-  if Assigned(AActivation) then
-    LSerializationOptions := LSerializationOptions
-    .AdjustWith(AActivation.ResourceAttributes)
-    .AdjustWith(AActivation.MethodAttributes);
+  LSerializationOptions := JSONSerializationOptionsFor(AActivation);
 
   LResult := TJSONObject.Create;
   try

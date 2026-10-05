@@ -16,7 +16,7 @@ interface
 uses
   Classes, SysUtils, Generics.Collections, System.JSON, System.SyncObjs
 , System.Rtti, System.TypInfo
-, MARS.Core.JSON
+, MARS.Core.JSON, MARS.Utils.Parameters
 , MARS.MCP.Attributes
 ;
 
@@ -89,6 +89,7 @@ type
     FCapabilities: TMCPCapabilities;
     FToolFilter: TMCPToolFilterFunc;
     FMethodFilter: TMCPMethodFilterFunc;
+    FApplicationParameters: TMARSParameters;
     // per-class capability cache: dispatchers are created per request, RTTI scan
     // happens once per class. Key is the instance class: descendants overriding
     // ScanCapabilities with different discovery logic should not share instance
@@ -172,6 +173,9 @@ type
     property Prompts: TArray<TMCPPromptInfo> read GetPrompts;
     property ToolFilter: TMCPToolFilterFunc read FToolFilter write FToolFilter;
     property MethodFilter: TMCPMethodFilterFunc read FMethodFilter write FMethodFilter;
+    // parameters of the MARS application serving the requests (not owned, may be nil):
+    // TMCPDataDispatcher reads the JSON.* serialization options from them
+    property ApplicationParameters: TMARSParameters read FApplicationParameters write FApplicationParameters;
   end;
 
   TMCPDispatcherClass = class of TMCPDispatcher;

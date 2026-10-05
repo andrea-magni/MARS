@@ -69,9 +69,7 @@ var
   LResult: TJSONArray;
   LSerializationOptions: TMARSJSONSerializationOptions;
 begin
-  LSerializationOptions := DefaultMARSJSONSerializationOptions
-    .AdjustWith(AActivation.ResourceAttributes)
-    .AdjustWith(AActivation.MethodAttributes);
+  LSerializationOptions := JSONSerializationOptionsFor(AActivation);
 
   LResult := DataSetToJSONArray(AValue.AsObject as TDataSet, LSerializationOptions);
   try
@@ -124,9 +122,7 @@ var
   LIndex: Integer;
   LSerializationOptions: TMARSJSONSerializationOptions;
 begin
-  LSerializationOptions := DefaultMARSJSONSerializationOptions
-    .AdjustWith(AActivation.ResourceAttributes)
-    .AdjustWith(AActivation.MethodAttributes);
+  LSerializationOptions := JSONSerializationOptionsFor(AActivation);
 
   LResult := TJSONObject.Create;
   try

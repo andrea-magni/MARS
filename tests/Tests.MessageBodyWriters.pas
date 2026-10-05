@@ -82,6 +82,18 @@ type
     [Test] procedure ControlCharactersAlwaysEscaped;
   end;
 
+  // JSON serialization options from the application parameters (JSON.*)
+  [TestFixture('JSONSerializationOptions')]
+  TMARSJSONSerializationOptionsTest = class(TObject)
+  public
+    [Test] procedure NoParametersKeepTheOptions;
+    [Test] procedure SkipEmptyValuesShortcut;
+    [Test] procedure SpecificParameterWinsOverShortcut;
+    [Test] procedure DateIsUTCAndDisplayFormat;
+    [Test] procedure BooleansGivenAsStrings;
+    [Test] procedure InvalidValueRaises;
+  end;
+
   function GetRecordMBW: IMessageBodyWriter;
   function GetArrayOfRecordMBW: IMessageBodyWriter;
 
@@ -564,8 +576,124 @@ begin
   Assert.AreEqual('{"name":"a\u0001b\nc' + CYRILLIC_TEXT + '"}', WriteJSON('a'#1'b'#10'c' + CYRILLIC_TEXT));
 end;
 
+{ TMARSJSONSerializationOptionsTest }
+
+procedure TMARSJSONSerializationOptionsTest.NoParametersKeepTheOptions;
+var
+  LBase, LResult: TMARSJSONSerializationOptions;
+  LParams: TMARSParameters;
+begin
+  LBase := DefaultMARSJSONSerializationOptions;
+  LBase.SkipEmptyStrings := False; // anything not equal to the global default
+  LBase.SkipNullValues := False;
+
+  LResult := LBase.AdjustWith(TMARSParameters(nil));
+  Assert.IsTrue(CompareMem(@LBase, @LResult, SizeOf(LBase)), 'nil parameters');
+
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values['Other.Setting'] := 'x';
+    LResult := LBase.AdjustWith(LParams);
+    Assert.IsTrue(CompareMem(@LBase, @LResult, SizeOf(LBase)), 'no JSON.* parameter');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONSerializationOptionsTest.SkipEmptyValuesShortcut;
+var
+  LParams: TMARSParameters;
+  LResult: TMARSJSONSerializationOptions;
+begin
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JSON_SKIPEMPTYVALUES_PARAM] := False;
+    LResult := DefaultMARSJSONSerializationOptions.AdjustWith(LParams);
+    Assert.IsFalse(LResult.SkipEmptyValues, 'every Skip* option off');
+
+    LParams.Values[JSON_SKIPEMPTYVALUES_PARAM] := True;
+    LResult := DefaultMARSJSONSerializationOptions.AdjustWith(LParams);
+    Assert.IsTrue(LResult.SkipEmptyStrings and LResult.SkipEmptyNumbers and LResult.SkipEmptyBooleans
+      and LResult.SkipEmptyObjects and LResult.SkipEmptyArrays and LResult.SkipNullValues, 'every Skip* option on');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONSerializationOptionsTest.SpecificParameterWinsOverShortcut;
+var
+  LParams: TMARSParameters;
+  LResult: TMARSJSONSerializationOptions;
+begin
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JSON_SKIPEMPTYVALUES_PARAM] := False;
+    LParams.Values[JSON_SKIPNULLVALUES_PARAM] := True;
+    LResult := DefaultMARSJSONSerializationOptions.AdjustWith(LParams);
+    Assert.IsTrue(LResult.SkipNullValues, 'specific parameter');
+    Assert.IsFalse(LResult.SkipEmptyStrings, 'from the shortcut');
+    Assert.IsFalse(LResult.SkipEmptyArrays, 'from the shortcut');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONSerializationOptionsTest.DateIsUTCAndDisplayFormat;
+var
+  LParams: TMARSParameters;
+  LResult: TMARSJSONSerializationOptions;
+begin
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JSON_DATEISUTC_PARAM] := not DefaultMARSJSONSerializationOptions.DateIsUTC;
+    LParams.Values[JSON_USEDISPLAYFORMATFORNUMERICFIELDS_PARAM] := True;
+    LResult := DefaultMARSJSONSerializationOptions.AdjustWith(LParams);
+    Assert.AreEqual(not DefaultMARSJSONSerializationOptions.DateIsUTC, LResult.DateIsUTC);
+    Assert.IsTrue(LResult.UseDisplayFormatForNumericFields);
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONSerializationOptionsTest.BooleansGivenAsStrings;
+var
+  LParams: TMARSParameters;
+  LResult: TMARSJSONSerializationOptions;
+begin
+  // the .ini reader produces Booleans, values set in code may be strings
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JSON_SKIPEMPTYSTRINGS_PARAM] := 'false';
+    LParams.Values[JSON_SKIPEMPTYNUMBERS_PARAM] := 'True';
+    LResult := DefaultMARSJSONSerializationOptions.AdjustWith(LParams);
+    Assert.IsFalse(LResult.SkipEmptyStrings);
+    Assert.IsTrue(LResult.SkipEmptyNumbers);
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJSONSerializationOptionsTest.InvalidValueRaises;
+var
+  LParams: TMARSParameters;
+begin
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JSON_SKIPNULLVALUES_PARAM] := 'sometimes';
+    Assert.WillRaise(
+      procedure
+      begin
+        DefaultMARSJSONSerializationOptions.AdjustWith(LParams);
+      end
+    , EArgumentException, 'not a boolean');
+  finally
+    LParams.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRecordWriterTest);
+  TDUnitX.RegisterTestFixture(TMARSJSONSerializationOptionsTest);
   TDUnitX.RegisterTestFixture(TMARSJSONValueWriterTest);
   TDUnitX.RegisterTestFixture(TMARSArrayOfRecordWriterTest);
 

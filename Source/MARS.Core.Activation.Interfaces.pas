@@ -15,6 +15,7 @@ uses
 , MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.MediaType, MARS.Core.Injection.Types, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.JSON
 ;
 
 type
@@ -70,7 +71,25 @@ type
     property Token: TMARSToken read GetToken;
   end;
 
+  // JSON serialization options for AActivation (readers and writers): the global default
+  // (DefaultMARSJSONSerializationOptions), then the JSON.* application parameters, then the
+  // attributes of the resource and of the method. Without an activation: the global default.
+  function JSONSerializationOptionsFor(const AActivation: IMARSActivation): TMARSJSONSerializationOptions;
 
 implementation
+
+function JSONSerializationOptionsFor(const AActivation: IMARSActivation): TMARSJSONSerializationOptions;
+begin
+  Result := DefaultMARSJSONSerializationOptions;
+  if not Assigned(AActivation) then
+    Exit;
+  {$IFNDEF MARS_JSON_LEGACY}
+  if Assigned(AActivation.Application) then
+    Result := Result.AdjustWith(AActivation.Application.Parameters);
+  {$ENDIF}
+  Result := Result
+    .AdjustWith(AActivation.ResourceAttributes)
+    .AdjustWith(AActivation.MethodAttributes);
+end;
 
 end.

@@ -247,7 +247,7 @@ begin
         raise EMARSHttpException.Create(
           'Malformed request body (JSON object expected)', 400);
 
-      Result := TJSONObject(LJSON).ToRecord(ADestination.GetRttiType);
+      Result := TJSONObject(LJSON).ToRecord(ADestination.GetRttiType, JSONSerializationOptionsFor(AActivation));
     finally
       LJSON.Free;
     end;
@@ -278,6 +278,7 @@ begin
       Result := TJSONObject.JSONToObject(
         TRttiInstanceType(ADestination.GetRttiType).MetaclassType
         , TJSONObject(LJSON)
+        , JSONSerializationOptionsFor(AActivation)
         )
     else
       raise EMARSHttpException.Create(
@@ -303,6 +304,7 @@ var
   LArrayType: TRttiType;
   LIndex: Integer;
   LNewLength: NativeInt;
+  LOptions: TMARSJSONSerializationOptions;
 begin
   Result := TValue.Empty;
   LArrayType := ADestination.GetRttiType;
@@ -312,6 +314,7 @@ begin
 
   if not (LElementType is TRttiInstanceType) then
     Exit;
+  LOptions := JSONSerializationOptionsFor(AActivation);
 
   // A missing (or unparsable) body keeps yielding an empty array, but a body the
   // client got wrong (JSON that is not an array of objects) is a 400, not a 500.
@@ -342,6 +345,7 @@ begin
           , TJSONObject.JSONToObject(
               TRttiInstanceType(LElementType).MetaclassType
             , LJSONObject
+            , LOptions
           )
         );
       end;
@@ -356,6 +360,7 @@ begin
         , TJSONObject.JSONToObject(
               TRttiInstanceType(LElementType).MetaclassType
             , TJSONObject(LJSONValue)
+            , LOptions
           )
       );
     end
@@ -386,12 +391,14 @@ var
   LArrayType: TRttiType;
   LIndex: Integer;
   LNewLength: NativeInt;
+  LOptions: TMARSJSONSerializationOptions;
 begin
   Result := TValue.Empty;
   LArrayType := ADestination.GetRttiType;
   LElementType := LArrayType.GetArrayElementType;
   if not Assigned(LElementType) then
     Exit;
+  LOptions := JSONSerializationOptionsFor(AActivation);
 
   // Fast path: one element at a time, the JSON tree of the whole array is never built
   // (large arrays would exhaust memory on 32 bit targets otherwise). Anything unexpected
@@ -409,7 +416,7 @@ begin
           Result := AElement is TJSONObject;
           if Result then
           begin
-            LArray.SetArrayElement(LIndex, TJSONObject(AElement).ToRecord(LElementType));
+            LArray.SetArrayElement(LIndex, TJSONObject(AElement).ToRecord(LElementType, LOptions));
             Inc(LIndex);
           end;
         end
@@ -444,7 +451,7 @@ begin
       for LIndex := 0 to LJSONArray.Count-1 do //AM Refactor using ForEach<TJSONObject>
       begin
         LJSONObject := TJSONObject(LJSONArray.Items[LIndex]);
-        LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LElementType));
+        LArray.SetArrayElement(LIndex, LJSONObject.ToRecord(LElementType, LOptions));
       end;
     end
     else if LJSONValue is TJSONObject then // a single obj, let's build an array of one element
@@ -452,7 +459,7 @@ begin
       LNewLength := 1;
       SetArrayLength(LArray, LArrayType, @LNewLength);
       //------------------------
-      LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LElementType));
+      LArray.SetArrayElement(0, TJSONObject(LJSONValue).ToRecord(LElementType, LOptions));
     end
     else
       raise EMARSHttpException.Create(

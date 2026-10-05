@@ -68,10 +68,39 @@ The fields you can set:
 | `SkipEmptyObjects` / `SkipEmptyArrays` | Omit empty `{}` / `[]`. |
 | `SkipNullValues` | Omit `null`. |
 | `DateIsUTC` | Treat `TDateTime` as UTC. |
-| `DateFormat` | `ISO8601` (default) or `UNIX`. |
+| `DateFormat` | Reserved: dates are always written and read as ISO 8601. |
 | `UseDisplayFormatForNumericFields` | Use a field's display format for dataset numbers. |
 
-The default is "skip most empty/null values, ISO-8601 UTC dates".
+The default is "skip most empty/null values, ISO-8601 dates". `DateIsUTC` defaults to `True` only
+when the machine runs at UTC+0; set it explicitly (in code or in the configuration file) to get the
+same behavior everywhere.
+
+### From the configuration file
+
+The same options can be set per application with `JSON.*` [parameters](/reference/parameters#json-parameters-per-application),
+without recompiling:
+
+```ini
+[DefaultEngine]
+; send empty strings too
+DefaultApp.JSON.SkipEmptyStrings=false
+; keep dates in UTC
+DefaultApp.JSON.DateIsUTC=true
+```
+
+`JSON.SkipEmptyValues` sets all the `Skip*` options at once; a specific parameter written along
+with it wins. A value that is not `true`/`false` raises an error at the first request that uses it.
+
+Each request combines the options in this order, the last one winning:
+
+1. the global default, `DefaultMARSJSONSerializationOptions` (set in code);
+2. the `JSON.*` parameters of the application;
+3. the attributes of the resource class (`[JSONIncludeEmptyValues]`, `[JSONSkipEmptyValues]`);
+4. the attributes of the method.
+
+They apply to responses (objects, records, arrays, datasets) and to requests: the readers of
+objects and records use the same options, so dates are read with the `DateIsUTC` they are written
+with. MCP dataset results follow them too.
 
 ## Non-ASCII characters
 
