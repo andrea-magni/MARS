@@ -125,6 +125,7 @@
         <DCCReference Include="Tests.DefaultEngine.pas"/>
         <DCCReference Include="Tests.MCP.Resources.pas"/>
         <DCCReference Include="Tests.MCP.pas"/>
+        <DCCReference Include="Tests.ReqRespLogger.JSON.pas"/>
         <DCCReference Include="Mock.IMARSRequest.pas"/>
         <DCCReference Include="Mock.IMARSResponse.pas"/>
         <BuildConfiguration Include="Base">

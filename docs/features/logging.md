@@ -47,13 +47,14 @@ JSONLogging.DailyRotation=True
 | Parameter | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `JSONLogging.Enabled` | Boolean | `False` | Master switch — the hooks check it on every activation. |
+| `JSONLogging.BuiltInEntries` | Boolean | `True` | Write the built-in `in`/`out`/`error` lines. Set it to `False` to write only [your own entries](#custom-entries-with-structured-data). |
 | `JSONLogging.Folder` | string | `<exe folder>\logs` | Target directory (created if missing). |
 | `JSONLogging.FileName` | string | `mars-reqresp.log` | Base log file name. |
 | `JSONLogging.DailyRotation` | Boolean | `True` | Insert the date (`yyyymmdd`) before the extension, e.g. `mars-reqresp-20260630.log`. |
 
 ### Line format
 
-Each line is a self-contained JSON object: an ISO-8601/RFC3339 UTC timestamp, a set of labels, and the human-readable `message`.
+Each line is a self-contained JSON object: an ISO-8601/RFC3339 UTC timestamp, a set of fields, and the human-readable `message`. These are plain JSON fields: which of them become Loki labels is decided by the log shipper (see [Ingesting into Loki](#ingesting-into-loki-with-grafana-alloy)).
 
 ```json
 {"ts":"2026-06-30T12:34:56.789Z","detected_level":"INFO","source":"MARS","engine":"DefaultEngine","application":"DefaultApp","direction":"in","message":"ResourcePath:helloworld | Verb:GET | Path:/rest/default/helloworld"}
@@ -69,6 +70,64 @@ Each line is a self-contained JSON object: an ISO-8601/RFC3339 UTC timestamp, a 
 | `message` | Pipe-separated details: `ResourcePath`, `Verb`, `Path`, and — on `out` — `InvocationTime` in ms, or — on `error` — the exception `Error`. |
 
 The file is written UTF-8 **without BOM**, one entry per line.
+
+### Custom entries with structured data
+
+The built-in lines carry a few fields. To log whatever your application needs (status code, token claims, tenant, timings…) as real JSON fields that LogQL can filter on, write your own entries with `Log<T>`: any data is serialized with the MARS JSON serializer, the same one used for response bodies.
+
+- The fields of an object (class, record, `TDictionary<string, T>`, `TJSONObject`) become **top level fields** of the line, numbers and booleans keep their JSON type.
+- Anything else (a scalar, an array) is written under `data`.
+- `[JSONName]` renames a field, `[JSONSkip]` leaves it out; the `JSON.*` engine parameters (e.g. `JSON.SkipEmptyValues`) apply.
+- Extra fields passed as `TArray<TLogField>` (e.g. `['source:MyApp']`, split at the first `:`, or `TLogField.Create(name, value)`) come first, then the data, then the optional message: a later field replaces an earlier one with the same name. `ts` is always the logger's timestamp.
+
+```pascal
+uses MARS.Core.JSON, MARS.Utils.ReqRespLogger.JSON;
+
+type
+  TRequestLogEntry = record
+    detected_level: string;
+    direction: string;
+    activation_id: string;
+    [JSONName('status_code')] StatusCode: Integer;
+    execution_ms: Int64;
+    id_user: Integer;
+  end;
+
+// ...
+  TMARSActivation.RegisterAfterInvoke(
+    procedure (const AActivation: IMARSActivation)
+    begin
+      if not TMARSReqRespLoggerJSON.IsEnabledFor(AActivation) then // JSONLogging.Enabled and no [NoLog]
+        Exit;
+
+      var LEntry := Default(TRequestLogEntry);
+      LEntry.detected_level := 'INFO';
+      LEntry.direction := 'out';
+      LEntry.activation_id := AActivation.Id;
+      LEntry.StatusCode := AActivation.Response.StatusCode;
+      LEntry.execution_ms := AActivation.InvocationTime.ElapsedMilliseconds;
+      if Assigned(AActivation.Token) then
+        LEntry.id_user := AActivation.Token.Claims.ByName('id_user', 0).AsInteger;
+
+      TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
+      TMARSReqRespLoggerJSON.Instance.Log<TRequestLogEntry>(
+        ['source:MyApp', 'engine:' + AActivation.Engine.Name, 'application:' + AActivation.Application.Name]
+      , LEntry
+      , AActivation.Request.Method + ' ' + AActivation.URL.Path
+      );
+    end
+  );
+```
+
+```json
+{"ts":"2026-10-06T10:12:03.123Z","source":"MyApp","engine":"DefaultEngine","application":"DefaultApp","detected_level":"INFO","direction":"out","activation_id":"…","status_code":200,"execution_ms":12,"id_user":5,"message":"GET /rest/default/helloworld"}
+```
+
+With `JSONLogging.BuiltInEntries=False` these are the only lines in the file; leave it `True` to get both. A `TJSONObject` can be passed as it is (`Log(LFields, 'message')`): it is copied, the caller keeps its ownership. To log outside of an activation (e.g. at startup) call `Configure(Engine.Parameters)` first, so the configured folder and file are used.
+
+::: tip Labels vs fields
+Which fields become Loki labels is decided by your Alloy pipeline, not by the logger. Promote only low-cardinality fields (`level`, `source`, `engine`, `application`, `direction`); keep ids, users and paths as JSON fields and filter them at query time, e.g. `{application="DefaultApp"} | json | status_code >= 500`.
+:::
 
 ### Excluding endpoints
 

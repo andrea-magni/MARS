@@ -15,10 +15,11 @@ unit MARS.Utils.ReqRespLogger.JSON;
 
   Configuration (engine Parameters / .ini, [DefaultEngine] section):
 
-    JSONLogging.Enabled       = True/False   (default: False)
-    JSONLogging.Folder        = path         (default: <exe folder>\logs)
-    JSONLogging.FileName      = base name    (default: mars-reqresp.log)
-    JSONLogging.DailyRotation = True/False   (default: True)
+    JSONLogging.Enabled        = True/False   (default: False)
+    JSONLogging.BuiltInEntries = True/False   (default: True)
+    JSONLogging.Folder         = path         (default: <exe folder>\logs)
+    JSONLogging.FileName       = base name    (default: mars-reqresp.log)
+    JSONLogging.DailyRotation  = True/False   (default: True)
 
   With DailyRotation enabled, the date (yyyymmdd) is inserted before the
   extension, e.g. logs\mars-reqresp-20260630.log
@@ -27,52 +28,92 @@ unit MARS.Utils.ReqRespLogger.JSON;
     {"ts":"2026-06-30T12:34:56.789Z","detected_level":"INFO","source":"MARS",
      "engine":"DefaultEngine","application":"DefaultApp","direction":"in",
      "message":"ResourcePath:... | Verb:... | Path:..."}
+
+  Custom entries: set JSONLogging.BuiltInEntries=False to keep the file but drop
+  the built-in lines, then write your own from your hooks with Log/Log<T>. Any
+  data is serialized with the MARS JSON serializer: the fields of an object
+  (class, record, dictionary, TJSONObject) become top level fields of the line,
+  anything else is written under "data". "ts" is always the logger's timestamp.
+
+    TMARSReqRespLoggerJSON.Instance.Log<TMyEntry>(LEntry, 'GET /helloworld 200');
+
+  The logger writes JSON fields only: which of them become Loki labels is decided
+  by the log shipper (e.g. stage.labels in the Grafana Alloy pipeline).
 *)
 
 interface
 
 uses
-  System.Classes, System.SysUtils, System.SyncObjs, System.Rtti,
-  MARS.Core.Classes, MARS.Core.MediaType,
+  System.Classes, System.SysUtils, System.SyncObjs, System.Rtti, System.JSON,
+  MARS.Core.Classes, MARS.Core.MediaType, MARS.Core.JSON,
   MARS.Core.Application, MARS.Core.Activation, MARS.Core.Activation.Interfaces,
+  MARS.Utils.Parameters,
   MARS.Utils.ReqRespLogger.Interfaces,
   MARS.Core.RequestAndResponse.Interfaces
 ;
 
 type
-  TLabelValue = record
-    LabelName: string;
-    LabelValue: string;
+  // A string field of a log line, also from a 'name:value' string (split at the first ':')
+  TLogField = record
+    Name: string;
+    Value: string;
     constructor Create(const AName, AValue: string);
-    class operator Implicit(const ANameValueString: string): TLabelValue;
-    class operator Implicit(const ALabelValue: TLabelValue): string;
+    class operator Implicit(const ANameValueString: string): TLogField;
+    class operator Implicit(const AField: TLogField): string;
     const NAME_VALUE_DELIMITER = ':';
   end;
 
   TMARSReqRespLoggerJSON = class(TInterfacedObject, IMARSReqRespLogger)
   private
-    class var _Instance: TMARSReqRespLoggerJSON;
     FLock: TCriticalSection;
     FFolder: string;
     FFileName: string;
     FDailyRotation: Boolean;
+    FBuiltInEntries: Boolean;
+    FSerializationOptions: TMARSJSONSerializationOptions;
     FConfigured: Boolean;
     FWriter: TStreamWriter;
     FCurrentFile: string;
+    class var _Instance: TMARSReqRespLoggerJSON;
     function CurrentFileName: string;
     procedure EnsureWriter;
+    procedure WriteLine(const AEntry: TJSONObject);
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
     // Reads settings from the engine parameters (called once per activation,
     // cheaply short-circuited after the first time).
-    procedure Configure(const AActivation: IMARSActivation);
+    procedure Configure(const AActivation: IMARSActivation); overload;
+    // Reads settings from AParameters, every time it is called: use it to log
+    // outside of an activation (i.e. at startup) with the configured file.
+    procedure Configure(const AParameters: TMARSParameters); overload;
+
+    // True when JSONLogging.Enabled is set and the resource/method is not marked [NoLog].
+    // The built-in hooks check it, custom hooks can do the same.
+    class function IsEnabledFor(const AActivation: IMARSActivation): Boolean;
 
     // IMARSReqRespLogger
     procedure Clear;
     function GetLogBuffer: TValue;
-    procedure Log(const ALabels: TArray<TLabelValue>; const APayload: string); overload;
+
+    procedure Log(const AFields: TArray<TLogField>; const APayload: string); overload;
+    // AFields is copied, the caller keeps its ownership
+    procedure Log(const AFields: TJSONObject; const AMessage: string = ''); overload;
+    procedure Log<T>(const AData: T; const AMessage: string = ''); overload;
+    procedure Log<T>(const AFields: TArray<TLogField>; const AData: T;
+      const AMessage: string = ''); overload;
+    // Common implementation: AFields first, then the serialized data, then the message.
+    // Later fields replace earlier ones with the same name.
+    procedure LogValue(const AFields: TArray<TLogField>; const AData: TValue;
+      const AMessage: string);
+
+    // JSONLogging.BuiltInEntries: when False the built-in hooks write nothing
+    property BuiltInEntries: Boolean read FBuiltInEntries;
+    // Used to serialize the data of Log<T>: the MARS defaults adjusted with the JSON.*
+    // engine parameters by Configure. Set it at startup, it is not guarded by the lock.
+    property SerializationOptions: TMARSJSONSerializationOptions
+      read FSerializationOptions write FSerializationOptions;
 
     class function Instance: TMARSReqRespLoggerJSON;
     class constructor ClassCreate;
@@ -84,13 +125,22 @@ implementation
 
 uses
   System.IOUtils, System.DateUtils, System.StrUtils
-, System.JSON, MARS.Core.JSON
 , MARS.Core.Attributes, MARS.Rtti.Utils
 ;
 
 const
   LOGFIELD_SEPARATOR = ' | ';
   DEFAULT_FILENAME = 'mars-reqresp.log';
+
+  TS_FIELD = 'ts';
+  MESSAGE_FIELD = 'message';
+  DATA_FIELD = 'data';
+
+  ENABLED_PARAM = 'JSONLogging.Enabled';
+  BUILTINENTRIES_PARAM = 'JSONLogging.BuiltInEntries';
+  FOLDER_PARAM = 'JSONLogging.Folder';
+  FILENAME_PARAM = 'JSONLogging.FileName';
+  DAILYROTATION_PARAM = 'JSONLogging.DailyRotation';
 
 type
   // UTF-8 encoding that emits no BOM, so every NDJSON line is clean JSON.
@@ -114,6 +164,11 @@ begin
   Result := _UTF8NoBOM;
 end;
 
+function DefaultFolder: string;
+begin
+  Result := TPath.Combine(ExtractFilePath(ParamStr(0)), 'logs');
+end;
+
 // True when the resource or method opts out of logging via the [NoLog] attribute.
 function ExcludedFromLog(const AActivation: IMARSActivation): Boolean;
 begin
@@ -123,6 +178,32 @@ begin
     (Assigned(AActivation.Method) and AActivation.Method.HasAttribute<NoLogAttribute>);
 end;
 
+// Configures the logger and tells whether the built-in hooks have to write their entry.
+function BuiltInEntryRequired(const AActivation: IMARSActivation): Boolean;
+begin
+  Result := TMARSReqRespLoggerJSON.IsEnabledFor(AActivation);
+  if not Result then
+    Exit;
+
+  TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
+  Result := TMARSReqRespLoggerJSON.Instance.BuiltInEntries;
+end;
+
+// Copies the pairs of ASource into ADest, replacing the ones with the same name.
+// The timestamp belongs to the logger, a "ts" pair of ASource is skipped.
+procedure MergeFields(const ADest, ASource: TJSONObject);
+begin
+  for var LPair in ASource do
+  begin
+    const LName = LPair.JsonString.Value;
+    if SameText(LName, TS_FIELD) then
+      Continue;
+
+    ADest.DeletePair(LName);
+    ADest.AddPair(LName, LPair.JsonValue.Clone as TJSONValue);
+  end;
+end;
+
 { TMARSReqRespLoggerJSON }
 
 class constructor TMARSReqRespLoggerJSON.ClassCreate;
@@ -130,13 +211,9 @@ begin
   TMARSActivation.RegisterBeforeInvoke(
     procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
     begin
-      if not AActivation.Engine.Parameters.ByName('JSONLogging.Enabled').AsBoolean then
+      if not BuiltInEntryRequired(AActivation) then
         Exit;
 
-      if ExcludedFromLog(AActivation) then
-        Exit;
-
-      TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
       TMARSReqRespLoggerJSON.Instance.Log(
         [
           'detected_level:INFO'
@@ -159,13 +236,9 @@ begin
   TMARSActivation.RegisterAfterInvoke(
     procedure (const AActivation: IMARSActivation)
     begin
-      if not AActivation.Engine.Parameters.ByName('JSONLogging.Enabled').AsBoolean then
+      if not BuiltInEntryRequired(AActivation) then
         Exit;
 
-      if ExcludedFromLog(AActivation) then
-        Exit;
-
-      TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
       TMARSReqRespLoggerJSON.Instance.Log(
         [
           'detected_level:INFO'
@@ -190,13 +263,16 @@ begin
   TMARSActivation.RegisterInvokeError(
     procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
     begin
-      if not AActivation.Engine.Parameters.ByName('JSONLogging.Enabled').AsBoolean then
+      if not BuiltInEntryRequired(AActivation) then
         Exit;
 
-      if ExcludedFromLog(AActivation) then
-        Exit;
+      var LResourceName := '';
+      if Assigned(AActivation.Resource) then
+        LResourceName := AActivation.Resource.Name;
+      var LMethodName := '';
+      if Assigned(AActivation.Method) then
+        LMethodName := AActivation.Method.Name;
 
-      TMARSReqRespLoggerJSON.Instance.Configure(AActivation);
       TMARSReqRespLoggerJSON.Instance.Log(
         [
           'detected_level:ERR'
@@ -211,8 +287,8 @@ begin
             'ResourcePath:' + AActivation.ResourcePath
           , 'Verb:' + AActivation.Request.Method
           , 'Path:' + AActivation.URL.Path
-          , 'Resource:' + if Assigned(AActivation.Resource) then AActivation.Resource.Name else ''
-          , 'Method:' + if Assigned(AActivation.Method) then AActivation.Method.Name else ''
+          , 'Resource:' + LResourceName
+          , 'Method:' + LMethodName
           , 'Error:' + AException.Message
           ]
         )
@@ -231,9 +307,11 @@ constructor TMARSReqRespLoggerJSON.Create;
 begin
   inherited Create;
   FLock := TCriticalSection.Create;
-  FFolder := TPath.Combine(ExtractFilePath(ParamStr(0)), 'logs');
+  FFolder := DefaultFolder;
   FFileName := DEFAULT_FILENAME;
   FDailyRotation := True;
+  FBuiltInEntries := True;
+  FSerializationOptions := DefaultMARSJSONSerializationOptions;
   FConfigured := False;
 end;
 
@@ -254,16 +332,18 @@ begin
   if FConfigured then
     Exit;
 
+  Configure(AActivation.Engine.Parameters);
+end;
+
+procedure TMARSReqRespLoggerJSON.Configure(const AParameters: TMARSParameters);
+begin
   FLock.Enter;
   try
-    if FConfigured then
-      Exit;
-
-    const LParams = AActivation.Engine.Parameters;
-    FFolder := LParams.ByName('JSONLogging.Folder'
-      , TPath.Combine(ExtractFilePath(ParamStr(0)), 'logs')).AsString;
-    FFileName := LParams.ByName('JSONLogging.FileName', DEFAULT_FILENAME).AsString;
-    FDailyRotation := LParams.ByName('JSONLogging.DailyRotation', True).AsBoolean;
+    FFolder := AParameters.ByName(FOLDER_PARAM, DefaultFolder).AsString;
+    FFileName := AParameters.ByName(FILENAME_PARAM, DEFAULT_FILENAME).AsString;
+    FDailyRotation := AParameters.ByName(DAILYROTATION_PARAM, True).AsBoolean;
+    FBuiltInEntries := AParameters.ByName(BUILTINENTRIES_PARAM, True).AsBoolean;
+    FSerializationOptions := DefaultMARSJSONSerializationOptions.AdjustWith(AParameters);
 
     FConfigured := True;
   finally
@@ -332,57 +412,115 @@ begin
   Result := _Instance;
 end;
 
-procedure TMARSReqRespLoggerJSON.Log(const ALabels: TArray<TLabelValue>;
+class function TMARSReqRespLoggerJSON.IsEnabledFor(const AActivation: IMARSActivation): Boolean;
+begin
+  Result := AActivation.Engine.Parameters.ByName(ENABLED_PARAM).AsBoolean
+    and not ExcludedFromLog(AActivation);
+end;
+
+procedure TMARSReqRespLoggerJSON.Log(const AFields: TArray<TLogField>;
   const APayload: string);
+begin
+  LogValue(AFields, TValue.Empty, APayload);
+end;
+
+procedure TMARSReqRespLoggerJSON.Log(const AFields: TJSONObject; const AMessage: string);
+begin
+  LogValue([], TValue.From<TJSONObject>(AFields), AMessage);
+end;
+
+procedure TMARSReqRespLoggerJSON.Log<T>(const AData: T; const AMessage: string);
+begin
+  LogValue([], TValue.From<T>(AData), AMessage);
+end;
+
+procedure TMARSReqRespLoggerJSON.Log<T>(const AFields: TArray<TLogField>; const AData: T;
+  const AMessage: string);
+begin
+  LogValue(AFields, TValue.From<T>(AData), AMessage);
+end;
+
+procedure TMARSReqRespLoggerJSON.LogValue(const AFields: TArray<TLogField>;
+  const AData: TValue; const AMessage: string);
 begin
   // RFC3339 / ISO8601 UTC timestamp with milliseconds (Grafana-friendly)
   const LTimeStamp = FormatDateTime('yyyy-mm-dd"T"hh:nn:ss.zzz"Z"', TTimeZone.Local.ToUniversalTime(Now));
 
-  var LObj := TJSONObject.Create;
+  var LEntry := TJSONObject.Create;
   try
-    LObj.AddPair('ts', LTimeStamp);
-    for var LLabel in ALabels do
-      LObj.AddPair(LLabel.LabelName, LLabel.LabelValue);
-    LObj.AddPair('message', APayload);
+    LEntry.AddPair(TS_FIELD, LTimeStamp);
 
-    const LLine = LObj.ToJSON;
+    for var LField in AFields do
+      if not SameText(LField.Name, TS_FIELD) then
+        LEntry.WriteStringValue(LField.Name, LField.Value);
 
-    FLock.Enter;
-    try
-      EnsureWriter;
-      FWriter.WriteLine(LLine);
-    finally
-      FLock.Leave;
+    if not AData.IsEmpty then
+    begin
+      var LData: TJSONValue;
+      if AData.IsObject and (AData.AsObject is TJSONValue) then
+        LData := TJSONValue(AData.AsObject).Clone as TJSONValue
+      else
+        LData := TJSONObject.TValueToJSONValue(AData, FSerializationOptions);
+      try
+        if LData is TJSONObject then
+          MergeFields(LEntry, TJSONObject(LData))
+        else
+        begin
+          LEntry.DeletePair(DATA_FIELD);
+          LEntry.AddPair(DATA_FIELD, LData);
+          LData := nil; // owned by LEntry now
+        end;
+      finally
+        LData.Free;
+      end;
     end;
+
+    if not AMessage.IsEmpty then
+      LEntry.WriteStringValue(MESSAGE_FIELD, AMessage);
+
+    WriteLine(LEntry);
   finally
-    LObj.Free;
+    LEntry.Free;
+  end;
+end;
+
+procedure TMARSReqRespLoggerJSON.WriteLine(const AEntry: TJSONObject);
+begin
+  const LLine = AEntry.ToJSON;
+
+  FLock.Enter;
+  try
+    EnsureWriter;
+    FWriter.WriteLine(LLine);
+  finally
+    FLock.Leave;
   end;
 end;
 
 
-{ TLabelValue }
+{ TLogField }
 
-constructor TLabelValue.Create(const AName, AValue: string);
+constructor TLogField.Create(const AName, AValue: string);
 begin
-  LabelName := AName;
-  LabelValue := AValue;
+  Name := AName;
+  Value := AValue;
 end;
 
-class operator TLabelValue.Implicit(const ALabelValue: TLabelValue): string;
+class operator TLogField.Implicit(const AField: TLogField): string;
 begin
-  Result := ALabelValue.LabelName.Trim + NAME_VALUE_DELIMITER + ALabelValue.LabelValue.Trim;
+  Result := AField.Name.Trim + NAME_VALUE_DELIMITER + AField.Value.Trim;
 end;
 
-class operator TLabelValue.Implicit(const ANameValueString: string): TLabelValue;
+class operator TLogField.Implicit(const ANameValueString: string): TLogField;
 begin
-  Result := Default(TLabelValue);
+  Result := Default(TLogField);
 
   var LNameValue := ANameValueString.Trim;
   var LIndex := LNameValue.IndexOf(NAME_VALUE_DELIMITER);
   if LIndex = -1 then
     Exit;
-  Result.LabelName := LNameValue.Substring(0, LIndex);
-  Result.LabelValue := LNameValue.Substring(LIndex + 1);
+  Result.Name := LNameValue.Substring(0, LIndex);
+  Result.Value := LNameValue.Substring(LIndex + 1);
 end;
 
 initialization
