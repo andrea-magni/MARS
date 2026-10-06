@@ -15,7 +15,7 @@ uses
 , System.Net.HttpSse, System.Net.HttpClient
 , MARS.Core.JSON, System.Net.HttpClient.Win, MARS.Client.Client.Http,
   MARS.Client.Resource.SSE, MARS.Client.CustomResource, MARS.Client.Resource,
-  MARS.Utils.Parameters, System.JSON, MARS.Client.Token
+  MARS.Utils.Parameters, System.JSON, MARS.Client.Token, MARS.Client.Log
 ;
 
 type
@@ -32,17 +32,20 @@ type
     procedure MARSClientResourceSSE1Close(Sender: TMARSClientResourceSSE);
     procedure MARSClientResourceSSE1Comment(ASender: TMARSClientResourceSSE;
       const AComment: string);
+    procedure MARSHttpClient1Log(Sender: TObject; const AEntry: TMARSClientLogEntry);
 
   private
     FOnHeartbeat: TProc<string,TJSONObject>;
     FOnStatusChanged: TProc<THTTPEventSourceStatus>;
     FOnError: TProc<string>;
+    FOnLog: TProc<string>;
     function GetConnected: Boolean;
     procedure SetConnected(const Value: Boolean);
   public
     property OnHeartbeat: TProc<string,TJSONObject> read FOnHeartbeat write FOnHeartbeat;
     property OnStatusChanged: TProc<THTTPEventSourceStatus> read FOnStatusChanged write FOnStatusChanged;
     property OnError: TProc<string> read FOnError write FOnError;
+    property OnLog: TProc<string> read FOnLog write FOnLog;
     property Connected: Boolean read GetConnected write SetConnected;
   end;
 
@@ -156,6 +159,23 @@ begin
         FOnStatusChanged(MARSClientResourceSSE1.Status);
       end
     );
+end;
+
+procedure TMainDataModule.MARSHttpClient1Log(Sender: TObject;
+  const AEntry: TMARSClientLogEntry);
+begin
+  // every request of MARSHttpClient1 and the life of the event stream (sse.open, sse.error,
+  // sse.reconnect, sse.close), in the thread of the call: see MARSHttpClient1.LogOptions
+  if Assigned(FOnLog) then
+  begin
+    const LLine = AEntry.ToString;
+    TThread.Queue(nil
+    , procedure
+      begin
+        FOnLog(LLine);
+      end
+    );
+  end;
 end;
 
 procedure TMainDataModule.SetConnected(const Value: Boolean);

@@ -95,6 +95,8 @@ begin
       LDetailDrawable.TextColor := TAlphaColorRec.Blue
     else if EventsDatasetKind.Value = 'error' then
       LDetailDrawable.TextColor := TAlphaColorRec.Red
+    else if EventsDatasetKind.Value = 'log' then
+      LDetailDrawable.TextColor := TAlphaColorRec.Purple
     else if EventsDatasetKind.Value = 'status' then
     begin
       var LStatus := EventsDatasetContent.Value;
@@ -135,6 +137,13 @@ begin
     procedure (AMessage: string)
     begin
       EventsDataset.AppendRecord([Now, 'error', AMessage]);
+    end;
+
+  // client log: requests and life of the event stream
+  MainDataModule.OnLog :=
+    procedure (ALine: string)
+    begin
+      EventsDataset.AppendRecord([Now, 'log', ALine]);
     end;
 
 end;

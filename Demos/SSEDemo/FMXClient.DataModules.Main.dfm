@@ -16,6 +16,7 @@ object MainDataModule: TMainDataModule
     AuthCookieName = 'access_token'
     ProxyConfig.Enabled = False
     ProxyConfig.Port = 0
+    OnLog = MARSHttpClient1Log
     Left = 88
     Top = 24
   end
