@@ -741,8 +741,18 @@ begin
 end;
 
 procedure TMARSDCSResponse.SetContentStream(const AContentStream: TStream);
+var
+  LStream: TStream;
 begin
-  FDCSResponse.Send(AContentStream);
+  // the response owns the content stream (as TWebResponse does with Indy): DCS sends it
+  // asynchronously, it is freed when the send is complete
+  LStream := AContentStream;
+  FDCSResponse.Send(LStream,
+    procedure(const AConnection: ICrossConnection; const ASuccess: Boolean)
+    begin
+      LStream.Free;
+    end
+  );
 end;
 
 procedure TMARSDCSResponse.SetContentType(const AContentType: string);
