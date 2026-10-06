@@ -21,7 +21,7 @@ type
     FProjectsFolder: string;
     function GetSettingsFileName: string;
     function GetProjectsFolder: string;
-    procedure SetProjectsFolder(const Value: string);
+    function IsGoodProjectsFolder(const APath: string): Boolean;
   protected
     function GetDestinationPath: string; virtual;
     procedure SetDestinationPath(const Value: string); virtual;
@@ -56,6 +56,11 @@ type
     // True when APath is the MARS folder or one of its subfolders: the uninstaller of the
     // setup removes the MARS folder, projects should not live there
     function IsInsideBasePath(const APath: string): Boolean;
+    // templates shipped with MARS: folders {MARS}\Demos\MARSTemplate* with a Delphi project
+    // (MARSTemplate first), full paths
+    function AvailableTemplates: TArray<string>;
+    // saves ProjectsFolder in the settings file (call it after a successful Execute)
+    procedure SaveSettings;
 
     class function Current: TMARSCmd;
     // 32 random bytes (system GUID generator) as hex
@@ -65,8 +70,9 @@ type
     property TemplatePath: string read GetTemplatePath write SetTemplatePath;
     property DestinationPath: string read GetDestinationPath write SetDestinationPath;
     // parent folder of new projects: Documents\MARS Projects by default, then the last one used
-    // (saved in %APPDATA%\MARS-Curiosity\MARSCmd.ini)
-    property ProjectsFolder: string read GetProjectsFolder write SetProjectsFolder;
+    // (SaveSettings, %APPDATA%\MARS-Curiosity\MARSCmd.ini); a saved folder that no longer exists,
+    // inside the MARS folder or inside the temp folder is ignored
+    property ProjectsFolder: string read GetProjectsFolder write FProjectsFolder;
     property ReplacePatterns: TDictionary<string,string> read FReplacePatterns;
     property ReplaceMatches: TArray<string> read FReplaceMatches;
   end;
@@ -74,7 +80,7 @@ type
 implementation
 
 uses
-  StrUtils, DateUtils, IOUtils, RegularExpressions, Masks, IniFiles
+  Windows, StrUtils, DateUtils, IOUtils, RegularExpressions, Masks, IniFiles, Generics.Defaults
 ;
 
 const
@@ -86,6 +92,7 @@ const
   MARSDIR_ROOT = '$(MARSDIR)\';
   SETTINGS_SECTION = 'MARSCmd';
   SETTINGS_PROJECTS_FOLDER = 'ProjectsFolder';
+  TEMPLATE_PREFIX = 'MARSTemplate';
 
 { TMARSCmd }
 
@@ -171,17 +178,62 @@ begin
   ReplaceEverywhere;
   ConfigureSecrets;
   FixMARSPaths;
+end;
 
-  ProjectsFolder := ExtractFileDir(ExcludeTrailingPathDelimiter(FDestinationPath));
+function TMARSCmd.AvailableTemplates: TArray<string>;
+var
+  LFolder: string;
+  LList: TList<string>;
+begin
+  LList := TList<string>.Create;
+  try
+    for LFolder in TDirectory.GetDirectories(TPath.Combine(BasePath, 'Demos'), TEMPLATE_PREFIX + '*') do
+      if (Length(TDirectory.GetFiles(LFolder, '*.groupproj')) > 0)
+        or (Length(TDirectory.GetFiles(LFolder, '*.dproj')) > 0)
+      then
+        LList.Add(LFolder);
+    LList.Sort(TComparer<string>.Construct(
+      function (const ALeft, ARight: string): Integer
+      begin
+        if SameText(ExtractFileName(ALeft), TEMPLATE_PREFIX) then
+          Result := -1
+        else if SameText(ExtractFileName(ARight), TEMPLATE_PREFIX) then
+          Result := 1
+        else
+          Result := CompareText(ExtractFileName(ALeft), ExtractFileName(ARight));
+      end
+    ));
+    Result := LList.ToArray;
+  finally
+    LList.Free;
+  end;
+end;
+
+// full path with long names (a short 8.3 name like ANDREA~1 and the long one are the same
+// folder) and a trailing delimiter
+function NormalizedPath(const APath: string): string;
+var
+  LLength: Cardinal;
+begin
+  Result := ExpandFileName(APath);
+  LLength := GetLongPathName(PChar(Result), nil, 0);
+  if LLength > 0 then
+  begin
+    SetLength(Result, LLength);
+    SetLength(Result, GetLongPathName(PChar(ExpandFileName(APath)), PChar(Result), LLength));
+  end;
+  Result := IncludeTrailingPathDelimiter(Result);
+end;
+
+function IsSubPath(const APath, AParent: string): Boolean;
+begin
+  Result := (APath <> '') and (AParent <> '')
+    and StartsText(NormalizedPath(AParent), NormalizedPath(APath));
 end;
 
 function TMARSCmd.IsInsideBasePath(const APath: string): Boolean;
-var
-  LBase, LPath: string;
 begin
-  LBase := IncludeTrailingPathDelimiter(ExpandFileName(BasePath));
-  LPath := IncludeTrailingPathDelimiter(ExpandFileName(APath));
-  Result := (BasePath <> '') and StartsText(LBase, LPath);
+  Result := IsSubPath(APath, BasePath);
 end;
 
 procedure TMARSCmd.FixMARSPaths;
@@ -193,8 +245,7 @@ var
 begin
   LInside := IsInsideBasePath(FDestinationPath);
   if LInside then
-    LRoot := ExtractRelativePath(IncludeTrailingPathDelimiter(ExpandFileName(FDestinationPath))
-      , IncludeTrailingPathDelimiter(ExpandFileName(BasePath)))
+    LRoot := ExtractRelativePath(NormalizedPath(FDestinationPath), NormalizedPath(BasePath))
   else
     LRoot := MARSDIR_ROOT;
   if SameText(LRoot, TEMPLATE_ROOT) then
@@ -239,6 +290,13 @@ begin
   Result := TPath.Combine(TPath.Combine(TPath.GetHomePath, 'MARS-Curiosity'), 'MARSCmd.ini');
 end;
 
+function TMARSCmd.IsGoodProjectsFolder(const APath: string): Boolean;
+begin
+  Result := (APath <> '') and TDirectory.Exists(APath)
+    and not IsInsideBasePath(APath)
+    and not IsSubPath(APath, TPath.GetTempPath);
+end;
+
 function TMARSCmd.GetProjectsFolder: string;
 var
   LIni: TIniFile;
@@ -251,22 +309,23 @@ begin
     finally
       LIni.Free;
     end;
-    if FProjectsFolder = '' then
+    if not IsGoodProjectsFolder(FProjectsFolder) then
       FProjectsFolder := TPath.Combine(TPath.GetDocumentsPath, 'MARS Projects');
   end;
   Result := FProjectsFolder;
 end;
 
-procedure TMARSCmd.SetProjectsFolder(const Value: string);
+procedure TMARSCmd.SaveSettings;
 var
   LIni: TIniFile;
 begin
-  FProjectsFolder := Value;
+  if not IsGoodProjectsFolder(FProjectsFolder) then
+    Exit;
   try
     ForceDirectories(ExtractFileDir(GetSettingsFileName));
     LIni := TIniFile.Create(GetSettingsFileName);
     try
-      LIni.WriteString(SETTINGS_SECTION, SETTINGS_PROJECTS_FOLDER, Value);
+      LIni.WriteString(SETTINGS_SECTION, SETTINGS_PROJECTS_FOLDER, FProjectsFolder);
     finally
       LIni.Free;
     end;

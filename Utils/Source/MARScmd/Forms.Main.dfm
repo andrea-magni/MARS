@@ -1291,15 +1291,25 @@ object MainForm: TMainForm
         AutoSize = False
         Caption = 'Template:'
       end
-      object TemplateFolderEdit: TEdit
+      object TemplatePathLabel: TLabel
+        Left = 91
+        Top = 40
+        Width = 449
+        Height = 13
+        Anchors = [akLeft, akTop, akRight]
+        AutoSize = False
+        EllipsisPosition = epPathEllipsis
+        ShowAccelChar = False
+      end
+      object TemplateComboBox: TComboBox
         Left = 91
         Top = 13
         Width = 449
         Height = 21
+        Style = csDropDownList
         Anchors = [akLeft, akTop, akRight]
         TabOrder = 0
-        OnChange = TemplateFolderEditChange
-        ExplicitWidth = 312
+        OnChange = TemplateComboBoxChange
       end
       object Button1: TButton
         Left = 546
@@ -1307,7 +1317,10 @@ object MainForm: TMainForm
         Width = 27
         Height = 25
         Anchors = [akTop, akRight]
+        Hint = 'Use a template from another folder'
         Caption = '...'
+        ParentShowHint = False
+        ShowHint = True
         TabOrder = 1
         OnClick = Button1Click
         ExplicitLeft = 409

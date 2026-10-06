@@ -14,7 +14,8 @@ type
     OptionsTab: TTabSheet;
     ExecuteTab: TTabSheet;
     TopPanel: TPanel;
-    TemplateFolderEdit: TEdit;
+    TemplateComboBox: TComboBox;
+    TemplatePathLabel: TLabel;
     TemplateLabel: TLabel;
     BasePathLabel: TLabel;
     Button1: TButton;
@@ -43,11 +44,14 @@ type
     procedure ExecuteActionExecute(Sender: TObject);
     procedure MainPageControlChange(Sender: TObject);
     procedure ExecuteActionUpdate(Sender: TObject);
-    procedure TemplateFolderEditChange(Sender: TObject);
+    procedure TemplateComboBoxChange(Sender: TObject);
     procedure DestinationFolderEditChange(Sender: TObject);
     procedure Button2Click(Sender: TObject);
   private
-    { Private declarations }
+    // full path of each item of TemplateComboBox
+    FTemplatePaths: TArray<string>;
+    procedure AddTemplate(const APath, ACaption: string);
+    procedure SelectTemplate(const AIndex: Integer);
   public
     { Public declarations }
   end;
@@ -65,11 +69,29 @@ uses
   ShellAPI
 ;
 
-procedure TMainForm.Button1Click(Sender: TObject);
+procedure TMainForm.AddTemplate(const APath, ACaption: string);
 begin
-  FileOpenDialog1.DefaultFolder := TemplateFolderEdit.Text;
+  TemplateComboBox.Items.Add(ACaption);
+  FTemplatePaths := FTemplatePaths + [APath];
+end;
+
+procedure TMainForm.Button1Click(Sender: TObject);
+var
+  LIndex: Integer;
+begin
+  FileOpenDialog1.DefaultFolder := TMARSCmd.Current.TemplatePath;
   if FileOpenDialog1.Execute then
-    TemplateFolderEdit.Text := FileOpenDialog1.FileName;
+  begin
+    LIndex := Length(FTemplatePaths) - 1;
+    while (LIndex >= 0) and not SameText(FTemplatePaths[LIndex], FileOpenDialog1.FileName) do
+      Dec(LIndex);
+    if LIndex < 0 then
+    begin
+      AddTemplate(FileOpenDialog1.FileName, FileOpenDialog1.FileName);
+      LIndex := High(FTemplatePaths);
+    end;
+    SelectTemplate(LIndex);
+  end;
 end;
 
 procedure TMainForm.Button2Click(Sender: TObject);
@@ -98,6 +120,9 @@ begin
     Exit;
 
   TMARSCmd.Current.Execute;
+  // proposed for the next project
+  TMARSCmd.Current.ProjectsFolder := ExtractFileDir(ExcludeTrailingPathDelimiter(TMARSCmd.Current.DestinationPath));
+  TMARSCmd.Current.SaveSettings;
   ShellExecute(0, 'open', PChar(TMARSCmd.Current.DestinationPath), nil, nil, SW_NORMAL);
 end;
 
@@ -108,10 +133,16 @@ begin
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
+var
+  LTemplate: string;
 begin
   MainPageControl.ActivePageIndex := 0;
   BasePathLabel.Caption := 'Base path: ' + TMARSCmd.Current.BasePath;
-  TemplateFolderEdit.Text := TMARSCmd.Current.TemplatePath;
+  for LTemplate in TMARSCmd.Current.AvailableTemplates do
+    AddTemplate(LTemplate, ExtractFileName(LTemplate));
+  if Length(FTemplatePaths) = 0 then
+    AddTemplate(TMARSCmd.Current.TemplatePath, TMARSCmd.Current.TemplatePath);
+  SelectTemplate(0);
 end;
 
 procedure TMainForm.MainPageControlChange(Sender: TObject);
@@ -130,9 +161,18 @@ begin
   NextAction.Enabled := MainPageControl.ActivePageIndex + 1 < MainPageControl.PageCount;
 end;
 
-procedure TMainForm.TemplateFolderEditChange(Sender: TObject);
+procedure TMainForm.SelectTemplate(const AIndex: Integer);
 begin
-  TMARSCmd.Current.TemplatePath := TemplateFolderEdit.Text;
+  TemplateComboBox.ItemIndex := AIndex;
+  TemplateComboBoxChange(TemplateComboBox);
+end;
+
+procedure TMainForm.TemplateComboBoxChange(Sender: TObject);
+begin
+  if TemplateComboBox.ItemIndex < 0 then
+    Exit;
+  TMARSCmd.Current.TemplatePath := FTemplatePaths[TemplateComboBox.ItemIndex];
+  TemplatePathLabel.Caption := TMARSCmd.Current.TemplatePath;
 end;
 
 procedure TMainForm.TestActionExecute(Sender: TObject);

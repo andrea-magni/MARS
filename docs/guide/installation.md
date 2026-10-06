@@ -85,14 +85,14 @@ MARS supports Delphi **10.4 Sydney** up to **13 Florence**. Earlier versions are
 
 ## Bootstrap a new project with MARSCmd
 
-MARS ships a small command-line utility that scaffolds a complete, ready-to-run project for you from the `MARSTemplate` demo.
+MARS ships a small command-line utility that scaffolds a complete, ready-to-run project for you from a template: `MARSTemplate` (Indy) or `MARSTemplateDCS` (Delphi Cross Socket).
 
 1. Compile and run [`MARScmd_VCL.dproj`](https://github.com/andrea-magni/MARS/blob/master/Utils/Source/MARScmd/MARScmd_VCL.dproj) in `[MARS Folder]\Utils\Source\MARScmd`.
-2. Follow the prompts. It clones `Demos\MARSTemplate` into a new folder with your chosen project name, giving you a server (console / VCL / FMX / service / ISAPI / Apache / daemon variants), a client, and a test project. The `.ini` files of the new project get a freshly generated random `JWT.Secret`.
+2. Follow the prompts. Choose the template on the first page: MARSCmd lists the `Demos\MARSTemplate*` folders (`...` picks a template from another folder). It clones the template into a new folder with your chosen project name, giving you a server (console / VCL / FMX / service / ISAPI / Apache / daemon variants), a client, and a test project. The `.ini` files of the new project get a freshly generated random `JWT.Secret`.
 
 The settings of the new project are in `bin\Server.ini`, shared by all its server flavors (console, VCL, FMX, service, daemon, ISAPI, Apache, FastCGI): each flavor has its own small `.ini`, named after the executable, that includes `Server.ini` with an [`[Include]` section](/reference/parameters#shared-configuration-include) and can override any value (i.e. a different `Port`). The generated `JWT.Secret` is in `Server.ini`.
 
-The new project goes to `Documents\MARS Projects\<project name>` by default; next time MARSCmd proposes the folder used last. A destination inside the MARS folder asks for confirmation, as uninstalling or upgrading MARS would delete it, and an existing folder that is not empty is never overwritten.
+The new project goes to `Documents\MARS Projects\<project name>` by default; next time MARSCmd proposes the folder used last (saved in `%APPDATA%\MARS-Curiosity\MARSCmd.ini`; a saved folder that no longer exists, or that is inside the MARS folder or the temp folder, is ignored). A destination inside the MARS folder asks for confirmation, as uninstalling or upgrading MARS would delete it, and an existing folder that is not empty is never overwritten.
 
 The template refers to the MARS folder with relative paths (`..\..\Source`). Outside the MARS folder, MARSCmd writes them as `$(MARSDIR)\Source`, `$(MARSDIR)\ThirdParty\...`: `MARSDIR` is the IDE environment variable set by the setup to the MARS folder (Tools ▸ Options ▸ IDE ▸ Environment Variables). With TMS Smart Setup or a manual installation, define it yourself or rely on the library path.
 
