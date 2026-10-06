@@ -1,7 +1,8 @@
 # Third-party libraries
 
 MARS ships a copy of the third-party sources it compiles, with the upstream folder layout and
-only the files MARS needs. The exception is delphi-jose-jwt, a git submodule (see below). This
+only the files MARS needs. The exceptions are delphi-jose-jwt and Delphi-Mocks, git submodules (see
+below). This
 page records where each copy comes from, so that it can be checked against upstream and
 refreshed.
 
@@ -28,6 +29,19 @@ instead of containing its units, so the two never clash. `Packages\<version>\MAR
 Clone MARS with `git clone --recurse-submodules`, or run `git submodule update --init` in an
 existing clone. To move to another release: `git -C ThirdParty/delphi-jose-jwt checkout <tag>`,
 build and test, then commit the new submodule pointer.
+
+## Delphi-Mocks (git submodule)
+
+`Delphi-Mocks` is a git submodule of
+[VSoftTechnologies/Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks) (Apache 2.0
+license), pinned to commit `53cd36b` (2026-10-01): the last tag, `v0.3.1`, predates the fix of the
+memory leaks of `TMock<T>` and `TStub<T>` (`9db73c2`). It is not part of any package: only
+`Source\MARS.Tests.pas`, the test suite (`tests`) and the test projects of the demos and templates
+(`Tests.Default.pas`) use it, through `ThirdParty\Delphi-Mocks\Source` in their search path (the
+setup adds it to the IDE library path).
+
+To move to another version: `git -C ThirdParty/Delphi-Mocks checkout <commit or tag>`, run the
+test suite, then commit the new submodule pointer.
 
 ## Refreshing a library
 

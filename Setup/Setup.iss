@@ -83,6 +83,10 @@
 #if !FileExists(AddBackslash(SourcePath) + "..\ThirdParty\delphi-jose-jwt\Packages\11AndLater\JOSE.dproj")
   #error ThirdParty\delphi-jose-jwt is empty: run "git submodule update --init" before building the setup
 #endif
+// ThirdParty\Delphi-Mocks is a git submodule too: MARS.Tests and the test projects use it
+#if !FileExists(AddBackslash(SourcePath) + "..\ThirdParty\Delphi-Mocks\Source\Delphi.Mocks.pas")
+  #error ThirdParty\Delphi-Mocks is empty: run "git submodule update --init" before building the setup
+#endif
 // MARS.groupproj builds the JOSE package from ThirdParty\delphi-jose-jwt\Packages: the setup must
 // extract those projects too when it reads the group projects (see InitializeSetup)
 #define ExtraProjectFiles "{app}\ThirdParty\delphi-jose-jwt\Packages\*"
@@ -236,6 +240,18 @@ Type: dirifempty; Name: "{app}";
 const
   LibraryDirVariable = 'MARSDIR';
   LibraryDirDefine = '$(' + LibraryDirVariable + ')';
+  // source folders not part of any package, added to the IDE library path along with the
+  // source folders of this package (and removed with them)
+  ExtraSourcePathsProject = 'MARS.Utils.dproj';
+  ExtraSourcePaths = 'ThirdParty\Delphi-Mocks\Source'; // MARS.Tests, test projects
+
+/// <summary> Adds ExtraSourcePaths to the source paths of ExtraSourcePathsProject </summary>
+procedure _AddExtraSourcePaths(var AProjectItem: TRADStudioGroupProjectItem);
+begin
+  if SameText(ExtractFileName(AProjectItem.Project.FileName), ExtraSourcePathsProject) then
+    AProjectItem.Project.SourcePaths := AppendString(AProjectItem.Project.SourcePaths
+      , AddBackslash(ExpandConstant('{app}')) + ExtraSourcePaths, False);
+end;
 
 /// <summary> Make custom changes before the installation </summary>
 function _OnTryPrepareProjectInstallation(var AProjectItem: TRADStudioGroupProjectItem; const AInfo: TRADStudioInfo): Boolean; forward;
@@ -259,6 +275,7 @@ begin
   begin
     _FRADStudioInstalledList := AppendString(_FRADStudioInstalledList, AInfo.Version.RegVersion, False);
   end;
+  _AddExtraSourcePaths(AProjectItem);
   LAppPath := ExpandConstant('{app}');
   for I := 0 to GetArrayLength(AProjectItem.Project.SourcePaths) - 1 do
     StringChangeEx(AProjectItem.Project.SourcePaths[I], LAppPath, LibraryDirDefine, True);
@@ -277,6 +294,7 @@ begin
   begin
     _FRADStudioUninstalledList := AppendString(_FRADStudioUninstalledList, AInfo.Version.RegVersion, False);
   end;
+  _AddExtraSourcePaths(AProjectItem);
   LAppPath := ExpandConstant('{app}');
   for I := 0 to GetArrayLength(AProjectItem.Project.SourcePaths) - 1 do
     StringChangeEx(AProjectItem.Project.SourcePaths[I], LAppPath, LibraryDirDefine, True);

@@ -42,15 +42,17 @@ Use one installation method only. If MARS is already installed with the executab
 
 `MARS.UniDAC` is not built by Smart Setup, because it requires Devart UniDAC: if you need it, build it manually from the `Packages` folder.
 
+The test projects (the `...Tests` project of an application created with MARSCmd, `MARS.Tests`) also need [Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), which is not a Smart Setup product: clone it and add its `Source` folder to the library path.
+
 ## Option 3 — Manual installation
 
-1. Get a copy of MARS with `git clone`, including its submodule ([delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt), used by the JOSE JWT backend; the other third-party libraries are part of the repository):
+1. Get a copy of MARS with `git clone`, including its submodules ([delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt), used by the JOSE JWT backend, and [Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), used by the test projects; the other third-party libraries are part of the repository):
 
    ```bash
    git clone --recurse-submodules https://github.com/andrea-magni/MARS.git
    ```
 
-   In a clone made without `--recurse-submodules`, run `git submodule update --init`. The **Download ZIP** button of GitHub leaves `ThirdParty\delphi-jose-jwt` empty: download [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) at the tag shown in [`ThirdParty/README.md`](https://github.com/andrea-magni/MARS/blob/master/ThirdParty/README.md) and extract it there.
+   In a clone made without `--recurse-submodules`, run `git submodule update --init`. The **Download ZIP** button of GitHub leaves `ThirdParty\delphi-jose-jwt` and `ThirdParty\Delphi-Mocks` empty: download them at the versions shown in [`ThirdParty/README.md`](https://github.com/andrea-magni/MARS/blob/master/ThirdParty/README.md) and extract them there.
 
 2. Add the following folders to your RAD Studio **Library Path** (Tools ▸ Options ▸ Language ▸ Delphi ▸ Library):
 
@@ -60,6 +62,7 @@ Use one installation method only. If MARS is already installed with the executab
    - `[MARS Folder]\ThirdParty\mORMot\Source`
    - `[MARS Folder]\ThirdParty\Neslib.Yaml`
    - `[MARS Folder]\ThirdParty\Neslib.Yaml\Neslib`
+   - `[MARS Folder]\ThirdParty\Delphi-Mocks\Source` (test projects: `MARS.Tests`, the `...Tests` project of a new application)
 
 3. Build the runtime/design-time packages. For example, on **13 Florence**:
 
@@ -95,5 +98,5 @@ After installation, the repository layout is:
 | `Packages` | RAD Studio packages, one subfolder per Delphi version. |
 | `Demos` | Ready-to-run sample projects (see [Demos](/demos/)). |
 | `Utils` | Tools, including the `MARSCmd` project bootstrapper. |
-| `ThirdParty` | Bundled dependencies (Delphi-Cross-Socket, JOSE-JWT, mORMot, Neslib.Yaml): origin, version and license of each in [`ThirdParty/README.md`](https://github.com/andrea-magni/MARS/blob/master/ThirdParty/README.md). |
+| `ThirdParty` | Bundled dependencies (Delphi-Cross-Socket, JOSE-JWT, mORMot, Neslib.Yaml, Delphi-Mocks): origin, version and license of each in [`ThirdParty/README.md`](https://github.com/andrea-magni/MARS/blob/master/ThirdParty/README.md). |
 | `tests` | DUnitX test suite. |
