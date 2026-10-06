@@ -615,9 +615,17 @@ begin
 end;
 
 function TMARSDCSRequest.GetQueryString: string;
+var
+  LRaw: string;
+  LPos: Integer;
 begin
-//AM TODO controllare
-  Result := FDCSRequest.Query.ToString;
+  // the query string as sent by the client (Query.ToString is the class name)
+  LRaw := FDCSRequest.RawPathAndParams;
+  LPos := Pos('?', LRaw);
+  if LPos > 0 then
+    Result := Copy(LRaw, LPos + 1, MaxInt)
+  else
+    Result := '';
 end;
 
 function TMARSDCSRequest.GetRawContent: TBytes;
