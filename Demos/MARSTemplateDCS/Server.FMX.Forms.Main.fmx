@@ -56,6 +56,13 @@ object MainForm: TMainForm
       TabOrder = 2
       TextSettings.Trimming = None
     end
+    object Button1: TButton
+      Action = OpenAPIAction
+      ImageIndex = -1
+      Position.X = 544.000000000000000000
+      Position.Y = 64.000000000000000000
+      TabOrder = 5
+    end
     object StopButton: TButton
       Action = StopServerAction
       ImageIndex = -1
@@ -77,6 +84,11 @@ object MainForm: TMainForm
       Text = 'Stop Server'
       OnExecute = StopServerActionExecute
       OnUpdate = StopServerActionUpdate
+    end
+    object OpenAPIAction: TAction
+      Text = 'OpenAPI'
+      OnExecute = OpenAPIActionExecute
+      OnUpdate = OpenAPIActionUpdate
     end
   end
 end

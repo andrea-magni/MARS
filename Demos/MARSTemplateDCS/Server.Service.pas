@@ -3,6 +3,7 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
+
 unit Server.Service;
 
 {$I MARS.inc}
@@ -12,9 +13,6 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, Vcl.Graphics
 , Vcl.Controls, Vcl.SvcMgr, Vcl.Dialogs
-//, IPPeerServer, IPPeerAPI
-, IdHTTPWebBrokerBridge, Web.WebReq, Web.WebBroker
-, IdContext
 , MARS.http.Server.DCS
 ;
 
@@ -25,16 +23,9 @@ type
     procedure ServiceStart(Sender: TService; var Started: Boolean);
     procedure ServiceStop(Sender: TService; var Stopped: Boolean);
   private
-    FServer: TIdHTTPWebBrokerBridge;
-
-    procedure ParseAuthenticationHandler(AContext: TIdContext;
-      const AAuthType, AAuthData: String; var VUsername, VPassword: String;
-      var VHandled: Boolean); virtual;
-
+    FServer: TMARShttpServerDCS;
   public
     function GetServiceController: TServiceController; override;
-
-    const DEFAULT_PORT = 8080;
   end;
 
 var
@@ -45,9 +36,7 @@ implementation
 {$R *.dfm}
 
 uses
-  IdSchedulerOfThreadPool
-, Server.Ignition
-, Server.WebModule
+  Server.Ignition
 ;
 
 procedure ServiceController(CtrlCode: DWord); stdcall;
@@ -60,37 +49,18 @@ begin
   Result := ServiceController;
 end;
 
-procedure TServerService.ParseAuthenticationHandler(AContext: TIdContext;
-  const AAuthType, AAuthData: String; var VUsername, VPassword: String;
-  var VHandled: Boolean);
-begin
-  // Allow JWT Bearer authentication's scheme
-  if SameText(AAuthType, 'Bearer') then
-    VHandled := True;
-end;
-
 procedure TServerService.ServiceCreate(Sender: TObject);
-var
-  LScheduler: TIdSchedulerOfThreadPool;
 begin
-  if WebRequestHandler <> nil then
-    WebRequestHandler.WebModuleClass := WebModuleClass;
+  Name := TServerEngine.Default.Parameters.ByNameText('ServiceName', Name).AsString;
+  DisplayName := TServerEngine.Default.Parameters.ByNameText('ServiceDisplayName', DisplayName).AsString;
 
-  FServer := TIdHTTPWebBrokerBridge.Create(nil);
+  FServer := TMARShttpServerDCS.Create(TServerEngine.Default);
   try
+    // http port (Port parameter, default 8080, 0 disables http)
     FServer.DefaultPort := TServerEngine.Default.Port;
-
-    LScheduler := TIdSchedulerOfThreadPool.Create(FServer);
-    try
-      LScheduler.PoolSize := TServerEngine.Default.ThreadPoolSize;
-      FServer.Scheduler := LScheduler;
-      FServer.MaxConnections := LScheduler.PoolSize;
-      FServer.OnParseAuthentication := ParseAuthenticationHandler;
-    except
-      FServer.Scheduler.Free;
-      FServer.Scheduler := nil;
-      raise;
-    end;
+    // https (0 = disabled): PortSSL, DCS.SSL.CertFile and DCS.SSL.KeyFile parameters,
+    // see https://andrea-magni.github.io/MARS/server/engine#https
+    FServer.SSLPort := TServerEngine.Default.PortSSL;
   except
     FServer.Free;
     raise;
@@ -104,7 +74,12 @@ end;
 
 procedure TServerService.ServiceStart(Sender: TService; var Started: Boolean);
 begin
-  FServer.Active := True;
+  try
+    FServer.Active := True;
+  except
+    on E: Exception do
+      LogMessage('The server could not start: ' + E.Message, EVENTLOG_ERROR_TYPE);
+  end;
   Started := FServer.Active;
 end;
 

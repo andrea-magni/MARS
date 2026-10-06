@@ -175,10 +175,6 @@
             <DesignClass>TService</DesignClass>
         </DCCReference>
         <DCCReference Include="Server.Ignition.pas"/>
-        <DCCReference Include="Server.WebModule.pas">
-            <Form>ServerWebModule</Form>
-            <DesignClass>TWebModule</DesignClass>
-        </DCCReference>
         <DCCReference Include="Server.Resources.HelloWorld.pas"/>
         <DCCReference Include="Server.Resources.OpenAPI.pas"/>
         <DCCReference Include="Server.Resources.Token.pas"/>

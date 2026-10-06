@@ -76,4 +76,6 @@ A common production setup is the console/service/daemon host on plain HTTP behin
 
 ## Alternative transport
 
-`Demos/MARSTemplateDCS` hosts the same server core on Delphi Cross Socket (DCS) instead of Indy, including a Linux daemon variant.
+`Demos/MARSTemplateDCS` hosts the same server core on Delphi Cross Socket (DCS) instead of Indy: console, VCL, FMX, Windows service (`Server.Service.pas` with `TMARShttpServerDCS`) and Linux daemon (`MARS.Linux.Daemon.DCS`, same classes as `MARS.Linux.Daemon`, which uses Indy).
+
+Configuration files (both templates): `bin\Server.ini` holds the settings shared by all the flavors; each flavor has `bin\<executable name>.ini` with `[Include] Base=Server.ini`, overriding values as needed (i.e. `Port`, or `ServiceName`/`ServiceDisplayName` for the service). MARSCmd renames the flavor files and writes the generated `JWT.Secret` into `Server.ini`.

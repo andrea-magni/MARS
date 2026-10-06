@@ -11,8 +11,9 @@ unit Server.Ignition;
 interface
 
 uses
-  System.Classes, System.SysUtils, System.RTTI, System.StrUtils, System.ZLib
-, MARS.Core.Engine, MARS.Core.Engine.Interfaces
+  System.Classes, System.SysUtils, System.RTTI, System.StrUtils
+{$IFDEF MARS_ZLIB}, System.ZLib {$ENDIF}
+, MARS.Core.Engine.Interfaces
 ;
 
 type
@@ -31,13 +32,13 @@ type
 implementation
 
 uses
-  MARS.Core.Activation, MARS.Core.Activation.Interfaces
-, MARS.Core.Application.Interfaces
+  MARS.Core.Engine, MARS.Core.Activation
+, MARS.Core.Activation.Interfaces, MARS.Core.Application.Interfaces, MARS.Core.RequestAndResponse.Interfaces
+
 , MARS.Core.Utils, MARS.Utils.Parameters.IniFile
-, MARS.Core.URL, MARS.Core.RequestAndResponse.Interfaces
-, MARS.Core.MessageBodyWriter
-, MARS.Core.MessageBodyWriters
-, MARS.Data.MessageBodyWriters
+, MARS.Core.URL, MARS.Core.JSON
+
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters, MARS.Data.MessageBodyWriters
 , MARS.Core.MessageBodyReaders
 {$IFDEF MARS_FIREDAC}
 , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option
@@ -66,6 +67,9 @@ begin
   // Engine configuration
   FEngine.Parameters.LoadFromIniFile;
 
+  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.IncludeEmptyOrNullValues;
+//  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.SkipAllEmptyOrNullValues;
+
   // Application configuration
   FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
 {$REGION 'OnGetApplication example'}
@@ -73,8 +77,10 @@ begin
   FEngine.OnGetApplication :=
     procedure (
       const AEngine: IMARSEngine;
-      const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
-      var AApplication: IMARSApplication)
+      const AURL: TMARSURL;
+      const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      var AApplication: IMARSApplication
+    )
     begin
       if AApplication = nil then
         AApplication := FEngine.ApplicationByName('DefaultApp');
@@ -101,7 +107,8 @@ begin
   FEngine.BeforeHandleRequest :=
     function (
       const AEngine: IMARSEngine;
-      const AURL: TMARSURL; const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      const AURL: TMARSURL;
+      const ARequest: IMARSRequest; const AResponse: IMARSResponse;
       var Handled: Boolean
     ): Boolean
     begin
@@ -146,10 +153,14 @@ begin
       var
         LOutputStream: TBytesStream;
       begin
-        if ContainsText(AActivation.Request.GetHeaderParamValue('Accept-Encoding'), 'gzip')  then
+        if ContainsText(AActivation.Request.GetHeaderParamValue('Accept-Encoding'), 'gzip')
+           and Assigned(AActivation.Response.ContentStream)
+           and (AActivation.Response.ContentStream.Size > 0)
+        then
         begin
           LOutputStream := TBytesStream.Create(nil);
           try
+            AActivation.Response.ContentStream.Position := 0;
             ZipStream(AActivation.Response.ContentStream, LOutputStream, 15 + 16);
             AActivation.Response.ContentStream.Free;
             AActivation.Response.ContentStream := LOutputStream;

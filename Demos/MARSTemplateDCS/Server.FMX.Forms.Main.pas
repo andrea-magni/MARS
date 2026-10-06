@@ -25,6 +25,8 @@ type
     Label1: TLabel;
     SSLPortEdit: TEdit;
     SSLPortLabel: TLabel;
+    OpenAPIAction: TAction;
+    Button1: TButton;
     StartButton: TButton;
     StopButton: TButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -35,8 +37,11 @@ type
     procedure StopServerActionUpdate(Sender: TObject);
     procedure PortNumberEditChange(Sender: TObject);
     procedure SSLPortEditChange(Sender: TObject);
+    procedure OpenAPIActionUpdate(Sender: TObject);
+    procedure OpenAPIActionExecute(Sender: TObject);
   private
     FServer: TMARShttpServerDCS;
+    function OpenAPIURL: string;
   public
   end;
 
@@ -48,7 +53,9 @@ implementation
 {$R *.fmx}
 
 uses
-  MARS.Core.URL, MARS.Core.Engine
+{$IFDEF MSWINDOWS} Windows, ShellAPI, {$ENDIF}
+  System.NetEncoding
+, MARS.Core.URL, MARS.Core.Engine, MARS.Core.Engine.Interfaces, MARS.Core.Application.Interfaces
 , Server.Ignition
 ;
 
@@ -63,6 +70,42 @@ begin
   SSLPortEdit.Text := TServerEngine.Default.PortSSL.ToString;
 
   StartServerAction.Execute;
+end;
+
+// Swagger UI (static content of TStaticContentResource) on the OpenAPI document of DefaultApp,
+// with the actual ports and base paths
+function TMainForm.OpenAPIURL: string;
+var
+  LEngine: IMARSEngine;
+  LApplication: IMARSApplication;
+  LBaseURL: string;
+begin
+  LEngine := TServerEngine.Default;
+  if LEngine.Port <> 0 then
+    LBaseURL := 'http://localhost:' + LEngine.Port.ToString
+  else
+    LBaseURL := 'https://localhost:' + LEngine.PortSSL.ToString;
+  LBaseURL := LBaseURL + LEngine.BasePath;
+  LApplication := LEngine.ApplicationByName('DefaultApp');
+  if Assigned(LApplication) then
+    LBaseURL := TMARSURL.CombinePath([LBaseURL, LApplication.BasePath]);
+
+  Result := TMARSURL.CombinePath([LBaseURL, 'www/index.html'])
+    + '?openAPIURL=' + TURLEncoding.URL.Encode(TMARSURL.CombinePath([LBaseURL, 'openapi']));
+end;
+
+procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
+begin
+{$IFDEF MSWINDOWS}
+  ShellExecute(0, nil, PWideChar(OpenAPIURL), nil, nil, SW_SHOWDEFAULT);
+{$ELSE}
+  ShowMessage('Open your browser at ' + OpenAPIURL);
+{$ENDIF}
+end;
+
+procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
+begin
+  OpenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.SSLPortEditChange(Sender: TObject);
@@ -97,7 +140,8 @@ end;
 
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
-  FServer.Active := False;
+  if Assigned(FServer) then
+    FServer.Active := False;
   FreeAndNil(FServer);
 end;
 

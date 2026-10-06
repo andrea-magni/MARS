@@ -12,7 +12,6 @@ uses
   Vcl.SvcMgr,
   Server.Service in 'Server.Service.pas' {ServerService: TService},
   Server.Ignition in 'Server.Ignition.pas',
-  Server.WebModule in 'Server.WebModule.pas' {ServerWebModule: TWebModule},
   Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
   Server.Resources.Token in 'Server.Resources.Token.pas';

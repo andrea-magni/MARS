@@ -10,13 +10,13 @@ interface
 
 uses
   SysUtils, Classes
-, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL, MARS.Core.JSON
 , MARS.WebServer.Resources
 , MARS.OpenAPI.v3, MARS.Metadata.Attributes
 ;
 
 type
-  [Path('openapi'), MetaVisible(False)]
+  [Path('openapi'), MetaVisible(False), JSONSkipEmptyValues]
   TOpenAPIResource = class
   protected
   public

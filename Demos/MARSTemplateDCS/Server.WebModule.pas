@@ -3,23 +3,22 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-
 unit Server.WebModule;
 
 {$I MARS.inc}
 
 interface
 
-uses System.SysUtils, System.Classes, Web.HTTPApp;
+uses
+  System.SysUtils, System.Classes, Web.HTTPApp
+;
 
 type
   TServerWebModule = class(TWebModule)
     procedure ServerWebModuleDefaultHandlerAction(Sender: TObject;
       Request: TWebRequest; Response: TWebResponse; var Handled: Boolean);
   private
-    { Private declarations }
   public
-    { Public declarations }
   end;
 
 var
