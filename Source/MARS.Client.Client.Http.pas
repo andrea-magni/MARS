@@ -12,6 +12,7 @@ interface
 uses
   SysUtils, Classes
   , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client,  MARS.Utils.Parameters
+  , MARS.Client.Log
 
   // Net
   , System.Net.URLClient, System.Net.HttpClient, System.NetConsts
@@ -86,6 +87,8 @@ type
 
     procedure EndorseAuthorization; override;
     procedure CheckLastCmdSuccess; virtual;
+    procedure GetLogResponseInfo(const AException: Exception; var AEntry: TMARSClientLogEntry;
+      var AErrorBody: TBytes); override;
     procedure ApplyProxyConfig; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -239,6 +242,27 @@ begin
 //  end;
 end;
 
+procedure TMARSHttpClient.GetLogResponseInfo(const AException: Exception;
+  var AEntry: TMARSClientLogEntry; var AErrorBody: TBytes);
+var
+  LHeader: TNetHeader;
+begin
+  inherited;
+  // FLastResponse is left as is by a failed connection: use it only for an HTTP error
+  if not Assigned(FLastResponse)
+    or (Assigned(AException) and not (AException is EMARSClientHttpException))
+  then
+    Exit;
+
+  AEntry.StatusCode := FLastResponse.StatusCode;
+  AEntry.StatusText := FLastResponse.StatusText;
+  AEntry.ResponseContentType := FLastResponse.HeaderValue['Content-Type'];
+  AEntry.ResponseHeaders := [];
+  for LHeader in FLastResponse.Headers do
+    AEntry.ResponseHeaders := AEntry.ResponseHeaders
+      + [TMARSClientLogHeader.Create(LHeader.Name, LHeader.Value)];
+end;
+
 procedure TMARSHttpClient.CheckLastCmdSuccess;
 begin
   if not Assigned(FLastResponse) then
@@ -278,8 +302,12 @@ begin
   inherited;
   FHttpClient.Accept := AAccept;
   FHttpClient.ContentType := AContentType;
-  FLastResponse := FHttpClient.Delete(AURL, AResponse);
-  CheckLastCmdSuccess;
+  ExecuteLogged(TMARSHttpVerb.Delete, AURL, AAccept, AContentType, TMARSClientLogBody.Empty, AResponse,
+    procedure
+    begin
+      FLastResponse := FHttpClient.Delete(AURL, AResponse);
+      CheckLastCmdSuccess;
+    end);
 end;
 
 destructor TMARSHttpClient.Destroy;
@@ -349,8 +377,12 @@ begin
   FHttpClient.Accept := AAccept;
   FHttpClient.ContentType := AContentType;
   inherited;
-  FLastResponse := FHttpClient.Get(AURL, AResponseContent);
-  CheckLastCmdSuccess;
+  ExecuteLogged(TMARSHttpVerb.Get, AURL, AAccept, AContentType, TMARSClientLogBody.Empty, AResponseContent,
+    procedure
+    begin
+      FLastResponse := FHttpClient.Get(AURL, AResponseContent);
+      CheckLastCmdSuccess;
+    end);
 end;
 
 function TMARSHttpClient.GetAllowCookies: Boolean;
@@ -492,8 +524,12 @@ begin
   FHttpClient.ContentType := AContentType;
   if Assigned(AContent) then
     AContent.Position := 0;
-  FLastResponse := FHttpClient.Post(AURL, AContent, AResponse);
-  CheckLastCmdSuccess;
+  ExecuteLogged(TMARSHttpVerb.Post, AURL, AAccept, AContentType, TMARSClientLogBody.FromStream(AContent), AResponse,
+    procedure
+    begin
+      FLastResponse := FHttpClient.Post(AURL, AContent, AResponse);
+      CheckLastCmdSuccess;
+    end);
 end;
 
 procedure TMARSHttpClient.Put(const AURL: string; AContent, AResponse: TStream;
@@ -504,8 +540,12 @@ begin
   FHttpClient.ContentType := AContentType;
   if Assigned(AContent) then
     AContent.Position := 0;
-  FLastResponse := FHttpClient.Put(AURL, AContent, AResponse);
-  CheckLastCmdSuccess;
+  ExecuteLogged(TMARSHttpVerb.Put, AURL, AAccept, AContentType, TMARSClientLogBody.FromStream(AContent), AResponse,
+    procedure
+    begin
+      FLastResponse := FHttpClient.Put(AURL, AContent, AResponse);
+      CheckLastCmdSuccess;
+    end);
 end;
 
 function TMARSHttpClient.ResponseStatusCode: Integer;
@@ -663,8 +703,12 @@ begin
   FHttpClient.ContentType := AContentType;
   LFormData := CreateMultipartFormData(AFormData);
   try
-    FLastResponse := FHttpClient.Post(AURL, LFormData, AResponse);
-    CheckLastCmdSuccess;
+    ExecuteLogged(TMARSHttpVerb.Post, AURL, AAccept, LFormData.MimeTypeHeader, TMARSClientLogBody.FromFormData(AFormData), AResponse,
+      procedure
+      begin
+        FLastResponse := FHttpClient.Post(AURL, LFormData, AResponse);
+        CheckLastCmdSuccess;
+      end);
   finally
     LFormData.Free;
   end;
@@ -677,8 +721,12 @@ begin
   FHttpClient.Accept := AAccept;
   FHttpClient.ContentType := AContentType;
   AContent.Position := 0;
-  FLastResponse := FHttpClient.Patch(AURL, AContent, AResponse);
-  CheckLastCmdSuccess;
+  ExecuteLogged(TMARSHttpVerb.Patch, AURL, AAccept, AContentType, TMARSClientLogBody.FromStream(AContent), AResponse,
+    procedure
+    begin
+      FLastResponse := FHttpClient.Patch(AURL, AContent, AResponse);
+      CheckLastCmdSuccess;
+    end);
 end;
 
 procedure TMARSHttpClient.Query(const AURL: string; AContent, AResponse: TStream;
@@ -690,10 +738,14 @@ begin
   FHttpClient.Accept := AAccept;
   FHttpClient.ContentType := AContentType;
   AContent.Position := 0;
-  LRequest := FHttpClient.GetRequest('QUERY', AURL);
-  LRequest.SourceStream := AContent;
-  FLastResponse := FHttpClient.Execute(LRequest, AResponse);
-  CheckLastCmdSuccess;
+  ExecuteLogged(TMARSHttpVerb.Query, AURL, AAccept, AContentType, TMARSClientLogBody.FromStream(AContent), AResponse,
+    procedure
+    begin
+      LRequest := FHttpClient.GetRequest('QUERY', AURL);
+      LRequest.SourceStream := AContent;
+      FLastResponse := FHttpClient.Execute(LRequest, AResponse);
+      CheckLastCmdSuccess;
+    end);
 end;
 
 procedure TMARSHttpClient.Post(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;
@@ -707,8 +759,12 @@ begin
   FHttpClient.ContentType := AContentType;
   LFormUrlEncoded := AFormUrlEncoded.AsStrings;
   try
-    FLastResponse := FHttpClient.Post(AURL, LFormUrlEncoded, AResponse);
-    CheckLastCmdSuccess;
+    ExecuteLogged(TMARSHttpVerb.Post, AURL, AAccept, AContentType, TMARSClientLogBody.FromParameters(AFormUrlEncoded), AResponse,
+      procedure
+      begin
+        FLastResponse := FHttpClient.Post(AURL, LFormUrlEncoded, AResponse);
+        CheckLastCmdSuccess;
+      end);
   finally
     LFormUrlEncoded.Free;
   end;
@@ -728,8 +784,12 @@ begin
   try
     LFormData.Stream.Position := 0;
     FHttpClient.ContentType := LFormData.MimeTypeHeader;
-    FLastResponse := FHttpClient.Put(AURL, LFormData, AResponse);
-    CheckLastCmdSuccess;
+    ExecuteLogged(TMARSHttpVerb.Put, AURL, AAccept, LFormData.MimeTypeHeader, TMARSClientLogBody.FromFormData(AFormData), AResponse,
+      procedure
+      begin
+        FLastResponse := FHttpClient.Put(AURL, LFormData, AResponse);
+        CheckLastCmdSuccess;
+      end);
   finally
     LFormData.Free;
   end;

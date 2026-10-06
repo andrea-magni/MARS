@@ -26,6 +26,7 @@ The transport. Use `TMARSNetClient`, `TMARSHttpClient` or `TMARSIndyClient` (see
 | `AuthEndorsement` | How the JWT is sent: `AuthorizationBearer` or `Cookie`. |
 | `ProxyConfig` | Proxy host/port/credentials. |
 | `OnError` | Central handler for failed requests. |
+| `OnLog`, `LogOptions`, `SynchronizeLog` | Log of every request and response, see [Logging](/client/logging). |
 
 ## Application — `TMARSClientApplication`
 

@@ -53,6 +53,14 @@ Drop a `TMARSClientToken` (Resource = `token`), set `UserName`/`Password`, call 
 
 `TMARSFDResource` targets a server `TMARSFDDatasetResource`: link `TFDMemTable`s via its `ResourceDataSets` collection, `GET` to fetch, let the user edit, `POST` to send deltas; the server replies with apply-updates results per dataset.
 
+## Logging
+
+Every request/response of `TMARSNetClient`, `TMARSHttpClient`, `TMARSIndyClient` can be logged (unit `MARS.Client.Log`):
+- component: `OnLog(Sender; const AEntry: TMARSClientLogEntry)`, runs in the thread of the call (worker thread for `...Async`); `SynchronizeLog := True` moves it to the main thread (`TThread.Synchronize`).
+- no component: `TMARSCustomClient.RegisterLogger(procedure (const AEntry: TMARSClientLogEntry) ...)` (returns index for `UnregisterLogger`; `ClearLoggers`); also covers internal clients (class shortcuts, Async clones). Ready sinks: `TMARSClientLog.ToFile` (JSON lines), `ToDebugOutput`, `ToStrings`; `TMARSClientLog.LogToFile(FileName)` registers one.
+- `AEntry`: `Verb`, `URL`, `RequestHeaders` (only the MARS ones), `RequestBody`/`Size`, `StatusCode` (0 = no response), `StatusText`, `ResponseHeaders`, `ResponseBody`/`Size`, `DurationMs`, `ExceptionClass`/`Message`, `Succeeded`, `ToString`/`ToText`/`ToJSON`.
+- `LogOptions.Content`: `HeadersOnly` | `Truncated` (default, `MaxBodySize` = 64 KB) | `Full`. `LogOptions.Masking`: `None` | `HeadersOnly` | `HeadersAndFields` (default: `MaskedHeaders` Authorization/Cookie/Set-Cookie/Proxy-Authorization + `MaskedFields` password/secret/token/... in JSON, url-encoded and form data) | `All` (sizes only).
+
 ## Errors
 
 Server errors raise `EMARSClientHttpException` (client side) carrying `StatusCode` and content; when the server raised `EMARSWithResponseException` with a JSON payload, read it via `ContentAsJSON`. See `Demos/ErrorObjects` for the full pattern on both sides.

@@ -105,6 +105,7 @@ export default defineConfig({
             { text: 'Calling Resources', link: '/client/resources' },
             { text: 'Authentication', link: '/client/authentication' },
             { text: 'FireDAC Client', link: '/client/firedac' },
+            { text: 'Logging', link: '/client/logging' },
           ],
         },
       ],

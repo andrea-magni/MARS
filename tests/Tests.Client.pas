@@ -44,10 +44,9 @@ type
   end;
 
   TMARSResourceClientTest<C: TMARSCustomClient; R:TMARSClientCustomResource> = class(TMARSClientServerTest<C>)
-  private
+  protected
     FApplication: TMARSClientApplication;
     FRequest: R;
-  protected
   public
     [SetupFixture]
     procedure SetupFixture;

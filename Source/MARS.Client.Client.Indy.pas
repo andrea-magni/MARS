@@ -12,6 +12,7 @@ interface
 uses
   SysUtils, Classes
   , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
+  , MARS.Client.Log
 
   // Indy
   , IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP, IdMultipartFormData
@@ -44,6 +45,8 @@ type
 
     procedure EndorseAuthorization; override;
     procedure ApplyProxyConfig; override;
+    procedure GetLogResponseInfo(const AException: Exception; var AEntry: TMARSClientLogEntry;
+      var AErrorBody: TBytes); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -209,7 +212,11 @@ begin
   inherited;
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
-  FHttpClient.Delete(AURL, AResponse);
+  ExecuteLogged(TMARSHttpVerb.Delete, AURL, AAccept, AContentType, TMARSClientLogBody.Empty, AResponse,
+    procedure
+    begin
+      FHttpClient.Delete(AURL, AResponse);
+    end);
 end;
 
 destructor TMARSIndyClient.Destroy;
@@ -262,7 +269,40 @@ begin
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
   inherited;
-  FHttpClient.Get(AURL, AResponseContent);
+  ExecuteLogged(TMARSHttpVerb.Get, AURL, AAccept, AContentType, TMARSClientLogBody.Empty, AResponseContent,
+    procedure
+    begin
+      FHttpClient.Get(AURL, AResponseContent);
+    end);
+end;
+
+procedure TMARSIndyClient.GetLogResponseInfo(const AException: Exception;
+  var AEntry: TMARSClientLogEntry; var AErrorBody: TBytes);
+var
+  LIndex: Integer;
+  LStatusLine: TArray<string>;
+begin
+  inherited;
+  // after a failed connection the response is the one of the previous call
+  if Assigned(AException) and not (AException is EIdHTTPProtocolException) then
+    Exit;
+
+  AEntry.StatusCode := FHttpClient.ResponseCode;
+  // "HTTP/1.1 404 Not Found"
+  LStatusLine := FHttpClient.Response.ResponseText.Split([' '], 3);
+  if Length(LStatusLine) = 3 then
+    AEntry.StatusText := LStatusLine[2];
+  AEntry.ResponseContentType := FHttpClient.Response.ContentType;
+  if (AEntry.ResponseContentType <> '') and (FHttpClient.Response.CharSet <> '') then
+    AEntry.ResponseContentType := AEntry.ResponseContentType + '; charset=' + FHttpClient.Response.CharSet;
+  AEntry.ResponseHeaders := [];
+  for LIndex := 0 to FHttpClient.Response.RawHeaders.Count - 1 do
+    AEntry.ResponseHeaders := AEntry.ResponseHeaders + [TMARSClientLogHeader.Create(
+      FHttpClient.Response.RawHeaders.Names[LIndex], FHttpClient.Response.RawHeaders.ValueFromIndex[LIndex])];
+
+  // Indy puts the body of an HTTP error in the exception, not in the response stream
+  if AException is EIdHTTPProtocolException then
+    AErrorBody := TEncoding.UTF8.GetBytes(EIdHTTPProtocolException(AException).ErrorMessage);
 end;
 
 function TMARSIndyClient.GetConnectTimeout: Integer;
@@ -296,7 +336,11 @@ begin
   inherited;
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
-  FHttpClient.Post(AURL, AContent, AResponse);
+  ExecuteLogged(TMARSHttpVerb.Post, AURL, AAccept, AContentType, TMARSClientLogBody.FromStream(AContent), AResponse,
+    procedure
+    begin
+      FHttpClient.Post(AURL, AContent, AResponse);
+    end);
 end;
 
 procedure TMARSIndyClient.Put(const AURL: string; AContent, AResponse: TStream;
@@ -305,7 +349,11 @@ begin
   inherited;
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
-  FHttpClient.Put(AURL, AContent, AResponse);
+  ExecuteLogged(TMARSHttpVerb.Put, AURL, AAccept, AContentType, TMARSClientLogBody.FromStream(AContent), AResponse,
+    procedure
+    begin
+      FHttpClient.Put(AURL, AContent, AResponse);
+    end);
 end;
 
 procedure TMARSIndyClient.Query(const AURL: string; AContent, AResponse: TStream;
@@ -314,7 +362,11 @@ begin
   inherited;
   FHttpClient.Request.Accept := AAccept;
   FHttpClient.Request.ContentType := AContentType;
-  TIdHTTPAccess(FHttpClient).DoRequest('QUERY', AURL, AContent, AResponse, []);
+  ExecuteLogged(TMARSHttpVerb.Query, AURL, AAccept, AContentType, TMARSClientLogBody.FromStream(AContent), AResponse,
+    procedure
+    begin
+      TIdHTTPAccess(FHttpClient).DoRequest('QUERY', AURL, AContent, AResponse, []);
+    end);
 end;
 
 function TMARSIndyClient.ResponseStatusCode: Integer;
@@ -361,7 +413,11 @@ begin
   try
 
     FHttpClient.Request.ContentType :=  'multipart/form-data, ' + LFormDataStream.RequestContentType;
-    FHttpClient.Post(AURL, LFormDataStream, AResponse);
+    ExecuteLogged(TMARSHttpVerb.Post, AURL, AAccept, FHttpClient.Request.ContentType, TMARSClientLogBody.FromFormData(AFormData), AResponse,
+      procedure
+      begin
+        FHttpClient.Post(AURL, LFormDataStream, AResponse);
+      end);
   finally
     LFormDataStream.Free;
   end;
@@ -379,7 +435,11 @@ begin
   LFormDataStream := CreateMultipartFormData(AFormData);
   try
     FHttpClient.Request.ContentType := LFormDataStream.RequestContentType;
-    FHttpClient.Put(AURL, LFormDataStream, AResponse);
+    ExecuteLogged(TMARSHttpVerb.Put, AURL, AAccept, FHttpClient.Request.ContentType, TMARSClientLogBody.FromFormData(AFormData), AResponse,
+      procedure
+      begin
+        FHttpClient.Put(AURL, LFormDataStream, AResponse);
+      end);
   finally
     LFormDataStream.Free;
   end;

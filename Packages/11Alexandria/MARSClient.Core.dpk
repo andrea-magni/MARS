@@ -49,6 +49,7 @@ contains
   MARS.Client.Resource.Stream in '..\..\Source\MARS.Client.Resource.Stream.pas',
   MARS.Client.Token in '..\..\Source\MARS.Client.Token.pas',
   MARS.Client.Utils in '..\..\Source\MARS.Client.Utils.pas',
+  MARS.Client.Log in '..\..\Source\MARS.Client.Log.pas',
   MARS.Client.Client in '..\..\Source\MARS.Client.Client.pas',
   MARS.Client.Client.Indy in '..\..\Source\MARS.Client.Client.Indy.pas',
   MARS.Client.Resource.FormData in '..\..\Source\MARS.Client.Resource.FormData.pas',

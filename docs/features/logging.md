@@ -157,5 +157,6 @@ or enable it only while diagnosing.
 
 ## See also
 
+- [Client ▸ Logging](/client/logging) — logging the requests sent by a Delphi client.
 - [Request Lifecycle](/server/request-lifecycle) — the hooks these loggers build on.
 - [Configuration Parameters](/reference/parameters#logging-parameters) — all logging keys in one place.
