@@ -22,6 +22,8 @@ type
     procedure ReadApplication(const AApplicationMetadata: TMARSApplicationMetadata);
     procedure ReadOperation(const AOperation: TOperation;
       const AResourceMetadata: TMARSResourceMetadata; const AMethodMetadata: TMARSMethodMetadata);
+    // media type of the request body of a method without Consumes ('' when it has no body)
+    function DefaultRequestMediaType(const AMethodMetadata: TMARSMethodMetadata): string;
   public
     class procedure FillSchemaForObjectOrRecord(const ASchema: TSchema; const AType: TRttiType; const AddTo: TOpenAPI);
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
@@ -177,6 +179,33 @@ begin
         end;
       end;
 
+end;
+
+function TOpenAPIHelper.DefaultRequestMediaType(
+  const AMethodMetadata: TMARSMethodMetadata): string;
+var
+  LParamMD: TMARSRequestParamMetadata;
+  LType: TRttiType;
+begin
+  // without Consumes the server reads the body as application/json or */* (see the
+  // TMARSMessageBodyReaderRegistry defaults): document the media type a client would use
+  Result := '';
+  if Length(AMethodMetadata.ParametersByKind('FormParam')) > 0 then
+    Exit(TMediaType.APPLICATION_FORM_URLENCODED_TYPE);
+
+  LParamMD := AMethodMetadata.ParameterByKind('BodyParam');
+  if not Assigned(LParamMD) or not Assigned(LParamMD.DataTypeRttiType) then
+    Exit;
+
+  LType := LParamMD.DataTypeRttiType;
+  if LType.IsObjectOfType<TStream> or LType.IsDynamicArrayOf<Byte> then
+    Result := TMediaType.APPLICATION_OCTET_STREAM
+  else if (LType.Handle = TypeInfo(TFormParam)) or LType.IsDynamicArrayOf<TFormParam>(False) then
+    Result := TMediaType.MULTIPART_FORM_DATA
+  else if LType.Handle = TypeInfo(string) then
+    Result := TMediaType.TEXT_PLAIN
+  else
+    Result := TMediaType.APPLICATION_JSON;
 end;
 
 function TOpenAPIHelper.MARSDataTypeToOpenAPIType(
@@ -409,11 +438,14 @@ begin
     end);
 
   // REQUEST BODY
-  if AMethodMetadata.Consumes <> '' then
+  var LConsumes := AMethodMetadata.Consumes;
+  if LConsumes = '' then
+    LConsumes := DefaultRequestMediaType(AMethodMetadata);
+  if LConsumes <> '' then
   begin
     var LRequestBody := AOperation.requestBody;
     LRequestBody.description := 'Request body';
-    for var LMediaType in AMethodMetadata.Consumes.Split([',']) do
+    for var LMediaType in LConsumes.Split([',']) do
     begin
       var LContent := LRequestBody.AddContent(LMediaType);
 

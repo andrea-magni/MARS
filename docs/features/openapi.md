@@ -95,6 +95,8 @@ end;
 
 Parameter kinds (`[PathParam]`, `[QueryParam]`, `[HeaderParam]`, `[BodyParam]`) and their Delphi types become the corresponding OpenAPI parameters, request bodies and schemas.
 
+The request body is documented with the media types of `[Consumes]` (on the method or on the resource). Without `[Consumes]` the media type depends on the parameters: `application/x-www-form-urlencoded` for `[FormParam]` parameters; for a `[BodyParam]`, `application/octet-stream` for `TStream` and `TBytes`, `multipart/form-data` for `TFormParam` and `TArray<TFormParam>`, `text/plain` for `string`, `application/json` for anything else (records, objects, arrays), whose schema is added to `components/schemas`.
+
 Where each `[OAPI…]` attribute is read:
 
 | Placement | Attributes honored |

@@ -16,6 +16,7 @@ type
   public
     [Test] procedure Basic;
     [Test] procedure QueryOperationNeedsOpenAPI32;
+    [Test] procedure RequestBodyWithoutConsumes;
   end;
 
 implementation
@@ -85,6 +86,51 @@ begin
       var LIds := QueryOperationIds(LOpenAPI);
       Assert.AreEqual(1, Length(LIds), 'The QUERY endpoint should be documented');
       Assert.AreEqual('Search', LIds[0]);
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+function OperationById(const AOpenAPI: TOpenAPI; const AOperationId: string): TOperation;
+begin
+  Result := nil;
+  for var LPath in AOpenAPI.paths.Values do
+    for var LOperation in [LPath.get, LPath.post, LPath.put, LPath.delete, LPath.patch] do
+      if Assigned(LOperation) and (LOperation.operationId = AOperationId) then
+        Exit(LOperation);
+end;
+
+procedure TMARSOpenAPI3Test.RequestBodyWithoutConsumes;
+begin
+  // TOpenAPIBodyResource (Tests.DefaultEngine.Resources) has no [Consumes]
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    try
+      // record: application/json, schema in components
+      var LOperation := OperationById(LOpenAPI, 'Elabora');
+      Assert.IsNotNull(LOperation, 'Elabora');
+      Assert.IsTrue(LOperation.requestBody.content.ContainsKey('application/json'), 'record body');
+      Assert.AreEqual('#/components/schemas/TOpenAPIPayload'
+        , LOperation.requestBody.content['application/json'].schema.ref);
+      Assert.IsTrue(LOpenAPI.components.schemas.ContainsKey('TOpenAPIPayload'), 'record schema');
+      Assert.AreEqual(2, LOpenAPI.components.schemas['TOpenAPIPayload'].properties.Count);
+
+      // string: text/plain
+      LOperation := OperationById(LOpenAPI, 'Text');
+      Assert.IsTrue(LOperation.requestBody.content.ContainsKey('text/plain'), 'string body');
+      Assert.AreEqual('string', LOperation.requestBody.content['text/plain'].schema.&type);
+
+      // form params: application/x-www-form-urlencoded
+      LOperation := OperationById(LOpenAPI, 'Form');
+      Assert.IsTrue(LOperation.requestBody.content.ContainsKey('application/x-www-form-urlencoded'), 'form');
+
+      // no body, no requestBody
+      LOperation := OperationById(LOpenAPI, 'NoBody');
+      Assert.AreEqual(0, LOperation.requestBody.content.Count, 'no body');
     finally
       LOpenAPI.Free;
     end;

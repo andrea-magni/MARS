@@ -22,6 +22,28 @@ type
   end;
 
   // JSON serialization options from the application parameters (JSON.*)
+  TOpenAPIPayload = record
+    Name: string;
+    Quantity: Integer;
+  end;
+
+  // request bodies without [Consumes]: documented anyway in the OpenAPI document
+  [Path('openapibody')]
+  TOpenAPIBodyResource = class
+  public
+    [POST]
+    function Elabora([BodyParam] APayload: TOpenAPIPayload): Integer;
+
+    [POST, Path('text')]
+    function Text([BodyParam] AText: string): string;
+
+    [POST, Path('form')]
+    function Form([FormParam('name')] AName: string): string;
+
+    [GET, Path('nobody')]
+    function NoBody: string;
+  end;
+
   [Path('jsonoptions')]
   TJSONOptionsResource = class
   public
@@ -177,6 +199,28 @@ end;
 
 { THelloWorldResource }
 
+{ TOpenAPIBodyResource }
+
+function TOpenAPIBodyResource.Elabora(APayload: TOpenAPIPayload): Integer;
+begin
+  Result := APayload.Quantity;
+end;
+
+function TOpenAPIBodyResource.Form(AName: string): string;
+begin
+  Result := AName;
+end;
+
+function TOpenAPIBodyResource.NoBody: string;
+begin
+  Result := '';
+end;
+
+function TOpenAPIBodyResource.Text(AText: string): string;
+begin
+  Result := AText;
+end;
+
 { TJSONOptionsResource }
 
 function TJSONOptionsResource.GetRecord: TJSONOptionsRecord;
@@ -246,7 +290,7 @@ begin
 end;
 
 initialization
-  MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TWildcardResource, TItemResource
+  MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);
 
