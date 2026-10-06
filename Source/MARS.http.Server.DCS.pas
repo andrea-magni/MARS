@@ -186,23 +186,32 @@ begin
 end;
 
 procedure TMARShttpServerDCS.Startup;
+var
+  LHandler: TCrossHttpRouterProc;
+  LBasePath: string;
 begin
   FHttpServer.Addr := IPv4v6_ALL; // IPv4v6
   FHttpServer.Port := DefaultPort;
   FHttpServer.Compressible := True;
 
-  FHttpServer
-//  .Get('/hello',
-//    procedure(ARequest: ICrossHttpRequest; AResponse: ICrossHttpResponse)
-//    begin
-//      AResponse.Send('Hello World');
-//    end)
-  .All(FEngine.BasePath + '*',
+  LHandler :=
     procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
     begin
       AHandled := FEngine.HandleRequest(TMARSDCSRequest.Create(ARequest), TMARSDCSResponse.Create(AResponse))
-    end
-  );
+    end;
+
+  // the DCS router matches by path segment and '*' is a wildcard only as a whole last segment
+  // ('/rest/*'): '/rest*' would match a single segment
+  LBasePath := FEngine.BasePath;
+  while LBasePath.EndsWith('/') do
+    LBasePath := LBasePath.Substring(0, LBasePath.Length - 1);
+  if LBasePath = '' then
+    FHttpServer.All('*', LHandler)
+  else
+  begin
+    FHttpServer.All(LBasePath, LHandler);
+    FHttpServer.All(LBasePath + '/*', LHandler);
+  end;
 
   FHttpServer.Start;
 
