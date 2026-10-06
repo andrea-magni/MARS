@@ -79,9 +79,16 @@ type
     constructor Create(ADCSRequest: ICrossHttpRequest); virtual;
   end;
 
+  // MARS sets content type, status code, headers and content in any order (TMARSResponse.CopyTo
+  // sets the content first): the content is kept here and sent by Send, when the request has
+  // been handled. DCS sends the response as soon as its Send is called.
   TMARSDCSResponse = class(TInterfacedObject, IMARSResponse)
   private
     FDCSResponse: ICrossHttpResponse;
+    FContent: string;
+    FContentStream: TStream;
+    FContentEncoding: string;
+    FSent: Boolean;
   public
     // IMARSResponse -----------------------------------------------------------
     function GetContent: string;
@@ -103,6 +110,9 @@ type
     procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(ADCSResponse: ICrossHttpResponse); virtual;
+    destructor Destroy; override;
+    // sends status code, headers and content (once)
+    procedure Send;
   end;
 
 
@@ -243,8 +253,15 @@ begin
   LEngine := FEngine;
   LHandler :=
     procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
+    var
+      LResponse: TMARSDCSResponse;
+      LResponseIntf: IMARSResponse;
     begin
-      AHandled := LEngine.HandleRequest(TMARSDCSRequest.Create(ARequest), TMARSDCSResponse.Create(AResponse))
+      LResponse := TMARSDCSResponse.Create(AResponse);
+      LResponseIntf := LResponse; // keeps it alive
+      AHandled := LEngine.HandleRequest(TMARSDCSRequest.Create(ARequest), LResponseIntf);
+      if AHandled then
+        LResponse.Send;
     end;
 
   // the DCS router matches by path segment and '*' is a wildcard only as a whole last segment
@@ -841,16 +858,45 @@ begin
   FDCSResponse := ADCSResponse;
 end;
 
+destructor TMARSDCSResponse.Destroy;
+begin
+  // not sent (request not handled): the response owns the content stream
+  FreeAndNil(FContentStream);
+  inherited;
+end;
+
+procedure TMARSDCSResponse.Send;
+var
+  LStream: TStream;
+begin
+  if FSent then
+    Exit;
+  FSent := True;
+
+  if Assigned(FContentStream) then
+  begin
+    // DCS sends the stream asynchronously, it is freed when the send is complete
+    LStream := FContentStream;
+    FContentStream := nil;
+    FDCSResponse.Send(LStream,
+      procedure(const AConnection: ICrossConnection; const ASuccess: Boolean)
+      begin
+        LStream.Free;
+      end
+    );
+  end
+  else
+    FDCSResponse.Send(FContent);
+end;
+
 function TMARSDCSResponse.GetContent: string;
 begin
-//AM TODO
-  Result := '';
+  Result := FContent;
 end;
 
 function TMARSDCSResponse.GetContentEncoding: string;
 begin
-//AM TODO
-  Result := '';
+  Result := FContentEncoding;
 end;
 
 function TMARSDCSResponse.GetContentLength: Integer;
@@ -860,8 +906,7 @@ end;
 
 function TMARSDCSResponse.GetContentStream: TStream;
 begin
-//AM TODO
-  Result := nil;
+  Result := FContentStream;
 end;
 
 function TMARSDCSResponse.GetContentType: string;
@@ -881,17 +926,22 @@ end;
 
 procedure TMARSDCSResponse.RedirectTo(const AURL: string);
 begin
+  FSent := True;
   FDCSResponse.Redirect(AURL);
 end;
 
 procedure TMARSDCSResponse.SetContent(const AContent: string);
 begin
-  FDCSResponse.Send(AContent);
+  FContent := AContent;
 end;
 
 procedure TMARSDCSResponse.SetContentEncoding(const AContentEncoding: string);
 begin
-//AM TODO
+  FContentEncoding := AContentEncoding;
+  if AContentEncoding <> '' then
+    FDCSResponse.Header['Content-Encoding'] := AContentEncoding
+  else
+    FDCSResponse.Header.Remove('Content-Encoding');
 end;
 
 procedure TMARSDCSResponse.SetContentLength(const ALength: Integer);
@@ -900,18 +950,10 @@ begin
 end;
 
 procedure TMARSDCSResponse.SetContentStream(const AContentStream: TStream);
-var
-  LStream: TStream;
 begin
-  // the response owns the content stream (as TWebResponse does with Indy): DCS sends it
-  // asynchronously, it is freed when the send is complete
-  LStream := AContentStream;
-  FDCSResponse.Send(LStream,
-    procedure(const AConnection: ICrossConnection; const ASuccess: Boolean)
-    begin
-      LStream.Free;
-    end
-  );
+  // the response owns the content stream (as TWebResponse does with Indy); like TWebResponse,
+  // the previous one is not freed (i.e. the compression hook frees it)
+  FContentStream := AContentStream;
 end;
 
 procedure TMARSDCSResponse.SetContentType(const AContentType: string);
