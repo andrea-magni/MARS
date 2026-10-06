@@ -19,7 +19,7 @@ Endpoint URLs compose as: engine base path (`/rest` by default) + application ba
 
 `Demos/MARSTemplate/` in the MARS repository is the canonical project group: console host, VCL form host, FMX host, Windows service, ISAPI, Apache module, FCGI, Linux daemon, tests, and an FMX client — all sharing the same `Server.Ignition.pas` and resource units. To scaffold:
 
-1. Copy the whole `Demos/MARSTemplate` folder to the target location.
+1. Copy the whole `Demos/MARSTemplate` folder to the target location, outside the MARS folder (the setup's uninstaller deletes the MARS folder; MARSCmd uses `Documents\MARS Projects\<name>`). The `.dproj` search paths and the `RootFolder` of `Server.Resources.OpenAPI.pas` refer to the MARS folder as `..\..\` (`{bin}\..\..\..\`): outside `Demos\` rewrite them as `$(MARSDIR)\` (IDE environment variable set by the setup) and drop the `..\..\Source` `in` clause/`DCCReference` of `MARS.Linux.Daemon`, as MARSCmd does.
 2. Rename files and rename the `MARSTemplate` prefix inside `.dpr`/`.dproj`/`.groupproj` files to the new project name (keep `Server.*.pas` unit names as they are — the engine registers resources by unit name mask `'Server.Resources.*'`).
 3. Delete the host flavors the user does not need.
 4. Rename the ini file in `bin/` to match the new executable name.

@@ -90,6 +90,32 @@
 // MARS.groupproj builds the JOSE package from ThirdParty\delphi-jose-jwt\Packages: the setup must
 // extract those projects too when it reads the group projects (see InitializeSetup)
 #define ExtraProjectFiles "{app}\ThirdParty\delphi-jose-jwt\Packages\*"
+
+// the demo folders shipped with the setup ("|ErrorObjects|...|"): the uninstaller deletes only
+// these, any other folder in Demos (e.g. a project created there with MARSCmd) is left alone
+#define DemoFolders "|"
+#define DemoFindHandle 0
+#define DemoFindResult 0
+#define DemoName ""
+#sub ReadDemoName
+  #define public DemoName FindGetFileName(DemoFindHandle)
+  #if DemoName == "." || DemoName == ".." || !DirExists(AddBackslash(SourcePath) + "..\Demos\" + DemoName)
+    #define public DemoName ""
+  #endif
+#endsub
+#sub AddDemoFolder
+  #expr ReadDemoName
+  #if DemoName != ""
+    #define public DemoFolders DemoFolders + DemoName + "|"
+  #endif
+#endsub
+#for {DemoFindHandle = DemoFindResult = FindFirst(AddBackslash(SourcePath) + "..\Demos\*", faDirectory); DemoFindResult; DemoFindResult = FindNext(DemoFindHandle)} AddDemoFolder
+#if DemoFindHandle
+  #expr FindClose(DemoFindHandle)
+#endif
+#if DemoFolders == "|"
+  #error No demo folder found in ..\Demos
+#endif
 //you can choose your preferred Style contained in folder: InnoSetupScripts\Style 
 #define VclStyle "RubyGraphite.vsf"
 
@@ -181,7 +207,18 @@ Filename: "{app}\{#LibrarySamplesFolder}"; Description: "{cm:SetupOpenSamplesFol
 Filename: "{#LibraryDocumentationURL}"; Description: "{cm:SetupViewOnlineDocumentation}"; Flags: shellexec runasoriginaluser postinstall;
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{app}\Demos\*";
+; Demos: only the demo folders shipped with the setup (see DemoFolders), not the projects of the user
+Type: files; Name: "{app}\Demos\*";
+#sub EmitDemoUninstallDelete
+  #expr ReadDemoName
+  #if DemoName != ""
+Type: filesandordirs; Name: "{app}\Demos\{#DemoName}";
+  #endif
+#endsub
+#for {DemoFindHandle = DemoFindResult = FindFirst(AddBackslash(SourcePath) + "..\Demos\*", faDirectory); DemoFindResult; DemoFindResult = FindNext(DemoFindHandle)} EmitDemoUninstallDelete
+#if DemoFindHandle
+  #expr FindClose(DemoFindHandle)
+#endif
 Type: filesandordirs; Name: "{app}\docs\*";
 Type: filesandordirs; Name: "{app}\media\*";
 Type: filesandordirs; Name: "{app}\Packages\*";
@@ -343,6 +380,127 @@ begin
   end
   else
     Result := True;  
+end;
+
+const
+  // where the projects of the user found in the Demos folder of a previous version are moved
+  UserProjectsFolderName = 'MARS Projects';
+
+function _IsShippedDemoFolder(const AName: string): Boolean;
+begin
+  Result := Pos('|' + Lowercase(AName) + '|', Lowercase('{#DemoFolders}')) > 0;
+end;
+
+/// <summary> Folders of ADemosDir that are not demos shipped with MARS: projects of the user </summary>
+function _GetUserFolders(const ADemosDir: string): TArrayOfString;
+var
+  LFindRec: TFindRec;
+begin
+  SetArrayLength(Result, 0);
+  if FindFirst(AddBackslash(ADemosDir) + '*', LFindRec) then
+  try
+    repeat
+      if ((LFindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0)
+        and (LFindRec.Name <> '.') and (LFindRec.Name <> '..')
+        and not _IsShippedDemoFolder(LFindRec.Name)
+      then
+        Result := AppendString(Result, LFindRec.Name, False);
+    until not FindNext(LFindRec);
+  finally
+    FindClose(LFindRec);
+  end;
+end;
+
+function _UniqueFolderName(const APath: string): string;
+var
+  I: Integer;
+begin
+  Result := APath;
+  I := 2;
+  while DirExists(Result) or FileExists(Result) do
+  begin
+    Result := APath + ' (' + IntToStr(I) + ')';
+    I := I + 1;
+  end;
+end;
+
+/// <summary> Before the previous version is uninstalled: its uninstaller deletes the whole Demos
+/// folder (up to 1.8.1), where MARSCmd used to create new projects. The folders that are not
+/// shipped demos are moved to Documents\MARS Projects. False if a folder could not be moved. </summary>
+function _SaveUserProjects: Boolean;
+var
+  LOldAppDir: string;
+  LDemosDir: string;
+  LSource: string;
+  LDest: string;
+  LMoved: string;
+  LFolders: TArrayOfString;
+  I: Integer;
+begin
+  Result := True;
+  LOldAppDir := ExtractFileDir(RemoveQuotes(_GetUninstallString));
+  if LOldAppDir = '' then
+    Exit;
+  LDemosDir := AddBackslash(LOldAppDir) + 'Demos';
+  if not DirExists(LDemosDir) then
+    Exit;
+
+  LFolders := _GetUserFolders(LDemosDir);
+  LMoved := '';
+  for I := 0 to GetArrayLength(LFolders) - 1 do
+  begin
+    LSource := AddBackslash(LDemosDir) + LFolders[I];
+    LDest := _UniqueFolderName(ExpandConstant('{userdocs}\') + UserProjectsFolderName + '\' + LFolders[I]);
+    ForceDirectories(ExtractFileDir(LDest));
+    if not RenameFile(LSource, LDest) then
+    begin
+      // another drive: copy, then delete (what is left is deleted by the uninstaller anyway)
+      if not CopyDirectory(LSource, LDest, False) then
+      begin
+        TryShowError(Format('The folder "%s" is not part of {#LibraryName} and the previous version would delete it,'
+          + ' but it could not be moved to "%s". Move it out of "%s" and run the setup again.', [LSource, LDest, LDemosDir]));
+        Result := False;
+        Exit;
+      end;
+      DelTree(LSource, True, True, True);
+    end;
+    Log(Format('_SaveUserProjects: moved "%s" to "%s"', [LSource, LDest]));
+    LMoved := LMoved + #13#10 + '  ' + LDest;
+  end;
+
+  if LMoved <> '' then
+    TryShowMessage('These folders were in the Demos folder of the previous version of {#LibraryName},'
+      + ' which deletes it when it is uninstalled. They are not demos shipped with {#LibraryName}'
+      + ' (i.e. projects created with MARSCmd), so they were moved:' + #13#10 + LMoved);
+end;
+
+<event('CurStepChanged')>
+procedure _CurStepChangedSaveUserProjects(ACurStep: TSetupStep);
+begin
+  // runs before the main CurStepChanged (Setup.Main.inc), that uninstalls the previous version
+  if (ACurStep = ssInstall) and IsUpgrade and NeedsUninstallRegKey then
+    if not _SaveUserProjects then
+      Abort;
+end;
+
+<event('CurUninstallStepChanged')>
+procedure _CurUninstallStepChangedReportUserFolders(ACurUninstallStep: TUninstallStep);
+var
+  LFolders: TArrayOfString;
+  LMessage: string;
+  I: Integer;
+begin
+  if ACurUninstallStep <> usPostUninstall then
+    Exit;
+  LFolders := _GetUserFolders(ExpandConstant('{app}\Demos'));
+  if GetArrayLength(LFolders) = 0 then
+    Exit;
+  LMessage := '';
+  for I := 0 to GetArrayLength(LFolders) - 1 do
+    LMessage := LMessage + #13#10 + '  ' + ExpandConstant('{app}\Demos\') + LFolders[I];
+  Log('Folders not shipped with {#LibraryName} left in Demos:' + LMessage);
+  if not UninstallSilent then
+    MsgBox('These folders are not part of {#LibraryName} and were not deleted:' + LMessage, mbInformation, MB_OK);
 end;
 
 <event('InitializeSetup')>

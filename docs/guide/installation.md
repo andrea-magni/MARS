@@ -9,6 +9,10 @@ The fastest way to get started:
 1. Download the setup from the [latest release page](https://github.com/andrea-magni/MARS/releases/latest).
 2. Run it. The installer configures the library paths and installs the design-time packages for your RAD Studio version.
 
+::: warning Keep your projects out of the MARS folder
+Uninstalling MARS, which the setup also does before installing a new version, deletes the content of the MARS folder. Since 1.8.1 the uninstaller leaves alone the folders of `Demos` that are not demos shipped with MARS, and the setup moves the ones it finds in the `Demos` folder of the previous version to `Documents\MARS Projects` before uninstalling it (older uninstallers delete the whole `Demos` folder). Anyway, create your projects somewhere else: [MARSCmd](#bootstrap-a-new-project-with-marscmd) proposes `Documents\MARS Projects`.
+:::
+
 ## Option 2 — TMS Smart Setup {#tms-smart-setup}
 
 [TMS Smart Setup](https://doc.tmssoftware.com/smartsetup/) is a free, open-source command-line tool that downloads, builds and registers Delphi libraries. MARS ships a `tmsbuild.yaml`, so Smart Setup can build it from sources for every supported Delphi version installed on your machine (**10.4 Sydney** and newer, Win32/Win64).
@@ -85,6 +89,10 @@ MARS ships a small command-line utility that scaffolds a complete, ready-to-run 
 
 1. Compile and run [`MARScmd_VCL.dproj`](https://github.com/andrea-magni/MARS/blob/master/Utils/Source/MARScmd/MARScmd_VCL.dproj) in `[MARS Folder]\Utils\Source\MARScmd`.
 2. Follow the prompts. It clones `Demos\MARSTemplate` into a new folder with your chosen project name, giving you a server (console / VCL / FMX / service / ISAPI / Apache / daemon variants), a client, and a test project. The `.ini` files of the new project get a freshly generated random `JWT.Secret`.
+
+The new project goes to `Documents\MARS Projects\<project name>` by default; next time MARSCmd proposes the folder used last. A destination inside the MARS folder asks for confirmation, as uninstalling or upgrading MARS would delete it, and an existing folder that is not empty is never overwritten.
+
+The template refers to the MARS folder with relative paths (`..\..\Source`). Outside the MARS folder, MARSCmd writes them as `$(MARSDIR)\Source`, `$(MARSDIR)\ThirdParty\...`: `MARSDIR` is the IDE environment variable set by the setup to the MARS folder (Tools ▸ Options ▸ IDE ▸ Environment Variables). With TMS Smart Setup or a manual installation, define it yourself or rely on the library path.
 
 This is the recommended way to start a brand-new MARS application — see [Your First Server](/guide/getting-started) for a walkthrough of what the generated code does.
 

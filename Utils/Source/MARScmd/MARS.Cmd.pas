@@ -18,6 +18,10 @@ type
     FDestinationPath: string;
     FReplacePatterns: TDictionary<string, string>;
     FReplaceMatches: TArray<string>;
+    FProjectsFolder: string;
+    function GetSettingsFileName: string;
+    function GetProjectsFolder: string;
+    procedure SetProjectsFolder(const Value: string);
   protected
     function GetDestinationPath: string; virtual;
     procedure SetDestinationPath(const Value: string); virtual;
@@ -35,6 +39,9 @@ type
     procedure ReplaceInFile(const AFileName: string);
     // writes a fresh random JWT.Secret into every .ini of the new project
     procedure ConfigureSecrets;
+    // the template refers to the MARS folder with paths relative to Demos\MARSTemplate
+    // (..\..\Source): fixes them for the actual destination
+    procedure FixMARSPaths;
     function ReadTextFile(const AFileName: string; out AEncoding: TEncoding): string;
     procedure WriteTextFile(const AFileName: string; const AContent: string; const AEncoding: TEncoding);
   public
@@ -46,6 +53,9 @@ type
 
     procedure Execute;
     function CanExecute: Boolean;
+    // True when APath is the MARS folder or one of its subfolders: the uninstaller of the
+    // setup removes the MARS folder, projects should not live there
+    function IsInsideBasePath(const APath: string): Boolean;
 
     class function Current: TMARSCmd;
     // 32 random bytes (system GUID generator) as hex
@@ -54,6 +64,9 @@ type
     property BasePath: string read FBasePath;
     property TemplatePath: string read GetTemplatePath write SetTemplatePath;
     property DestinationPath: string read GetDestinationPath write SetDestinationPath;
+    // parent folder of new projects: Documents\MARS Projects by default, then the last one used
+    // (saved in %APPDATA%\MARS-Curiosity\MARSCmd.ini)
+    property ProjectsFolder: string read GetProjectsFolder write SetProjectsFolder;
     property ReplacePatterns: TDictionary<string,string> read FReplacePatterns;
     property ReplaceMatches: TArray<string> read FReplaceMatches;
   end;
@@ -61,8 +74,18 @@ type
 implementation
 
 uses
-  StrUtils, DateUtils, IOUtils, RegularExpressions, Masks
+  StrUtils, DateUtils, IOUtils, RegularExpressions, Masks, IniFiles
 ;
+
+const
+  // the template is in {MARS}\Demos\MARSTemplate: this is the MARS folder for its files
+  TEMPLATE_ROOT = '..\..\';
+  // RootFolder('{bin}\..\..\..\www\...'): from {MARS}\Demos\MARSTemplate\bin
+  TEMPLATE_BIN_ROOT = '{bin}\..\..\..\';
+  // environment variable set in the IDE by the setup: the MARS folder
+  MARSDIR_ROOT = '$(MARSDIR)\';
+  SETTINGS_SECTION = 'MARSCmd';
+  SETTINGS_PROJECTS_FOLDER = 'ProjectsFolder';
 
 { TMARSCmd }
 
@@ -132,6 +155,9 @@ end;
 
 procedure TMARSCmd.Execute;
 begin
+  if TDirectory.Exists(FDestinationPath) and not TDirectory.IsEmpty(FDestinationPath) then
+    raise EMARSCmdException.CreateFmt('Destination folder %s already exists and is not empty', [FDestinationPath]);
+
   ForceDirectories(FDestinationPath);
   TDirectory.Copy(TemplatePath, FDestinationPath);
 
@@ -144,6 +170,109 @@ begin
 
   ReplaceEverywhere;
   ConfigureSecrets;
+  FixMARSPaths;
+
+  ProjectsFolder := ExtractFileDir(ExcludeTrailingPathDelimiter(FDestinationPath));
+end;
+
+function TMARSCmd.IsInsideBasePath(const APath: string): Boolean;
+var
+  LBase, LPath: string;
+begin
+  LBase := IncludeTrailingPathDelimiter(ExpandFileName(BasePath));
+  LPath := IncludeTrailingPathDelimiter(ExpandFileName(APath));
+  Result := (BasePath <> '') and StartsText(LBase, LPath);
+end;
+
+procedure TMARSCmd.FixMARSPaths;
+var
+  LRoot: string;
+  LFile, LContent, LNewContent: string;
+  LEncoding: TEncoding;
+  LInside: Boolean;
+begin
+  LInside := IsInsideBasePath(FDestinationPath);
+  if LInside then
+    LRoot := ExtractRelativePath(IncludeTrailingPathDelimiter(ExpandFileName(FDestinationPath))
+      , IncludeTrailingPathDelimiter(ExpandFileName(BasePath)))
+  else
+    LRoot := MARSDIR_ROOT;
+  if SameText(LRoot, TEMPLATE_ROOT) then
+    Exit; // {MARS}\Demos\<project>, like the template
+
+  for LFile in TDirectory.GetFiles(DestinationPath, '*.*', TSearchOption.soAllDirectories) do
+  begin
+    if not MatchStr(LowerCase(ExtractFileExt(LFile)), ['.dproj', '.dpr', '.pas']) then
+      Continue;
+
+    LContent := ReadTextFile(LFile, LEncoding);
+    LNewContent := LContent;
+    if SameText(ExtractFileExt(LFile), '.pas') then
+    begin
+      // RootFolder of the static resources (Swagger UI in {MARS}\www): {bin} is a runtime macro
+      if LInside then
+        LNewContent := LNewContent.Replace(TEMPLATE_BIN_ROOT, '{bin}\..\' + LRoot, [rfReplaceAll, rfIgnoreCase])
+      else
+        LNewContent := LNewContent.Replace(TEMPLATE_BIN_ROOT, IncludeTrailingPathDelimiter(ExpandFileName(BasePath)), [rfReplaceAll, rfIgnoreCase]);
+    end
+    else if LInside then
+      LNewContent := LNewContent.Replace(TEMPLATE_ROOT, LRoot, [rfReplaceAll])
+    else if SameText(ExtractFileExt(LFile), '.dpr') then
+      // the compiler does not expand $(MARSDIR) in the uses clause: units of the MARS folder
+      // are found through the search path
+      LNewContent := TRegEx.Replace(LNewContent, '\s+in\s+''\.\.\\\.\.\\[^'']*''', '')
+    else
+    begin
+      // .dproj: files of the MARS folder are not part of the project, they are found through the
+      // search path, that refers to the MARS folder with $(MARSDIR)
+      LNewContent := TRegEx.Replace(LNewContent, '[ \t]*<DCCReference Include="\.\.\\\.\.\\[^"]*"/>\r?\n', '');
+      LNewContent := LNewContent.Replace(TEMPLATE_ROOT, LRoot, [rfReplaceAll]);
+    end;
+
+    if LNewContent <> LContent then
+      WriteTextFile(LFile, LNewContent, LEncoding);
+  end;
+end;
+
+function TMARSCmd.GetSettingsFileName: string;
+begin
+  Result := TPath.Combine(TPath.Combine(TPath.GetHomePath, 'MARS-Curiosity'), 'MARSCmd.ini');
+end;
+
+function TMARSCmd.GetProjectsFolder: string;
+var
+  LIni: TIniFile;
+begin
+  if FProjectsFolder = '' then
+  begin
+    LIni := TIniFile.Create(GetSettingsFileName);
+    try
+      FProjectsFolder := LIni.ReadString(SETTINGS_SECTION, SETTINGS_PROJECTS_FOLDER, '');
+    finally
+      LIni.Free;
+    end;
+    if FProjectsFolder = '' then
+      FProjectsFolder := TPath.Combine(TPath.GetDocumentsPath, 'MARS Projects');
+  end;
+  Result := FProjectsFolder;
+end;
+
+procedure TMARSCmd.SetProjectsFolder(const Value: string);
+var
+  LIni: TIniFile;
+begin
+  FProjectsFolder := Value;
+  try
+    ForceDirectories(ExtractFileDir(GetSettingsFileName));
+    LIni := TIniFile.Create(GetSettingsFileName);
+    try
+      LIni.WriteString(SETTINGS_SECTION, SETTINGS_PROJECTS_FOLDER, Value);
+    finally
+      LIni.Free;
+    end;
+  except
+    // a setting that cannot be saved is not a reason to fail
+  end;
 end;
 
 class function TMARSCmd.GenerateSecret: string;
@@ -253,10 +382,9 @@ end;
 procedure TMARSCmd.PrepareNewProject(const ASearchText, AReplaceText: string;
   const AMatches: TArray<string>);
 begin
+  // not next to the template: the uninstaller of the setup removes the MARS folder
   if FDestinationPath = '' then
-    FDestinationPath := TPath.Combine(
-      ExtractFilePath(ExcludeTrailingPathDelimiter(TemplatePath))
-    , AReplaceText);
+    FDestinationPath := TPath.Combine(ProjectsFolder, AReplaceText);
 
   ReplacePatterns.Clear;
   ReplacePatterns.Add(ASearchText, AReplaceText);

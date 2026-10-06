@@ -61,7 +61,7 @@ implementation
 
 uses
   MARS.Cmd
-, IOUtils,
+, IOUtils, System.UITypes,
   ShellAPI
 ;
 
@@ -86,6 +86,17 @@ end;
 
 procedure TMainForm.ExecuteActionExecute(Sender: TObject);
 begin
+  if TMARSCmd.Current.IsInsideBasePath(TMARSCmd.Current.DestinationPath)
+    and (MessageDlg(
+      'The destination folder is inside the MARS folder (' + TMARSCmd.Current.BasePath + ').'
+      + sLineBreak + sLineBreak
+      + 'Uninstalling or upgrading MARS with the setup deletes the content of the MARS folder:'
+      + ' keep your projects somewhere else.' + sLineBreak + sLineBreak
+      + 'Create the project there anyway?'
+      , mtWarning, [mbYes, mbNo], 0, mbNo) <> mrYes)
+  then
+    Exit;
+
   TMARSCmd.Current.Execute;
   ShellExecute(0, 'open', PChar(TMARSCmd.Current.DestinationPath), nil, nil, SW_NORMAL);
 end;
