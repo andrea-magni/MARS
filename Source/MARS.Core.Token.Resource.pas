@@ -44,7 +44,10 @@ type
     [GET, IsReference]
     function GetCurrent: TMARSToken;
 
-    [POST, Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), IsReference]
+    // the credentials are read by GetCredentials (form fields username and password):
+    // MetaRequestBody documents them (OpenAPI)
+    [POST, Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), IsReference
+    , MetaRequestBody('MARS.Core.Token.Resource.TCredentials', 'Credentials: username and password')]
     function DoLogin: TMARSToken;
 
     [DELETE, IsReference]

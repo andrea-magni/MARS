@@ -17,6 +17,7 @@ type
     [Test] procedure Basic;
     [Test] procedure QueryOperationNeedsOpenAPI32;
     [Test] procedure RequestBodyWithoutConsumes;
+    [Test] procedure MetaRequestBody;
   end;
 
 implementation
@@ -131,6 +132,45 @@ begin
       // no body, no requestBody
       LOperation := OperationById(LOpenAPI, 'NoBody');
       Assert.AreEqual(0, LOperation.requestBody.content.Count, 'no body');
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.MetaRequestBody;
+begin
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    try
+      // TMARSTokenResource.DoLogin: username and password read from the form
+      var LOperation := OperationById(LOpenAPI, 'DoLogin');
+      Assert.IsNotNull(LOperation, 'DoLogin');
+      var LContent := LOperation.requestBody.content['application/x-www-form-urlencoded'];
+      Assert.AreEqual('#/components/schemas/TCredentials', LContent.schema.ref);
+      var LCredentials := LOpenAPI.components.schemas['TCredentials'];
+      Assert.AreEqual(2, LCredentials.properties.Count);
+      Assert.AreEqual('username', LCredentials.properties[0].Key);
+      Assert.AreEqual('password', LCredentials.properties[1].Key);
+      Assert.AreEqual('Credentials: username and password', LOperation.requestBody.description);
+
+      // with [Consumes]
+      LOperation := OperationById(LOpenAPI, 'ManualForm');
+      Assert.AreEqual('#/components/schemas/TOpenAPIPayload'
+        , LOperation.requestBody.content['application/x-www-form-urlencoded'].schema.ref);
+      Assert.AreEqual('The payload', LOperation.requestBody.description);
+
+      // without [Consumes]: media type from the type
+      LOperation := OperationById(LOpenAPI, 'ManualJSON');
+      Assert.AreEqual('#/components/schemas/TOpenAPIPayload'
+        , LOperation.requestBody.content['application/json'].schema.ref);
+
+      // a type that does not exist: no body, no error
+      LOperation := OperationById(LOpenAPI, 'ManualWrong');
+      Assert.AreEqual(0, LOperation.requestBody.content.Count);
     finally
       LOpenAPI.Free;
     end;

@@ -24,6 +24,12 @@ type
       const AResourceMetadata: TMARSResourceMetadata; const AMethodMetadata: TMARSMethodMetadata);
     // media type of the request body of a method without Consumes ('' when it has no body)
     function DefaultRequestMediaType(const AMethodMetadata: TMARSMethodMetadata): string;
+    function MediaTypeForBodyType(const AType: TRttiType): string;
+    // the type of [MetaRequestBody] of the method, nil when absent or not found
+    function RequestBodyTypeOf(const AMethodMetadata: TMARSMethodMetadata): TRttiType;
+    // describes the request body with the type of [MetaRequestBody], if any
+    procedure ApplyMetaRequestBody(const AMethodMetadata: TMARSMethodMetadata;
+      const ARequestBody: TRequestBody; const AContent: TMediaTypeObj);
   public
     class procedure FillSchemaForObjectOrRecord(const ASchema: TSchema; const AType: TRttiType; const AddTo: TOpenAPI);
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
@@ -41,7 +47,7 @@ implementation
 uses
   StrUtils
 , MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT, MARS.Core.Utils
-, MARS.Metadata.Reader
+, MARS.Metadata.Reader, MARS.Metadata.Attributes
 , MARS.Core.MediaType, MARS.Core.JSON
 {$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
@@ -181,6 +187,41 @@ begin
 
 end;
 
+function TOpenAPIHelper.RequestBodyTypeOf(
+  const AMethodMetadata: TMARSMethodMetadata): TRttiType;
+var
+  LAttribute: MetaRequestBodyAttribute;
+begin
+  Result := nil;
+  if not Assigned(AMethodMetadata.RttiMethod) then
+    Exit;
+  LAttribute := AMethodMetadata.RttiMethod.GetAttribute<MetaRequestBodyAttribute>;
+  if Assigned(LAttribute) then
+    Result := LAttribute.FindType;
+end;
+
+procedure TOpenAPIHelper.ApplyMetaRequestBody(const AMethodMetadata: TMARSMethodMetadata;
+  const ARequestBody: TRequestBody; const AContent: TMediaTypeObj);
+var
+  LAttribute: MetaRequestBodyAttribute;
+  LType: TRttiType;
+begin
+  if not Assigned(AMethodMetadata.RttiMethod) then
+    Exit;
+  LAttribute := AMethodMetadata.RttiMethod.GetAttribute<MetaRequestBodyAttribute>;
+  if not Assigned(LAttribute) then
+    Exit;
+  LType := LAttribute.FindType;
+  if not Assigned(LType) then // a wrong name never breaks the document
+    Exit;
+
+  AContent.schema.SetType(LType, Self);
+  if LAttribute.Description <> '' then
+    ARequestBody.description := LAttribute.Description
+  else
+    ARequestBody.description := LType.Name;
+end;
+
 function TOpenAPIHelper.DefaultRequestMediaType(
   const AMethodMetadata: TMARSMethodMetadata): string;
 var
@@ -195,9 +236,22 @@ begin
 
   LParamMD := AMethodMetadata.ParameterByKind('BodyParam');
   if not Assigned(LParamMD) or not Assigned(LParamMD.DataTypeRttiType) then
+  begin
+    // [MetaRequestBody] describes a body read by the method itself
+    if Assigned(RequestBodyTypeOf(AMethodMetadata)) then
+      Result := MediaTypeForBodyType(RequestBodyTypeOf(AMethodMetadata));
     Exit;
+  end;
 
   LType := LParamMD.DataTypeRttiType;
+  Result := MediaTypeForBodyType(LType);
+end;
+
+function TOpenAPIHelper.MediaTypeForBodyType(const AType: TRttiType): string;
+var
+  LType: TRttiType;
+begin
+  LType := AType;
   if LType.IsObjectOfType<TStream> or LType.IsDynamicArrayOf<Byte> then
     Result := TMediaType.APPLICATION_OCTET_STREAM
   else if (LType.Handle = TypeInfo(TFormParam)) or LType.IsDynamicArrayOf<TFormParam>(False) then
@@ -471,6 +525,8 @@ begin
 
           LHasFormParams := True;
         end;
+        if not LHasFormParams and (Length(AMethodMetadata.ParametersByKind('BodyParam')) = 0) then
+          ApplyMetaRequestBody(AMethodMetadata, LRequestBody, LContent);
         if not LHasFormParams then
           for var LParamMD in AMethodMetadata.ParametersByKind('BodyParam') do
           begin
@@ -510,7 +566,9 @@ begin
 
             LContent.schema.FillFromAttributes(LParamMD.RttiParameter);
           end;
-        end;
+        end
+        else
+          ApplyMetaRequestBody(AMethodMetadata, LRequestBody, LContent);
       end;
     end;
   end;

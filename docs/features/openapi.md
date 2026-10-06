@@ -97,6 +97,16 @@ Parameter kinds (`[PathParam]`, `[QueryParam]`, `[HeaderParam]`, `[BodyParam]`) 
 
 The request body is documented with the media types of `[Consumes]` (on the method or on the resource). Without `[Consumes]` the media type depends on the parameters: `application/x-www-form-urlencoded` for `[FormParam]` parameters; for a `[BodyParam]`, `application/octet-stream` for `TStream` and `TBytes`, `multipart/form-data` for `TFormParam` and `TArray<TFormParam>`, `text/plain` for `string`, `application/json` for anything else (records, objects, arrays), whose schema is added to `components/schemas`.
 
+A method that reads the body by itself (`Request.Body`, `Request.GetFormParamValue`, ...) instead of through `[BodyParam]`/`[FormParam]` parameters can describe it with `[MetaRequestBody]` (unit `MARS.Metadata.Attributes`): the qualified name of a record or class with the shape of the body, and an optional description. The built-in token resource uses it for the `username` and `password` form fields read by `GetCredentials`:
+
+```pascal
+[POST, Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
+, MetaRequestBody('MARS.Core.Token.Resource.TCredentials', 'Credentials: username and password')]
+function DoLogin: TMARSToken;
+```
+
+Parameters describing the body, if any, take precedence. Without `[Consumes]` the media type follows the type, as for `[BodyParam]`. A name that cannot be resolved is ignored.
+
 Where each `[OAPI…]` attribute is read:
 
 | Placement | Attributes honored |

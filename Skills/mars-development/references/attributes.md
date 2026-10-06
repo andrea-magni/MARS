@@ -78,4 +78,4 @@ No authorization attribute = public endpoint. `[PermitAll]` alone requires no to
 
 ## Metadata / OpenAPI (unit `MARS.Metadata.Attributes`)
 
-`[MetaVisible(False)]` hides a resource from metadata/OpenAPI output; `MetaDescription`, `MetaSummary` and friends document endpoints for the OpenAPI generator.
+`[MetaVisible(False)]` hides a resource from metadata/OpenAPI output; `MetaDescription`, `MetaSummary` and friends document endpoints for the OpenAPI generator. `[MetaRequestBody('Unit.TType', 'description')]` documents the request body of a method that reads it by itself (`Request.Body`, `GetFormParamValue`) with the shape of a record/class (e.g. `TMARSTokenResource.DoLogin` → `TCredentials`); `[BodyParam]`/`[FormParam]` parameters take precedence.

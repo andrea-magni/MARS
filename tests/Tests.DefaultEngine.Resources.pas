@@ -9,6 +9,7 @@ uses
 , MARS.WebServer.Resources
 //, MARS.Core.Token
 , MARS.OpenAPI.v3
+, MARS.Metadata.Attributes, MARS.Core.Token.Resource
 ;
 
 type
@@ -42,7 +43,21 @@ type
 
     [GET, Path('nobody')]
     function NoBody: string;
+
+    // body read by the method itself, documented with [MetaRequestBody]
+    [POST, Path('manualform'), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE)
+    , MetaRequestBody('Tests.DefaultEngine.Resources.TOpenAPIPayload', 'The payload')]
+    function ManualForm: string;
+
+    [POST, Path('manualjson'), MetaRequestBody('Tests.DefaultEngine.Resources.TOpenAPIPayload')]
+    function ManualJSON: string;
+
+    [POST, Path('manualwrong'), MetaRequestBody('No.Such.Type')]
+    function ManualWrong: string;
   end;
+
+  [Path('token')]
+  TTestTokenResource = class(TMARSTokenResource);
 
   [Path('jsonoptions')]
   TJSONOptionsResource = class
@@ -211,6 +226,21 @@ begin
   Result := AName;
 end;
 
+function TOpenAPIBodyResource.ManualForm: string;
+begin
+  Result := '';
+end;
+
+function TOpenAPIBodyResource.ManualJSON: string;
+begin
+  Result := '';
+end;
+
+function TOpenAPIBodyResource.ManualWrong: string;
+begin
+  Result := '';
+end;
+
 function TOpenAPIBodyResource.NoBody: string;
 begin
   Result := '';
@@ -290,7 +320,7 @@ begin
 end;
 
 initialization
-  MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TWildcardResource, TItemResource
+  MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TTestTokenResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);
 

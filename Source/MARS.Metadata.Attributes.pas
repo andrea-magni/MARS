@@ -40,6 +40,23 @@ type
 
   MetaVisibleAttribute = class(MetadataBooleanAttribute);
 
+  // Shape of the request body of a method that reads it by itself (Request.Body,
+  // Request.GetFormParamValue, ...) instead of through [BodyParam]/[FormParam] parameters:
+  // ATypeName is the qualified name of a record or class (e.g.
+  // 'MARS.Core.Token.Resource.TCredentials'), used by the documentation (OpenAPI). Parameters
+  // describing the body, if any, take precedence.
+  MetaRequestBodyAttribute = class(MetadataAttribute)
+  private
+    FTypeName: string;
+    FDescription: string;
+  public
+    constructor Create(const ATypeName: string; const ADescription: string = '');
+    // the type, nil if it cannot be found
+    function FindType: TRttiType;
+    property TypeName: string read FTypeName;
+    property Description: string read FDescription;
+  end;
+
 implementation
 
 uses
@@ -48,6 +65,23 @@ uses
 
 
 { MetadataBooleanAttribute }
+
+{ MetaRequestBodyAttribute }
+
+constructor MetaRequestBodyAttribute.Create(const ATypeName, ADescription: string);
+begin
+  inherited Create;
+  FTypeName := ATypeName;
+  FDescription := ADescription;
+end;
+
+function MetaRequestBodyAttribute.FindType: TRttiType;
+var
+  LContext: TRttiContext;
+begin
+  LContext := TRttiContext.Create;
+  Result := LContext.FindType(FTypeName);
+end;
 
 constructor MetadataBooleanAttribute.Create(AValue: Boolean);
 begin
