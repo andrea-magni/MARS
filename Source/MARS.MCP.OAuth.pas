@@ -847,8 +847,16 @@ begin
     LProto := FirstValue('X-Forwarded-Proto').ToLower;
 
   if LProto = '' then
-    // no proxy in front: http assumed on the local port
-    Exit('http://' + ARequest.HostName + ':' + ARequest.Port.ToString);
+  begin
+    // no proxy in front: the scheme of the connection, on the local port
+    if ARequest.IsSecure then
+      Result := 'https://' + ARequest.HostName
+    else
+      Result := 'http://' + ARequest.HostName;
+    if not ((ARequest.IsSecure and (ARequest.Port = 443)) or ((not ARequest.IsSecure) and (ARequest.Port = 80))) then
+      Result := Result + ':' + ARequest.Port.ToString;
+    Exit;
+  end;
 
   LHost := '';
   if ARequest.GetHeaderParamValue('X-Forwarded-Host') <> '' then

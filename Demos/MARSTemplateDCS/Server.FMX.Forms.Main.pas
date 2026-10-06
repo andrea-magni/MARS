@@ -23,6 +23,8 @@ type
     Layout1: TLayout;
     PortNumberEdit: TEdit;
     Label1: TLabel;
+    SSLPortEdit: TEdit;
+    SSLPortLabel: TLabel;
     StartButton: TButton;
     StopButton: TButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -32,6 +34,7 @@ type
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionUpdate(Sender: TObject);
     procedure PortNumberEditChange(Sender: TObject);
+    procedure SSLPortEditChange(Sender: TObject);
   private
     FServer: TMARShttpServerDCS;
   public
@@ -57,8 +60,14 @@ end;
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   PortNumberEdit.Text := TServerEngine.Default.Port.ToString;
+  SSLPortEdit.Text := TServerEngine.Default.PortSSL.ToString;
 
   StartServerAction.Execute;
+end;
+
+procedure TMainForm.SSLPortEditChange(Sender: TObject);
+begin
+  TServerEngine.Default.PortSSL := StrToIntDef(SSLPortEdit.Text, 0);
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);
@@ -72,6 +81,8 @@ begin
   FServer := TMARShttpServerDCS.Create(TServerEngine.Default);
   try
     FServer.DefaultPort := TServerEngine.Default.Port;
+    // HTTPS (0 = disabled): certificate and key from DCS.SSL.CertFile and DCS.SSL.KeyFile
+    FServer.SSLPort := TServerEngine.Default.PortSSL;
     FServer.Active := True;
   except
     FServer.Free;

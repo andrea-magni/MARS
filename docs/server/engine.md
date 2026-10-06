@@ -117,6 +117,41 @@ FEngine.OnGetApplication :=
 
 Runs after the activation completes — handy for logging or post-processing.
 
+## HTTPS
+
+The self-hosted servers can serve HTTPS directly, without a reverse proxy in front. `Port` is the
+HTTP port and `PortSSL` the HTTPS one; either can be `0` to disable it.
+
+**Delphi Cross Socket** (`TMARShttpServerDCS`, `Demos/MARSTemplateDCS`):
+
+```ini
+[DefaultEngine]
+Port=0
+PortSSL=443
+DCS.SSL.CertFile=fullchain.pem
+DCS.SSL.KeyFile=privkey.pem
+```
+
+- The certificate and its private key are PEM files; the certificate file can hold the whole
+  chain (e.g. `fullchain.pem` of Let's Encrypt). Relative paths are relative to the folder of the
+  executable. Defaults: `localhost.crt` and `localhost.key`.
+- OpenSSL is loaded at run time: `libssl-3-x64.dll` and `libcrypto-3-x64.dll` (Win64) or
+  `libssl-3.dll` and `libcrypto-3.dll` (Win32), next to the executable or in the `PATH` (1.1
+  works too); on Linux the `libssl` package of the distribution.
+- In code: `SSLPort`, `CertificateFile`, `PrivateKeyFile`, or `Certificate`/`PrivateKey` with the
+  PEM content. A missing certificate or OpenSSL library makes `Active := True` raise
+  `EMARSDCSServerException`, with the reason.
+- HTTP and HTTPS are two DCS servers sharing the same engine (`HttpServer`, `HttpsServer`
+  properties, for fine tuning).
+
+**Indy** (`TMARShttpServerIndy`): `Indy.SSL.CertFile`, `Indy.SSL.KeyFile`, `Indy.SSL.RootCertFile`,
+`Indy.SSL.Version`, `Indy.SSL.Mode`, see the
+[parameters reference](/reference/parameters#engine-parameters).
+
+`Request.IsSecure` tells whether the request came in over TLS to this server; the URL of the
+request (`TMARSURL`) and the OAuth metadata of [MCP](/features/mcp) use it. Behind a reverse proxy
+terminating TLS it is `False`, and the `X-Forwarded-Proto` header tells the original scheme.
+
 ## CORS
 
 When CORS is enabled (via parameters such as `CORS.Origin`, `CORS.Methods`, `CORS.Headers`), the engine adds the appropriate `Access-Control-*` headers. Check `FEngine.IsCORSEnabled` and handle the `OPTIONS` pre-flight in `BeforeHandleRequest` as shown above.

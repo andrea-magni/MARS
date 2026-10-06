@@ -32,6 +32,22 @@ object MainForm: TMainForm
       Size.PlatformDefault = False
       Text = 'Port number:'
     end
+    object SSLPortEdit: TEdit
+      Touch.InteractiveGestures = [LongTap, DoubleTap]
+      TabOrder = 1
+      Text = '0'
+      Position.X = 325.000000000000000000
+      Position.Y = 22.000000000000000000
+      OnChange = SSLPortEditChange
+    end
+    object SSLPortLabel: TLabel
+      Position.X = 232.000000000000000000
+      Position.Y = 24.000000000000000000
+      Size.Width = 89.000000000000000000
+      Size.Height = 17.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'HTTPS port:'
+    end
     object StartButton: TButton
       Action = StartServerAction
       ImageIndex = -1

@@ -51,6 +51,21 @@ object MainForm: TMainForm
       TabOrder = 2
       OnChange = PortNumberEditChange
     end
+    object SSLPortLabel: TLabel
+      Left = 200
+      Top = 17
+      Width = 59
+      Height = 13
+      Caption = 'HTTPS port:'
+    end
+    object SSLPortEdit: TEdit
+      Left = 265
+      Top = 14
+      Width = 82
+      Height = 21
+      TabOrder = 3
+      OnChange = SSLPortEditChange
+    end
   end
   object MainTreeView: TTreeView
     Left = 0

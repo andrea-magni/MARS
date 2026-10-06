@@ -290,6 +290,7 @@ type
     [Test] procedure Persistence_ClientsSurviveRestart;
     [Test] procedure AuthorizePage_DefaultContainsMARSFooter;
     [Test] procedure AuthorizePage_TemplateFileOverride;
+    [Test] procedure BaseURL_SchemeOfTheConnection;
   end;
 
   // host for MCP Apps tests: tools linked to a ui:// resource, generic _meta
@@ -1845,6 +1846,26 @@ begin
   finally
     LJSON.Free;
   end;
+end;
+
+procedure TMCPOAuthFixture.BaseURL_SchemeOfTheConnection;
+
+  function BaseURLOf(const AURL, AHost: string; const AHeaders: TMARSHeaders = []): string;
+  var
+    LRequest: IMARSRequest; // a new object passed to a const interface parameter would leak
+  begin
+    LRequest := TMARSRequestMock.Create('GET', AURL, [TMARSHeader.Create('Host', AHost)] + AHeaders, '');
+    Result := TMCPOAuthMetadata.BaseURL(LRequest);
+  end;
+
+begin
+  // no proxy: the scheme of the connection (IsSecure), default ports omitted
+  Assert.AreEqual('http://localhost:8080', BaseURLOf('http://localhost:8080/rest/default/mcp', 'localhost'));
+  Assert.AreEqual('https://localhost:8443', BaseURLOf('https://localhost:8443/rest/default/mcp', 'localhost'));
+  Assert.AreEqual('https://mcp.example.com', BaseURLOf('https://mcp.example.com:443/rest/default/mcp', 'mcp.example.com'));
+  // a reverse proxy wins
+  Assert.AreEqual('https://public.example.com', BaseURLOf('http://localhost:8080/rest/default/mcp', 'localhost'
+    , [TMARSHeader.Create('X-Forwarded-Proto', 'https'), TMARSHeader.Create('X-Forwarded-Host', 'public.example.com')]));
 end;
 
 procedure TMCPOAuthFixture.WellKnown_UnknownDocument_Returns404;

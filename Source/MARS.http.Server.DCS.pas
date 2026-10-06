@@ -73,6 +73,7 @@ type
     function GetQueryFields: TArray<string>;
     function GetRemoteIP: string;
     function GetUserAgent: string;
+    function GetIsSecure: Boolean;
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
     constructor Create(ADCSRequest: ICrossHttpRequest); virtual;
@@ -105,18 +106,45 @@ type
   end;
 
 
+  EMARSDCSServerException = class(Exception);
+
+  // HTTP and/or HTTPS server based on Delphi Cross Socket.
+  // HTTP listens on DefaultPort, HTTPS on SSLPort (0 disables either). HTTPS needs a certificate
+  // and its private key in PEM format (the certificate file can hold the whole chain, e.g. the
+  // fullchain.pem of Let's Encrypt) and OpenSSL at run time: libssl-3-x64.dll and
+  // libcrypto-3-x64.dll (libssl-3.dll and libcrypto-3.dll for Win32; 1.1 works too) next to the
+  // executable or in the PATH on Windows, libssl from the distribution on Linux.
+  // Engine parameters (read when the server is created):
+  //   PortSSL           HTTPS port (SSLPort), 0 = disabled
+  //   DCS.SSL.CertFile  certificate (CertificateFile), default localhost.crt
+  //   DCS.SSL.KeyFile   private key (PrivateKeyFile), default localhost.key
+  // Relative file names are relative to the folder of the executable (or library).
   TMARShttpServerDCS = class
+  public const
+    SSL_CERTFILE_PARAM = 'DCS.SSL.CertFile';
+    SSL_KEYFILE_PARAM = 'DCS.SSL.KeyFile';
+    SSL_CERTFILE_DEFAULT = 'localhost.crt';
+    SSL_KEYFILE_DEFAULT = 'localhost.key';
   private
     FStoppedAt: TDateTime;
     FEngine: IMARSEngine;
     FStartedAt: TDateTime;
     FActive: Boolean;
     FDefaultPort: Integer;
+    FSSLPort: Integer;
+    FCertificateFile: string;
+    FPrivateKeyFile: string;
+    FCertificate: string;
+    FPrivateKey: string;
     FHttpServer: ICrossHttpServer;
+    FHttpsServer: ICrossHttpServer;
     function GetUpTime: TTimeSpan;
     procedure SetActive(const Value: Boolean);
     procedure SetDefaultPort(const Value: Integer);
   protected
+    function CreateServer(const APort: Integer; const ASsl: Boolean): ICrossHttpServer; virtual;
+    procedure LoadCertificate(const AServer: ICrossHttpServer); virtual;
+    function ExpandFileName(const AFileName: string): string; virtual;
     procedure Startup; virtual;
     procedure Shutdown; virtual;
   public
@@ -124,8 +152,20 @@ type
     destructor Destroy; override;
 
     property Active: Boolean read FActive write SetActive;
+    // HTTP port, 0 = no HTTP
     property DefaultPort: Integer read FDefaultPort write SetDefaultPort;
+    // HTTPS port, 0 = no HTTPS (default: the PortSSL engine parameter)
+    property SSLPort: Integer read FSSLPort write FSSLPort;
+    // PEM files for HTTPS (defaults: DCS.SSL.CertFile and DCS.SSL.KeyFile engine parameters)
+    property CertificateFile: string read FCertificateFile write FCertificateFile;
+    property PrivateKeyFile: string read FPrivateKeyFile write FPrivateKeyFile;
+    // PEM content for HTTPS, used instead of the files when not empty
+    property Certificate: string read FCertificate write FCertificate;
+    property PrivateKey: string read FPrivateKey write FPrivateKey;
     property Engine: IMARSEngine read FEngine;
+    // the DCS servers while active (nil when disabled), for fine tuning
+    property HttpServer: ICrossHttpServer read FHttpServer;
+    property HttpsServer: ICrossHttpServer read FHttpsServer;
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
@@ -134,7 +174,8 @@ type
 implementation
 
 uses
-  Net.CrossHttpParams;
+  System.IOUtils
+, Net.CrossHttpParams;
 
 { TMARShttpServerDCS }
 
@@ -142,13 +183,113 @@ constructor TMARShttpServerDCS.Create(AEngine: IMARSEngine);
 begin
   inherited Create;
   FEngine := AEngine;
-  FHttpServer := TCrossHttpServer.Create(0, False);
+  if Assigned(FEngine) then
+  begin
+    FSSLPort := FEngine.PortSSL;
+    FCertificateFile := FEngine.Parameters.ByNameText(SSL_CERTFILE_PARAM, SSL_CERTFILE_DEFAULT).AsString;
+    FPrivateKeyFile := FEngine.Parameters.ByNameText(SSL_KEYFILE_PARAM, SSL_KEYFILE_DEFAULT).AsString;
+  end;
 end;
 
 destructor TMARShttpServerDCS.Destroy;
 begin
+  if Active then
+    Shutdown;
   FHttpServer := nil;
+  FHttpsServer := nil;
   inherited;
+end;
+
+function TMARShttpServerDCS.ExpandFileName(const AFileName: string): string;
+begin
+  Result := AFileName;
+  if (Result <> '') and TPath.IsRelativePath(Result) then
+    Result := TPath.Combine(ExtractFilePath(GetModuleName(HInstance)), Result);
+end;
+
+const
+  OPENSSL_LIBRARIES =
+{$IF defined(MSWINDOWS) and defined(CPU64BITS)}
+    'libssl-3-x64.dll and libcrypto-3-x64.dll (or libssl-1_1-x64.dll and libcrypto-1_1-x64.dll)';
+{$ELSEIF defined(MSWINDOWS)}
+    'libssl-3.dll and libcrypto-3.dll (or libssl-1_1.dll and libcrypto-1_1.dll)';
+{$ELSE}
+    'libssl and libcrypto (i.e. package libssl3)';
+{$ENDIF}
+
+function TMARShttpServerDCS.CreateServer(const APort: Integer; const ASsl: Boolean): ICrossHttpServer;
+var
+  LEngine: IMARSEngine;
+  LHandler: TCrossHttpRouterProc;
+  LBasePath: string;
+begin
+  try
+    Result := TCrossHttpServer.Create(0, ASsl);
+  except
+    on E: Exception do
+      if ASsl then
+        raise EMARSDCSServerException.CreateFmt('HTTPS (DCS) on port %d: OpenSSL cannot be loaded (%s).'
+          + ' %s must be next to the executable or in the PATH', [APort, E.Message, OPENSSL_LIBRARIES])
+      else
+        raise;
+  end;
+  if ASsl then
+    LoadCertificate(Result);
+
+  Result.Addr := IPv4v6_ALL; // IPv4v6
+  Result.Port := APort;
+  Result.Compressible := True;
+
+  LEngine := FEngine;
+  LHandler :=
+    procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
+    begin
+      AHandled := LEngine.HandleRequest(TMARSDCSRequest.Create(ARequest), TMARSDCSResponse.Create(AResponse))
+    end;
+
+  // the DCS router matches by path segment and '*' is a wildcard only as a whole last segment
+  // ('/rest/*'): '/rest*' would match a single segment
+  LBasePath := FEngine.BasePath;
+  while LBasePath.EndsWith('/') do
+    LBasePath := LBasePath.Substring(0, LBasePath.Length - 1);
+  if LBasePath = '' then
+    Result.All('*', LHandler)
+  else
+  begin
+    Result.All(LBasePath, LHandler);
+    Result.All(LBasePath + '/*', LHandler);
+  end;
+end;
+
+procedure TMARShttpServerDCS.LoadCertificate(const AServer: ICrossHttpServer);
+var
+  LCertFile, LKeyFile: string;
+begin
+  try
+    if FCertificate <> '' then
+      AServer.SetCertificate(FCertificate)
+    else
+    begin
+      LCertFile := ExpandFileName(FCertificateFile);
+      if not FileExists(LCertFile) then
+        raise EMARSDCSServerException.CreateFmt('certificate file not found: %s', [LCertFile]);
+      AServer.SetCertificateFile(LCertFile);
+    end;
+
+    if FPrivateKey <> '' then
+      AServer.SetPrivateKey(FPrivateKey)
+    else
+    begin
+      LKeyFile := ExpandFileName(FPrivateKeyFile);
+      if not FileExists(LKeyFile) then
+        raise EMARSDCSServerException.CreateFmt('private key file not found: %s', [LKeyFile]);
+      AServer.SetPrivateKeyFile(LKeyFile);
+    end;
+  except
+    on E: Exception do
+      raise EMARSDCSServerException.CreateFmt('HTTPS (DCS) on port %d: %s (%s=%s, %s=%s)'
+        , [SSLPort, E.Message, SSL_CERTFILE_PARAM, FCertificateFile, SSL_KEYFILE_PARAM, FPrivateKeyFile]);
+  end;
 end;
 
 function TMARShttpServerDCS.GetUpTime: TTimeSpan;
@@ -165,11 +306,11 @@ procedure TMARShttpServerDCS.SetActive(const Value: Boolean);
 begin
   if FActive <> Value then
   begin
-    FActive := Value;
-    if FActive then
+    if Value then
       Startup
     else
       Shutdown;
+    FActive := Value;
   end;
 end;
 
@@ -180,40 +321,45 @@ end;
 
 procedure TMARShttpServerDCS.Shutdown;
 begin
-  FHttpServer.Stop;
+  if Assigned(FHttpServer) then
+    FHttpServer.Stop;
+  if Assigned(FHttpsServer) then
+    FHttpsServer.Stop;
+  FHttpServer := nil;
+  FHttpsServer := nil;
 
   FStoppedAt := Now;
 end;
 
 procedure TMARShttpServerDCS.Startup;
-var
-  LHandler: TCrossHttpRouterProc;
-  LBasePath: string;
 begin
-  FHttpServer.Addr := IPv4v6_ALL; // IPv4v6
-  FHttpServer.Port := DefaultPort;
-  FHttpServer.Compressible := True;
+  if (DefaultPort <= 0) and (SSLPort <= 0) then
+    raise EMARSDCSServerException.Create('DCS server: no port to listen on (DefaultPort and SSLPort are both 0)');
 
-  LHandler :=
-    procedure(const ARequest: ICrossHttpRequest; const AResponse: ICrossHttpResponse; var AHandled: Boolean)
+  // fresh servers at each start: routes are registered once per server
+  FHttpServer := nil;
+  FHttpsServer := nil;
+  try
+    if DefaultPort > 0 then
     begin
-      AHandled := FEngine.HandleRequest(TMARSDCSRequest.Create(ARequest), TMARSDCSResponse.Create(AResponse))
+      FHttpServer := CreateServer(DefaultPort, False);
+      FHttpServer.Start;
     end;
 
-  // the DCS router matches by path segment and '*' is a wildcard only as a whole last segment
-  // ('/rest/*'): '/rest*' would match a single segment
-  LBasePath := FEngine.BasePath;
-  while LBasePath.EndsWith('/') do
-    LBasePath := LBasePath.Substring(0, LBasePath.Length - 1);
-  if LBasePath = '' then
-    FHttpServer.All('*', LHandler)
-  else
-  begin
-    FHttpServer.All(LBasePath, LHandler);
-    FHttpServer.All(LBasePath + '/*', LHandler);
+    if SSLPort > 0 then
+    begin
+      FHttpsServer := CreateServer(SSLPort, True);
+      FHttpsServer.Start;
+    end;
+  except
+    if Assigned(FHttpServer) then
+      FHttpServer.Stop;
+    if Assigned(FHttpsServer) then
+      FHttpsServer.Stop;
+    FHttpServer := nil;
+    FHttpsServer := nil;
+    raise;
   end;
-
-  FHttpServer.Start;
 
   FStartedAt := Now;
   FStoppedAt := 0;
@@ -648,6 +794,11 @@ end;
 function TMARSDCSRequest.GetRemoteIP: string;
 begin
   Result := FDCSRequest.Connection.PeerAddr;
+end;
+
+function TMARSDCSRequest.GetIsSecure: Boolean;
+begin
+  Result := Assigned(FDCSRequest.Connection) and FDCSRequest.Connection.Ssl;
 end;
 
 function TMARSDCSRequest.GetUserAgent: string;

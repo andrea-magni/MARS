@@ -79,6 +79,7 @@ type
     function GetQueryFields: TArray<string>;
     function GetRemoteIP: string;
     function GetUserAgent: string;
+    function GetIsSecure: Boolean;
 
     procedure CheckWorkaroundForISAPI;
     // -------------------------------------------------------------------------
@@ -120,6 +121,8 @@ type
     function GetRequestInfo: TIdHTTPRequestInfo;
     function GetResponseInfo: TIdHTTPResponseInfo;
   public
+    // True when the connection uses TLS (SSL IOHandler not in pass-through mode)
+    function IsSecure: Boolean;
     property RequestInfo: TIdHTTPRequestInfo read GetRequestInfo;
     property ResponseInfo: TIdHTTPResponseInfo read GetResponseInfo;
   end;
@@ -574,6 +577,14 @@ begin
   Result := FWebRequest.Method;
 end;
 
+function TMARSWebRequest.GetIsSecure: Boolean;
+begin
+  if FWebRequest is TMARSIdHTTPAppRequest then // Indy standalone server
+    Result := TMARSIdHTTPAppRequest(FWebRequest).IsSecure
+  else // WebBroker: ISAPI (IIS) has the HTTPS server variable
+    Result := SameText(FWebRequest.GetFieldByName('HTTPS'), 'on');
+end;
+
 function TMARSWebRequest.GetPort: Integer;
 begin
   Result := FWebRequest.ServerPort;
@@ -774,6 +785,13 @@ begin
 end;
 
 { TMARSIdHTTPAppRequest }
+
+function TMARSIdHTTPAppRequest.IsSecure: Boolean;
+begin
+  Result := Assigned(FThread) and Assigned(FThread.Connection)
+    and (FThread.Connection.IOHandler is TIdSSLIOHandlerSocketBase)
+    and not TIdSSLIOHandlerSocketBase(FThread.Connection.IOHandler).PassThrough;
+end;
 
 function TMARSIdHTTPAppRequest.GetRequestInfo: TIdHTTPRequestInfo;
 begin

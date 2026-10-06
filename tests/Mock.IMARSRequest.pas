@@ -72,6 +72,7 @@ type
     function GetQueryFields: TArray<string>;
     function GetRemoteIP: string;
     function GetUserAgent: string;
+    function GetIsSecure: Boolean;
 
     function AsObject: TObject;
     procedure CheckWorkaroundForISAPI;
@@ -474,6 +475,11 @@ end;
 function TMARSRequestMock.GetRemoteIP: string;
 begin
   Result := '127.0.0.1';
+end;
+
+function TMARSRequestMock.GetIsSecure: Boolean;
+begin
+  Result := StartsText('https://', FActualURL);
 end;
 
 function TMARSRequestMock.GetUserAgent: string;

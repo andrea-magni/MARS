@@ -119,7 +119,11 @@ including file are the same parameter (the first spelling is kept). Parameters r
 | Parameter | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `Port` | Integer | `8080` | HTTP listening port. |
-| `PortSSL` | Integer | `0` | HTTPS port (0 = disabled). |
+| `PortSSL` | Integer | `0` | HTTPS port (0 = disabled), for the Indy and DCS servers. See [HTTPS](/server/engine#https). |
+| `DCS.SSL.CertFile` | string | `localhost.crt` | DCS server: certificate (PEM, may hold the chain); relative to the executable folder. |
+| `DCS.SSL.KeyFile` | string | `localhost.key` | DCS server: private key (PEM); relative to the executable folder. |
+| `Indy.SSL.CertFile`, `Indy.SSL.KeyFile`, `Indy.SSL.RootCertFile` | string | `localhost.crt`, `localhost.key`, `localhost.pem` | Indy server: certificate, key and root certificate. |
+| `Indy.SSL.Version`, `Indy.SSL.Mode` | string | `sslvTLSv1_2`, `sslmServer` | Indy server: TLS version and mode. |
 | `ThreadPoolSize` | Integer | `75` | Worker threads (size for concurrent requests, incl. open SSE streams). |
 | `BasePath` | string | `/rest` | Root path stripped from every URL before application matching. |
 

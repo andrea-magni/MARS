@@ -26,8 +26,18 @@ begin
   if not (AServer.Active) then
   begin
     AServer.DefaultPort := TServerEngine.Default.Port;
-    Writeln(Format(sStartingServer, [AServer.DefaultPort]));
-    AServer.Active := True;
+    // HTTPS: PortSSL, DCS.SSL.CertFile and DCS.SSL.KeyFile in the ini file
+    AServer.SSLPort := TServerEngine.Default.PortSSL;
+    if AServer.DefaultPort > 0 then
+      Writeln(Format(sStartingServer, [AServer.DefaultPort]));
+    if AServer.SSLPort > 0 then
+      Writeln(Format(sStartingServerSSL, [AServer.SSLPort, AServer.CertificateFile, AServer.PrivateKeyFile]));
+    try
+      AServer.Active := True;
+    except
+      on E: Exception do
+        Writeln(Format(sServerNotStarted, [E.Message]));
+    end;
   end
   else
     Writeln(sServerRunning);
@@ -69,6 +79,28 @@ begin
   Write(cArrow);
 end;
 
+procedure SetSSLPort(const AServer: TMARShttpServerDCS; const APort: string);
+var
+  LPort: Integer;
+  LWasActive: Boolean;
+begin
+  LPort := StrToIntDef(APort, -1);
+  if LPort = -1 then
+  begin
+    Writeln('Port should be an integer number. Try again.');
+    Exit;
+  end;
+
+  LWasActive := AServer.Active;
+  if LWasActive  then
+    StopServer(AServer);
+  TServerEngine.Default.PortSSL := LPort;
+  if LWasActive then
+    StartServer(AServer);
+  Writeln(Format(sSSLPortSet, [IntToStr(TServerEngine.Default.PortSSL)]));
+  Write(cArrow);
+end;
+
 procedure  WriteCommands;
 begin
   Writeln(sCommands);
@@ -79,6 +111,7 @@ procedure  WriteStatus(const AServer: TMARShttpServerDCS);
 begin
   Writeln(sActive + BoolToStr(AServer.Active, True));
   Writeln(sPort + IntToStr(TServerEngine.Default.Port));
+  Writeln(sSSLPort + IntToStr(TServerEngine.Default.PortSSL));
   Write(cArrow);
 end;
 
@@ -105,6 +138,8 @@ begin
         StopServer(LServer)
       else if LResponse.StartsWith(cCommandSetPort, True) then
         SetPort(LServer, LResponse.Split([' '])[2])
+      else if LResponse.StartsWith(cCommandSetSSLPort, True) then
+        SetSSLPort(LServer, LResponse.Split([' '])[2])
 
       else if sametext(LResponse, cCommandHelp) then
         WriteCommands

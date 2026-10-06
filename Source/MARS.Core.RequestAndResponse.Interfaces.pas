@@ -81,6 +81,9 @@ type
     function GetQueryFields: TArray<string>;
     function GetRemoteIP: string;
     function GetUserAgent: string;
+    // True when the request came in over TLS (https) to this server; behind a reverse
+    // proxy terminating TLS it is False: see the X-Forwarded-Proto header
+    function GetIsSecure: Boolean;
 
     function AsObject: TObject;
     procedure CheckWorkaroundForISAPI;
@@ -101,6 +104,7 @@ type
     property QueryParams: TMARSQueryParams read GetQueryParams;
     property RemoteIP: string read GetRemoteIP;
     property UserAgent: string read GetUserAgent;
+    property IsSecure: Boolean read GetIsSecure;
   end;
 
   {$M+}

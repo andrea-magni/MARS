@@ -70,6 +70,8 @@ end;
 
 Engine parameters in the ini (`[DefaultEngine]`): `Port` (default 8080; set 0 to disable plain HTTP), `PortSSL` (default 0 = disabled), and Indy SSL settings `Indy.SSL.RootCertFile`/`CertFile`/`KeyFile` (defaults `localhost.pem`/`.crt`/`.key` in the bin folder), `Indy.SSL.Version` (e.g. `sslvTLSv1_2`), `Indy.SSL.Mode` (`sslmServer`). For finer control (multiple bindings, per-port SSL, IOHandler events) see the commented `SetupSSLIOHandler` block in `MARSTemplateServerConsoleApplication.dpr`.
 
+DCS hosts (`TMARShttpServerDCS`, `Demos/MARSTemplateDCS`) serve HTTPS directly too: `PortSSL` plus `DCS.SSL.CertFile`/`DCS.SSL.KeyFile` (PEM; the cert file may hold the chain, e.g. Let's Encrypt `fullchain.pem`; relative to the exe folder; defaults `localhost.crt`/`.key`), or the `SSLPort`/`CertificateFile`/`PrivateKeyFile`/`Certificate`/`PrivateKey` properties. Needs OpenSSL at run time: `libssl-3-x64.dll` + `libcrypto-3-x64.dll` (Win64) / `libssl-3.dll` + `libcrypto-3.dll` (Win32) next to the exe, `libssl` on Linux. `Port=0` disables plain HTTP. Startup failures raise `EMARSDCSServerException`. `Request.IsSecure` tells whether the request came in over TLS (behind a proxy use `X-Forwarded-Proto`).
+
 A common production setup is the console/service/daemon host on plain HTTP behind a reverse proxy (nginx, IIS ARR, Caddy) that terminates TLS; remember to enable `CORS.*` parameters if browsers call the API from another origin.
 
 ## Alternative transport

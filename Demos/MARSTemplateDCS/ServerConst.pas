@@ -13,6 +13,10 @@ resourcestring
   sPortSet = '- Port set to %s';
   sServerRunning = '- The Server is already running';
   sStartingServer = '- Starting HTTP Server on port %d';
+  sStartingServerSSL = '- Starting HTTPS Server on port %d (certificate: %s, key: %s)';
+  sServerNotStarted = '- Error: the Server could not start: %s';
+  sSSLPortSet = '- HTTPS port set to %s (0 = disabled)';
+  sSSLPort = '- HTTPS port: ';
   sStoppingServer = '- Stopping Server';
   sServerStopped = '- Server Stopped';
   sServerNotRunning = '- The Server is not running';
@@ -25,6 +29,7 @@ resourcestring
     '   - "start" to start the server'+ slineBreak +
     '   - "stop" to stop the server'+ slineBreak +
     '   - "set port" to change the default port'+ slineBreak +
+    '   - "set sslport" to change the HTTPS port (0 = disabled)'+ slineBreak +
     '   - "status" for Server status'+ slineBreak +
     '   - "help" to show commands'+ slineBreak +
     '   - "exit" to close the application';
@@ -36,6 +41,7 @@ const
   cCommandStatus = 'status';
   cCommandHelp = 'help';
   cCommandSetPort = 'set port';
+  cCommandSetSSLPort = 'set sslport';
   cCommandExit = 'exit';
 
 implementation

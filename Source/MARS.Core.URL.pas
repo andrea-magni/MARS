@@ -208,7 +208,10 @@ begin
     LQuery := URL_QUERY_PREFIX + LQuery;
 
   // Add the protocol in order to make Parse work.
-  Create('http://' + ARequest.HostName + ':' + ARequest.Port.ToString + ARequest.RawPath + LQuery);
+  if ARequest.IsSecure then
+    Create('https://' + ARequest.HostName + ':' + ARequest.Port.ToString + ARequest.RawPath + LQuery)
+  else
+    Create('http://' + ARequest.HostName + ':' + ARequest.Port.ToString + ARequest.RawPath + LQuery);
 end;
 
 constructor TMARSURL.CreateDummy(const APaths: array of string; const ABaseURL: string);
