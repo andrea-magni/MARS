@@ -771,7 +771,8 @@ end;
 procedure TMARSDCSResponse.SetCookie(const AName, AValue, ADomain,
   APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
 begin
-  FDCSResponse.Cookies.AddOrSet(AName, AValue, SecondsBetween(Now, AExpiration), APath, ADomain, False {AHttpOnly}, ASecure);
+  // HttpOnly, as with Indy: the token cookie must not be readable by scripts
+  FDCSResponse.Cookies.AddOrSet(AName, AValue, SecondsBetween(Now, AExpiration), APath, ADomain, True {AHttpOnly}, ASecure);
 end;
 
 procedure TMARSDCSResponse.SetHeader(const AName, AValue: string);
