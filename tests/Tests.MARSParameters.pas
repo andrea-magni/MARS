@@ -124,11 +124,31 @@ type
     procedure CustomSaveToJSON;
   end;
 
+  // [Include] section and case insensitive ini parameters
+  [TestFixture('MARSParameters Ini')]
+  TMARSParametersIniFixture = class
+  private
+    FFolder: string;
+    function WriteIni(const ARelativeFileName, AContent: string): string;
+  public
+    [Setup] procedure Setup;
+    [TearDown] procedure TearDown;
+
+    [Test] procedure IncludedFileIsOverridden;
+    [Test] procedure NestedIncludes;
+    [Test] procedure SeveralIncludesInOrder;
+    [Test] procedure CircularIncludeRaises;
+    [Test] procedure MissingIncludeRaises;
+    [Test] procedure IniIsCaseInsensitive;
+    [Test] procedure JSONStaysCaseSensitive;
+    [Test] procedure ApplicationCopyKeepsCaseInsensitivity;
+  end;
+
 implementation
 
 
 uses
-  IniFiles, IOUtils
+  IniFiles, IOUtils, StrUtils
 , MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
 ;
@@ -247,7 +267,7 @@ begin
   try
     var LParameters := TMARSParameters.Create('Test');
     try
-//      LParameters.LoadFromIniFile(LTempIniFileName);
+//      TMARSParametersIniFileReaderWriter.Load(LParameters, LTempIniFileName);
       TMARSParametersIniFileReaderWriter.Load(LParameters, LTempIniFileName);
 
       var LParameterValue := LParameters.ByName(AMemberName);
@@ -330,8 +350,238 @@ begin
   end;
 end;
 
+{ TMARSParametersIniFixture }
+
+procedure TMARSParametersIniFixture.Setup;
+begin
+  FFolder := TPath.Combine(TPath.GetTempPath, 'MARSParametersIni-' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(TPath.Combine(FFolder, 'Project'));
+end;
+
+procedure TMARSParametersIniFixture.TearDown;
+begin
+  if TDirectory.Exists(FFolder) then
+    TDirectory.Delete(FFolder, True);
+end;
+
+function TMARSParametersIniFixture.WriteIni(const ARelativeFileName, AContent: string): string;
+begin
+  Result := TPath.Combine(FFolder, ARelativeFileName);
+  TFile.WriteAllText(Result, AContent, TEncoding.UTF8);
+end;
+
+procedure TMARSParametersIniFixture.IncludedFileIsOverridden;
+begin
+  WriteIni('BaseConfiguration.ini', '''
+    [DefaultEngine]
+    Port=8080
+    ThreadPoolSize=50
+    DefaultApp.JWT.Duration=1
+    [DefaultApp]
+    JWT.Secret=base-secret
+    ''');
+  var LProjectIni := WriteIni('Project\Project.ini', '''
+    [Include]
+    Base=..\BaseConfiguration.ini
+    [DefaultEngine]
+    Port=9090
+    DefaultApp.JWT.Secret=project-secret
+    ''');
+
+  var LParameters := TMARSParameters.Create('DefaultEngine');
+  try
+    TMARSParametersIniFileReaderWriter.Load(LParameters, LProjectIni);
+
+    Assert.AreEqual(9090, LParameters.ByName('Port').AsInteger, 'project wins');
+    Assert.AreEqual(50, LParameters.ByName('ThreadPoolSize').AsInteger, 'from the base');
+    Assert.AreEqual(1, LParameters.ByName('DefaultApp.JWT.Duration').AsInteger, 'from the base');
+    Assert.AreEqual('project-secret', LParameters.ByName('DefaultApp.JWT.Secret').AsString, 'project wins');
+    Assert.IsFalse(LParameters.ContainsParam('Include.Base'), '[Include] is not a parameter');
+    Assert.AreEqual(4, LParameters.Count);
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.NestedIncludes;
+begin
+  WriteIni('Company.ini', '''
+    [DefaultEngine]
+    A=company
+    B=company
+    C=company
+    ''');
+  WriteIni('BaseConfiguration.ini', '''
+    [Include]
+    Company=Company.ini
+    [DefaultEngine]
+    B=base
+    C=base
+    ''');
+  var LProjectIni := WriteIni('Project\Project.ini', '''
+    [Include]
+    Base=..\BaseConfiguration.ini
+    [DefaultEngine]
+    C=project
+    ''');
+
+  var LParameters := TMARSParameters.Create('DefaultEngine');
+  try
+    TMARSParametersIniFileReaderWriter.Load(LParameters, LProjectIni);
+    Assert.AreEqual('company', LParameters.ByName('A').AsString);
+    Assert.AreEqual('base', LParameters.ByName('B').AsString);
+    Assert.AreEqual('project', LParameters.ByName('C').AsString);
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.SeveralIncludesInOrder;
+begin
+  WriteIni('First.ini', '''
+    [DefaultEngine]
+    A=first
+    B=first
+    ''');
+  WriteIni('Second.ini', '''
+    [DefaultEngine]
+    B=second
+    ''');
+  var LProjectIni := WriteIni('Project.ini', '''
+    [Include]
+    One=First.ini
+    Two=Second.ini
+    ''');
+
+  var LParameters := TMARSParameters.Create('DefaultEngine');
+  try
+    TMARSParametersIniFileReaderWriter.Load(LParameters, LProjectIni);
+    Assert.AreEqual('first', LParameters.ByName('A').AsString);
+    Assert.AreEqual('second', LParameters.ByName('B').AsString, 'later include wins');
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.CircularIncludeRaises;
+begin
+  WriteIni('A.ini', '''
+    [Include]
+    B=B.ini
+    ''');
+  WriteIni('B.ini', '''
+    [Include]
+    A=A.ini
+    ''');
+
+  var LParameters := TMARSParameters.Create('DefaultEngine');
+  try
+    var LCall: TTestLocalMethod :=
+      procedure
+      begin
+        TMARSParametersIniFileReaderWriter.Load(LParameters, TPath.Combine(FFolder, 'A.ini'));
+      end;
+    Assert.WillRaiseWithMessageRegex(LCall, EMARSParametersIniFileException, 'Circular.*A\.ini -> .*B\.ini -> .*A\.ini');
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.MissingIncludeRaises;
+begin
+  var LProjectIni := WriteIni('Project.ini', '''
+    [Include]
+    Base=NotThere.ini
+    ''');
+
+  var LParameters := TMARSParameters.Create('DefaultEngine');
+  try
+    var LCall: TTestLocalMethod :=
+      procedure
+      begin
+        TMARSParametersIniFileReaderWriter.Load(LParameters, LProjectIni);
+      end;
+    Assert.WillRaiseWithMessageRegex(LCall, EMARSParametersIniFileException, 'NotThere\.ini');
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.IniIsCaseInsensitive;
+begin
+  WriteIni('BaseConfiguration.ini', '''
+    [DefaultEngine]
+    Feature.X=base
+    [DefaultApp]
+    JWT.Secret=base-secret
+    ''');
+  var LProjectIni := WriteIni('Project.ini', '''
+    [include]
+    base=BaseConfiguration.ini
+    [defaultengine]
+    feature.x=project
+    [defaultapp]
+    jwt.secret=project-secret
+    ''');
+
+  var LParameters := TMARSParameters.Create('DefaultEngine');
+  try
+    TMARSParametersIniFileReaderWriter.Load(LParameters, LProjectIni);
+
+    Assert.AreEqual(2, LParameters.Count, 'no duplicates');
+    Assert.AreEqual('project', LParameters.ByName('Feature.X').AsString);
+    Assert.AreEqual('project', LParameters.ByName('FEATURE.X').AsString);
+    Assert.AreEqual('project-secret', LParameters.ByName('DefaultApp.JWT.Secret').AsString);
+    Assert.IsTrue(LParameters.ContainsParam('defaultapp.jwt.secret'));
+    Assert.IsTrue(MatchStr('Feature.X', LParameters.ParamNames), 'first spelling kept');
+
+    // set in code, in another case: same parameter
+    LParameters.Values['feature.X'] := 'code';
+    Assert.AreEqual(2, LParameters.Count);
+    Assert.AreEqual('code', LParameters.ByName('Feature.X').AsString);
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.JSONStaysCaseSensitive;
+begin
+  var LParameters := TMARSParameters.Create('');
+  try
+    LParameters.LoadFromJSON('{"Value": "upper", "value": "lower"}');
+
+    Assert.AreEqual(2, LParameters.Count);
+    Assert.AreEqual('upper', LParameters.ByName('Value').AsString);
+    Assert.AreEqual('lower', LParameters.ByName('value').AsString);
+    Assert.IsTrue(LParameters.ByName('VALUE').IsEmpty);
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.ApplicationCopyKeepsCaseInsensitivity;
+begin
+  var LIni := WriteIni('Project.ini', '''
+    [DefaultApp]
+    jwt.secret=s3cr3t
+    ''');
+
+  var LEngine := TMARSParameters.Create('DefaultEngine');
+  var LApp := TMARSParameters.Create('DefaultApp');
+  try
+    TMARSParametersIniFileReaderWriter.Load(LEngine, LIni);
+    LApp.CopyFrom(LEngine, 'DefaultApp'); // what AddApplication does
+
+    Assert.AreEqual('s3cr3t', LApp.ByName('JWT.Secret').AsString);
+  finally
+    LApp.Free;
+    LEngine.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSParametersFixture);
+  TDUnitX.RegisterTestFixture(TMARSParametersIniFixture);
 
 
 end.

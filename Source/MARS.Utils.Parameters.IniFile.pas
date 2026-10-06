@@ -7,11 +7,23 @@ uses
   , MARS.Utils.Parameters;
 
 type
+  EMARSParametersIniFileException = class(Exception);
+
   TMARSParametersIniFileReaderWriter=class
   private
+    class procedure LoadIniFile(const AParameters: TMARSParameters; const AIniFile: TMemIniFile;
+      const AFileNames: TArray<string>);
+    class function ResolveIncludeFileName(const AFileName, AIncludingFileName: string): string;
   protected
     class function GetActualFileName(const AFileName: string): string;
   public
+    // [Include] section: each value is an ini file loaded before the one including it, so the
+    // including file wins. Relative paths are relative to the folder of the including file;
+    // included files can include other files.
+    //   [Include]
+    //   Base=..\BaseConfiguration.ini
+    const INCLUDE_SECTION = 'Include';
+
     class procedure Load(const AParameters: TMARSParameters;
       const AIniFileName: string = ''; const ABeforeLoad: TProc<TMemIniFile> = nil);
     class procedure Save(const AParameters: TMARSParameters; const AIniFileName: string = '');
@@ -62,7 +74,35 @@ class procedure TMARSParametersIniFileReaderWriter.Load(
   const AParameters: TMARSParameters; const AIniFileName: string;
   const ABeforeLoad: TProc<TMemIniFile>);
 var
+  LFileName: string;
   LIniFile: TMemIniFile;
+begin
+  LFileName := GetActualFileName(AIniFileName);
+  LIniFile := TMemIniFile.Create(LFileName);
+  try
+    if Assigned(ABeforeLoad) then
+      ABeforeLoad(LIniFile);
+
+    LoadIniFile(AParameters, LIniFile, [ExpandFileName(LFileName)]);
+  finally
+    LIniFile.Free;
+  end;
+end;
+
+class function TMARSParametersIniFileReaderWriter.ResolveIncludeFileName(
+  const AFileName, AIncludingFileName: string): string;
+begin
+  Result := AFileName;
+  if TPath.IsRelativePath(Result) then
+    Result := TPath.Combine(ExtractFilePath(AIncludingFileName), Result);
+  Result := ExpandFileName(Result);
+end;
+
+// AFileNames: the file of AIniFile, preceded by the files including it (to detect cycles)
+class procedure TMARSParametersIniFileReaderWriter.LoadIniFile(
+  const AParameters: TMARSParameters; const AIniFile: TMemIniFile;
+  const AFileNames: TArray<string>);
+var
   LSections: TStringList;
   LSection: string;
   LValues: TStringList;
@@ -70,52 +110,74 @@ var
   LParameterName: string;
   LName: string;
   LValue: string;
+  LFileName: string;
+  LIncludedFileName: string;
+  LIncludedIniFile: TMemIniFile;
 begin
-  LIniFile := TMemIniFile.Create(GetActualFileName(AIniFileName));
+  LFileName := AFileNames[High(AFileNames)];
+
+  LValues := TStringList.Create;
   try
-    if Assigned(ABeforeLoad) then
-      ABeforeLoad(LIniFile);
+    // included files first, in order: the values of this file win
+    AIniFile.ReadSectionValues(INCLUDE_SECTION, LValues);
+    for LIndex := 0 to LValues.Count-1 do
+    begin
+      LValue := LValues.ValueFromIndex[LIndex].Trim;
+      if LValue = '' then
+        Continue;
 
-    LValues := TStringList.Create;
-    try
-      LIniFile.ReadSectionValues(AParameters.Name, LValues);
+      LIncludedFileName := ResolveIncludeFileName(LValue, LFileName);
+      if MatchText(LIncludedFileName, AFileNames) then
+        raise EMARSParametersIniFileException.CreateFmt('Circular [%s] in %s: %s'
+          , [INCLUDE_SECTION, LFileName, string.Join(' -> ', AFileNames + [LIncludedFileName])]);
+      if not FileExists(LIncludedFileName) then
+        raise EMARSParametersIniFileException.CreateFmt('File not found: %s ([%s] %s in %s)'
+          , [LIncludedFileName, INCLUDE_SECTION, LValues.Names[LIndex], LFileName]);
 
-      for LIndex := 0 to LValues.Count-1 do
-      begin
-        LName := LValues.Names[LIndex];
-        LValue := LValues.ValueFromIndex[LIndex];
-
-        AParameters.Values[LName] := GuessTValueFromString(LValue);
-      end;
-
-
-      LSections := TStringList.Create;
+      LIncludedIniFile := TMemIniFile.Create(LIncludedFileName);
       try
-        LIniFile.ReadSections(LSections);
-        for LSection in LSections do
-        begin
-          if SameText(LSection, AParameters.Name) then
-            Continue; // skip
-
-          LIniFile.ReadSectionValues(LSection, LValues);
-          for LIndex := 0 to LValues.Count-1 do
-          begin
-            LName := LValues.Names[LIndex];
-            LValue := LValues.ValueFromIndex[LIndex];
-
-            LParameterName := TMARSParameters.CombineSliceAndParamName(LSection, LName);
-
-            AParameters.Values[LParameterName] := GuessTValueFromString(LValue);
-          end;
-        end;
+        LoadIniFile(AParameters, LIncludedIniFile, AFileNames + [LIncludedFileName]);
       finally
-        LSections.Free;
+        LIncludedIniFile.Free;
+      end;
+    end;
+
+    // ini files are case insensitive: so are the parameters read from them
+    AIniFile.ReadSectionValues(AParameters.Name, LValues);
+
+    for LIndex := 0 to LValues.Count-1 do
+    begin
+      LName := LValues.Names[LIndex];
+      LValue := LValues.ValueFromIndex[LIndex];
+
+      AParameters.SetValueIgnoringCase(LName, GuessTValueFromString(LValue));
+    end;
+
+
+    LSections := TStringList.Create;
+    try
+      AIniFile.ReadSections(LSections);
+      for LSection in LSections do
+      begin
+        if SameText(LSection, AParameters.Name) or SameText(LSection, INCLUDE_SECTION) then
+          Continue; // skip
+
+        AIniFile.ReadSectionValues(LSection, LValues);
+        for LIndex := 0 to LValues.Count-1 do
+        begin
+          LName := LValues.Names[LIndex];
+          LValue := LValues.ValueFromIndex[LIndex];
+
+          LParameterName := TMARSParameters.CombineSliceAndParamName(LSection, LName);
+
+          AParameters.SetValueIgnoringCase(LParameterName, GuessTValueFromString(LValue));
+        end;
       end;
     finally
-      LValues.Free;
+      LSections.Free;
     end;
   finally
-    LIniFile.Free;
+    LValues.Free;
   end;
 end;
 

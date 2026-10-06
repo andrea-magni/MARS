@@ -11,6 +11,8 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 ```
 
 - File: same path/name as the executable with `.ini` extension, overridable with the command-line switch `-configFileName <file>`.
+- Shared configuration: an `[Include]` section lists files loaded before the current one (`Base=..\BaseConfiguration.ini`; paths relative to the including file; nested includes allowed, cycles and missing included files raise `EMARSParametersIniFileException`). The including file wins; `[Include]` is not a parameters section.
+- Names read from ini files are case insensitive (`jwt.secret` = `JWT.Secret`); names read from JSON stay case sensitive.
 - Section: the engine name — `[DefaultEngine]` unless a custom name was passed to `TMARSEngine.Create`.
 - Application-scoped values use the application *name* as prefix inside the same section: `DefaultApp.JWT.Secret=...` targets the application registered as `'DefaultApp'`.
 

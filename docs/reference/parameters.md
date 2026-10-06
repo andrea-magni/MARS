@@ -33,6 +33,87 @@ if not FEngine.Parameters.IniFileExists then
   Writeln('No configuration file at ' + FEngine.Parameters.GetFileName);
 ```
 
+## Shared configuration: `[Include]`
+
+Several servers often share most of their configuration (JWT settings, logging, database
+connections) and differ in a few values (port, secret, application specific settings). Put the
+common values in a base file and include it in the `.ini` of each server with an `[Include]`
+section: the call to `LoadFromIniFile` in `Server.Ignition` stays the same.
+
+```text
+C:\Servers\
+├─ BaseConfiguration.ini
+├─ Orders\
+│  ├─ OrdersServer.exe
+│  └─ OrdersServer.ini
+└─ Invoices\
+   ├─ InvoicesServer.exe
+   └─ InvoicesServer.ini
+```
+
+`C:\Servers\BaseConfiguration.ini`, shared:
+
+```ini
+[DefaultEngine]
+Port=8080
+ThreadPoolSize=50
+JSONLogging.Enabled=true
+
+[DefaultApp]
+JWT.Issuer=MyCompany
+JWT.Duration=8
+JWT.Secret=base-secret-replaced-by-each-server
+```
+
+`C:\Servers\Orders\OrdersServer.ini`:
+
+```ini
+[Include]
+Base=..\BaseConfiguration.ini
+
+[DefaultEngine]
+Port=8081
+
+[DefaultApp]
+JWT.Secret=a-long-random-value-for-orders
+Orders.MaxItems=100
+```
+
+The parameters of `OrdersServer` are the sum of the two files, the including file winning:
+
+| Parameter | Value | From |
+| --- | --- | --- |
+| `Port` | `8081` | `OrdersServer.ini` |
+| `ThreadPoolSize` | `50` | `BaseConfiguration.ini` |
+| `JSONLogging.Enabled` | `true` | `BaseConfiguration.ini` |
+| `DefaultApp.JWT.Issuer` | `MyCompany` | `BaseConfiguration.ini` |
+| `DefaultApp.JWT.Duration` | `8` | `BaseConfiguration.ini` |
+| `DefaultApp.JWT.Secret` | `a-long-random-value-for-orders` | `OrdersServer.ini` |
+| `DefaultApp.Orders.MaxItems` | `100` | `OrdersServer.ini` |
+
+The rules:
+
+- each value of `[Include]` is a file to load; the names (`Base` above) are free and only
+  identify the line. Relative paths are relative to the folder of the file containing the
+  `[Include]` section, not to the current folder;
+- included files are loaded first, in the order they are listed, then the values of the
+  including file: the including file wins, and a later include wins over an earlier one;
+- an included file can have its own `[Include]` section, e.g. `BaseConfiguration.ini` could
+  include a `CompanyDefaults.ini`. A file including itself, directly or through other files,
+  raises `EMARSParametersIniFileException`;
+- an included file that does not exist raises `EMARSParametersIniFileException` (a missing main
+  file, instead, still gives empty parameters, as before);
+- `[Include]` is not a parameters section; an included file cannot remove a value, only replace
+  it (`Key=` sets an empty value);
+- `SaveToIniFile` writes all the parameters to a single file, without `[Include]`.
+
+## Names are case insensitive in `.ini` files
+
+Like the `.ini` files themselves, the parameters read from them ignore case: `jwt.secret` in the
+file is found as `JWT.Secret` in code, and `Feature.X` in a base file and `feature.x` in the
+including file are the same parameter (the first spelling is kept). Parameters read from JSON
+(`LoadFromJSON`) keep matching the exact case.
+
 ## Engine parameters
 
 | Parameter | Type | Default | Purpose |

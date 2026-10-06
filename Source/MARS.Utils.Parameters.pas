@@ -16,7 +16,10 @@ type
   TMARSParametersSlice = class
   private
     FItems: TDictionary<string, TValue>;
+    // keys found ignoring case (i.e. read from an ini file): UpperCase(key) -> key
+    FCaseInsensitiveKeys: TDictionary<string, string>;
     FName: string;
+    function FindKey(const AName: string; out AKey: string): Boolean;
   protected
     const SLICE_SEPARATOR = '.';
 
@@ -43,6 +46,14 @@ type
     function CopyFrom(const ASource: TMARSParametersSlice;
       const ASliceName: string = ''): Integer;
     function ToString: string; override;
+
+    // sets AName ignoring case: an existing parameter with the same name in another case
+    // is replaced (keeping its spelling) and the parameter is found ignoring case from now
+    // on. Used by the ini file reader (ini files are case insensitive); the other
+    // parameters, i.e. the ones read from JSON, keep matching the exact case.
+    procedure SetValueIgnoringCase(const AName: string; const AValue: TValue);
+    function IsCaseInsensitive(const AName: string): Boolean;
+
     procedure AsStrings(var AStrings: TStrings; const AClearBefore: Boolean = True); overload;
     function AsStrings: TStrings; overload;
     function AsStringArray(const ANameValueSeparator: string = '='): TArray<string>;
@@ -81,9 +92,12 @@ procedure TMARSParametersSlice.Assign(const ASource: TMARSParametersSlice);
 var
   LItem: TPair<string, TValue>;
 begin
-  FItems.Clear;
+  Clear;
   for LItem in ASource do
-    Fitems.Add(LItem.Key, LItem.Value);
+    if ASource.IsCaseInsensitive(LItem.Key) then
+      SetValueIgnoringCase(LItem.Key, LItem.Value)
+    else
+      FItems.AddOrSetValue(LItem.Key, LItem.Value);
 end;
 
 function TMARSParametersSlice.AsStringArray(
@@ -116,12 +130,55 @@ end;
 function TMARSParametersSlice.ByName(const AName: string;
   const ADefault: TValue): TValue;
 var
+  LKey: string;
   LValue: TValue;
 begin
-  if FItems.TryGetValue(AName, LValue) then
+  if FindKey(AName, LKey) and FItems.TryGetValue(LKey, LValue) then
     Result := LValue
   else
     Result := ADefault;
+end;
+
+// AKey: the actual key of AName (AName itself when not found)
+function TMARSParametersSlice.FindKey(const AName: string; out AKey: string): Boolean;
+var
+  LKey: string;
+begin
+  AKey := AName;
+  Result := FItems.ContainsKey(AName);
+  if not Result and FCaseInsensitiveKeys.TryGetValue(UpperCase(AName), LKey) then
+  begin
+    AKey := LKey;
+    Result := True;
+  end;
+end;
+
+function TMARSParametersSlice.IsCaseInsensitive(const AName: string): Boolean;
+var
+  LKey: string;
+begin
+  Result := FCaseInsensitiveKeys.TryGetValue(UpperCase(AName), LKey);
+end;
+
+procedure TMARSParametersSlice.SetValueIgnoringCase(const AName: string;
+  const AValue: TValue);
+var
+  LKey: string;
+  LExisting: string;
+begin
+  if not FCaseInsensitiveKeys.TryGetValue(UpperCase(AName), LKey) then
+  begin
+    LKey := AName;
+    if not FItems.ContainsKey(AName) then
+      for LExisting in FItems.Keys do
+        if SameText(LExisting, AName) then
+        begin
+          LKey := LExisting;
+          Break;
+        end;
+  end;
+  FItems.AddOrSetValue(LKey, AValue);
+  FCaseInsensitiveKeys.AddOrSetValue(UpperCase(LKey), LKey);
 end;
 
 function TMARSParametersSlice.ByNameText(const AName: string): TValue;
@@ -162,6 +219,7 @@ end;
 procedure TMARSParametersSlice.Clear;
 begin
   FItems.Clear;
+  FCaseInsensitiveKeys.Clear;
 end;
 
 class function TMARSParametersSlice.CombineSliceAndParamName(const ASlice,
@@ -173,8 +231,10 @@ begin
 end;
 
 function TMARSParametersSlice.ContainsParam(const AParamName: string): Boolean;
+var
+  LKey: string;
 begin
-  Result := FItems.ContainsKey(AParamName);
+  Result := FindKey(AParamName, LKey);
 end;
 
 function TMARSParametersSlice.ContainsSlice(const ASliceName: string): Boolean;
@@ -205,7 +265,10 @@ begin
 
         if SameText(LSourceSliceName, ASliceName) then
         begin
-          Self.Values[LSourceParamName] := LItem.Value;
+          if ASource.IsCaseInsensitive(LItem.Key) then
+            SetValueIgnoringCase(LSourceParamName, LItem.Value)
+          else
+            Self.Values[LSourceParamName] := LItem.Value;
           Inc(Result);
         end;
       end;
@@ -276,11 +339,13 @@ constructor TMARSParametersSlice.Create(const AName: string);
 begin
   inherited Create;
   FItems := TDictionary<string, TValue>.Create;
+  FCaseInsensitiveKeys := TDictionary<string, string>.Create;
   FName := AName;
 end;
 
 destructor TMARSParametersSlice.Destroy;
 begin
+  FreeAndNil(FCaseInsensitiveKeys);
   FreeAndNil(FItems);
   inherited;
 end;
@@ -317,8 +382,11 @@ begin
 end;
 
 procedure TMARSParametersSlice.SetValue(AName: string; const Value: TValue);
+var
+  LKey: string;
 begin
-  FItems.AddOrSetValue(AName, Value);
+  FindKey(AName, LKey); // an existing case-insensitive parameter keeps its spelling
+  FItems.AddOrSetValue(LKey, Value);
 end;
 
 function TMARSParametersSlice.ToString: string;
