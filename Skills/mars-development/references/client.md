@@ -59,6 +59,7 @@ Every request/response of `TMARSNetClient`, `TMARSHttpClient`, `TMARSIndyClient`
 - component: `OnLog(Sender; const AEntry: TMARSClientLogEntry)`, runs in the thread of the call (worker thread for `...Async`); `SynchronizeLog := True` moves it to the main thread (`TThread.Synchronize`).
 - no component: `TMARSCustomClient.RegisterLogger(procedure (const AEntry: TMARSClientLogEntry) ...)` (returns index for `UnregisterLogger`; `ClearLoggers`); also covers internal clients (class shortcuts, Async clones). Ready sinks: `TMARSClientLog.ToFile` (JSON lines), `ToDebugOutput`, `ToStrings`; `TMARSClientLog.LogToFile(FileName)` registers one.
 - `AEntry`: `Verb`, `URL`, `RequestHeaders` (only the MARS ones), `RequestBody`/`Size`, `StatusCode` (0 = no response), `StatusText`, `ResponseHeaders`, `ResponseBody`/`Size`, `DurationMs`, `ExceptionClass`/`Message`, `Succeeded`, `ToString`/`ToText`/`ToJSON`.
+- `TMARSClientResourceSSE`: the stream is logged by its client as entries with `Event` = `sse.open` | `sse.error` | `sse.reconnect` | `sse.close` (DurationMs = stream lifetime); single events are not logged.
 - `LogOptions.Content`: `HeadersOnly` | `Truncated` (default, `MaxBodySize` = 64 KB) | `Full`. `LogOptions.Masking`: `None` | `HeadersOnly` | `HeadersAndFields` (default: `MaskedHeaders` Authorization/Cookie/Set-Cookie/Proxy-Authorization + `MaskedFields` password/secret/token/... in JSON, url-encoded and form data) | `All` (sizes only).
 
 ## Errors

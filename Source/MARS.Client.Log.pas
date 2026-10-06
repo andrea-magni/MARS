@@ -38,6 +38,9 @@ type
 
   TMARSClientLogEntry = record
     Client: TObject;               // the TMARSCustomClient making the call
+    // empty for a request; for a server-sent events stream (TMARSClientResourceSSE)
+    // one of the SSE_* constants below
+    Event: string;
     Verb: string;                  // GET, POST, ...
     URL: string;
     RequestHeaders: TMARSClientLogHeaders; // the ones set by MARS (Accept, Content-Type, auth, custom)
@@ -64,6 +67,13 @@ type
     function ToJSON: TJSONObject;
   end;
 
+const
+  SSE_OPEN = 'sse.open';           // first data received
+  SSE_ERROR = 'sse.error';
+  SSE_RECONNECT = 'sse.reconnect';
+  SSE_CLOSE = 'sse.close';         // DurationMs: lifetime of the stream
+
+type
   TMARSClientLogEvent = procedure(Sender: TObject; const AEntry: TMARSClientLogEntry) of object;
   TMARSClientLogProc = reference to procedure(const AEntry: TMARSClientLogEntry);
 
@@ -210,13 +220,16 @@ end;
 
 function TMARSClientLogEntry.Succeeded: Boolean;
 begin
-  Result := (ExceptionClass = '') and (StatusCode >= 200) and (StatusCode < 300);
+  Result := (ExceptionClass = '')
+    and ((Event <> '') or ((StatusCode >= 200) and (StatusCode < 300)));
 end;
 
 function TMARSClientLogEntry.ToString: string;
 begin
   Result := Verb + ' ' + URL + ' -> ';
-  if StatusCode > 0 then
+  if Event <> '' then
+    Result := Result + Event
+  else if StatusCode > 0 then
     Result := Result + (IntToStr(StatusCode) + ' ' + StatusText).Trim
   else
     Result := Result + 'no response';
@@ -253,6 +266,8 @@ begin
       Result.AddPair('detected_level', 'ERROR');
     Result.AddPair('source', 'MARS');
     Result.AddPair('direction', 'out');
+    if Event <> '' then
+      Result.AddPair('event', Event);
     Result.AddPair('verb', Verb);
     Result.AddPair('url', URL);
     Result.AddPair('status', TJSONNumber.Create(StatusCode));

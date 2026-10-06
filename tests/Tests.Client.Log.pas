@@ -3,13 +3,13 @@ unit Tests.Client.Log;
 interface
 
 uses
-  Classes, SysUtils, StrUtils
+  Classes, SysUtils, StrUtils, SyncObjs
 , DUnitX.TestFramework
 
 , MARS.Core.Utils, MARS.Core.MediaType
 , MARS.Client.Client, MARS.Client.Client.Indy, MARS.Client.Client.Net, MARS.Client.Client.Http
 , MARS.Client.Log
-, MARS.Client.Resource
+, MARS.Client.Resource, MARS.Client.Resource.SSE
 
 , Tests.Client
 ;
@@ -55,6 +55,22 @@ type
 
   [TestFixture('Client Log Http')]
   THttpClientLogTest = class(TClientLogTestBase<TMARSHttpClient>)
+  end;
+
+  // server-sent events stream: open, error, reconnect and close are logged
+  [TestFixture('Client Log SSE')]
+  TSSEClientLogTest = class(TMARSResourceClientTest<TMARSHttpClient, TMARSClientResourceSSE>)
+  private
+    FLock: TCriticalSection;
+    FClosed: TEvent;
+    FEntries: TArray<TMARSClientLogEntry>;
+    procedure HandleLog(Sender: TObject; const AEntry: TMARSClientLogEntry);
+    procedure HandleError(ASender: TMARSClientResourceSSE; const AException: Exception;
+      var AReconnect: Boolean);
+  public
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
+    [Test] procedure LogsStreamErrorAndClose;
   end;
 
   // masking and formatting helpers, no server involved
@@ -344,6 +360,91 @@ begin
   end;
 end;
 
+{ TSSEClientLogTest }
+
+procedure TSSEClientLogTest.AfterConstruction;
+begin
+  inherited;
+  FLock := TCriticalSection.Create;
+  FClosed := TEvent.Create(nil, True, False, '');
+end;
+
+procedure TSSEClientLogTest.BeforeDestruction;
+begin
+  if Assigned(FRequest) then
+    FRequest.Active := False;
+  inherited;
+  FreeAndNil(FClosed);
+  FreeAndNil(FLock);
+end;
+
+procedure TSSEClientLogTest.HandleError(ASender: TMARSClientResourceSSE;
+  const AException: Exception; var AReconnect: Boolean);
+begin
+  AReconnect := False;
+end;
+
+procedure TSSEClientLogTest.HandleLog(Sender: TObject; const AEntry: TMARSClientLogEntry);
+begin
+  // stream events arrive in the thread of the stream
+  FLock.Enter;
+  try
+    FEntries := FEntries + [AEntry];
+  finally
+    FLock.Leave;
+  end;
+  if AEntry.Event = SSE_CLOSE then
+    FClosed.SetEvent;
+end;
+
+procedure TSSEClientLogTest.LogsStreamErrorAndClose;
+var
+  LEntry: TMARSClientLogEntry;
+  LEvents: string;
+  LError: TMARSClientLogEntry;
+  LCount: Integer;
+begin
+  Client.OnLog := HandleLog;
+  FRequest.OnError := HandleError;
+  FRequest.Resource := 'test/helloworld'; // text/plain, not an event stream
+  FRequest.Active := True;
+
+  Assert.AreEqual(TWaitResult.wrSignaled, FClosed.WaitFor(10000), 'stream not closed');
+
+  LEvents := '';
+  LError := Default(TMARSClientLogEntry);
+  FLock.Enter;
+  try
+    for LEntry in FEntries do
+    begin
+      LEvents := LEvents + LEntry.Event + ' ';
+      if LEntry.Event = SSE_ERROR then
+        LError := LEntry;
+      Assert.AreEqual('GET', LEntry.Verb);
+      Assert.IsTrue(LEntry.URL.EndsWith('/default/test/helloworld'), LEntry.URL);
+      Assert.AreEqual('text/event-stream', LEntry.HeaderValue(LEntry.RequestHeaders, 'Accept'));
+    end;
+  finally
+    FLock.Leave;
+  end;
+
+  Assert.Contains(LEvents, SSE_ERROR, LEvents);
+  Assert.IsTrue(LEvents.TrimRight.EndsWith(SSE_CLOSE), LEvents);
+  Assert.AreNotEqual('', LError.ExceptionClass);
+  Assert.IsFalse(LError.Succeeded);
+  Assert.Contains(LError.ToString, SSE_ERROR);
+
+  // already closed by the server side: closing again logs nothing
+  LCount := Length(FEntries);
+  FRequest.Active := False;
+  FLock.Enter;
+  try
+    Assert.AreEqual(LCount, Length(FEntries), 'nothing more logged');
+  finally
+    FLock.Leave;
+  end;
+end;
+
 { TClientLogHelpersTest }
 
 procedure TClientLogHelpersTest.MaskJSONFields;
@@ -426,6 +527,7 @@ initialization
   TDUnitX.RegisterTestFixture(TIndyClientLogTest);
   TDUnitX.RegisterTestFixture(TNetClientLogTest);
   TDUnitX.RegisterTestFixture(THttpClientLogTest);
+  TDUnitX.RegisterTestFixture(TSSEClientLogTest);
   TDUnitX.RegisterTestFixture(TClientLogHelpersTest);
 
 end.

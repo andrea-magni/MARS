@@ -11,11 +11,11 @@ unit MARS.Client.Resource.SSE;
 interface
 
 uses
-  SysUtils, Classes, Generics.Collections, System.JSON
+  SysUtils, Classes, Generics.Collections, System.JSON, System.Diagnostics
 , System.Net.HttpSse, System.Net.HttpClient
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Client.Utils
 , MARS.Client.Resource, MARS.Client.CustomResource, MARS.Core.MediaType
-, MARS.Client.Client, MARS.Client.Client.Http
+, MARS.Client.Client, MARS.Client.Client.Http, MARS.Client.Log
 ;
 
 type
@@ -55,6 +55,14 @@ type
     FReconnectCallbackWrapper: THTTPNotifyCallback;
     FCommentCallbackWrapper: THTTPCommentCallback;
     FErrorCallbackWrapper: THTTPErrorCallback;
+
+    // log (see TMARSCustomClient.OnLog): open, error, reconnect and close of the stream
+    FLogStartedAt: TDateTime;
+    FLogStopwatch: TStopwatch;
+    FClosingFromCaller: Boolean;
+    procedure LogStart;
+    procedure LogEvent(const AEvent: string; const AException: Exception = nil);
+    procedure CloseSource;
 
     procedure SourceOnClose(Sender: THTTPEventSource);
     procedure SourceOnMessage(Sender: THTTPEventSource);
@@ -120,13 +128,78 @@ type
 
 implementation
 
-uses System.Rtti;
+uses System.Rtti, System.DateUtils;
 
 { TMARSClientResourceSSE }
 
 procedure TMARSClientResourceSSE.Close;
 begin
-  FSource.Close();
+  CloseSource;
+end;
+
+procedure TMARSClientResourceSSE.CloseSource;
+var
+  LWasActive: Boolean;
+begin
+  LWasActive := FSource.Active;
+  // FSource.Close waits for its thread, that fires OnClose: the close is logged here, in the
+  // thread of the caller, or a log synchronized with this thread (SynchronizeLog) would hang
+  FClosingFromCaller := True;
+  try
+    FSource.Close();
+  finally
+    FClosingFromCaller := False;
+  end;
+  if LWasActive then
+    LogEvent(SSE_CLOSE);
+end;
+
+procedure TMARSClientResourceSSE.LogStart;
+begin
+  FLogStartedAt := TTimeZone.Local.ToUniversalTime(Now);
+  FLogStopwatch := TStopwatch.StartNew;
+end;
+
+procedure TMARSClientResourceSSE.LogEvent(const AEvent: string; const AException: Exception);
+var
+  LClient: TMARSCustomClient;
+  LEntry: TMARSClientLogEntry;
+  LHeaders: TMARSClientLogHeaders;
+  LIndex: Integer;
+begin
+  if csDestroying in ComponentState then
+    Exit;
+  LClient := Client;
+  if not Assigned(LClient) or not LClient.IsLogging then
+    Exit;
+
+  try
+    LHeaders := [TMARSClientLogHeader.Create('Accept', 'text/event-stream')];
+    if FSource.LastEventID <> '' then
+      LHeaders := LHeaders + [TMARSClientLogHeader.Create('Last-Event-ID', FSource.LastEventID)];
+    for LIndex := 0 to FSource.Headers.Count - 1 do
+      LHeaders := LHeaders + [TMARSClientLogHeader.Create(FSource.Headers.Names[LIndex]
+        , FSource.Headers.ValueFromIndex[LIndex])];
+
+    LEntry := Default(TMARSClientLogEntry);
+    LEntry.Client := LClient;
+    LEntry.Event := AEvent;
+    LEntry.Verb := 'GET';
+    LEntry.URL := FSource.URL;
+    LEntry.RequestHeaders := TMARSClientLog.MaskHeaders(LHeaders, LClient.LogOptions);
+    LEntry.ResponseSize := -1;
+    LEntry.StartedAt := FLogStartedAt;
+    LEntry.DurationMs := FLogStopwatch.ElapsedMilliseconds;
+    if Assigned(AException) then
+    begin
+      LEntry.ExceptionClass := AException.ClassName;
+      LEntry.ExceptionMessage := AException.Message;
+    end;
+  except
+    Exit; // never break the stream because of the log
+  end;
+
+  LClient.Log(LEntry);
 end;
 
 constructor TMARSClientResourceSSE.Create(AOwner: TComponent);
@@ -193,13 +266,22 @@ end;
 procedure TMARSClientResourceSSE.Open;
 begin
   SetupSource;
+  if not FSource.Active then
+    LogStart;
   FSource.Open();
 end;
 
 procedure TMARSClientResourceSSE.SetActive(const Value: Boolean);
 begin
   SetupSource;
-  FSource.Active := Value;
+  if not Value then
+    CloseSource
+  else
+  begin
+    if not FSource.Active then
+      LogStart;
+    FSource.Active := True;
+  end;
 end;
 
 procedure TMARSClientResourceSSE.SetCloseCallback(
@@ -289,6 +371,8 @@ begin
   FCloseCallbackWrapper :=
     procedure (ASender: THTTPEventSource)
     begin
+      if not FClosingFromCaller then
+        LogEvent(SSE_CLOSE);
       if Assigned(FCloseCallback) then
         FCloseCallback(Self);
     end;
@@ -296,6 +380,7 @@ begin
   FOpenCallbackWrapper :=
     procedure (ASender: THTTPEventSource)
     begin
+      LogEvent(SSE_OPEN);
       if Assigned(FOpenCallback) then
         FOpenCallback(Self);
     end;
@@ -310,6 +395,7 @@ begin
   FReconnectCallbackWrapper :=
     procedure (ASender: THTTPEventSource)
     begin
+      LogEvent(SSE_RECONNECT);
       if Assigned(FReconnectCallback) then
         FReconnectCallback(Self);
     end;
@@ -324,6 +410,7 @@ begin
   FErrorCallbackWrapper :=
     procedure(ASender: THTTPEventSource; const AException: Exception; var AReconnect: Boolean)
     begin
+      LogEvent(SSE_ERROR, AException);
       if Assigned(FErrorCallback) then
         FErrorCallback(Self, AException, AReconnect);
     end;
@@ -334,6 +421,8 @@ end;
 
 procedure TMARSClientResourceSSE.SourceOnClose(Sender: THTTPEventSource);
 begin
+  if not FClosingFromCaller then
+    LogEvent(SSE_CLOSE);
   if Assigned(FOnClose) then
     FOnClose(Self);
 end;
@@ -348,6 +437,7 @@ end;
 procedure TMARSClientResourceSSE.SourceOnError(ASender: THTTPEventSource;
   const AException: Exception; var AReconnect: Boolean);
 begin
+  LogEvent(SSE_ERROR, AException);
   if Assigned(FOnError) then
     FOnError(Self, AException, AReconnect);
 end;
@@ -360,12 +450,14 @@ end;
 
 procedure TMARSClientResourceSSE.SourceOnOpen(Sender: THTTPEventSource);
 begin
+  LogEvent(SSE_OPEN);
   if Assigned(FOnOpen) then
     FOnOpen(Self);
 end;
 
 procedure TMARSClientResourceSSE.SourceOnReconnect(Sender: THTTPEventSource);
 begin
+  LogEvent(SSE_RECONNECT);
   if Assigned(FOnReconnect) then
     FOnReconnect(Self);
 end;

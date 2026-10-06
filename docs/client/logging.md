@@ -79,6 +79,7 @@ and shortcuts registering them: `TMARSClientLog.LogToDebugOutput`, `TMARSClientL
 | Field | Content |
 | --- | --- |
 | `Client` | The client making the call. |
+| `Event` | Empty for a request; for an event stream, see [Server-sent events](#server-sent-events). |
 | `Verb`, `URL` | `GET`, `POST`, ...; the full URL. |
 | `RequestHeaders`, `RequestContentType` | The headers set by MARS: `Accept`, `Content-Type`, authorization, custom headers. Those added by the HTTP library (`User-Agent`, `Host`, ...) are not included. |
 | `RequestBody`, `RequestSize` | Text of the body (see below) and its size in bytes. |
@@ -88,7 +89,7 @@ and shortcuts registering them: `TMARSClientLog.LogToDebugOutput`, `TMARSClientL
 | `StartedAt`, `DurationMs` | Start time (UTC) and duration. |
 | `ExceptionClass`, `ExceptionMessage` | The exception raised by the call, if any. |
 
-`Succeeded` is `True` for a 2xx answer without exceptions. `ToString` gives one line, `ToText` adds
+`Succeeded` is `True` for a 2xx answer, or a stream event, without exceptions. `ToString` gives one line, `ToText` adds
 headers and bodies, `ToJSON` returns a `TJSONObject` (free it).
 
 ## What is logged
@@ -130,7 +131,28 @@ look like secrets but sit in fields with other names are not detected. Review wh
 sends before enabling `Content = Full` with `Masking = None` outside development.
 :::
 
+## Server-sent events
+
+A `TMARSClientResourceSSE` keeps a request open to receive events, so it is not logged as one
+request: its client logs the life of the stream, with `Event` set to
+
+| `Event` | When |
+| --- | --- |
+| `sse.open` | The first data arrives. |
+| `sse.error` | The stream fails (`ExceptionClass`, `ExceptionMessage`), e.g. the server answers with something else than an event stream. |
+| `sse.reconnect` | The stream is going to reconnect. |
+| `sse.close` | The stream ends. `DurationMs` is its lifetime. |
+
+```text
+GET http://localhost:8080/rest/default/helloworld -> sse.open (98 ms)
+GET http://localhost:8080/rest/default/helloworld -> sse.close (3513 ms)
+```
+
+Single events are not logged. A close requested by the application (`Active := False`, `Close`)
+is logged in the thread of the caller; the other entries in the thread of the stream.
+
 ## See also
 
 - [Request/Response Logging](/features/logging) — logging on the server side.
 - [Components](/client/components) — the client components.
+- `Demos/SSEDemo` — the client lists its log entries along with the events.

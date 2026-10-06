@@ -86,7 +86,6 @@ type
   protected
     // Log: derived clients wrap the actual call (AExecute) with ExecuteLogged, that
     // only runs it when nobody is listening (OnLog unassigned, no RegisterLogger)
-    function IsLogging: Boolean;
     procedure ExecuteLogged(const AVerb: TMARSHttpVerb; const AURL, AAccept, AContentType: string;
       const ARequestBody: TMARSClientLogBody; const AResponse: TStream; const AExecute: TProc); virtual;
     // headers set by MARS for the current call (Accept, Content-Type, auth, custom headers)
@@ -120,6 +119,12 @@ type
 //    procedure CloneStatus(const ASource: TMARSClientCustomClient); virtual;
 
     procedure ApplyCustomHeaders(const AHeaders: TStrings); virtual;
+
+    // True when OnLog is assigned or a logger is registered
+    function IsLogging: Boolean;
+    // sends AEntry to OnLog and to the registered loggers (i.e. for SSE streams)
+    procedure Log(const AEntry: TMARSClientLogEntry);
+
     procedure DoError(const AResource: TObject; const AException: Exception;
       const AVerb: TMARSHttpVerb; const AAfterExecute: TMARSClientResponseProc); virtual;
 
@@ -334,6 +339,12 @@ end;
 function TMARSCustomClient.IsLogging: Boolean;
 begin
   Result := Assigned(FOnLog) or (Length(FLoggers) > 0);
+end;
+
+procedure TMARSCustomClient.Log(const AEntry: TMARSClientLogEntry);
+begin
+  if IsLogging then
+    DoLog(AEntry);
 end;
 
 function TMARSCustomClient.GetLogRequestHeaders(const AAccept,
