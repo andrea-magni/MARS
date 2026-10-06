@@ -90,6 +90,8 @@ MARS ships a small command-line utility that scaffolds a complete, ready-to-run 
 1. Compile and run [`MARScmd_VCL.dproj`](https://github.com/andrea-magni/MARS/blob/master/Utils/Source/MARScmd/MARScmd_VCL.dproj) in `[MARS Folder]\Utils\Source\MARScmd`.
 2. Follow the prompts. It clones `Demos\MARSTemplate` into a new folder with your chosen project name, giving you a server (console / VCL / FMX / service / ISAPI / Apache / daemon variants), a client, and a test project. The `.ini` files of the new project get a freshly generated random `JWT.Secret`.
 
+The settings of the new project are in `bin\Server.ini`, shared by all its server flavors (console, VCL, FMX, service, daemon, ISAPI, Apache, FastCGI): each flavor has its own small `.ini`, named after the executable, that includes `Server.ini` with an [`[Include]` section](/reference/parameters#shared-configuration-include) and can override any value (i.e. a different `Port`). The generated `JWT.Secret` is in `Server.ini`.
+
 The new project goes to `Documents\MARS Projects\<project name>` by default; next time MARSCmd proposes the folder used last. A destination inside the MARS folder asks for confirmation, as uninstalling or upgrading MARS would delete it, and an existing folder that is not empty is never overwritten.
 
 The template refers to the MARS folder with relative paths (`..\..\Source`). Outside the MARS folder, MARSCmd writes them as `$(MARSDIR)\Source`, `$(MARSDIR)\ThirdParty\...`: `MARSDIR` is the IDE environment variable set by the setup to the MARS folder (Tools ▸ Options ▸ IDE ▸ Environment Variables). With TMS Smart Setup or a manual installation, define it yourself or rely on the library path.
