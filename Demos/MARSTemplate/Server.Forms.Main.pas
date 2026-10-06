@@ -46,6 +46,7 @@ type
     FServer: TMARShttpServerIndy;
   protected
     procedure RenderEngines(const ATreeView: TTreeView);
+    function OpenAPIURL: string;
   public
   end;
 
@@ -129,7 +130,7 @@ begin
                       if LApplicationHttpPath <> '' then
                         ATreeview.Items.AddChild(LResourceItem, TMARSURL.CombinePath([LApplicationHttpPath, AMethodPath]) + ' ' + AMethodVerb);
                       if LApplicationHttpsPath <> '' then
-                        ATreeview.Items.AddChild(LResourceItem, TMARSURL.CombinePath([LApplicationHttpPath, AMethodPath]) + ' ' + AMethodVerb);
+                        ATreeview.Items.AddChild(LResourceItem, TMARSURL.CombinePath([LApplicationHttpsPath, AMethodPath]) + ' ' + AMethodVerb);
                     end;
                   end
                 );
@@ -182,16 +183,31 @@ begin
   end;
 end;
 
-procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
-const
-  STATIC_CONTENT_URL = 'http://localhost:8080/rest/default/www/';
-  OPENAPI_URL = 'http://localhost:8080/rest/default/openapi';
+// Swagger UI (static content of TStaticContentResource) on the OpenAPI document of DefaultApp,
+// with the actual ports and base paths
+function TMainForm.OpenAPIURL: string;
 var
-  LURL: string;
+  LEngine: IMARSEngine;
+  LApplication: IMARSApplication;
+  LBaseURL: string;
 begin
-  LURL := STATIC_CONTENT_URL + 'index.html' + '?openAPIURL=' + TURLEncoding.URL.Encode(OPENAPI_URL);
+  LEngine := TServerEngine.Default;
+  if LEngine.Port <> 0 then
+    LBaseURL := 'http://localhost:' + LEngine.Port.ToString
+  else
+    LBaseURL := 'https://localhost:' + LEngine.PortSSL.ToString;
+  LBaseURL := LBaseURL + LEngine.BasePath;
+  LApplication := LEngine.ApplicationByName('DefaultApp');
+  if Assigned(LApplication) then
+    LBaseURL := TMARSURL.CombinePath([LBaseURL, LApplication.BasePath]);
 
-  ShellExecute(0, nil, PWideChar(LURL), nil, nil, SW_SHOWDEFAULT);
+  Result := TMARSURL.CombinePath([LBaseURL, 'www/index.html'])
+    + '?openAPIURL=' + TURLEncoding.URL.Encode(TMARSURL.CombinePath([LBaseURL, 'openapi']));
+end;
+
+procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
+begin
+  ShellExecute(0, nil, PWideChar(OpenAPIURL), nil, nil, SW_SHOWDEFAULT);
 end;
 
 procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
@@ -248,7 +264,8 @@ end;
 
 procedure TMainForm.StopServerActionExecute(Sender: TObject);
 begin
-  FServer.Active := False;
+  if Assigned(FServer) then
+    FServer.Active := False;
   FreeAndNil(FServer);
 end;
 
