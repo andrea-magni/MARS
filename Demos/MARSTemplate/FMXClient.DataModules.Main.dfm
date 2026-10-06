@@ -16,6 +16,7 @@ object MainDataModule: TMainDataModule
     ProxyConfig.Enabled = False
     ProxyConfig.Port = 0
     HttpClient.UserAgent = 'Embarcadero URI Client/1.0'
+    OnLog = MARSClientLog
     Left = 88
     Top = 24
   end
