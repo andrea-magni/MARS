@@ -48,7 +48,8 @@ type
 implementation
 
 uses
-  MARS.Core.Utils, MARS.Core.URL, MARS.Rtti.Utils, MARS.Core.Attributes
+  Generics.Collections
+, MARS.Core.Utils, MARS.Core.URL, MARS.Rtti.Utils, MARS.Core.Attributes
 , MARS.Core.Exceptions, MARS.Metadata.Attributes
 ;
 
@@ -278,55 +279,68 @@ var
   LRoute: TMARSRoute;
   LRouter: TMARSRouter;
   LResourceMetadata: TMARSResourceMetadata;
+  LMethodMetadata: TMARSMethodMetadata;
   LHidden: Boolean;
   LProduces, LConsumes, LAuthorization: string;
+  LGroups: TDictionary<TMARSRouter, TMARSResourceMetadata>;
+  LOperationIds: TDictionary<string, Integer>;
+  LCount: Integer;
 begin
   if not (AApplication.RouteTable is TMARSRouteTable) then
     Exit;
   LTable := TMARSRouteTable(AApplication.RouteTable);
 
-  for LRoute in LTable.Routes do
-  begin
-    // one resource for each group path (several modules may share a path)
-    LResourceMetadata := nil;
-    AApplicationMetadata.ForEachResource(
-      procedure (AResource: TMARSResourceMetadata)
-      begin
-        if (not Assigned(AResource.RttiType)) and SameText(AResource.Path, LRoute.Router.PrototypePath) then
-          LResourceMetadata := AResource;
-      end
-    );
-
-    if not Assigned(LResourceMetadata) then
+  LGroups := TDictionary<TMARSRouter, TMARSResourceMetadata>.Create;
+  LOperationIds := TDictionary<string, Integer>.Create;
+  try
+    for LRoute in LTable.Routes do
     begin
-      LHidden := False;
-      LRouter := LRoute.Router;
-      while Assigned(LRouter) do
+      // one resource for each group: its declarations and visibility apply to its routes only
+      if not LGroups.TryGetValue(LRoute.Router, LResourceMetadata) then
       begin
-        LHidden := LHidden or LRouter.IsHidden;
-        LRouter := LRouter.Parent;
-      end;
-      LRouter := LRoute.Router;
-      ReadRouteAttributes(LRoute.GroupAttributes, LProduces, LConsumes, LAuthorization);
+        LHidden := False;
+        LRouter := LRoute.Router;
+        while Assigned(LRouter) do
+        begin
+          LHidden := LHidden or LRouter.IsHidden;
+          LRouter := LRouter.Parent;
+        end;
+        LRouter := LRoute.Router;
+        ReadRouteAttributes(LRoute.GroupAttributes, LProduces, LConsumes, LAuthorization);
 
-      LResourceMetadata := TMARSResourceMetadata.Create(AApplicationMetadata);
-      try
-        LResourceMetadata.RttiType := nil;
-        LResourceMetadata.Path := LRouter.PrototypePath;
-        LResourceMetadata.Name := StringFallback([LRouter.GroupName, LRouter.PrototypePath], 'routes');
-        LResourceMetadata.Summary := LRouter.SummaryText;
-        LResourceMetadata.Description := LRouter.DescriptionText;
-        LResourceMetadata.Visible := not LHidden;
-        LResourceMetadata.Produces := LProduces;
-        LResourceMetadata.Consumes := LConsumes;
-        LResourceMetadata.Authorization := LAuthorization;
-      except
-        LResourceMetadata.Free;
-        raise;
+        LResourceMetadata := TMARSResourceMetadata.Create(AApplicationMetadata);
+        try
+          LResourceMetadata.RttiType := nil;
+          LResourceMetadata.Path := LRouter.PrototypePath;
+          LResourceMetadata.Name := StringFallback([LRouter.GroupName, LRouter.PrototypePath], 'routes');
+          LResourceMetadata.Summary := LRouter.SummaryText;
+          LResourceMetadata.Description := LRouter.DescriptionText;
+          LResourceMetadata.Visible := not LHidden;
+          LResourceMetadata.Produces := LProduces;
+          LResourceMetadata.Consumes := LConsumes;
+          LResourceMetadata.Authorization := LAuthorization;
+        except
+          LResourceMetadata.Free;
+          raise;
+        end;
+        LGroups.Add(LRoute.Router, LResourceMetadata);
       end;
+
+      ReadRoute(LResourceMetadata, LRoute);
+
+      // unique operation ids (i.e. get_people_id for people/{id} and people/id)
+      LMethodMetadata := LResourceMetadata.Methods.Last as TMARSMethodMetadata;
+      if LOperationIds.TryGetValue(LMethodMetadata.Name.ToLower, LCount) then
+      begin
+        Inc(LCount);
+        LOperationIds[LMethodMetadata.Name.ToLower] := LCount;
+        LMethodMetadata.Name := LMethodMetadata.Name + '_' + LCount.ToString;
+      end;
+      LOperationIds.AddOrSetValue(LMethodMetadata.Name.ToLower, 1);
     end;
-
-    ReadRoute(LResourceMetadata, LRoute);
+  finally
+    LOperationIds.Free;
+    LGroups.Free;
   end;
 end;
 

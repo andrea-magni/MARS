@@ -272,7 +272,7 @@ begin
       var LMethodName := '';
       if Assigned(AActivation.Method) then
         LMethodName := AActivation.Method.Name
-      else
+      else if not Assigned(AActivation.Resource) then
         LMethodName := AActivation.EndpointName; // routes
 
       TMARSReqRespLoggerJSON.Instance.Log(

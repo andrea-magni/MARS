@@ -79,8 +79,12 @@ type
 
   // holder whose field is the injection destination of TMARSRouteContext (type T, [Context])
   TMARSRouteValue<T> = class
+  private
+    class var FField: TRttiField;
   public
     [Context] Value: T;
+    // the RTTI of Value, cached for each T (no lock once known)
+    class function Field: TRttiField; static;
   end;
 
   TMARSRouteSegmentKind = (rskLiteral, rskParam, rskWildcard);
@@ -142,6 +146,7 @@ type
     FParams: TArray<TMARSRouteParam>;
     function GetGroupAttributes: TArray<TCustomAttribute>;
     function GetOperationId: string;
+    procedure CheckRequiredParams(const AActivation: IMARSActivation);
   protected
     function AddParam(const AKind, ASwaggerKind, AName: string; const ADataType: PTypeInfo;
       const ADescription: string; const ARequired: Boolean): TMARSRoute;
@@ -421,6 +426,18 @@ begin
   APrototypePath := string.Join(TMARSURL.URL_PATH_SEPARATOR, LPrototype);
 end;
 
+{ TMARSRouteValue<T> }
+
+class function TMARSRouteValue<T>.Field: TRttiField;
+begin
+  Result := FField;
+  if not Assigned(Result) then
+  begin
+    Result := TMARSRouteRtti.ValueField(TypeInfo(TMARSRouteValue<T>));
+    FField := Result;
+  end;
+end;
+
 { TMARSRouteContext }
 
 constructor TMARSRouteContext.Create(const AActivation: IMARSActivation);
@@ -434,7 +451,7 @@ var
 begin
   try
     try
-      LValue := AAttribute.GetValue(TMARSRouteRtti.ValueField(TypeInfo(TMARSRouteValue<T>)), FActivation);
+      LValue := AAttribute.GetValue(TMARSRouteValue<T>.Field, FActivation);
     except
       on E: EMARSHttpException do
         raise;
@@ -510,7 +527,7 @@ begin
   LAttribute := BodyParamAttribute.Create;
   try
     try
-      LValue := LAttribute.GetValue(TMARSRouteRtti.ValueField(TypeInfo(TMARSRouteValue<T>)), FActivation);
+      LValue := LAttribute.GetValue(TMARSRouteValue<T>.Field, FActivation);
     except
       on E: EMARSHttpException do
         raise;
@@ -544,7 +561,7 @@ var
   LValue: TInjectionValue;
 begin
   LValue := TMARSInjectionServiceRegistry.Instance.GetValue(
-    TMARSRouteRtti.ValueField(TypeInfo(TMARSRouteValue<T>)), FActivation);
+    TMARSRouteValue<T>.Field, FActivation);
   if not LValue.IsReference then
     FActivation.AddToContext(LValue.Value);
 
@@ -607,12 +624,53 @@ begin
   Result := FActivation.URL;
 end;
 
+// digits with an optional minus sign, in the Int64 range (no hex, no plus sign)
+function IsIntegerToken(const AToken: string): Boolean;
+var
+  LIndex, LStart: Integer;
+  LValue: Int64;
+begin
+  Result := False;
+  if AToken = '' then
+    Exit;
+  LStart := 1;
+  if AToken[1] = '-' then
+    LStart := 2;
+  if LStart > Length(AToken) then
+    Exit;
+  for LIndex := LStart to Length(AToken) do
+    if not CharInSet(AToken[LIndex], ['0'..'9']) then
+      Exit;
+  Result := TryStrToInt64(AToken, LValue);
+end;
+
+// 8-4-4-4-12 hexadecimal digits, optionally in braces
+function IsGUIDToken(const AToken: string): Boolean;
+var
+  LText: string;
+  LIndex: Integer;
+begin
+  Result := False;
+  LText := AToken;
+  if LText.StartsWith('{') and LText.EndsWith('}') then
+    LText := LText.Substring(1, LText.Length - 2);
+  if LText.Length <> 36 then
+    Exit;
+  for LIndex := 1 to 36 do
+    if LIndex in [9, 14, 19, 24] then
+    begin
+      if LText[LIndex] <> '-' then
+        Exit;
+    end
+    else if not CharInSet(LText[LIndex], ['0'..'9', 'a'..'f', 'A'..'F']) then
+      Exit;
+  Result := True;
+end;
+
 { TMARSRouteSegment }
 
 function TMARSRouteSegment.Matches(const AToken: string): Boolean;
 var
-  LInt: Int64;
-  LGUID: string;
   LChar: Char;
 begin
   case Kind of
@@ -623,19 +681,9 @@ begin
       if Constraint = '' then
         Result := AToken <> ''
       else if Constraint = 'int' then
-        Result := TryStrToInt64(AToken, LInt)
+        Result := IsIntegerToken(AToken)
       else if Constraint = 'guid' then
-      begin
-        LGUID := AToken;
-        if not LGUID.StartsWith('{') then
-          LGUID := '{' + LGUID + '}';
-        try
-          StringToGUID(LGUID);
-          Result := True;
-        except
-          Result := False;
-        end;
-      end
+        Result := IsGUIDToken(AToken)
       else if Constraint = 'alpha' then
       begin
         Result := AToken <> '';
@@ -815,8 +863,10 @@ begin
     Result := FSegments[LIndex].Rank - AOther.FSegments[LIndex].Rank;
     Inc(LIndex);
   end;
+  // same prefix: the shorter template is the more specific one (the longer one can only
+  // match the same path with a {*} matching no segment: 'files' beats 'files/{*}')
   if Result = 0 then
-    Result := Length(FSegments) - Length(AOther.FSegments);
+    Result := Length(AOther.FSegments) - Length(FSegments);
 end;
 
 function TMARSRoute.ShapeKey(const AWithConstraints: Boolean): string;
@@ -841,12 +891,44 @@ begin
   end;
 end;
 
+procedure TMARSRoute.CheckRequiredParams(const AActivation: IMARSActivation);
+var
+  LParam: TMARSRouteParam;
+  LRequest: IMARSRequest;
+  LFound: Boolean;
+begin
+  LRequest := AActivation.Request;
+  for LParam in FParams do
+  begin
+    if not LParam.Required then
+      Continue;
+
+    if LParam.Kind = 'QueryParam' then
+      LFound := LRequest.GetQueryParamIndex(LParam.Name) <> -1
+    else if LParam.Kind = 'HeaderParam' then
+      LFound := LRequest.GetHeaderParamValue(LParam.Name) <> ''
+    else if LParam.Kind = 'CookieParam' then
+      LFound := LRequest.GetCookieParamIndex(LParam.Name) <> -1
+    else if LParam.Kind = 'FormParam' then
+      LFound := (LRequest.GetFormParamIndex(LParam.Name) <> -1)
+        or (LRequest.GetFormFileParamIndex(LParam.Name) <> -1)
+    else
+      LFound := True;
+
+    if not LFound then
+      raise ERequiredException.CreateFmt('Required %s parameter missing: %s'
+        , [LParam.SwaggerKind, LParam.Name], 400);
+  end;
+end;
+
 function TMARSRoute.Invoke(const AActivation: IMARSActivation): TValue;
 begin
+  // parameters declared as required (QueryParam<T>(..., True) and the like)
+  CheckRequiredParams(AActivation);
   Result := FInvoker(AActivation);
 end;
 
-// the endpoint runs once, even if a middleware calls ANext twice
+// the endpoint runs once: a second call of ANext raises
 function OnceOnly(const AEndpoint: TProc): TProc;
 var
   LCalled: Boolean;

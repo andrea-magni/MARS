@@ -345,7 +345,13 @@ begin
           LResourceSummary := LSummaryAttr.Value;
       end;
 
-      AddTag(TagOf(AResourceMetadata), StringFallback([LResourceSummary, LResourceDescription, AResourceMetadata.Name]));
+      // one tag for each name (a resource and a group of routes may share a path)
+      var LTagExists := False;
+      for var LTag in tags do
+        if SameText(LTag.name, TagOf(AResourceMetadata)) then
+          LTagExists := True;
+      if not LTagExists then
+        AddTag(TagOf(AResourceMetadata), StringFallback([LResourceSummary, LResourceDescription, AResourceMetadata.Name]));
 
       AResourceMetadata.ForEachMethod(
         procedure (AMethodMetadata: TMARSMethodMetadata)

@@ -25,6 +25,13 @@ type
     property Name: string read FName write FName;
   end;
 
+  TRouteBodyThing = class
+  public
+    Name: string;
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
   TRouteMock = record
     Request: IMARSRequest;
     Response: IMARSResponse;
@@ -108,12 +115,43 @@ type
     procedure TestApplicationMiddlewareOnResourcesByParameter;
     [Test]
     procedure TestApplicationMiddlewareOnResourcesByDefault;
+    [Test]
+    procedure TestTrailingSlashAndCase;
+    [Test]
+    procedure TestMalformedBodyIs400;
+    [Test]
+    procedure TestObjectBodyIsFreed;
+    [Test]
+    procedure TestResultIsReference;
+    [Test]
+    procedure TestGuidConstraint;
+    [Test]
+    procedure TestMapCustomMethod;
+    [Test]
+    procedure TestSameModuleInTwoApplications;
+    [Test]
+    procedure TestEndpointNameOfResource;
+    [Test]
+    procedure TestConcurrentRequests;
+    [Test]
+    procedure TestExactBeatsWildcard;
+    [Test]
+    procedure TestRootRouteBeatsWildcard;
+    [Test]
+    procedure TestDeclaredRequiredParam;
+    [Test]
+    procedure TestIntConstraintIsStrict;
+    [Test]
+    procedure TestOpenAPIGroupsSharingAPath;
+    [Test]
+    procedure TestOpenAPIUniqueTagsAndOperationIds;
   end;
 
 implementation
 
 uses
-  MARS.Core.Engine, MARS.Core.URL, MARS.Core.Exceptions, MARS.Core.Activation
+  System.Threading, System.SyncObjs
+, MARS.Core.Engine, MARS.Core.URL, MARS.Core.Exceptions, MARS.Core.Activation
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
@@ -128,7 +166,22 @@ uses
 
 var
   GThingsAlive: Integer = 0;
+  GBodyThingsAlive: Integer = 0;
   GTrace: string = '';
+
+{ TRouteBodyThing }
+
+constructor TRouteBodyThing.Create;
+begin
+  inherited Create;
+  AtomicIncrement(GBodyThingsAlive);
+end;
+
+destructor TRouteBodyThing.Destroy;
+begin
+  AtomicDecrement(GBodyThingsAlive);
+  inherited;
+end;
 
 { TRouteThing }
 
@@ -149,6 +202,9 @@ end;
 
 procedure TMARSRoutesFixture.Setup;
 begin
+  // DUnitX compares strings ignoring case by default: routes are checked strictly
+  Assert.IgnoreCaseDefault := False;
+
   TMARSActivation.ClearBeforeInvokes;
   TMARSActivation.ClearAfterInvokes;
   TMARSActivation.ClearInvokeErrors;
@@ -163,6 +219,7 @@ end;
 
 procedure TMARSRoutesFixture.Teardown;
 begin
+  Assert.IgnoreCaseDefault := True;
   FApplication := nil;
   FEngine := nil;
 end;
@@ -309,7 +366,7 @@ procedure TMARSRoutesFixture.TestRoutesAndResourcesTogether;
 begin
   var LMock := Send('GET', 'helloworld');
   Assert.AreEqual(200, LMock.Response.StatusCode);
-  Assert.AreEqual('Hello, World!', LMock.Response.Content);
+  Assert.AreEqual('Hello, world!', LMock.Response.Content);
 
   LMock := Send('GET', 'nothing/here');
   Assert.AreEqual(404, LMock.Response.StatusCode);
@@ -547,7 +604,7 @@ begin
   FApplication.Parameters.Values[MIDDLEWARES_RESOURCES_PARAM] := True;
 
   var LMock := Send('GET', 'helloworld');
-  Assert.AreEqual('Hello, World!', LMock.Response.Content);
+  Assert.AreEqual('Hello, world!', LMock.Response.Content);
   Assert.AreEqual('yes 200', HeaderOf(LMock.Response, 'X-App'), 'resource wrapped by the application middleware');
 
   LMock := Send('GET', 'ping');
@@ -579,6 +636,337 @@ begin
     Assert.AreEqual('', HeaderOf(LMock.Response, 'X-App'), 'parameter over global default');
   finally
     TMARSRouteTable.DefaultMiddlewaresOnResources := False;
+  end;
+end;
+
+procedure TMARSRoutesFixture.TestTrailingSlashAndCase;
+begin
+  var LMock := Send('GET', 'PING/');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('pong', LMock.Response.Content);
+
+  LMock := Send('GET', 'People/7/');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('{"Id":7,"Name":"Person 7"}', LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestMalformedBodyIs400;
+begin
+  var LMock := Send('POST', 'people', '{"Id": 7, "Name": ');
+  Assert.AreEqual(400, LMock.Response.StatusCode, LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestObjectBodyIsFreed;
+begin
+  MARSRoutesOf(FApplication).Post<TRouteBodyThing, string>('bodything',
+    function (const C: TMARSRouteContext; const AThing: TRouteBodyThing): string
+    begin
+      Result := 'got ' + AThing.Name;
+    end
+  ).Produces(TMediaType.TEXT_PLAIN);
+
+  var LMock := Send('POST', 'bodything', '{"Name":"box"}');
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.AreEqual('got box', LMock.Response.Content);
+  Assert.AreEqual(0, GBodyThingsAlive, 'the body object should be freed with the activation');
+end;
+
+procedure TMARSRoutesFixture.TestResultIsReference;
+begin
+  var LShared := TRouteThing.Create('shared');
+  try
+    MARSRoutesOf(FApplication).Get<TRouteThing>('shared',
+      function (const C: TMARSRouteContext): TRouteThing
+      begin
+        Result := LShared;
+      end
+    ).Produces(TMediaType.APPLICATION_JSON).ResultIsReference;
+
+    var LMock := Send('GET', 'shared');
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.Contains(LMock.Response.Content, 'shared');
+    Assert.AreEqual(1, GThingsAlive, 'a reference result must not be freed');
+    Assert.AreEqual('shared', LShared.Name);
+  finally
+    LShared.Free;
+  end;
+  Assert.AreEqual(0, GThingsAlive);
+end;
+
+procedure TMARSRoutesFixture.TestGuidConstraint;
+begin
+  MARSRoutesOf(FApplication).Get<string>('items/{id:guid}',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := C.Path<string>('id');
+    end
+  ).Produces(TMediaType.TEXT_PLAIN);
+
+  var LGuid := '6F9619FF-8B86-D011-B42D-00C04FC964FF';
+  var LMock := Send('GET', 'items/' + LGuid);
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual(LGuid, LMock.Response.Content);
+
+  LMock := Send('GET', 'items/123');
+  Assert.AreEqual(404, LMock.Response.StatusCode);
+end;
+
+procedure TMARSRoutesFixture.TestMapCustomMethod;
+begin
+  MARSRoutesOf(FApplication).Map<string>('QUERY', 'search',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := 'searching ' + C.Body<string>;
+    end
+  ).Produces(TMediaType.TEXT_PLAIN);
+
+  var LMock := Send('QUERY', 'search', 'mars');
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.AreEqual('searching mars', LMock.Response.Content);
+
+  LMock := Send('GET', 'search');
+  Assert.AreEqual(405, LMock.Response.StatusCode);
+  Assert.AreEqual('QUERY', HeaderOf(LMock.Response, 'Allow'));
+end;
+
+procedure TMARSRoutesFixture.TestSameModuleInTwoApplications;
+begin
+  var LOther := FEngine.AddApplication('OtherApp', '/other', []);
+  Assert.IsTrue(LOther.AddRoutes('Tests.Routes.People'));
+
+  var LMock: TRouteMock;
+  LMock.Request := TMARSRequestMock.Create('GET', 'http://localhost:8080/rest/other/people/5', [], '');
+  LMock.Response := TMARSResponseMock.Create();
+  Assert.IsTrue(FEngine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('{"Id":5,"Name":"Person 5"}', LMock.Response.Content);
+
+  // only the People module in the other application
+  LMock.Request := TMARSRequestMock.Create('GET', 'http://localhost:8080/rest/other/ping', [], '');
+  LMock.Response := TMARSResponseMock.Create();
+  Assert.IsTrue(FEngine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(404, LMock.Response.StatusCode);
+
+  // and still in the first one
+  Assert.AreEqual(200, Send('GET', 'people/5').Response.StatusCode);
+end;
+
+procedure TMARSRoutesFixture.TestEndpointNameOfResource;
+begin
+  MARSRoutesOf(FApplication).Use(
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      C.Response.SetHeader('X-Endpoint', C.Activation.EndpointName);
+      ANext();
+    end
+  );
+  FApplication.Parameters.Values[MIDDLEWARES_RESOURCES_PARAM] := True;
+
+  Assert.AreEqual('THelloWorldResource.GetContent', HeaderOf(Send('GET', 'helloworld').Response, 'X-Endpoint'));
+  Assert.AreEqual('GET people/{id:int}', HeaderOf(Send('GET', 'people/1').Response, 'X-Endpoint'));
+end;
+
+procedure TMARSRoutesFixture.TestConcurrentRequests;
+const
+  REQUESTS = 400;
+var
+  LFailures: Integer;
+  LFirstFailure: string;
+  LLock: TCriticalSection;
+begin
+  LFailures := 0;
+  LFirstFailure := '';
+  LLock := TCriticalSection.Create;
+  try
+    TParallel.For(1, REQUESTS,
+      procedure (AIndex: Integer)
+      var
+        LRequest: IMARSRequest;
+        LResponse: IMARSResponse;
+        LExpected: string;
+      begin
+        try
+          case AIndex mod 4 of
+            0: begin
+                 LRequest := TMARSRequestMock.Create('GET', URLFor('people/' + AIndex.ToString), [], '');
+                 LExpected := Format('{"Id":%d,"Name":"Person %d"}', [AIndex, AIndex]);
+               end;
+            1: begin
+                 LRequest := TMARSRequestMock.Create('POST', URLFor('people')
+                   , [], Format('{"Id":%d,"Name":"p%d"}', [AIndex, AIndex]));
+                 LExpected := Format('{"Id":%d,"Name":"P%d"}', [AIndex, AIndex]);
+               end;
+            2: begin
+                 LRequest := TMARSRequestMock.Create('GET', URLFor('sum?a=' + AIndex.ToString + '&b=1'), [], '');
+                 LExpected := (AIndex + 1).ToString;
+               end;
+            else
+               begin
+                 LRequest := TMARSRequestMock.Create('GET', URLFor('helloworld'), [], '');
+                 LExpected := 'Hello, world!';
+               end;
+          end;
+          LResponse := TMARSResponseMock.Create();
+          FEngine.HandleRequest(LRequest, LResponse);
+          if LResponse.Content <> LExpected then
+          begin
+            AtomicIncrement(LFailures);
+            LLock.Enter;
+            try
+              if LFirstFailure = '' then
+                LFirstFailure := Format('#%d: expected [%s] got [%s]', [AIndex, LExpected, LResponse.Content]);
+            finally
+              LLock.Leave;
+            end;
+          end;
+        except
+          on E: Exception do
+          begin
+            AtomicIncrement(LFailures);
+            LLock.Enter;
+            try
+              if LFirstFailure = '' then
+                LFirstFailure := Format('#%d: %s %s', [AIndex, E.ClassName, E.Message]);
+            finally
+              LLock.Leave;
+            end;
+          end;
+        end;
+      end
+    );
+  finally
+    LLock.Free;
+  end;
+  Assert.AreEqual(0, LFailures, LFirstFailure);
+  Assert.AreEqual(0, GThingsAlive);
+end;
+
+procedure TMARSRoutesFixture.TestExactBeatsWildcard;
+begin
+  // exact route first, then the wildcard
+  MARSRoutesOf(FApplication).Get<string>('docs',
+    function (const C: TMARSRouteContext): string begin Result := 'exact'; end
+  ).Produces(TMediaType.TEXT_PLAIN);
+  MARSRoutesOf(FApplication).Get<string>('docs/{*}',
+    function (const C: TMARSRouteContext): string begin Result := 'wild:' + C.Path<string>('*'); end
+  ).Produces(TMediaType.TEXT_PLAIN);
+  // wildcard first, then the exact route
+  MARSRoutesOf(FApplication).Get<string>('pics/{*}',
+    function (const C: TMARSRouteContext): string begin Result := 'wild:' + C.Path<string>('*'); end
+  ).Produces(TMediaType.TEXT_PLAIN);
+  MARSRoutesOf(FApplication).Get<string>('pics',
+    function (const C: TMARSRouteContext): string begin Result := 'exact'; end
+  ).Produces(TMediaType.TEXT_PLAIN);
+  // a parameter and a deeper wildcard
+  MARSRoutesOf(FApplication).Get<string>('tree/{node}/{*}',
+    function (const C: TMARSRouteContext): string begin Result := 'wild'; end
+  ).Produces(TMediaType.TEXT_PLAIN);
+  MARSRoutesOf(FApplication).Get<string>('tree/{node}',
+    function (const C: TMARSRouteContext): string begin Result := 'node ' + C.Path<string>('node'); end
+  ).Produces(TMediaType.TEXT_PLAIN);
+
+  Assert.AreEqual('exact', Send('GET', 'docs').Response.Content);
+  Assert.AreEqual('wild:a/b', Send('GET', 'docs/a/b').Response.Content);
+  Assert.AreEqual('exact', Send('GET', 'pics').Response.Content);
+  Assert.AreEqual('wild:x', Send('GET', 'pics/x').Response.Content);
+  Assert.AreEqual('node n1', Send('GET', 'tree/n1').Response.Content);
+  Assert.AreEqual('wild', Send('GET', 'tree/n1/leaf').Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestRootRouteBeatsWildcard;
+begin
+  var LApp := FEngine.AddApplication('RootApp', '/rootapp', []);
+  MARSRoutesOf(LApp).Get<string>('{*}',
+    function (const C: TMARSRouteContext): string begin Result := 'any'; end
+  ).Produces(TMediaType.TEXT_PLAIN);
+  MARSRoutesOf(LApp).Get<string>('',
+    function (const C: TMARSRouteContext): string begin Result := 'root'; end
+  ).Produces(TMediaType.TEXT_PLAIN);
+
+  var LMock: TRouteMock;
+  LMock.Request := TMARSRequestMock.Create('GET', 'http://localhost:8080/rest/rootapp', [], '');
+  LMock.Response := TMARSResponseMock.Create();
+  Assert.IsTrue(FEngine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual('root', LMock.Response.Content);
+
+  LMock.Request := TMARSRequestMock.Create('GET', 'http://localhost:8080/rest/rootapp/some/thing', [], '');
+  LMock.Response := TMARSResponseMock.Create();
+  Assert.IsTrue(FEngine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual('any', LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestDeclaredRequiredParam;
+begin
+  // sum declares a as required, b as optional
+  var LMock := Send('GET', 'sum?b=1');
+  Assert.AreEqual(400, LMock.Response.StatusCode);
+  Assert.Contains(LMock.Response.Content, 'Required query parameter missing: a');
+
+  LMock := Send('GET', 'sum?a=1');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('11', LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestIntConstraintIsStrict;
+begin
+  Assert.AreEqual(200, Send('GET', 'people/-3').Response.StatusCode, 'negative number');
+  Assert.AreEqual(404, Send('GET', 'people/0x2A').Response.StatusCode, 'hexadecimal');
+  Assert.AreEqual(404, Send('GET', 'people/$2A').Response.StatusCode, 'Delphi hexadecimal');
+  Assert.AreEqual(404, Send('GET', 'people/+3').Response.StatusCode, 'plus sign');
+  Assert.AreEqual(404, Send('GET', 'people/3.5').Response.StatusCode, 'decimal');
+  Assert.AreEqual(404, Send('GET', 'people/-').Response.StatusCode, 'sign only');
+end;
+
+procedure TMARSRoutesFixture.TestOpenAPIGroupsSharingAPath;
+begin
+  var LRoot := MARSRoutesOf(FApplication);
+  LRoot.Group('shared',
+    procedure (const G: TMARSRouter)
+    begin
+      G.Hidden;
+      G.Get<string>('a', function (const C: TMARSRouteContext): string begin Result := 'a'; end);
+    end);
+  LRoot.Group('shared',
+    procedure (const G: TMARSRouter)
+    begin
+      G.Get<string>('b', function (const C: TMARSRouteContext): string begin Result := 'b'; end);
+    end);
+
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    Assert.IsNull(OperationById(LOpenAPI, 'get_shared_a'), 'route of the hidden group');
+    Assert.IsNotNull(OperationById(LOpenAPI, 'get_shared_b'), 'route of the visible group');
+  finally
+    LOpenAPI.Free;
+  end;
+end;
+
+procedure TMARSRoutesFixture.TestOpenAPIUniqueTagsAndOperationIds;
+begin
+  // a route group with the path of a resource (POST, no conflict with its GET)
+  MARSRoutesOf(FApplication).Group('helloworld',
+    procedure (const G: TMARSRouter)
+    begin
+      G.Post<string>('', function (const C: TMARSRouteContext): string begin Result := 'posted'; end);
+    end);
+  // two routes with the same derived operation id
+  MARSRoutesOf(FApplication).Get<string>('ops/{id}',
+    function (const C: TMARSRouteContext): string begin Result := '1'; end);
+  MARSRoutesOf(FApplication).Get<string>('ops/id',
+    function (const C: TMARSRouteContext): string begin Result := '2'; end);
+
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    var LCount := 0;
+    for var LTag in LOpenAPI.tags do
+      if LTag.name = 'helloworld' then
+        Inc(LCount);
+    Assert.AreEqual(1, LCount, 'tag names must be unique');
+
+    Assert.IsNotNull(OperationById(LOpenAPI, 'get_ops_id'));
+    Assert.IsNotNull(OperationById(LOpenAPI, 'get_ops_id_2'), 'operation ids must be unique');
+  finally
+    LOpenAPI.Free;
   end;
 end;
 
