@@ -470,7 +470,7 @@ begin
   AOperation.description := AMethodMetadata.Description;
   AOperation.tags := [TagOf(AResourceMetadata)];
 
-  var LDescriptionAttr: OAPIDescriptionAttribute := nil;
+  var LDescriptionAttr: OAPIDescriptionAttribute;
   const LMethod = AMethodMetadata.RttiMethod;
   if Assigned(LMethod) then // routes (MARS.Core.Routes) have no RTTI method
   begin
