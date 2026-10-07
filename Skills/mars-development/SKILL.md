@@ -1,6 +1,6 @@
 ---
 name: mars-development
-description: Develop REST APIs with MARS-Curiosity (Delphi REST library) - writing resources, REST attributes, parameter binding, JWT authentication and roles, FireDAC dataset publishing, server-sent events (SSE), WebStencils HTML templating, client components, configuration, serialization. Use this skill whenever the user is working in a Delphi project that uses MARS (units named MARS.*, Server.Ignition, Server.Resources.*), asks how to add or modify REST endpoints, secure endpoints with tokens/roles, expose datasets, push events to clients, render server-side HTML, consume a MARS server from a client, handle errors, or configure a MARS server - even if they don't mention MARS by name but the code clearly uses it.
+description: Develop REST APIs with MARS-Curiosity (Delphi REST library) - writing resources or route-based endpoints (Express style, MARS.Core.Routes, middlewares), REST attributes, parameter binding, JWT authentication and roles, FireDAC dataset publishing, server-sent events (SSE), WebStencils HTML templating, client components, configuration, serialization. Use this skill whenever the user is working in a Delphi project that uses MARS (units named MARS.*, Server.Ignition, Server.Resources.*), asks how to add or modify REST endpoints, secure endpoints with tokens/roles, expose datasets, push events to clients, render server-side HTML, consume a MARS server from a client, handle errors, or configure a MARS server - even if they don't mention MARS by name but the code clearly uses it.
 ---
 
 # Developing with MARS-Curiosity
@@ -11,6 +11,7 @@ MARS (https://github.com/andrea-magni/MARS) maps HTTP requests onto plain Delphi
 - **Resources**: classes annotated with `[Path('...')]`, registered via `MARSRegister(TMyResource)` (or `MARSRegister([TResA, TResB])`, or `TMARSResourceRegistry.Instance.RegisterResource<TMyResource>`) in the unit `initialization`. A new instance is created per request and freed afterwards.
 - **Activation** (`IMARSActivation`): per-request context (request, response, token, URL...). Injectable anywhere with `[Context]`.
 - URL = engine BasePath + app path + resource `[Path]` + method `[Path]`: `/rest/default/customers/123`.
+- **Routes** (alternative style, `MARS.Core.Routes`): endpoints defined in code with `MARSRoutes(...)` modules and `R.Get<T>('path', function (const C: TMARSRouteContext): T ...)`, added with `IMARSApplication.AddRoutes`; same activation, serialization, roles and OpenAPI as resources. See `references/routes.md`.
 
 ## Minimal resource
 
@@ -63,6 +64,7 @@ Raise `EMARSHttpException.Create('Not found', 404)` for error statuses; raise `E
 
 ## Reference files — read the one matching the task
 
+- **`references/routes.md`** — route-based endpoints (Express / Minimal API style): `MARSRoutes` modules, `TMARSRouter` (`Get<T>`, `Post<TBody,TResult>`, groups, constraints `{id:int}`), `TMARSRouteContext`, declarations, middlewares (`Use`), OpenAPI. Read when the user wants endpoints defined in code, middlewares, or works on `Server.Routes*` units.
 - **`references/attributes.md`** — complete attribute catalog (HTTP methods, `Path`, `Produces`/`Consumes`, all `*Param` binding attributes, `Context`, config params, authorization, invocation events, response shaping). Read when writing or reviewing resource declarations.
 - **`references/authentication.md`** — JWT tokens, `TMARSTokenResource` login endpoint, `Authenticate` override, `[RolesAllowed]`/`[PermitAll]`/`[DenyAll]`, `[Context] Token: TMARSToken`, JWT ini parameters. Read for anything auth/security related.
 - **`references/firedac.md`** — publishing datasets with `TMARSFDDatasetResource` + `[SQLStatement]`, ad-hoc queries with `[Context] FD: TMARSFireDAC`, connection defs from ini, macro/param injection, applying deltas. Read for database endpoints.
@@ -77,4 +79,4 @@ For hosting/deployment (Windows service, ISAPI, Apache, FastCGI, Linux daemon, H
 
 - One resource per unit, unit named `Server.Resources.<Topic>`, so the standard `'Server.Resources.*'` mask finds it; remember to add new units to the .dpr uses clause, otherwise the unit's `initialization` never runs and the resource is silently missing.
 - Prefer attribute-driven binding over reading `IMARSRequest` manually; inject what you need with `[Context]`.
-- Working demos for most features live in `Demos/` in the MARS repo: `MARSTemplate` (baseline), `TokenRenew` (JWT+roles), `OTPDemo` (FireDAC+auth), `ErrorObjects` (structured errors), `SSEDemo` (server-sent events), `HtmxDemo`, `WebStencilsDemo`. When unsure about an API, check the corresponding demo or the source unit in `Source/` — it is the ground truth.
+- Working demos for most features live in `Demos/` in the MARS repo: `MARSTemplate` (baseline), `TokenRenew` (JWT+roles), `OTPDemo` (FireDAC+auth), `ErrorObjects` (structured errors), `SSEDemo` (server-sent events), `RoutesDemo` (route-based endpoints and middlewares), `HtmxDemo`, `WebStencilsDemo`. When unsure about an API, check the corresponding demo or the source unit in `Source/` — it is the ground truth.
