@@ -27,6 +27,7 @@ export default defineConfig({
       { text: 'Client', link: '/client/overview' },
       { text: 'Demos', link: '/demos/' },
       { text: 'Reference', link: '/reference/attributes' },
+      { text: 'Release Notes', link: '/release-notes' },
       {
         text: 'Links',
         items: [

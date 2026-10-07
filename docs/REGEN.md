@@ -69,8 +69,10 @@ updates the affected pages, and advances the baseline to the new `HEAD`.
 >    `docs/REGEN.md`), conservando lo stile esistente: inglese, esempi Delphi reali
 >    presi dai sorgenti/demo, niente API inventate — verifica le firme nei `.pas`.
 > 4. Se sono comparse nuove demo in `Demos/`, aggiungile a `docs/demos/index.md`.
-> 5. Aggiorna `commit=` e `date=` in `docs/.docs-baseline` al nuovo HEAD.
-> 6. Lancia la build (`docs/build.cmd` oppure `npm run docs:build`) e correggi
+> 5. Aggiungi le novità e le correzioni alla versione in corso in `docs/release-notes.md`
+>    (una riga ciascuna, con il link alla pagina della documentazione, alla demo o all'issue).
+> 6. Aggiorna `commit=` e `date=` in `docs/.docs-baseline` al nuovo HEAD.
+> 7. Lancia la build (`docs/build.cmd` oppure `npm run docs:build`) e correggi
 >    eventuali link rotti (la build ha `ignoreDeadLinks: false`).
 > Mostrami un riepilogo delle pagine modificate prima di concludere.
 

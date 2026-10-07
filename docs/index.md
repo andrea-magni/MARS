@@ -16,6 +16,9 @@ hero:
       text: Your First Server
       link: /guide/getting-started
     - theme: alt
+      text: Release Notes
+      link: /release-notes
+    - theme: alt
       text: View on GitHub
       link: https://github.com/andrea-magni/MARS
 
@@ -78,6 +81,7 @@ On the **client**, drop a few components on a form (or create them in code) and 
 - Building a server? Jump to the [Server section](/server/engine).
 - Consuming a REST API from Delphi? See the [Client section](/client/overview).
 - Looking for working code? Browse the [Demos](/demos/).
+- What's new? The [Release Notes](/release-notes) list the changes of every version, with links to the docs, demos and issues.
 - Want AI agents to use your Delphi code and data? Build an [MCP server](/features/mcp).
 - Using Claude Code or another AI coding agent? Install the [MARS Agent Skills](/guide/agent-skills).
 
