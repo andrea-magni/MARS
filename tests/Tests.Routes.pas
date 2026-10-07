@@ -42,6 +42,7 @@ type
   private
     FEngine: IMARSEngine;
     FApplication: IMARSApplication;
+    FIgnoreCaseDefault: Boolean;
   protected
     function URLFor(const APath: string): string;
     function Send(const AMethod, APath: string; const ABody: string = '';
@@ -203,6 +204,7 @@ end;
 procedure TMARSRoutesFixture.Setup;
 begin
   // DUnitX compares strings ignoring case by default: routes are checked strictly
+  FIgnoreCaseDefault := Assert.IgnoreCaseDefault;
   Assert.IgnoreCaseDefault := False;
 
   TMARSActivation.ClearBeforeInvokes;
@@ -219,7 +221,7 @@ end;
 
 procedure TMARSRoutesFixture.Teardown;
 begin
-  Assert.IgnoreCaseDefault := True;
+  Assert.IgnoreCaseDefault := FIgnoreCaseDefault;
   FApplication := nil;
   FEngine := nil;
 end;
