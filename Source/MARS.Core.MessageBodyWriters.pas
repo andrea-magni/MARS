@@ -266,8 +266,8 @@ begin
   LJSONPEnabled := False;
   if Assigned(AActivation) then
   begin
-    if not AActivation.Method.HasAttribute<JSONPAttribute>(LJSONPProc) then
-      AActivation.Resource.HasAttribute<JSONPAttribute>(LJSONPProc);
+    if not TRttiHelper.IfHasAttribute<JSONPAttribute>(AActivation.MethodAttributes, LJSONPProc) then
+      TRttiHelper.IfHasAttribute<JSONPAttribute>(AActivation.ResourceAttributes, LJSONPProc);
     if LJSONPEnabled then
     begin
       LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
@@ -393,6 +393,8 @@ var
   LParameters: TArray<TRttiParameter>;
   LIndex: Integer;
 begin
+  if not Assigned(AActivation.Method) then
+    Exit;
   LParameters := AActivation.Method.GetParameters;
 
   for LIndex := 0 to High(LParameters) do
@@ -460,25 +462,19 @@ function TPrimitiveTypesWriter.GetProducesValue(const AActivation: IMARSActivati
 var
   LProduces: string;
   LFound: Boolean;
+  LProducesProc: TProc<ProducesAttribute>;
 begin
   LFound := False;
   LProduces := '';
 
-  AActivation.Method.HasAttribute<ProducesAttribute>(
+  LProducesProc :=
     procedure(AAttr: ProducesAttribute)
     begin
       LProduces := AAttr.Value;
       LFound := True;
-    end
-  );
-  if not LFound then
-    AActivation.Resource.HasAttribute<ProducesAttribute>(
-      procedure(AAttr: ProducesAttribute)
-      begin
-        LProduces := AAttr.Value;
-        LFound := True;
-      end
-    );
+    end;
+  if not TRttiHelper.IfHasAttribute<ProducesAttribute>(AActivation.MethodAttributes, LProducesProc) then
+    TRttiHelper.IfHasAttribute<ProducesAttribute>(AActivation.ResourceAttributes, LProducesProc);
 
   Result := LFound;
   if Result then

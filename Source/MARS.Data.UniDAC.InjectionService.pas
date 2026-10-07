@@ -71,7 +71,7 @@ begin
 
   // second chance: method annotation
   if (LConnectionDefName = '') then
-    AActivation.Method.HasAttribute<ConnectionAttribute>(
+    TRttiHelper.IfHasAttribute<ConnectionAttribute>(AActivation.MethodAttributes,
       procedure (AAttrib: ConnectionAttribute)
       begin
         LConnectionDefName := AAttrib.ConnectionDefName;
@@ -81,7 +81,7 @@ begin
 
   // third chance: resource annotation
   if (LConnectionDefName = '') then
-    AActivation.Resource.HasAttribute<ConnectionAttribute>(
+    TRttiHelper.IfHasAttribute<ConnectionAttribute>(AActivation.ResourceAttributes,
       procedure (AAttrib: ConnectionAttribute)
       begin
         LConnectionDefName := AAttrib.ConnectionDefName;

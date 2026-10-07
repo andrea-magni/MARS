@@ -71,7 +71,7 @@ begin
 
   // second chance: method annotation
   if (LReportDefName = '') then
-    AActivation.Method.HasAttribute<ReportAttribute>(
+    TRttiHelper.IfHasAttribute<ReportAttribute>(AActivation.MethodAttributes,
       procedure (AAttrib: ReportAttribute)
       begin
         LReportDefName := AAttrib.ReportDefName;
@@ -81,7 +81,7 @@ begin
 
   // third chance: resource annotation
   if (LReportDefName = '') then
-    AActivation.Resource.HasAttribute<ReportAttribute>(
+    TRttiHelper.IfHasAttribute<ReportAttribute>(AActivation.ResourceAttributes,
       procedure (AAttrib: ReportAttribute)
       begin
         LReportDefName := AAttrib.ReportDefName;

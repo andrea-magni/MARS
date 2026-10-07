@@ -173,9 +173,9 @@ end;
 function ExcludedFromLog(const AActivation: IMARSActivation): Boolean;
 begin
   Result :=
-    (Assigned(AActivation.Resource) and AActivation.Resource.HasAttribute<NoLogAttribute>)
+    TRttiHelper.IfHasAttribute<NoLogAttribute>(AActivation.ResourceAttributes, nil)
     or
-    (Assigned(AActivation.Method) and AActivation.Method.HasAttribute<NoLogAttribute>);
+    TRttiHelper.IfHasAttribute<NoLogAttribute>(AActivation.MethodAttributes, nil);
 end;
 
 // Configures the logger and tells whether the built-in hooks have to write their entry.

@@ -74,7 +74,7 @@ type
     FOnScaffolding: TOnScaffoldingProc;
   protected
     function GetRazorAttributeValue<T: RazorSingleValueAttribute>(
-      const AType: TRttiType; const ADefault: string = ''): string;
+      const AAttributes: TArray<TCustomAttribute>; const ADefault: string = ''): string;
     function GetRazorEngine(const AName: string): TRlxRazorEngine; overload; virtual;
     function GetRazorEngine: TRlxRazorEngine; overload; virtual;
 
@@ -203,7 +203,7 @@ var
 begin
   LBasePath := URL.BasePath + URL.Resource;
 
-  Activation.Method.HasAttribute<PathAttribute>(
+  TRttiHelper.IfHasAttribute<PathAttribute>(Activation.MethodAttributes,
     procedure (AAttr: PathAttribute)
     begin
       if not (LBasePath.EndsWith('/') or AAttr.Value.StartsWith('/')) then
@@ -217,7 +217,7 @@ end;
 
 function TMARSDelphiRazor.GetErrorPage: string;
 begin
-  Result := GetRazorAttributeValue<RazorErrorPageAttribute>(Activation.Resource
+  Result := GetRazorAttributeValue<RazorErrorPageAttribute>(Activation.ResourceAttributes
     // default
     , Parameters.ByName('ErrorPage', 'error.html').AsString
   );
@@ -225,7 +225,7 @@ end;
 
 function TMARSDelphiRazor.GetFilesFolder: string;
 begin
-  Result := GetRazorAttributeValue<RazorFilesFolderAttribute>(Activation.Resource
+  Result := GetRazorAttributeValue<RazorFilesFolderAttribute>(Activation.ResourceAttributes
     // default
     , Parameters.ByName('FilesFolder'
       , IncludeTrailingPathDelimiter(TPath.Combine(ExtractFilePath(ParamStr(0)), 'files'))
@@ -235,19 +235,19 @@ end;
 
 function TMARSDelphiRazor.GetHomePage: string;
 begin
-  Result := GetRazorAttributeValue<RazorHomePageAttribute>(Activation.Resource
+  Result := GetRazorAttributeValue<RazorHomePageAttribute>(Activation.ResourceAttributes
     // default
     , Parameters.ByName('HomePage', 'index').AsString
   );
 end;
 
-function TMARSDelphiRazor.GetRazorAttributeValue<T>(const AType: TRttiType;
+function TMARSDelphiRazor.GetRazorAttributeValue<T>(const AAttributes: TArray<TCustomAttribute>;
   const ADefault: string): string;
 var
   LValue: string;
 begin
   LValue := ADefault;
-  AType.HasAttribute<T>(
+  TRttiHelper.IfHasAttribute<T>(AAttributes,
     procedure (AAttrib: T)
     begin
       LValue := AAttrib.Value;
@@ -295,7 +295,7 @@ end;
 
 function TMARSDelphiRazor.GetTemplatesFolder: string;
 begin
-  Result := GetRazorAttributeValue<RazorTemplatesFolderAttribute>(Activation.Resource
+  Result := GetRazorAttributeValue<RazorTemplatesFolderAttribute>(Activation.ResourceAttributes
     // default
     , Parameters.ByName('TemplatesFolder'
       , IncludeTrailingPathDelimiter(TPath.Combine(ExtractFilePath(ParamStr(0)), 'templates'))

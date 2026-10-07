@@ -60,7 +60,7 @@ begin
 
   // second chance: method annotation
   if (LName = '') then
-    AActivation.Method.HasAttribute<RazorEngineAttribute>(
+    TRttiHelper.IfHasAttribute<RazorEngineAttribute>(AActivation.MethodAttributes,
       procedure (AAttrib: RazorEngineAttribute)
       begin
         LName := AAttrib.Name;
@@ -69,7 +69,7 @@ begin
 
   // third chance: resource annotation
   if (LName = '') then
-    AActivation.Resource.HasAttribute<RazorEngineAttribute>(
+    TRttiHelper.IfHasAttribute<RazorEngineAttribute>(AActivation.ResourceAttributes,
       procedure (AAttrib: RazorEngineAttribute)
       begin
         LName := AAttrib.Name;

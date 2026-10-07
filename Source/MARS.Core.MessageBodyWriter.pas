@@ -114,6 +114,7 @@ class function TMARSMessageBodyWriter.GetDesiredEncoding(const AActivation: IMAR
 var
   LEncoding: TEncoding;
   LFound: Boolean;
+  LEncodingProc: TProc<EncodingAttribute>;
 begin
   if not Assigned(AActivation) then
   begin
@@ -123,24 +124,15 @@ begin
   end;
 
   LFound := False;
-  // look for attribute on Method
-  if Assigned(AActivation.Method) and not AActivation.Method.HasAttribute<EncodingAttribute>(
+  LEncodingProc :=
     procedure(AAttr: EncodingAttribute)
     begin
       LEncoding := AAttr.Encoding;
       LFound := True;
-    end
-  ) then // if not found, fallback looking for attribute on Resource
-  begin
-    if Assigned(AActivation.Resource) then
-      AActivation.Resource.HasAttribute<EncodingAttribute>(
-        procedure(AAttr: EncodingAttribute)
-        begin
-          LEncoding := AAttr.Encoding;
-          LFound := True;
-        end
-      );
-  end;
+    end;
+  // look for attribute on Method, fallback on Resource
+  if not TRttiHelper.IfHasAttribute<EncodingAttribute>(AActivation.MethodAttributes, LEncodingProc) then
+    TRttiHelper.IfHasAttribute<EncodingAttribute>(AActivation.ResourceAttributes, LEncodingProc);
 
   Result := False;
   if LFound then
@@ -366,28 +358,42 @@ begin
       end
     );
 
-    // if AObject is a method, fall back to its class
-    if (LList.Count = 0) then
+    // no RTTI method behind the endpoint: fall back to the resource attributes
+    if not Assigned(LMethod) then
     begin
-       (LMethod.Parent).ForEachAttribute<ProducesAttribute>(
-          procedure (AProduces: ProducesAttribute)
-          begin
-            LList.Add( TMediaType.Create(AProduces.Value) );
-          end
-       );
-    end;
+      if LList.Count = 0 then
+        TRttiHelper.ForEachAttribute<ProducesAttribute>(AActivation.ResourceAttributes
+          , procedure (AProduces: ProducesAttribute)
+            begin
+              LList.Add( TMediaType.Create(AProduces.Value) );
+            end
+         );
+    end
+    else
+    begin
+      // if AObject is a method, fall back to its class
+      if (LList.Count = 0) then
+      begin
+         (LMethod.Parent).ForEachAttribute<ProducesAttribute>(
+            procedure (AProduces: ProducesAttribute)
+            begin
+              LList.Add( TMediaType.Create(AProduces.Value) );
+            end
+         );
+      end;
 
-    // the Parent class for the method may not be our resource (Resource may be a
-    // subclass of LMethod.Parent). We are also looking to the actual Resource class
-    // to add Produces
-    if LMethod.Parent <> AActivation.Resource then
-    begin
-      TRttiHelper.ForEachAttribute<ProducesAttribute>(AActivation.ResourceAttributes
-        , procedure (AProduces: ProducesAttribute)
-          begin
-            LList.Add( TMediaType.Create(AProduces.Value) );
-          end
-       );
+      // the Parent class for the method may not be our resource (Resource may be a
+      // subclass of LMethod.Parent). We are also looking to the actual Resource class
+      // to add Produces
+      if LMethod.Parent <> AActivation.Resource then
+      begin
+        TRttiHelper.ForEachAttribute<ProducesAttribute>(AActivation.ResourceAttributes
+          , procedure (AProduces: ProducesAttribute)
+            begin
+              LList.Add( TMediaType.Create(AProduces.Value) );
+            end
+         );
+      end;
     end;
   except
     LList.Free;

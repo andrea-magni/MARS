@@ -384,6 +384,7 @@ class function TMARSMessageBodyReader.GetDesiredEncoding(
 var
   LEncoding: TEncoding;
   LFound: Boolean;
+  LEncodingProc: TProc<EncodingAttribute>;
 begin
   if not Assigned(AActivation) then
   begin
@@ -393,24 +394,15 @@ begin
   end;
 
   LFound := False;
-  // look for attribute on Method
-  if Assigned(AActivation.Method) and not AActivation.Method.HasAttribute<EncodingAttribute>(
+  LEncodingProc :=
     procedure(AAttr: EncodingAttribute)
     begin
       LEncoding := AAttr.Encoding;
       LFound := True;
-    end
-  ) then // if not found, fallback looking for attribute on Resource
-  begin
-    if Assigned(AActivation.Resource) then
-      AActivation.Resource.HasAttribute<EncodingAttribute>(
-        procedure(AAttr: EncodingAttribute)
-        begin
-          LEncoding := AAttr.Encoding;
-          LFound := True;
-        end
-      );
-  end;
+    end;
+  // look for attribute on Method, fallback on Resource
+  if not TRttiHelper.IfHasAttribute<EncodingAttribute>(AActivation.MethodAttributes, LEncodingProc) then
+    TRttiHelper.IfHasAttribute<EncodingAttribute>(AActivation.ResourceAttributes, LEncodingProc);
 
   Result := False;
   if LFound then

@@ -60,7 +60,7 @@ begin
 
   // second chance: method annotation
   if (LName = '') then
-    AActivation.Method.HasAttribute<dmustacheAttribute>(
+    TRttiHelper.IfHasAttribute<dmustacheAttribute>(AActivation.MethodAttributes,
       procedure (AAttrib: dmustacheAttribute)
       begin
         LName := AAttrib.Name;
@@ -69,7 +69,7 @@ begin
 
   // third chance: resource annotation
   if (LName = '') then
-    AActivation.Resource.HasAttribute<dmustacheAttribute>(
+    TRttiHelper.IfHasAttribute<dmustacheAttribute>(AActivation.ResourceAttributes,
       procedure (AAttrib: dmustacheAttribute)
       begin
         LName := AAttrib.Name;

@@ -10,6 +10,9 @@ Changes on the `develop` branch, part of the next release.
 - Linux daemon: `--foreground` (or `-f`) runs the server in the current process with logs on standard output, for systemd (`Type=simple`) and Docker. [Deployment](/guide/deployment#linux-with-systemd)
 - Documentation: [Deployment](/guide/deployment) guide (Windows service, systemd, Docker, reverse proxy, HTTPS, IIS/Apache/FastCGI), [Why MARS?](/guide/why-mars), [FAQ](/guide/faq); `llms.txt` and `llms-full.txt` for AI tools, sitemap.
 
+**Changed**
+- Attributes on a resource class (`Encoding`, `JSONP`, `Produces`, `Connection`, `NoLog`, report, template and Razor attributes) also apply when declared on an ancestor class, as `RolesAllowed` and the JSON options already did. Readers, writers, injection services and loggers read them from the activation attribute lists, ready for endpoints not backed by an RTTI method.
+
 **Fixed**
 - Linux daemon: the log file only held its last line.
 - Documentation: the footer stated the wrong license (MARS is released under the Mozilla Public License 2.0).
