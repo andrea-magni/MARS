@@ -412,8 +412,7 @@ end;
 
 function TMARSDCSRequest.GetContent: string;
 begin
-//AM TODO
-  Result := '';
+  Result := TEncoding.UTF8.GetString(GetRawContent);
 end;
 
 function TMARSDCSRequest.GetContentFields: TArray<string>;
@@ -792,13 +791,21 @@ begin
 end;
 
 function TMARSDCSRequest.GetRawContent: TBytes;
+var
+  LStream: TStream;
+  LPosition: Int64;
 begin
   Result := [];
-  case FDCSRequest.BodyType of
-//    btNone: Result := [];
-//    btUrlEncoded: ;
-//    btMultiPart: Result := THttpMultiPartFormData(FDCSRequest.Body).Bytes;
-    btBinary: Result := TBytesStream(FDCSRequest.Body).Bytes;
+  // DCS keeps the raw body of url-encoded and binary (i.e. JSON) requests in a TMemoryStream;
+  // nil for multipart/form-data
+  LStream := FDCSRequest.RawBody;
+  if Assigned(LStream) and (LStream.Size > 0) then
+  begin
+    SetLength(Result, LStream.Size);
+    LPosition := LStream.Position;
+    LStream.Position := 0;
+    LStream.ReadBuffer(Result[0], LStream.Size);
+    LStream.Position := LPosition;
   end;
 end;
 
