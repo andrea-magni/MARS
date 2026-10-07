@@ -146,7 +146,8 @@ DCS.SSL.KeyFile=privkey.pem
 
 **Indy** (`TMARShttpServerIndy`): `Indy.SSL.CertFile`, `Indy.SSL.KeyFile`, `Indy.SSL.RootCertFile`,
 `Indy.SSL.Version`, `Indy.SSL.Mode`, see the
-[parameters reference](/reference/parameters#engine-parameters).
+[parameters reference](/reference/parameters#engine-parameters). With HTTPS, enable keep-alive too
+(`Indy.KeepAlive=true`): without it every request costs a new TLS handshake.
 
 `Request.IsSecure` tells whether the request came in over TLS to this server; the URL of the
 request (`TMARSURL`) and the OAuth metadata of [MCP](/features/mcp) use it. Behind a reverse proxy

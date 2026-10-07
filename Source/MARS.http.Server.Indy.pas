@@ -381,6 +381,9 @@ begin
 
   AutoStartSession := False;
   SessionState := False;
+  // Indy.KeepAlive parameter (default: the KeepAlive property, False): HTTP keep-alive. Each open
+  // connection holds a thread of the pool (ThreadPoolSize is also the maximum of connections)
+  KeepAlive := FEngine.Parameters.ByName('Indy.KeepAlive', KeepAlive).AsBoolean;
   SetupThreadPooling(FEngine.ThreadPoolSize);
   FStartedAt := Now;
   FStoppedAt := 0;

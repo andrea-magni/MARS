@@ -128,6 +128,7 @@ including file are the same parameter (the first spelling is kept). Parameters r
 | `DCS.SSL.KeyFile` | string | `localhost.key` | DCS server: private key (PEM); relative to the executable folder. |
 | `Indy.SSL.CertFile`, `Indy.SSL.KeyFile`, `Indy.SSL.RootCertFile` | string | `localhost.crt`, `localhost.key`, `localhost.pem` | Indy server: certificate, key and root certificate. |
 | `Indy.SSL.Version`, `Indy.SSL.Mode` | string | `sslvTLSv1_2`, `sslmServer` | Indy server: TLS version and mode. |
+| `Indy.KeepAlive` | Boolean | `false` | Indy server: HTTP keep-alive (without it every request opens a new connection, and a TLS handshake with HTTPS). Each open connection holds a thread of the pool: `ThreadPoolSize` is also the maximum number of connections. `true` in the `MARSTemplate` projects. The DCS server always supports keep-alive. |
 | `ThreadPoolSize` | Integer | `75` | Worker threads (size for concurrent requests, incl. open SSE streams). |
 | `BasePath` | string | `/rest` | Root path stripped from every URL before application matching. |
 
