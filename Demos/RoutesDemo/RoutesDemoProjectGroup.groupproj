@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="RoutesDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RoutesDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="RoutesDemoServerApplication">
+        <MSBuild Projects="RoutesDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerApplication:Clean">
+        <MSBuild Projects="RoutesDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerApplication:Make">
+        <MSBuild Projects="RoutesDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoServerFMXApplication">
+        <MSBuild Projects="RoutesDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerFMXApplication:Clean">
+        <MSBuild Projects="RoutesDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerFMXApplication:Make">
+        <MSBuild Projects="RoutesDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoServerService">
+        <MSBuild Projects="RoutesDemoServerService.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerService:Clean">
+        <MSBuild Projects="RoutesDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerService:Make">
+        <MSBuild Projects="RoutesDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoServerConsoleApplication">
+        <MSBuild Projects="RoutesDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="RoutesDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerConsoleApplication:Make">
+        <MSBuild Projects="RoutesDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoServerDaemon">
+        <MSBuild Projects="RoutesDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerDaemon:Clean">
+        <MSBuild Projects="RoutesDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerDaemon:Make">
+        <MSBuild Projects="RoutesDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoServerApacheModule">
+        <MSBuild Projects="RoutesDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerApacheModule:Clean">
+        <MSBuild Projects="RoutesDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerApacheModule:Make">
+        <MSBuild Projects="RoutesDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoServerFCGI">
+        <MSBuild Projects="RoutesDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerFCGI:Clean">
+        <MSBuild Projects="RoutesDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerFCGI:Make">
+        <MSBuild Projects="RoutesDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoServerISAPI">
+        <MSBuild Projects="RoutesDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoServerISAPI:Clean">
+        <MSBuild Projects="RoutesDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoServerISAPI:Make">
+        <MSBuild Projects="RoutesDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoClient">
+        <MSBuild Projects="RoutesDemoClient.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoClient:Clean">
+        <MSBuild Projects="RoutesDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoClient:Make">
+        <MSBuild Projects="RoutesDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RoutesDemoTests">
+        <MSBuild Projects="RoutesDemoTests.dproj"/>
+    </Target>
+    <Target Name="RoutesDemoTests:Clean">
+        <MSBuild Projects="RoutesDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RoutesDemoTests:Make">
+        <MSBuild Projects="RoutesDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="RoutesDemoServerApplication;RoutesDemoServerFMXApplication;RoutesDemoServerService;RoutesDemoServerConsoleApplication;RoutesDemoServerDaemon;RoutesDemoServerApacheModule;RoutesDemoServerFCGI;RoutesDemoServerISAPI;RoutesDemoClient;RoutesDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="RoutesDemoServerApplication:Clean;RoutesDemoServerFMXApplication:Clean;RoutesDemoServerService:Clean;RoutesDemoServerConsoleApplication:Clean;RoutesDemoServerDaemon:Clean;RoutesDemoServerApacheModule:Clean;RoutesDemoServerFCGI:Clean;RoutesDemoServerISAPI:Clean;RoutesDemoClient:Clean;RoutesDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="RoutesDemoServerApplication:Make;RoutesDemoServerFMXApplication:Make;RoutesDemoServerService:Make;RoutesDemoServerConsoleApplication:Make;RoutesDemoServerDaemon:Make;RoutesDemoServerApacheModule:Make;RoutesDemoServerFCGI:Make;RoutesDemoServerISAPI:Make;RoutesDemoClient:Make;RoutesDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
