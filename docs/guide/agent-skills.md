@@ -9,7 +9,7 @@ MARS ships with three [Agent Skills](https://code.claude.com/docs/en/skills) tha
 | Skill | What it does |
 | --- | --- |
 | **`mars-new-project`** | Scaffolds a new MARS server project — from the official `MARSTemplate` project group or from minimal bundled templates — and covers deployment (Windows service, ISAPI on IIS, Apache module, FastCGI, Linux daemon, HTTPS/SSL). |
-| **`mars-development`** | Day-to-day MARS development: resources and REST attributes, parameter binding, JWT authentication and roles, FireDAC dataset publishing, Server-Sent Events, WebStencils templating, client components, configuration and serialization. |
+| **`mars-development`** | Day-to-day MARS development: resources and REST attributes, route-based endpoints and middlewares, parameter binding, JWT authentication and roles, FireDAC dataset publishing, Server-Sent Events, WebStencils templating, client components, configuration and serialization. |
 | **`mars-mcp-server`** | Building [MCP servers](/features/mcp) with MARS: exposing Delphi methods as tools for AI agents with `[MCPTool]`, database tools via FireDAC, per-tool role authorization, Bearer and OAuth 2.1 authentication. |
 
 A skill is a folder with a `SKILL.md` file (instructions plus a `description` that tells the agent *when* to activate it) and optional `references/` and `assets/` files loaded on demand. Once installed, the agent picks the right skill automatically based on what you ask — you don't need to mention MARS explicitly if your code clearly uses it.

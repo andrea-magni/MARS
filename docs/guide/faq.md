@@ -49,6 +49,16 @@ end;
 
 See [Resources & Methods](/server/resources) and [JSON Serialization](/features/serialization).
 
+### Can I define endpoints as routes in code (Express style)?
+
+Yes. Besides resource classes, endpoints can be defined in code: `R.Get<TPerson>('people/{id:int}', function (const C: TMARSRouteContext): TPerson ...)`.
+
+Routes have:
+- path constraints, typed bodies and groups;
+- roles, middlewares (`Use`) and OpenAPI.
+
+They live next to the resources, in the same application. See [Routes](/server/routes).
+
 ### How do I read path, query and body parameters?
 
 Decorate the method parameters: `[PathParam]`, `[QueryParam]`, `[HeaderParam]`, `[CookieParam]`, `[FormParam]`, `[BodyParam]` (a record or an object read from JSON). See [Parameters & Injection](/server/injection).

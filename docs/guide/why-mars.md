@@ -29,6 +29,25 @@ end;
 
 Records, objects, arrays and datasets are serialized to JSON for you; parameters come from the path, the query string, headers, cookies, forms or the body. Developers coming from Java (JAX-RS) or .NET (ASP.NET Web API) recognize the model at once. See [Resources](/server/resources) and [Attributes](/server/attributes).
 
+## Or routes in code
+
+Prefer the Express or Minimal API style? Define endpoints as routes, next to the resources and on the same engine:
+
+```pascal
+R.Get<TCustomer>('customers/{id:int}',
+  function (const C: TMARSRouteContext): TCustomer
+  begin
+    Result := TCustomers.Find(C.Path<Integer>('id'));
+  end
+).RolesAllowed('standard');
+```
+
+Routes give you:
+- path constraints, typed bodies, groups and middlewares (`Use`);
+- the same serialization, injection, JWT roles, error handling and OpenAPI as resources.
+
+See [Routes](/server/routes).
+
 ## Server and client in one library
 
 The same library has a client side: RAD components (`TMARSNetClient`, `TMARSClientResourceJSON`, `TMARSClientToken`, ...) to call MARS servers and any other REST API, with JSON to record mapping, JWT handling, asynchronous calls and [logging of every request](/client/logging). Delphi-to-Delphi applications share the record types between server and client. See [Client](/client/overview).

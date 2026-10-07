@@ -178,6 +178,12 @@ into the `.ini` files of every project it creates.
 
 Defaults are those of `DefaultMARSJSONSerializationOptions`; resource and method attributes win over these parameters. See [Serialization options](/features/serialization#serialization-options).
 
+## Routes parameters (per application)
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Middlewares.Resources` | Boolean | `TMARSRouteTable.DefaultMiddlewaresOnResources` (`False`) | The middlewares of the application (`MARSRoutesOf(App).Use`) also wrap the methods of the resources. See [Middlewares around resource methods](/server/routes#middlewares-around-resource-methods). |
+
 ## Logging parameters
 
 Read by the [request/response loggers](/features/logging) (engine section). Each logger is inert until both its unit is in the server's `uses` clause and its `Enabled` flag is set.

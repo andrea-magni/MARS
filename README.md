@@ -35,6 +35,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/rest/default/people
 ## Features
 
 - **Declarative REST resources**: `[Path]`, `[GET]`/`[POST]`/`[PUT]`/`[PATCH]`/`[DELETE]`/`[QUERY]`, `[Produces]`, `[Consumes]`, path/query/header/cookie/form/body parameters, dependency injection with `[Context]`.
+- **Or [routes in code](https://andrea-magni.github.io/MARS/server/routes)** (Express style): `R.Get<TPerson>('people/{id:int}', ...)`, with path constraints, groups, middlewares and OpenAPI, next to the resources.
 - **JSON** to and from records, objects, arrays and datasets, with options per application; YAML and XML writers too.
 - **Security**: JWT authentication (Bearer header or cookie, key rotation, token renewal), role based authorization (`[RolesAllowed]`, `[PermitAll]`, `[DenyAll]`).
 - **OpenAPI 3** generated from your code, Swagger UI included.

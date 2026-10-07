@@ -35,6 +35,11 @@ features:
   - icon: 🦾
     title: Delphi-like
     details: Modern Delphi on the server (attributes, generics, RTTI, collections) and a classic RAD component approach on the client.
+  - icon: 🧭
+    title: Resources or Routes
+    details: Declare endpoints as classes with attributes (JAX-RS style) or as routes in code (Express style), with the same serialization, JWT roles, middlewares and OpenAPI.
+    link: /server/routes
+    linkText: Routes in code
   - icon: 🔥
     title: FireDAC Datasets
     details: First-class, advanced dataset support with FireDAC for powerful Delphi-to-Delphi data-aware servers.

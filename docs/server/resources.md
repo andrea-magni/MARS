@@ -2,6 +2,8 @@
 
 A **resource** is an ordinary Delphi class decorated with `[Path]`. Its public methods, decorated with HTTP-verb attributes, are your endpoints. Resources are instantiated *per request* — a fresh instance is created, used, and freed within a single [activation](/server/request-lifecycle), so they are inherently thread-safe with respect to instance state.
 
+Prefer to define endpoints in code, Express style? See [Routes](/server/routes): both styles can live in the same application.
+
 ## Anatomy of a resource
 
 ```pascal

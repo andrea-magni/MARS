@@ -223,6 +223,7 @@ export default defineConfig({
             { text: 'Engine', link: '/server/engine' },
             { text: 'Applications', link: '/server/application' },
             { text: 'Resources & Methods', link: '/server/resources' },
+            { text: 'Routes', link: '/server/routes' },
             { text: 'Attributes', link: '/server/attributes' },
             { text: 'Parameters & Injection', link: '/server/injection' },
             { text: 'Content Negotiation', link: '/server/content-negotiation' },

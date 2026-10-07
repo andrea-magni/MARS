@@ -16,6 +16,24 @@ THelloWorldResource = class
 end;
 ```
 
+## RoutesDemo
+
+Route-based endpoints next to the resources of the template:
+- a `people` module with CRUD routes, `{id:int}` constraints, a typed body, a nested group, `admin` routes and a timing middleware;
+- a `ping` and a `whoami` route;
+- an application middleware that writes the endpoint name in the `X-MARS-Endpoint` header. `DefaultApp.Middlewares.Resources=true` in `Server.ini` extends it to the resources.
+
+All the routes appear in Swagger UI. See [Routes](/server/routes).
+
+```pascal
+R.Get<TPerson>('{id:int}',
+  function (const C: TMARSRouteContext): TPerson
+  begin
+    Result := TPeopleStore.Find(C.Path<Integer>('id'));
+  end
+).Summary('Get a person');
+```
+
 ## ErrorObjects
 
 How to return errors at three levels of richness: a plain Delphi exception (→ 500), a MARS HTTP exception with a custom status/message, and a MARS exception carrying a structured JSON body — plus how the client reads that body back. See [Error Handling](/server/error-handling).
