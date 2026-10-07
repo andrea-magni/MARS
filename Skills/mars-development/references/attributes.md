@@ -28,7 +28,7 @@ The parameter name is used when the attribute has no explicit name argument.
 | `CookieParam` | cookie | `[CookieParam] session: string` |
 | `BodyParam` | whole request body via MessageBodyReaders | `[BodyParam] ACustomer: TCustomer` (JSON → record/object), also `TJSONObject`, `TStream`, `TArray<TFDMemTable>`... |
 | `PathParams`, `QueryParams`, `FormParams`, `Headers`, `Cookies` | the whole collection | bind to array/record types |
-| `Required` | combined with a param attribute | `[QueryParam, Required] search: string` — raises `ERequiredException` when missing |
+| `Required` | combined with a param attribute | `[QueryParam, Required] search: string` — raises `ERequiredException` (400) when missing |
 
 ## Injection (on parameters or fields)
 

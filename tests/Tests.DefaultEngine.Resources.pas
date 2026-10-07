@@ -154,6 +154,19 @@ type
     Description: string;
   end;
 
+  [Path('required'), Produces(TMediaType.TEXT_PLAIN)]
+  TRequiredResource = class
+  public
+    [GET]
+    function GetQuery([QueryParam, Required] name: string): string;
+
+    [GET, Path('header')]
+    function GetHeader([HeaderParam('X-Name'), Required] name: string): string;
+
+    [POST, Consumes(TMediaType.APPLICATION_JSON)]
+    function PostBody([BodyParam, Required] const AItem: TItem): string;
+  end;
+
   [Path('item'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
   TItemResource = class
   private
@@ -319,7 +332,25 @@ begin
       Result := Result + [LItem];
 end;
 
+{ TRequiredResource }
+
+function TRequiredResource.GetQuery(name: string): string;
+begin
+  Result := 'query ' + name;
+end;
+
+function TRequiredResource.GetHeader(name: string): string;
+begin
+  Result := 'header ' + name;
+end;
+
+function TRequiredResource.PostBody(const AItem: TItem): string;
+begin
+  Result := 'body ' + AItem.Description;
+end;
+
 initialization
+  MARSRegister([TRequiredResource]);
   MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TTestTokenResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);

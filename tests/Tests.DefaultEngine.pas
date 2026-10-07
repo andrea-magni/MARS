@@ -130,6 +130,9 @@ type
 
     [Test]
     procedure TestQueryDoesNotShadowGet;
+
+    [Test]
+    procedure TestRequiredParamsAre400;
   end;
 
 implementation
@@ -464,6 +467,40 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual('[]', LMock.Response.Content, 'No item should match');
+end;
+
+procedure TMARSDefaultEngineFixture.TestRequiredParamsAre400;
+var
+  LHeader: TMARSHeader;
+begin
+  // present: 200
+  var LMock := MockRequestAndResponse('GET', ResourcePath('required?name=Andrea'));
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('query Andrea', LMock.Response.Content, False);
+
+  // missing query parameter: client error
+  LMock := MockRequestAndResponse('GET', ResourcePath('required'));
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(400, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.Contains(LMock.Response.Content, 'Required query parameter missing: name', False);
+
+  // missing header
+  LMock := MockRequestAndResponse('GET', ResourcePath('required/header'));
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(400, LMock.Response.StatusCode, LMock.Response.Content);
+
+  LHeader.Name := 'X-Name';
+  LHeader.Value := 'Ada';
+  LMock := MockRequestAndResponse('GET', ResourcePath('required/header'), '', [LHeader]);
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('header Ada', LMock.Response.Content, False);
+
+  // missing body
+  LMock := MockRequestAndResponse('POST', ResourcePath('required'), '');
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(400, LMock.Response.StatusCode, LMock.Response.Content);
 end;
 
 procedure TMARSDefaultEngineFixture.TestQueryDoesNotShadowGet;

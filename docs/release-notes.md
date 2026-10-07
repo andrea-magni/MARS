@@ -12,6 +12,7 @@ Changes on the `develop` branch, part of the next release.
 - Documentation: [Deployment](/guide/deployment) guide (Windows service, systemd, Docker, reverse proxy, HTTPS, IIS/Apache/FastCGI), [Why MARS?](/guide/why-mars), [FAQ](/guide/faq); `llms.txt` and `llms-full.txt` for AI tools, sitemap.
 
 **Changed**
+- A parameter marked `[Required]` missing from the request gives `400 Bad Request` instead of 500. [Attributes](/server/attributes#required)
 - Attributes on a resource class (`Encoding`, `JSONP`, `Produces`, `Connection`, `NoLog`, report, template and Razor attributes) also apply when declared on an ancestor class, as `RolesAllowed` and the JSON options already did. Readers, writers, injection services and loggers read them from the activation attribute lists, ready for endpoints not backed by an RTTI method.
 
 **Fixed**

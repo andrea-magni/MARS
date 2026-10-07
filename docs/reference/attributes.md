@@ -28,7 +28,7 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | `[CookieParam('name')]` | Cookie. |
 | `[BodyParam]` | Entire request body (deserialized). |
 | `[PathParams]` `[QueryParams]` `[Headers]` `[Cookies]` `[FormParams]` | All values of that kind as a collection. |
-| `[Required]` | Marks a bound parameter mandatory. |
+| `[Required]` | Marks a bound parameter mandatory: 400 when missing. |
 
 ## Injection
 

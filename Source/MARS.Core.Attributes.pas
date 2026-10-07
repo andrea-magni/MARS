@@ -567,9 +567,19 @@ end;
 { RequestParamAttribute }
 
 procedure RequestParamAttribute.CheckRequiredAttribute(const ADestination: TRttiObject);
+var
+  LStatus: Integer;
 begin
   if IsRequired(ADestination) then
-    raise ERequiredException.CreateFmt('Required %s parameter missing: %s', [Self.GetSwaggerKind, GetActualName(ADestination)]);
+  begin
+    // a value missing from the request is a client error (400); a path parameter is
+    // missing only when its name is not in the [Path] of the method: a server error (500)
+    LStatus := 400;
+    if Self is PathParamAttribute then
+      LStatus := 500;
+    raise ERequiredException.CreateFmt('Required %s parameter missing: %s'
+      , [Self.GetSwaggerKind, GetActualName(ADestination)], LStatus);
+  end;
 end;
 
 function RequestParamAttribute.GetActualName(

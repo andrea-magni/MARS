@@ -77,7 +77,7 @@ function Info(
 
 ### `[Required]`
 
-Marks a bound parameter as mandatory; a missing value raises an HTTP error. `[PathParam]` is always required by nature.
+Marks a bound parameter as mandatory: a value missing from the request gives `400 Bad Request` (`ERequiredException`). `[PathParam]` is always required by nature.
 
 ```pascal
 [GET] function Find([QueryParam, Required] q: string): TArray<TItem>;
