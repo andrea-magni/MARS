@@ -226,8 +226,13 @@ begin
   LExeFileName := ParamStr(0);
   LLogFileName := ChangeFileExt(LExeFileName, '.log');
 
-  LFileStream := TFileStream.Create(LLogFileName, fmCreate or fmOpenWrite or fmShareDenyWrite);
+  // appended to the log file (fmCreate alone truncated it at every line)
+  if FileExists(LLogFileName) then
+    LFileStream := TFileStream.Create(LLogFileName, fmOpenWrite or fmShareDenyWrite)
+  else
+    LFileStream := TFileStream.Create(LLogFileName, fmCreate or fmShareDenyWrite);
   try
+    LFileStream.Seek(0, soEnd);
     LBytes := TEncoding.UTF8.GetBytes(string.join('|', [DateTimeToStr(Now), Name, AMsg]) + sLineBreak);
     LFileStream.Write(LBytes, Length(LBytes));
   finally
@@ -237,11 +242,10 @@ end;
 
 procedure TMARSDaemon.IdleCycle;
 begin
+  Log('Started');
   while not Terminated do
-  begin
-    Log('Heartbeat');
-    Sleep(5000);
-  end;
+    Sleep(500);
+  Log('Stopping');
 end;
 
 procedure TMARSDaemon.Log(const AMsg: string);
