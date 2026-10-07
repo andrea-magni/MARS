@@ -88,6 +88,8 @@ type
     procedure TestUnknownConstraintRaises;
     [Test]
     procedure TestOpenAPI;
+    [Test]
+    procedure TestMetadata;
   end;
 
 implementation
@@ -102,6 +104,7 @@ uses
 {$ENDIF}
 , Mock.IMARSRequest, Mock.IMARSResponse
 , MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
+, MARS.Metadata.Engine.Resource, MARS.Metadata.ReadersAndWriters, MARS.Metadata.InjectionService
 , Tests.DefaultEngine.Resources
 ;
 
@@ -422,6 +425,27 @@ begin
   finally
     LOpenAPI.Free;
   end;
+end;
+
+procedure TMARSRoutesFixture.TestMetadata;
+begin
+  // resources only (/metadata failed with EInvalidCast since the OpenAPI fields were added)
+  FEngine.AddApplication('PlainApp', '/plain'
+    , ['Tests.DefaultEngine.Resources.THelloWorldResource', 'MARS.Metadata.Engine.Resource.TMetadataResource']);
+  var LMock: TRouteMock;
+  LMock.Request := TMARSRequestMock.Create('GET', 'http://localhost:8080/rest/plain/metadata/PlainApp', [], '');
+  LMock.Response := TMARSResponseMock.Create();
+  Assert.IsTrue(FEngine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.Contains(LMock.Response.Content, '"Name":"GetContent"');
+
+  // resources and routes
+  Assert.IsTrue(FApplication.AddResource('MARS.Metadata.Engine.Resource.TMetadataResource'));
+  LMock := Send('GET', 'metadata/RoutesApp');
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.Contains(LMock.Response.Content, '"Name":"Tests.Routes.People"');
+  Assert.Contains(LMock.Response.Content, '"Name":"get_people_id"');
+  Assert.Contains(LMock.Response.Content, '"FullPath":"rest/routes/people/{id}"');
 end;
 
 initialization

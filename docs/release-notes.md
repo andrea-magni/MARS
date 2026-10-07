@@ -16,6 +16,7 @@ Changes on the `develop` branch, part of the next release.
 
 **Fixed**
 - Linux daemon: the log file only held its last line.
+- `/metadata` (`TMetadataResource`) answered 500 (invalid class typecast) since 1.6.4.
 - Documentation: the footer stated the wrong license (MARS is released under the Mozilla Public License 2.0).
 
 ## 1.8.1 {#v1-8-1}

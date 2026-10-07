@@ -112,6 +112,10 @@ begin
         Result.AddPair(LField.Name, LField.GetValue(Self).AsType<TMARSMetadata>.ToJSON)
       else if LField.FieldType is TRttiInstanceType then
       begin
+        // other objects (i.e. the RTTI of the endpoint, used by OpenAPI) are not serialized
+        if not LField.FieldType.IsObjectOfType<TMARSMetadataList> then
+          Continue;
+
         LList := LField.GetValue(Self).AsType<TMARSMetadataList>;
         if Assigned(LList) then
         begin
@@ -142,6 +146,10 @@ begin
         Result.AddPair(LProperty.Name, LProperty.GetValue(Self).AsType<TMARSMetadata>.ToJSON)
       else if LProperty.PropertyType is TRttiInstanceType then
       begin
+        // other objects (i.e. the RTTI of the endpoint, used by OpenAPI) are not serialized
+        if not LProperty.PropertyType.IsObjectOfType<TMARSMetadataList> then
+          Continue;
+
         LList := LProperty.GetValue(Self).AsType<TMARSMetadataList>;
         if Assigned(LList) then
         begin
