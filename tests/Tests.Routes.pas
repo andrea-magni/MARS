@@ -90,6 +90,20 @@ type
     procedure TestOpenAPI;
     [Test]
     procedure TestMetadata;
+    [Test]
+    procedure TestMiddlewareOrder;
+    [Test]
+    procedure TestMiddlewareShortCircuit;
+    [Test]
+    procedure TestMiddlewareSeesResponseAndResult;
+    [Test]
+    procedure TestMiddlewareHandlesException;
+    [Test]
+    procedure TestMiddlewareNextTwice;
+    [Test]
+    procedure TestAuthorizationBeforeMiddleware;
+    [Test]
+    procedure TestApplicationMiddleware;
   end;
 
 implementation
@@ -110,6 +124,7 @@ uses
 
 var
   GThingsAlive: Integer = 0;
+  GTrace: string = '';
 
 { TRouteThing }
 
@@ -448,8 +463,210 @@ begin
   Assert.Contains(LMock.Response.Content, '"FullPath":"rest/routes/people/{id}"');
 end;
 
+procedure TMARSRoutesFixture.TestMiddlewareOrder;
+begin
+  GTrace := '';
+  var LMock := Send('GET', 'mw/inner/trace');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('ok', LMock.Response.Content);
+  Assert.AreEqual('g1>g2>r>h r<g2<g1<', GTrace, 'outer group first, route last');
+end;
+
+procedure TMARSRoutesFixture.TestMiddlewareShortCircuit;
+begin
+  GTrace := '';
+  var LMock := Send('GET', 'mw/limited');
+  Assert.AreEqual(429, LMock.Response.StatusCode);
+  Assert.AreEqual('slow down', LMock.Response.Content);
+  Assert.AreEqual('g1>g1<', GTrace, 'the handler should not run');
+end;
+
+procedure TMARSRoutesFixture.TestMiddlewareSeesResponseAndResult;
+begin
+  var LMock := Send('POST', 'mw/created');
+  Assert.AreEqual(201, LMock.Response.StatusCode);
+  Assert.AreEqual('made', LMock.Response.Content);
+  Assert.AreEqual('201', HeaderOf(LMock.Response, 'X-Seen-Status'));
+  Assert.AreEqual('made', HeaderOf(LMock.Response, 'X-Seen-Result'));
+end;
+
+procedure TMARSRoutesFixture.TestMiddlewareHandlesException;
+begin
+  var LMock := Send('GET', 'mw/failing');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('recovered from 409', LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestMiddlewareNextTwice;
+begin
+  GTrace := '';
+  var LMock := Send('GET', 'mw/twice');
+  Assert.AreEqual(500, LMock.Response.StatusCode);
+  Assert.AreEqual(1, GTrace.CountChar('h'), 'the handler should run once');
+end;
+
+procedure TMARSRoutesFixture.TestAuthorizationBeforeMiddleware;
+begin
+  GTrace := '';
+  var LMock := Send('GET', 'mw/secure/data');
+  Assert.AreEqual(403, LMock.Response.StatusCode);
+  Assert.AreEqual('', GTrace, 'no middleware should run without authorization');
+end;
+
+procedure TMARSRoutesFixture.TestApplicationMiddleware;
+begin
+  MARSRoutesOf(FApplication).Use(
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      C.Response.SetHeader('X-App', 'yes');
+      ANext();
+    end
+  );
+
+  var LMock := Send('GET', 'ping');
+  Assert.AreEqual('pong', LMock.Response.Content);
+  Assert.AreEqual('yes', HeaderOf(LMock.Response, 'X-App'), 'application middleware on a module route');
+
+  LMock := Send('GET', 'helloworld');
+  Assert.AreEqual('', HeaderOf(LMock.Response, 'X-App'), 'resources are not affected');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRoutesFixture);
+
+  MARSRoutes('Tests.Routes.Middleware', 'mw',
+    procedure (const R: TMARSRouter)
+    begin
+      R.Use(
+        procedure (const C: TMARSRouteContext; const ANext: TProc)
+        begin
+          GTrace := GTrace + 'g1>';
+          ANext();
+          GTrace := GTrace + 'g1<';
+        end
+      );
+
+      R.Group('inner',
+        procedure (const G: TMARSRouter)
+        begin
+          G.Use(
+            procedure (const C: TMARSRouteContext; const ANext: TProc)
+            begin
+              GTrace := GTrace + 'g2>';
+              ANext();
+              GTrace := GTrace + 'g2<';
+            end
+          );
+
+          G.Get<string>('trace',
+            function (const C: TMARSRouteContext): string
+            begin
+              GTrace := GTrace + 'h ';
+              Result := 'ok';
+            end
+          ).Produces(TMediaType.TEXT_PLAIN)
+           .Use(
+            procedure (const C: TMARSRouteContext; const ANext: TProc)
+            begin
+              GTrace := GTrace + 'r>';
+              ANext();
+              GTrace := GTrace + 'r<';
+            end
+          );
+        end
+      );
+
+      // a middleware that answers without calling the handler
+      R.Get<string>('limited',
+        function (const C: TMARSRouteContext): string
+        begin
+          GTrace := GTrace + 'h';
+          Result := 'never';
+        end
+      ).Use(
+        procedure (const C: TMARSRouteContext; const ANext: TProc)
+        begin
+          C.Status(429);
+          C.Response.ContentType := TMediaType.TEXT_PLAIN;
+          C.Response.Content := 'slow down';
+        end
+      );
+
+      // after ANext: status, headers and result of the handler
+      R.Post<string>('created',
+        function (const C: TMARSRouteContext): string
+        begin
+          C.Created('mw/created/1');
+          Result := 'made';
+        end
+      ).Produces(TMediaType.TEXT_PLAIN)
+       .Use(
+        procedure (const C: TMARSRouteContext; const ANext: TProc)
+        begin
+          ANext();
+          C.Response.SetHeader('X-Seen-Status', C.Response.StatusCode.ToString);
+          C.Response.SetHeader('X-Seen-Result', C.Activation.MethodResult.ToString);
+        end
+      );
+
+      // an exception of the handler reaches the middleware first
+      R.Get<string>('failing',
+        function (const C: TMARSRouteContext): string
+        begin
+          Result := '';
+          raise EMARSHttpException.Create('conflict', 409);
+        end
+      ).Use(
+        procedure (const C: TMARSRouteContext; const ANext: TProc)
+        begin
+          try
+            ANext();
+          except
+            on E: EMARSHttpException do
+            begin
+              C.Status(200);
+              C.Response.ContentType := TMediaType.TEXT_PLAIN;
+              C.Response.Content := 'recovered from ' + E.Status.ToString;
+            end;
+          end;
+        end
+      );
+
+      R.Get<string>('twice',
+        function (const C: TMARSRouteContext): string
+        begin
+          GTrace := GTrace + 'h';
+          Result := 'once';
+        end
+      ).Use(
+        procedure (const C: TMARSRouteContext; const ANext: TProc)
+        begin
+          ANext();
+          ANext();
+        end
+      );
+
+      R.Group('secure',
+        procedure (const G: TMARSRouter)
+        begin
+          G.RolesAllowed('admin');
+          G.Use(
+            procedure (const C: TMARSRouteContext; const ANext: TProc)
+            begin
+              GTrace := GTrace + 'secure-mw';
+              ANext();
+            end
+          );
+          G.Get<string>('data',
+            function (const C: TMARSRouteContext): string
+            begin
+              Result := 'secret';
+            end
+          );
+        end
+      );
+    end
+  );
 
   MARSRoutes('Tests.Routes.Misc', '',
     procedure (const R: TMARSRouter)

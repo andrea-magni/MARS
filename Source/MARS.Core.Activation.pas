@@ -96,6 +96,7 @@ type
     procedure FillResourceMethodParameters; virtual;
     procedure FindMethodToInvoke; virtual;
     procedure InvokeResourceMethod; virtual;
+    procedure SerializeMethodResult(const AOriginalContentType: string); virtual;
     procedure SetCustomHeaders; virtual;
     procedure WriteToResponse(const AValue: TValue;
       const AValueContentType: string; const AOriginalContentType: string;
@@ -630,19 +631,32 @@ begin
 
     // actual method invocation
     if Assigned(FRoute) then
-      FMethodResult := FRoute.Invoke(Self)
+      // route middlewares (MARS.Core.Routes) around the handler and the serialization
+      FRoute.Execute(Self,
+        procedure
+        begin
+          FMethodResult := FRoute.Invoke(Self);
+          if LHasMethodResult then
+            SerializeMethodResult(LContentType);
+        end
+      )
     else
-      FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
-    if LHasMethodResult then
     begin
-      FSerializationTime := TStopWatch.StartNew;
-      WriteToResponse(FMethodResult, string(Response.ContentType), LContentType);
-      FSerializationTime.Stop;
+      FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
+      if LHasMethodResult then
+        SerializeMethodResult(LContentType);
     end;
   finally
     if FAddMethodResultToContext then
       AddToContext(FMethodResult);
   end;
+end;
+
+procedure TMARSActivation.SerializeMethodResult(const AOriginalContentType: string);
+begin
+  FSerializationTime := TStopWatch.StartNew;
+  WriteToResponse(FMethodResult, string(Response.ContentType), AOriginalContentType);
+  FSerializationTime.Stop;
 end;
 
 procedure TMARSActivation.ReadAuthorizationInfo;

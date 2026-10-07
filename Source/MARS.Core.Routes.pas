@@ -71,6 +71,9 @@ type
   TMARSRouteBodyFunc<TBody, TResult> = reference to function (const C: TMARSRouteContext; const ABody: TBody): TResult;
   TMARSRouteProc = reference to procedure (const C: TMARSRouteContext);
   TMARSRouteDefineProc = reference to procedure (const R: TMARSRouter);
+  // ANext runs the rest of the chain: the inner middlewares, the handler and the
+  // serialization of its result; not calling it skips them (the middleware answers)
+  TMARSRouteMiddleware = reference to procedure (const C: TMARSRouteContext; const ANext: TProc);
 
   TMARSRouteInvoker = reference to function (const AActivation: IMARSActivation): TValue;
 
@@ -97,8 +100,10 @@ type
     FSummary: string;
     FDescription: string;
     FHidden: Boolean;
+    FMiddlewares: TArray<TMARSRouteMiddleware>;
   protected
     procedure AddAttribute(const AAttribute: TCustomAttribute);
+    procedure AddMiddleware(const AMiddleware: TMARSRouteMiddleware);
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -108,6 +113,7 @@ type
     property SummaryText: string read FSummary;
     property DescriptionText: string read FDescription;
     property IsHidden: Boolean read FHidden;
+    property Middlewares: TArray<TMARSRouteMiddleware> read FMiddlewares;
   end;
 
   // a parameter declared on a route for the documentation (OpenAPI)
@@ -147,6 +153,8 @@ type
     function CompareSpecificity(const AOther: TMARSRoute): Integer;
     function ShapeKey(const AWithConstraints: Boolean): string;
     function Invoke(const AActivation: IMARSActivation): TValue;
+    // runs the middlewares of the groups (outer first) and of the route around AEndpoint
+    procedure Execute(const AActivation: IMARSActivation; const AEndpoint: TProc);
 
     // declarations (same meaning as the attributes of a resource method)
     function RolesAllowed(const ARoles: string): TMARSRoute;
@@ -164,6 +172,9 @@ type
     function Summary(const AText: string): TMARSRoute;
     function Description(const AText: string): TMARSRoute;
     function Hidden: TMARSRoute;
+
+    // middleware around this route (after the ones of its groups)
+    function Use(const AMiddleware: TMARSRouteMiddleware): TMARSRoute;
     function QueryParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
     function HeaderParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
     function CookieParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
@@ -240,6 +251,9 @@ type
     function Summary(const AText: string): TMARSRouter;
     function Description(const AText: string): TMARSRouter;
     function Hidden: TMARSRouter;
+
+    // middleware around every route of the group, nested groups included
+    function Use(const AMiddleware: TMARSRouteMiddleware): TMARSRouter;
 
     property Parent: TMARSRouter read FParent;
     property Path: string read FPath;
@@ -664,6 +678,12 @@ begin
   inherited;
 end;
 
+procedure TMARSRouteItem.AddMiddleware(const AMiddleware: TMARSRouteMiddleware);
+begin
+  if Assigned(AMiddleware) then
+    FMiddlewares := FMiddlewares + [AMiddleware];
+end;
+
 function TMARSRouteItem.GetAttributes: TArray<TCustomAttribute>;
 begin
   Result := FAttributes.ToArray;
@@ -811,6 +831,65 @@ end;
 function TMARSRoute.Invoke(const AActivation: IMARSActivation): TValue;
 begin
   Result := FInvoker(AActivation);
+end;
+
+// the endpoint runs once, even if a middleware calls ANext twice
+function OnceOnly(const AEndpoint: TProc): TProc;
+var
+  LCalled: Boolean;
+begin
+  LCalled := False;
+  Result :=
+    procedure
+    begin
+      if LCalled then
+        raise EMARSException.Create('Route middleware: next called more than once');
+      LCalled := True;
+      AEndpoint();
+    end;
+end;
+
+function MiddlewareStep(const AMiddleware: TMARSRouteMiddleware; const ANext: TProc;
+  const AActivation: IMARSActivation): TProc;
+begin
+  Result :=
+    procedure
+    begin
+      AMiddleware(TMARSRouteContext.Create(AActivation), ANext);
+    end;
+end;
+
+procedure TMARSRoute.Execute(const AActivation: IMARSActivation; const AEndpoint: TProc);
+var
+  LChain: TArray<TMARSRouteMiddleware>;
+  LRouter: TMARSRouter;
+  LStep: TProc;
+  LIndex: Integer;
+begin
+  LChain := FMiddlewares;
+  LRouter := FRouter;
+  while Assigned(LRouter) do
+  begin
+    LChain := LRouter.FMiddlewares + LChain;
+    LRouter := LRouter.Parent;
+  end;
+
+  if Length(LChain) = 0 then
+  begin
+    AEndpoint();
+    Exit;
+  end;
+
+  LStep := OnceOnly(AEndpoint);
+  for LIndex := High(LChain) downto 0 do
+    LStep := MiddlewareStep(LChain[LIndex], LStep, AActivation);
+  LStep();
+end;
+
+function TMARSRoute.Use(const AMiddleware: TMARSRouteMiddleware): TMARSRoute;
+begin
+  AddMiddleware(AMiddleware);
+  Result := Self;
 end;
 
 function TMARSRoute.Attribute(const AAttribute: TCustomAttribute): TMARSRoute;
@@ -1066,6 +1145,12 @@ end;
 function TMARSRouter.Hidden: TMARSRouter;
 begin
   FHidden := True;
+  Result := Self;
+end;
+
+function TMARSRouter.Use(const AMiddleware: TMARSRouteMiddleware): TMARSRouter;
+begin
+  AddMiddleware(AMiddleware);
   Result := Self;
 end;
 
