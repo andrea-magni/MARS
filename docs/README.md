@@ -1,3 +1,9 @@
-# MARS - Curiosity Documentation
+---
+redirect: /
+---
 
-> We need community support in implementing our project documentation. If you feel that you are ready, then just send us a Pull Request with new MD documents in this folder
+# MARS-Curiosity Documentation
+
+This page has moved to the [documentation site](https://andrea-magni.github.io/MARS/).
+
+The documentation is built with [VitePress](https://vitepress.dev/) from this folder: see [`REGEN.md`](https://github.com/andrea-magni/MARS/blob/master/docs/REGEN.md) to update it.

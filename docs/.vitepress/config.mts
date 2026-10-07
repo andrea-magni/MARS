@@ -47,6 +47,12 @@ function pageSummary(md: string): { title: string, description: string } {
   return { title, description }
 }
 
+// clean URLs (relative to the site) of the pages with "redirect:" in the frontmatter (root of docs/)
+const REDIRECTED_URLS: string[] = fs.readdirSync(path.resolve(__dirname, '..'))
+  .filter(f => f.endsWith('.md'))
+  .filter(f => splitFrontmatter(fs.readFileSync(path.resolve(__dirname, '..', f), 'utf-8')).data.redirect)
+  .map(f => f.replace(/\.md$/, ''))
+
 function pageUrl(relativePath: string): string {
   return SITE_URL + relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
 }
@@ -64,7 +70,11 @@ export default defineConfig({
   // Internal maintenance docs that should not be part of the published site.
   srcExclude: ['REGEN.md', '**/CODE_OF_CONDUCT.md'],
 
-  sitemap: { hostname: SITE_URL },
+  // pages moved elsewhere ("redirect:" in the frontmatter) are not listed
+  sitemap: {
+    hostname: SITE_URL,
+    transformItems: items => items.filter(item => !REDIRECTED_URLS.some(u => item.url.replace(/^\//, '') === u)),
+  },
 
   head: [
     ['link', { rel: 'icon', href: '/logo-256.png' }],
@@ -93,6 +103,16 @@ export default defineConfig({
   // canonical URL and Open Graph / Twitter tags of every page
   transformHead({ pageData, title, description, siteConfig }) {
     const url = pageUrl(pageData.relativePath)
+    // moved page: immediate redirect, canonical to the new address, not indexed
+    const redirect: string | undefined = pageData.frontmatter.redirect
+    if (redirect) {
+      const target = SITE_URL + redirect.replace(/^\//, '')
+      return [
+        ['meta', { 'http-equiv': 'refresh', content: `0; url=${target}` }],
+        ['link', { rel: 'canonical', href: target }],
+        ['meta', { name: 'robots', content: 'noindex, follow' }],
+      ]
+    }
     const extra: any[] = []
     // FAQ: schema.org FAQPage from the "### question" headings and the first paragraph after each
     if (pageData.relativePath === 'guide/faq.md') {
