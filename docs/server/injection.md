@@ -1,3 +1,7 @@
+---
+description: "How MARS-Curiosity fills resource fields and method parameters: path, query, header, cookie, form and body binding, [Context] injection of request, token and configuration, and custom injection services."
+---
+
 # Parameters & Injection
 
 MARS fills resource fields, properties and method parameters for you before your code runs. There are two related mechanisms:

@@ -2,6 +2,18 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included.
 
+## Unreleased {#unreleased}
+
+Changes on the `develop` branch, part of the next release.
+
+**New**
+- Linux daemon: `--foreground` (or `-f`) runs the server in the current process with logs on standard output, for systemd (`Type=simple`) and Docker. [Deployment](/guide/deployment#linux-with-systemd)
+- Documentation: [Deployment](/guide/deployment) guide (Windows service, systemd, Docker, reverse proxy, HTTPS, IIS/Apache/FastCGI), [Why MARS?](/guide/why-mars), [FAQ](/guide/faq); `llms.txt` and `llms-full.txt` for AI tools, sitemap.
+
+**Fixed**
+- Linux daemon: the log file only held its last line.
+- Documentation: the footer stated the wrong license (MARS is released under the Mozilla Public License 2.0).
+
 ## 1.8.1 {#v1-8-1}
 
 <Badge type="tip" text="latest" /> **7 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.8.1) · [changes since 1.8.0](https://github.com/andrea-magni/MARS/compare/v.1.8.0...v.1.8.1)

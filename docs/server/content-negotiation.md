@@ -1,3 +1,7 @@
+---
+description: "How MARS-Curiosity chooses message body readers and writers from Accept and Content-Type, the built-in JSON, XML, dataset and stream writers, and how to register your own."
+---
+
 # Content Negotiation
 
 MARS converts between Delphi values and the bytes on the wire using two registries:

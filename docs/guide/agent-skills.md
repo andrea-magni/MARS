@@ -1,3 +1,7 @@
+---
+description: "Agent Skills that teach Claude Code and other AI coding agents to scaffold, develop and secure MARS-Curiosity REST servers in Delphi: installation as a plugin, with npx or by hand, and usage examples."
+---
+
 # AI Agent Skills
 
 MARS ships with three [Agent Skills](https://code.claude.com/docs/en/skills) that teach AI coding agents (Claude Code, Cowork, and any tool supporting the open `SKILL.md` format) how to work with MARS-Curiosity. They live in the [`Skills/`](https://github.com/andrea-magni/MARS/tree/master/Skills) folder of the repository:

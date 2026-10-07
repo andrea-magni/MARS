@@ -41,6 +41,11 @@ features:
   - icon: 📘
     title: OpenAPI 3
     details: Generate an OpenAPI 3 specification from your resources automatically and expose Swagger UI out of the box.
+  - icon: 🐧
+    title: Windows, Linux, Docker
+    details: Host the same server as a Windows service, a Linux daemon under systemd or in a container, inside IIS or Apache, on Indy or Delphi Cross Socket, with HTTPS.
+    link: /guide/deployment
+    linkText: Deployment guide
   - icon: 🤖
     title: MCP for AI Agents
     details: Expose Delphi methods and FireDAC data as MCP tools, resources and prompts — with per-tool roles and OAuth 2.1. Claude, ChatGPT and local models can call your server.
@@ -77,6 +82,8 @@ On the **client**, drop a few components on a form (or create them in code) and 
 ## Where to next?
 
 - New here? Start with the [Introduction](/guide/introduction) and build [your first server](/guide/getting-started).
+- Comparing options? Read [Why MARS?](/guide/why-mars) and the [FAQ](/guide/faq).
+- Going to production? See [Deployment](/guide/deployment): Windows service, Linux with systemd, Docker, reverse proxy, HTTPS.
 - Want the big picture? Read [Core Concepts](/guide/core-concepts).
 - Building a server? Jump to the [Server section](/server/engine).
 - Consuming a REST API from Delphi? See the [Client section](/client/overview).

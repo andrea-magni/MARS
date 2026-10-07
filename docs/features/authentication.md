@@ -1,3 +1,7 @@
+---
+description: "JWT authentication in MARS-Curiosity: the token resource, credential validation, Bearer header or cookie, key rotation, token renewal and the JWT backends."
+---
+
 # Authentication (JWT)
 
 MARS uses **JSON Web Tokens (JWT)** for authentication. The flow is:
