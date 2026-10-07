@@ -145,7 +145,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'Released under the Apache License 2.0.',
+      message: 'Released under the Mozilla Public License 2.0.',
       copyright: 'Copyright © 2015-present Andrea Magni',
     },
   },
