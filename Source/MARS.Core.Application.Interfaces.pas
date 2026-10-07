@@ -20,6 +20,8 @@ type
   IMARSApplication = interface ['{8E39419C-2F32-4B89-A08E-704EEB823E1D}']
 
     function AddResource(AResource: string): Boolean;
+    // adds the route modules registered with MARSRoutes (MARS.Core.Routes), wildcards allowed
+    function AddRoutes(const ARoutes: string): Boolean;
     procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
     procedure EnumerateEndpoints(const ADoSomething: TProc<string, TMARSConstructorInfo, string, string>);
 
@@ -30,12 +32,16 @@ type
     procedure SetDefaultResourcePath(const AValue: string);
     function GetResources: TObjectDictionary<string, TMARSConstructorInfo>;
     function GetParameters: TMARSParameters;
+    function GetRouteTable: TObject;
+    procedure SetRouteTable(const AValue: TObject);
 
     property Name: string read GetName;
     property BasePath: string read GetBasePath write SetBasePath;
     property DefaultResourcePath: string read GetDefaultResourcePath write SetDefaultResourcePath;
     property Resources: TObjectDictionary<string, TMARSConstructorInfo> read GetResources;
     property Parameters: TMARSParameters read GetParameters;
+    // routes of the application (TMARSRouteTable, MARS.Core.Routes), owned by the application
+    property RouteTable: TObject read GetRouteTable write SetRouteTable;
 
   end;
 

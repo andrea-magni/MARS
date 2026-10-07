@@ -7,6 +7,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 Changes on the `develop` branch, part of the next release.
 
 **New**
+- Route-based endpoints (preview, `MARS.Core.Routes`): `R.Get<TResult>('people/{id:int}', function (const C: TMARSRouteContext): TResult ...)` next to the resource classes, with groups, path constraints (`int`, `guid`, `alpha`), typed body, roles, `Produces`/`Consumes`, injection (`C.Inject<T>`) and 405 with `Allow` for a wrong method. Route modules are registered with `MARSRoutes` and added with `IMARSApplication.AddRoutes`.
 - Linux daemon: `--foreground` (or `-f`) runs the server in the current process with logs on standard output, for systemd (`Type=simple`) and Docker. [Deployment](/guide/deployment#linux-with-systemd)
 - Documentation: [Deployment](/guide/deployment) guide (Windows service, systemd, Docker, reverse proxy, HTTPS, IIS/Apache/FastCGI), [Why MARS?](/guide/why-mars), [FAQ](/guide/faq); `llms.txt` and `llms-full.txt` for AI tools, sitemap.
 

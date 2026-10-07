@@ -47,6 +47,7 @@ type
     function GetURL: TMARSURL;
     function GetURLPrototype: TMARSURL;
     function GetToken: TMARSToken;
+    function GetEndpointName: string;
 
     property Id: string read GetId;
     property Application: IMARSApplication read GetApplication;
@@ -69,6 +70,8 @@ type
     property URL: TMARSURL read GetURL;
     property URLPrototype: TMARSURL read GetURLPrototype;
     property Token: TMARSToken read GetToken;
+    // Resource.Method for resources, the route name (i.e. "GET people/{id:int}") for routes
+    property EndpointName: string read GetEndpointName;
   end;
 
   // JSON serialization options for AActivation (readers and writers): the global default

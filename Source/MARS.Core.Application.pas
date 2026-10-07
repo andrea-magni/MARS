@@ -25,6 +25,7 @@ type
     FName: string;
     FParameters: TMARSParameters;
     FDefaultResourcePath: string;
+    FRouteTable: TObject;
   protected
   public
     constructor Create(const AName: string); virtual;
@@ -32,6 +33,7 @@ type
 
     // IMARSApplication --------------------------------------------------------
     function AddResource(AResource: string): Boolean;
+    function AddRoutes(const ARoutes: string): Boolean;
     procedure EnumerateResources(const ADoSomething: TProc<string, TMARSConstructorInfo>);
     procedure EnumerateEndpoints(const ADoSomething: TProc<string, TMARSConstructorInfo, string, string>);
 
@@ -42,6 +44,8 @@ type
     procedure SetDefaultResourcePath(const AValue: string);
     function GetResources: TObjectDictionary<string, TMARSConstructorInfo>;
     function GetParameters: TMARSParameters;
+    function GetRouteTable: TObject;
+    procedure SetRouteTable(const AValue: TObject);
     // IMARSApplication --------------------------------------------------------
 
 //    property Name: string read FName;
@@ -58,6 +62,7 @@ uses
     StrUtils
   , MARS.Core.Utils, MARS.Rtti.Utils
   , MARS.Core.Attributes
+  , MARS.Core.Routes
 ;
 
 { TMARSApplication }
@@ -128,6 +133,7 @@ end;
 
 destructor TMARSApplication.Destroy;
 begin
+  FreeAndNil(FRouteTable);
   FParameters.Free;
   FResources.Free;
   inherited;
@@ -192,6 +198,25 @@ end;
 function TMARSApplication.GetParameters: TMARSParameters;
 begin
   Result := FParameters;
+end;
+
+function TMARSApplication.AddRoutes(const ARoutes: string): Boolean;
+begin
+  Result := TMARSRouteModules.AddTo(Self, ARoutes);
+end;
+
+function TMARSApplication.GetRouteTable: TObject;
+begin
+  Result := FRouteTable;
+end;
+
+procedure TMARSApplication.SetRouteTable(const AValue: TObject);
+begin
+  if FRouteTable <> AValue then
+  begin
+    FRouteTable.Free;
+    FRouteTable := AValue;
+  end;
 end;
 
 function TMARSApplication.GetResources: TObjectDictionary<string, TMARSConstructorInfo>;

@@ -157,6 +157,7 @@ var
   LMediaType: string;
   LCandidateMediaType: string;
   LAttributes: TArray<TCustomAttribute>;
+  LAddConsumes: TProc<ConsumesAttribute>;
 //  LCandidateQualityFactor: Double;
 begin
   AMediaType := nil;
@@ -176,6 +177,19 @@ begin
     LMethod := TRttiMethod(ADestination.Parent);
     FreeAndNil(LConsumesMediaTypes);
     LConsumesMediaTypes := GetConsumesMediaTypes(LMethod);
+  end;
+
+  // no RTTI method behind the endpoint (routes): Consumes of the endpoint
+  if (LConsumesMediaTypes.Count = 0) and Assigned(AActivation) and not Assigned(AActivation.Method) then
+  begin
+    LAddConsumes :=
+      procedure (AConsumes: ConsumesAttribute)
+      begin
+        LConsumesMediaTypes.Add(TMediaType.Create(AConsumes.Value));
+      end;
+    TRttiHelper.ForEachAttribute<ConsumesAttribute>(AActivation.MethodAttributes, LAddConsumes);
+    if LConsumesMediaTypes.Count = 0 then
+      TRttiHelper.ForEachAttribute<ConsumesAttribute>(AActivation.ResourceAttributes, LAddConsumes);
   end;
 
   if (Length(LAttributes) = 0) and (ADestination.Parent is TRttiMethod) then

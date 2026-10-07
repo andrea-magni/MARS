@@ -18,6 +18,7 @@ uses
 , MARS.Core.Token
 , MARS.Core.Registry.Utils, MARS.Core.Injection.Types, MARS.Core.Activation.Interfaces
 , MARS.Core.MessageBodyWriter, MARS.Core.RequestAndResponse.Interfaces
+, MARS.Core.Routes
 ;
 
 type
@@ -81,6 +82,8 @@ type
     FSerializationTime: TStopWatch;
     FAuthorizationInfo: TMARSAuthorizationInfo;
     FAddMethodResultToContext: Boolean;
+    FRoute: TMARSRoute;
+    FRouteAllowedMethods: string;
 
     procedure CallEachMethodWithAttribute<A: TCustomAttribute>();
 
@@ -103,6 +106,7 @@ type
     procedure DoAfterInvoke;
     procedure DoInvokeError(const E: Exception); virtual;
 
+    function MatchRoute: Boolean; virtual;
     procedure CheckResource; virtual;
     procedure CheckMethod; virtual;
     procedure ReadAuthorizationInfo; virtual;
@@ -139,6 +143,7 @@ type
     function GetURL: TMARSURL; inline;
     function GetURLPrototype: TMARSURL; inline;
     function GetToken: TMARSToken; inline;
+    function GetEndpointName: string;
     // ---
 
     property Id: string read FId;
@@ -154,6 +159,7 @@ type
     property URL: TMARSURL read FURL;
     property URLPrototype: TMARSURL read FURLPrototype;
     property Token: TMARSToken read GetToken;
+    property Route: TMARSRoute read FRoute;
 
     class procedure RegisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
 //    class procedure UnregisterBeforeInvoke(const ABeforeInvoke: TMARSBeforeInvokeProc);
@@ -289,6 +295,17 @@ end;
 function TMARSActivation.GetURL: TMARSURL;
 begin
   Result := FURL;
+end;
+
+function TMARSActivation.GetEndpointName: string;
+begin
+  Result := '';
+  if Assigned(FRoute) then
+    Result := FRoute.RouteName
+  else if Assigned(FResource) and Assigned(FMethod) then
+    Result := FResource.Name + '.' + FMethod.Name
+  else if Assigned(FResource) then
+    Result := FResource.Name;
 end;
 
 function TMARSActivation.GetURLPrototype: TMARSURL;
@@ -557,7 +574,7 @@ begin
     TMARSMessageBodyRegistry.Instance.FindWriter(Self, LAccept, LReturnType, FWriter, FWriterMediaType);
     try
       if not Assigned(FWriter) then
-        raise EMARSHttpException.CreateFmt('MessageBodyWriter not found for method %s of resource %s', [Method.Name, Resource.Name]);
+        raise EMARSHttpException.CreateFmt('MessageBodyWriter not found for %s', [GetEndpointName]);
 
       if AValueContentType = AOriginalContentType then
         Response.ContentType := FWriterMediaType.ToString;
@@ -601,7 +618,7 @@ var
   LContentType: string;
   LHasMethodResult: Boolean;
 begin
-  Assert(Assigned(FMethod));
+  Assert(Assigned(FMethod) or Assigned(FRoute));
 
   LHasMethodResult := Assigned(FMethodReturnType);
 
@@ -612,7 +629,10 @@ begin
     SetCustomHeaders;
 
     // actual method invocation
-    FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
+    if Assigned(FRoute) then
+      FMethodResult := FRoute.Invoke(Self)
+    else
+      FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
     if LHasMethodResult then
     begin
       FSerializationTime := TStopWatch.StartNew;
@@ -780,10 +800,13 @@ begin
       CheckAuthentication;
       CheckAuthorization;
 
-      FResourceInstance := FConstructorInfo.ConstructorFunc(Self);
-      FillResourceMethodParameters;
+      if not Assigned(FRoute) then
+      begin
+        FResourceInstance := FConstructorInfo.ConstructorFunc(Self);
+        FillResourceMethodParameters;
 
-      ContextInjection;
+        ContextInjection;
+      end;
       FSetupTime.Stop;
 
       // invocation phase
@@ -857,6 +880,20 @@ end;
 
 procedure TMARSActivation.CheckMethod;
 begin
+  if Assigned(FRoute) then
+  begin
+    FMethod := nil;
+    FMethodAttributes := FRoute.Attributes;
+    FMethodReturnType := nil;
+    if Assigned(FRoute.ResultType) then
+      FMethodReturnType := FRttiContext.GetType(FRoute.ResultType);
+    FAddMethodResultToContext := Assigned(FMethodReturnType)
+      and not TRttiHelper.IfHasAttribute<IsReference>(FMethodAttributes, nil);
+    FreeAndNil(FURLPrototype);
+    FURLPrototype := TMARSURL.CreateDummy([Engine.BasePath, Application.BasePath, FRoute.PrototypePath]);
+    Exit;
+  end;
+
   FindMethodToInvoke;
 
   if not Assigned(FMethod) then
@@ -874,6 +911,10 @@ var
   LCompareFunc: TStringCompareFunc;
   LURLRelativePathStr, LAppResourcePathStr: string;
 begin
+  // routes first (MARS.Core.Routes), then resources
+  if MatchRoute then
+    Exit;
+
   LURLBasePath := URL.BasePath.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
   LURLPath := URL.PathTokens;
 
@@ -955,6 +996,14 @@ begin
   if (not LFound) and (Application.DefaultResourcePath <> '') then
     LFound := Application.Resources.TryGetValue(Application.DefaultResourcePath, FConstructorInfo);
 
+  // a route matches the path, not the http method
+  if (not LFound) and (FRouteAllowedMethods <> '') then
+  begin
+    Response.SetHeader('Allow', FRouteAllowedMethods);
+    raise EMARSMethodNotFoundException.Create(
+      Format('Method %s not allowed for [%s]', [Request.Method, URL.Path]), 405);
+  end;
+
   if not LFound then
     raise EMARSResourceNotFoundException.Create(Format('Resource [%s] not found', [URL.Resource]), 404);
 
@@ -962,6 +1011,40 @@ begin
   FResourceAttributes := FConstructorInfo.Attributes;
   FResourceMethods := FConstructorInfo.Methods;
   FResourcePath := FConstructorInfo.Path;
+end;
+
+function TMARSActivation.MatchRoute: Boolean;
+var
+  LTable: TMARSRouteTable;
+  LRoute: TMARSRoute;
+  LURLBasePath, LURLPath, LURLRelativePath: TArray<string>;
+  LAllowedMethods: string;
+begin
+  Result := False;
+  FRoute := nil;
+  FRouteAllowedMethods := '';
+  if not (Application.RouteTable is TMARSRouteTable) then
+    Exit;
+  LTable := TMARSRouteTable(Application.RouteTable);
+
+  LURLBasePath := URL.BasePath.Split([TMARSURL.URL_PATH_SEPARATOR], TStringSplitOptions.ExcludeEmpty);
+  LURLPath := URL.PathTokens;
+  if not LURLPath.StartsWith(LURLBasePath, True) then
+    Exit;
+  LURLRelativePath := LURLPath.SubArray(Length(LURLBasePath));
+
+  if LTable.Match(LURLRelativePath, Request.Method, LRoute, LAllowedMethods) then
+  begin
+    FRoute := LRoute;
+    FConstructorInfo := nil;
+    FResource := nil;
+    FResourceAttributes := LRoute.GroupAttributes;
+    FResourceMethods := [];
+    FResourcePath := LRoute.Router.FullPath;
+    Result := True;
+  end
+  else
+    FRouteAllowedMethods := LAllowedMethods;
 end;
 
 procedure TMARSActivation.AddToContext(AValue: TValue);
