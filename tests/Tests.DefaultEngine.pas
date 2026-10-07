@@ -233,7 +233,7 @@ begin
 
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
-  Assert.AreEqual('Hello, World!', LMock.Response.Content, 'Content should be Hello, World!');
+  Assert.AreEqual('Hello, world!', LMock.Response.Content, 'Content should be Hello, world!');
 end;
 
 procedure TMARSDefaultEngineFixture.TestJSONEscapeNonASCIIParameter;

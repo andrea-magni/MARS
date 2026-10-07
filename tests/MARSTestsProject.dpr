@@ -44,11 +44,15 @@ uses
 {$IFDEF TESTINSIGHT}
 begin
   ReportMemoryLeaksOnShutdown := True;
+  // string assertions are case sensitive (DUnitX ignores case by default)
+  Assert.IgnoreCaseDefault := False;
   RunRegisteredTests;
 {$ELSE}
 var LResults: IRunResults;
 begin
   ReportMemoryLeaksOnShutdown := True;
+  // string assertions are case sensitive (DUnitX ignores case by default)
+  Assert.IgnoreCaseDefault := False;
   LResults := TDUnitX.CreateRunner([
     TDUnitXConsoleLogger.Create(),
     TDUnitXXMLNUnitFileLogger.Create()
