@@ -94,12 +94,30 @@ type
   TMARSRouteItem = class
   private
     FAttributes: TObjectList<TCustomAttribute>;
+    FSummary: string;
+    FDescription: string;
+    FHidden: Boolean;
   protected
     procedure AddAttribute(const AAttribute: TCustomAttribute);
   public
     constructor Create; virtual;
     destructor Destroy; override;
     function GetAttributes: TArray<TCustomAttribute>;
+
+    // documentation (OpenAPI)
+    property SummaryText: string read FSummary;
+    property DescriptionText: string read FDescription;
+    property IsHidden: Boolean read FHidden;
+  end;
+
+  // a parameter declared on a route for the documentation (OpenAPI)
+  TMARSRouteParam = record
+    Kind: string;         // QueryParam, HeaderParam, CookieParam, FormParam
+    SwaggerKind: string;  // query, header, cookie, formData
+    Name: string;
+    DataType: PTypeInfo;
+    Description: string;
+    Required: Boolean;
   end;
 
   TMARSRoute = class(TMARSRouteItem)
@@ -113,9 +131,16 @@ type
     FBodyType: PTypeInfo;
     FInvoker: TMARSRouteInvoker;
     FName: string;
+    FNameSet: Boolean;
+    FRelativePrototypePath: string;
+    FParams: TArray<TMARSRouteParam>;
     function GetGroupAttributes: TArray<TCustomAttribute>;
+    function GetOperationId: string;
+  protected
+    function AddParam(const AKind, ASwaggerKind, AName: string; const ADataType: PTypeInfo;
+      const ADescription: string; const ARequired: Boolean): TMARSRoute;
   public
-    constructor Create(const ARouter: TMARSRouter; const AHttpMethod, ATemplate: string;
+    constructor Create(const ARouter: TMARSRouter; const AHttpMethod, APath: string;
       const AResultType, ABodyType: PTypeInfo; const AInvoker: TMARSRouteInvoker); reintroduce;
 
     function MatchesPath(const ATokens: TArray<string>): Boolean;
@@ -135,6 +160,15 @@ type
     function Attribute(const AAttribute: TCustomAttribute): TMARSRoute;
     function Name(const AName: string): TMARSRoute;
 
+    // documentation (OpenAPI)
+    function Summary(const AText: string): TMARSRoute;
+    function Description(const AText: string): TMARSRoute;
+    function Hidden: TMARSRoute;
+    function QueryParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
+    function HeaderParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
+    function CookieParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
+    function FormParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
+
     property HttpMethod: string read FHttpMethod;
     property Template: string read FTemplate;
     property PrototypePath: string read FPrototypePath;
@@ -143,6 +177,11 @@ type
     property BodyType: PTypeInfo read FBodyType;
     property Router: TMARSRouter read FRouter;
     property RouteName: string read FName;
+    // Name(...) when given, otherwise derived from method and path (i.e. get_people_id)
+    property OperationId: string read GetOperationId;
+    // path of the route relative to its group, without constraints (i.e. {id})
+    property RelativePrototypePath: string read FRelativePrototypePath;
+    property Params: TArray<TMARSRouteParam> read FParams;
     property Attributes: TArray<TCustomAttribute> read GetAttributes;
     // attributes of the enclosing groups, innermost first
     property GroupAttributes: TArray<TCustomAttribute> read GetGroupAttributes;
@@ -156,6 +195,8 @@ type
     FTable: TMARSRouteTable;
     FPath: string;
     FFullPath: string;
+    FPrototypePath: string;
+    FName: string;
     FGroups: TObjectList<TMARSRouter>;
     FRoutes: TObjectList<TMARSRoute>;
   protected
@@ -195,9 +236,18 @@ type
     function NoLog: TMARSRouter;
     function Attribute(const AAttribute: TCustomAttribute): TMARSRouter;
 
+    // documentation (OpenAPI)
+    function Summary(const AText: string): TMARSRouter;
+    function Description(const AText: string): TMARSRouter;
+    function Hidden: TMARSRouter;
+
     property Parent: TMARSRouter read FParent;
     property Path: string read FPath;
     property FullPath: string read FFullPath;
+    // FullPath without constraints (i.e. people/{id}/orders)
+    property PrototypePath: string read FPrototypePath;
+    // name of the module (MARSRoutes) for a module group
+    property GroupName: string read FName;
     property Table: TMARSRouteTable read FTable;
   end;
 
@@ -286,6 +336,62 @@ end;
 function CombineRoutePath(const ALeft, ARight: string): string;
 begin
   Result := string.Join(TMARSURL.URL_PATH_SEPARATOR, SplitPath(ALeft) + SplitPath(ARight));
+end;
+
+function ParseRouteTemplate(const ATemplate, AWhat: string; out APrototypePath: string): TArray<TMARSRouteSegment>;
+var
+  LTokens: TArray<string>;
+  LPrototype: TArray<string>;
+  LIndex, LColon: Integer;
+  LToken, LInner: string;
+  LSegment: TMARSRouteSegment;
+begin
+  LTokens := SplitPath(ATemplate);
+  SetLength(Result, Length(LTokens));
+  SetLength(LPrototype, Length(LTokens));
+  for LIndex := 0 to High(LTokens) do
+  begin
+    LToken := LTokens[LIndex];
+    LSegment := Default(TMARSRouteSegment);
+    if LToken.StartsWith('{') and LToken.EndsWith('}') then
+    begin
+      LInner := LToken.Substring(1, LToken.Length - 2).Trim;
+      if LInner = '*' then
+      begin
+        if LIndex < High(LTokens) then
+          raise ERouteDefinitionException.CreateFmt('Route %s: {*} must be the last segment', [AWhat]);
+        LSegment.Kind := rskWildcard;
+        LSegment.Text := '*';
+        LPrototype[LIndex] := TMARSURL.PATH_PARAM_WILDCARD;
+      end
+      else
+      begin
+        LSegment.Kind := rskParam;
+        LColon := LInner.IndexOf(':');
+        if LColon > -1 then
+        begin
+          LSegment.Text := LInner.Substring(0, LColon).Trim;
+          LSegment.Constraint := LInner.Substring(LColon + 1).Trim.ToLower;
+          if not MatchStr(LSegment.Constraint, ['int', 'guid', 'alpha']) then
+            raise ERouteDefinitionException.CreateFmt('Route %s: unknown constraint "%s" (int, guid, alpha)'
+              , [AWhat, LSegment.Constraint]);
+        end
+        else
+          LSegment.Text := LInner;
+        if LSegment.Text = '' then
+          raise ERouteDefinitionException.CreateFmt('Route %s: parameter without a name', [AWhat]);
+        LPrototype[LIndex] := '{' + LSegment.Text + '}';
+      end;
+    end
+    else
+    begin
+      LSegment.Kind := rskLiteral;
+      LSegment.Text := LToken;
+      LPrototype[LIndex] := LToken;
+    end;
+    Result[LIndex] := LSegment;
+  end;
+  APrototypePath := string.Join(TMARSURL.URL_PATH_SEPARATOR, LPrototype);
 end;
 
 { TMARSRouteContext }
@@ -565,70 +671,88 @@ end;
 
 { TMARSRoute }
 
-constructor TMARSRoute.Create(const ARouter: TMARSRouter; const AHttpMethod, ATemplate: string;
+constructor TMARSRoute.Create(const ARouter: TMARSRouter; const AHttpMethod, APath: string;
   const AResultType, ABodyType: PTypeInfo; const AInvoker: TMARSRouteInvoker);
-var
-  LTokens: TArray<string>;
-  LPrototype: TArray<string>;
-  LIndex, LColon: Integer;
-  LToken, LInner: string;
-  LSegment: TMARSRouteSegment;
 begin
   inherited Create;
   FRouter := ARouter;
   FHttpMethod := AHttpMethod.ToUpper;
-  FTemplate := ATemplate;
+  FTemplate := CombineRoutePath(ARouter.FullPath, APath);
   FResultType := AResultType;
   FBodyType := ABodyType;
   FInvoker := AInvoker;
   FName := FHttpMethod + ' ' + FTemplate;
+  FParams := [];
 
-  LTokens := SplitPath(ATemplate);
-  SetLength(FSegments, Length(LTokens));
-  SetLength(LPrototype, Length(LTokens));
-  for LIndex := 0 to High(LTokens) do
-  begin
-    LToken := LTokens[LIndex];
-    LSegment := Default(TMARSRouteSegment);
-    if LToken.StartsWith('{') and LToken.EndsWith('}') then
-    begin
-      LInner := LToken.Substring(1, LToken.Length - 2).Trim;
-      if LInner = '*' then
-      begin
-        if LIndex < High(LTokens) then
-          raise ERouteDefinitionException.CreateFmt('Route %s: {*} must be the last segment', [FName]);
-        LSegment.Kind := rskWildcard;
-        LSegment.Text := '*';
-        LPrototype[LIndex] := TMARSURL.PATH_PARAM_WILDCARD;
-      end
-      else
-      begin
-        LSegment.Kind := rskParam;
-        LColon := LInner.IndexOf(':');
-        if LColon > -1 then
-        begin
-          LSegment.Text := LInner.Substring(0, LColon).Trim;
-          LSegment.Constraint := LInner.Substring(LColon + 1).Trim.ToLower;
-          if not MatchStr(LSegment.Constraint, ['int', 'guid', 'alpha']) then
-            raise ERouteDefinitionException.CreateFmt('Route %s: unknown constraint "%s" (int, guid, alpha)'
-              , [FName, LSegment.Constraint]);
-        end
-        else
-          LSegment.Text := LInner;
-        if LSegment.Text = '' then
-          raise ERouteDefinitionException.CreateFmt('Route %s: parameter without a name', [FName]);
-        LPrototype[LIndex] := '{' + LSegment.Text + '}';
-      end;
-    end
+  FSegments := ParseRouteTemplate(FTemplate, FName, FPrototypePath);
+  ParseRouteTemplate(APath, FName, FRelativePrototypePath);
+end;
+
+function TMARSRoute.GetOperationId: string;
+var
+  LSegment: TMARSRouteSegment;
+begin
+  if FNameSet then
+    Exit(FName);
+  Result := FHttpMethod.ToLower;
+  for LSegment in FSegments do
+    if LSegment.Kind <> rskWildcard then
+      Result := Result + '_' + LSegment.Text
     else
-    begin
-      LSegment.Kind := rskLiteral;
-      LSegment.Text := LToken;
-      LPrototype[LIndex] := LToken;
-    end;
-    FSegments[LIndex] := LSegment;
-  end;
-  FPrototypePath := string.Join(TMARSURL.URL_PATH_SEPARATOR, LPrototype);
+      Result := Result + '_all';
+end;
+
+function TMARSRoute.AddParam(const AKind, ASwaggerKind, AName: string; const ADataType: PTypeInfo;
+  const ADescription: string; const ARequired: Boolean): TMARSRoute;
+var
+  LParam: TMARSRouteParam;
+begin
+  LParam.Kind := AKind;
+  LParam.SwaggerKind := ASwaggerKind;
+  LParam.Name := AName;
+  LParam.DataType := ADataType;
+  LParam.Description := ADescription;
+  LParam.Required := ARequired;
+  FParams := FParams + [LParam];
+  Result := Self;
+end;
+
+function TMARSRoute.QueryParam<T>(const AName, ADescription: string; const ARequired: Boolean): TMARSRoute;
+begin
+  Result := AddParam('QueryParam', 'query', AName, TypeInfo(T), ADescription, ARequired);
+end;
+
+function TMARSRoute.HeaderParam<T>(const AName, ADescription: string; const ARequired: Boolean): TMARSRoute;
+begin
+  Result := AddParam('HeaderParam', 'header', AName, TypeInfo(T), ADescription, ARequired);
+end;
+
+function TMARSRoute.CookieParam<T>(const AName, ADescription: string; const ARequired: Boolean): TMARSRoute;
+begin
+  Result := AddParam('CookieParam', 'cookie', AName, TypeInfo(T), ADescription, ARequired);
+end;
+
+function TMARSRoute.FormParam<T>(const AName, ADescription: string; const ARequired: Boolean): TMARSRoute;
+begin
+  Result := AddParam('FormParam', 'formData', AName, TypeInfo(T), ADescription, ARequired);
+end;
+
+function TMARSRoute.Summary(const AText: string): TMARSRoute;
+begin
+  FSummary := AText;
+  Result := Self;
+end;
+
+function TMARSRoute.Description(const AText: string): TMARSRoute;
+begin
+  FDescription := AText;
+  Result := Self;
+end;
+
+function TMARSRoute.Hidden: TMARSRoute;
+begin
+  FHidden := True;
+  Result := Self;
 end;
 
 function TMARSRoute.MatchesPath(const ATokens: TArray<string>): Boolean;
@@ -713,6 +837,7 @@ end;
 function TMARSRoute.Name(const AName: string): TMARSRoute;
 begin
   FName := AName;
+  FNameSet := True;
   Result := Self;
 end;
 
@@ -753,6 +878,7 @@ begin
     FFullPath := CombineRoutePath(AParent.FullPath, APath)
   else
     FFullPath := CombineRoutePath('', APath);
+  ParseRouteTemplate(FFullPath, 'group ' + FFullPath, FPrototypePath);
   FGroups := TObjectList<TMARSRouter>.Create(True);
   FRoutes := TObjectList<TMARSRoute>.Create(True);
 end;
@@ -775,8 +901,7 @@ end;
 function TMARSRouter.AddRoute(const AHttpMethod, APath: string; const AResultType, ABodyType: PTypeInfo;
   const AInvoker: TMARSRouteInvoker): TMARSRoute;
 begin
-  Result := TMARSRoute.Create(Self, AHttpMethod, CombineRoutePath(FFullPath, APath)
-    , AResultType, ABodyType, AInvoker);
+  Result := TMARSRoute.Create(Self, AHttpMethod, APath, AResultType, ABodyType, AInvoker);
   try
     FTable.Add(Result);
   except
@@ -924,6 +1049,24 @@ end;
 function TMARSRouter.Produces(const AMediaType: string): TMARSRouter;
 begin
   Result := Attribute(ProducesAttribute.Create(AMediaType));
+end;
+
+function TMARSRouter.Summary(const AText: string): TMARSRouter;
+begin
+  FSummary := AText;
+  Result := Self;
+end;
+
+function TMARSRouter.Description(const AText: string): TMARSRouter;
+begin
+  FDescription := AText;
+  Result := Self;
+end;
+
+function TMARSRouter.Hidden: TMARSRouter;
+begin
+  FHidden := True;
+  Result := Self;
 end;
 
 function TMARSRouter.RolesAllowed(const ARoles: string): TMARSRouter;
@@ -1112,6 +1255,7 @@ var
   LKeys: TArray<string>;
   LKey: string;
   LModulesToLower: string;
+  LGroup: TMARSRouter;
 begin
   Result := False;
   LTable := TMARSRouteTable.ForApplication(AApplication);
@@ -1124,7 +1268,10 @@ begin
     if (IsMask(AModules) and MatchesMask(LKey, LModulesToLower)) or (LKey = LModulesToLower) then
     begin
       LModule := FModules[LKey];
-      LTable.Root.Group(LModule.Path, LModule.Define);
+      LGroup := LTable.Root.Group(LModule.Path, nil);
+      LGroup.FName := LModule.Name;
+      if Assigned(LModule.Define) then
+        LModule.Define(LGroup);
       Result := True;
     end;
   end;

@@ -86,6 +86,8 @@ type
     procedure TestRouteConflictingWithResourceRaises;
     [Test]
     procedure TestUnknownConstraintRaises;
+    [Test]
+    procedure TestOpenAPI;
   end;
 
 implementation
@@ -99,6 +101,7 @@ uses
 , MARS.JOSEJWT.Token
 {$ENDIF}
 , Mock.IMARSRequest, Mock.IMARSResponse
+, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
 , Tests.DefaultEngine.Resources
 ;
 
@@ -353,6 +356,74 @@ begin
   , ERouteDefinitionException);
 end;
 
+function OperationById(const AOpenAPI: TOpenAPI; const AOperationId: string): TOperation;
+begin
+  Result := nil;
+  for var LPath in AOpenAPI.paths.Values do
+    for var LOperation in [LPath.get, LPath.post, LPath.put, LPath.delete, LPath.patch] do
+      if Assigned(LOperation) and (LOperation.operationId = AOperationId) then
+        Exit(LOperation);
+end;
+
+procedure TMARSRoutesFixture.TestOpenAPI;
+begin
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    // constraints are not part of the documented paths
+    var LPeoplePathFound := False;
+    for var LPath in LOpenAPI.paths.Keys do
+    begin
+      Assert.IsFalse(LPath.Contains(':'), 'constraint in path ' + LPath);
+      if LPath.EndsWith('people/{id}') then
+        LPeoplePathFound := True;
+    end;
+    Assert.IsTrue(LPeoplePathFound, 'people/{id} path');
+
+    // resources and routes in the same document
+    Assert.IsNotNull(OperationById(LOpenAPI, 'GetContent'), 'resource method');
+
+    // path parameter typed by its constraint, record result
+    var LOperation := OperationById(LOpenAPI, 'get_people_id');
+    Assert.IsNotNull(LOperation, 'get_people_id');
+    Assert.AreEqual('people', LOperation.tags[0]);
+    Assert.AreEqual(1, LOperation.parameters.Count);
+    Assert.AreEqual('id', LOperation.parameters[0].name);
+    Assert.AreEqual('path', LOperation.parameters[0].&in);
+    Assert.AreEqual('integer', LOperation.parameters[0].schema.&type);
+    Assert.AreEqual('#/components/schemas/TRoutePerson'
+      , LOperation.responses['200'].content['application/json'].schema.ref);
+    Assert.IsTrue(LOpenAPI.components.schemas.ContainsKey('TRoutePerson'), 'record schema');
+
+    // typed body
+    LOperation := OperationById(LOpenAPI, 'post_people');
+    Assert.IsNotNull(LOperation, 'post_people');
+    Assert.AreEqual('#/components/schemas/TRoutePerson'
+      , LOperation.requestBody.content['application/json'].schema.ref);
+
+    // declared query parameters, summary
+    LOperation := OperationById(LOpenAPI, 'get_sum');
+    Assert.IsNotNull(LOperation, 'get_sum');
+    Assert.AreEqual('Adds two numbers', LOperation.summary);
+    Assert.AreEqual(2, LOperation.parameters.Count);
+    Assert.AreEqual('a', LOperation.parameters[0].name);
+    Assert.AreEqual('query', LOperation.parameters[0].&in);
+    Assert.IsTrue(LOperation.parameters[0].required);
+    Assert.AreEqual('first addend', LOperation.parameters[0].description);
+    Assert.IsFalse(LOperation.parameters[1].required);
+
+    // group parameters, nested group
+    LOperation := OperationById(LOpenAPI, 'get_people_personId_orders_orderId');
+    Assert.IsNotNull(LOperation, 'nested group');
+    Assert.AreEqual(2, LOperation.parameters.Count);
+
+    // explicit name, hidden route
+    Assert.IsNotNull(OperationById(LOpenAPI, 'WhereAmI'), 'explicit operation id');
+    Assert.IsNull(OperationById(LOpenAPI, 'get_closed'), 'hidden route');
+  finally
+    LOpenAPI.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRoutesFixture);
 
@@ -371,7 +442,10 @@ initialization
         begin
           Result := C.Query<Integer>('a') + C.Query<Integer>('b', 10);
         end
-      ).Produces(TMediaType.TEXT_PLAIN);
+      ).Produces(TMediaType.TEXT_PLAIN)
+       .Summary('Adds two numbers')
+       .QueryParam<Integer>('a', 'first addend', True)
+       .QueryParam<Integer>('b', 'second addend (default 10)');
 
       R.Get<string>('greeting',
         function (const C: TMARSRouteContext): string
@@ -399,7 +473,7 @@ initialization
         begin
           Result := C.Inject<TMARSURL>.Path;
         end
-      ).Produces(TMediaType.TEXT_PLAIN);
+      ).Produces(TMediaType.TEXT_PLAIN).Name('WhereAmI');
 
       R.Delete('things/{id:int}',
         procedure (const C: TMARSRouteContext)
@@ -414,7 +488,7 @@ initialization
         begin
           Result := 'never';
         end
-      ).DenyAll;
+      ).DenyAll.Hidden;
 
       R.Group('admin',
         procedure (const G: TMARSRouter)
@@ -436,7 +510,7 @@ initialization
   MARSRoutes('Tests.Routes.People', 'people',
     procedure (const R: TMARSRouter)
     begin
-      R.Produces(TMediaType.APPLICATION_JSON);
+      R.Produces(TMediaType.APPLICATION_JSON).Summary('People');
 
       R.Get<TRoutePerson>('{id:int}',
         function (const C: TMARSRouteContext): TRoutePerson

@@ -13,6 +13,7 @@ uses
 , MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Registry.Utils
+, MARS.Core.Routes
 ;
 
 type
@@ -30,6 +31,10 @@ type
     procedure ReadParameter(const AResourceMetadata: TMARSResourceMetadata;
       const AMethodMetadata: TMARSMethodMetadata;
       const AParameter: TRttiParameter; const AMethod: TRttiMethod); virtual;
+    procedure ReadRoutes(const AApplication: IMARSApplication;
+      const AApplicationMetadata: TMARSApplicationMetadata); virtual;
+    procedure ReadRoute(const AResourceMetadata: TMARSResourceMetadata;
+      const ARoute: TMARSRoute); virtual;
   public
     constructor Create(const AEngine: IMARSEngine; const AReadImmediately: Boolean = True); virtual;
     destructor Destroy; override;
@@ -96,6 +101,8 @@ begin
         ReadResource(AApplication, LApplicationMetadata, APath, AConstructorInfo);
       end
     );
+
+    ReadRoutes(AApplication, LApplicationMetadata);
   except
     LApplicationMetadata.Free;
     raise;
@@ -240,6 +247,168 @@ begin
       end;
     end
   );
+end;
+
+// Produces, Consumes and Authorization values of a list of attributes (routes)
+procedure ReadRouteAttributes(const AAttributes: TArray<TCustomAttribute>;
+  out AProduces, AConsumes, AAuthorization: string);
+var
+  LAttribute: TCustomAttribute;
+begin
+  AProduces := '';
+  AConsumes := '';
+  AAuthorization := '';
+  for LAttribute in AAttributes do
+  begin
+    if LAttribute is ProducesAttribute then
+      AProduces := SmartConcat([AProduces, ProducesAttribute(LAttribute).Value])
+    else if LAttribute is ConsumesAttribute then
+      AConsumes := SmartConcat([AConsumes, ConsumesAttribute(LAttribute).Value])
+    else if LAttribute is AuthorizationAttribute then
+      AAuthorization := SmartConcat([AAuthorization, LAttribute.ToString]);
+  end;
+  AProduces := SmartConcat(AProduces.Split([',']).RemoveDuplicates, ',');
+  AConsumes := SmartConcat(AConsumes.Split([',']).RemoveDuplicates, ',');
+end;
+
+procedure TMARSMetadataReader.ReadRoutes(const AApplication: IMARSApplication;
+  const AApplicationMetadata: TMARSApplicationMetadata);
+var
+  LTable: TMARSRouteTable;
+  LRoute: TMARSRoute;
+  LRouter: TMARSRouter;
+  LResourceMetadata: TMARSResourceMetadata;
+  LHidden: Boolean;
+  LProduces, LConsumes, LAuthorization: string;
+begin
+  if not (AApplication.RouteTable is TMARSRouteTable) then
+    Exit;
+  LTable := TMARSRouteTable(AApplication.RouteTable);
+
+  for LRoute in LTable.Routes do
+  begin
+    // one resource for each group path (several modules may share a path)
+    LResourceMetadata := nil;
+    AApplicationMetadata.ForEachResource(
+      procedure (AResource: TMARSResourceMetadata)
+      begin
+        if (not Assigned(AResource.RttiType)) and SameText(AResource.Path, LRoute.Router.PrototypePath) then
+          LResourceMetadata := AResource;
+      end
+    );
+
+    if not Assigned(LResourceMetadata) then
+    begin
+      LHidden := False;
+      LRouter := LRoute.Router;
+      while Assigned(LRouter) do
+      begin
+        LHidden := LHidden or LRouter.IsHidden;
+        LRouter := LRouter.Parent;
+      end;
+      LRouter := LRoute.Router;
+      ReadRouteAttributes(LRoute.GroupAttributes, LProduces, LConsumes, LAuthorization);
+
+      LResourceMetadata := TMARSResourceMetadata.Create(AApplicationMetadata);
+      try
+        LResourceMetadata.RttiType := nil;
+        LResourceMetadata.Path := LRouter.PrototypePath;
+        LResourceMetadata.Name := StringFallback([LRouter.GroupName, LRouter.PrototypePath], 'routes');
+        LResourceMetadata.Summary := LRouter.SummaryText;
+        LResourceMetadata.Description := LRouter.DescriptionText;
+        LResourceMetadata.Visible := not LHidden;
+        LResourceMetadata.Produces := LProduces;
+        LResourceMetadata.Consumes := LConsumes;
+        LResourceMetadata.Authorization := LAuthorization;
+      except
+        LResourceMetadata.Free;
+        raise;
+      end;
+    end;
+
+    ReadRoute(LResourceMetadata, LRoute);
+  end;
+end;
+
+procedure TMARSMetadataReader.ReadRoute(const AResourceMetadata: TMARSResourceMetadata;
+  const ARoute: TMARSRoute);
+
+  procedure AddParam(const AMethodMetadata: TMARSMethodMetadata; const AKind, ASwaggerKind, AName: string;
+    const ADataType: PTypeInfo; const ADescription: string; const ARequired: Boolean);
+  var
+    LParamMetadata: TMARSRequestParamMetadata;
+  begin
+    LParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
+    try
+      LParamMetadata.Kind := AKind;
+      LParamMetadata.SwaggerKind := ASwaggerKind;
+      LParamMetadata.Name := AName;
+      LParamMetadata.Description := ADescription;
+      LParamMetadata.DataTypeRttiType := TMARSRouteRtti.RttiType(ADataType);
+      LParamMetadata.DataType := LParamMetadata.DataTypeRttiType.QualifiedName;
+      LParamMetadata.Required := ARequired;
+    except
+      LParamMetadata.Free;
+      raise;
+    end;
+  end;
+
+var
+  LMethodMetadata: TMARSMethodMetadata;
+  LSegment: TMARSRouteSegment;
+  LParam: TMARSRouteParam;
+  LProduces, LConsumes, LAuthorization: string;
+begin
+  LMethodMetadata := TMARSMethodMetadata.Create(AResourceMetadata);
+  try
+    LMethodMetadata.RttiMethod := nil;
+    LMethodMetadata.Name := ARoute.OperationId;
+    LMethodMetadata.Path := ARoute.RelativePrototypePath;
+    LMethodMetadata.Summary := ARoute.SummaryText;
+    LMethodMetadata.Description := ARoute.DescriptionText;
+    LMethodMetadata.Visible := not ARoute.IsHidden;
+    LMethodMetadata.HttpMethod := ARoute.HttpMethod;
+
+    LMethodMetadata.DataType := '';
+    if Assigned(ARoute.ResultType) then
+    begin
+      LMethodMetadata.DataTypeRttiType := TMARSRouteRtti.RttiType(ARoute.ResultType);
+      LMethodMetadata.DataType := LMethodMetadata.DataTypeRttiType.QualifiedName;
+    end;
+
+    // route values, then group values (as ReadMethod)
+    ReadRouteAttributes(ARoute.Attributes, LProduces, LConsumes, LAuthorization);
+    LMethodMetadata.Produces := StringFallback([LProduces, AResourceMetadata.Produces]);
+    LMethodMetadata.Consumes := StringFallback([LConsumes, AResourceMetadata.Consumes]);
+    LMethodMetadata.Authorization := LAuthorization;
+
+    // path parameters: from the template, typed by the constraint
+    for LSegment in ARoute.Segments do
+      case LSegment.Kind of
+        rskParam:
+          if LSegment.Constraint = 'int' then
+            AddParam(LMethodMetadata, 'PathParam', 'path', LSegment.Text, TypeInfo(Integer), '', True)
+          else
+            AddParam(LMethodMetadata, 'PathParam', 'path', LSegment.Text, TypeInfo(string), '', True);
+        rskWildcard:
+          AddParam(LMethodMetadata, 'PathParam', 'path', LSegment.Text, TypeInfo(string), '', True);
+      end;
+
+    // declared parameters
+    for LParam in ARoute.Params do
+      AddParam(LMethodMetadata, LParam.Kind, LParam.SwaggerKind, LParam.Name, LParam.DataType
+        , LParam.Description, LParam.Required);
+
+    // typed body
+    if Assigned(ARoute.BodyType) then
+      AddParam(LMethodMetadata, 'BodyParam', 'body', 'body', ARoute.BodyType, '', True);
+
+    AResourceMetadata.GetParent.AddPath(
+      TMARSURL.CombinePath([AResourceMetadata.Path, LMethodMetadata.Path]), LMethodMetadata);
+  except
+    LMethodMetadata.Free;
+    raise;
+  end;
 end;
 
 procedure TMARSMetadataReader.ReadResource(const AApplication: IMARSApplication;

@@ -20,6 +20,8 @@ type
     procedure ReadInfoFromParams(const AParams: TMARSParameters);
     function AddServerFromEngine(const AEngine: IMARSEngine): TServer;
     procedure ReadApplication(const AApplicationMetadata: TMARSApplicationMetadata);
+    // tag of the operations of a resource (or of a group of routes): its path, its name for an empty path
+    function TagOf(const AResourceMetadata: TMARSResourceMetadata): string;
     procedure ReadOperation(const AOperation: TOperation;
       const AResourceMetadata: TMARSResourceMetadata; const AMethodMetadata: TMARSMethodMetadata);
     // media type of the request body of a method without Consumes ('' when it has no body)
@@ -328,18 +330,22 @@ begin
       if not AResourceMetadata.Visible then
         Exit;
 
+      // routes (MARS.Core.Routes) have no RTTI type: Summary and Description only
       var LResourceDescription := AResourceMetadata.Description;
-      const LResourceType = AResourceMetadata.RttiType;
-      const LDescriptionAttr = LResourceType.GetAttribute<OAPIDescriptionAttribute>;
-      if Assigned(LDescriptionAttr) then
-        LResourceDescription := LDescriptionAttr.Value;
-
       var LResourceSummary := AResourceMetadata.Summary;
-      const LSummaryAttr = LResourceType.GetAttribute<OAPISummaryAttribute>;
-      if Assigned(LSummaryAttr) then
-        LResourceSummary := LSummaryAttr.Value;
+      const LResourceType = AResourceMetadata.RttiType;
+      if Assigned(LResourceType) then
+      begin
+        const LDescriptionAttr = LResourceType.GetAttribute<OAPIDescriptionAttribute>;
+        if Assigned(LDescriptionAttr) then
+          LResourceDescription := LDescriptionAttr.Value;
 
-      AddTag(AResourceMetadata.Path, StringFallback([LResourceSummary, LResourceDescription, AResourceMetadata.Name]));
+        const LSummaryAttr = LResourceType.GetAttribute<OAPISummaryAttribute>;
+        if Assigned(LSummaryAttr) then
+          LResourceSummary := LSummaryAttr.Value;
+      end;
+
+      AddTag(TagOf(AResourceMetadata), StringFallback([LResourceSummary, LResourceDescription, AResourceMetadata.Name]));
 
       AResourceMetadata.ForEachMethod(
         procedure (AMethodMetadata: TMARSMethodMetadata)
@@ -359,14 +365,19 @@ begin
           LPath := GetPath(TMARSURL.CombinePath([AResourceMetadata.Path, AMethodMetadata.Path], True, False));
 
           LPath.description := AResourceMetadata.Description;
-          const LDescriptionAttr = LMethod.GetAttribute<OAPIDescriptionAttribute>;
-          if Assigned(LDescriptionAttr) then
-            LPath.description := LDescriptionAttr.Value;
-
           LPath.summary := AResourceMetadata.Name + ' resource';
-          const LSummaryAttr = LMethod.GetAttribute<OAPISummaryAttribute>;
-          if Assigned(LSummaryAttr) then
-            LPath.summary := LSummaryAttr.Value;
+          if Assigned(LMethod) then
+          begin
+            const LDescriptionAttr = LMethod.GetAttribute<OAPIDescriptionAttribute>;
+            if Assigned(LDescriptionAttr) then
+              LPath.description := LDescriptionAttr.Value;
+
+            const LSummaryAttr = LMethod.GetAttribute<OAPISummaryAttribute>;
+            if Assigned(LSummaryAttr) then
+              LPath.summary := LSummaryAttr.Value;
+          end
+          else if AResourceMetadata.Summary <> '' then
+            LPath.summary := AResourceMetadata.Summary;
 
           LOperation := LPath.OperationByHttpMethod(AMethodMetadata.HttpMethodLowerCase);
           if Assigned(LOperation) then
@@ -376,6 +387,11 @@ begin
 
     end
   );
+end;
+
+function TOpenAPIHelper.TagOf(const AResourceMetadata: TMARSResourceMetadata): string;
+begin
+  Result := StringFallback([AResourceMetadata.Path, AResourceMetadata.Name]);
 end;
 
 function TOpenAPIHelper.SupportsQueryOperation: Boolean;
@@ -452,16 +468,20 @@ begin
   AOperation.operationId := AMethodMetadata.Name;
   AOperation.summary := LMethodSummary;
   AOperation.description := AMethodMetadata.Description;
-  AOperation.tags := [AResourceMetadata.Path];
+  AOperation.tags := [TagOf(AResourceMetadata)];
 
+  var LDescriptionAttr: OAPIDescriptionAttribute := nil;
   const LMethod = AMethodMetadata.RttiMethod;
-  var LDescriptionAttr := LMethod.GetAttribute<OAPIDescriptionAttribute>;
-  if Assigned(LDescriptionAttr) then
-    AOperation.description := LDescriptionAttr.Value;
+  if Assigned(LMethod) then // routes (MARS.Core.Routes) have no RTTI method
+  begin
+    LDescriptionAttr := LMethod.GetAttribute<OAPIDescriptionAttribute>;
+    if Assigned(LDescriptionAttr) then
+      AOperation.description := LDescriptionAttr.Value;
 
-  var LSummaryAttr := LMethod.GetAttribute<OAPISummaryAttribute>;
-  if Assigned(LSummaryAttr) then
-    AOperation.summary := LSummaryAttr.Value;
+    var LSummaryAttr := LMethod.GetAttribute<OAPISummaryAttribute>;
+    if Assigned(LSummaryAttr) then
+      AOperation.summary := LSummaryAttr.Value;
+  end;
 
   AMethodMetadata.ForEachParameter(
     procedure (AParam: TMARSRequestParamMetadata)
