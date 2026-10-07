@@ -104,6 +104,10 @@ type
     procedure TestAuthorizationBeforeMiddleware;
     [Test]
     procedure TestApplicationMiddleware;
+    [Test]
+    procedure TestApplicationMiddlewareOnResourcesByParameter;
+    [Test]
+    procedure TestApplicationMiddlewareOnResourcesByDefault;
   end;
 
 implementation
@@ -529,6 +533,53 @@ begin
 
   LMock := Send('GET', 'helloworld');
   Assert.AreEqual('', HeaderOf(LMock.Response, 'X-App'), 'resources are not affected');
+end;
+
+procedure TMARSRoutesFixture.TestApplicationMiddlewareOnResourcesByParameter;
+begin
+  MARSRoutesOf(FApplication).Use(
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      ANext();
+      C.Response.SetHeader('X-App', 'yes ' + C.Response.StatusCode.ToString);
+    end
+  );
+  FApplication.Parameters.Values[MIDDLEWARES_RESOURCES_PARAM] := True;
+
+  var LMock := Send('GET', 'helloworld');
+  Assert.AreEqual('Hello, World!', LMock.Response.Content);
+  Assert.AreEqual('yes 200', HeaderOf(LMock.Response, 'X-App'), 'resource wrapped by the application middleware');
+
+  LMock := Send('GET', 'ping');
+  Assert.AreEqual('yes 200', HeaderOf(LMock.Response, 'X-App'), 'routes too');
+
+  FApplication.Parameters.Values[MIDDLEWARES_RESOURCES_PARAM] := False;
+  LMock := Send('GET', 'helloworld');
+  Assert.AreEqual('', HeaderOf(LMock.Response, 'X-App'), 'disabled by the parameter');
+end;
+
+procedure TMARSRoutesFixture.TestApplicationMiddlewareOnResourcesByDefault;
+begin
+  MARSRoutesOf(FApplication).Use(
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      C.Response.SetHeader('X-App', 'yes');
+      ANext();
+    end
+  );
+
+  TMARSRouteTable.DefaultMiddlewaresOnResources := True;
+  try
+    var LMock := Send('GET', 'helloworld');
+    Assert.AreEqual('yes', HeaderOf(LMock.Response, 'X-App'), 'global default');
+
+    // the application parameter wins over the global default
+    FApplication.Parameters.Values[MIDDLEWARES_RESOURCES_PARAM] := False;
+    LMock := Send('GET', 'helloworld');
+    Assert.AreEqual('', HeaderOf(LMock.Response, 'X-App'), 'parameter over global default');
+  finally
+    TMARSRouteTable.DefaultMiddlewaresOnResources := False;
+  end;
 end;
 
 initialization

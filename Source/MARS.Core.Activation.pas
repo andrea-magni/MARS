@@ -640,6 +640,16 @@ begin
             SerializeMethodResult(LContentType);
         end
       )
+    else if Application.RouteTable is TMARSRouteTable then
+      // middlewares of the application, when enabled for resources (Middlewares.Resources)
+      TMARSRouteTable(Application.RouteTable).ExecuteResource(Self,
+        procedure
+        begin
+          FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);
+          if LHasMethodResult then
+            SerializeMethodResult(LContentType);
+        end
+      )
     else
     begin
       FMethodResult := FMethod.Invoke(FResourceInstance, FMethodArguments);

@@ -280,9 +280,19 @@ type
     function Match(const ATokens: TArray<string>; const AHttpMethod: string;
       out ARoute: TMARSRoute; out AAllowedMethods: string): Boolean;
 
+    // True when the middlewares of the application (Root.Use) also run around the
+    // methods of the resources: application parameter Middlewares.Resources,
+    // DefaultMiddlewaresOnResources when not set
+    function MiddlewaresOnResources: Boolean;
+    // runs the middlewares of the application around AEndpoint (a resource method),
+    // when MiddlewaresOnResources; AEndpoint alone otherwise
+    procedure ExecuteResource(const AActivation: IMARSActivation; const AEndpoint: TProc);
+
     property Root: TMARSRouter read FRoot;
     property Routes: TList<TMARSRoute> read FRoutes;
     property Application: IMARSApplication read FApplication;
+
+    class var DefaultMiddlewaresOnResources: Boolean;
 
     class function ForApplication(const AApplication: IMARSApplication): TMARSRouteTable;
   end;
@@ -317,6 +327,9 @@ type
   end;
 
   ERouteDefinitionException = class(EMARSException);
+
+const
+  MIDDLEWARES_RESOURCES_PARAM = 'Middlewares.Resources';
 
   // Registers a module of routes (typically in the initialization section of a unit);
   // IMARSApplication.AddRoutes adds it to an application (wildcards allowed, as AddResource).
@@ -859,12 +872,28 @@ begin
     end;
 end;
 
+procedure RunMiddlewares(const AChain: TArray<TMARSRouteMiddleware>;
+  const AActivation: IMARSActivation; const AEndpoint: TProc);
+var
+  LStep: TProc;
+  LIndex: Integer;
+begin
+  if Length(AChain) = 0 then
+  begin
+    AEndpoint();
+    Exit;
+  end;
+
+  LStep := OnceOnly(AEndpoint);
+  for LIndex := High(AChain) downto 0 do
+    LStep := MiddlewareStep(AChain[LIndex], LStep, AActivation);
+  LStep();
+end;
+
 procedure TMARSRoute.Execute(const AActivation: IMARSActivation; const AEndpoint: TProc);
 var
   LChain: TArray<TMARSRouteMiddleware>;
   LRouter: TMARSRouter;
-  LStep: TProc;
-  LIndex: Integer;
 begin
   LChain := FMiddlewares;
   LRouter := FRouter;
@@ -874,16 +903,7 @@ begin
     LRouter := LRouter.Parent;
   end;
 
-  if Length(LChain) = 0 then
-  begin
-    AEndpoint();
-    Exit;
-  end;
-
-  LStep := OnceOnly(AEndpoint);
-  for LIndex := High(LChain) downto 0 do
-    LStep := MiddlewareStep(LChain[LIndex], LStep, AActivation);
-  LStep();
+  RunMiddlewares(LChain, AActivation, AEndpoint);
 end;
 
 function TMARSRoute.Use(const AMiddleware: TMARSRouteMiddleware): TMARSRoute;
@@ -1181,6 +1201,21 @@ begin
   if not Assigned(AApplication.RouteTable) then
     AApplication.RouteTable := TMARSRouteTable.Create(AApplication);
   Result := AApplication.RouteTable as TMARSRouteTable;
+end;
+
+function TMARSRouteTable.MiddlewaresOnResources: Boolean;
+begin
+  Result := DefaultMiddlewaresOnResources;
+  if Assigned(FApplication) then
+    Result := FApplication.Parameters.ByName(MIDDLEWARES_RESOURCES_PARAM, Result).AsBoolean;
+end;
+
+procedure TMARSRouteTable.ExecuteResource(const AActivation: IMARSActivation; const AEndpoint: TProc);
+begin
+  if (Length(FRoot.FMiddlewares) > 0) and MiddlewaresOnResources then
+    RunMiddlewares(FRoot.FMiddlewares, AActivation, AEndpoint)
+  else
+    AEndpoint();
 end;
 
 procedure TMARSRouteTable.Add(const ARoute: TMARSRoute);
