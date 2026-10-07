@@ -144,6 +144,12 @@ R.Post<TPerson, TPerson>('', TPeopleHandlers.AddPerson).RolesAllowed('admin');
 A resource class gets a new instance for each request; a route does not. What an anonymous method captures is shared by all the requests, served by many threads at once. Keep the state of a request in local variables, `C.Inject<T>` or `C.Own`, and protect shared data (a lock, a thread-safe repository, a connection pool).
 :::
 
+::: tip Define routes at startup
+- **Startup only:** define routes and middlewares when the engine is configured (`Server.Ignition`), before the server receives requests. The route table is read without locks while serving.
+- **Application in handlers:** use `C.Application` in a handler, not the `IMARSApplication` variable of the ignition. A captured application interface keeps the application alive, and its routes keep the closure alive: a memory leak at shutdown.
+- **Attribute ownership:** `Attribute(...)` takes ownership of the instance, so create a new one for each call.
+:::
+
 ## Paths
 
 Route paths use the same syntax as `[Path]`, plus optional constraints:
@@ -152,7 +158,7 @@ Route paths use the same syntax as `[Path]`, plus optional constraints:
 | --- | --- |
 | `people` | the literal text (case insensitive) |
 | `{id}` | any one segment |
-| `{id:int}` | an integer |
+| `{id:int}` | an integer: digits with an optional minus sign |
 | `{id:guid}` | a GUID, with or without braces |
 | `{name:alpha}` | letters only |
 | `{*}` | the rest of the path (last segment only), read with `C.Path<string>('*')` |
@@ -163,8 +169,10 @@ Routes are matched before resources. If a path matches a route but not its HTTP 
 
 Mistakes are reported when the routes are defined, with an `ERouteDefinitionException`:
 - two routes with the same HTTP method and the same path;
-- a route that would hide a method of a resource;
+- a route with the same HTTP method and path as a method of a resource already added to the application;
 - an unknown constraint.
+
+Since routes are matched first, a route with parameters can still take requests meant for a resource with a different path: `GET {name}` answers `GET helloworld` too. Keep the paths of routes and resources apart, i.e. with a module path.
 
 ## The context: `TMARSRouteContext`
 
@@ -182,7 +190,7 @@ Mistakes are reported when the routes are defined, with an `ERouteDefinitionExce
 | `C.Own(AObject)` | an object freed at the end of the request |
 | `C.Created(ALocation)`, `C.NoContent`, `C.Status(ACode)` | `Response.StatusCode := ...` |
 
-Parameters are converted with the same rules as resource parameters: the readers, `StringToTValue`, `Required`, 400 on a malformed body.
+Parameters are converted with the same rules as resource parameters (the readers, `StringToTValue`), and a malformed body gives 400. Parameters declared as required on the route (`QueryParam<T>('a', '', True)`, see [OpenAPI](#openapi)) are checked before the handler runs: 400 when missing.
 
 ```pascal
 R.Get<TFDDataSet>('report',
@@ -296,7 +304,7 @@ R.Get<TArray<TPerson>>('',
  .QueryParam<string>('name', 'part of the name (optional)');
 ```
 
-`QueryParam<T>`, `HeaderParam<T>`, `CookieParam<T>` and `FormParam<T>` take a name, a description and a `Required` flag. `Summary`, `Description` and `Hidden` are available on routes and groups.
+`QueryParam<T>`, `HeaderParam<T>`, `CookieParam<T>` and `FormParam<T>` take a name, a description and a `Required` flag: a required parameter missing from the request gives 400 before the handler runs. `Summary`, `Description` and `Hidden` are available on routes and groups.
 
 ## Resources or routes?
 

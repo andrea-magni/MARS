@@ -79,5 +79,8 @@ Application middlewares also wrap resource methods when `Middlewares.Resources=t
 ## Pitfalls
 
 - No instance per request: anything an anonymous method captures is shared across threads. Keep request state in locals, `C.Inject`, `C.Own`; protect shared data with locks.
+- Define routes and middlewares at startup (Server.Ignition), not while serving. Use `C.Application` in handlers, never capture the ignition's `IMARSApplication` variable (reference cycle, leak). `Attribute(...)` owns the instance: one new instance per call.
+- Routes match before resources: a parameter route (`{name}`) can shadow a resource with a different path; keep paths apart. Conflict detection only covers identical method + path of resources already added.
+- `QueryParam<T>(..., True)` and the like are enforced: missing -> 400 before the handler.
 - Strings/numbers: add `.Produces(TMediaType.TEXT_PLAIN)` for plain text.
 - Undeclared query/header parameters work but are missing from OpenAPI: declare them with `QueryParam<T>` etc.
