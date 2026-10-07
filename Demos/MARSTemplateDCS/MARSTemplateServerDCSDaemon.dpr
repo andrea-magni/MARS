@@ -18,6 +18,8 @@ uses
 begin
   {$IFDEF LINUX}
   TMARSDaemon.Current.Name := 'MARSTemplateServerDCSDaemon';
+  // detaches from the terminal (fork) and logs to <executable>.log; with --foreground (or -f)
+  // it stays in the current process and logs to stdout: systemd Type=simple, Docker
   TMARSDaemon.Current.Start;
   {$ELSE}
   WriteLn('Warning: This is for LINUX platform only.');

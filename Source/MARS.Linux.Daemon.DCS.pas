@@ -24,9 +24,15 @@ const EXIT_CODE_SUCCESS = 0;
 const EXIT_CODE_FAILURE = 1;
 
 type
+  // Start runs DoExecute in a daemon process (fork, new session, stdio to /dev/null) or, when
+  // Foreground is True, in the current process: the way Docker (main process of the
+  // container) and systemd (Type=simple) expect it. Foreground defaults to True when the
+  // command line has --foreground (or -f).
   TLinuxDaemon = class
   private
     FTerminated: Boolean;
+    FForeground: Boolean;
+    FLastSignal: Integer;
   protected
     procedure DoLog(const AMsg: string); virtual;
     procedure DoError(const AMsg: string = ''; const AFatal: Boolean = True);
@@ -36,8 +42,13 @@ type
     constructor Create; virtual;
     procedure Start; virtual;
     procedure Terminate; virtual;
+    // --foreground or -f on the command line
+    class function ForegroundRequested: Boolean;
 
     property Terminated: Boolean read FTerminated;
+    property Foreground: Boolean read FForeground write FForeground;
+    // last SIGTERM/SIGINT/SIGHUP received (0 = none)
+    property LastSignal: Integer read FLastSignal;
   end;
 
   TMARSDaemon = class(TLinuxDaemon)
@@ -74,18 +85,12 @@ uses
 , Server.Ignition
 ;
 
+// only sets flags: the daemon logs and stops outside of the signal handler
 procedure SignalsHandler(ASigNum: Integer); cdecl;
 begin
+  TMARSDaemon.Current.FLastSignal := ASigNum;
   case ASigNum of
-    SIGTERM:
-    begin
-      TMARSDaemon.Current.Log('*** SIGTERM ***');
-      TMARSDaemon.Current.Terminate;
-    end;
-    SIGHUP:
-    begin
-      TMARSDaemon.Current.Log('*** SIGHUP ***');
-    end;
+    SIGTERM, SIGINT: TMARSDaemon.Current.Terminate;
   end;
 end;
 
@@ -96,6 +101,17 @@ constructor TLinuxDaemon.Create;
 begin
   inherited Create;
   FTerminated := False;
+  FForeground := ForegroundRequested;
+end;
+
+class function TLinuxDaemon.ForegroundRequested: Boolean;
+var
+  LIndex: Integer;
+begin
+  Result := False;
+  for LIndex := 1 to ParamCount do
+    if SameText(ParamStr(LIndex), '--foreground') or SameText(ParamStr(LIndex), '-f') then
+      Exit(True);
 end;
 
 procedure TLinuxDaemon.DoError(const AMsg: string; const AFatal: Boolean);
@@ -121,7 +137,15 @@ var
   Lfid: Integer;
 begin
   signal(SIGTERM, SignalsHandler);
+  signal(SIGINT, SignalsHandler);
   signal(SIGHUP, SignalsHandler);
+
+  if Foreground then
+  begin
+    DoLog('Running in foreground, process id ' + getpid.ToString);
+    DoExecute;
+    Exit;
+  end;
 
   Lpid := fork();
   if Lpid < 0 then
@@ -211,7 +235,13 @@ var
   LFileStream: TFileStream;
   LBytes: TBytes;
 begin
-//  inherited DoLog('[' + Name +'] ' + AMsg);
+  // foreground: standard output, collected by docker logs / journald
+  if Foreground then
+  begin
+    WriteLn(string.join('|', [DateTimeToStr(Now), Name, AMsg]));
+    Flush(Output);
+    Exit;
+  end;
 
   LExeFileName := ParamStr(0);
   LLogFileName := ChangeFileExt(LExeFileName, '.log');
@@ -234,8 +264,21 @@ procedure TMARSDaemon.IdleCycle;
 begin
   Log('Started');
   while not Terminated do
+  begin
     Sleep(500);
-  Log('Stopping');
+    if LastSignal = SIGHUP then
+    begin
+      FLastSignal := 0;
+      Log('SIGHUP');
+    end;
+  end;
+  case LastSignal of
+    SIGTERM: Log('Stopping (SIGTERM)');
+    SIGINT: Log('Stopping (SIGINT)');
+  else
+    Log('Stopping');
+  end;
+  StopServer;
 end;
 
 procedure TMARSDaemon.Log(const AMsg: string);
