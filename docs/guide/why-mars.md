@@ -33,9 +33,11 @@ Records, objects, arrays and datasets are serialized to JSON for you; parameters
 
 The same library has a client side: RAD components (`TMARSNetClient`, `TMARSClientResourceJSON`, `TMARSClientToken`, ...) to call MARS servers and any other REST API, with JSON to record mapping, JWT handling, asynchronous calls and [logging of every request](/client/logging). Delphi-to-Delphi applications share the record types between server and client. See [Client](/client/overview).
 
-## FireDAC, first class
+## Your data access, your choice
 
-A method can return a FireDAC dataset (or several) and MARS writes it as JSON; the client fetches it into memory tables, lets the user edit and sends back the changes (delta) for the server to apply. See [FireDAC & Datasets](/features/firedac) and [FireDAC Client](/client/firedac).
+MARS has been designed from scratch to plug in whatever ORM or data access library (DAC) you need. Not bundling one is a precise choice: MARS is not dogmatic about how you reach your data, so you pick the ORM or DAC that fits your project and your team, and keep the one you already use. A [custom injection service](/server/injection#writing-a-custom-injection-service) hands your ORM session, repository or connection to the resources through `[Context]`, the same way MARS injects its own objects.
+
+FireDAC and UniDAC come with ready integration. With FireDAC a method can return a dataset (or several) and MARS writes it as JSON; the client fetches it into memory tables, lets the user edit and sends back the changes (delta) for the server to apply. See [FireDAC & Datasets](/features/firedac), [UniDAC](/features/firedac#unidac) and [FireDAC Client](/client/firedac).
 
 ## Security built in
 
@@ -63,11 +65,9 @@ The same server code runs as a console or GUI application, a Windows service, a 
 
 [Server-sent events](/features/sse), [HTML and templates](/features/templates) (WebStencils, htmx, static files), [JSON request/response logging](/features/logging) for Grafana/Loki, [shared configuration files](/reference/parameters#shared-configuration-include), YAML, an installer with IDE integration, [TMS Smart Setup](/guide/installation#tms-smart-setup) support, Delphi 10.4 Sydney to 13 Florence.
 
-## When MARS is not the best fit
+## When you may not need MARS
 
-- **You need an ORM.** MARS has no ORM of its own: it works with FireDAC (or UniDAC) datasets and with your data layer.
-- **You prefer routes defined in code** (Express style, `app.Get('/path', handler)`): MARS describes endpoints with classes and attributes.
-- **You only consume a couple of REST APIs.** The Delphi RTL (`THTTPClient`, `TRESTClient`) may be enough; MARS client shines when you want typed records, tokens, datasets, logging and MARS servers.
+If you only call a couple of REST APIs and have no server to build, the Delphi RTL (`THTTPClient`, `TRESTClient`) may be enough. The MARS client shines when you want typed records, tokens, datasets, logging and MARS servers.
 
 ## Get started
 

@@ -61,6 +61,10 @@ Raise `EMARSHttpException.Create('Not found', 404)`, or an `EMARSWithResponseExc
 
 Inject `[Context] FD: TMARSFireDAC` and return the dataset (`Result := FD.Query('SELECT ...')`); clients can also send back changes as a delta. See [FireDAC & Datasets](/features/firedac).
 
+### Can I use my ORM or data access library?
+
+Yes. MARS has been designed to plug in whatever ORM or data access library you need, and not bundling one is a deliberate choice: use the one that fits your project. Register a custom injection service to hand your ORM session or repository to the resources with `[Context]`; FireDAC and UniDAC have ready integration. See [Parameters & Injection](/server/injection#writing-a-custom-injection-service) and [Why MARS?](/guide/why-mars#your-data-access-your-choice).
+
 ### How do I generate OpenAPI (Swagger) documentation?
 
 Add a resource returning `TOpenAPI` (the templates already have one, `Server.Resources.OpenAPI`): the document is generated from your resources, and the templates serve Swagger UI too. See [OpenAPI 3 & Swagger](/features/openapi).
