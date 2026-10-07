@@ -191,8 +191,9 @@ end;
 
 procedure TMARSReqRespLoggerMemory.LogIncoming(const AR: IMARSActivation);
 begin
-  if AR.Resource.HasAttribute<NoLogAttribute> or
-     AR.Method.HasAttribute<NoLogAttribute> then
+  // attribute lists: routes (MARS.Core.Routes) have no RTTI resource and method
+  if TRttiHelper.IfHasAttribute<NoLogAttribute>(AR.ResourceAttributes, nil) or
+     TRttiHelper.IfHasAttribute<NoLogAttribute>(AR.MethodAttributes, nil) then
     Exit;
 
   FCriticalSection.Enter;
@@ -221,8 +222,9 @@ end;
 
 procedure TMARSReqRespLoggerMemory.LogOutgoing(const AR: IMARSActivation);
 begin
-  if AR.Resource.HasAttribute<NoLogAttribute> or
-     AR.Method.HasAttribute<NoLogAttribute> then
+  // attribute lists: routes (MARS.Core.Routes) have no RTTI resource and method
+  if TRttiHelper.IfHasAttribute<NoLogAttribute>(AR.ResourceAttributes, nil) or
+     TRttiHelper.IfHasAttribute<NoLogAttribute>(AR.MethodAttributes, nil) then
     Exit;
 
   FCriticalSection.Enter;
