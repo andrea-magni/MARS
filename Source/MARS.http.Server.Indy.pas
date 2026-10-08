@@ -785,7 +785,12 @@ begin
   LCookie.Name := AName;
   LCookie.Value := AValue;
   LCookie.Domain := ADomain;
-  LCookie.Expires := AExpiration;
+  // WebBroker writes Expires as it is, labelled GMT (TCookie.HeaderValue): UTC for the ISAPI,
+  // Apache and FastCGI hosts; the Indy server converts the local time itself (TIdCookie)
+  if FWebResponse is TIdHTTPAppResponse then
+    LCookie.Expires := AExpiration
+  else
+    LCookie.Expires := TTimeZone.Local.ToUniversalTime(AExpiration);
   LCookie.Secure := ASecure;
   {$IFDEF MARS_NATIVE_COOKIE_ATTRIBUTES}
   LCookie.Path := APath;
