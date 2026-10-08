@@ -29,6 +29,8 @@ interface
     const JWT_DURATION_PARAM_DEFAULT = 1; // 1 day
     const JWT_COOKIESECURE_PARAM = 'JWT.CookieSecure';
     const JWT_COOKIESECURE_PARAM_DEFAULT = false;
+    const JWT_COOKIESAMESITE_PARAM = 'JWT.CookieSameSite';
+    const JWT_COOKIESAMESITE_PARAM_DEFAULT = 'Lax';
 
     const JWT_AUDIENCE_CLAIM   = 'aud';
     const JWT_EXPIRATION_CLAIM = 'exp';

@@ -154,6 +154,7 @@ Read by the [token resource](/features/authentication) and JWT backends:
 | `JWT.CookieDomain` | — | Cookie domain. |
 | `JWT.CookiePath` | — | Cookie path. |
 | `JWT.CookieSecure` | `false` | Mark the cookie `Secure` (HTTPS only). |
+| `JWT.CookieSameSite` | `Lax` | `SameSite` attribute of the cookie: `Lax`, `Strict`, `None` (makes the cookie `Secure` too) or `Unspecified` (not written). See [The token cookie](/features/authentication#the-token-cookie). |
 
 ::: danger Set `JWT.Secret`
 The default secret ships in the public source and is never used unless you opt in with

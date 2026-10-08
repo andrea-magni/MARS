@@ -106,7 +106,9 @@ type
     procedure SetHeader(const AName: string; const AValue: string);
     procedure SetStatusCode(const AStatusCode: Integer);
     procedure SetReasonString(const AReasonString: string);
-    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); overload;
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime;
+      const ASecure, AHttpOnly: Boolean; const ASameSite: TMARSCookieSameSite); overload;
     procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(ADCSResponse: ICrossHttpResponse); virtual;
@@ -972,10 +974,18 @@ end;
 procedure TMARSDCSResponse.SetCookie(const AName, AValue, ADomain,
   APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
 begin
+  // HttpOnly, as with Indy: the token cookie must not be readable by scripts
+  SetCookie(AName, AValue, ADomain, APath, AExpiration, ASecure, True, TMARSCookieSameSite.Unspecified);
+end;
+
+procedure TMARSDCSResponse.SetCookie(const AName, AValue, ADomain, APath: string;
+  const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean;
+  const ASameSite: TMARSCookieSameSite);
+begin
   // written by MARS, not with TResponseCookie of DCS, whose Max-Age cannot be 0 to delete a
-  // cookie; HttpOnly, as with Indy: the token cookie must not be readable by scripts
+  // cookie and which has no SameSite
   FDCSResponse.Header.Add('Set-Cookie'
-    , SetCookieHeaderValue(AName, AValue, ADomain, APath, AExpiration, ASecure, True {AHttpOnly})
+    , SetCookieHeaderValue(AName, AValue, ADomain, APath, AExpiration, ASecure, AHttpOnly, ASameSite)
     , True {ADupAllowed: one header for each cookie});
 end;
 

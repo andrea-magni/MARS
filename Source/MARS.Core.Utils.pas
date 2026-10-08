@@ -76,10 +76,11 @@ type
 
   // The value of a Set-Cookie header (RFC 6265): Path, Domain, Expires (GMT) and Max-Age
   // (0 when AExpiration is past: the browser deletes the cookie; none when AExpiration is 0, a
-  // session cookie), Secure, HttpOnly. Raises EArgumentException for a name, value, path or
-  // domain with characters a cookie cannot carry.
+  // session cookie), Secure, HttpOnly, SameSite (None makes the cookie Secure too). Raises
+  // EArgumentException for a name, value, path or domain with characters a cookie cannot carry.
   function SetCookieHeaderValue(const AName, AValue, ADomain, APath: string;
-    const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean): string;
+    const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean;
+    const ASameSite: TMARSCookieSameSite = TMARSCookieSameSite.Unspecified): string;
 
   function EnsurePrefix(const AString, APrefix: string; const AIgnoreCase: Boolean = True): string;
   function EnsureSuffix(const AString, ASuffix: string; const AIgnoreCase: Boolean = True): string;
@@ -128,7 +129,8 @@ uses
 ;
 
 function SetCookieHeaderValue(const AName, AValue, ADomain, APath: string;
-  const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean): string;
+  const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean;
+  const ASameSite: TMARSCookieSameSite): string;
 
   // RFC 6265: token (name), cookie-octet (value), av-value (path, domain)
   function IsToken(const AText: string): Boolean;
@@ -187,10 +189,12 @@ begin
     else
       Result := Result + '; Max-Age=0';
   end;
-  if ASecure then
+  if ASecure or (ASameSite = TMARSCookieSameSite.None) then
     Result := Result + '; Secure';
   if AHttpOnly then
     Result := Result + '; HttpOnly';
+  if ASameSite <> TMARSCookieSameSite.Unspecified then
+    Result := Result + '; SameSite=' + CookieSameSiteToString(ASameSite);
 end;
 
 function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;

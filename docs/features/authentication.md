@@ -95,7 +95,34 @@ JWT.Duration=1                 ; days (also JWT.Duration.InMinutes / .InSeconds)
 JWT.CookieEnabled=true
 JWT.CookieName=access_token
 JWT.CookieSecure=false
+JWT.CookieSameSite=Lax         ; Lax (default), Strict, None, Unspecified
 ```
+
+### The token cookie
+
+With `JWT.CookieEnabled` (the default) the token is also sent as a cookie:
+- **HttpOnly:** scripts in the page cannot read it, on every host (console, service, daemon, ISAPI, Apache, FastCGI, Indy or DCS).
+- **SameSite:** `JWT.CookieSameSite` controls it:
+
+| Value | The browser sends the cookie... | Use it for |
+| --- | --- | --- |
+| `Lax` (default) | with requests from the same site and top-level navigations from other sites, not with cross-site POST or fetch | a web UI served by the same site as the API: a good protection against cross-site request forgery |
+| `Strict` | only with requests from the same site | the strictest choice, when users never follow links to the site from other sites while logged in |
+| `None` | with every request, cross-site ones included | a front end on another site that calls the API with credentials; MARS makes the cookie `Secure` too, as browsers require, so it travels on HTTPS only |
+| `Unspecified` | (attribute not written) the default of the browser | the behavior before MARS wrote SameSite |
+
+On logout the cookie is deleted with the same attributes.
+
+Your own cookies use the same options through `IMARSResponse.SetCookie`:
+
+```pascal
+[Context] FResponse: IMARSResponse;
+...
+FResponse.SetCookie('theme', 'dark', '', '/', Now + 30, True {Secure}
+  , False {HttpOnly}, TMARSCookieSameSite.Lax);
+```
+
+The shorter overload `SetCookie(Name, Value, Domain, Path, Expiration, Secure)` writes an HttpOnly cookie without SameSite.
 
 ::: danger The public default is never used silently
 `JWT_SECRET_PARAM_DEFAULT` ships in the public source, so MARS does not fall back to it. When

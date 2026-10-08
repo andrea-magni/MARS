@@ -40,7 +40,9 @@ type
     function GetContent: string;
     procedure SetContent(const AContent: string);
     procedure SetHeader(const AName, AValue: string);
-    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); overload;
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime;
+      const ASecure, AHttpOnly: Boolean; const ASameSite: TMARSCookieSameSite); overload;
     procedure RedirectTo(const AURL: string);
     // IMARSResponse -------------------------------------------------- END ----
 
@@ -167,6 +169,13 @@ begin
 
   if not LFound then
     FCookies := FCookies + [TMARSCookie.Create(AName, AValue)];
+end;
+
+procedure TMARSResponseMock.SetCookie(const AName, AValue, ADomain, APath: string;
+  const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean;
+  const ASameSite: TMARSCookieSameSite);
+begin
+  SetCookie(AName, AValue, ADomain, APath, AExpiration, ASecure);
 end;
 
 procedure TMARSResponseMock.SetHeader(const AName, AValue: string);

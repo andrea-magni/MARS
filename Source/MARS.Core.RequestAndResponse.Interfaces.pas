@@ -24,6 +24,11 @@ type
   TMARSCookie = TNameValuePair<string, string>;
   TMARSCookies = TArray<TMARSCookie>;
 
+  // SameSite attribute of a cookie; Unspecified: not written, the default of the browser applies
+  {$SCOPEDENUMS ON}
+  TMARSCookieSameSite = (Unspecified, Lax, Strict, None);
+  {$SCOPEDENUMS OFF}
+
   TMARSQueryParam = TNameValuePair<string, string>;
   TMARSQueryParams = TArray<TMARSQueryParam>;
 
@@ -124,7 +129,11 @@ type
     function GetContent: string;
     procedure SetContent(const AContent: string);
     procedure SetHeader(const AName, AValue: string);
-    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    // HttpOnly cookie, SameSite not specified
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); overload;
+    // SameSite None makes the cookie Secure too: browsers refuse SameSite=None without Secure
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime;
+      const ASecure, AHttpOnly: Boolean; const ASameSite: TMARSCookieSameSite); overload;
     procedure RedirectTo(const AURL: string);
 
     property Content: string read GetContent write SetContent;
@@ -136,8 +145,36 @@ type
     property ReasonString: string read GetReasonString write SetReasonString;
   end;
 
+  // 'Lax', 'Strict', 'None'; '' for Unspecified
+  function CookieSameSiteToString(const ASameSite: TMARSCookieSameSite): string;
+  // case insensitive; '' or 'Unspecified' is Unspecified; raises EArgumentException otherwise
+  function CookieSameSiteFromString(const AValue: string): TMARSCookieSameSite;
 
 implementation
+
+function CookieSameSiteToString(const ASameSite: TMARSCookieSameSite): string;
+begin
+  case ASameSite of
+    TMARSCookieSameSite.Lax: Result := 'Lax';
+    TMARSCookieSameSite.Strict: Result := 'Strict';
+    TMARSCookieSameSite.None: Result := 'None';
+    else Result := '';
+  end;
+end;
+
+function CookieSameSiteFromString(const AValue: string): TMARSCookieSameSite;
+begin
+  if (AValue = '') or SameText(AValue, 'Unspecified') then
+    Result := TMARSCookieSameSite.Unspecified
+  else if SameText(AValue, 'Lax') then
+    Result := TMARSCookieSameSite.Lax
+  else if SameText(AValue, 'Strict') then
+    Result := TMARSCookieSameSite.Strict
+  else if SameText(AValue, 'None') then
+    Result := TMARSCookieSameSite.None
+  else
+    raise EArgumentException.CreateFmt('Invalid SameSite value: %s (Lax, Strict, None)', [AValue]);
+end;
 
 { TNameValuePair<N, V> }
 

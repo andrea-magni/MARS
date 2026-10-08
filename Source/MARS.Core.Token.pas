@@ -81,6 +81,7 @@ type
     FCookieDomain: string;
     FCookiePath: string;
     FCookieSecure: Boolean;
+    FCookieSameSite: TMARSCookieSameSite;
     FRequest: IMARSRequest;
     FResponse: IMARSResponse;
     FDuration: TDateTime;
@@ -175,6 +176,8 @@ type
     property CookieDomain: string read FCookieDomain;
     property CookiePath: string read FCookiePath;
     property CookieSecure: Boolean read FCookieSecure;
+    // JWT.CookieSameSite: Lax (default), Strict, None (cookie Secure too), Unspecified
+    property CookieSameSite: TMARSCookieSameSite read FCookieSameSite;
   end;
 
 implementation
@@ -425,6 +428,7 @@ begin
     Result.FCookieDomain := CookieDomain;
     Result.FCookiePath := CookiePath;
     Result.FCookieSecure := CookieSecure;
+    Result.FCookieSameSite := CookieSameSite;
     Result.FIssuer := Issuer;
     Result.FKeyId := KeyId;
     Result.FDuration := Duration;
@@ -457,6 +461,8 @@ begin
   FCookieDomain := AParameters.ByName(JWT_COOKIEDOMAIN_PARAM, AURL.Hostname).AsString;
   FCookiePath := AParameters.ByName(JWT_COOKIEPATH_PARAM, AURL.BasePath).AsString;
   FCookieSecure := AParameters.ByName(JWT_COOKIESECURE_PARAM, JWT_COOKIESECURE_PARAM_DEFAULT).AsBoolean;
+  FCookieSameSite := CookieSameSiteFromString(
+    AParameters.ByName(JWT_COOKIESAMESITE_PARAM, JWT_COOKIESAMESITE_PARAM_DEFAULT).AsString);
   Create(GetToken(ARequest), AParameters);
 end;
 
@@ -688,9 +694,11 @@ begin
     Assert(Assigned(Response));
 
     if IsVerified and not IsExpired then
-      Response.SetCookie(CookieName, Token, CookieDomain, CookiePath, Expiration, CookieSecure)
+      Response.SetCookie(CookieName, Token, CookieDomain, CookiePath, Expiration, CookieSecure
+        , True {HttpOnly}, CookieSameSite)
     else if Request.GetCookieParamValue(CookieName) <> '' then
-      Response.SetCookie(CookieName, 'dummy', CookieDomain, CookiePath, Now-1, CookieSecure);
+      Response.SetCookie(CookieName, 'dummy', CookieDomain, CookiePath, Now-1, CookieSecure
+        , True {HttpOnly}, CookieSameSite);
   end;
 end;
 

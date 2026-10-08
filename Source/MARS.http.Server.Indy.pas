@@ -108,7 +108,9 @@ type
     procedure SetHeader(const AName: string; const AValue: string); inline;
     procedure SetStatusCode(const AStatusCode: Integer); inline;
     procedure SetReasonString(const AReasonString: string); inline;
-    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); inline;
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); overload;
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime;
+      const ASecure, AHttpOnly: Boolean; const ASameSite: TMARSCookieSameSite); overload;
     procedure RedirectTo(const AURL: string);
     // -------------------------------------------------------------------------
     constructor Create(AWebResponse: TWebResponse); virtual;
@@ -317,7 +319,13 @@ begin
     LIdCookie.Path := LCookie.Path;
     LIdCookie.Secure := LCookie.Secure;
     LIdCookie.Value := LCookie.Value;
-    LIdCookie.HttpOnly := True;
+    {$IFDEF MARS_NATIVE_COOKIE_ATTRIBUTES}
+    LIdCookie.HttpOnly := LCookie.HttpOnly;
+    LIdCookie.SameSite := LCookie.SameSite;
+    {$ELSE}
+    // HttpOnly and SameSite travel in the path (TMARSWebResponse.SetCookie)
+    LIdCookie.HttpOnly := not ContainsText(LCookie.Path, '; HttpOnly');
+    {$ENDIF}
   end;
 end;
 
@@ -776,11 +784,21 @@ end;
 
 procedure TMARSWebResponse.SetCookie(const AName, AValue, ADomain,
   APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
-var
-  LCookie: TCookie;
 begin
   // HttpOnly, as with the Indy and DCS servers: the token cookie must not be readable by
   // scripts (ISAPI, Apache and FastCGI hosts write this cookie as it is)
+  SetCookie(AName, AValue, ADomain, APath, AExpiration, ASecure, True, TMARSCookieSameSite.Unspecified);
+end;
+
+procedure TMARSWebResponse.SetCookie(const AName, AValue, ADomain, APath: string;
+  const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean;
+  const ASameSite: TMARSCookieSameSite);
+var
+  LCookie: TCookie;
+  {$IFNDEF MARS_NATIVE_COOKIE_ATTRIBUTES}
+  LAttributes: TArray<string>;
+  {$ENDIF}
+begin
   LCookie := FWebResponse.Cookies.Add;
   LCookie.Name := AName;
   LCookie.Value := AValue;
@@ -791,12 +809,19 @@ begin
     LCookie.Expires := AExpiration
   else
     LCookie.Expires := TTimeZone.Local.ToUniversalTime(AExpiration);
-  LCookie.Secure := ASecure;
+  // browsers refuse SameSite=None without Secure
+  LCookie.Secure := ASecure or (ASameSite = TMARSCookieSameSite.None);
   {$IFDEF MARS_NATIVE_COOKIE_ATTRIBUTES}
   LCookie.Path := APath;
-  LCookie.HttpOnly := True;
+  LCookie.HttpOnly := AHttpOnly;
+  LCookie.SameSite := CookieSameSiteToString(ASameSite);
   {$ELSE}
-  LCookie.Path := CookiePathWithAttributes(APath, ['HttpOnly']);
+  LAttributes := [];
+  if AHttpOnly then
+    LAttributes := LAttributes + ['HttpOnly'];
+  if ASameSite <> TMARSCookieSameSite.Unspecified then
+    LAttributes := LAttributes + ['SameSite=' + CookieSameSiteToString(ASameSite)];
+  LCookie.Path := CookiePathWithAttributes(APath, LAttributes);
   {$ENDIF}
 end;
 

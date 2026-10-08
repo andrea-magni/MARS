@@ -40,7 +40,7 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 | `JWT.PreviousSecret.<kid>`, `JWT.PreviousSecret` | retired keys, verification only (with that `kid` / without `kid`) |
 | `JWT.Issuer` | default `MARS-Curiosity` |
 | `JWT.Duration` | days; alternatives `JWT.Duration.InSeconds`, `JWT.Duration.InMinutes` |
-| `JWT.CookieEnabled`, `JWT.CookieName`, `JWT.CookieDomain`, `JWT.CookiePath`, `JWT.CookieSecure` | cookie-based token transport |
+| `JWT.CookieEnabled`, `JWT.CookieName`, `JWT.CookieDomain`, `JWT.CookiePath`, `JWT.CookieSecure`, `JWT.CookieSameSite` | cookie-based token transport (HttpOnly; SameSite `Lax` by default, `Strict`, `None` = also Secure, `Unspecified`) |
 | `JSON.SkipEmptyValues`, `JSON.SkipEmptyStrings`, `JSON.SkipEmptyNumbers`, `JSON.SkipEmptyBooleans`, `JSON.SkipEmptyObjects`, `JSON.SkipEmptyArrays`, `JSON.SkipNullValues`, `JSON.DateIsUTC`, `JSON.UseDisplayFormatForNumericFields` | JSON serialization options per application (responses and request readers); order: `DefaultMARSJSONSerializationOptions` < these parameters < resource attributes < method attributes |
 | `Middlewares.Resources` | default `TMARSRouteTable.DefaultMiddlewaresOnResources` (`false`); `true` makes the application middlewares of routes (`MARSRoutesOf(App).Use`) wrap the resource methods too (see `routes.md`) |
 | `JSON.EscapeNonASCII` | default `true` (characters above 127 sent as `\uXXXX` in JSON responses); `false` writes them as they are (Unicode response encodings only); code-level default `TJSONValueWriter.DefaultEscapeNonASCII` |

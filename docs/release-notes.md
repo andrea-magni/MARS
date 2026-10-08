@@ -7,16 +7,20 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 Changes on the `develop` branch, part of the next release.
 
 **New**
+- Cookies: `SameSite` (`TMARSCookieSameSite`, `IMARSResponse.SetCookie` overload with HttpOnly and SameSite) on every host; `JWT.CookieSameSite` for the token cookie. [The token cookie](/features/authentication#the-token-cookie)
 - MARSCmd template `MARSTemplateRoutes`: a new project with its endpoints defined as routes. [MARSTemplateRoutes](/demos/#marstemplateroutes)
 - [Route-based endpoints](/server/routes) (preview, `MARS.Core.Routes`, [RoutesDemo](/demos/#routesdemo)): `R.Get<TResult>('people/{id:int}', function (const C: TMARSRouteContext): TResult ...)` next to the resource classes, with groups, path constraints (`int`, `guid`, `alpha`), typed body, roles, `Produces`/`Consumes`, injection (`C.Inject<T>`) and 405 with `Allow` for a wrong method. Route modules are registered with `MARSRoutes` and added with `IMARSApplication.AddRoutes`. Routes are part of the OpenAPI document: path parameters typed by their constraint, typed body and result, `Summary`, `Description`, `Hidden`, declared `QueryParam<T>`/`HeaderParam<T>`/`CookieParam<T>`/`FormParam<T>`. Middlewares around routes, groups or all the routes of an application: `Use(procedure (const C: TMARSRouteContext; const ANext: TProc) ...)`. Named middlewares (`Use('apikey', ...)`) can be left out with `SkipMiddleware` (also `[SkipMiddleware]` on resources); class-based middlewares derive from `TMARSMiddleware` (`Use<TMyMiddleware>`, a new instance for each request with `[Context]` injection). The application middlewares also wrap the resource methods with `Middlewares.Resources=true` (default: `TMARSRouteTable.DefaultMiddlewaresOnResources`, False).
 - Linux daemon: `--foreground` (or `-f`) runs the server in the current process with logs on standard output, for systemd (`Type=simple`) and Docker. [Deployment](/guide/deployment#linux-with-systemd)
 - Documentation: [Deployment](/guide/deployment) guide (Windows service, systemd, Docker, reverse proxy, HTTPS, IIS/Apache/FastCGI), [Why MARS?](/guide/why-mars), [FAQ](/guide/faq); `llms.txt` and `llms-full.txt` for AI tools, sitemap.
 
 **Changed**
+- The token cookie is `SameSite=Lax` by default (`JWT.CookieSameSite`; `Unspecified` restores the previous header, `None` serves front ends on other sites).
 - A parameter marked `[Required]` missing from the request gives `400 Bad Request` instead of 500. [Attributes](/server/attributes#required)
 - Attributes on a resource class (`Encoding`, `JSONP`, `Produces`, `Connection`, `NoLog`, report, template and Razor attributes) also apply when declared on an ancestor class, as `RolesAllowed` and the JSON options already did. Readers, writers, injection services and loggers read them from the activation attribute lists, ready for endpoints not backed by an RTTI method.
 
 **Fixed**
+- ISAPI, Apache and FastCGI hosts: the token cookie was not `HttpOnly`, and its expiration was written in local time labelled GMT (shifted by the time zone offset).
+- DCS server: logging out kept the token cookie for a day (`Max-Age=86400`) instead of deleting it.
 - Templates and demos: the test projects did not compile without TestInsight (missing `DUnitX.Loggers.Xml.NUnit`), and their tests failed on the `IsSecure` request property (`MARS.Tests` mock).
 - Linux daemon: the log file only held its last line.
 - `/metadata` (`TMetadataResource`) answered 500 (invalid class typecast) since 1.6.4.

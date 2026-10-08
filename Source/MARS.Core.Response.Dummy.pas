@@ -38,7 +38,9 @@ type
     function GetContent: string;
     procedure SetContent(const AContent: string);
     procedure SetHeader(const AName, AValue: string);
-    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime; const ASecure: Boolean); overload;
+    procedure SetCookie(const AName, AValue, ADomain, APath: string; const AExpiration: TDateTime;
+      const ASecure, AHttpOnly: Boolean; const ASameSite: TMARSCookieSameSite); overload;
     procedure RedirectTo(const AURL: string);
     // IMARSResponse implementation --------------------------------------------
   end;
@@ -142,6 +144,13 @@ end;
 
 procedure TMARSWebResponseDummy.SetCookie(const AName, AValue, ADomain,
   APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
+begin
+  //TODO
+end;
+
+procedure TMARSWebResponseDummy.SetCookie(const AName, AValue, ADomain, APath: string;
+  const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean;
+  const ASameSite: TMARSCookieSameSite);
 begin
   //TODO
 end;

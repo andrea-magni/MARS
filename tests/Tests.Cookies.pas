@@ -16,6 +16,7 @@ type
     FEngine: IMARSEngine;
     function IndyGet(const APath: string; out ASetCookie: string): string;
     function DCSGet(const APath: string; out ASetCookie: string): string;
+    function IndyLogin(out ASetCookie: string): string;
   public
     [SetupFixture] procedure SetupFixture;
     [TearDownFixture] procedure TearDownFixture;
@@ -29,16 +30,29 @@ type
     [Test] procedure SetCookieHeaderValueSession;
     [Test] procedure SetCookieHeaderValueRejectsInvalidCharacters;
     [Test] procedure DCSServerDeletesTheCookie;
+    [Test] procedure SetCookieHeaderValueSameSite;
+    [Test] procedure WebBrokerCookieSameSite;
+    [Test] procedure IndyServerCookieSameSite;
+    [Test] procedure DCSServerCookieSameSite;
+    [Test] procedure TokenCookieIsLaxByDefault;
+    [Test] procedure TokenCookieSameSiteNone;
+    [Test] procedure CookieSameSiteFromStringRejectsInvalidValues;
   end;
 
 implementation
 
 uses
   Web.HTTPApp, IdHTTP, IdCustomHTTPServer, IdHTTPWebBrokerBridge
+, MARS.Core.Token.Resource
+{$IFDEF MSWINDOWS}
+, MARS.mORMotJWT.Token
+{$ELSE}
+, MARS.JOSEJWT.Token
+{$ENDIF}
 , MARS.Core.Engine, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Registry
 , MARS.Core.RequestAndResponse.Interfaces
 , MARS.http.Server.Indy, MARS.http.Server.DCS
-, MARS.Core.Utils
+, MARS.Core.Utils, MARS.Utils.Parameters
 ;
 
 const
@@ -55,12 +69,42 @@ type
     function SetProbe: string;
     [GET, Path('expire'), Produces(TMediaType.TEXT_PLAIN)]
     function ExpireProbe: string;
+    [GET, Path('lax'), Produces(TMediaType.TEXT_PLAIN)]
+    function LaxProbe: string;
+    [GET, Path('none'), Produces(TMediaType.TEXT_PLAIN)]
+    function NoneProbe: string;
   end;
+
+  [Path('token')]
+  TCookiesTokenResource = class(TMARSTokenResource)
+  protected
+    function Authenticate(const AUserName, APassword: string): Boolean; override;
+  end;
+
+function TCookiesTokenResource.Authenticate(const AUserName, APassword: string): Boolean;
+begin
+  Result := True;
+  Token.UserName := AUserName;
+  Token.Roles := ['standard'];
+end;
 
 function TCookiesResource.SetProbe: string;
 begin
   FResponse.SetCookie('probe', 'value', '', '/rest/default', Now + 1, False);
   Result := 'set';
+end;
+
+function TCookiesResource.LaxProbe: string;
+begin
+  FResponse.SetCookie('probe', 'value', '', '/rest/default', Now + 1, False, True, TMARSCookieSameSite.Lax);
+  Result := 'lax';
+end;
+
+function TCookiesResource.NoneProbe: string;
+begin
+  // SameSite=None without Secure: MARS makes it Secure (browsers refuse it otherwise)
+  FResponse.SetCookie('probe', 'value', '', '/rest/default', Now + 1, False, False, TMARSCookieSameSite.None);
+  Result := 'none';
 end;
 
 function TCookiesResource.ExpireProbe: string;
@@ -112,7 +156,9 @@ begin
   FEngine := TMARSEngine.Create('CookiesTestEngine');
   FEngine.Port := INDY_PORT; // the Indy server binds Engine.Port
   FEngine.PortSSL := 0;
-  FEngine.AddApplication('DefaultApp', '/default', ['Tests.Cookies.TCookiesResource']);
+  FEngine.AddApplication('DefaultApp', '/default'
+    , ['Tests.Cookies.TCookiesResource', 'Tests.Cookies.TCookiesTokenResource']
+  ).Parameters.Values['JWT.Secret'] := 'cookies-test-secret-0123456789-0123456789-0123456789';
 end;
 
 procedure TMARSCookiesTest.TearDownFixture;
@@ -156,6 +202,32 @@ begin
       Result := LClient.Get(Format('http://localhost:%d/rest/default/%s', [DCS_PORT, APath]));
       ASetCookie := LClient.Response.RawHeaders.Values['Set-Cookie'];
     finally
+      LClient.Free;
+    end;
+  finally
+    LServer.Free;
+  end;
+end;
+
+function TMARSCookiesTest.IndyLogin(out ASetCookie: string): string;
+var
+  LServer: TMARShttpServerIndy;
+  LClient: TIdHTTP;
+  LForm: TStringList;
+begin
+  LServer := TMARShttpServerIndy.Create(FEngine);
+  try
+    LServer.DefaultPort := INDY_PORT;
+    LServer.Active := True;
+    LClient := TIdHTTP.Create(nil);
+    LForm := TStringList.Create;
+    try
+      LForm.Values['username'] := 'andrea';
+      LForm.Values['password'] := 'any';
+      Result := LClient.Post(Format('http://localhost:%d/rest/default/token', [INDY_PORT]), LForm);
+      ASetCookie := LClient.Response.RawHeaders.Values['Set-Cookie'];
+    finally
+      LForm.Free;
       LClient.Free;
     end;
   finally
@@ -304,8 +376,104 @@ begin
   Assert.Contains(LSetCookie, 'Max-Age=0', 'deleted, not kept for a day');
 end;
 
+procedure TMARSCookiesTest.SetCookieHeaderValueSameSite;
+begin
+  Assert.EndsWith('; HttpOnly; SameSite=Lax'
+    , SetCookieHeaderValue('probe', 'value', '', '/', 0, False, True, TMARSCookieSameSite.Lax));
+  Assert.EndsWith('; Secure; SameSite=None'
+    , SetCookieHeaderValue('probe', 'value', '', '/', 0, False, False, TMARSCookieSameSite.None)
+    , 'None makes the cookie Secure');
+  Assert.IsFalse(SetCookieHeaderValue('probe', 'value', '', '/', 0, False, True).Contains('SameSite'), 'Unspecified');
+end;
+
+procedure TMARSCookiesTest.WebBrokerCookieSameSite;
+var
+  LRequestInfo: TIdHTTPRequestInfo;
+  LRequest: TIdHTTPAppRequest;
+  LResponse: TTestWebResponse;
+  LMARSResponse: IMARSResponse;
+begin
+  LRequestInfo := TIdHTTPRequestInfo.Create(nil);
+  LRequest := TMARSIdHTTPAppRequest.Create(nil, LRequestInfo, nil);
+  LResponse := TTestWebResponse.Create(LRequest);
+  try
+    LMARSResponse := TMARSWebResponse.Create(LResponse);
+    LMARSResponse.SetCookie('probe', 'value', '', '/rest/default', Now + 1, False, True, TMARSCookieSameSite.Strict);
+    LMARSResponse.SetCookie('other', 'value', '', '/rest/default', Now + 1, False, False, TMARSCookieSameSite.None);
+    LMARSResponse := nil;
+
+    Assert.Contains(LResponse.Cookies[0].HeaderValue, 'SameSite=Strict');
+    Assert.Contains(LResponse.Cookies[0].HeaderValue, 'httponly', True);
+    Assert.Contains(LResponse.Cookies[1].HeaderValue, 'SameSite=None');
+    Assert.Contains(LResponse.Cookies[1].HeaderValue, 'secure', True);
+    Assert.IsFalse(ContainsText(LResponse.Cookies[1].HeaderValue, 'httponly'), 'HttpOnly not requested');
+  finally
+    LResponse.Free;
+    LRequest.Free;
+    LRequestInfo.Free;
+  end;
+end;
+
+procedure TMARSCookiesTest.IndyServerCookieSameSite;
+var
+  LSetCookie: string;
+begin
+  Assert.AreEqual('lax', IndyGet('cookies/lax', LSetCookie));
+  Assert.Contains(LSetCookie, 'SameSite=Lax');
+  Assert.Contains(LSetCookie, 'HttpOnly');
+
+  Assert.AreEqual('none', IndyGet('cookies/none', LSetCookie));
+  Assert.Contains(LSetCookie, 'SameSite=None');
+  Assert.Contains(LSetCookie, 'Secure');
+end;
+
+procedure TMARSCookiesTest.DCSServerCookieSameSite;
+var
+  LSetCookie: string;
+begin
+  Assert.AreEqual('lax', DCSGet('cookies/lax', LSetCookie));
+  Assert.EndsWith('; HttpOnly; SameSite=Lax', LSetCookie);
+
+  Assert.AreEqual('none', DCSGet('cookies/none', LSetCookie));
+  Assert.EndsWith('; Secure; SameSite=None', LSetCookie);
+end;
+
+procedure TMARSCookiesTest.TokenCookieIsLaxByDefault;
+var
+  LSetCookie: string;
+begin
+  IndyLogin(LSetCookie);
+  Assert.StartsWith('access_token=', LSetCookie);
+  Assert.Contains(LSetCookie, 'HttpOnly');
+  Assert.Contains(LSetCookie, 'SameSite=Lax', 'JWT.CookieSameSite defaults to Lax');
+end;
+
+procedure TMARSCookiesTest.TokenCookieSameSiteNone;
+var
+  LSetCookie: string;
+  LParameters: TMARSParameters;
+begin
+  LParameters := FEngine.ApplicationByName('DefaultApp').Parameters;
+  LParameters.Values['JWT.CookieSameSite'] := 'None';
+  try
+    IndyLogin(LSetCookie);
+    Assert.Contains(LSetCookie, 'SameSite=None');
+    Assert.Contains(LSetCookie, 'Secure', 'None makes the cookie Secure');
+  finally
+    LParameters.Values['JWT.CookieSameSite'] := 'Lax';
+  end;
+end;
+
+procedure TMARSCookiesTest.CookieSameSiteFromStringRejectsInvalidValues;
+begin
+  Assert.AreEqual(Ord(TMARSCookieSameSite.Lax), Ord(CookieSameSiteFromString('lax')));
+  Assert.AreEqual(Ord(TMARSCookieSameSite.Unspecified), Ord(CookieSameSiteFromString('')));
+  Assert.WillRaise(procedure begin CookieSameSiteFromString('Loose'); end, EArgumentException);
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSCookiesTest);
   MARSRegister(TCookiesResource);
+  MARSRegister(TCookiesTokenResource);
 
 end.
