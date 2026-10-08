@@ -91,7 +91,7 @@ The parameters of `OrdersServer` are the sum of the two files, the including fil
 | `DefaultApp.JWT.Secret` | `a-long-random-value-for-orders` | `OrdersServer.ini` |
 | `DefaultApp.Orders.MaxItems` | `100` | `OrdersServer.ini` |
 
-The `MARSTemplate` and `MARSTemplateDCS` templates, and so the projects created with MARSCmd, use this
+The `MARSTemplate`, `MARSTemplateDCS` and `MARSTemplateRoutes` templates, and so the projects created with MARSCmd, use this
 layout: `bin\Server.ini` holds the settings, and each server flavor has a small `.ini` named after
 its executable that includes it.
 

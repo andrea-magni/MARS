@@ -7,6 +7,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 Changes on the `develop` branch, part of the next release.
 
 **New**
+- MARSCmd template `MARSTemplateRoutes`: a new project with its endpoints defined as routes. [MARSTemplateRoutes](/demos/#marstemplateroutes)
 - [Route-based endpoints](/server/routes) (preview, `MARS.Core.Routes`, [RoutesDemo](/demos/#routesdemo)): `R.Get<TResult>('people/{id:int}', function (const C: TMARSRouteContext): TResult ...)` next to the resource classes, with groups, path constraints (`int`, `guid`, `alpha`), typed body, roles, `Produces`/`Consumes`, injection (`C.Inject<T>`) and 405 with `Allow` for a wrong method. Route modules are registered with `MARSRoutes` and added with `IMARSApplication.AddRoutes`. Routes are part of the OpenAPI document: path parameters typed by their constraint, typed body and result, `Summary`, `Description`, `Hidden`, declared `QueryParam<T>`/`HeaderParam<T>`/`CookieParam<T>`/`FormParam<T>`. Middlewares around routes, groups or all the routes of an application: `Use(procedure (const C: TMARSRouteContext; const ANext: TProc) ...)`. The application middlewares also wrap the resource methods with `Middlewares.Resources=true` (default: `TMARSRouteTable.DefaultMiddlewaresOnResources`, False).
 - Linux daemon: `--foreground` (or `-f`) runs the server in the current process with logs on standard output, for systemd (`Type=simple`) and Docker. [Deployment](/guide/deployment#linux-with-systemd)
 - Documentation: [Deployment](/guide/deployment) guide (Windows service, systemd, Docker, reverse proxy, HTTPS, IIS/Apache/FastCGI), [Why MARS?](/guide/why-mars), [FAQ](/guide/faq); `llms.txt` and `llms-full.txt` for AI tools, sitemap.
@@ -16,6 +17,7 @@ Changes on the `develop` branch, part of the next release.
 - Attributes on a resource class (`Encoding`, `JSONP`, `Produces`, `Connection`, `NoLog`, report, template and Razor attributes) also apply when declared on an ancestor class, as `RolesAllowed` and the JSON options already did. Readers, writers, injection services and loggers read them from the activation attribute lists, ready for endpoints not backed by an RTTI method.
 
 **Fixed**
+- Templates and demos: the test projects did not compile without TestInsight (missing `DUnitX.Loggers.Xml.NUnit`), and their tests failed on the `IsSecure` request property (`MARS.Tests` mock).
 - Linux daemon: the log file only held its last line.
 - `/metadata` (`TMetadataResource`) answered 500 (invalid class typecast) since 1.6.4.
 - Documentation: the footer stated the wrong license (MARS is released under the Mozilla Public License 2.0).

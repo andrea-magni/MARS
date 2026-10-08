@@ -34,6 +34,27 @@ R.Get<TPerson>('{id:int}',
 ).Summary('Get a person');
 ```
 
+## MARSTemplateRoutes
+
+The route-based version of `MARSTemplate`, for a new project whose endpoints are [routes](/server/routes) defined in code (Express style):
+- **Same structure:** the same project group as `MARSTemplate` (all the hosts, client and tests).
+- **Endpoints:** `Server.Routes.pas` replaces the `helloworld` resource with a module of routes.
+- **Still resources:** the JWT `token` and the OpenAPI/Swagger endpoints.
+
+Pick it in [MARSCmd](/guide/installation#bootstrap-a-new-project-with-marscmd).
+
+```pascal
+MARSRoutes('Server.Routes.HelloWorld', 'helloworld',
+  procedure (const R: TMARSRouter)
+  begin
+    R.Get<string>('{name}',
+      function (const C: TMARSRouteContext): string
+      begin
+        Result := 'Hello ' + C.Path<string>('name') + '!';
+      end);
+  end);
+```
+
 ## ErrorObjects
 
 How to return errors at three levels of richness: a plain Delphi exception (→ 500), a MARS HTTP exception with a custom status/message, and a MARS exception carrying a structured JSON body — plus how the client reads that body back. See [Error Handling](/server/error-handling).

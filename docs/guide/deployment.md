@@ -4,7 +4,7 @@ description: "Deploy a MARS-Curiosity REST server built with Delphi - Windows se
 
 # Deployment
 
-A MARS server is one core (`Server.Ignition.pas` plus your resource units) that you can host in several ways. The [`MARSTemplate`](/demos/#marstemplate) and `MARSTemplateDCS` templates (and the projects [MARSCmd](/guide/installation#bootstrap-a-new-project-with-marscmd) creates from them) contain a ready project for each host.
+A MARS server is one core (`Server.Ignition.pas` plus your resource units) that you can host in several ways. The [`MARSTemplate`](/demos/#marstemplate), `MARSTemplateDCS` and [`MARSTemplateRoutes`](/demos/#marstemplateroutes) templates (and the projects [MARSCmd](/guide/installation#bootstrap-a-new-project-with-marscmd) creates from them) contain a ready project for each host.
 
 | Host | Project in the template | Typical use |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ A MARS server is one core (`Server.Ignition.pas` plus your resource units) that 
 | Apache module | `...ServerApacheModule` | inside Apache httpd |
 | FastCGI | `...ServerFCGI` | behind nginx |
 
-The self-hosted flavors (console, GUI, service, daemon) run their own HTTP server: Indy (`TMARShttpServerIndy`, `MARSTemplate`) or Delphi Cross Socket (`TMARShttpServerDCS`, `MARSTemplateDCS`). The ISAPI, Apache and FastCGI flavors go through WebBroker and the web server does the HTTP part.
+The self-hosted flavors (console, GUI, service, daemon) run their own HTTP server: Indy (`TMARShttpServerIndy`, `MARSTemplate`, `MARSTemplateRoutes`) or Delphi Cross Socket (`TMARShttpServerDCS`, `MARSTemplateDCS`). The ISAPI, Apache and FastCGI flavors go through WebBroker and the web server does the HTTP part.
 
 ## Files to deploy
 

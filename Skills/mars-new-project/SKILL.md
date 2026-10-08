@@ -24,7 +24,7 @@ Endpoint URLs compose as: engine base path (`/rest` by default) + application ba
 3. Delete the host flavors the user does not need.
 4. Rename the ini file in `bin/` to match the new executable name.
 
-There is also `Demos/MARSTemplateDCS/` — the same template running on Delphi Cross Socket instead of Indy — if the user asks for the DCS transport.
+There is also `Demos/MARSTemplateDCS/` — the same template running on Delphi Cross Socket instead of Indy — if the user asks for the DCS transport, and `Demos/MARSTemplateRoutes/` — the same Indy template with its endpoints defined as routes in code (`Server.Routes.pas`, `MARS.Core.Routes`, Express style) instead of resource classes — if the user prefers route-based endpoints. Token and OpenAPI stay resources in both.
 
 ### Option B — generate a minimal project from bundled templates
 

@@ -85,7 +85,11 @@ MARS supports Delphi **10.4 Sydney** up to **13 Florence**. Earlier versions are
 
 ## Bootstrap a new project with MARSCmd
 
-MARS ships a small command-line utility that scaffolds a complete, ready-to-run project for you from a template: `MARSTemplate` (Indy) or `MARSTemplateDCS` (Delphi Cross Socket).
+MARS ships a small command-line utility that scaffolds a complete, ready-to-run project for you from a template:
+
+- `MARSTemplate`: Indy, endpoints as resource classes;
+- `MARSTemplateDCS`: Delphi Cross Socket, endpoints as resource classes;
+- `MARSTemplateRoutes`: Indy, endpoints as [routes](/server/routes) defined in code (Express style).
 
 1. Compile and run [`MARScmd_VCL.dproj`](https://github.com/andrea-magni/MARS/blob/master/Utils/Source/MARScmd/MARScmd_VCL.dproj) in `[MARS Folder]\Utils\Source\MARScmd`.
 2. Follow the prompts. Choose the template on the first page: MARSCmd lists the `Demos\MARSTemplate*` folders (`...` picks a template from another folder). It clones the template into a new folder with your chosen project name, giving you a server (console / VCL / FMX / service / ISAPI / Apache / daemon variants), a client, and a test project. The `.ini` files of the new project get a freshly generated random `JWT.Secret`.

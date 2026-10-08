@@ -22,6 +22,10 @@ A route is a full MARS endpoint, not a separate framework. It goes through the s
 
 Routes and resources live in the same application, under the same base path, with the same token. Pick the style that fits each part of your API, or mix them.
 
+::: tip Start with routes
+To start a new project with routes, pick the `MARSTemplateRoutes` template in [MARSCmd](/guide/installation#bootstrap-a-new-project-with-marscmd): the same project group as `MARSTemplate`, with its endpoints defined as routes in `Server.Routes.pas`.
+:::
+
 ::: tip Preview
 Routes are new on the `develop` branch and will ship with the next release. The API may still change slightly; feedback is welcome on the [forum](https://en.delphipraxis.net/forum/34-mars-curiosity-rest-library/) or in the [GitHub issues](https://github.com/andrea-magni/MARS/issues).
 :::

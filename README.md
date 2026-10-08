@@ -57,7 +57,7 @@ Delphi 10.4 Sydney to Delphi 13 Florence.
 # Get started
 
 ### Bootstrap with MARSCmd
-Run [MARSCmd](https://andrea-magni.github.io/MARS/guide/installation#bootstrap-a-new-project-with-marscmd), pick a template (`MARSTemplate` with Indy, `MARSTemplateDCS` with Delphi Cross Socket) and a name: you get a ready project group with the server in several flavors, a client and a test project. Then follow [Your First Server](https://andrea-magni.github.io/MARS/guide/getting-started).
+Run [MARSCmd](https://andrea-magni.github.io/MARS/guide/installation#bootstrap-a-new-project-with-marscmd), pick a template (`MARSTemplate` with Indy, `MARSTemplateDCS` with Delphi Cross Socket, `MARSTemplateRoutes` with Indy and [routes in code](https://andrea-magni.github.io/MARS/server/routes)) and a name: you get a ready project group with the server in several flavors, a client and a test project. Then follow [Your First Server](https://andrea-magni.github.io/MARS/guide/getting-started).
 
 ### AI Agent Skills
 MARS ships [Agent Skills](https://andrea-magni.github.io/MARS/guide/agent-skills) for Claude Code and other AI coding agents: scaffold a new server or develop REST APIs (resources, JWT, FireDAC, SSE, MCP, ...) with an AI assistant that knows MARS. From Claude Code:
