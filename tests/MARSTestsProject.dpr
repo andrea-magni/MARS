@@ -39,6 +39,7 @@ uses
   Tests.ReqRespLogger.JSON in 'Tests.ReqRespLogger.JSON.pas',
   Tests.Routes in 'Tests.Routes.pas',
   Tests.Cookies in 'Tests.Cookies.pas',
+  Tests.IndyIOHandler in 'Tests.IndyIOHandler.pas',
   Mock.IMARSRequest in 'Mock.IMARSRequest.pas',
   Mock.IMARSResponse in 'Mock.IMARSResponse.pas';
 

@@ -149,6 +149,43 @@ DCS.SSL.KeyFile=privkey.pem
 [parameters reference](/reference/parameters#engine-parameters). With HTTPS, enable keep-alive too
 (`Indy.KeepAlive=true`): without it every request costs a new TLS handshake.
 
+By default the Indy server uses Indy's `TIdServerIOHandlerSSLOpenSSL`, which needs OpenSSL 1.0.2
+(see [HTTPS without a proxy](/guide/deployment#https-without-a-proxy)).
+
+### Another SSL IOHandler for Indy
+
+The Indy server can use any SSL server IOHandler derived from Indy's `TIdServerIOHandlerSSLBase`
+(unit `IdSSL`), i.e. the one of a library bringing OpenSSL 3 to Indy. MARS does not depend on
+that library: your project uses it and gives MARS a factory that creates and configures the
+IOHandler.
+
+```pascal
+// Server.Ignition: for every host flavor (console, VCL, FMX, service, daemon)
+TMARShttpServerIndy.DefaultSSLIOHandlerFactory :=
+  function (const AServer: TMARShttpServerIndy): TIdServerIOHandlerSSLBase
+  var
+    LIOHandler: TMyOpenSSL3ServerIOHandler; // the class of the library
+  begin
+    LIOHandler := TMyOpenSSL3ServerIOHandler.Create(AServer);
+    // configure it, i.e. from the Indy.SSL.* parameters
+    LIOHandler.CertificateFile := AServer.Engine.Parameters.ByName('Indy.SSL.CertFile', 'localhost.crt').AsString;
+    LIOHandler.PrivateKeyFile := AServer.Engine.Parameters.ByName('Indy.SSL.KeyFile', 'localhost.key').AsString;
+    Result := LIOHandler;
+  end;
+```
+
+How the server chooses the IOHandler when it starts with a `PortSSL`:
+- **`SSLIOHandlerFactory`:** the factory of that server, if assigned.
+- **`DefaultSSLIOHandlerFactory`:** otherwise the class-wide factory, convenient in `Server.Ignition` because the host flavors create their servers in different places.
+- **Indy's OpenSSL IOHandler:** otherwise, configured with the `Indy.SSL.*` parameters, as before.
+
+A few rules:
+- **Configuration:** the factory configures its IOHandler; MARS applies the `Indy.SSL.*` parameters only to the OpenSSL IOHandler it creates itself.
+- **Ownership:** the server owns the IOHandler the factory returns and frees it when it stops; the next start calls the factory again. A factory returning `nil` makes `Active := True` raise.
+- **Your own instance:** an IOHandler you assign to the `IOHandler` property before starting is used as it is, kept when the server stops and freed by you.
+- **`SSLIOHandler`:** the `SSLIOHandler` property is Indy's OpenSSL IOHandler only; with another IOHandler use `IOHandler`.
+- **Secure requests:** `Request.IsSecure` works with any IOHandler derived from Indy's SSL classes.
+
 `Request.IsSecure` tells whether the request came in over TLS to this server; the URL of the
 request (`TMARSURL`) and the OAuth metadata of [MCP](/features/mcp) use it. Behind a reverse proxy
 terminating TLS it is `False`, and the `X-Forwarded-Proto` header tells the original scheme.

@@ -129,6 +129,13 @@ type
     property ResponseInfo: TIdHTTPResponseInfo read GetResponseInfo;
   end;
 
+  TMARShttpServerIndy = class;
+
+  // Creates the SSL IOHandler of the server (any TIdServerIOHandlerSSLBase descendant, i.e. the
+  // one of an OpenSSL 3 library for Indy) and configures it: AServer.Engine.Parameters holds the
+  // settings (i.e. Indy.SSL.CertFile). The server owns the IOHandler and frees it when it stops.
+  TMARSSSLIOHandlerFactory = reference to function (const AServer: TMARShttpServerIndy): TIdServerIOHandlerSSLBase;
+
   TMARShttpServerIndy = class(TIdCustomHTTPServer)
   private
     FEngine: IMARSEngine;
@@ -136,9 +143,16 @@ type
     FStoppedAt: TDateTime;
     FBeforeCommandGet: TBeforeCommandGetFunc;
     FQuerySSLPortFunc: TFunc<UInt16, Boolean>;
+    FSSLIOHandlerFactory: TMARSSSLIOHandlerFactory;
+    FIOHandlerByMARS: Boolean;       // created by MARS (default, SSLIOHandler or a factory)
+    FIOHandlerFromFactory: Boolean;  // configured by the factory, not by SetupSSLIOHandler
+    FKeepIOHandler: Boolean;         // assigned by the user: not freed when the server stops
     function GetUpTime: TTimeSpan;
     function GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
   protected
+    // The IOHandler for PortSSL: SSLIOHandlerFactory, else DefaultSSLIOHandlerFactory, else
+    // Indy's TIdServerIOHandlerSSLOpenSSL (configured with the Indy.SSL.* parameters)
+    function CreateSSLIOHandler: TIdServerIOHandlerSSLBase; virtual;
     procedure SetCookies(const AResponseInfo: TIdHTTPResponseInfo; const AResponse: TIdHTTPAppResponse); virtual;
     procedure Startup; override;
     procedure Shutdown; override;
@@ -168,7 +182,13 @@ type
     property StartedAt: TDateTime read FStartedAt;
     property StoppedAt: TDateTime read FStoppedAt;
     property UpTime: TTimeSpan read GetUpTime;
+    // Indy's OpenSSL IOHandler (created on first use); raises when another SSL IOHandler is in use
     property SSLIOHandler: TIdServerIOHandlerSSLOpenSSL read GetSSLIOHandler;
+    // the SSL IOHandler of this server; when not assigned, DefaultSSLIOHandlerFactory
+    property SSLIOHandlerFactory: TMARSSSLIOHandlerFactory read FSSLIOHandlerFactory write FSSLIOHandlerFactory;
+    // the SSL IOHandler of every server without SSLIOHandlerFactory (i.e. set once in
+    // Server.Ignition for all the host flavors); when not assigned, Indy's OpenSSL IOHandler
+    class var DefaultSSLIOHandlerFactory: TMARSSSLIOHandlerFactory;
     property QuerySSLPortFunc: TFunc<UInt16, Boolean> read FQuerySSLPortFunc write FQuerySSLPortFunc;
 
     property BeforeCommandGet: TBeforeCommandGetFunc read FBeforeCommandGet write FBeforeCommandGet;
@@ -278,8 +298,34 @@ end;
 function TMARShttpServerIndy.GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
 begin
   if not Assigned(IOHandler) then
+  begin
     IOHandler := TIdServerIOHandlerSSLOpenSSL.Create(Self);
-  Result := IOHandler as TIdServerIOHandlerSSLOpenSSL;
+    FIOHandlerByMARS := True;
+    FIOHandlerFromFactory := False;
+  end;
+  if not (IOHandler is TIdServerIOHandlerSSLOpenSSL) then
+    raise EMARSException.CreateFmt('SSLIOHandler: the IOHandler of the server is a %s, not Indy''s '
+      + 'TIdServerIOHandlerSSLOpenSSL; use the IOHandler property', [IOHandler.ClassName]);
+  Result := TIdServerIOHandlerSSLOpenSSL(IOHandler);
+end;
+
+function TMARShttpServerIndy.CreateSSLIOHandler: TIdServerIOHandlerSSLBase;
+var
+  LFactory: TMARSSSLIOHandlerFactory;
+begin
+  LFactory := FSSLIOHandlerFactory;
+  if not Assigned(LFactory) then
+    LFactory := DefaultSSLIOHandlerFactory;
+
+  FIOHandlerFromFactory := Assigned(LFactory);
+  if FIOHandlerFromFactory then
+  begin
+    Result := LFactory(Self);
+    if not Assigned(Result) then
+      raise EMARSException.Create('The SSL IOHandler factory of the Indy server returned nil');
+  end
+  else
+    Result := TIdServerIOHandlerSSLOpenSSL.Create(Self);
 end;
 
 function TMARShttpServerIndy.GetUpTime: TTimeSpan;
@@ -368,22 +414,36 @@ procedure TMARShttpServerIndy.Shutdown;
 begin
   inherited;
   Bindings.Clear;
-  if Assigned(IOHandler) then
+  // the IOHandler created by MARS or by Indy; one assigned by the user stays (and is the user's)
+  if Assigned(IOHandler) and not FKeepIOHandler then
   begin
     IOHandler.Free;
     IOHandler := nil;
   end;
+  FIOHandlerByMARS := False;
+  FIOHandlerFromFactory := False;
   FStoppedAt := Now;
 end;
 
 procedure TMARShttpServerIndy.Startup;
 begin
+  // an IOHandler assigned before starting, not by MARS, is the user's
+  FKeepIOHandler := Assigned(IOHandler) and not FIOHandlerByMARS;
+
   if FEngine.Port <> 0 then
     Bindings.Add.Port := FEngine.Port;
 
   if (FEngine.PortSSL <> 0) then
   begin
-    SetupSSLIOHandler();
+    if not Assigned(IOHandler) then
+    begin
+      IOHandler := CreateSSLIOHandler;
+      FIOHandlerByMARS := True;
+    end;
+    // Indy's OpenSSL IOHandler created by MARS: the Indy.SSL.* parameters (a factory or the user
+    // configure their own IOHandler)
+    if FIOHandlerByMARS and not FIOHandlerFromFactory and (IOHandler is TIdServerIOHandlerSSLOpenSSL) then
+      SetupSSLIOHandler();
     Bindings.Add.Port := FEngine.PortSSL;
   end;
 

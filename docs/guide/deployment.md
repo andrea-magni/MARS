@@ -151,7 +151,7 @@ If browsers call the API from another origin, enable the `CORS.*` [parameters](/
 Both self-hosted servers can terminate HTTPS: `PortSSL` plus the certificate and key, see [HTTPS](/server/engine#https).
 
 - **DCS** loads a current OpenSSL (3.x) at run time. Use the certificate chain (`fullchain.pem`) as certificate file.
-- **Indy** requires OpenSSL 1.0.2 (`libeay32.dll`, `ssleay32.dll`), out of support since 2019. `Indy.SSL.Version=sslvTLSv1_2` (the default) means TLS 1.2 only, and with OpenSSL 1.0.2 Indy negotiates RSA key exchange only (no ECDHE, so no forward secrecy), which recent browsers may refuse. With Indy, prefer a reverse proxy for public endpoints.
+- **Indy** requires OpenSSL 1.0.2 (`libeay32.dll`, `ssleay32.dll`), out of support since 2019. `Indy.SSL.Version=sslvTLSv1_2` (the default) means TLS 1.2 only, and with OpenSSL 1.0.2 Indy negotiates RSA key exchange only (no ECDHE, so no forward secrecy), which recent browsers may refuse. With Indy, prefer a reverse proxy for public endpoints, or plug an SSL IOHandler with a current OpenSSL (see [Another SSL IOHandler for Indy](/server/engine#another-ssl-iohandler-for-indy)).
 
 ## ISAPI, Apache, FastCGI
 
