@@ -7,7 +7,7 @@ uses
 , DUnitX.TestFramework
 , MARS.Core.Engine.Interfaces, MARS.Core.Application.Interfaces
 , MARS.Core.RequestAndResponse.Interfaces, MARS.Core.MediaType
-, MARS.Core.Routes
+, MARS.Core.Routes, MARS.Core.URL, MARS.Core.Attributes
 ;
 
 type
@@ -30,6 +30,29 @@ type
     Name: string;
     constructor Create;
     destructor Destroy; override;
+  end;
+
+  // class-based middleware: [Context] injection, one instance per request
+  TStampMiddleware = class(TMARSMiddleware)
+  protected
+    [Context] FURL: TMARSURL;
+  public
+    constructor Create; override;
+    destructor Destroy; override;
+    procedure Execute(const C: TMARSRouteContext; const ANext: TProc); override;
+  end;
+
+  TNamedMiddleware = class(TMARSMiddleware)
+  public
+    procedure Execute(const C: TMARSRouteContext; const ANext: TProc); override;
+    class function MiddlewareName: string; override;
+  end;
+
+  [Path('skipme'), SkipMiddleware('stamp')]
+  TSkipMiddlewareResource = class
+  public
+    [GET, Produces(TMediaType.TEXT_PLAIN)]
+    function Get: string;
   end;
 
   TRouteMock = record
@@ -148,13 +171,25 @@ type
     procedure TestOpenAPIUniqueTagsAndOperationIds;
     [Test]
     procedure TestEnumerateRoutes;
+    [Test]
+    procedure TestNamedMiddlewareSkippedByRoute;
+    [Test]
+    procedure TestNamedMiddlewareSkippedByGroup;
+    [Test]
+    procedure TestClassMiddleware;
+    [Test]
+    procedure TestClassMiddlewareNames;
+    [Test]
+    procedure TestSkipMiddlewareOnResource;
+    [Test]
+    procedure TestNextTwiceNamesTheMiddleware;
   end;
 
 implementation
 
 uses
-  System.Threading, System.SyncObjs
-, MARS.Core.Engine, MARS.Core.URL, MARS.Core.Exceptions, MARS.Core.Activation
+  System.Threading, System.SyncObjs, MARS.Core.Registry
+, MARS.Core.Engine, MARS.Core.Exceptions, MARS.Core.Activation
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
@@ -168,9 +203,50 @@ uses
 ;
 
 var
+  GMiddlewaresAlive: Integer = 0;
   GThingsAlive: Integer = 0;
   GBodyThingsAlive: Integer = 0;
   GTrace: string = '';
+
+{ TStampMiddleware }
+
+constructor TStampMiddleware.Create;
+begin
+  inherited Create;
+  AtomicIncrement(GMiddlewaresAlive);
+end;
+
+destructor TStampMiddleware.Destroy;
+begin
+  AtomicDecrement(GMiddlewaresAlive);
+  inherited;
+end;
+
+procedure TStampMiddleware.Execute(const C: TMARSRouteContext; const ANext: TProc);
+begin
+  ANext();
+  C.Response.SetHeader('X-Stamp', FURL.Path);
+end;
+
+{ TNamedMiddleware }
+
+procedure TNamedMiddleware.Execute(const C: TMARSRouteContext; const ANext: TProc);
+begin
+  C.Response.SetHeader('X-Named', 'yes');
+  ANext();
+end;
+
+class function TNamedMiddleware.MiddlewareName: string;
+begin
+  Result := 'named';
+end;
+
+{ TSkipMiddlewareResource }
+
+function TSkipMiddlewareResource.Get: string;
+begin
+  Result := 'skipped';
+end;
 
 { TRouteBodyThing }
 
@@ -1006,8 +1082,136 @@ begin
   Assert.AreEqual(0, LCount);
 end;
 
+procedure DefineGuardedGroup(const AApplication: IMARSApplication);
+begin
+  MARSRoutesOf(AApplication).Group('guarded',
+    procedure (const G: TMARSRouter)
+    begin
+      G.Use('apikey',
+        procedure (const C: TMARSRouteContext; const ANext: TProc)
+        begin
+          if C.Header<string>('X-Api-Key', '') <> 'secret' then
+            raise EMARSHttpException.Create('Invalid API key', 401);
+          ANext();
+        end
+      );
+
+      G.Get<string>('data', function (const C: TMARSRouteContext): string begin Result := 'data'; end
+      ).Produces(TMediaType.TEXT_PLAIN);
+
+      G.Get<string>('health', function (const C: TMARSRouteContext): string begin Result := 'ok'; end
+      ).Produces(TMediaType.TEXT_PLAIN).SkipMiddleware('apikey');
+
+      G.Group('public',
+        procedure (const P: TMARSRouter)
+        begin
+          P.SkipMiddleware('apikey');
+          P.Get<string>('info', function (const C: TMARSRouteContext): string begin Result := 'info'; end
+          ).Produces(TMediaType.TEXT_PLAIN);
+        end
+      );
+    end
+  );
+end;
+
+procedure TMARSRoutesFixture.TestNamedMiddlewareSkippedByRoute;
+var
+  LHeader: TMARSHeader;
+begin
+  DefineGuardedGroup(FApplication);
+
+  Assert.AreEqual(401, Send('GET', 'guarded/data').Response.StatusCode, 'no key');
+  LHeader.Name := 'X-Api-Key';
+  LHeader.Value := 'secret';
+  Assert.AreEqual('data', Send('GET', 'guarded/data', '', [LHeader]).Response.Content, 'with key');
+
+  var LMock := Send('GET', 'guarded/health');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'the route skips apikey');
+  Assert.AreEqual('ok', LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestNamedMiddlewareSkippedByGroup;
+begin
+  DefineGuardedGroup(FApplication);
+
+  var LMock := Send('GET', 'guarded/public/info');
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'the nested group skips apikey');
+  Assert.AreEqual('info', LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestClassMiddleware;
+begin
+  MARSRoutesOf(FApplication).Use<TStampMiddleware>;
+
+  var LMock := Send('GET', 'ping');
+  Assert.AreEqual('pong', LMock.Response.Content);
+  Assert.AreEqual('/rest/routes/ping', HeaderOf(LMock.Response, 'X-Stamp'), '[Context] field injected');
+  Assert.AreEqual(0, GMiddlewaresAlive, 'one instance per request, freed');
+
+  LMock := Send('GET', 'people/3');
+  Assert.AreEqual('/rest/routes/people/3', HeaderOf(LMock.Response, 'X-Stamp'), 'a new instance for each request');
+  Assert.AreEqual(0, GMiddlewaresAlive);
+end;
+
+procedure TMARSRoutesFixture.TestClassMiddlewareNames;
+begin
+  MARSRoutesOf(FApplication).Use(TNamedMiddleware).Use<TStampMiddleware>;
+  // default name: the class name; custom name: MiddlewareName
+  MARSRoutesOf(FApplication).Get<string>('quiet',
+    function (const C: TMARSRouteContext): string begin Result := 'quiet'; end
+  ).Produces(TMediaType.TEXT_PLAIN).SkipMiddleware('TStampMiddleware').SkipMiddleware('named');
+
+  var LMock := Send('GET', 'ping');
+  Assert.AreEqual('yes', HeaderOf(LMock.Response, 'X-Named'));
+  Assert.AreEqual('/rest/routes/ping', HeaderOf(LMock.Response, 'X-Stamp'));
+
+  LMock := Send('GET', 'quiet');
+  Assert.AreEqual('quiet', LMock.Response.Content);
+  Assert.AreEqual('', HeaderOf(LMock.Response, 'X-Named'), 'skipped by its MiddlewareName');
+  Assert.AreEqual('', HeaderOf(LMock.Response, 'X-Stamp'), 'skipped by its class name');
+  Assert.AreEqual(0, GMiddlewaresAlive);
+end;
+
+procedure TMARSRoutesFixture.TestSkipMiddlewareOnResource;
+begin
+  Assert.IsTrue(FApplication.AddResource('Tests.Routes.TSkipMiddlewareResource'));
+  MARSRoutesOf(FApplication).Use('stamp',
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      ANext();
+      C.Response.SetHeader('X-Stamp', 'stamped');
+    end
+  );
+  FApplication.Parameters.Values[MIDDLEWARES_RESOURCES_PARAM] := True;
+
+  Assert.AreEqual('stamped', HeaderOf(Send('GET', 'helloworld').Response, 'X-Stamp'), 'resource without SkipMiddleware');
+
+  var LMock := Send('GET', 'skipme');
+  Assert.AreEqual('skipped', LMock.Response.Content);
+  Assert.AreEqual('', HeaderOf(LMock.Response, 'X-Stamp'), '[SkipMiddleware] on the resource class');
+end;
+
+procedure TMARSRoutesFixture.TestNextTwiceNamesTheMiddleware;
+begin
+  MARSRoutesOf(FApplication).Get<string>('twicenamed',
+    function (const C: TMARSRouteContext): string begin Result := 'once'; end
+  ).Produces(TMediaType.TEXT_PLAIN)
+   .Use('doubler',
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      ANext();
+      ANext();
+    end
+  );
+
+  var LMock := Send('GET', 'twicenamed');
+  Assert.AreEqual(500, LMock.Response.StatusCode);
+  Assert.Contains(LMock.Response.Content, 'Middleware doubler: next called more than once');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRoutesFixture);
+  MARSRegister(TSkipMiddlewareResource);
 
   MARSRoutes('Tests.Routes.Middleware', 'mw',
     procedure (const R: TMARSRouter)

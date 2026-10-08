@@ -266,18 +266,63 @@ How the chain runs:
 - **Authentication and roles:** checked before any middleware runs.
 - **Global hooks:** `TMARSActivation.RegisterBeforeInvoke` and `RegisterAfterInvoke` run outside the chain.
 
+Each `C.Inject<T>` call asks the injection service for a new value, as each `[Context]` field of a resource does: a `TMARSFireDAC` injected in a middleware and one injected in the handler are different objects, with their own connection.
+
+### Named middlewares and `SkipMiddleware`
+
+A middleware can have a name: `Use('apikey', procedure ...)`.
+- **Messages:** the name appears in error messages (i.e. `Middleware apikey: next called more than once`).
+- **Opting out:** a route or a group can leave out a named middleware of its groups or of the application with `SkipMiddleware('apikey')`, as a public `health` route in a protected group.
+
 ```pascal
 // an API key for every route of the group (ApiKey in the .ini file)
-R.Use(
+R.Use('apikey',
   procedure (const C: TMARSRouteContext; const ANext: TProc)
   begin
     if C.Header<string>('X-Api-Key', '') <> C.Config<string>('ApiKey', '') then
       raise EMARSHttpException.Create('Invalid API key', 401);
     ANext();
   end);
+
+R.Get<string>('health',
+  function (const C: TMARSRouteContext): string
+  begin
+    Result := 'ok';
+  end
+).SkipMiddleware('apikey');   // no key needed
 ```
 
-Each `C.Inject<T>` call asks the injection service for a new value, as each `[Context]` field of a resource does: a `TMARSFireDAC` injected in a middleware and one injected in the handler are different objects, with their own connection.
+`SkipMiddleware` on a group applies to all its routes, nested groups included. Names are case insensitive; anonymous middlewares without a name cannot be skipped.
+
+### Class-based middlewares
+
+A middleware can also be a class derived from `TMARSMiddleware`, with an `Execute` method:
+
+```pascal
+type
+  TAuditMiddleware = class(TMARSMiddleware)
+  protected
+    [Context] FToken: TMARSToken;   // injected, as in a resource
+  public
+    procedure Execute(const C: TMARSRouteContext; const ANext: TProc); override;
+  end;
+
+procedure TAuditMiddleware.Execute(const C: TMARSRouteContext; const ANext: TProc);
+begin
+  ANext();
+  TAuditLog.Write(FToken.UserName, C.Request.Method, C.URL.Path, C.Response.StatusCode);
+end;
+
+// registration
+R.Use<TAuditMiddleware>;          // or R.Use(TAuditMiddleware)
+```
+
+A class-based middleware works like a resource class:
+- **Instance:** a new one for each request, freed when `Execute` returns, so its fields hold the state of that request only and are not shared between threads.
+- **Injection:** its `[Context]` fields and properties are injected before `Execute`, by the same injection services as resources (`TMARSToken`, `TMARSURL`, `IMARSRequest`, `TMARSFireDAC`, custom services...). Injected objects are freed with the request.
+- **Name:** the class name (`TAuditMiddleware`), used by `SkipMiddleware`; override the class function `MiddlewareName` to choose another one.
+
+Prefer a class when the middleware is large, needs injected values, or is shared by several projects; an anonymous method is handier for a few lines.
 
 ### Middlewares around resource methods
 
@@ -286,6 +331,15 @@ The middlewares of the application, the ones added with `MARSRoutesOf(LApplicati
 - **Global default:** used when the parameter is not set; it is `TMARSRouteTable.DefaultMiddlewaresOnResources` (`False`).
 
 Resources are not affected unless you turn the option on. The middlewares of groups and routes stay on routes.
+
+A resource class or method can leave out a named application middleware with the `[SkipMiddleware('name')]` attribute (unit `MARS.Core.Routes`):
+
+```pascal
+[Path('status'), SkipMiddleware('apikey')]
+TStatusResource = class
+  ...
+end;
+```
 
 ## OpenAPI
 

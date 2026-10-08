@@ -80,7 +80,7 @@ begin
 
   // application middleware: around every route, and around the resource methods too
   // with DefaultApp.Middlewares.Resources=true (Server.ini)
-  MARSRoutesOf(LApplication).Use(
+  MARSRoutesOf(LApplication).Use('endpoint',
     procedure (const C: TMARSRouteContext; const ANext: TProc)
     begin
       C.Response.SetHeader('X-MARS-Endpoint', C.Activation.EndpointName);

@@ -22,6 +22,12 @@ type
     City: string;
   end;
 
+  // class-based middleware: a new instance for each request ([Context] fields injected)
+  TTimingMiddleware = class(TMARSMiddleware)
+  public
+    procedure Execute(const C: TMARSRouteContext; const ANext: TProc); override;
+  end;
+
   // in-memory storage shared by all the requests (thread safe)
   TPeopleStore = class
   private
@@ -39,6 +45,17 @@ type
   end;
 
 implementation
+
+{ TTimingMiddleware }
+
+procedure TTimingMiddleware.Execute(const C: TMARSRouteContext; const ANext: TProc);
+var
+  LWatch: TStopwatch;
+begin
+  LWatch := TStopwatch.StartNew;
+  ANext();
+  C.Response.SetHeader('Server-Timing', 'app;dur=' + LWatch.ElapsedMilliseconds.ToString);
+end;
 
 { TPeopleStore }
 
@@ -147,7 +164,8 @@ initialization
           Result := 'pong';
         end
       ).Produces(TMediaType.TEXT_PLAIN)
-       .Summary('Liveness check');
+       .Summary('Liveness check')
+       .SkipMiddleware('endpoint'); // no X-MARS-Endpoint header (Server.Ignition)
 
       R.Get<string>('whoami',
         function (const C: TMARSRouteContext): string
@@ -167,17 +185,8 @@ initialization
       R.Produces(TMediaType.APPLICATION_JSON)
        .Summary('People (route-based endpoints)');
 
-      // middleware of the module: time spent by every route of the group
-      R.Use(
-        procedure (const C: TMARSRouteContext; const ANext: TProc)
-        var
-          LWatch: TStopwatch;
-        begin
-          LWatch := TStopwatch.StartNew;
-          ANext();
-          C.Response.SetHeader('Server-Timing', 'app;dur=' + LWatch.ElapsedMilliseconds.ToString);
-        end
-      );
+      // middleware of the module (class-based): time spent by every route of the group
+      R.Use<TTimingMiddleware>;
 
       // GET /people?name=an
       R.Get<TArray<TPerson>>('',

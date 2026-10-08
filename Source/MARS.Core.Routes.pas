@@ -75,6 +75,37 @@ type
   // serialization of its result; not calling it skips them (the middleware answers)
   TMARSRouteMiddleware = reference to procedure (const C: TMARSRouteContext; const ANext: TProc);
 
+  // Class-based middleware: a new instance for each request, with its [Context] fields and
+  // properties injected as for a resource (token, URL, FireDAC, custom services...), freed
+  // after Execute. Register it with Use<TMyMiddleware> or Use(TMyMiddleware).
+  TMARSMiddleware = class abstract
+  public
+    constructor Create; virtual;
+    procedure Execute(const C: TMARSRouteContext; const ANext: TProc); virtual; abstract;
+    // the name used by SkipMiddleware: the class name, unless overridden
+    class function MiddlewareName: string; virtual;
+  end;
+  TMARSMiddlewareClass = class of TMARSMiddleware;
+
+  // a middleware of a route, a group or an application: a procedure or a class, with a name
+  // ('' for an anonymous procedure registered without a name)
+  TMARSMiddlewareEntry = record
+    Name: string;
+    Proc: TMARSRouteMiddleware;
+    MiddlewareClass: TMARSMiddlewareClass;
+  end;
+
+  // Leaves out the middleware named AName (of the enclosing groups or of the application).
+  // On a route or a group (SkipMiddleware), or on a resource class or method when the
+  // application middlewares wrap the resources (Middlewares.Resources).
+  SkipMiddlewareAttribute = class(MARSAttribute)
+  private
+    FName: string;
+  public
+    constructor Create(const AName: string);
+    property Name: string read FName;
+  end;
+
   TMARSRouteInvoker = reference to function (const AActivation: IMARSActivation): TValue;
 
   // holder whose field is the injection destination of TMARSRouteContext (type T, [Context])
@@ -104,10 +135,11 @@ type
     FSummary: string;
     FDescription: string;
     FHidden: Boolean;
-    FMiddlewares: TArray<TMARSRouteMiddleware>;
+    FMiddlewares: TArray<TMARSMiddlewareEntry>;
   protected
     procedure AddAttribute(const AAttribute: TCustomAttribute);
-    procedure AddMiddleware(const AMiddleware: TMARSRouteMiddleware);
+    procedure AddMiddleware(const AName: string; const AProc: TMARSRouteMiddleware;
+      const AMiddlewareClass: TMARSMiddlewareClass);
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -117,7 +149,7 @@ type
     property SummaryText: string read FSummary;
     property DescriptionText: string read FDescription;
     property IsHidden: Boolean read FHidden;
-    property Middlewares: TArray<TMARSRouteMiddleware> read FMiddlewares;
+    property Middlewares: TArray<TMARSMiddlewareEntry> read FMiddlewares;
   end;
 
   // a parameter declared on a route for the documentation (OpenAPI)
@@ -178,8 +210,14 @@ type
     function Description(const AText: string): TMARSRoute;
     function Hidden: TMARSRoute;
 
-    // middleware around this route (after the ones of its groups)
-    function Use(const AMiddleware: TMARSRouteMiddleware): TMARSRoute;
+    // middleware around this route (after the ones of its groups): a procedure, optionally
+    // named, or a class (a new instance for each request, named after the class)
+    function Use(const AMiddleware: TMARSRouteMiddleware): TMARSRoute; overload;
+    function Use(const AName: string; const AMiddleware: TMARSRouteMiddleware): TMARSRoute; overload;
+    function Use(const AMiddlewareClass: TMARSMiddlewareClass): TMARSRoute; overload;
+    function Use<T: TMARSMiddleware>: TMARSRoute; overload;
+    // leaves out the middleware named AName of the groups or of the application
+    function SkipMiddleware(const AName: string): TMARSRoute;
     function QueryParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
     function HeaderParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
     function CookieParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
@@ -257,8 +295,15 @@ type
     function Description(const AText: string): TMARSRouter;
     function Hidden: TMARSRouter;
 
-    // middleware around every route of the group, nested groups included
-    function Use(const AMiddleware: TMARSRouteMiddleware): TMARSRouter;
+    // middleware around every route of the group, nested groups included: a procedure,
+    // optionally named, or a class (a new instance for each request, named after the class)
+    function Use(const AMiddleware: TMARSRouteMiddleware): TMARSRouter; overload;
+    function Use(const AName: string; const AMiddleware: TMARSRouteMiddleware): TMARSRouter; overload;
+    function Use(const AMiddlewareClass: TMARSMiddlewareClass): TMARSRouter; overload;
+    function Use<T: TMARSMiddleware>: TMARSRouter; overload;
+    // leaves out, for the routes of the group, the middleware named AName of the enclosing
+    // groups or of the application
+    function SkipMiddleware(const AName: string): TMARSRouter;
 
     property Parent: TMARSRouter read FParent;
     property Path: string read FPath;
@@ -744,10 +789,19 @@ begin
   inherited;
 end;
 
-procedure TMARSRouteItem.AddMiddleware(const AMiddleware: TMARSRouteMiddleware);
+procedure TMARSRouteItem.AddMiddleware(const AName: string; const AProc: TMARSRouteMiddleware;
+  const AMiddlewareClass: TMARSMiddlewareClass);
+var
+  LEntry: TMARSMiddlewareEntry;
 begin
-  if Assigned(AMiddleware) then
-    FMiddlewares := FMiddlewares + [AMiddleware];
+  if not Assigned(AProc) and not Assigned(AMiddlewareClass) then
+    Exit;
+  LEntry.Name := AName;
+  LEntry.Proc := AProc;
+  LEntry.MiddlewareClass := AMiddlewareClass;
+  if Assigned(AMiddlewareClass) and (LEntry.Name = '') then
+    LEntry.Name := AMiddlewareClass.MiddlewareName;
+  FMiddlewares := FMiddlewares + [LEntry];
 end;
 
 function TMARSRouteItem.GetAttributes: TArray<TCustomAttribute>;
@@ -933,8 +987,60 @@ begin
   Result := FInvoker(AActivation);
 end;
 
-// the endpoint runs once: a second call of ANext raises
-function OnceOnly(const AEndpoint: TProc): TProc;
+{ TMARSMiddleware }
+
+constructor TMARSMiddleware.Create;
+begin
+  inherited Create;
+end;
+
+class function TMARSMiddleware.MiddlewareName: string;
+begin
+  Result := ClassName;
+end;
+
+{ SkipMiddlewareAttribute }
+
+constructor SkipMiddlewareAttribute.Create(const AName: string);
+begin
+  inherited Create;
+  FName := AName;
+end;
+
+// [Context] fields and properties of a class-based middleware, as for a resource
+procedure InjectMiddlewareContext(const AInstance: TObject; const AActivation: IMARSActivation);
+var
+  LType: TRttiType;
+begin
+  LType := TMARSRouteRtti.RttiType(AInstance.ClassInfo);
+  LType.ForEachFieldWithAttribute<ContextAttribute>(
+    function (AField: TRttiField; AAttribute: ContextAttribute): Boolean
+    var
+      LValue: TInjectionValue;
+    begin
+      Result := True;
+      LValue := TMARSInjectionServiceRegistry.Instance.GetValue(AField, AActivation);
+      if not LValue.IsReference then
+        AActivation.AddToContext(LValue.Value);
+      AField.SetValue(AInstance, LValue.Value);
+    end
+  );
+  LType.ForEachPropertyWithAttribute<ContextAttribute>(
+    function (AProperty: TRttiProperty; AAttribute: ContextAttribute): Boolean
+    var
+      LValue: TInjectionValue;
+    begin
+      Result := True;
+      LValue := TMARSInjectionServiceRegistry.Instance.GetValue(AProperty, AActivation);
+      if not LValue.IsReference then
+        AActivation.AddToContext(LValue.Value);
+      AProperty.SetValue(AInstance, LValue.Value);
+    end
+  );
+end;
+
+// ANext of a middleware runs the rest of the chain once: a second call raises
+function NextOnce(const ANext: TProc; const AMiddlewareName: string): TProc;
 var
   LCalled: Boolean;
 begin
@@ -943,43 +1049,89 @@ begin
     procedure
     begin
       if LCalled then
-        raise EMARSException.Create('Route middleware: next called more than once');
+        raise EMARSException.CreateFmt('Middleware %s: next called more than once'
+          , [StringFallback([AMiddlewareName], '(unnamed)')]);
       LCalled := True;
-      AEndpoint();
+      ANext();
     end;
 end;
 
-function MiddlewareStep(const AMiddleware: TMARSRouteMiddleware; const ANext: TProc;
+function MiddlewareStep(const AEntry: TMARSMiddlewareEntry; const ANext: TProc;
   const AActivation: IMARSActivation): TProc;
+var
+  LNext: TProc;
 begin
+  LNext := NextOnce(ANext, AEntry.Name);
   Result :=
     procedure
+    var
+      LInstance: TMARSMiddleware;
     begin
-      AMiddleware(TMARSRouteContext.Create(AActivation), ANext);
+      if Assigned(AEntry.Proc) then
+        AEntry.Proc(TMARSRouteContext.Create(AActivation), LNext)
+      else
+      begin
+        LInstance := AEntry.MiddlewareClass.Create;
+        try
+          InjectMiddlewareContext(LInstance, AActivation);
+          LInstance.Execute(TMARSRouteContext.Create(AActivation), LNext);
+        finally
+          LInstance.Free;
+        end;
+      end;
     end;
 end;
 
-procedure RunMiddlewares(const AChain: TArray<TMARSRouteMiddleware>;
+// the chain without the middlewares named in SkipMiddleware attributes of the endpoint
+// (route and groups, or resource method and class)
+function WithoutSkipped(const AChain: TArray<TMARSMiddlewareEntry>;
+  const AActivation: IMARSActivation): TArray<TMARSMiddlewareEntry>;
+var
+  LSkipped: TArray<string>;
+  LAddSkipped: TProc<SkipMiddlewareAttribute>;
+  LEntry: TMARSMiddlewareEntry;
+begin
+  LSkipped := [];
+  LAddSkipped :=
+    procedure (AAttribute: SkipMiddlewareAttribute)
+    begin
+      LSkipped := LSkipped + [AAttribute.Name];
+    end;
+  TRttiHelper.ForEachAttribute<SkipMiddlewareAttribute>(AActivation.MethodAttributes, LAddSkipped);
+  TRttiHelper.ForEachAttribute<SkipMiddlewareAttribute>(AActivation.ResourceAttributes, LAddSkipped);
+
+  if Length(LSkipped) = 0 then
+    Exit(AChain);
+
+  Result := [];
+  for LEntry in AChain do
+    if (LEntry.Name = '') or (IndexText(LEntry.Name, LSkipped) = -1) then
+      Result := Result + [LEntry];
+end;
+
+procedure RunMiddlewares(const AChain: TArray<TMARSMiddlewareEntry>;
   const AActivation: IMARSActivation; const AEndpoint: TProc);
 var
+  LChain: TArray<TMARSMiddlewareEntry>;
   LStep: TProc;
   LIndex: Integer;
 begin
-  if Length(AChain) = 0 then
+  LChain := WithoutSkipped(AChain, AActivation);
+  if Length(LChain) = 0 then
   begin
     AEndpoint();
     Exit;
   end;
 
-  LStep := OnceOnly(AEndpoint);
-  for LIndex := High(AChain) downto 0 do
-    LStep := MiddlewareStep(AChain[LIndex], LStep, AActivation);
+  LStep := AEndpoint;
+  for LIndex := High(LChain) downto 0 do
+    LStep := MiddlewareStep(LChain[LIndex], LStep, AActivation);
   LStep();
 end;
 
 procedure TMARSRoute.Execute(const AActivation: IMARSActivation; const AEndpoint: TProc);
 var
-  LChain: TArray<TMARSRouteMiddleware>;
+  LChain: TArray<TMARSMiddlewareEntry>;
   LRouter: TMARSRouter;
 begin
   LChain := FMiddlewares;
@@ -995,8 +1147,30 @@ end;
 
 function TMARSRoute.Use(const AMiddleware: TMARSRouteMiddleware): TMARSRoute;
 begin
-  AddMiddleware(AMiddleware);
+  AddMiddleware('', AMiddleware, nil);
   Result := Self;
+end;
+
+function TMARSRoute.Use(const AName: string; const AMiddleware: TMARSRouteMiddleware): TMARSRoute;
+begin
+  AddMiddleware(AName, AMiddleware, nil);
+  Result := Self;
+end;
+
+function TMARSRoute.Use(const AMiddlewareClass: TMARSMiddlewareClass): TMARSRoute;
+begin
+  AddMiddleware('', nil, AMiddlewareClass);
+  Result := Self;
+end;
+
+function TMARSRoute.Use<T>: TMARSRoute;
+begin
+  Result := Use(TMARSMiddlewareClass(TClass(T)));
+end;
+
+function TMARSRoute.SkipMiddleware(const AName: string): TMARSRoute;
+begin
+  Result := Attribute(SkipMiddlewareAttribute.Create(AName));
 end;
 
 function TMARSRoute.Attribute(const AAttribute: TCustomAttribute): TMARSRoute;
@@ -1257,8 +1431,30 @@ end;
 
 function TMARSRouter.Use(const AMiddleware: TMARSRouteMiddleware): TMARSRouter;
 begin
-  AddMiddleware(AMiddleware);
+  AddMiddleware('', AMiddleware, nil);
   Result := Self;
+end;
+
+function TMARSRouter.Use(const AName: string; const AMiddleware: TMARSRouteMiddleware): TMARSRouter;
+begin
+  AddMiddleware(AName, AMiddleware, nil);
+  Result := Self;
+end;
+
+function TMARSRouter.Use(const AMiddlewareClass: TMARSMiddlewareClass): TMARSRouter;
+begin
+  AddMiddleware('', nil, AMiddlewareClass);
+  Result := Self;
+end;
+
+function TMARSRouter.Use<T>: TMARSRouter;
+begin
+  Result := Use(TMARSMiddlewareClass(TClass(T)));
+end;
+
+function TMARSRouter.SkipMiddleware(const AName: string): TMARSRouter;
+begin
+  Result := Attribute(SkipMiddlewareAttribute.Create(AName));
 end;
 
 function TMARSRouter.RolesAllowed(const ARoles: string): TMARSRouter;
