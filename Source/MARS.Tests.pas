@@ -224,6 +224,7 @@ begin
 
     WillReturn('').When.Authorization;
 
+    WillReturn(False).When.GetIsSecure; // plain HTTP (IMARSRequest.IsSecure, since 1.8.1)
     WillReturn(AData.HostName).When.HostName;
     WillReturn(AData.Port).When.Port;
     WillReturn(AData.HttpMethod).When.Method;
