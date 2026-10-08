@@ -56,3 +56,10 @@
 {$if CompilerVersion >= 37}
   {$define Delphi13Florence_UP}
 {$endif}
+
+// WebBroker TCookie.HttpOnly and TCookie.SameSite, Indy TIdCookie.SameSite (added to Indy in
+// April 2023): used where verified, Delphi 13 on. With older versions MARS writes those cookie
+// attributes after the cookie path, which WebBroker and Indy copy as they are into Set-Cookie.
+{$if CompilerVersion >= 37}
+  {$define MARS_NATIVE_COOKIE_ATTRIBUTES}
+{$endif}

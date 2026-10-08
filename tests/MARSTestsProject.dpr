@@ -38,6 +38,7 @@ uses
   Tests.MCP in 'Tests.MCP.pas',
   Tests.ReqRespLogger.JSON in 'Tests.ReqRespLogger.JSON.pas',
   Tests.Routes in 'Tests.Routes.pas',
+  Tests.Cookies in 'Tests.Cookies.pas',
   Mock.IMARSRequest in 'Mock.IMARSRequest.pas',
   Mock.IMARSResponse in 'Mock.IMARSResponse.pas';
 

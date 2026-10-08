@@ -758,18 +758,41 @@ begin
   FWebResponse.ContentType := AContentType;
 end;
 
+// the cookie path followed by the attributes WebBroker/Indy cannot write natively (Delphi
+// versions before 13, see MARS_NATIVE_COOKIE_ATTRIBUTES in MARS.inc): both copy the path as it
+// is into the Set-Cookie header ("path=/rest/default; HttpOnly")
+function CookiePathWithAttributes(const APath: string; const AAttributes: TArray<string>): string;
+var
+  LAttribute: string;
+begin
+  Result := APath;
+  if Length(AAttributes) = 0 then
+    Exit;
+  if Result = '' then
+    Result := '/';
+  for LAttribute in AAttributes do
+    Result := Result + '; ' + LAttribute;
+end;
+
 procedure TMARSWebResponse.SetCookie(const AName, AValue, ADomain,
   APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
 var
-  LSL: TStringList;
+  LCookie: TCookie;
 begin
-  LSL := TStringList.Create;
-  try
-    LSL.Values[AName] := AValue;
-    FWebResponse.SetCookieField(LSL, ADomain, APath, AExpiration, ASecure{, AHttpOnly});
-  finally
-    LSL.Free;
-  end;
+  // HttpOnly, as with the Indy and DCS servers: the token cookie must not be readable by
+  // scripts (ISAPI, Apache and FastCGI hosts write this cookie as it is)
+  LCookie := FWebResponse.Cookies.Add;
+  LCookie.Name := AName;
+  LCookie.Value := AValue;
+  LCookie.Domain := ADomain;
+  LCookie.Expires := AExpiration;
+  LCookie.Secure := ASecure;
+  {$IFDEF MARS_NATIVE_COOKIE_ATTRIBUTES}
+  LCookie.Path := APath;
+  LCookie.HttpOnly := True;
+  {$ELSE}
+  LCookie.Path := CookiePathWithAttributes(APath, ['HttpOnly']);
+  {$ENDIF}
 end;
 
 procedure TMARSWebResponse.SetHeader(const AName, AValue: string);
