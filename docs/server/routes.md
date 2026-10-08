@@ -193,6 +193,7 @@ Since routes are matched first, a route with parameters can still take requests 
 | `C.Token`, `C.Request`, `C.Response`, `C.URL`, `C.Application`, `C.Engine`, `C.Activation` | `[Context]` of those types |
 | `C.Own(AObject)` | an object freed at the end of the request |
 | `C.Created(ALocation)`, `C.NoContent`, `C.Status(ACode)` | `Response.StatusCode := ...` |
+| `C.MiddlewareName` | in a middleware: its name (`''` in handlers) |
 
 Parameters are converted with the same rules as resource parameters (the readers, `StringToTValue`), and a malformed body gives 400. Parameters declared as required on the route (`QueryParam<T>('a', '', True)`, see [OpenAPI](#openapi)) are checked before the handler runs: 400 when missing.
 
@@ -271,6 +272,7 @@ Each `C.Inject<T>` call asks the injection service for a new value, as each `[Co
 ### Named middlewares and `SkipMiddleware`
 
 A middleware can have a name: `Use('apikey', procedure ...)`.
+- **Inside the middleware:** `C.MiddlewareName` is the name it was registered with (`''` for an unnamed middleware and in handlers), handy for logs and shared helper code.
 - **Messages:** the name appears in error messages (i.e. `Middleware apikey: next called more than once`).
 - **Opting out:** a route or a group can leave out a named middleware of its groups or of the application with `SkipMiddleware('apikey')`, as a public `health` route in a protected group.
 

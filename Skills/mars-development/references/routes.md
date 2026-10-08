@@ -74,7 +74,7 @@ R.Use(
 
 On a route, a group (nested groups included) or the whole application (`MARSRoutesOf(LApplication).Use`). Order: outer groups first, route last. Not calling `ANext` skips the handler. Exceptions of the handler reach the middleware first. Authentication/roles are checked before any middleware. Calling `ANext` twice raises.
 
-- Named: `Use('apikey', procedure ...)`; a route or group opts out with `.SkipMiddleware('apikey')` (case insensitive; also `[SkipMiddleware('apikey')]` on a resource class/method when application middlewares wrap resources). The name appears in errors.
+- Named: `Use('apikey', procedure ...)`; a route or group opts out with `.SkipMiddleware('apikey')` (case insensitive; also `[SkipMiddleware('apikey')]` on a resource class/method when application middlewares wrap resources). The name appears in errors; inside the middleware it is `C.MiddlewareName` (`''` for unnamed ones and in handlers).
 - Class-based: `TMyMiddleware = class(TMARSMiddleware)` overriding `Execute(const C; const ANext: TProc)`, registered with `Use<TMyMiddleware>` or `Use(TMyMiddleware)`. New instance per request, `[Context]` fields/properties injected like a resource, freed after `Execute`. Name = class name, or override `class function MiddlewareName`.
 
 Application middlewares also wrap resource methods when `Middlewares.Resources=true` (application parameter, i.e. `DefaultApp.Middlewares.Resources=true`; default `TMARSRouteTable.DefaultMiddlewaresOnResources`, False).

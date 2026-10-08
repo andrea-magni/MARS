@@ -183,6 +183,8 @@ type
     procedure TestSkipMiddlewareOnResource;
     [Test]
     procedure TestNextTwiceNamesTheMiddleware;
+    [Test]
+    procedure TestMiddlewareNameInContext;
   end;
 
 implementation
@@ -233,6 +235,7 @@ end;
 procedure TNamedMiddleware.Execute(const C: TMARSRouteContext; const ANext: TProc);
 begin
   C.Response.SetHeader('X-Named', 'yes');
+  C.Response.SetHeader('X-Named-Name', C.MiddlewareName);
   ANext();
 end;
 
@@ -1207,6 +1210,37 @@ begin
   var LMock := Send('GET', 'twicenamed');
   Assert.AreEqual(500, LMock.Response.StatusCode);
   Assert.Contains(LMock.Response.Content, 'Middleware doubler: next called more than once');
+end;
+
+procedure TMARSRoutesFixture.TestMiddlewareNameInContext;
+begin
+  MARSRoutesOf(FApplication).Get<string>('whoisit',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := '[' + C.MiddlewareName + ']'; // '' in a handler
+    end
+  ).Produces(TMediaType.TEXT_PLAIN)
+   .Use('TestMW',
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      C.Response.SetHeader('X-MW', C.MiddlewareName);
+      ANext();
+    end
+  )
+   .Use(
+    procedure (const C: TMARSRouteContext; const ANext: TProc)
+    begin
+      C.Response.SetHeader('X-Unnamed', '[' + C.MiddlewareName + ']');
+      ANext();
+    end
+  )
+   .Use(TNamedMiddleware);
+
+  var LMock := Send('GET', 'whoisit');
+  Assert.AreEqual('[]', LMock.Response.Content, 'handler');
+  Assert.AreEqual('TestMW', HeaderOf(LMock.Response, 'X-MW'), 'named procedure');
+  Assert.AreEqual('[]', HeaderOf(LMock.Response, 'X-Unnamed'), 'unnamed procedure');
+  Assert.AreEqual('named', HeaderOf(LMock.Response, 'X-Named-Name'), 'class: MiddlewareName');
 end;
 
 initialization

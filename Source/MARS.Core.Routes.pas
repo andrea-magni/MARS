@@ -25,6 +25,7 @@ type
   TMARSRouteContext = record
   private
     FActivation: IMARSActivation;
+    FMiddlewareName: string;
     function GetApplication: IMARSApplication;
     function GetEngine: IMARSEngine;
     function GetRequest: IMARSRequest;
@@ -33,7 +34,8 @@ type
     function GetURL: TMARSURL;
     function ReadParam<T>(const AAttribute: RequestParamAttribute): T;
   public
-    constructor Create(const AActivation: IMARSActivation);
+    constructor Create(const AActivation: IMARSActivation); overload;
+    constructor Create(const AActivation: IMARSActivation; const AMiddlewareName: string); overload;
 
     // request parameters ([PathParam], [QueryParam], ... of the resources)
     function Path<T>(const AName: string): T;
@@ -59,6 +61,9 @@ type
     procedure NoContent;
 
     property Activation: IMARSActivation read FActivation;
+    // inside a middleware: the name it was registered with (Use('name', ...), the class name or
+    // MiddlewareName of a class-based one); '' for an unnamed middleware and in handlers
+    property MiddlewareName: string read FMiddlewareName;
     property Application: IMARSApplication read GetApplication;
     property Engine: IMARSEngine read GetEngine;
     property Request: IMARSRequest read GetRequest;
@@ -493,6 +498,14 @@ end;
 constructor TMARSRouteContext.Create(const AActivation: IMARSActivation);
 begin
   FActivation := AActivation;
+  FMiddlewareName := '';
+end;
+
+
+constructor TMARSRouteContext.Create(const AActivation: IMARSActivation; const AMiddlewareName: string);
+begin
+  FActivation := AActivation;
+  FMiddlewareName := AMiddlewareName;
 end;
 
 function TMARSRouteContext.ReadParam<T>(const AAttribute: RequestParamAttribute): T;
@@ -1068,13 +1081,13 @@ begin
       LInstance: TMARSMiddleware;
     begin
       if Assigned(AEntry.Proc) then
-        AEntry.Proc(TMARSRouteContext.Create(AActivation), LNext)
+        AEntry.Proc(TMARSRouteContext.Create(AActivation, AEntry.Name), LNext)
       else
       begin
         LInstance := AEntry.MiddlewareClass.Create;
         try
           InjectMiddlewareContext(LInstance, AActivation);
-          LInstance.Execute(TMARSRouteContext.Create(AActivation), LNext);
+          LInstance.Execute(TMARSRouteContext.Create(AActivation, AEntry.Name), LNext);
         finally
           LInstance.Free;
         end;
