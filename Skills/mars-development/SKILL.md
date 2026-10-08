@@ -1,6 +1,6 @@
 ---
 name: mars-development
-description: Develop REST APIs with MARS-Curiosity (Delphi REST library) - writing resources or route-based endpoints (Express style, MARS.Core.Routes, middlewares), REST attributes, parameter binding, JWT authentication and roles, FireDAC dataset publishing, server-sent events (SSE), WebStencils HTML templating, client components, configuration, serialization. Use this skill whenever the user is working in a Delphi project that uses MARS (units named MARS.*, Server.Ignition, Server.Resources.*), asks how to add or modify REST endpoints, secure endpoints with tokens/roles, expose datasets, push events to clients, render server-side HTML, consume a MARS server from a client, handle errors, or configure a MARS server - even if they don't mention MARS by name but the code clearly uses it.
+description: Develop REST APIs with MARS-Curiosity (Delphi REST library) - writing resources (the primary, JAX-RS style model) and, as an additional option, route-based endpoints (Express style, MARS.Core.Routes, middlewares), REST attributes, parameter binding, JWT authentication and roles, FireDAC dataset publishing, server-sent events (SSE), WebStencils HTML templating, client components, configuration, serialization. Use this skill whenever the user is working in a Delphi project that uses MARS (units named MARS.*, Server.Ignition, Server.Resources.*, Server.Routes*), asks how to add or modify REST endpoints, secure endpoints with tokens/roles, expose datasets, push events to clients, render server-side HTML, consume a MARS server from a client, handle errors, or configure a MARS server - even if they don't mention MARS by name but the code clearly uses it.
 ---
 
 # Developing with MARS-Curiosity
@@ -11,7 +11,15 @@ MARS (https://github.com/andrea-magni/MARS) maps HTTP requests onto plain Delphi
 - **Resources**: classes annotated with `[Path('...')]`, registered via `MARSRegister(TMyResource)` (or `MARSRegister([TResA, TResB])`, or `TMARSResourceRegistry.Instance.RegisterResource<TMyResource>`) in the unit `initialization`. A new instance is created per request and freed afterwards.
 - **Activation** (`IMARSActivation`): per-request context (request, response, token, URL...). Injectable anywhere with `[Context]`.
 - URL = engine BasePath + app path + resource `[Path]` + method `[Path]`: `/rest/default/customers/123`.
-- **Routes** (alternative style, `MARS.Core.Routes`): endpoints defined in code with `MARSRoutes(...)` modules and `R.Get<T>('path', function (const C: TMARSRouteContext): T ...)`, added with `IMARSApplication.AddRoutes`; same activation, serialization, roles and OpenAPI as resources. See `references/routes.md`.
+- **Routes** (additional style, `MARS.Core.Routes`, on develop after 1.8.1): endpoints defined in code with `MARSRoutes(...)` modules and `R.Get<T>('path', function (const C: TMARSRouteContext): T ...)`, added with `IMARSApplication.AddRoutes`; same activation, serialization, roles and OpenAPI as resources. See `references/routes.md`.
+
+## Resources first, routes as an option
+
+Resource classes with attributes (JAX-RS style) are the primary MARS model and stay fully supported: routes are an **addition**, not a replacement. Both styles live in the same application, on the same engine, base path, token and OpenAPI document.
+
+- Write resources by default: new endpoints, examples, answers to "how do I add an endpoint".
+- Use routes when the user asks for them (Express / Minimal API / endpoints in code, middlewares around endpoints) or when the project already uses them (`Server.Routes*` units, `MARS.Core.Routes`, `AddRoutes`, `MARSRoutes`); follow the style of the code around.
+- Never convert existing resources to routes (or routes to resources) unless the user asks. Login (`TMARSTokenResource`), OpenAPI, static files and MCP (`TMCPResource`) are resources in every project, route-based ones included.
 
 ## Minimal resource
 

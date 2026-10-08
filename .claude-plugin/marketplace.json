@@ -9,7 +9,7 @@
     {
       "name": "mars-curiosity",
       "source": "./",
-      "description": "Agent Skills for MARS-Curiosity, the Delphi REST library: scaffold new MARS server projects, develop REST APIs (resources or routes, attributes, JWT, FireDAC, SSE, WebStencils, client, deployment) and build MCP servers exposing Delphi tools to AI agents."
+      "description": "Agent Skills for MARS-Curiosity, the Delphi REST library: scaffold new MARS server projects, develop REST APIs (resources and, as an addition, routes, attributes, JWT, FireDAC, SSE, WebStencils, client, deployment) and build MCP servers exposing Delphi tools to AI agents."
     }
   ]
 }

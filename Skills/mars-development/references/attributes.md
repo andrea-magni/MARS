@@ -56,7 +56,7 @@ Configuration values (see `configuration.md` for the parameter system):
 
 | Attribute | Effect |
 |---|---|
-| `[PermitAll]` | any caller passes — authenticated or not; overrides role-based checks |
+| `[PermitAll]` | any caller passes — authenticated or not; overrides the role check, but if `[RolesAllowed]` is also present (class or method) a valid token is still required |
 | `[DenyAll]` | nobody passes |
 | `[RolesAllowed('standard')]` / `[RolesAllowed('standard,admin')]` | token must be verified and have at least one listed role (separators: comma, semicolon, space) |
 
@@ -75,6 +75,9 @@ No authorization attribute = public endpoint. `[PermitAll]` alone requires no to
 | `[CustomHeader('X-Name', 'value')]` | add a response header |
 | `[JSONP]` | JSONP wrapping |
 | `[NoLog]` | exclude from request/response loggers |
+| `[SkipMiddleware('name')]` (unit `MARS.Core.Routes`) | leave out a named application middleware (`MARSRoutesOf(App).Use('name', ...)`), when application middlewares wrap resources (`Middlewares.Resources=true`) |
+
+Route-based endpoints (`MARS.Core.Routes`, an addition to resources) use the same attributes through fluent declarations (`.RolesAllowed(...)`, `.Produces(...)`, `.Attribute(AnyAttribute.Create(...))`): see `routes.md`.
 
 ## Metadata / OpenAPI (unit `MARS.Metadata.Attributes`)
 

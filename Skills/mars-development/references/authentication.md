@@ -64,6 +64,8 @@ end;
 
 Unauthorized calls fail with an authorization error (HTTP 403 family) before the method body runs.
 
+Routes (`MARS.Core.Routes`) are protected with the same rules through fluent declarations: `R.RolesAllowed('standard')` on a group, `.RolesAllowed('admin')`, `.PermitAll`, `.DenyAll` on a route; inside a handler the token is `C.Token`. See `routes.md`.
+
 ## Using the token inside a resource
 
 ```pascal

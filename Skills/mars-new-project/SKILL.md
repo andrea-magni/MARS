@@ -9,7 +9,7 @@ MARS-Curiosity (https://github.com/andrea-magni/MARS) is a REST library for Delp
 
 1. **A project file (.dpr)** — the host: console app, VCL/FMX form, Windows service, ISAPI dll, Apache module, or Linux daemon. The host creates an HTTP server (typically `TMARShttpServerIndy`) bound to the engine.
 2. **`Server.Ignition.pas`** — creates the singleton `IMARSEngine` (`TServerEngine.Default`), loads configuration, and registers applications with `AddApplication(AName, ABasePath, AResourceMasks)`.
-3. **Resource units (`Server.Resources.*.pas`)** — plain classes annotated with attributes (`[Path]`, `[GET]`, `[Produces]`, ...) and registered in their `initialization` section via `MARSRegister(...)`.
+3. **Resource units (`Server.Resources.*.pas`)** — plain classes annotated with attributes (`[Path]`, `[GET]`, `[Produces]`, ...) and registered in their `initialization` section via `MARSRegister(...)`. This JAX-RS style is the primary MARS model. As an addition (not a replacement), endpoints can also be defined as routes in code (`Server.Routes*.pas`, `MARS.Core.Routes`, Express style), next to the resources.
 
 Endpoint URLs compose as: engine base path (`/rest` by default) + application base path (`/default`) + resource `[Path]` + method `[Path]`. So the HelloWorld template answers at `http://localhost:8080/rest/default/helloworld`.
 
@@ -24,7 +24,13 @@ Endpoint URLs compose as: engine base path (`/rest` by default) + application ba
 3. Delete the host flavors the user does not need.
 4. Rename the ini file in `bin/` to match the new executable name.
 
-There is also `Demos/MARSTemplateDCS/` — the same template running on Delphi Cross Socket instead of Indy — if the user asks for the DCS transport, and `Demos/MARSTemplateRoutes/` — the same Indy template with its endpoints defined as routes in code (`Server.Routes.pas`, `MARS.Core.Routes`, Express style) instead of resource classes — if the user prefers route-based endpoints. Token and OpenAPI stay resources in both.
+Pick the template:
+
+- `Demos/MARSTemplate/` (default): Indy, endpoints as resource classes;
+- `Demos/MARSTemplateDCS/`: the same on Delphi Cross Socket, if the user asks for the DCS transport;
+- `Demos/MARSTemplateRoutes/`: the same as `MARSTemplate`, with its sample endpoints defined as routes in code (`Server.Routes.pas`, `MARS.Core.Routes`, Express style), only if the user asks for route-based / Express-style endpoints. Routes are in addition to resources: token (login) and OpenAPI stay resources there too, and resource units can be added to that project as to any other (`'Server.Resources.*'`).
+
+MARSCmd (`Utils\Bin\Win32\MARScmd_VCL.exe`) lists the three templates and does all the steps above.
 
 ### Option B — generate a minimal project from bundled templates
 
@@ -54,6 +60,7 @@ The engine defaults (from `TMARSEngine.Create`): `Port=8080`, `PortSSL=0`, `Thre
 ## Adding more pieces
 
 - **New resource**: create `Server.Resources.<Name>.pas` with an attributed class, register it with `MARSRegister(TMyResource)` in `initialization`, and add the unit to the .dpr uses. No engine change needed — the `'Server.Resources.*'` mask picks it up.
+- **New route module** (projects using routes, or when the user asks for them): create `Server.Routes.<Name>.pas` registering a module with `MARSRoutes('Server.Routes.<Name>', '<path>', procedure (const R: TMARSRouter) ...)` in `initialization`, add the unit to the .dpr uses, and make sure the ignition calls `LApplication.AddRoutes('Server.Routes.*')` (already there in `MARSTemplateRoutes`). See the `mars-development` skill, `references/routes.md`.
 - **Token/login endpoint**: already included (`Server.Resources.Token.pas` subclasses `TMARSTokenResource`). Override `Authenticate` to plug real credential checks.
 - **OpenAPI/Swagger endpoint**: see `Demos/MARSTemplate/Server.Resources.OpenAPI.pas` (`TOpenAPIResource` + `MARS.OpenAPI.v3.InjectionService` in the ignition uses) and the `OpenAPI.info.*` ini parameters.
 - **FireDAC**: uncomment the `FireDAC.<DefName>.*` entries in the ini; the ignition template already calls `TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC')` under `{$IFDEF MARS_FIREDAC}`.

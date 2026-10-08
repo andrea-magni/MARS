@@ -2,7 +2,7 @@
 
 Unit: `MARS.Core.Routes`. Endpoints defined in code (Express / Minimal API style), next to resource classes, on the same activation: same MessageBodyReaders/Writers, injection services, JWT roles, error handling, loggers and OpenAPI. Available on the `develop` branch after 1.8.1. Working demo: `Demos/RoutesDemo`; new projects with routes: the `Demos/MARSTemplateRoutes` template (MARSCmd). Docs: https://andrea-magni.github.io/MARS/server/routes
 
-Use routes when the user asks for Express-style / code-defined / minimal endpoints; otherwise resources remain the default style of MARS projects. Both can be mixed in one application.
+Routes are an **addition** to resource classes (the primary, JAX-RS style model of MARS), not a replacement: both styles are first-class and can be mixed in one application. Use routes when the user asks for Express-style / code-defined / minimal endpoints or the project already uses them; otherwise write resources. Do not convert existing resources to routes unless asked. Token (login), OpenAPI, static files and MCP endpoints are resources in route-based projects too.
 
 ## Module + registration
 
@@ -56,9 +56,9 @@ In `Server.Ignition`: `LApplication := FEngine.AddApplication(...); LApplication
 - Generic type arguments are always explicit (Delphi does not infer them from anonymous methods). Static class methods / plain functions can be passed as handlers.
 - Paths: `{name}`, `{name:int|guid|alpha}`, `{*}` (last, read with `C.Path<string>('*')`). Literal > constrained param > param > wildcard. Routes match before resources; path matched with another verb -> 405 + `Allow`.
 - Context: `C.Path<T>`, `C.Query<T>(Name[, Default])`, `C.Header<T>`, `C.Cookie<T>`, `C.Form<T>`, `C.Body<T>`, `C.Config<T>(Name, Default)`, `C.Inject<T>` (any injection service, e.g. `TMARSFireDAC`; a new value per call), `C.Token`, `C.Request`, `C.Response`, `C.URL`, `C.Activation`, `C.Own(Obj)`, `C.Created(Location)`, `C.NoContent`, `C.Status(Code)`.
-- Declarations (route or group, fluent): `RolesAllowed('a,b')`, `PermitAll`, `DenyAll`, `Produces`, `Consumes`, `CustomHeader`, `NoLog`, `ResultIsReference`, `Attribute(AnyAttribute.Create(...))` (e.g. `ConnectionAttribute.Create('MAIN_DB')`), `Name(OperationId)`, `Summary`, `Description`, `Hidden`, `QueryParam<T>/HeaderParam<T>/CookieParam<T>/FormParam<T>(Name, Description, Required)` (OpenAPI only). Roles of route and groups add up (union), like resource class + method.
+- Declarations (route or group, fluent): `RolesAllowed('a,b')`, `PermitAll`, `DenyAll`, `Produces`, `Consumes`, `CustomHeader`, `NoLog`, `ResultIsReference`, `Attribute(AnyAttribute.Create(...))` (e.g. `ConnectionAttribute.Create('MAIN_DB')`), `Name(OperationId)`, `Summary`, `Description`, `Hidden`, `QueryParam<T>/HeaderParam<T>/CookieParam<T>/FormParam<T>(Name, Description, Required)` (documented in OpenAPI; a missing `Required` one gives 400 before the handler). Roles of route and groups add up (union), like resource class + method.
 - Returned objects are freed after the response (as for resources) unless `ResultIsReference`.
-- Definition errors raise `ERouteDefinitionException` (duplicate route, route hiding a resource method, unknown constraint).
+- Definition errors raise `ERouteDefinitionException` (duplicate route, same method + path as a method of a resource already added to the application, unknown constraint).
 
 ## Middlewares
 
@@ -72,11 +72,10 @@ R.Use(
   end);
 ```
 
-On a route, a group (nested groups included) or the whole application (`MARSRoutesOf(LApplication).Use`).
+On a route, a group (nested groups included) or the whole application (`MARSRoutesOf(LApplication).Use`). Order: outer groups first, route last. Not calling `ANext` skips the handler. Exceptions of the handler reach the middleware first. Authentication/roles are checked before any middleware. Calling `ANext` twice raises.
 
 - Named: `Use('apikey', procedure ...)`; a route or group opts out with `.SkipMiddleware('apikey')` (case insensitive; also `[SkipMiddleware('apikey')]` on a resource class/method when application middlewares wrap resources). The name appears in errors.
 - Class-based: `TMyMiddleware = class(TMARSMiddleware)` overriding `Execute(const C; const ANext: TProc)`, registered with `Use<TMyMiddleware>` or `Use(TMyMiddleware)`. New instance per request, `[Context]` fields/properties injected like a resource, freed after `Execute`. Name = class name, or override `class function MiddlewareName`.
- Order: outer groups first, route last. Not calling `ANext` skips the handler. Exceptions of the handler reach the middleware first. Authentication/roles are checked before any middleware. Calling `ANext` twice raises.
 
 Application middlewares also wrap resource methods when `Middlewares.Resources=true` (application parameter, i.e. `DefaultApp.Middlewares.Resources=true`; default `TMARSRouteTable.DefaultMiddlewaresOnResources`, False).
 
@@ -88,3 +87,12 @@ Application middlewares also wrap resource methods when `Middlewares.Resources=t
 - `QueryParam<T>(..., True)` and the like are enforced: missing -> 400 before the handler.
 - Strings/numbers: add `.Produces(TMediaType.TEXT_PLAIN)` for plain text.
 - Undeclared query/header parameters work but are missing from OpenAPI: declare them with `QueryParam<T>` etc.
+
+## Resources or routes?
+
+| | Resources (primary) | Routes (additional) |
+| --- | --- | --- |
+| Definition | classes + attributes, RTTI | code, explicit |
+| Instance | one per request, `[Context]` fields | none; values asked to `C` |
+| Cross-cutting code | `[BeforeInvoke]`/`[AfterInvoke]`, global hooks | middlewares (`Use`), global hooks |
+| Good for | most APIs, larger services, per-request state | small services, prototypes, generated endpoints, developers coming from Node.js |

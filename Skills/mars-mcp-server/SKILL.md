@@ -9,6 +9,8 @@ MARS ships native MCP support (units `MARS.MCP.*` in `Source/`): derive a resour
 
 The complete working example is `Demos/MCPServer` in the MARS repository (public tools + FireDAC-backed authenticated tools + OAuth).
 
+MCP servers are built on resources (`TMCPResource`), also in projects that define their REST endpoints as routes (`MARS.Core.Routes`, `MARSTemplateRoutes`): routes are an addition to resources, and an MCP resource lives next to them in the same application. Add it to the application's resources (`'Server.Resources.*'` mask) as shown below.
+
 ## Minimal MCP server
 
 ```pascal
