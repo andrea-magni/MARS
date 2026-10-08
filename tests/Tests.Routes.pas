@@ -146,6 +146,8 @@ type
     procedure TestOpenAPIGroupsSharingAPath;
     [Test]
     procedure TestOpenAPIUniqueTagsAndOperationIds;
+    [Test]
+    procedure TestEnumerateRoutes;
   end;
 
 implementation
@@ -970,6 +972,38 @@ begin
   finally
     LOpenAPI.Free;
   end;
+end;
+
+procedure TMARSRoutesFixture.TestEnumerateRoutes;
+begin
+  MARSRoutesOf(FApplication).Get<string>('direct',
+    function (const C: TMARSRouteContext): string begin Result := ''; end);
+
+  var LLines := TStringList.Create;
+  try
+    TMARSRouteTable.EnumerateRoutes(FApplication,
+      procedure (AGroupName, ARoutePath, AHttpMethod: string)
+      begin
+        LLines.Add(AGroupName + '|' + ARoutePath + '|' + AHttpMethod);
+      end
+    );
+    Assert.IsTrue(LLines.IndexOf('Tests.Routes.People|people/{id}|GET') > -1, 'module route, no constraint');
+    Assert.IsTrue(LLines.IndexOf('Tests.Routes.People|people/{personId}/orders/{orderId}|GET') > -1, 'nested group: its module');
+    Assert.IsTrue(LLines.IndexOf('Tests.Routes.Misc|ping|GET') > -1, 'module at the application root');
+    Assert.IsTrue(LLines.IndexOf('Routes|direct|GET') > -1, 'route defined on the application');
+  finally
+    LLines.Free;
+  end;
+
+  // an application without routes: nothing, no error
+  var LCount := 0;
+  TMARSRouteTable.EnumerateRoutes(FEngine.AddApplication('NoRoutes', '/noroutes', []),
+    procedure (AGroupName, ARoutePath, AHttpMethod: string)
+    begin
+      Inc(LCount);
+    end
+  );
+  Assert.AreEqual(0, LCount);
 end;
 
 initialization

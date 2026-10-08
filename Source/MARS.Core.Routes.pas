@@ -300,6 +300,11 @@ type
     class var DefaultMiddlewaresOnResources: Boolean;
 
     class function ForApplication(const AApplication: IMARSApplication): TMARSRouteTable;
+    // the routes of AApplication, if any, in definition order: group (name of the module,
+    // 'Routes' for routes defined on the application), path relative to the application
+    // without constraints (i.e. people/{id}), HTTP method
+    class procedure EnumerateRoutes(const AApplication: IMARSApplication;
+      const ADoSomething: TProc<string, string, string>);
   end;
 
   // Holds the TRttiContext the holder fields belong to
@@ -1298,6 +1303,35 @@ begin
     RunMiddlewares(FRoot.FMiddlewares, AActivation, AEndpoint)
   else
     AEndpoint();
+end;
+
+class procedure TMARSRouteTable.EnumerateRoutes(const AApplication: IMARSApplication;
+  const ADoSomething: TProc<string, string, string>);
+var
+  LRoute: TMARSRoute;
+  LRouter: TMARSRouter;
+  LGroup: string;
+begin
+  if not Assigned(ADoSomething) or not Assigned(AApplication)
+    or not (AApplication.RouteTable is TMARSRouteTable)
+  then
+    Exit;
+
+  for LRoute in TMARSRouteTable(AApplication.RouteTable).Routes do
+  begin
+    // the module the route belongs to (nested groups included)
+    LGroup := '';
+    LRouter := LRoute.Router;
+    while Assigned(LRouter) and (LGroup = '') do
+    begin
+      LGroup := LRouter.GroupName;
+      LRouter := LRouter.Parent;
+    end;
+    if LGroup = '' then
+      LGroup := 'Routes';
+
+    ADoSomething(LGroup, LRoute.PrototypePath, LRoute.HttpMethod);
+  end;
 end;
 
 procedure TMARSRouteTable.Add(const ARoute: TMARSRoute);

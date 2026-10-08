@@ -63,6 +63,7 @@ uses
 , MARS.Core.Engine, MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Registry, MARS.Core.Registry.Utils, MARS.Core.Utils
+, MARS.Core.Routes
 , Server.Ignition
 ;
 
@@ -135,6 +136,25 @@ begin
                   end
                 );
 
+              end
+            );
+
+            // routes (MARS.Core.Routes), grouped by module
+            TMARSRouteTable.EnumerateRoutes(AApplication,
+              procedure (AGroupName, ARoutePath, AHttpMethod: string)
+              var
+                LGroupItem: TTreeNode;
+              begin
+                LGroupItem := LApplicationItem.getFirstChild;
+                while Assigned(LGroupItem) and (LGroupItem.Text <> AGroupName) do
+                  LGroupItem := LApplicationItem.GetNextChild(LGroupItem);
+                if not Assigned(LGroupItem) then
+                  LGroupItem := ATreeview.Items.AddChild(LApplicationItem, AGroupName);
+
+                if LApplicationHttpPath <> '' then
+                  ATreeview.Items.AddChild(LGroupItem, TMARSURL.CombinePath([LApplicationHttpPath, ARoutePath]) + ' ' + AHttpMethod);
+                if LApplicationHttpsPath <> '' then
+                  ATreeview.Items.AddChild(LGroupItem, TMARSURL.CombinePath([LApplicationHttpsPath, ARoutePath]) + ' ' + AHttpMethod);
               end
             );
           end
