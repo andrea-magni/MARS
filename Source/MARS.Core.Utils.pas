@@ -74,6 +74,13 @@ type
 
   function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;
 
+  // The value of a Set-Cookie header (RFC 6265): Path, Domain, Expires (GMT) and Max-Age
+  // (0 when AExpiration is past: the browser deletes the cookie; none when AExpiration is 0, a
+  // session cookie), Secure, HttpOnly. Raises EArgumentException for a name, value, path or
+  // domain with characters a cookie cannot carry.
+  function SetCookieHeaderValue(const AName, AValue, ADomain, APath: string;
+    const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean): string;
+
   function EnsurePrefix(const AString, APrefix: string; const AIgnoreCase: Boolean = True): string;
   function EnsureSuffix(const AString, ASuffix: string; const AIgnoreCase: Boolean = True): string;
 
@@ -119,6 +126,72 @@ uses
 {$IFDEF MARS_ZIP}, Zip {$ENDIF}
   , NetEncoding
 ;
+
+function SetCookieHeaderValue(const AName, AValue, ADomain, APath: string;
+  const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean): string;
+
+  // RFC 6265: token (name), cookie-octet (value), av-value (path, domain)
+  function IsToken(const AText: string): Boolean;
+  var
+    LChar: Char;
+  begin
+    Result := AText <> '';
+    for LChar in AText do
+      if (LChar <= ' ') or (LChar >= #127)
+        or CharInSet(LChar, ['(', ')', '<', '>', '@', ',', ';', ':', '\', '"', '/', '[', ']', '?', '=', '{', '}'])
+      then
+        Exit(False);
+  end;
+
+  function IsCookieValue(const AText: string): Boolean;
+  var
+    LChar: Char;
+  begin
+    Result := True;
+    for LChar in AText do
+      if (LChar <= ' ') or (LChar >= #127) or CharInSet(LChar, ['"', ',', ';', '\']) then
+        Exit(False);
+  end;
+
+  function IsAttributeValue(const AText: string): Boolean;
+  var
+    LChar: Char;
+  begin
+    Result := True;
+    for LChar in AText do
+      if (LChar < ' ') or (LChar >= #127) or (LChar = ';') then
+        Exit(False);
+  end;
+
+begin
+  if not IsToken(AName) then
+    raise EArgumentException.CreateFmt('Invalid cookie name: %s', [AName]);
+  if not IsCookieValue(AValue) then
+    raise EArgumentException.CreateFmt('Invalid value for cookie %s', [AName]);
+  if not IsAttributeValue(APath) then
+    raise EArgumentException.CreateFmt('Invalid path for cookie %s: %s', [AName, APath]);
+  if not IsAttributeValue(ADomain) then
+    raise EArgumentException.CreateFmt('Invalid domain for cookie %s: %s', [AName, ADomain]);
+
+  Result := AName + '=' + AValue;
+  if APath <> '' then
+    Result := Result + '; Path=' + APath;
+  if ADomain <> '' then
+    Result := Result + '; Domain=' + ADomain;
+  if AExpiration <> 0 then
+  begin
+    Result := Result + '; Expires=' + FormatDateTime('ddd, dd mmm yyyy hh":"nn":"ss "GMT"'
+      , TTimeZone.Local.ToUniversalTime(AExpiration), TFormatSettings.Invariant);
+    if AExpiration > Now then
+      Result := Result + '; Max-Age=' + SecondsBetween(Now, AExpiration).ToString
+    else
+      Result := Result + '; Max-Age=0';
+  end;
+  if ASecure then
+    Result := Result + '; Secure';
+  if AHttpOnly then
+    Result := Result + '; HttpOnly';
+end;
 
 function StringFallback(const AStrings: TArray<string>; const ADefault: string = ''): string;
 var

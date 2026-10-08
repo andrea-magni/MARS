@@ -185,7 +185,8 @@ implementation
 
 uses
   System.IOUtils
-, Net.CrossHttpParams;
+, Net.CrossHttpParams
+, MARS.Core.Utils;
 
 { TMARShttpServerDCS }
 
@@ -971,8 +972,11 @@ end;
 procedure TMARSDCSResponse.SetCookie(const AName, AValue, ADomain,
   APath: string; const AExpiration: TDateTime; const ASecure: Boolean);
 begin
-  // HttpOnly, as with Indy: the token cookie must not be readable by scripts
-  FDCSResponse.Cookies.AddOrSet(AName, AValue, SecondsBetween(Now, AExpiration), APath, ADomain, True {AHttpOnly}, ASecure);
+  // written by MARS, not with TResponseCookie of DCS, whose Max-Age cannot be 0 to delete a
+  // cookie; HttpOnly, as with Indy: the token cookie must not be readable by scripts
+  FDCSResponse.Header.Add('Set-Cookie'
+    , SetCookieHeaderValue(AName, AValue, ADomain, APath, AExpiration, ASecure, True {AHttpOnly})
+    , True {ADupAllowed: one header for each cookie});
 end;
 
 procedure TMARSDCSResponse.SetHeader(const AName, AValue: string);
