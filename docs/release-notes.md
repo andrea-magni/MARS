@@ -2,14 +2,20 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included.
 
-## Unreleased {#unreleased}
+## 1.9.0 {#v1-9-0}
 
-Changes on the `develop` branch, part of the next release.
+<Badge type="tip" text="latest" /> **8 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.0) · [changes since 1.8.1](https://github.com/andrea-magni/MARS/compare/v.1.8.1...v.1.9.0)
 
 **New**
-- Cookies: `SameSite` (`TMARSCookieSameSite`, `IMARSResponse.SetCookie` overload with HttpOnly and SameSite) on every host; `JWT.CookieSameSite` for the token cookie. [The token cookie](/features/authentication#the-token-cookie)
+- [Route-based endpoints](/server/routes) (preview, `MARS.Core.Routes`), in addition to resource classes: `R.Get<TResult>('people/{id:int}', function (const C: TMARSRouteContext): TResult ...)`. [RoutesDemo](/demos/#routesdemo)
+  - groups, path constraints (`int`, `guid`, `alpha`), typed body and result, roles, `Produces`/`Consumes`, injection (`C.Inject<T>`), 405 with `Allow`;
+  - modules registered with `MARSRoutes` and added with `IMARSApplication.AddRoutes`, or defined with `MARSRoutesOf(App)`;
+  - in the OpenAPI document and in `/metadata`, with `Summary`, `Description`, `Hidden` and declared `QueryParam<T>`/`HeaderParam<T>`/`CookieParam<T>`/`FormParam<T>`;
+  - middlewares (`Use`) on routes, groups and applications, named (`SkipMiddleware`, `C.MiddlewareName`) or class-based (`TMARSMiddleware`); with `Middlewares.Resources=true` the application middlewares wrap the resource methods too;
+  - the endpoint tree of the VCL server forms lists the routes.
 - MARSCmd template `MARSTemplateRoutes`: a new project with its endpoints defined as routes. [MARSTemplateRoutes](/demos/#marstemplateroutes)
-- [Route-based endpoints](/server/routes) (preview, `MARS.Core.Routes`, [RoutesDemo](/demos/#routesdemo)): `R.Get<TResult>('people/{id:int}', function (const C: TMARSRouteContext): TResult ...)` next to the resource classes, with groups, path constraints (`int`, `guid`, `alpha`), typed body, roles, `Produces`/`Consumes`, injection (`C.Inject<T>`) and 405 with `Allow` for a wrong method. Route modules are registered with `MARSRoutes` and added with `IMARSApplication.AddRoutes`. Routes are part of the OpenAPI document: path parameters typed by their constraint, typed body and result, `Summary`, `Description`, `Hidden`, declared `QueryParam<T>`/`HeaderParam<T>`/`CookieParam<T>`/`FormParam<T>`. Middlewares around routes, groups or all the routes of an application: `Use(procedure (const C: TMARSRouteContext; const ANext: TProc) ...)`. Named middlewares (`Use('apikey', ...)`) can be left out with `SkipMiddleware` (also `[SkipMiddleware]` on resources); class-based middlewares derive from `TMARSMiddleware` (`Use<TMyMiddleware>`, a new instance for each request with `[Context]` injection). The application middlewares also wrap the resource methods with `Middlewares.Resources=true` (default: `TMARSRouteTable.DefaultMiddlewaresOnResources`, False).
+- Indy server: pluggable SSL IOHandler (`SSLIOHandlerFactory`, `DefaultSSLIOHandlerFactory`), i.e. one with OpenSSL 3, any `TIdServerIOHandlerSSLBase` descendant. [Another SSL IOHandler for Indy](/server/engine#another-ssl-iohandler-for-indy)
+- Cookies: `SameSite` (`TMARSCookieSameSite`, `IMARSResponse.SetCookie` overload with HttpOnly and SameSite) on every host; `JWT.CookieSameSite` for the token cookie. [The token cookie](/features/authentication#the-token-cookie)
 - Linux daemon: `--foreground` (or `-f`) runs the server in the current process with logs on standard output, for systemd (`Type=simple`) and Docker. [Deployment](/guide/deployment#linux-with-systemd)
 - Documentation: [Deployment](/guide/deployment) guide (Windows service, systemd, Docker, reverse proxy, HTTPS, IIS/Apache/FastCGI), [Why MARS?](/guide/why-mars), [FAQ](/guide/faq); `llms.txt` and `llms-full.txt` for AI tools, sitemap.
 
@@ -19,6 +25,7 @@ Changes on the `develop` branch, part of the next release.
 - Attributes on a resource class (`Encoding`, `JSONP`, `Produces`, `Connection`, `NoLog`, report, template and Razor attributes) also apply when declared on an ancestor class, as `RolesAllowed` and the JSON options already did. Readers, writers, injection services and loggers read them from the activation attribute lists, ready for endpoints not backed by an RTTI method.
 
 **Fixed**
+- dmustache: `MARS.dmustache` did not compile (`MARS.Core.Exceptions` used twice).
 - ISAPI, Apache and FastCGI hosts: the token cookie was not `HttpOnly`, and its expiration was written in local time labelled GMT (shifted by the time zone offset).
 - DCS server: logging out kept the token cookie for a day (`Max-Age=86400`) instead of deleting it.
 - Templates and demos: the test projects did not compile without TestInsight (missing `DUnitX.Loggers.Xml.NUnit`), and their tests failed on the `IsSecure` request property (`MARS.Tests` mock).
@@ -28,7 +35,7 @@ Changes on the `develop` branch, part of the next release.
 
 ## 1.8.1 {#v1-8-1}
 
-<Badge type="tip" text="latest" /> **7 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.8.1) · [changes since 1.8.0](https://github.com/andrea-magni/MARS/compare/v.1.8.0...v.1.8.1)
+**7 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.8.1) · [changes since 1.8.0](https://github.com/andrea-magni/MARS/compare/v.1.8.0...v.1.8.1)
 
 **New**
 - Client logging: `OnLog`, `RegisterLogger`, `LogOptions` (content, masking), ready-made sinks, server-sent events streams. [Client logging](/client/logging)

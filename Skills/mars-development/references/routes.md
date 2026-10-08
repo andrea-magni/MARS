@@ -1,6 +1,6 @@
 # Routes (route-based endpoints)
 
-Unit: `MARS.Core.Routes`. Endpoints defined in code (Express / Minimal API style), next to resource classes, on the same activation: same MessageBodyReaders/Writers, injection services, JWT roles, error handling, loggers and OpenAPI. Available on the `develop` branch after 1.8.1. Working demo: `Demos/RoutesDemo`; new projects with routes: the `Demos/MARSTemplateRoutes` template (MARSCmd). Docs: https://andrea-magni.github.io/MARS/server/routes
+Unit: `MARS.Core.Routes`. Endpoints defined in code (Express / Minimal API style), next to resource classes, on the same activation: same MessageBodyReaders/Writers, injection services, JWT roles, error handling, loggers and OpenAPI. Available since MARS 1.9.0 (preview: the API may still change slightly). Working demo: `Demos/RoutesDemo`; new projects with routes: the `Demos/MARSTemplateRoutes` template (MARSCmd). Docs: https://andrea-magni.github.io/MARS/server/routes
 
 Routes are an **addition** to resource classes (the primary, JAX-RS style model of MARS), not a replacement: both styles are first-class and can be mixed in one application. Use routes when the user asks for Express-style / code-defined / minimal endpoints or the project already uses them; otherwise write resources. Do not convert existing resources to routes unless asked. Token (login), OpenAPI, static files and MCP endpoints are resources in route-based projects too.
 

@@ -27,7 +27,7 @@ To start a new project with routes, pick the `MARSTemplateRoutes` template in [M
 :::
 
 ::: tip Preview
-Routes are new on the `develop` branch and will ship with the next release. The API may still change slightly; feedback is welcome on the [forum](https://en.delphipraxis.net/forum/34-mars-curiosity-rest-library/) or in the [GitHub issues](https://github.com/andrea-magni/MARS/issues).
+Routes are new in MARS 1.9.0. The API may still change slightly; feedback is welcome on the [forum](https://en.delphipraxis.net/forum/34-mars-curiosity-rest-library/) or in the [GitHub issues](https://github.com/andrea-magni/MARS/issues).
 :::
 
 ## A module of routes

@@ -11,7 +11,7 @@ MARS (https://github.com/andrea-magni/MARS) maps HTTP requests onto plain Delphi
 - **Resources**: classes annotated with `[Path('...')]`, registered via `MARSRegister(TMyResource)` (or `MARSRegister([TResA, TResB])`, or `TMARSResourceRegistry.Instance.RegisterResource<TMyResource>`) in the unit `initialization`. A new instance is created per request and freed afterwards.
 - **Activation** (`IMARSActivation`): per-request context (request, response, token, URL...). Injectable anywhere with `[Context]`.
 - URL = engine BasePath + app path + resource `[Path]` + method `[Path]`: `/rest/default/customers/123`.
-- **Routes** (additional style, `MARS.Core.Routes`, on develop after 1.8.1): endpoints defined in code with `MARSRoutes(...)` modules and `R.Get<T>('path', function (const C: TMARSRouteContext): T ...)`, added with `IMARSApplication.AddRoutes`; same activation, serialization, roles and OpenAPI as resources. See `references/routes.md`.
+- **Routes** (additional style, `MARS.Core.Routes`, since 1.9.0): endpoints defined in code with `MARSRoutes(...)` modules and `R.Get<T>('path', function (const C: TMARSRouteContext): T ...)`, added with `IMARSApplication.AddRoutes`; same activation, serialization, roles and OpenAPI as resources. See `references/routes.md`.
 
 ## Resources first, routes as an option
 

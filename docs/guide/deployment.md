@@ -62,7 +62,7 @@ The daemon runs in two ways:
 - `./MyProjectServerDaemon` detaches from the terminal (classic daemon: fork, new session) and logs to `MyProjectServerDaemon.log` next to the binary;
 - `./MyProjectServerDaemon --foreground` (or `-f`) stays in the current process and logs to standard output. This is what systemd and Docker expect.
 
-Both stop on `SIGTERM` (and `SIGINT` in foreground). The foreground mode is available after MARS 1.8.1; with older versions use `Type=forking` and no `--foreground`. A systemd unit, `/etc/systemd/system/myproject.service`:
+Both stop on `SIGTERM` (and `SIGINT` in foreground). The foreground mode is available since MARS 1.9.0; with older versions use `Type=forking` and no `--foreground`. A systemd unit, `/etc/systemd/system/myproject.service`:
 
 ```ini
 [Unit]
