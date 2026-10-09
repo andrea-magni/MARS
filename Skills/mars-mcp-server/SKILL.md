@@ -99,7 +99,7 @@ Parameter/field types map to JSON Schema automatically: strings → `string`, in
 ## When to read the references
 
 - **Any authentication requirement** — Bearer tokens, roles, hiding tools per user, OAuth login window for Claude/ChatGPT/Open WebUI: read `references/authorization.md` first, it also lists client-specific pitfalls that look like server bugs.
-- **Tools that query a database** (FireDAC, TFDQuery, TMARSFireDAC): read `references/database-tools.md` — dataset ownership rules matter.
+- **Tools that query a database** (FireDAC, TFDQuery, TMARSFireDAC, or Devart UniDAC/MyDAC/IBDAC with TMARSUniDAC/TMARSMyDAC/TMARSIBDAC): read `references/database-tools.md` — dataset ownership rules matter.
 - **MCP resources or prompts** (attachable content like DB schemas, URI templates, reusable prompt templates): read `references/resources-prompts.md`.
 - **Interactive UIs / MCP Apps** (a chart, form or dashboard rendered by Claude or another host next to a tool result, `ui://` resources): read `references/mcp-apps.md`.
 

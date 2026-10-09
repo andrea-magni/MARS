@@ -1,6 +1,6 @@
 {
   "name": "mars",
-  "description": "Official plugin marketplace of MARS-Curiosity, the Delphi REST library: Agent Skills to scaffold, develop and deploy MARS servers.",
+  "description": "Official plugin marketplace of MARS-Curiosity, the Delphi REST library: Agent Skills to scaffold (with MARSCmd), develop and deploy MARS servers and clients.",
   "owner": {
     "name": "Andrea Magni",
     "url": "https://github.com/andrea-magni"
@@ -9,7 +9,7 @@
     {
       "name": "mars-curiosity",
       "source": "./",
-      "description": "Agent Skills for MARS-Curiosity, the Delphi REST library: scaffold new MARS server projects, develop REST APIs (resources and, as an addition, routes, attributes, JWT, FireDAC, SSE, WebStencils, client, deployment) and build MCP servers exposing Delphi tools to AI agents."
+      "description": "Agent Skills for MARS-Curiosity, the Delphi REST library: scaffold new MARS server projects, develop REST APIs (resources and, as an addition, routes, attributes, JWT, datasets with FireDAC and Devart UniDAC/MyDAC/IBDAC, SSE, WebStencils, client, deployment) and build MCP servers exposing Delphi tools to AI agents."
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "mars-curiosity",
   "displayName": "MARS-Curiosity",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Agent Skills for MARS-Curiosity, the Delphi REST library: scaffold new MARS server projects, develop REST APIs with resources and, as an addition, routes, attributes, JWT authentication, FireDAC and Devart UniDAC/MyDAC/IBDAC datasets, server-sent events, WebStencils, client components and deployment, and build MCP servers exposing Delphi tools to AI agents.",
   "author": {
     "name": "Andrea Magni",

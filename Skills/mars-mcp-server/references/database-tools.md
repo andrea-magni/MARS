@@ -1,4 +1,4 @@
-# Database tools (FireDAC) for MARS MCP servers
+# Database tools (FireDAC, UniDAC, MyDAC, IBDAC) for MARS MCP servers
 
 To let AI agents query a database, derive from `TMCPDataResource` (unit `MARS.MCP.Data`) instead of `TMCPResource`: tools can then return any `TDataSet` and rows are serialized automatically into the tool result as `structuredContent: { rowCount, rows: [...] }` plus a text fallback (agents read either).
 
@@ -22,6 +22,10 @@ type
 ```
 
 The `[Context] FD: TMARSFireDAC` injection works inside tool methods because tools run on the same per-request resource instance MARS builds — everything in the `mars-development` skill's FireDAC reference applies (connection defs from ini, `[Connection('name')]` attribute, default def `MAIN_DB`).
+
+## With UniDAC, MyDAC or IBDAC
+
+`TMCPDataResource` serializes any `TDataSet`, so the Devart helpers work the same way: inject `[Context] MyDAC: TMARSMyDAC` (or `TMARSUniDAC`, `TMARSIBDAC`) and return `MyDAC.Query(...)` (a `TMyQuery`, owned by the request like `FD.Query`). The define of the library (`MARS_MYDAC`, …) must be enabled and the connection defs loaded in the ignition: see the `mars-development` skill, `references/devart.md`. The examples below translate one to one (`TMyQuery`/`TMyCommand` for `TFDQuery`/`TFDCommand`).
 
 ## Binding tool arguments to SQL parameters
 

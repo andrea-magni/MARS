@@ -71,10 +71,11 @@ The engine defaults (from `TMARSEngine.Create`): `Port=8080`, `PortSSL=0`, `Thre
 - **Token/login endpoint**: already included (`Server.Resources.Token.pas` subclasses `TMARSTokenResource`). Override `Authenticate` to plug real credential checks.
 - **OpenAPI/Swagger endpoint**: see `Demos/MARSTemplate/Server.Resources.OpenAPI.pas` (`TOpenAPIResource` + `MARS.OpenAPI.v3.InjectionService` in the ignition uses) and the `OpenAPI.info.*` ini parameters.
 - **FireDAC**: uncomment the `FireDAC.<DefName>.*` entries in the ini; the ignition template already calls `TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC')` under `{$IFDEF MARS_FIREDAC}`.
+- **Devart UniDAC, MyDAC or IBDAC** instead of FireDAC: define `MARS_UNIDAC`/`MARS_MYDAC`/`MARS_IBDAC` in the projects (or in `MARS.inc`), load the connection defs with `TMARS<Lib>.LoadConnectionDefs(FEngine.Parameters, '<Lib>')` and add `<Lib>.<DefName>.*` entries to the ini. See the `mars-development` skill, `references/devart.md`, and the demos `Demos/UniDACDemo`, `MyDACDemo`, `IBDACDemo` (`Demos/FireDACDemo` for FireDAC).
 
 - **Deployment** (Windows service install, ISAPI on IIS, Apache module, FastCGI, Linux daemon, HTTPS/SSL, reverse proxy): read `references/deployment.md` in this skill.
 
-For everything about writing resources (attributes, parameter binding, auth, FireDAC, SSE, WebStencils, clients), consult the companion skill `mars-development`.
+For everything about writing resources (attributes, parameter binding, auth, FireDAC and Devart datasets, SSE, WebStencils, clients), consult the companion skill `mars-development`.
 
 ## Verify the result
 
