@@ -133,10 +133,7 @@ end;
 
 function TMARSFDDatasetResource.Update([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
 begin
-  // setup
-  SetupStatements;
-
-  // apply updates
+  // apply updates (Retrieve calls SetupStatements: calling it here too added every statement twice)
   Result := FD.ApplyUpdates(Retrieve, ADeltas);
 end;
 
