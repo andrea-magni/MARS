@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="IBDACDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="IBDACDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="IBDACDemoServerApplication">
+        <MSBuild Projects="IBDACDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerApplication:Clean">
+        <MSBuild Projects="IBDACDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerApplication:Make">
+        <MSBuild Projects="IBDACDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoServerFMXApplication">
+        <MSBuild Projects="IBDACDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerFMXApplication:Clean">
+        <MSBuild Projects="IBDACDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerFMXApplication:Make">
+        <MSBuild Projects="IBDACDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoServerService">
+        <MSBuild Projects="IBDACDemoServerService.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerService:Clean">
+        <MSBuild Projects="IBDACDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerService:Make">
+        <MSBuild Projects="IBDACDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoServerConsoleApplication">
+        <MSBuild Projects="IBDACDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="IBDACDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerConsoleApplication:Make">
+        <MSBuild Projects="IBDACDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoServerDaemon">
+        <MSBuild Projects="IBDACDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerDaemon:Clean">
+        <MSBuild Projects="IBDACDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerDaemon:Make">
+        <MSBuild Projects="IBDACDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoServerApacheModule">
+        <MSBuild Projects="IBDACDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerApacheModule:Clean">
+        <MSBuild Projects="IBDACDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerApacheModule:Make">
+        <MSBuild Projects="IBDACDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoServerFCGI">
+        <MSBuild Projects="IBDACDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerFCGI:Clean">
+        <MSBuild Projects="IBDACDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerFCGI:Make">
+        <MSBuild Projects="IBDACDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoServerISAPI">
+        <MSBuild Projects="IBDACDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoServerISAPI:Clean">
+        <MSBuild Projects="IBDACDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoServerISAPI:Make">
+        <MSBuild Projects="IBDACDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoClient">
+        <MSBuild Projects="IBDACDemoClient.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoClient:Clean">
+        <MSBuild Projects="IBDACDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoClient:Make">
+        <MSBuild Projects="IBDACDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IBDACDemoTests">
+        <MSBuild Projects="IBDACDemoTests.dproj"/>
+    </Target>
+    <Target Name="IBDACDemoTests:Clean">
+        <MSBuild Projects="IBDACDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IBDACDemoTests:Make">
+        <MSBuild Projects="IBDACDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="IBDACDemoServerApplication;IBDACDemoServerFMXApplication;IBDACDemoServerService;IBDACDemoServerConsoleApplication;IBDACDemoServerDaemon;IBDACDemoServerApacheModule;IBDACDemoServerFCGI;IBDACDemoServerISAPI;IBDACDemoClient;IBDACDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="IBDACDemoServerApplication:Clean;IBDACDemoServerFMXApplication:Clean;IBDACDemoServerService:Clean;IBDACDemoServerConsoleApplication:Clean;IBDACDemoServerDaemon:Clean;IBDACDemoServerApacheModule:Clean;IBDACDemoServerFCGI:Clean;IBDACDemoServerISAPI:Clean;IBDACDemoClient:Clean;IBDACDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="IBDACDemoServerApplication:Make;IBDACDemoServerFMXApplication:Make;IBDACDemoServerService:Make;IBDACDemoServerConsoleApplication:Make;IBDACDemoServerDaemon:Make;IBDACDemoServerApacheModule:Make;IBDACDemoServerFCGI:Make;IBDACDemoServerISAPI:Make;IBDACDemoClient:Make;IBDACDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
