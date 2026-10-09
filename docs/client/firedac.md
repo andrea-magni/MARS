@@ -1,72 +1,81 @@
 # FireDAC Client
 
-When the server exposes [FireDAC datasets](/features/firedac), the client can fetch them into live `TFDMemTable`s, let the user edit them, and post the changes back as a *delta*. This gives you a near-classic data-aware experience over REST. The component is `TMARSFDResource` (`MARS.Client.FireDAC.pas`), installed by the `MARSClient.FireDACDesign` package.
+When the server exposes [FireDAC datasets](/features/firedac), the client fetches them into live `TFDMemTable`s, lets the user edit them, and posts the changes back as a *delta*. This gives you a near-classic data-aware experience over REST. The components are `TMARSFDResource` and `TMARSFDDataSetResource` (`MARS.Client.FireDAC`, package `MARSClient.FireDAC`), on the *MARS-Curiosity Client* page of the palette (package `MARSClient.FireDACDesign`).
 
 ## Setup
 
-Drop a `TMARSFDResource`, link it to an application, and tell it which local datasets correspond to the server's:
+Drop a `TMARSFDResource`, link it to an application, and pair each dataset of the server with a local `TFDMemTable` in `ResourceDataSets`:
 
 ```pascal
-FDResource.Application := App1;
-FDResource.Resource := 'orders';              // a TMARSFDDatasetResource on the server
-// ResourceDataSets maps server dataset names to local TFDMemTables
+FDResource.Application := MARSApplication;
+FDResource.Resource := 'customersdata';  // i.e. a TMARSFDDatasetResource on the server
+// ResourceDataSets: Customers -> CustomersTable (SendDelta), Cities -> CitiesTable
 ```
 
-`TMARSFDResource` holds a collection (`ResourceDataSets`) pairing each server-side dataset name with a local `TFDMemTable`. Set these up at design time (the component editor lists the names) or in code.
+Set the items at design time or in code. At design time, the *GET* verb of the component adds an item for each dataset of the response, and the *Create datasets* verb creates a `TFDMemTable` for each item that has none. Each item has:
+
+| Property | Default | Meaning |
+| --- | --- | --- |
+| `DataSetName` | | The name of the dataset in the response. |
+| `DataSet` | | The local `TFDMemTable` (its `CachedUpdates` is set when `SendDelta` is on). |
+| `SendDelta` | `True` | `POST` sends the changes of this dataset. |
+| `Synchronize` | `True` | Fill the dataset in the main thread. |
+
+The component asks for `application/json-firedac`, the FireDAC binary format: data, field metadata and change tracking travel with the datasets.
 
 ## Fetching data
 
-A `GET` populates the linked mem-tables:
+A `GET` fills the linked mem tables (an item is added for a dataset that has none, and removed for a dataset missing from the response):
 
 ```pascal
-FDResource.GET(
-  nil,
-  procedure (AStream: TStream)
-  begin
-    // OrdersMemTable and ItemsMemTable are now filled and active
-    Grid1.DataSource.DataSet := OrdersMemTable;
-  end,
-  nil);
+FDResource.GET;
+// CustomersTable and CitiesTable are open, bound controls show the data
 ```
 
-Because the server can return the compact FireDAC wire format, transfers are efficient and field metadata (types, constraints) is preserved.
+`GETAsync` does the same in a background thread; `Synchronize` updates the datasets in the main thread.
 
 ## Sending changes back
 
-Edit the mem-tables as usual (FireDAC tracks the changes). A `POST` sends only the **delta** to the server, which applies it with `ApplyUpdates` and returns a per-dataset result:
+Edit the mem tables as usual: FireDAC tracks the changes. A `POST` sends only the **delta** of the items with `SendDelta`; the server applies it with `ApplyUpdates` and returns one result for each dataset:
 
 ```pascal
-// user edited OrdersMemTable / ItemsMemTable ...
-FDResource.POST(
-  nil,
-  procedure (AStream: TStream)
-  begin
-    if FDResource.ApplyUpdatesResults.AllOK then
-      ShowMessage('Saved')
-    else
-      ShowMessage('Some rows were rejected — see error details');
-  end,
-  nil);
+CustomersTable.Edit;
+CustomersTable.FieldByName('credit').AsCurrency := 2000;
+CustomersTable.Post;
+
+FDResource.POST; // the changed record only
 ```
 
-The server returns an array of `TMARSFDApplyUpdatesRes` (applied count and any per-row errors per dataset), which the client exposes so you can report or reconcile failures.
+After the `POST`, `ApplyUpdatesResults` holds the results (`TMARSFDApplyUpdatesRes`: `dataset`, `result`, `errorCount`, `errors`) and `POSTResponse` the JSON of the response. When a dataset has errors, `OnApplyUpdatesError` is called; if it does not set `AHandled`, an exception is raised. Without errors the changes of the local datasets are merged (`ApplyUpdates` on the client), and the next delta starts from there.
+
+```pascal
+procedure TMainDataModule.FDResourceApplyUpdatesError(const ASender: TObject;
+  const AItem: TMARSFDResourceDatasetsItem; const AErrorCount: Integer;
+  const AErrors: TArray<string>; var AHandled: Boolean);
+begin
+  ShowMessage(AItem.DataSetName + ': ' + string.Join(sLineBreak, AErrors));
+  AHandled := True;
+end;
+```
+
+New records may leave an auto-incremental key empty (clear `Required` of its field): the database assigns it when the server applies the delta, the next `GET` brings it back.
 
 ## Single-dataset resource
 
-For the common one-dataset case, `TMARSFDDataSetResource` binds a single `TFDMemTable` and exposes convenience properties like `Filter` and `Sort` (sent as query parameters) and flags controlling whether to send deltas. The usage pattern is the same: `GET` to load, `POST` to save.
+`TMARSFDDataSetResource` binds a single `TFDMemTable` (`DataSet`) and sends `Filter` and `Sort` as the `filter` and `sort` query parameters of the `GET` (the server decides what to do with them); `SendDelta` and `Synchronize` work as above. `GET` to load, `POST` to save.
 
 ## End-to-end shape
 
 ```
-[Client]  TMARSFDResource.GET  ──►  GET /rest/default/orders
+[Client]  TMARSFDResource.GET  ──►  GET /rest/default/customersdata
                                      server: TMARSFDDatasetResource.Retrieve
-          local TFDMemTables  ◄──    JSON / FireDAC binary (datasets)
+          local TFDMemTables  ◄──    application/json-firedac (datasets)
 
   user edits rows (change tracking) ...
 
-[Client]  TMARSFDResource.POST ──►  POST /rest/default/orders  (delta)
+[Client]  TMARSFDResource.POST ──►  POST /rest/default/customersdata  (deltas)
                                      server: ApplyUpdates(datasets, deltas)
           ApplyUpdatesResults ◄──    [{ dataset, result, errorCount, errors }]
 ```
 
-See the server side in [FireDAC & Datasets](/features/firedac) and the working [ConnectionPoolingProject demo](/demos/#connectionpoolingproject).
+See the server side in [FireDAC & Datasets](/features/firedac) and the complete [FireDACDemo](/demos/#firedacdemo) (its FMX client loads, edits, adds and saves customers this way). The Devart libraries have equivalent components: see [Devart Client](/client/devart).

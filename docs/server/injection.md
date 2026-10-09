@@ -46,6 +46,8 @@ Out of the box you can inject:
 | `TMARSToken` | The authenticated identity — claims and roles (see [Authentication](/features/authentication)). |
 | `TFDConnection` | A FireDAC connection (with the data units; see [FireDAC](/features/firedac)). |
 | `TMARSFireDAC` | A FireDAC helper bound to a connection. |
+| `TUniConnection`, `TMyConnection`, `TIBCConnection` | A Devart connection (with `MARS_UNIDAC`, `MARS_MYDAC`, `MARS_IBDAC`; see [Data Access](/features/data-access)). |
+| `TMARSUniDAC`, `TMARSMyDAC`, `TMARSIBDAC` | The helper of the Devart library, bound to a connection. |
 | `TOpenAPI` | The generated OpenAPI 3 document (with the OpenAPI injection service; see [OpenAPI](/features/openapi)). |
 
 ## Injecting configuration parameters

@@ -56,7 +56,7 @@ The same library has a client side: RAD components (`TMARSNetClient`, `TMARSClie
 
 MARS has been designed from scratch to plug in whatever ORM or data access library (DAC) you need. Not bundling one is a precise choice: MARS is not dogmatic about how you reach your data, so you pick the ORM or DAC that fits your project and your team, and keep the one you already use. A [custom injection service](/server/injection#writing-a-custom-injection-service) hands your ORM session, repository or connection to the resources through `[Context]`, the same way MARS injects its own objects.
 
-FireDAC, UniDAC, MyDAC and IBDAC come with ready integration. With FireDAC a method can return a dataset (or several) and MARS writes it as JSON; the client fetches it into memory tables, lets the user edit and sends back the changes (delta) for the server to apply. See [FireDAC & Datasets](/features/firedac), [UniDAC](/features/firedac#unidac), [MyDAC](/features/firedac#mydac), [IBDAC](/features/firedac#ibdac) and [FireDAC Client](/client/firedac).
+FireDAC, UniDAC, MyDAC and IBDAC come with ready integration. With FireDAC a method can return a dataset (or several) and MARS writes it as JSON; the client fetches it into memory tables, lets the user edit and sends back the changes (delta) for the server to apply. The Devart integrations do the same, with whole datasets instead of deltas. See [Data Access](/features/data-access), [FireDAC & Datasets](/features/firedac), [UniDAC](/features/unidac), [MyDAC](/features/mydac), [IBDAC](/features/ibdac) and the clients ([FireDAC Client](/client/firedac), [Devart Client](/client/devart)).
 
 ## Security built in
 

@@ -201,9 +201,25 @@ Read by the [request/response loggers](/features/logging) (engine section). Each
 
 See [Request/Response Logging](/features/logging) for the log line format and a Grafana Alloy ingestion example.
 
-## FireDAC parameters
+## Data access parameters
 
-Connection definitions live under a slice (commonly `FireDAC`) and are loaded with `TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC')`. Each named definition maps to a FireDAC `ConnectionDefName` with its usual driver-specific keys (`DriverID`, `Database`, `Server`, `User_Name`, `Password`, pooling options, …). See [FireDAC & Datasets](/features/firedac#enabling-firedac).
+Connection definitions live in a section of the engine parameters, loaded by the ignition with `LoadConnectionDefs`:
+
+| Keys | Loaded by | Content |
+| --- | --- | --- |
+| `FireDAC.<name>.<parameter>` | `TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC')` | a FireDAC connection definition (`DriverID`, `Database`, `Server`, `User_Name`, `Password`, `Pooled`, …) |
+| `UniDAC.<name>.<item>` or `UniDAC.<name>.ConnectString` | `TMARSUniDAC.LoadConnectionDefs(FEngine.Parameters, 'UniDAC')` | a UniDAC connect string (`Provider Name`, `Server`, `Database`, `User ID`, `Password`, …) |
+| `MyDAC.<name>.<item>` or `MyDAC.<name>.ConnectString` | `TMARSMyDAC.LoadConnectionDefs(FEngine.Parameters, 'MyDAC')` | a MyDAC connect string (`Server`, `Port`, `Database`, `User ID`, `Password`, …) |
+| `IBDAC.<name>.<item>` or `IBDAC.<name>.ConnectString` | `TMARSIBDAC.LoadConnectionDefs(FEngine.Parameters, 'IBDAC')` | an IBDAC connect string (`Server`, `Database`, `User ID`, `Password`, `Client Library`, `Charset`, …) |
+
+Application parameters (i.e. `DefaultApp.FireDAC.ConnectionDefName`) choose the definition injected without a `[Connection]` attribute:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `FireDAC.ConnectionDefName`, `UniDAC.ConnectionDefName`, `MyDAC.ConnectionDefName`, `IBDAC.ConnectionDefName` | string | `MAIN_DB` | The definition of `[Context]` connections and helpers. |
+| `FireDAC.ConnectionExpandMacros`, `UniDAC.ConnectionExpandMacros`, `MyDAC.ConnectionExpandMacros`, `IBDAC.ConnectionExpandMacros` | Boolean | `False` | Resolve the definition name as a [context value](/features/data-access#parameters-and-macros-from-the-request) (i.e. `Token_Claim_tenant`). |
+
+See [Data Access](/features/data-access) and the page of each library: [FireDAC](/features/firedac#enabling-firedac), [UniDAC](/features/unidac#connection-definitions), [MyDAC](/features/mydac#connection-definitions), [IBDAC](/features/ibdac#connection-definitions).
 
 ## Reading and injecting parameters
 

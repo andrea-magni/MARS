@@ -69,11 +69,11 @@ Raise `EMARSHttpException.Create('Not found', 404)`, or an `EMARSWithResponseExc
 
 ### How do I expose a database table or query?
 
-Inject `[Context] FD: TMARSFireDAC` and return the dataset (`Result := FD.Query('SELECT ...')`); clients can also send back changes as a delta. See [FireDAC & Datasets](/features/firedac).
+Inject `[Context] FD: TMARSFireDAC` and return the dataset (`Result := FD.Query('SELECT ...')`); clients can also send back changes as a delta. See [FireDAC & Datasets](/features/firedac). With Devart UniDAC, MyDAC or IBDAC it works the same way: see [Data Access](/features/data-access).
 
 ### Can I use my ORM or data access library?
 
-Yes. MARS has been designed to plug in whatever ORM or data access library you need, and not bundling one is a deliberate choice: use the one that fits your project. Register a custom injection service to hand your ORM session or repository to the resources with `[Context]`; FireDAC, UniDAC, MyDAC and IBDAC have ready integration. See [Parameters & Injection](/server/injection#writing-a-custom-injection-service) and [Why MARS?](/guide/why-mars#your-data-access-your-choice).
+Yes. MARS has been designed to plug in whatever ORM or data access library you need, and not bundling one is a deliberate choice: use the one that fits your project. Register a custom injection service to hand your ORM session or repository to the resources with `[Context]`; FireDAC, UniDAC, MyDAC and IBDAC have ready integration ([Data Access](/features/data-access)). See [Parameters & Injection](/server/injection#writing-a-custom-injection-service) and [Why MARS?](/guide/why-mars#your-data-access-your-choice).
 
 ### How do I generate OpenAPI (Swagger) documentation?
 

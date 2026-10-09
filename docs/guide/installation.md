@@ -44,7 +44,7 @@ Installing it after MARS is fine: Smart Setup rebuilds MARS and adds `MARS.JOSE`
 Use one installation method only. If MARS is already installed with the executable installer or manually, remove it first, so the IDE doesn't load two copies of the same packages.
 :::
 
-`MARS.UniDAC`, `MARS.MyDAC` and `MARS.IBDAC` are not built by Smart Setup, because they require Devart UniDAC, MyDAC and IBDAC: if you need them, enable `MARS_UNIDAC`, `MARS_MYDAC` or `MARS_IBDAC` in `Source\MARS.inc` and build the package manually from the `Packages` folder.
+The packages of the Devart integrations (`MARS.UniDAC`, `MARS.MyDAC`, `MARS.IBDAC` and the client ones, `MARSClient.UniDAC`, `MARSClient.MyDAC`, `MARSClient.IBDAC` with their `…Design` packages) are not built by Smart Setup, because they require Devart UniDAC, MyDAC and IBDAC: if you need them, enable `MARS_UNIDAC`, `MARS_MYDAC` or `MARS_IBDAC` in `Source\MARS.inc` and build them manually from the `Packages` folder. The executable installer builds them when the Devart library is installed. See [Data Access](/features/data-access#enabling-an-integration).
 
 The test projects (the `...Tests` project of an application created with MARSCmd, `MARS.Tests`) also need [Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), which is not a Smart Setup product: clone it and add its `Source` folder to the library path.
 
@@ -76,6 +76,7 @@ The test projects (the `...Tests` project of an application created with MARSCmd
      - **Build All**
      - **Install** `MARSClient.CoreDesign`
      - **Install** `MARSClient.FireDACDesign`
+     - with a Devart library and its define enabled in `MARS.inc`: build `MARSClient.UniDAC`, `MARSClient.MyDAC` or `MARSClient.IBDAC` and install the corresponding `…Design` package (the server packages, `MARS.UniDAC`, `MARS.MyDAC`, `MARS.IBDAC`, are in `MARS.groupproj`)
 
    Adjust the package folder to match your Delphi version.
 

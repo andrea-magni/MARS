@@ -21,6 +21,9 @@ function GetData: TData;
 | `TMediaType.APPLICATION_XML_FireDAC` | `application/xml-firedac` |
 | `TMediaType.APPLICATION_JSON` | `application/json` |
 | `TMediaType.APPLICATION_JSON_FireDAC` | `application/json-firedac` |
+| `APPLICATION_JSON_UniDAC` (`MARS.Data.UniDAC.Utils`) | `application/json-unidac` |
+| `APPLICATION_JSON_MyDAC` (`MARS.Data.MyDAC.Utils`) | `application/json-mydac` |
+| `APPLICATION_JSON_IBDAC` (`MARS.Data.IBDAC.Utils`) | `application/json-ibdac` |
 | `TMediaType.APPLICATION_XHTML_XML` | `application/xhtml+xml` |
 | `TMediaType.APPLICATION_SVG_XML` | `application/svg+xml` |
 | `TMediaType.APPLICATION_ATOM_XML` | `application/atom+xml` |
@@ -52,7 +55,7 @@ on the textual files served by `TFileSystemResource` (see
 ## Notes
 
 - **`*/*`** (`WILDCARD`) matches any type; writers/readers registered for it act as fallbacks (lowest affinity).
-- **FireDAC variants** (`…-firedac`) carry datasets in a compact Delphi-native format; plain `application/json` carries them as an interoperable array of objects. See [FireDAC & Datasets](/features/firedac#wire-formats).
+- **Dataset formats**: `…-firedac`, `…-unidac`, `…-mydac` and `…-ibdac` carry datasets in the native format of the data access library (for the Delphi client components); plain `application/json` carries them as an interoperable array of objects. See [Data Access](/features/data-access#writing-datasets).
 - **`text/event-stream`** is used by [Server-Sent Events](/features/sse).
 - **`application/x-yaml`** requires `MARS.YAML.ReadersAndWriters` to be registered (used by the [OpenAPI](/features/openapi) endpoint).
 

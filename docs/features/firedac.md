@@ -1,223 +1,274 @@
 # FireDAC & Datasets
 
-MARS has deep, first-class support for **FireDAC**: a resource method can return a `TFDDataSet` (or an array of them) and MARS serializes it to JSON automatically; clients can send back the changed rows (a *delta*) and the server applies the updates. This makes Delphi-to-Delphi, data-aware REST servers extremely concise.
+MARS has first-class support for **FireDAC**: a resource method returns a `TFDDataSet` (or an array of them) and MARS writes it as JSON, XML or the FireDAC native format; a Delphi client fetches the datasets into `TFDMemTable`s, lets the user edit them and sends back only the changes (the *delta*), which the server applies. The [Data Access](/features/data-access) page describes the model shared with the Devart integrations; this page is the complete reference for FireDAC. The [FireDACDemo](/demos/#firedacdemo) puts everything together.
 
-The relevant units are `MARS.Data.FireDAC.pas`, `MARS.Data.FireDAC.Resources.pas`, `MARS.Data.FireDAC.ReadersAndWriters.pas`, `MARS.Data.FireDAC.InjectionService.pas` and `MARS.Data.MessageBodyWriters.pas`. Add them (and `MARS.Data.MessageBodyWriters`) to your ignition `uses` and build with the `MARS_FIREDAC` define.
+## Units
+
+| Unit | Content |
+| --- | --- |
+| `MARS.Data.FireDAC` | `TMARSFireDAC` (the helper), `[Connection]`, `[SQLStatement]`, `TMARSFDMemTable` |
+| `MARS.Data.FireDAC.InjectionService` | `[Context]` for `TFDConnection` and `TMARSFireDAC` |
+| `MARS.Data.FireDAC.ReadersAndWriters` | writers for `TFDDataSet` and `TArray<TFDDataSet>`, reader for `TArray<TFDMemTable>` |
+| `MARS.Data.FireDAC.Resources` | `TMARSFDDatasetResource` (GET datasets, POST deltas) |
+| `MARS.Data.FireDAC.DataModule` | `TMARSFDDataModuleResource` (a data module as a resource) |
+| `MARS.Data.FireDAC.Utils` | `TFDDataSets` (encoding of the native format), `TMARSFDApplyUpdatesRes` |
+| `MARS.Data.MessageBodyWriters` | writers of plain JSON and XML for any `TDataSet` |
+
+`MARS.Data.FireDAC` uses the injection service and the readers/writers: adding it (and `MARS.Data.MessageBodyWriters`) to the `uses` of the ignition is enough. The `MARS_FIREDAC` define (in `MARS.inc`, on by default) compiles the FireDAC support; if your edition of Delphi has no FireDAC, remove it.
 
 ## Enabling FireDAC
 
-During ignition, load the connection definitions from the engine parameters:
+The ignition loads the connection definitions from the `FireDAC` section of the parameters and releases them at shutdown (the template already does it):
 
 ```pascal
-{$IFDEF MARS_FIREDAC}
 FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
-{$ENDIF}
-```
-
-and close them on shutdown:
-
-```pascal
+// in the class destructor
 TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
 ```
 
-Connection definitions live in your parameters file under the `FireDAC` slice, naming a connection def (e.g. `MAIN_DB`) that maps to a FireDAC `ConnectionDefName`.
+Each definition is a group of `FireDAC.<name>.<parameter>` keys, the parameters of a FireDAC connection definition (`DriverID` and the parameters of the driver):
+
+```ini
+FireDAC.MAIN_DB.DriverID=FB
+FireDAC.MAIN_DB.Server=localhost
+FireDAC.MAIN_DB.Database=C:\Data\MARS.FDB
+FireDAC.MAIN_DB.User_Name=SYSDBA
+FireDAC.MAIN_DB.Password=secret
+FireDAC.MAIN_DB.CharacterSet=UTF8
+FireDAC.MAIN_DB.Pooled=True
+FireDAC.MAIN_DB.POOL_MaximumItems=100
+
+FireDAC.REPORTS.DriverID=SQLite
+FireDAC.REPORTS.Database=C:\Data\reports.db
+```
+
+`LoadConnectionDefs` adds them to `FDManager` (a definition already there is left as it is) and returns the names of the ones it added. Link the FireDAC driver of each database, i.e. `FireDAC.Phys.FB`, `FireDAC.Phys.MySQL`, `FireDAC.Phys.SQLite`, `FireDAC.Phys.MSSQL`: without it the connection fails with *driver not registered*. MARS sets `FDManager.SilentMode`, so no wait cursor unit is needed. `Pooled=True` enables the FireDAC connection pool, recommended for a server.
 
 ## Injecting a connection
 
-Mark fields/parameters `[Context]`. The FireDAC injection service supplies either a raw `TFDConnection` or the higher-level `TMARSFireDAC` helper. The `[Connection('DEFNAME')]` attribute selects which definition to use (otherwise the default — typically `MAIN_DB` — is used):
-
 ```pascal
 [Path('customers')]
 TCustomersResource = class
 protected
-  [Context] FD: TMARSFireDAC;                 // helper bound to the default connection
-  [Context][Connection('REPORTS')] FRep: TFDConnection;  // a specific definition
-public
-  // ...
+  [Context] FD: TMARSFireDAC;                              // the default definition
+  [Context, Connection('REPORTS')] Reports: TFDConnection; // a specific one
 end;
 ```
 
-The injected connection is owned by the activation and released during teardown.
+`[Connection('NAME')]` can be on the field/property/parameter, on the method or on the resource; without it the definition is the `FireDAC.ConnectionDefName` parameter of the application (`DefaultApp.FireDAC.ConnectionDefName`), `MAIN_DB` by default. `[Connection('Token_Claim_tenant', True)]` takes the name from the request (see [context values](/features/data-access#parameters-and-macros-from-the-request)); `FireDAC.ConnectionExpandMacros=True` does the same for the parameter. The connection and the helper live as long as the request.
 
-## Returning a dataset as JSON
-
-Just return the query — MARS picks the dataset writer:
+Class properties of `TMARSFireDAC` customize the connections:
 
 ```pascal
-[GET, Produces(TMediaType.APPLICATION_JSON)]
-function List: TFDDataSet;
-begin
-  Result := FD.Query('SELECT id, name, total FROM customer ORDER BY name');
-end;
+// options that are not part of the definition, for every connection
+TMARSFireDAC.AfterCreateConnection :=
+  procedure (const AConnection: TFDConnection; const AActivation: IMARSActivation)
+  begin
+    AConnection.TxOptions.Isolation := xiReadCommitted;
+  end;
+
+// a TFDConnection descendant of yours
+TMARSFireDAC.CustomFDConnectionClass := TMyFDConnection;
 ```
 
-Response:
-
-```json
-[
-  { "id": 1, "name": "Acme",  "total": 1234.56 },
-  { "id": 2, "name": "Globex","total":  987.00 }
-]
-```
-
-Return `TArray<TFDDataSet>` to ship several datasets in one call. Field types map naturally: numbers → JSON numbers, booleans → `true`/`false`, dates → ISO-8601 strings (configurable via [serialization options](/features/serialization)).
-
-### The `TMARSFireDAC` helper
-
-`TMARSFireDAC` wraps a connection with convenient, context-aware methods:
+## The `TMARSFireDAC` helper
 
 | Member | Purpose |
 | --- | --- |
-| `Query(sql[, transaction])` | Open a `TFDQuery`; auto-injects URL params/macros and is freed at teardown. |
-| `ExecuteSQL(sql[, transaction], …)` | Run a non-select command, returns affected rows. |
-| `CreateTransaction` / `InTransaction(proc)` | Manage transactions. |
-| `ApplyUpdates(datasets, deltas)` | Apply client changes, returns per-dataset results. |
-| `InjectParamValues` / `InjectMacroValues` | Bind `:param` / `{macro}` from the request context. |
+| `Query(sql)` | Opens a `TFDQuery` owned by the request (freed after the response): return it from the method. |
+| `Query(sql, transaction, contextOwned, beforeOpen)` | The same, with a transaction, the ownership and a callback before `Open` (i.e. to set parameters). |
+| `Query(sql, transaction, beforeOpen, onReady)` | Opens, calls `onReady` and frees the query. |
+| `CreateQuery(sql, transaction, contextOwned, name)` | A `TFDQuery` not opened yet. |
+| `CreateCommand(sql, transaction, contextOwned)` | A `TFDCommand`. |
+| `ExecuteSQL(sql, transaction, before, after)` | Executes a command and returns the number of affected rows. |
+| `CreateTransaction(contextOwned)`, `InTransaction(proc)` | Transactions (see below). |
+| `ApplyUpdates(datasets, deltas, onBeforeApplyUpdates)` | Applies the deltas of the client, returns one result for each delta. |
+| `InjectParamValues`, `InjectMacroValues`, `InjectMacroAndParamValues` | Fill parameters and macros from the request (`CreateQuery` and `CreateCommand` do it already). |
+| `SetName<T>(component, name)` | Names a dataset. |
+| `Connection`, `ConnectionDefName`, `Activation` | The connection (created on first use), its definition, the request. |
+| `GetContextValue(name, activation)` (class) | The value of a [context value](/features/data-access#parameters-and-macros-from-the-request). |
+| `AddContextValueProvider(proc)` (class) | Context values of your own. |
 
-Parameters and macros named after request values are filled automatically. For example a query using `:QueryParam_newAddress` picks up the `newAddress` query string value.
+### Returning datasets
+
+```pascal
+[GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
+function List([QueryParam('city')] const ACity: string): TFDQuery;
+begin
+  if ACity = '' then
+    Result := FD.Query('select * from customers order by name')
+  else
+    Result := FD.Query('select * from customers where city = :QueryParam_city order by name');
+end;
+```
+
+```json
+[{"ID":1,"NAME":"Ada Lovelace","CITY":"London","CREDIT":1500.0}, …]
+```
+
+Several datasets in one response: return `TArray<TFDDataSet>`, named with `SetName` (the name is the member of the response):
+
+```pascal
+[GET, Path('summary')]
+function Summary: TArray<TFDDataSet>;
+begin
+  Result := [
+    FD.SetName<TFDQuery>(FD.Query('select * from customers'), 'Customers')
+  , FD.SetName<TFDQuery>(FD.Query('select city, count(*) as customers from customers group by city'), 'Cities')
+  ];
+end;
+```
+
+```json
+{"Customers": [{…}, …], "Cities": [{…}, …]}
+```
+
+Field values follow the [serialization options](/features/serialization) (dates, `null` values, `JSON.UseDisplayFormatForNumericFields`).
+
+### Parameters, macros and commands
+
+Parameters and macros named after the request are filled automatically ([context values](/features/data-access#parameters-and-macros-from-the-request)): `:PathParam_id`, `:QueryParam_city`, `:Token_UserName`, `!QueryParam_orderBy` (a macro). Set the other ones in the `before` callback; read output parameters in the `after` one:
+
+```pascal
+[POST, Consumes(TMediaType.APPLICATION_JSON)]
+function Add([BodyParam] const ACustomer: TCustomer): TFDQuery;
+var
+  LId: Integer;
+begin
+  // Firebird: RETURNING ... {INTO :id} puts the new id in the id output parameter
+  FD.ExecuteSQL('insert into customers (name, city) values (:name, :city) returning id {into :id}', nil,
+    procedure (ACommand: TFDCommand)
+    begin
+      ACommand.ParamByName('name').AsString := ACustomer.name;
+      ACommand.ParamByName('city').AsString := ACustomer.city;
+      ACommand.ParamByName('id').ParamType := ptOutput;
+      ACommand.ParamByName('id').DataType := ftInteger;
+    end,
+    procedure (ACommand: TFDCommand)
+    begin
+      LId := ACommand.ParamByName('id').AsInteger;
+    end
+  );
+  Result := FD.Query('select * from customers where id = :id', nil, True,
+    procedure (AQuery: TFDQuery)
+    begin
+      AQuery.ParamByName('id').AsInteger := LId;
+    end
+  );
+end;
+
+[DELETE, Path('{id}')]
+procedure Delete;
+begin
+  if FD.ExecuteSQL('delete from customers where id = :PathParam_id') = 0 then
+    raise EMARSHttpException.Create('Customer not found', 404);
+end;
+```
+
+Without a transaction the statements run in auto-commit mode.
 
 ## Transactions
 
+`InTransaction` runs a procedure in a new transaction: commit when it ends, rollback when it raises an exception (the exception reaches the client, i.e. an `EMARSHttpException` with its status):
+
 ```pascal
-[GET]
-function Report([QueryParam] newAddress: string): TFDDataSet;
+[POST, Path('transfer')]
+function Transfer: string;
 begin
-  var LTx := FD.CreateTransaction();
-  LTx.StartTransaction;
-  try
-    FD.Query('select * from employee', LTx);
-    FD.ExecuteSQL('update customer set address_line1 = :QueryParam_newAddress', LTx);
-    Result := FD.Query('select * from sales left join customer ...', LTx);
-    LTx.Commit;
-  except
-    LTx.Rollback;
-    raise;
-  end;
+  FD.InTransaction(
+    procedure (ATransaction: TFDTransaction)
+    begin
+      if FD.ExecuteSQL('update customers set credit = credit - :QueryParam_amount'
+        + ' where id = :QueryParam_from and credit >= :QueryParam_amount', ATransaction) = 0 then
+        raise EMARSHttpException.Create('Customer not found or insufficient credit', 409);
+      if FD.ExecuteSQL('update customers set credit = credit + :QueryParam_amount'
+        + ' where id = :QueryParam_to', ATransaction) = 0 then
+        raise EMARSHttpException.Create('Customer not found', 404);
+    end
+  );
+  Result := 'Transfer done';
 end;
 ```
 
-See the [ConnectionPoolingProject demo](/demos/#connectionpoolingproject).
+`CreateTransaction` gives a `TFDTransaction` to manage yourself (owned by the request unless `AContextOwned = False`); pass it to `Query`, `CreateCommand`, `ExecuteSQL`.
 
-## CRUD with `TMARSFDDatasetResource`
+## Editing data from the client (delta)
 
-For full read/write resources, subclass `TMARSFDDatasetResource`. It implements `GET` (retrieve) and `POST` (apply deltas) for you; you only declare the SQL via `[SQLStatement]` or by overriding `SetupStatements`:
+A Delphi client with [`TMARSFDResource`](/client/firedac) receives datasets in the native format, keeps track of the changes in its `TFDMemTable`s and sends back only the changed records, the delta. The server applies it with `ApplyUpdates`, which generates the `insert`/`update`/`delete` statements from the query of each dataset.
+
+### `TMARSFDDatasetResource`
+
+Derive a resource from it and declare its datasets: `GET` returns them, `POST` applies the deltas.
 
 ```pascal
-[Path('orders')]
-TOrdersResource = class(TMARSFDDatasetResource)
-protected
-  procedure SetupStatements; override;
+[ Path('customersdata')
+, SQLStatement('Customers', 'select * from customers order by name')
+, SQLStatement('Cities', 'select city, count(*) as customers from customers group by city')
+]
+TCustomersDataResource = class(TMARSFDDatasetResource)
 end;
+```
 
+Or override `SetupStatements` to build them in code:
+
+```pascal
 procedure TOrdersResource.SetupStatements;
 begin
-  Statements.Add('orders', 'SELECT * FROM orders');
-  Statements.Add('items',  'SELECT * FROM order_items');
+  inherited; // the [SQLStatement] attributes, if any
+  Statements.Add('Orders', 'select * from orders where customer_id = :QueryParam_customer');
+  Statements.Add('Items', 'select * from order_items');
 end;
 ```
 
-- `GET …/orders` → returns all configured datasets as JSON.
-- `POST …/orders` with a JSON delta → calls `ApplyUpdates` and returns an array of `TMARSFDApplyUpdatesRes` (one per dataset, with applied count and any errors).
-
-### Applying updates manually
-
-```pascal
-[POST]
-function Update([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
-begin
-  var LDataSets := [ FD.Query('select * from orders'),
-                     FD.Query('select * from order_items') ];
-  Result := FD.ApplyUpdates(LDataSets, ADeltas);
-end;
-```
-
-Each result row:
+- `GET …/customersdata` returns the datasets (`application/json` or `application/json-firedac`).
+- `POST …/customersdata` with the deltas (`application/json-firedac`, the body `TMARSFDResource` sends) applies them and returns one `TMARSFDApplyUpdatesRes` for each delta:
 
 ```json
-{ "dataset": "orders", "result": 3, "errorCount": 0, "errors": [] }
+[{"dataset": "Customers", "result": 0, "errorCount": 0, "errors": []}]
 ```
+
+`result` is the value returned by `ApplyUpdates` (the number of errors), `errors` describes each rejected record. Virtual methods `BeforeOpenDataSet` and `AfterOpenDataSet` customize each query; the `Connection` and `FD` fields are available to derived classes.
+
+Records added on the client with no value for an auto-incremental key (an identity column, i.e. `generated by default as identity` in Firebird) are inserted without it: the database assigns it.
+
+### Applying deltas in your own method
+
+```pascal
+[POST, Consumes(TMediaType.APPLICATION_JSON_FireDAC)]
+function Save([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
+begin
+  Result := FD.ApplyUpdates(
+    [ FD.SetName<TFDQuery>(FD.CreateQuery('select * from orders'), 'Orders') ]
+  , ADeltas
+  , procedure (ADataSet: TFDDataSet; ADelta: TFDMemTable)
+    begin
+      // before each dataset: checks, defaults...
+    end
+  );
+end;
+```
+
+Each delta is matched by name to a dataset. MARS frees the deltas after the method.
+
+### `TMARSFDDataModuleResource`
+
+A data module as a resource: design the queries in the IDE (with `ConnectionName` set to the name of the definition) and derive the data module from `TMARSFDDataModuleResource`. `GET` returns its published `TFDDataSet` fields, `POST` applies the deltas to them; `BeforeApplyUpdates` is called for each dataset. `[RESTInclude]`, `[RESTExclude]` (on the fields) and `[RESTIncludeDefault(False)]` (on the class) choose the datasets.
 
 ## Wire formats
 
-The FireDAC readers/writers support several media types so the *client* can choose efficiency vs interoperability:
+| Media type | Constant | Format |
+| --- | --- | --- |
+| `application/json` | `TMediaType.APPLICATION_JSON` | an array of records (any client); an object with one array per dataset for `TArray<TFDDataSet>` |
+| `application/xml` | `TMediaType.APPLICATION_XML` | `<dataset><row>…</row></dataset>` |
+| `application/json-firedac` | `TMediaType.APPLICATION_JSON_FireDAC` | an object with one member per dataset: the FireDAC binary format (data, metadata, changes), zipped and Base64 encoded |
+| `application/xml-firedac` | `TMediaType.APPLICATION_XML_FireDAC` | the FireDAC XML format of a single dataset |
+| `application/octet-stream` | `TMediaType.APPLICATION_OCTET_STREAM` | the FireDAC binary format of a single dataset |
 
-| Media type | Format |
-| --- | --- |
-| `application/json` | Plain JSON array of records (interoperable). |
-| `application/json;dialect=FireDAC` | Base64 of zipped FireDAC binary inside JSON (compact, Delphi-to-Delphi). |
-| `application/xml;dialect=FireDAC` | FireDAC native XML. |
-| `application/octet-stream` | Raw FireDAC binary. |
+`TFDDataSets` (`MARS.Data.FireDAC.Utils`) encodes and decodes the native JSON format: `ToJSON`, `FromJSON`, `DataSetToEncodedBinaryString`, `EncodedBinaryStringToDataSet`.
 
-A Delphi client using `TMARSFDResource` (see [Client ▸ FireDAC](/client/firedac)) negotiates the compact FireDAC format and reconstructs live `TFDMemTable`s, including change tracking for round-trip updates.
+## See also
 
-## UniDAC
-
-A parallel set of units (`MARS.Data.UniDAC.*`) provides equivalent support for **Devart UniDAC**, with the same patterns (`[Context]` connection injection, dataset readers/writers).
-
-## MyDAC
-
-The `MARS.Data.MyDAC.*` units (package `MARS.MyDAC`) provide the same support for **Devart MyDAC** (MySQL and MariaDB). Enable the `MARS_MYDAC` define in `MARS.inc` and add `MARS.Data.MyDAC` to the ignition `uses` (it brings in the injection service and the readers/writers).
-
-Load the connection definitions from the `MyDAC` slice of the parameters:
-
-```pascal
-{$IFDEF MARS_MYDAC}
-FAvailableConnectionDefs := TMARSMyDAC.LoadConnectionDefs(FEngine.Parameters, 'MyDAC');
-{$ENDIF}
-```
-
-Each definition is a MyDAC connect string: either one parameter per item, or the whole string in `ConnectString`:
-
-```ini
-MyDAC.MAIN_DB.Server=localhost
-MyDAC.MAIN_DB.Port=3306
-MyDAC.MAIN_DB.Database=mars
-MyDAC.MAIN_DB.User ID=mars
-MyDAC.MAIN_DB.Password=secret
-
-MyDAC.REPORTS.ConnectString=Server=reports;Database=stats;User ID=reader;Password=secret
-```
-
-Mark fields and parameters `[Context]` to receive a `TMyConnection` or the `TMARSMyDAC` helper. `[Connection('DEFNAME')]` (from `MARS.Data.MyDAC`) selects the definition, otherwise `MyDAC.ConnectionDefName` (default `MAIN_DB`) is used. `TMARSMyDAC` offers `Query`, `CreateQuery`, `CreateCommand`, `ExecuteSQL` and `InTransaction`, and fills params and macros named after the request (`PathParam_id`, `QueryParam_filter`, `Token_UserName`…), like the FireDAC helper. `TMARSMyDAC.AfterCreateConnection` lets you configure every new connection (i.e. SSL options).
-
-```pascal
-[Path('customers')]
-TCustomersResource = class
-protected
-  [Context] MyDAC: TMARSMyDAC;
-public
-  [GET, Path('{id}')]
-  function GetCustomer: TMyQuery;   // the resource returns the dataset, MARS writes it
-end;
-
-function TCustomersResource.GetCustomer: TMyQuery;
-begin
-  Result := MyDAC.Query('select * from customers where id = :PathParam_id');
-end;
-```
-
-Datasets (`TMemDataSet` descendants, i.e. `TMyQuery`, `TVirtualTable`) are written as XML (`application/xml`, `application/octet-stream`) or as `application/json-mydac` (JSON object, one Base64 of the zipped XML per dataset); a method parameter of type `TArray<TMemDataSet>` reads the same JSON format back into `TVirtualTable`s. Applying a delta (`ApplyUpdates`) is not supported, as with UniDAC.
-
-::: tip Transactions
-MySQL has one transaction per connection: the `ATransaction` arguments of `TMARSMyDAC` only check that the transaction belongs to the same connection, and every statement on that connection takes part in it.
-:::
-
-## IBDAC
-
-The `MARS.Data.IBDAC.*` units (package `MARS.IBDAC`) provide the same support for **Devart IBDAC** (InterBase and Firebird): enable the `MARS_IBDAC` define, load the definitions from the `IBDAC` slice with `TMARSIBDAC.LoadConnectionDefs(FEngine.Parameters, 'IBDAC')`, and inject a `TIBCConnection` or the `TMARSIBDAC` helper. Everything else works as described for MyDAC above, with `TIBCQuery`, `TIBCSQL` and `TIBCTransaction`, the `IBDAC.ConnectionDefName` parameter and the `application/json-ibdac` media type.
-
-```ini
-IBDAC.MAIN_DB.Server=localhost
-IBDAC.MAIN_DB.Port=3050
-IBDAC.MAIN_DB.Database=C:\Data\MARS.fdb
-IBDAC.MAIN_DB.User ID=SYSDBA
-IBDAC.MAIN_DB.Password=secret
-IBDAC.MAIN_DB.Client Library=fbclient.dll
-IBDAC.MAIN_DB.Charset=UTF8
-```
-
-InterBase and Firebird support several transactions per connection: the `ATransaction` arguments of `TMARSIBDAC` are assigned to the commands and queries, as with FireDAC.
-
-::: warning
-`MARS.Data.FireDAC`, `MARS.Data.UniDAC`, `MARS.Data.MyDAC` and `MARS.Data.IBDAC` all declare `ConnectionAttribute`: if a unit uses more than one of them, the last one in the `uses` wins. In a unit that needs two of them, use the unambiguous names `[MyDACConnection('REPORTS')]` and `[IBDACConnection('REPORTS')]`. MyDAC and IBDAC can be used in the same server (their JSON media types differ); enable only one of UniDAC and MyDAC/IBDAC per project: UniDAC already covers those databases, and its writers are registered for the same `TMemDataSet` type.
-:::
+- [Data Access](/features/data-access): the model shared by all the integrations.
+- [FireDAC Client](/client/firedac): `TMARSFDResource` and `TMARSFDDataSetResource`.
+- [FireDACDemo](/demos/#firedacdemo): a complete server, client and tests on Firebird.
+- [UniDAC](/features/unidac), [MyDAC](/features/mydac), [IBDAC](/features/ibdac): the Devart integrations.
