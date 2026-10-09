@@ -86,7 +86,7 @@ MARS supports Delphi **10.4 Sydney** up to **13 Florence**. Earlier versions are
 
 ## Bootstrap a new project with MARSCmd
 
-MARS ships a small command-line utility that scaffolds a complete, ready-to-run project for you from a template:
+MARS ships a small utility (with a user interface, and a [command line](#from-the-command-line) version) that scaffolds a complete, ready-to-run project for you from a template:
 
 - `MARSTemplate`: Indy, endpoints as resource classes;
 - `MARSTemplateDCS`: Delphi Cross Socket, endpoints as resource classes;
@@ -101,6 +101,26 @@ The new project goes to `Documents\MARS Projects\<project name>` by default; nex
 
 The template refers to the MARS folder with relative paths (`..\..\Source`). Outside the MARS folder, MARSCmd writes them as `$(MARSDIR)\Source`, `$(MARSDIR)\ThirdParty\...`: `MARSDIR` is the IDE environment variable set by the setup to the MARS folder (Tools ▸ Options ▸ IDE ▸ Environment Variables). With TMS Smart Setup or a manual installation, define it yourself or rely on the library path.
 
+### From the command line
+
+`MARScmd.exe` (`[MARS Folder]\Utils\Bin\Win32`, project `MARScmd.dproj` in the same source folder) does the same without a user interface, for scripts and automation:
+
+```bash
+MARScmd CustomersServer --template MARSTemplateRoutes --dest C:\Projects\CustomersServer
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `<ProjectName>` | | The name of the project (a Delphi identifier): it replaces `MARSTemplate` in the names and contents of the files. |
+| `--template <name or folder>` | `MARSTemplate` | A folder of `Demos` (`MARScmd --list-templates` lists them) or the path of a template. |
+| `--dest <folder>` | `<projects folder>\<ProjectName>` | The folder of the new project: it must not exist, or be empty. The projects folder is the one proposed by MARSCmd (see above); the command line does not change it. |
+| `--allow-inside` | | Allows a destination inside the MARS folder (otherwise refused, as uninstalling or upgrading MARS deletes it). |
+| `--search <text>` | `MARSTemplate` | The text replaced by the project name. |
+| `--matches <patterns>` | `*.pas\|*.dpr\|*.dproj\|*.dfm\|*.xfm\|*.groupproj\|*.deployproj` | The files whose content is changed, separated by `\|`. |
+| `--mars <folder>` | the folder of `MARScmd.exe` | The MARS folder (with the `Demos` of the templates). |
+
+`MARScmd --help` prints the usage. The exit code is 0 when the project is created, 1 on errors (i.e. a destination that is not empty), 2 on a wrong command line.
+
 This is the recommended way to start a brand-new MARS application — see [Your First Server](/guide/getting-started) for a walkthrough of what the generated code does.
 
 ## Project structure
@@ -112,6 +132,6 @@ After installation, the repository layout is:
 | `Source` | The MARS library units (server + client). |
 | `Packages` | RAD Studio packages, one subfolder per Delphi version. |
 | `Demos` | Ready-to-run sample projects (see [Demos](/demos/)). |
-| `Utils` | Tools, including the `MARSCmd` project bootstrapper. |
+| `Utils` | Tools, including the `MARSCmd` project bootstrapper (`MARScmd_VCL.exe` and `MARScmd.exe`, the command line version). |
 | `ThirdParty` | Bundled dependencies (Delphi-Cross-Socket, JOSE-JWT, mORMot, Neslib.Yaml, Delphi-Mocks): origin, version and license of each in [`ThirdParty/README.md`](https://github.com/andrea-magni/MARS/blob/master/ThirdParty/README.md). |
 | `tests` | DUnitX test suite. |

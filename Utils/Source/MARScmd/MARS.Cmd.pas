@@ -45,6 +45,11 @@ type
     function ReadTextFile(const AFileName: string; out AEncoding: TEncoding): string;
     procedure WriteTextFile(const AFileName: string; const AContent: string; const AEncoding: TEncoding);
   public
+    // the defaults of a new project (MARScmd_VCL has them in its form too)
+    const DEFAULT_TEMPLATE = 'MARSTemplate';
+    const DEFAULT_SEARCH_TEXT = 'MARSTemplate';
+    const DEFAULT_MATCHES = '*.pas|*.dpr|*.dproj|*.dfm|*.xfm|*.groupproj|*.deployproj';
+
     constructor Create(const ABasePath: string);
     destructor Destroy; override;
 
@@ -59,6 +64,8 @@ type
     // templates shipped with MARS: folders {MARS}\Demos\MARSTemplate* with a Delphi project
     // (MARSTemplate first), full paths
     function AvailableTemplates: TArray<string>;
+    /// <summary> The folder of a template: a path, or the name of a folder of Demos </summary>
+    function ResolveTemplatePath(const ATemplate: string): string;
     // saves ProjectsFolder in the settings file (call it after a successful Execute)
     procedure SaveSettings;
 
@@ -158,6 +165,13 @@ destructor TMARSCmd.Destroy;
 begin
   FReplacePatterns.Free;
   inherited;
+end;
+
+function TMARSCmd.ResolveTemplatePath(const ATemplate: string): string;
+begin
+  Result := TPath.Combine(TPath.Combine(BasePath, 'Demos'), ATemplate);
+  if not TDirectory.Exists(Result) and TDirectory.Exists(ATemplate) then
+    Result := TPath.GetFullPath(ATemplate);
 end;
 
 procedure TMARSCmd.Execute;
