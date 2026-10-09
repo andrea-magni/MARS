@@ -47,6 +47,10 @@ type
     property ExpandMacros: Boolean read FExpandMacros;
   end;
 
+  // unambiguous name of ConnectionAttribute, i.e. [UniDACConnection('DEFNAME')], for units that
+  // use more than one MARS data access integration (all of them declare ConnectionAttribute)
+  UniDACConnectionAttribute = ConnectionAttribute;
+
   SQLStatementAttribute = class(MARSUniDACAttribute)
   private
     FName: string;
@@ -59,6 +63,8 @@ type
 
   TContextValueProviderProc = reference to procedure (const AActivation: IMARSActivation;
     const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
+
+  TAfterCreateConnectionProc = reference to procedure(const AConnection: TUniConnection; const AActivation: IMARSActivation);
 
   TMARSUniMemTable = class(TVirtualTable)
   private
@@ -84,6 +90,7 @@ type
     procedure SetConnectionDefName(const Value: string); virtual;
     function GetConnection: TUniConnection; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
+    class var FAfterCreateConnection: TAfterCreateConnectionProc;
   public
     const PARAM_AND_MACRO_DELIMITER = '_';
 
@@ -121,9 +128,9 @@ type
       const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TUniQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TUniTransaction; virtual;
 
-    procedure ExecuteSQL(const ASQL: string; const ATransaction: TUniTransaction = nil;
+    function ExecuteSQL(const ASQL: string; const ATransaction: TUniTransaction = nil;
       const ABeforeExecute: TProc<TUniSQL> = nil;
-      const AAfterExecute: TProc<TUniSQL> = nil); virtual;
+      const AAfterExecute: TProc<TUniSQL> = nil): Integer; virtual;
 
     function Query(const ASQL: string): TUniQuery; overload; virtual;
 
@@ -159,6 +166,7 @@ type
     class constructor CreateClass;
     class destructor DestroyClass;
     class procedure AddContextValueProvider(const AContextValueProviderProc: TContextValueProviderProc);
+    class property AfterCreateConnection: TAfterCreateConnectionProc read FAfterCreateConnection write FAfterCreateConnection;
   end;
 
 implementation
@@ -172,17 +180,17 @@ uses
   , MARS.Data.UniDAC.ReadersAndWriters
 ;
 
-function GetAsTStrings(const AParameters: TMARSParameters): TStrings;
+// Name=Value pairs, separated by ';' (UniDAC connect string format)
+function GetAsConnectString(const AParameters: TMARSParameters): string;
 var
   LParam: TPair<string, TValue>;
 begin
-  Result := TStringList.Create;
-  try
-    for LParam in AParameters do
-      Result.Values[LParam.Key] := LParam.Value.ToString;
-  except
-    Result.Free;
-    raise;
+  Result := '';
+  for LParam in AParameters do
+  begin
+    if Result <> '' then
+      Result := Result + ';';
+    Result := Result + LParam.Key + '=' + LParam.Value.ToString;
   end;
 end;
 
@@ -192,7 +200,6 @@ var
   LData, LConnectionParams: TMARSParameters;
   LConnectionDefNames: TArray<string>;
   LConnectionDefName: string;
-  LParams: TStrings;
   LConnectString: string;
 begin
   Result := [];
@@ -206,22 +213,15 @@ begin
       LConnectionParams := TMARSParameters.Create(LConnectionDefName);
       try
         LConnectionParams.CopyFrom(LData, LConnectionDefName);
-        LParams := GetAsTStrings(LConnectionParams);
-        try
-          LConnectString := LConnectionParams.ByNameText('ConnectString', '').AsString;
-          if LConnectString = '' then
-          begin
-            LParams.Delimiter := ';';
-            LParams.QuoteChar := #0;
-            LConnectString := LParams.DelimitedText;
-          end;
+        // either a full ConnectString parameter or one parameter per connect string item
+        // (i.e. Provider Name, Server, Database, User ID, Password)
+        LConnectString := LConnectionParams.ByNameText('ConnectString', '').AsString;
+        if LConnectString = '' then
+          LConnectString := GetAsConnectString(LConnectionParams);
 
-          FConnectionDefs.AddOrSetValue(LConnectionDefName, LConnectString);
+        FConnectionDefs.AddOrSetValue(LConnectionDefName, LConnectString);
 
-          Result := Result + [LConnectionDefName];
-        finally
-          LParams.Free;
-        end;
+        Result := Result + [LConnectionDefName];
       finally
         LConnectionParams.Free;
       end;
@@ -283,7 +283,9 @@ class function TMARSUniDAC.CreateConnectionByConnectString(const AConnectString:
 begin
   Result := TUniConnection.Create(nil);
   try
-    Result.ConnectString := AConnectString;
+    if AConnectString <> '' then
+      Result.ConnectString := AConnectString;
+    Result.LoginPrompt := False; // after ConnectString, that resets it
   except
     Result.Free();
     raise;
@@ -298,9 +300,18 @@ begin
   //AM TDictionary is not thread-safe but connection definitions are not supposed
   // to change during server execution. A monitor object would be a safer choice, if
   // errors should arise.
-  Result := nil;
-  if FConnectionDefs.TryGetValue(AConnectionDefName, LConnectString) then
-    Result := CreateConnectionByConnectString(LConnectString)
+  LConnectString := '';
+  if (AConnectionDefName <> '') and not FConnectionDefs.TryGetValue(AConnectionDefName, LConnectString) then
+    raise EMARSUniDACException.CreateFmt('UniDAC connection definition not found: %s', [AConnectionDefName]);
+
+  Result := CreateConnectionByConnectString(LConnectString);
+  try
+    if Assigned(FAfterCreateConnection) then
+      FAfterCreateConnection(Result, AActivation);
+  except
+    Result.Free;
+    raise;
+  end;
 end;
 
 { ConnectionAttribute }
@@ -439,6 +450,7 @@ end;
 class constructor TMARSUniDAC.CreateClass;
 begin
   FContextValueProviders := [];
+  FAfterCreateConnection := nil;
   FConnectionDefs := TDictionary<string, string>.Create();
 end;
 
@@ -451,7 +463,7 @@ begin
     Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
-    if AContextOwned then
+    if AContextOwned and Assigned(Activation) then
       Activation.AddToContext(Result);
   except
     Result.Free;
@@ -469,7 +481,7 @@ begin
     Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
-    if AContextOwned then
+    if AContextOwned and Assigned(Activation) then
       Activation.AddToContext(Result);
   except
     Result.Free;
@@ -481,8 +493,11 @@ function TMARSUniDAC.CreateTransaction(const AContextOwned: Boolean): TUniTransa
 begin
   Result := TUniTransaction.Create(nil);
   try
+    // a transaction starts only on an active connection
+    if not Connection.Connected then
+      Connection.Connect;
     Result.DefaultConnection := Connection;
-    if AContextOwned then
+    if AContextOwned and Assigned(Activation) then
       Activation.AddToContext(Result);
   except
     Result.Free;
@@ -507,8 +522,8 @@ begin
 
 end;
 
-procedure TMARSUniDAC.ExecuteSQL(const ASQL: string; const ATransaction: TUniTransaction;
-  const ABeforeExecute, AAfterExecute: TProc<TUniSQL>);
+function TMARSUniDAC.ExecuteSQL(const ASQL: string; const ATransaction: TUniTransaction;
+  const ABeforeExecute, AAfterExecute: TProc<TUniSQL>): Integer;
 var
   LCommand: TUniSQL;
 begin
@@ -517,6 +532,7 @@ begin
     if Assigned(ABeforeExecute) then
       ABeforeExecute(LCommand);
     LCommand.Execute();
+    Result := LCommand.RowsAffected;
     if Assigned(AAfterExecute) then
       AAfterExecute(LCommand);
   finally
@@ -611,12 +627,17 @@ procedure TMARSUniDAC.InjectMacroValues(const ACommand: TUniSQL; const AOnlyIfEm
 var
   LIndex: Integer;
   LMacro: TMacro;
+  LValue: TValue;
 begin
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
     if (not AOnlyIfEmpty) or (LMacro.Value = '') then
-      LMacro.Value := GetContextValue(LMacro.Name, Activation).AsVariant;
+    begin
+      LValue := GetContextValue(LMacro.Name, Activation, ftString);
+      if not LValue.IsEmpty then
+        LMacro.Value := LValue.ToString;
+    end;
   end;
 end;
 
@@ -624,12 +645,17 @@ procedure TMARSUniDAC.InjectMacroValues(const ACommand: TUniQuery; const AOnlyIf
 var
   LIndex: Integer;
   LMacro: TMacro;
+  LValue: TValue;
 begin
   for LIndex := 0 to ACommand.Macros.Count-1 do
   begin
     LMacro := ACommand.Macros[LIndex];
     if (not AOnlyIfEmpty) or (LMacro.Value = '') then
-      LMacro.Value := GetContextValue(LMacro.Name, Activation).AsVariant;
+    begin
+      LValue := GetContextValue(LMacro.Name, Activation, ftString);
+      if not LValue.IsEmpty then
+        LMacro.Value := LValue.ToString;
+    end;
   end;
 end;
 

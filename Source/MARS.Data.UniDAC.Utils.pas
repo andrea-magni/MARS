@@ -127,6 +127,8 @@ begin
 
 
       ADataSet.LoadFromStream(LStream);
+      if not ADataSet.Active then // LoadFromStream leaves the table closed
+        ADataSet.Open;
     finally
       LStream.Free;
     end;
@@ -177,20 +179,25 @@ var
   LMemTable: TVirtualTable;
 begin
   Result := [];
-  for LPair in AJSON do
-  begin
-    if not (LPair.JsonValue is TJSONString) then
-      raise EMARSException.Create('Invalid JSON format [JSONToFDDataSets]');
+  try
+    for LPair in AJSON do
+    begin
+      if not (LPair.JsonValue is TJSONString) then
+        raise EMARSException.Create('Invalid JSON format [TUniDataSets.FromJSON]');
 
-    LMemTable := TVirtualTable.Create(nil);
-    try
-      EncodedBinaryStringToDataSet((LPair.JsonValue as TJSONString).Value, LMemTable);
-      LMemTable.Name := LPair.JsonString.Value;
-      Result := Result + [LMemTable];
-    except
-      LMemTable.Free;
-      raise;
+      LMemTable := TVirtualTable.Create(nil);
+      try
+        EncodedBinaryStringToDataSet((LPair.JsonValue as TJSONString).Value, LMemTable);
+        LMemTable.Name := LPair.JsonString.Value;
+        Result := Result + [LMemTable];
+      except
+        LMemTable.Free;
+        raise;
+      end;
     end;
+  except
+    FreeAll(Result);
+    raise;
   end;
 end;
 
