@@ -18,6 +18,24 @@
         <Projects Include="MARSClient.FireDACDesign.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="MARSClient.MyDAC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSClient.MyDACDesign.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSClient.IBDAC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSClient.IBDACDesign.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSClient.UniDAC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MARSClient.UniDACDesign.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -71,14 +89,68 @@
     <Target Name="MARSClient_FireDACDesign:Make">
         <MSBuild Projects="MARSClient.FireDACDesign.dproj" Targets="Make"/>
     </Target>
+    <Target Name="MARSClient_MyDAC">
+        <MSBuild Projects="MARSClient.MyDAC.dproj"/>
+    </Target>
+    <Target Name="MARSClient_MyDAC:Clean">
+        <MSBuild Projects="MARSClient.MyDAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_MyDAC:Make">
+        <MSBuild Projects="MARSClient.MyDAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSClient_MyDACDesign">
+        <MSBuild Projects="MARSClient.MyDACDesign.dproj"/>
+    </Target>
+    <Target Name="MARSClient_MyDACDesign:Clean">
+        <MSBuild Projects="MARSClient.MyDACDesign.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_MyDACDesign:Make">
+        <MSBuild Projects="MARSClient.MyDACDesign.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSClient_IBDAC">
+        <MSBuild Projects="MARSClient.IBDAC.dproj"/>
+    </Target>
+    <Target Name="MARSClient_IBDAC:Clean">
+        <MSBuild Projects="MARSClient.IBDAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_IBDAC:Make">
+        <MSBuild Projects="MARSClient.IBDAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSClient_IBDACDesign">
+        <MSBuild Projects="MARSClient.IBDACDesign.dproj"/>
+    </Target>
+    <Target Name="MARSClient_IBDACDesign:Clean">
+        <MSBuild Projects="MARSClient.IBDACDesign.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_IBDACDesign:Make">
+        <MSBuild Projects="MARSClient.IBDACDesign.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSClient_UniDAC">
+        <MSBuild Projects="MARSClient.UniDAC.dproj"/>
+    </Target>
+    <Target Name="MARSClient_UniDAC:Clean">
+        <MSBuild Projects="MARSClient.UniDAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_UniDAC:Make">
+        <MSBuild Projects="MARSClient.UniDAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MARSClient_UniDACDesign">
+        <MSBuild Projects="MARSClient.UniDACDesign.dproj"/>
+    </Target>
+    <Target Name="MARSClient_UniDACDesign:Clean">
+        <MSBuild Projects="MARSClient.UniDACDesign.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARSClient_UniDACDesign:Make">
+        <MSBuild Projects="MARSClient.UniDACDesign.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARS_Utils;MARSClient_Core;MARSClient_CoreDesign;MARSClient_FireDAC;MARSClient_FireDACDesign"/>
+        <CallTarget Targets="MARS_Utils;MARSClient_Core;MARSClient_CoreDesign;MARSClient_FireDAC;MARSClient_FireDACDesign;MARSClient_MyDAC;MARSClient_MyDACDesign;MARSClient_IBDAC;MARSClient_IBDACDesign;MARSClient_UniDAC;MARSClient_UniDACDesign"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARS_Utils:Clean;MARSClient_Core:Clean;MARSClient_CoreDesign:Clean;MARSClient_FireDAC:Clean;MARSClient_FireDACDesign:Clean"/>
+        <CallTarget Targets="MARS_Utils:Clean;MARSClient_Core:Clean;MARSClient_CoreDesign:Clean;MARSClient_FireDAC:Clean;MARSClient_FireDACDesign:Clean;MARSClient_MyDAC:Clean;MARSClient_MyDACDesign:Clean;MARSClient_IBDAC:Clean;MARSClient_IBDACDesign:Clean;MARSClient_UniDAC:Clean;MARSClient_UniDACDesign:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARS_Utils:Make;MARSClient_Core:Make;MARSClient_CoreDesign:Make;MARSClient_FireDAC:Make;MARSClient_FireDACDesign:Make"/>
+        <CallTarget Targets="MARS_Utils:Make;MARSClient_Core:Make;MARSClient_CoreDesign:Make;MARSClient_FireDAC:Make;MARSClient_FireDACDesign:Make;MARSClient_MyDAC:Make;MARSClient_MyDACDesign:Make;MARSClient_IBDAC:Make;MARSClient_IBDACDesign:Make;MARSClient_UniDAC:Make;MARSClient_UniDACDesign:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
     <ItemGroup Condition="'$(BuildGroup)'=='ALL'">
@@ -108,6 +180,42 @@
         </BuildGroupProject>
         <BuildGroupProject Include="MARSClient.FireDACDesign.dproj">
             <ProjectGuid>{6F52BB40-74E2-410E-A54D-0C20E713A0CE}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARSClient.MyDAC.dproj">
+            <ProjectGuid>{3C7B9EA2-C588-40F1-9C3B-0A9458718658}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARSClient.MyDACDesign.dproj">
+            <ProjectGuid>{D7E45871-0542-4E4A-BC83-FDE3ABF38AE3}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARSClient.IBDAC.dproj">
+            <ProjectGuid>{0329504D-D5D3-42A0-AB6E-2B0A6B817E98}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARSClient.IBDACDesign.dproj">
+            <ProjectGuid>{0FF00B16-11C8-4758-89DC-016566A2D034}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARSClient.UniDAC.dproj">
+            <ProjectGuid>{8B0A225D-237D-4FB1-8936-1D67A5509EF5}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARSClient.UniDACDesign.dproj">
+            <ProjectGuid>{654BEF9D-5BC3-40D7-8958-431E03934269}</ProjectGuid>
             <Configurations>Release</Configurations>
             <Platforms>Win32</Platforms>
             <Enabled>True</Enabled>

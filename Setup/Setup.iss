@@ -378,12 +378,15 @@ var
   LProjectName: string;
 begin
   LProjectName := ExtractFileName(AProject.FileName);
-  //Compile MARS.UniDAC, MARS.MyDAC and MARS.IBDAC only if the Devart package is installed
-  if SameText(LProjectName, 'MARS.UniDAC.dproj') then
+  //Compile the UniDAC, MyDAC and IBDAC packages (server and client) only if the Devart package is installed
+  if SameText(LProjectName, 'MARS.UniDAC.dproj') or SameText(LProjectName, 'MARSClient.UniDAC.dproj')
+    or SameText(LProjectName, 'MARSClient.UniDACDesign.dproj') then
     Result := _IsDevartPackageInstalled(AProject, AInfo, 'unidac')
-  else if SameText(LProjectName, 'MARS.MyDAC.dproj') then
+  else if SameText(LProjectName, 'MARS.MyDAC.dproj') or SameText(LProjectName, 'MARSClient.MyDAC.dproj')
+    or SameText(LProjectName, 'MARSClient.MyDACDesign.dproj') then
     Result := _IsDevartPackageInstalled(AProject, AInfo, 'mydac')
-  else if SameText(LProjectName, 'MARS.IBDAC.dproj') then
+  else if SameText(LProjectName, 'MARS.IBDAC.dproj') or SameText(LProjectName, 'MARSClient.IBDAC.dproj')
+    or SameText(LProjectName, 'MARSClient.IBDACDesign.dproj') then
     Result := _IsDevartPackageInstalled(AProject, AInfo, 'ibdac')
   else
     Result := True;
