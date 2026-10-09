@@ -133,6 +133,10 @@ type
 
 implementation
 
+uses
+  System.NetEncoding
+;
+
 { TMARSTestFixture }
 
 procedure TMARSTestFixture.RequestHasNonSuccessfulResponse(
@@ -240,6 +244,24 @@ begin
     WillReturn(AData.Body).When.Content;
     var LBodyBytes := TValue.From<TBytes>(TEncoding.UTF8.GetBytes(AData.Body));
     WillReturn(LBodyBytes, True).When.GetRawContent;
+
+    // the query parameters of AData.QueryString, for [QueryParam] (a missing one has index -1)
+    WillReturnDefault('GetQueryParamIndex', -1);
+    WillReturnDefault('GetQueryParamValue', '');
+  end;
+  var LQueryParams := AData.QueryString.Split(['&'], TStringSplitOptions.ExcludeEmpty);
+  Result.SetQueryParamCount(Length(LQueryParams));
+  for var LIndex := 0 to High(LQueryParams) do
+  begin
+    var LName := LQueryParams[LIndex];
+    var LValue := '';
+    var LEqualPos := LName.IndexOf('=');
+    if LEqualPos >= 0 then
+    begin
+      LValue := TNetEncoding.URL.Decode(LName.Substring(LEqualPos + 1));
+      LName := LName.Substring(0, LEqualPos);
+    end;
+    Result.SetQueryParam(LIndex, TNetEncoding.URL.Decode(LName), LValue);
   end;
   AfterMockRequest(AData, Result);
 end;
