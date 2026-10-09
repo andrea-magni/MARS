@@ -2,9 +2,35 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included.
 
+## 1.9.1 {#v1-9-1}
+
+<Badge type="tip" text="latest" /> **9 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.1) · [changes since 1.9.0](https://github.com/andrea-magni/MARS/compare/v.1.9.0...v.1.9.1)
+
+**New**
+- [Data Access](/features/data-access): the model shared by the data access integrations, now four. [FireDACDemo](/demos/#firedacdemo), [UniDACDemo](/demos/#unidacdemo), [MyDACDemo](/demos/#mydacdemo), [IBDACDemo](/demos/#ibdacdemo): the same customers application (server, FMX client, tests) with each library.
+  - Devart [MyDAC](/features/mydac) (MySQL, MariaDB): `MARS.Data.MyDAC.*`, `MARS.MyDAC` package, `MARS_MYDAC` define ([#213](https://github.com/andrea-magni/MARS/issues/213));
+  - Devart [IBDAC](/features/ibdac) (InterBase, Firebird): `MARS.Data.IBDAC.*`, `MARS.IBDAC` package, `MARS_IBDAC` define ([#215](https://github.com/andrea-magni/MARS/issues/215));
+  - [client components](/client/devart) for UniDAC, MyDAC and IBDAC: `TMARSUniDACResource`, `TMARSMyDACResource`, `TMARSIBDACResource` and the `…DataSetResource` ones, `MARSClient.<Library>` packages ([#220](https://github.com/andrea-magni/MARS/issues/220));
+  - `[UniDACConnection]`, `[MyDACConnection]`, `[IBDACConnection]`: aliases of `ConnectionAttribute` for units that use more than one integration; `TMARSUniDAC.ExecuteSQL` returns the affected rows and `TMARSUniDAC.AfterCreateConnection`, as the others.
+- MARSCmd [from the command line](/guide/installation#from-the-command-line): `MARScmd.exe <ProjectName> [--template] [--dest]`, installed next to `MARScmd_VCL.exe` ([#227](https://github.com/andrea-magni/MARS/issues/227)).
+- Agent Skills (plugin 1.4.0): Devart integrations (`references/devart.md`), MARSCmd from the command line.
+
+**Changed**
+- MARSTemplateRoutes: a new project gets `<Name>ProjectGroup`, like the other templates, instead of `<Name>RoutesProjectGroup` ([#228](https://github.com/andrea-magni/MARS/issues/228)).
+- The setup builds the UniDAC packages when UniDAC is installed: its check never found the package.
+
+**Fixed**
+- `TMARSFDDatasetResource`: POST (applying the deltas of the client) always failed with "Duplicates not allowed" ([#218](https://github.com/andrea-magni/MARS/issues/218)).
+- IBDAC: statements executed without a transaction were rolled back when the connection closed ([#217](https://github.com/andrea-magni/MARS/issues/217)).
+- UniDAC: connection definitions made of items produced a broken connect string (items with spaces, i.e. `Provider Name`); a missing definition injected nil; a macro without a value raised an error; the reader returned closed datasets ([#219](https://github.com/andrea-magni/MARS/issues/219)).
+- UniDAC: the Delphi 13 package did not compile (F1054) ([#214](https://github.com/andrea-magni/MARS/issues/214)).
+- `MARS.Tests`: `[QueryParam]` arguments did not receive the query string of the test request ([#216](https://github.com/andrea-magni/MARS/issues/216)).
+- Templates and demos: the commented `AfterCreateConnection` example did not compile ([#226](https://github.com/andrea-magni/MARS/issues/226)).
+- Documentation: the FireDAC media types were wrong (`application/json-firedac`, `application/xml-firedac`); the FireDAC client page described members that do not exist; two broken links.
+
 ## 1.9.0 {#v1-9-0}
 
-<Badge type="tip" text="latest" /> **8 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.0) · [changes since 1.8.1](https://github.com/andrea-magni/MARS/compare/v.1.8.1...v.1.9.0)
+**8 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.0) · [changes since 1.8.1](https://github.com/andrea-magni/MARS/compare/v.1.8.1...v.1.9.0)
 
 **New**
 - [Route-based endpoints](/server/routes) (preview, `MARS.Core.Routes`), in addition to resource classes: `R.Get<TResult>('people/{id:int}', function (const C: TMARSRouteContext): TResult ...)`. [RoutesDemo](/demos/#routesdemo)
