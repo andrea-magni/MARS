@@ -1,0 +1,47 @@
+package MARS.MyDAC;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS OFF}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE RELEASE}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'MARS-Curiosity REST Library (MyDAC)'}
+{$LIBSUFFIX AUTO}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  MARS.Core,
+  MARS.ReadersAndWriters,
+  mydac280,
+  dac280;
+
+contains
+  MARS.Data.MyDAC.InjectionService in '..\..\Source\MARS.Data.MyDAC.InjectionService.pas',
+  MARS.Data.MyDAC in '..\..\Source\MARS.Data.MyDAC.pas',
+  MARS.Data.MyDAC.ReadersAndWriters in '..\..\Source\MARS.Data.MyDAC.ReadersAndWriters.pas',
+  MARS.Data.MyDAC.Utils in '..\..\Source\MARS.Data.MyDAC.Utils.pas';
+
+end.

@@ -341,45 +341,50 @@ begin
     Log(Format('_OnTryPrepareProjectUninstallation: Failed to prepare the project "%s"', [AProjectItem.Project.FileName]));
 end;
 
+/// <summary> True if the runtime package APackageName (i.e. 'unidac', 'mydac') of Devart is installed
+/// for the RAD Studio version of AProject </summary>
+function _IsDevartPackageInstalled(const AProject: TRADStudioProject; const AInfo: TRADStudioInfo; const APackageName: string): Boolean;
+var
+  LBplFileName: string;
+  LFullFileName: string;
+  LProject: TRADStudioProject;
+begin
+  Result := False;
+  LProject := AProject;
+  LProject.FileName := APackageName + '.dproj';
+  if not TryGetRADStudioBplFileName(LProject, LProject.DllSuffix, LBplFileName) then
+    Exit;
+
+  // the Devart installers put the runtime packages in the Windows system folder or in the RAD Studio bin folder
+  LFullFileName := AddBackslash(ExpandConstant('{sys}')) + LBplFileName;
+  Result := FileExists(LFullFileName);
+  if not Result and IsWin64 then
+  begin
+    LFullFileName := AddBackslash(ExpandConstant('{syswow64}')) + LBplFileName;
+    Result := FileExists(LFullFileName);
+  end;
+  if not Result then
+  begin
+    LFullFileName := AddBackslash(AddBackslash(AInfo.RootDir) + 'bin') + LBplFileName;
+    Result := FileExists(LFullFileName);
+  end;
+
+  if Result then
+    Log(Format('Found %s Package "%s": proceed to Build "%s" Package of Version "%s"', [APackageName, LFullFileName, AProject.FileName, AProject.ProjectVersion]));
+end;
+
 function _OnBeforeProjectBuild(const AProject: TRADStudioProject; const APlatform: TProjectPlatform; const AInfo: TRADStudioInfo): Boolean;
 var
   LProjectName: string;
-  LBplFileName: string;
-  LRADStudioPath: string;
-  LProject: TRADStudioProject;
 begin
   LProjectName := ExtractFileName(AProject.FileName);
-  //Compile MARS.UniDAC only if unidac package is installed
+  //Compile MARS.UniDAC and MARS.MyDAC only if the Devart package is installed
   if SameText(LProjectName, 'MARS.UniDAC.dproj') then
-  begin
-    Result := False;
-    //Check if UniDAC Package is installed
-    LRadStudioPath := AInfo.RootDir; 
-
-    if (pfWin32 in AProject.Platforms) then 
-      LRadStudioPath := AddBackslash(LRadStudioPath) + 'bin'
-    else if (pfWin64 in AProject.Platforms) then 
-      LRadStudioPath := AddBackslash(LRadStudioPath) + 'bin64';
-
-    LProject := AProject;
-    LProject.FileName := 'unidac.dproj';
-    //Check if UniDAC BPL file Exists in RADStudioPath/Bin(64)/
-    if TryGetRADStudioBplFileName(LProject, LProject.DllSuffix, LBplFileName) then
-    begin
-      //Check if bpl file Exists in Windows System Folder
-      Result := FileExists(LBplFileName);
-      if not Result then
-      begin
-        //Check if bpl file Exists in 32 or 64 BDS binary folder
-        LBplFileName := AddBackslash(LRadStudioPath)+LBplFileName;
-        Result := Result and FileExists(LBplFileName);
-      end;
-      if Result then
-        Log(Format('Found unidac Package "%s": proceed to Build "%s" Package of Version "%s"', [LBplFileName, AProject.FileName, AProject.ProjectVersion]));
-    end;
-  end
+    Result := _IsDevartPackageInstalled(AProject, AInfo, 'unidac')
+  else if SameText(LProjectName, 'MARS.MyDAC.dproj') then
+    Result := _IsDevartPackageInstalled(AProject, AInfo, 'mydac')
   else
-    Result := True;  
+    Result := True;
 end;
 
 const

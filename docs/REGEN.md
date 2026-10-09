@@ -47,7 +47,7 @@ updates the affected pages, and advances the baseline to the new `HEAD`.
   - `MARS.Core.MessageBody*.pas` → `server/content-negotiation.md`
   - `MARS.Core.Exceptions.pas` → `server/error-handling.md`
   - `MARS.Core.Token*.pas`, `MARS.*JWT*.pas` → `features/authentication.md`, `features/authorization.md`
-  - `MARS.Data.FireDAC*.pas`, `MARS.Data.UniDAC*.pas` → `features/firedac.md`
+  - `MARS.Data.FireDAC*.pas`, `MARS.Data.UniDAC*.pas`, `MARS.Data.MyDAC*.pas` → `features/firedac.md`
   - `MARS.Core.JSON.pas` → `features/serialization.md`
   - `MARS.OpenAPI*.pas`, `MARS.Metadata*.pas` → `features/openapi.md`
   - `MARS.Core.ServerSideEvents*.pas` → `features/sse.md`

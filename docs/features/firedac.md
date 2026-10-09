@@ -153,3 +153,55 @@ A Delphi client using `TMARSFDResource` (see [Client ▸ FireDAC](/client/fireda
 ## UniDAC
 
 A parallel set of units (`MARS.Data.UniDAC.*`) provides equivalent support for **Devart UniDAC**, with the same patterns (`[Context]` connection injection, dataset readers/writers).
+
+## MyDAC
+
+The `MARS.Data.MyDAC.*` units (package `MARS.MyDAC`) provide the same support for **Devart MyDAC** (MySQL and MariaDB). Enable the `MARS_MYDAC` define in `MARS.inc` and add `MARS.Data.MyDAC` to the ignition `uses` (it brings in the injection service and the readers/writers).
+
+Load the connection definitions from the `MyDAC` slice of the parameters:
+
+```pascal
+{$IFDEF MARS_MYDAC}
+FAvailableConnectionDefs := TMARSMyDAC.LoadConnectionDefs(FEngine.Parameters, 'MyDAC');
+{$ENDIF}
+```
+
+Each definition is a MyDAC connect string: either one parameter per item, or the whole string in `ConnectString`:
+
+```ini
+MyDAC.MAIN_DB.Server=localhost
+MyDAC.MAIN_DB.Port=3306
+MyDAC.MAIN_DB.Database=mars
+MyDAC.MAIN_DB.User ID=mars
+MyDAC.MAIN_DB.Password=secret
+
+MyDAC.REPORTS.ConnectString=Server=reports;Database=stats;User ID=reader;Password=secret
+```
+
+Mark fields and parameters `[Context]` to receive a `TMyConnection` or the `TMARSMyDAC` helper. `[Connection('DEFNAME')]` (from `MARS.Data.MyDAC`) selects the definition, otherwise `MyDAC.ConnectionDefName` (default `MAIN_DB`) is used. `TMARSMyDAC` offers `Query`, `CreateQuery`, `CreateCommand`, `ExecuteSQL` and `InTransaction`, and fills params and macros named after the request (`PathParam_id`, `QueryParam_filter`, `Token_UserName`…), like the FireDAC helper. `TMARSMyDAC.AfterCreateConnection` lets you configure every new connection (i.e. SSL options).
+
+```pascal
+[Path('customers')]
+TCustomersResource = class
+protected
+  [Context] MyDAC: TMARSMyDAC;
+public
+  [GET, Path('{id}')]
+  function GetCustomer: TMyQuery;   // the resource returns the dataset, MARS writes it
+end;
+
+function TCustomersResource.GetCustomer: TMyQuery;
+begin
+  Result := MyDAC.Query('select * from customers where id = :PathParam_id');
+end;
+```
+
+Datasets (`TMemDataSet` descendants, i.e. `TMyQuery`, `TVirtualTable`) are written as XML (`application/xml`, `application/octet-stream`) or as `application/json-mydac` (JSON object, one Base64 of the zipped XML per dataset); a method parameter of type `TArray<TMemDataSet>` reads the same JSON format back into `TVirtualTable`s. Applying a delta (`ApplyUpdates`) is not supported, as with UniDAC.
+
+::: tip Transactions
+MySQL has one transaction per connection: the `ATransaction` arguments of `TMARSMyDAC` only check that the transaction belongs to the same connection, and every statement on that connection takes part in it.
+:::
+
+::: warning
+`MARS.Data.FireDAC`, `MARS.Data.UniDAC` and `MARS.Data.MyDAC` all declare `ConnectionAttribute`: if a unit uses more than one of them, the last one in the `uses` wins. Enable only one Devart integration (UniDAC or MyDAC) per project: both register writers for `TMemDataSet`.
+:::

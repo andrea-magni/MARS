@@ -30,6 +30,9 @@
         <Projects Include="MARS.UniDAC.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="MARS.MyDAC.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -119,14 +122,23 @@
     <Target Name="MARS_UniDAC:Make">
         <MSBuild Projects="MARS.UniDAC.dproj" Targets="Make"/>
     </Target>
+    <Target Name="MARS_MyDAC">
+        <MSBuild Projects="MARS.MyDAC.dproj"/>
+    </Target>
+    <Target Name="MARS_MyDAC:Clean">
+        <MSBuild Projects="MARS.MyDAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MARS_MyDAC:Make">
+        <MSBuild Projects="MARS.MyDAC.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="MARS_Utils;MARS_Core;MARS_DCS;MARS_mORMot;JOSE;MARS_JOSE;MARS_ReadersAndWriters;MARS_FireDAC;MARS_UniDAC"/>
+        <CallTarget Targets="MARS_Utils;MARS_Core;MARS_DCS;MARS_mORMot;JOSE;MARS_JOSE;MARS_ReadersAndWriters;MARS_FireDAC;MARS_UniDAC;MARS_MyDAC"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MARS_Utils:Clean;MARS_Core:Clean;MARS_DCS:Clean;MARS_mORMot:Clean;JOSE:Clean;MARS_JOSE:Clean;MARS_ReadersAndWriters:Clean;MARS_FireDAC:Clean;MARS_UniDAC:Clean"/>
+        <CallTarget Targets="MARS_Utils:Clean;MARS_Core:Clean;MARS_DCS:Clean;MARS_mORMot:Clean;JOSE:Clean;MARS_JOSE:Clean;MARS_ReadersAndWriters:Clean;MARS_FireDAC:Clean;MARS_UniDAC:Clean;MARS_MyDAC:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MARS_Utils:Make;MARS_Core:Make;MARS_DCS:Make;MARS_mORMot:Make;JOSE:Make;MARS_JOSE:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make;MARS_UniDAC:Make"/>
+        <CallTarget Targets="MARS_Utils:Make;MARS_Core:Make;MARS_DCS:Make;MARS_mORMot:Make;JOSE:Make;MARS_JOSE:Make;MARS_ReadersAndWriters:Make;MARS_FireDAC:Make;MARS_UniDAC:Make;MARS_MyDAC:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
     <ItemGroup Condition="'$(BuildGroup)'=='ALL'">
@@ -180,6 +192,12 @@
         </BuildGroupProject>
         <BuildGroupProject Include="MARS.UniDAC.dproj">
             <ProjectGuid>{BD9048A8-F51F-4F53-92B4-4A4ADE6BE0BE}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="MARS.MyDAC.dproj">
+            <ProjectGuid>{380B7716-8669-4ABE-96CA-6CC7C1B92E80}</ProjectGuid>
             <Configurations>Release</Configurations>
             <Platforms>Win32;Win64</Platforms>
             <Enabled>True</Enabled>
