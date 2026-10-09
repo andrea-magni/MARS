@@ -173,6 +173,8 @@
         <DCCReference Include="dbrtl.dcp"/>
         <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="MARS.ReadersAndWriters.dcp"/>
+        <DCCReference Include="unidac370.dcp"/>
+        <DCCReference Include="dac370.dcp"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.InjectionService.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.pas"/>
         <DCCReference Include="..\..\Source\MARS.Data.UniDAC.ReadersAndWriters.pas"/>
