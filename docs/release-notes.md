@@ -13,7 +13,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
   - [client components](/client/devart) for UniDAC, MyDAC and IBDAC: `TMARSUniDACResource`, `TMARSMyDACResource`, `TMARSIBDACResource` and the `…DataSetResource` ones, `MARSClient.<Library>` packages ([#220](https://github.com/andrea-magni/MARS/issues/220));
   - `[UniDACConnection]`, `[MyDACConnection]`, `[IBDACConnection]`: aliases of `ConnectionAttribute` for units that use more than one integration; `TMARSUniDAC.ExecuteSQL` returns the affected rows and `TMARSUniDAC.AfterCreateConnection`, as the others.
 - MARSCmd [from the command line](/guide/installation#from-the-command-line): `MARScmd.exe <ProjectName> [--template] [--dest]`, installed next to `MARScmd_VCL.exe` ([#227](https://github.com/andrea-magni/MARS/issues/227)).
-- Agent Skills (plugin 1.4.0): Devart integrations (`references/devart.md`), MARSCmd from the command line.
+- Agent Skills (plugin 1.4.1): Devart integrations (`references/devart.md`, MCP database tools), MARSCmd from the command line.
 
 **Changed**
 - MARSTemplateRoutes: a new project gets `<Name>ProjectGroup`, like the other templates, instead of `<Name>RoutesProjectGroup` ([#228](https://github.com/andrea-magni/MARS/issues/228)).
