@@ -1,0 +1,114 @@
+object MainForm: TMainForm
+  Left = 0
+  Top = 0
+  Caption = 'MARS Customers Client'
+  ClientHeight = 560
+  ClientWidth = 720
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object TopToolBar: TToolBar
+    Size.Width = 720.000000000000000000
+    Size.Height = 48.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object TitleLabel: TLabel
+      Align = Right
+      AutoSize = True
+      Margins.Right = 12.000000000000000000
+      Position.X = 560.000000000000000000
+      Size.Width = 148.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'toollabel'
+      TextSettings.WordWrap = False
+      Text = 'MARS Customers Client'
+    end
+    object LoadButton: TButton
+      Align = Left
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Bottom = 8.000000000000000000
+      Position.X = 8.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 32.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      Text = 'Load'
+      OnClick = LoadButtonClick
+    end
+    object NewButton: TButton
+      Align = Left
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Bottom = 8.000000000000000000
+      Position.X = 96.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 32.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 2
+      Text = 'New'
+      OnClick = NewButtonClick
+    end
+    object SaveButton: TButton
+      Align = Left
+      Margins.Left = 8.000000000000000000
+      Margins.Top = 8.000000000000000000
+      Margins.Bottom = 8.000000000000000000
+      Position.X = 184.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 80.000000000000000000
+      Size.Height = 32.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 3
+      Text = 'Save'
+      OnClick = SaveButtonClick
+    end
+  end
+  object CustomersGrid: TStringGrid
+    Align = Client
+    CanFocus = True
+    ClipChildren = True
+    Size.Width = 720.000000000000000000
+    Size.Height = 304.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    RowCount = 0
+    OnEditingDone = CustomersGridEditingDone
+  end
+  object CitiesLabel: TLabel
+    Align = Bottom
+    Margins.Left = 8.000000000000000000
+    Position.X = 8.000000000000000000
+    Position.Y = 352.000000000000000000
+    Size.Width = 712.000000000000000000
+    Size.Height = 24.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Totals by city'
+  end
+  object CitiesGrid: TStringGrid
+    Align = Bottom
+    CanFocus = True
+    ClipChildren = True
+    Position.Y = 376.000000000000000000
+    Size.Width = 720.000000000000000000
+    Size.Height = 160.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    ReadOnly = True
+    RowCount = 0
+  end
+  object StatusLabel: TLabel
+    Align = Bottom
+    Margins.Left = 8.000000000000000000
+    Position.X = 8.000000000000000000
+    Position.Y = 536.000000000000000000
+    Size.Width = 712.000000000000000000
+    Size.Height = 24.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Start the server, then Load'
+  end
+end

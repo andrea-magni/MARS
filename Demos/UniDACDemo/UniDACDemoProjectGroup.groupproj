@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="UniDACDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="UniDACDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="UniDACDemoServerApplication">
+        <MSBuild Projects="UniDACDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerApplication:Clean">
+        <MSBuild Projects="UniDACDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerApplication:Make">
+        <MSBuild Projects="UniDACDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoServerFMXApplication">
+        <MSBuild Projects="UniDACDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerFMXApplication:Clean">
+        <MSBuild Projects="UniDACDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerFMXApplication:Make">
+        <MSBuild Projects="UniDACDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoServerService">
+        <MSBuild Projects="UniDACDemoServerService.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerService:Clean">
+        <MSBuild Projects="UniDACDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerService:Make">
+        <MSBuild Projects="UniDACDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoServerConsoleApplication">
+        <MSBuild Projects="UniDACDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="UniDACDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerConsoleApplication:Make">
+        <MSBuild Projects="UniDACDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoServerDaemon">
+        <MSBuild Projects="UniDACDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerDaemon:Clean">
+        <MSBuild Projects="UniDACDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerDaemon:Make">
+        <MSBuild Projects="UniDACDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoServerApacheModule">
+        <MSBuild Projects="UniDACDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerApacheModule:Clean">
+        <MSBuild Projects="UniDACDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerApacheModule:Make">
+        <MSBuild Projects="UniDACDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoServerFCGI">
+        <MSBuild Projects="UniDACDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerFCGI:Clean">
+        <MSBuild Projects="UniDACDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerFCGI:Make">
+        <MSBuild Projects="UniDACDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoServerISAPI">
+        <MSBuild Projects="UniDACDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoServerISAPI:Clean">
+        <MSBuild Projects="UniDACDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoServerISAPI:Make">
+        <MSBuild Projects="UniDACDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoClient">
+        <MSBuild Projects="UniDACDemoClient.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoClient:Clean">
+        <MSBuild Projects="UniDACDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoClient:Make">
+        <MSBuild Projects="UniDACDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UniDACDemoTests">
+        <MSBuild Projects="UniDACDemoTests.dproj"/>
+    </Target>
+    <Target Name="UniDACDemoTests:Clean">
+        <MSBuild Projects="UniDACDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniDACDemoTests:Make">
+        <MSBuild Projects="UniDACDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="UniDACDemoServerApplication;UniDACDemoServerFMXApplication;UniDACDemoServerService;UniDACDemoServerConsoleApplication;UniDACDemoServerDaemon;UniDACDemoServerApacheModule;UniDACDemoServerFCGI;UniDACDemoServerISAPI;UniDACDemoClient;UniDACDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="UniDACDemoServerApplication:Clean;UniDACDemoServerFMXApplication:Clean;UniDACDemoServerService:Clean;UniDACDemoServerConsoleApplication:Clean;UniDACDemoServerDaemon:Clean;UniDACDemoServerApacheModule:Clean;UniDACDemoServerFCGI:Clean;UniDACDemoServerISAPI:Clean;UniDACDemoClient:Clean;UniDACDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="UniDACDemoServerApplication:Make;UniDACDemoServerFMXApplication:Make;UniDACDemoServerService:Make;UniDACDemoServerConsoleApplication:Make;UniDACDemoServerDaemon:Make;UniDACDemoServerApacheModule:Make;UniDACDemoServerFCGI:Make;UniDACDemoServerISAPI:Make;UniDACDemoClient:Make;UniDACDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
