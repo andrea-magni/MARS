@@ -348,6 +348,9 @@ begin
   try
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
+    // without a transaction, commit after the execution (as FireDAC does): TIBCSQL.AutoCommit is
+    // False by default and the changes would be rolled back when the connection closes
+    Result.AutoCommit := not Assigned(ATransaction);
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
     if AContextOwned and Assigned(Activation) then
@@ -366,6 +369,7 @@ begin
     Result.Name := AName;
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
+    Result.AutoCommit := not Assigned(ATransaction); // see CreateCommand
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
     if AContextOwned and Assigned(Activation) then
