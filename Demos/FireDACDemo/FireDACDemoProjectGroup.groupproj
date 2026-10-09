@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="FireDACDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="FireDACDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="FireDACDemoServerApplication">
+        <MSBuild Projects="FireDACDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerApplication:Clean">
+        <MSBuild Projects="FireDACDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerApplication:Make">
+        <MSBuild Projects="FireDACDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoServerFMXApplication">
+        <MSBuild Projects="FireDACDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerFMXApplication:Clean">
+        <MSBuild Projects="FireDACDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerFMXApplication:Make">
+        <MSBuild Projects="FireDACDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoServerService">
+        <MSBuild Projects="FireDACDemoServerService.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerService:Clean">
+        <MSBuild Projects="FireDACDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerService:Make">
+        <MSBuild Projects="FireDACDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoServerConsoleApplication">
+        <MSBuild Projects="FireDACDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="FireDACDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerConsoleApplication:Make">
+        <MSBuild Projects="FireDACDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoServerDaemon">
+        <MSBuild Projects="FireDACDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerDaemon:Clean">
+        <MSBuild Projects="FireDACDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerDaemon:Make">
+        <MSBuild Projects="FireDACDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoServerApacheModule">
+        <MSBuild Projects="FireDACDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerApacheModule:Clean">
+        <MSBuild Projects="FireDACDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerApacheModule:Make">
+        <MSBuild Projects="FireDACDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoServerFCGI">
+        <MSBuild Projects="FireDACDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerFCGI:Clean">
+        <MSBuild Projects="FireDACDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerFCGI:Make">
+        <MSBuild Projects="FireDACDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoServerISAPI">
+        <MSBuild Projects="FireDACDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoServerISAPI:Clean">
+        <MSBuild Projects="FireDACDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoServerISAPI:Make">
+        <MSBuild Projects="FireDACDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoClient">
+        <MSBuild Projects="FireDACDemoClient.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoClient:Clean">
+        <MSBuild Projects="FireDACDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoClient:Make">
+        <MSBuild Projects="FireDACDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="FireDACDemoTests">
+        <MSBuild Projects="FireDACDemoTests.dproj"/>
+    </Target>
+    <Target Name="FireDACDemoTests:Clean">
+        <MSBuild Projects="FireDACDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FireDACDemoTests:Make">
+        <MSBuild Projects="FireDACDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="FireDACDemoServerApplication;FireDACDemoServerFMXApplication;FireDACDemoServerService;FireDACDemoServerConsoleApplication;FireDACDemoServerDaemon;FireDACDemoServerApacheModule;FireDACDemoServerFCGI;FireDACDemoServerISAPI;FireDACDemoClient;FireDACDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="FireDACDemoServerApplication:Clean;FireDACDemoServerFMXApplication:Clean;FireDACDemoServerService:Clean;FireDACDemoServerConsoleApplication:Clean;FireDACDemoServerDaemon:Clean;FireDACDemoServerApacheModule:Clean;FireDACDemoServerFCGI:Clean;FireDACDemoServerISAPI:Clean;FireDACDemoClient:Clean;FireDACDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="FireDACDemoServerApplication:Make;FireDACDemoServerFMXApplication:Make;FireDACDemoServerService:Make;FireDACDemoServerConsoleApplication:Make;FireDACDemoServerDaemon:Make;FireDACDemoServerApacheModule:Make;FireDACDemoServerFCGI:Make;FireDACDemoServerISAPI:Make;FireDACDemoClient:Make;FireDACDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
