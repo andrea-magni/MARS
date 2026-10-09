@@ -96,10 +96,10 @@ begin
 {$REGION 'AfterCreateConnection example'}
 (*
   TMARSFireDAC.AfterCreateConnection :=
-    procedure (AConn: TFDConnection)
+    procedure (const AConnection: TFDConnection; const AActivation: IMARSActivation)
     begin
-      AConn.TxOptions.Isolation := FEngine.Parameters.ByNameTextEnum<TFDTxIsolation>(
-        'FireDAC.' + AConn.ConnectionDefName + '.TxOptions.Isolation'
+      AConnection.TxOptions.Isolation := FEngine.Parameters.ByNameTextEnum<TFDTxIsolation>(
+        'FireDAC.' + AConnection.ConnectionDefName + '.TxOptions.Isolation'
       , TFDTxIsolation.xiUnspecified
       );
     end;
