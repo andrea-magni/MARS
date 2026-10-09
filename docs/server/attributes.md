@@ -73,7 +73,7 @@ function Info(
 ): string;
 ```
 
-(`[FormParams]` works similarly for form data.) See the [NewAttributesDemo](/demos/#newattributesdemo).
+(`[FormParams]` works similarly for form data.)
 
 ### `[Required]`
 

@@ -12,7 +12,7 @@ The library is built around six guiding principles:
 2. **Easy and powerful** — a small, attribute-driven API that scales from a one-method "hello world" to large, secured, data-aware servers.
 3. **Pure RESTful Web Services** — interoperable with any consumer technology.
 4. **Delphi-like** — leans on modern language features (custom attributes, generics, RTTI, anonymous methods) on the server, and a classic RAD component model on the client.
-5. **Advanced dataset support** — deep FireDAC integration for Delphi-to-Delphi data-aware applications.
+5. **Advanced dataset support** — deep FireDAC integration for Delphi-to-Delphi data-aware applications, and ready integrations for Devart UniDAC, MyDAC and IBDAC ([Data Access](/features/data-access)).
 6. **OpenAPI 3 support** — automatic specification generation and Swagger UI.
 
 ## How it works in one minute

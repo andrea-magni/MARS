@@ -30,6 +30,7 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 | `OpenAPI.info.*` | — | title, description, version, contact.*, license.* for the OpenAPI document |
 | `OpenAPI.openapi` | 3.0.2 | OpenAPI document version; `3.2.0` or later also documents `[QUERY]` endpoints |
 | `FireDAC.<DefName>.<Param>` | — | connection definitions (see `firedac.md`) |
+| `UniDAC.<DefName>.<Item>`, `MyDAC.<DefName>.<Item>`, `IBDAC.<DefName>.<Item>` (or `.ConnectString`) | — | Devart connection definitions (see `devart.md`) |
 
 ## Application parameters (prefix `<AppName>.` in the ini)
 

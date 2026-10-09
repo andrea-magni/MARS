@@ -15,7 +15,7 @@ MARS maps Delphi values to and from JSON through the helpers in `MARS.Core.JSON.
 | `class` (`TObject`) | object (published/visible properties) |
 | `TArray<T>` / `TObjectList<T>` | array |
 | `TJSONValue` | passed through as-is |
-| `TDataSet` / `TFDDataSet` | array of objects (see [FireDAC](/features/firedac)) |
+| `TDataSet` / `TFDDataSet` | array of objects (see [Data Access](/features/data-access#writing-datasets)) |
 
 Nested records, arrays of records, and arrays of objects all serialize recursively.
 

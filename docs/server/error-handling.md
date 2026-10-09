@@ -55,7 +55,7 @@ containing non-ASCII characters (a localized exception text, a file name, …) r
 intact. The same applies to the generic `500` body produced for non-MARS exceptions.
 :::
 
-## `EMARSWithResponseException` — structured error body
+## `EMARSWithResponseException` — structured error body {#emarswithresponseexception-structured-error-body}
 
 When clients need machine-readable error details, raise `EMARSWithResponseException` with a payload. By default the payload is serialized using the normal [MessageBodyWriter](/server/content-negotiation) machinery (`AUseMBW = True`), so a record or object becomes JSON.
 

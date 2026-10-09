@@ -1,6 +1,6 @@
 # Consuming a MARS server from Delphi
 
-Client units are in `Source/MARS.Client.*`; design-time components are registered by the `MARSClient.CoreDesign` / `MARSClient.FireDACDesign` packages (palette category "MARS-Curiosity Client"). Everything also works created in code.
+Client units are in `Source/MARS.Client.*`; design-time components are registered by the `MARSClient.CoreDesign` / `MARSClient.FireDACDesign` (and `MARSClient.UniDACDesign`/`MyDACDesign`/`IBDACDesign`) packages (palette category "MARS-Curiosity Client"). Everything also works created in code.
 
 ## Component stack
 
@@ -19,6 +19,7 @@ TMARSNetClient / TMARSIndyClient        (connection: host, port, protocol)
   - `TMARSClientResourceFormData` / `TMARSClientResourceFormUrlEncoded` — form posts;
   - `TMARSClientResourceSSE` — server-sent events;
   - `TMARSFDResource` (`MARS.Client.FireDAC`) — datasets + deltas;
+  - `TMARSUniDACResource`/`TMARSMyDACResource`/`TMARSIBDACResource` (`MARS.Client.UniDAC`/`MyDAC`/`IBDAC`) — Devart datasets in `TVirtualTable`s, whole datasets back with `SendData` (see `devart.md`);
   - `TMARSClientToken` — login/logout.
 
 ## Calling

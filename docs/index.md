@@ -41,8 +41,10 @@ features:
     link: /server/routes
     linkText: Routes in code
   - icon: 🔥
-    title: FireDAC Datasets
-    details: First-class, advanced dataset support with FireDAC for powerful Delphi-to-Delphi data-aware servers.
+    title: Datasets
+    details: First-class dataset support with FireDAC and Devart UniDAC, MyDAC, IBDAC, server and client, for powerful Delphi-to-Delphi data-aware servers.
+    link: /features/data-access
+    linkText: Data access
   - icon: 📘
     title: OpenAPI 3
     details: Generate an OpenAPI 3 specification from your resources automatically and expose Swagger UI out of the box.

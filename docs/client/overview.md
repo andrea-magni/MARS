@@ -1,6 +1,6 @@
 # Client Overview
 
-MARS ships a complete **client** library for consuming REST services from Delphi. It works against any REST server, with extra conveniences when the server is MARS (JSON ↔ record mapping, JWT handling, FireDAC dataset sync).
+MARS ships a complete **client** library for consuming REST services from Delphi. It works against any REST server, with extra conveniences when the server is MARS (JSON ↔ record mapping, JWT handling, dataset sync with FireDAC, UniDAC, MyDAC and IBDAC).
 
 The client is a set of components you can drop on a form at design time or create in code. Their hierarchy mirrors the server:
 
@@ -13,7 +13,8 @@ TMARSClient (transport: Net / Http / Indy)
     ├── TMARSClientResourceStream  (binary)
     ├── TMARSClientResourceFormData / ...FormUrlEncoded
     ├── TMARSClientResourceSSE     (server-sent events)
-    └── TMARSFDResource            (FireDAC datasets)
+    ├── TMARSFDResource            (FireDAC datasets)
+    └── TMARSUniDACResource / TMARSMyDACResource / TMARSIBDACResource (Devart datasets)
 ```
 
 The URL of a call is composed the same way as on the server:
@@ -73,3 +74,4 @@ All descend from `TMARSCustomClient` (`MARS.Client.Client`).
 - [Calling Resources](/client/resources) — GET/POST, sync vs async, JSON mapping, streams, SSE.
 - [Authentication](/client/authentication) — logging in with `TMARSClientToken`.
 - [FireDAC Client](/client/firedac) — synchronizing datasets with the server.
+- [Devart Client](/client/devart) — the same with UniDAC, MyDAC and IBDAC.

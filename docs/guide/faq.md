@@ -32,7 +32,7 @@ The [MARS forum on Delphi-Praxis](https://en.delphipraxis.net/forum/34-mars-curi
 
 ### How do I create a REST server in Delphi with MARS?
 
-Run MARSCmd (in the MARS folder, `Utils`), pick a template (`MARSTemplate` with Indy, `MARSTemplateDCS` with Delphi Cross Socket, `MARSTemplateRoutes` with Indy and [routes](/server/routes) instead of resource classes) and a project name: you get a project group with the server in several flavors (console, VCL, FMX, Windows service, Linux daemon and, with `MARSTemplate`, ISAPI, Apache and FastCGI), a client and a test project. See [Bootstrap a new project](/guide/installation#bootstrap-a-new-project-with-marscmd) and [Your First Server](/guide/getting-started).
+Run MARSCmd (in the MARS folder, `Utils`), pick a template (`MARSTemplate` with Indy, `MARSTemplateDCS` with Delphi Cross Socket, `MARSTemplateRoutes` with Indy and [routes](/server/routes) instead of resource classes) and a project name: you get a project group with the server in several flavors (console, VCL, FMX, Windows service, Linux daemon and, with `MARSTemplate`, ISAPI, Apache and FastCGI), a client and a test project. `MARScmd.exe` does the same [from the command line](/guide/installation#from-the-command-line). See [Bootstrap a new project](/guide/installation#bootstrap-a-new-project-with-marscmd) and [Your First Server](/guide/getting-started).
 
 ### How do I return JSON?
 

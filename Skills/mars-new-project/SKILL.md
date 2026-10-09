@@ -30,7 +30,14 @@ Pick the template:
 - `Demos/MARSTemplateDCS/`: the same on Delphi Cross Socket, if the user asks for the DCS transport;
 - `Demos/MARSTemplateRoutes/`: the same as `MARSTemplate`, with its sample endpoints defined as routes in code (`Server.Routes.pas`, `MARS.Core.Routes`, Express style), only if the user asks for route-based / Express-style endpoints. Routes are in addition to resources: token (login) and OpenAPI stay resources there too, and resource units can be added to that project as to any other (`'Server.Resources.*'`).
 
-MARSCmd (`Utils\Bin\Win32\MARScmd_VCL.exe`) lists the three templates and does all the steps above.
+MARSCmd (`Utils\Bin\Win32\MARScmd_VCL.exe`) lists the three templates and does all the steps above. From the command line (prefer it when you can run programs: it does steps 1, 2 and 4 exactly as the tool, with a random `JWT.Secret`), use `Utils\Bin\Win32\MARScmd.exe`:
+
+```
+MARScmd <ProjectName> [--template MARSTemplate|MARSTemplateDCS|MARSTemplateRoutes|<folder>] [--dest <folder>]
+MARScmd --list-templates
+```
+
+Default destination: `Documents\MARS Projects\<ProjectName>`; a destination inside the MARS folder needs `--allow-inside`; exit code 0 = created, 1 = error (i.e. destination not empty), 2 = wrong command line. Then delete the host flavors the user does not need (step 3).
 
 ### Option B — generate a minimal project from bundled templates
 

@@ -34,12 +34,12 @@ type
   protected
     [Context] FD: TMARSFireDAC;              // helper bound to a connection def
     [Context] Connection: TFDConnection;     // raw connection, if preferred
-    // pick a specific def (default is the first/only one):
+    // pick a specific def (default: the FireDAC.ConnectionDefName application parameter, MAIN_DB):
     // [Context, Connection('MAIN_DB')] FD: TMARSFireDAC;
   end;
 ```
 
-`ConnectionAttribute` (`[Connection('DefName', AExpandMacros)]`, from `MARS.Data.FireDAC`) selects the connection def by name.
+`ConnectionAttribute` (`[Connection('DefName', AExpandMacros)]`, from `MARS.Data.FireDAC`) selects the connection def by name, on the field/parameter, the method or the resource; without it the def is the `FireDAC.ConnectionDefName` parameter of the application (`DefaultApp.FireDAC.ConnectionDefName`), `MAIN_DB` by default. Link the FireDAC driver unit of the database (i.e. `FireDAC.Phys.FB`).
 
 ## Ad-hoc queries with TMARSFireDAC
 
@@ -55,7 +55,7 @@ end;
 
 Useful members: `Query(ASQL [, ATransaction, AContextOwned, AOnBeforeOpen])`, `CreateQuery(...)`, `CreateCommand(...)`, `InTransaction(ADoSomething: TProc<TFDTransaction>)`, `ApplyUpdates(...)`, `Connection`, `ConnectionDefName`.
 
-**Macro/param injection**: before opening, `InjectMacroAndParamValues` fills FireDAC macros/params from the request context — so SQL can reference values like path/query params and token claims without string concatenation. Look at `Demos/OTPDemo` and `Demos/WebStencilsDemo` for working examples (e.g. `select * from T where ID = :id` with a `[PathParam] id`-driven param, or macros like `&Token_UserName`-style context values).
+**Macro/param injection**: `CreateQuery`/`CreateCommand` (so `Query` and `ExecuteSQL` too) fill the params and macros whose name is a context value: `:PathParam_id` (the `{id}` of the path), `:QueryParam_city`, `:FormParam_x`, `:Token_UserName`, `:Token_Claim_x`, `:Token_HasRole_admin`, `Request_*`/`URL_*` properties — no string concatenation. Other params stay null: set them in the `before` callback of `ExecuteSQL(sql, transaction, before, after)` (returns the rows affected; `after` reads output params). Example: `FD.Query('select * from T where ID = :PathParam_id')`. Working demo: `Demos/FireDACDemo` (CRUD, transaction, `TMARSFDDatasetResource` with deltas).
 
 Returning `TFDDataSet` / `TArray<TFDDataSet>` with `Produces(APPLICATION_JSON)` serializes rows as a JSON array. `Produces(TMediaType.APPLICATION_JSON_FireDAC)` (`application/json-firedac`) uses FireDAC's native format instead — lossless for round-tripping with Delphi clients, including deltas.
 
@@ -76,6 +76,10 @@ type
 - Hooks: `BeforeOpenDataSet` / `AfterOpenDataSet`.
 
 The base class is already annotated `Produces/Consumes` for both `APPLICATION_JSON` and `APPLICATION_JSON_FireDAC`.
+
+`TMARSFDDataModuleResource` (`MARS.Data.FireDAC.DataModule`): a data module as a resource, its published `TFDDataSet` fields returned by GET and updated by POST (deltas); `[RESTInclude]`/`[RESTExclude]`/`[RESTIncludeDefault]` choose them.
+
+For Devart UniDAC, MyDAC, IBDAC (same model, whole datasets instead of deltas) see `devart.md`.
 
 ## Client side
 

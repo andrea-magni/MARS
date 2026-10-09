@@ -1,6 +1,6 @@
 # Components
 
-The MARS client is component-based, so you can build a consumer visually. After [installing](/guide/installation) the `MARSClient.CoreDesign` (and `MARSClient.FireDACDesign`) packages, the components appear on the **MARS-Curiosity Client** palette page.
+The MARS client is component-based, so you can build a consumer visually. After [installing](/guide/installation) the `MARSClient.CoreDesign` (and `MARSClient.FireDACDesign`, or the `MARSClient.UniDACDesign`/`MyDACDesign`/`IBDACDesign` of a Devart library) packages, the components appear on the **MARS-Curiosity Client** palette page.
 
 ## The component tree
 
@@ -64,7 +64,8 @@ The specialized resource types add convenience on top:
 | `TMARSClientResourceFormData` | multipart uploads | `FormData: TArray<TFormParam>` |
 | `TMARSClientResourceFormUrlEncoded` | urlencoded forms | `FormUrlEncoded` parameters |
 | `TMARSClientResourceSSE` | server-sent events | `Open`/`Close`, `OnMessage` |
-| `TMARSFDResource` / `TMARSFDDataSetResource` | FireDAC datasets | dataset sync & deltas |
+| `TMARSFDResource` / `TMARSFDDataSetResource` | FireDAC datasets | dataset sync & deltas ([FireDAC Client](/client/firedac)) |
+| `TMARSUniDACResource`, `TMARSMyDACResource`, `TMARSIBDACResource` (and `…DataSetResource`) | Devart datasets (`TVirtualTable`) | dataset sync, whole datasets back ([Devart Client](/client/devart)) |
 
 ## Token — `TMARSClientToken`
 

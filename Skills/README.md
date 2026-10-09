@@ -3,7 +3,7 @@
 This folder contains [Agent Skills](https://code.claude.com/docs/en/skills) for working with MARS-Curiosity:
 
 - **`mars-new-project/`** — scaffold a new MARS server project (template files included) and deploy it (service, ISAPI, Apache, FastCGI, Linux daemon).
-- **`mars-development/`** — develop with MARS: resources (JAX-RS style) and, as an addition, routes in code with middlewares; attributes, parameter binding, JWT auth, FireDAC, SSE, WebStencils, client components, configuration.
+- **`mars-development/`** — develop with MARS: resources (JAX-RS style) and, as an addition, routes in code with middlewares; attributes, parameter binding, JWT auth, datasets with FireDAC and Devart UniDAC/MyDAC/IBDAC, SSE, WebStencils, client components, configuration.
 - **`mars-mcp-server/`** — build MCP servers for AI agents (Claude, ChatGPT, Open WebUI/Ollama): expose Delphi methods as MCP tools with `[MCPTool]`, database tools via FireDAC, Bearer/OAuth 2.1 authentication.
 
 ## Install as a plugin (recommended)

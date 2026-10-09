@@ -87,7 +87,7 @@ begin
 end;
 ```
 
-Built-in injectables include `IMARSRequest`, `IMARSResponse`, `TMARSURL`, `IMARSActivation`, `TMARSToken`, the `TFDConnection` / `TMARSFireDAC` (with the data units), the generated `TOpenAPI`, and configuration parameters via `[EngineParam]` / `[ApplicationParam]`. You can register your own. See [Parameters & Injection](/server/injection).
+Built-in injectables include `IMARSRequest`, `IMARSResponse`, `TMARSURL`, `IMARSActivation`, `TMARSToken`, the `TFDConnection` / `TMARSFireDAC` (and the Devart equivalents, see [Data Access](/features/data-access)), the generated `TOpenAPI`, and configuration parameters via `[EngineParam]` / `[ApplicationParam]`. You can register your own. See [Parameters & Injection](/server/injection).
 
 ## Content negotiation
 
@@ -108,4 +108,4 @@ See [Authentication](/features/authentication) and [Authorization](/features/aut
 
 ## Server *and* client
 
-The same library contains a [client](/client/overview) made of RAD components (`TMARSClient`, `TMARSClientApplication`, `TMARSClientResource*`, `TMARSClientToken`). Their hierarchy mirrors the server's (Client → Application → Resource), so consuming a MARS server from Delphi feels symmetric — including automatic JSON ↔ record mapping and FireDAC dataset synchronization.
+The same library contains a [client](/client/overview) made of RAD components (`TMARSClient`, `TMARSClientApplication`, `TMARSClientResource*`, `TMARSClientToken`). Their hierarchy mirrors the server's (Client → Application → Resource), so consuming a MARS server from Delphi feels symmetric — including automatic JSON ↔ record mapping and dataset synchronization (FireDAC, UniDAC, MyDAC, IBDAC).
