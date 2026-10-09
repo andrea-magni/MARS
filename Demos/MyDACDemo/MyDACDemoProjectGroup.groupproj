@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="MyDACDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MyDACDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MyDACDemoServerApplication">
+        <MSBuild Projects="MyDACDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerApplication:Clean">
+        <MSBuild Projects="MyDACDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerApplication:Make">
+        <MSBuild Projects="MyDACDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoServerFMXApplication">
+        <MSBuild Projects="MyDACDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerFMXApplication:Clean">
+        <MSBuild Projects="MyDACDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerFMXApplication:Make">
+        <MSBuild Projects="MyDACDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoServerService">
+        <MSBuild Projects="MyDACDemoServerService.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerService:Clean">
+        <MSBuild Projects="MyDACDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerService:Make">
+        <MSBuild Projects="MyDACDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoServerConsoleApplication">
+        <MSBuild Projects="MyDACDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="MyDACDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerConsoleApplication:Make">
+        <MSBuild Projects="MyDACDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoServerDaemon">
+        <MSBuild Projects="MyDACDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerDaemon:Clean">
+        <MSBuild Projects="MyDACDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerDaemon:Make">
+        <MSBuild Projects="MyDACDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoServerApacheModule">
+        <MSBuild Projects="MyDACDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerApacheModule:Clean">
+        <MSBuild Projects="MyDACDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerApacheModule:Make">
+        <MSBuild Projects="MyDACDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoServerFCGI">
+        <MSBuild Projects="MyDACDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerFCGI:Clean">
+        <MSBuild Projects="MyDACDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerFCGI:Make">
+        <MSBuild Projects="MyDACDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoServerISAPI">
+        <MSBuild Projects="MyDACDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoServerISAPI:Clean">
+        <MSBuild Projects="MyDACDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoServerISAPI:Make">
+        <MSBuild Projects="MyDACDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoClient">
+        <MSBuild Projects="MyDACDemoClient.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoClient:Clean">
+        <MSBuild Projects="MyDACDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoClient:Make">
+        <MSBuild Projects="MyDACDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MyDACDemoTests">
+        <MSBuild Projects="MyDACDemoTests.dproj"/>
+    </Target>
+    <Target Name="MyDACDemoTests:Clean">
+        <MSBuild Projects="MyDACDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MyDACDemoTests:Make">
+        <MSBuild Projects="MyDACDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MyDACDemoServerApplication;MyDACDemoServerFMXApplication;MyDACDemoServerService;MyDACDemoServerConsoleApplication;MyDACDemoServerDaemon;MyDACDemoServerApacheModule;MyDACDemoServerFCGI;MyDACDemoServerISAPI;MyDACDemoClient;MyDACDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MyDACDemoServerApplication:Clean;MyDACDemoServerFMXApplication:Clean;MyDACDemoServerService:Clean;MyDACDemoServerConsoleApplication:Clean;MyDACDemoServerDaemon:Clean;MyDACDemoServerApacheModule:Clean;MyDACDemoServerFCGI:Clean;MyDACDemoServerISAPI:Clean;MyDACDemoClient:Clean;MyDACDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MyDACDemoServerApplication:Make;MyDACDemoServerFMXApplication:Make;MyDACDemoServerService:Make;MyDACDemoServerConsoleApplication:Make;MyDACDemoServerDaemon:Make;MyDACDemoServerApacheModule:Make;MyDACDemoServerFCGI:Make;MyDACDemoServerISAPI:Make;MyDACDemoClient:Make;MyDACDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
