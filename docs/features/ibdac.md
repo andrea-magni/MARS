@@ -1,3 +1,7 @@
+---
+description: "Devart IBDAC (InterBase, Firebird) in MARS-Curiosity, the Delphi REST library: connect strings, TMARSIBDAC helper, RETURNING, transactions, datasets as JSON, XML or application/json-ibdac, datasets received from TMARSIBDACResource clients."
+---
+
 # IBDAC
 
 The `MARS.Data.IBDAC.*` units integrate **Devart IBDAC** (InterBase and Firebird) with MARS: connection definitions in the configuration, `[Context]` injection of the connection or of the `TMARSIBDAC` helper, parameters filled from the request, datasets written as JSON, XML or the IBDAC native format and read back from the body. The [Data Access](/features/data-access) page describes the model, the same of FireDAC, UniDAC and MyDAC; the [IBDACDemo](/demos/#ibdacdemo) puts everything together.

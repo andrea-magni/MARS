@@ -1,5 +1,5 @@
 ---
-description: "Why choose MARS-Curiosity for REST APIs in Delphi: JAX-RS style declarative resources, server and client in one library, FireDAC datasets, JWT, OpenAPI 3, MCP servers for AI agents, Indy or Delphi Cross Socket, Windows and Linux."
+description: "Why choose MARS-Curiosity for REST APIs in Delphi: JAX-RS style declarative resources, server and client in one library, datasets with FireDAC and Devart UniDAC/MyDAC/IBDAC, JWT, OpenAPI 3, MCP servers for AI agents, Indy or Delphi Cross Socket, Windows and Linux."
 ---
 
 # Why MARS?

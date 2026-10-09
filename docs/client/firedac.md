@@ -1,3 +1,7 @@
+---
+description: "FireDAC client of MARS-Curiosity: TMARSFDResource and TMARSFDDataSetResource fetch datasets into TFDMemTables and post back only the changes (delta), applied on the server."
+---
+
 # FireDAC Client
 
 When the server exposes [FireDAC datasets](/features/firedac), the client fetches them into live `TFDMemTable`s, lets the user edit them, and posts the changes back as a *delta*. This gives you a near-classic data-aware experience over REST. The components are `TMARSFDResource` and `TMARSFDDataSetResource` (`MARS.Client.FireDAC`, package `MARSClient.FireDAC`), on the *MARS-Curiosity Client* page of the palette (package `MARSClient.FireDACDesign`).

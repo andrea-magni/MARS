@@ -39,13 +39,13 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/rest/default/people
 - **JSON** to and from records, objects, arrays and datasets, with options per application; YAML and XML writers too.
 - **Security**: JWT authentication (Bearer header or cookie, key rotation, token renewal), role based authorization (`[RolesAllowed]`, `[PermitAll]`, `[DenyAll]`).
 - **OpenAPI 3** generated from your code, Swagger UI included.
-- **FireDAC**: return datasets as JSON, apply client deltas, connection pooling via configuration.
+- **[Data access](https://andrea-magni.github.io/MARS/features/data-access)** with FireDAC and Devart UniDAC, MyDAC, IBDAC: return datasets as JSON, XML or native formats, parameters from the request, transactions, connections from the configuration; FireDAC clients send back deltas.
 - **MCP servers for AI agents**: expose Delphi methods and data as [Model Context Protocol](https://andrea-magni.github.io/MARS/features/mcp) tools, resources and prompts (Claude, ChatGPT, Copilot, local models), with roles and OAuth 2.1.
 - **Server-sent events**, HTML and templates (WebStencils, htmx), static files.
 - **Logging**: JSON request/response logs for Grafana/Loki; client side logging of every request.
-- **Client library**: RAD components to call MARS and any other REST API, typed records, tokens, async calls, FireDAC dataset sync.
+- **Client library**: RAD components to call MARS and any other REST API, typed records, tokens, async calls, dataset sync with FireDAC, UniDAC, MyDAC and IBDAC.
 - **Hosting**: console, VCL/FMX, Windows service, Linux daemon (systemd, Docker), IIS ISAPI, Apache module, FastCGI; Indy or Delphi Cross Socket with HTTPS. See [Deployment](https://andrea-magni.github.io/MARS/guide/deployment).
-- **Tooling**: setup with IDE integration, [TMS Smart Setup](https://andrea-magni.github.io/MARS/guide/installation#tms-smart-setup), the MARSCmd project bootstrapper, [Agent Skills](https://andrea-magni.github.io/MARS/guide/agent-skills) for AI coding agents.
+- **Tooling**: setup with IDE integration, [TMS Smart Setup](https://andrea-magni.github.io/MARS/guide/installation#tms-smart-setup), the MARSCmd project bootstrapper (also [from the command line](https://andrea-magni.github.io/MARS/guide/installation#from-the-command-line)), [Agent Skills](https://andrea-magni.github.io/MARS/guide/agent-skills) for AI coding agents.
 
 Delphi 10.4 Sydney to Delphi 13 Florence.
 
@@ -60,7 +60,7 @@ Delphi 10.4 Sydney to Delphi 13 Florence.
 Run [MARSCmd](https://andrea-magni.github.io/MARS/guide/installation#bootstrap-a-new-project-with-marscmd), pick a template (`MARSTemplate` with Indy, `MARSTemplateDCS` with Delphi Cross Socket, `MARSTemplateRoutes` with Indy and [routes in code](https://andrea-magni.github.io/MARS/server/routes)) and a name: you get a ready project group with the server in several flavors, a client and a test project. Then follow [Your First Server](https://andrea-magni.github.io/MARS/guide/getting-started).
 
 ### AI Agent Skills
-MARS ships [Agent Skills](https://andrea-magni.github.io/MARS/guide/agent-skills) for Claude Code and other AI coding agents: scaffold a new server or develop REST APIs (resources, JWT, FireDAC, SSE, MCP, ...) with an AI assistant that knows MARS. From Claude Code:
+MARS ships [Agent Skills](https://andrea-magni.github.io/MARS/guide/agent-skills) for Claude Code and other AI coding agents: scaffold a new server or develop REST APIs (resources, JWT, FireDAC and Devart datasets, SSE, MCP, ...) with an AI assistant that knows MARS. From Claude Code:
 
 ```
 /plugin marketplace add andrea-magni/MARS

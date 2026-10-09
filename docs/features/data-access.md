@@ -1,3 +1,7 @@
+---
+description: "Data access in MARS-Curiosity, the Delphi REST library: ready integrations for FireDAC and Devart UniDAC, MyDAC and IBDAC on the same model (connection definitions, [Context] injection, parameters from the request, datasets as JSON, XML or native formats, client components, demos)."
+---
+
 # Data Access
 
 MARS does not bundle a data access library: it integrates the ones Delphi developers already use. Four integrations are ready, all built on the same model, so moving from one to another (or reading the code of a project that uses another one) is straightforward:

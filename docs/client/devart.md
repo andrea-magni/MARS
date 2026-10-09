@@ -1,3 +1,7 @@
+---
+description: "Devart client of MARS-Curiosity: TMARSUniDACResource, TMARSMyDACResource and TMARSIBDACResource fetch datasets into TVirtualTables and post them back to the server."
+---
+
 # Devart Client (UniDAC, MyDAC, IBDAC)
 
 When the server exposes datasets with a Devart integration ([UniDAC](/features/unidac), [MyDAC](/features/mydac), [IBDAC](/features/ibdac)), a Delphi client fetches them into `TVirtualTable`s (Devart's in-memory dataset), shows and edits them with the usual data-aware controls, and can send them back. The components are the same for the three libraries, with their own names:

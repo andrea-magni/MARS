@@ -1,3 +1,7 @@
+---
+description: "Devart UniDAC in MARS-Curiosity, the Delphi REST library: connect strings with providers, TMARSUniDAC helper, datasets as JSON, XML or application/json-unidac, transactions, datasets received from TMARSUniDACResource clients."
+---
+
 # UniDAC
 
 The `MARS.Data.UniDAC.*` units integrate **Devart UniDAC** (Universal Data Access Components: one set of components, a *provider* for each database) with MARS: connection definitions in the configuration, `[Context]` injection of the connection or of the `TMARSUniDAC` helper, parameters filled from the request, datasets written as JSON, XML or the UniDAC native format and read back from the body. The [Data Access](/features/data-access) page describes the model, the same of FireDAC, MyDAC and IBDAC; the [UniDACDemo](/demos/#unidacdemo) puts everything together.

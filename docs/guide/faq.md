@@ -1,5 +1,5 @@
 ---
-description: "Frequently asked questions about MARS-Curiosity, the Delphi REST library: creating a REST server in Delphi, JSON, JWT authentication, OpenAPI, FireDAC, CORS, HTTPS, Linux and Docker, REST clients, server-sent events, MCP servers for AI agents."
+description: "Frequently asked questions about MARS-Curiosity, the Delphi REST library: creating a REST server in Delphi, JSON, JWT authentication, OpenAPI, FireDAC and Devart UniDAC/MyDAC/IBDAC, CORS, HTTPS, Linux and Docker, REST clients, server-sent events, MCP servers for AI agents."
 ---
 
 # FAQ
@@ -33,6 +33,10 @@ The [MARS forum on Delphi-Praxis](https://en.delphipraxis.net/forum/34-mars-curi
 ### How do I create a REST server in Delphi with MARS?
 
 Run MARSCmd (in the MARS folder, `Utils`), pick a template (`MARSTemplate` with Indy, `MARSTemplateDCS` with Delphi Cross Socket, `MARSTemplateRoutes` with Indy and [routes](/server/routes) instead of resource classes) and a project name: you get a project group with the server in several flavors (console, VCL, FMX, Windows service, Linux daemon and, with `MARSTemplate`, ISAPI, Apache and FastCGI), a client and a test project. `MARScmd.exe` does the same [from the command line](/guide/installation#from-the-command-line). See [Bootstrap a new project](/guide/installation#bootstrap-a-new-project-with-marscmd) and [Your First Server](/guide/getting-started).
+
+### Can I create a project from the command line?
+
+Yes: `Utils\Bin\Win32\MARScmd.exe <ProjectName> [--template <name>] [--dest <folder>]` creates it as MARSCmd does, for scripts and automation (`MARScmd --list-templates` lists the templates). See [From the command line](/guide/installation#from-the-command-line).
 
 ### How do I return JSON?
 
@@ -74,6 +78,10 @@ Inject `[Context] FD: TMARSFireDAC` and return the dataset (`Result := FD.Query(
 ### Can I use my ORM or data access library?
 
 Yes. MARS has been designed to plug in whatever ORM or data access library you need, and not bundling one is a deliberate choice: use the one that fits your project. Register a custom injection service to hand your ORM session or repository to the resources with `[Context]`; FireDAC, UniDAC, MyDAC and IBDAC have ready integration ([Data Access](/features/data-access)). See [Parameters & Injection](/server/injection#writing-a-custom-injection-service) and [Why MARS?](/guide/why-mars#your-data-access-your-choice).
+
+### Does MARS work with UniDAC, MyDAC or IBDAC?
+
+Yes, with ready integrations for Devart UniDAC, MyDAC (MySQL, MariaDB) and IBDAC (InterBase, Firebird), on the same model as FireDAC: enable `MARS_UNIDAC`, `MARS_MYDAC` or `MARS_IBDAC`, inject `[Context] MyDAC: TMARSMyDAC` (or `TMARSUniDAC`, `TMARSIBDAC`) and return `MyDAC.Query(...)`. The Delphi client has components for them too. See [Data Access](/features/data-access) and the demos [UniDACDemo](/demos/#unidacdemo), [MyDACDemo](/demos/#mydacdemo), [IBDACDemo](/demos/#ibdacdemo).
 
 ### How do I generate OpenAPI (Swagger) documentation?
 
@@ -144,6 +152,10 @@ Use `TMARSNetClient`, `TMARSClientApplication` and a resource component (`TMARSC
 ### How do I avoid blocking the user interface?
 
 Use the asynchronous methods (`GETAsync`, `POSTAsync`, ...): the request runs in background and the completion handler runs in the main thread. See [Asynchronous calls](/client/resources#asynchronous-calls).
+
+### How do I edit database data in a Delphi client?
+
+Fetch the datasets of the server into local datasets, bind them to the controls, then send them back: with FireDAC, `TMARSFDResource` fills `TFDMemTable`s and posts only the changes (the delta, applied with `ApplyUpdates`); with UniDAC, MyDAC and IBDAC, `TMARSUniDACResource`, `TMARSMyDACResource`, `TMARSIBDACResource` fill `TVirtualTable`s and post them whole. See [FireDAC Client](/client/firedac), [Devart Client](/client/devart) and the [data access demos](/demos/#data-access-demos).
 
 ### How do I log the client requests?
 

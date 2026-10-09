@@ -1,3 +1,7 @@
+---
+description: "FireDAC in MARS-Curiosity, the Delphi REST library: connection definitions, TMARSFireDAC helper, datasets as JSON, XML or the FireDAC format, transactions, TMARSFDDatasetResource and deltas (ApplyUpdates) from TFDMemTable clients."
+---
+
 # FireDAC & Datasets
 
 MARS has first-class support for **FireDAC**: a resource method returns a `TFDDataSet` (or an array of them) and MARS writes it as JSON, XML or the FireDAC native format; a Delphi client fetches the datasets into `TFDMemTable`s, lets the user edit them and sends back only the changes (the *delta*), which the server applies. The [Data Access](/features/data-access) page describes the model shared with the Devart integrations; this page is the complete reference for FireDAC. The [FireDACDemo](/demos/#firedacdemo) puts everything together.

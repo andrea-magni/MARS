@@ -4,7 +4,7 @@ import path from 'node:path'
 
 // public address of the site (GitHub Pages): sitemap, canonical URLs, llms.txt
 const SITE_URL = 'https://andrea-magni.github.io/MARS/'
-const SITE_DESCRIPTION = 'MARS-Curiosity: REST library for Delphi, server and client. JAX-RS style resources, JWT, OpenAPI 3, FireDAC, server-sent events, MCP servers for AI agents; Windows and Linux.'
+const SITE_DESCRIPTION = 'MARS-Curiosity: REST library for Delphi, server and client. JAX-RS style resources, JWT, OpenAPI 3, FireDAC and Devart UniDAC/MyDAC/IBDAC datasets, server-sent events, MCP servers for AI agents; Windows and Linux.'
 
 // sections of llms.txt, in the order of the sidebar
 const LLMS_SECTIONS: [string, string][] = [
@@ -81,7 +81,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#e23c2e' }],
     // Google Search Console ownership (also docs/public/googlea4bcf4b25aec7c8a.html)
     ['meta', { name: 'google-site-verification', content: 'wal16o518WBogF_ELurPnRkWrVusyVZ20TgT8SpWmys' }],
-    ['meta', { name: 'keywords', content: 'Delphi, Object Pascal, REST, REST API, REST server, REST client, web API framework, JAX-RS, JWT, OpenAPI, Swagger, FireDAC, server-sent events, MCP, Model Context Protocol, AI agents, Linux, Docker' }],
+    ['meta', { name: 'keywords', content: 'Delphi, Object Pascal, REST, REST API, REST server, REST client, web API framework, JAX-RS, JWT, OpenAPI, Swagger, FireDAC, UniDAC, MyDAC, IBDAC, Devart, server-sent events, MCP, Model Context Protocol, AI agents, Linux, Docker' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'MARS-Curiosity' }],
     ['meta', { property: 'og:image', content: SITE_URL + 'hero.png' }],

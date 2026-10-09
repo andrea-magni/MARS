@@ -1,3 +1,7 @@
+---
+description: "Devart MyDAC (MySQL, MariaDB) in MARS-Curiosity, the Delphi REST library: connect strings, TMARSMyDAC helper, datasets as JSON, XML or application/json-mydac, transactions, datasets received from TMARSMyDACResource clients."
+---
+
 # MyDAC
 
 The `MARS.Data.MyDAC.*` units integrate **Devart MyDAC** (MySQL and MariaDB) with MARS: connection definitions in the configuration, `[Context]` injection of the connection or of the `TMARSMyDAC` helper, parameters filled from the request, datasets written as JSON, XML or the MyDAC native format and read back from the body. The [Data Access](/features/data-access) page describes the model, the same of FireDAC, UniDAC and IBDAC; the [MyDACDemo](/demos/#mydacdemo) puts everything together.
