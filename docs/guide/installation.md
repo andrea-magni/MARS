@@ -44,7 +44,7 @@ Installing it after MARS is fine: Smart Setup rebuilds MARS and adds `MARS.JOSE`
 Use one installation method only. If MARS is already installed with the executable installer or manually, remove it first, so the IDE doesn't load two copies of the same packages.
 :::
 
-`MARS.UniDAC` and `MARS.MyDAC` are not built by Smart Setup, because they require Devart UniDAC and MyDAC: if you need them, enable `MARS_UNIDAC` or `MARS_MYDAC` in `Source\MARS.inc` and build the package manually from the `Packages` folder.
+`MARS.UniDAC`, `MARS.MyDAC` and `MARS.IBDAC` are not built by Smart Setup, because they require Devart UniDAC, MyDAC and IBDAC: if you need them, enable `MARS_UNIDAC`, `MARS_MYDAC` or `MARS_IBDAC` in `Source\MARS.inc` and build the package manually from the `Packages` folder.
 
 The test projects (the `...Tests` project of an application created with MARSCmd, `MARS.Tests`) also need [Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), which is not a Smart Setup product: clone it and add its `Source` folder to the library path.
 

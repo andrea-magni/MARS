@@ -50,7 +50,7 @@ packages:
   - MARSClient.FireDAC: [runtime, rtl]
   - MARSClient.CoreDesign: [design, rtl]
   - MARSClient.FireDACDesign: [design, rtl]
-  # MARS.UniDAC and MARS.MyDAC are not listed: they require Devart UniDAC and MyDAC, which are not available through SmartSetup.
+  # MARS.UniDAC, MARS.MyDAC and MARS.IBDAC are not listed: they require Devart UniDAC, MyDAC and IBDAC, which are not available through SmartSetup.
 
 package options:
   package folders:

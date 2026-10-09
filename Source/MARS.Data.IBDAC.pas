@@ -3,31 +3,31 @@
 
   Home: https://github.com/andrea-magni/MARS
 *)
-unit MARS.Data.MyDAC;
+unit MARS.Data.IBDAC;
 
 {$I MARS.inc}
 
-{$IFDEF MARS_MYDAC}
+{$IFDEF MARS_IBDAC}
 
 interface
 
 uses
   System.Classes, System.SysUtils, Generics.Collections, Rtti, Data.DB
-// Devart MyDAC
-, DBAccess, MyAccess
+// Devart IBDAC
+, DBAccess, IBC
 // MARS
 , MARS.Core.Activation.Interfaces
 , MARS.Core.Exceptions
 , MARS.Utils.Parameters
-, MARS.Data.MyDAC.Utils
+, MARS.Data.IBDAC.Utils
 ;
 
 type
-  EMARSMyDACException = class(EMARSApplicationException);
+  EMARSIBDACException = class(EMARSApplicationException);
 
-  MARSMyDACAttribute = class(TCustomAttribute);
+  MARSIBDACAttribute = class(TCustomAttribute);
 
-  ConnectionAttribute = class(MARSMyDACAttribute)
+  ConnectionAttribute = class(MARSIBDACAttribute)
   private
     FConnectionDefName: string;
     FExpandMacros: Boolean;
@@ -37,11 +37,11 @@ type
     property ExpandMacros: Boolean read FExpandMacros;
   end;
 
-  // unambiguous name of ConnectionAttribute, i.e. [MyDACConnection('DEFNAME')], for units that
+  // unambiguous name of ConnectionAttribute, i.e. [IBDACConnection('DEFNAME')], for units that
   // use more than one MARS data access integration (all of them declare ConnectionAttribute)
-  MyDACConnectionAttribute = ConnectionAttribute;
+  IBDACConnectionAttribute = ConnectionAttribute;
 
-  SQLStatementAttribute = class(MARSMyDACAttribute)
+  SQLStatementAttribute = class(MARSIBDACAttribute)
   private
     FName: string;
     FSQLStatement: string;
@@ -54,18 +54,17 @@ type
   TContextValueProviderProc = reference to procedure (const AActivation: IMARSActivation;
     const AName: string; const ADesiredType: TFieldType; out AValue: TValue);
 
-  TAfterCreateConnectionProc = reference to procedure(const AConnection: TMyConnection; const AActivation: IMARSActivation);
+  TAfterCreateConnectionProc = reference to procedure(const AConnection: TIBCConnection; const AActivation: IMARSActivation);
 
-  TMARSMyDAC = class
+  TMARSIBDAC = class
   private
     FConnectionDefName: string;
-    FConnection: TMyConnection;
+    FConnection: TIBCConnection;
     FActivation: IMARSActivation;
     class var FConnectionDefs: TDictionary<string, string>;
   protected
-    procedure CheckTransaction(const ATransaction: TMyTransaction); virtual;
     procedure SetConnectionDefName(const Value: string); virtual;
-    function GetConnection: TMyConnection; virtual;
+    function GetConnection: TIBCConnection; virtual;
     class var FContextValueProviders: TArray<TContextValueProviderProc>;
     class var FAfterCreateConnection: TAfterCreateConnectionProc;
   public
@@ -86,37 +85,37 @@ type
       const AActivation: IMARSActivation = nil); virtual;
     destructor Destroy; override;
 
-    function CreateCommand(const ASQL: string = ''; const ATransaction: TMyTransaction = nil;
-      const AContextOwned: Boolean = True): TMyCommand; virtual;
-    function CreateQuery(const ASQL: string = ''; const ATransaction: TMyTransaction = nil;
-      const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TMyQuery; virtual;
-    function CreateTransaction(const AContextOwned: Boolean = True): TMyTransaction; virtual;
+    function CreateCommand(const ASQL: string = ''; const ATransaction: TIBCTransaction = nil;
+      const AContextOwned: Boolean = True): TIBCSQL; virtual;
+    function CreateQuery(const ASQL: string = ''; const ATransaction: TIBCTransaction = nil;
+      const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TIBCQuery; virtual;
+    function CreateTransaction(const AContextOwned: Boolean = True): TIBCTransaction; virtual;
 
-    function ExecuteSQL(const ASQL: string; const ATransaction: TMyTransaction = nil;
-      const ABeforeExecute: TProc<TMyCommand> = nil;
-      const AAfterExecute: TProc<TMyCommand> = nil): Integer; virtual;
+    function ExecuteSQL(const ASQL: string; const ATransaction: TIBCTransaction = nil;
+      const ABeforeExecute: TProc<TIBCSQL> = nil;
+      const AAfterExecute: TProc<TIBCSQL> = nil): Integer; virtual;
 
-    function Query(const ASQL: string): TMyQuery; overload; virtual;
+    function Query(const ASQL: string): TIBCQuery; overload; virtual;
 
     function Query(const ASQL: string;
-      const ATransaction: TMyTransaction): TMyQuery; overload; virtual;
+      const ATransaction: TIBCTransaction): TIBCQuery; overload; virtual;
 
-    function Query(const ASQL: string; const ATransaction: TMyTransaction;
-      const AContextOwned: Boolean): TMyQuery; overload; virtual;
+    function Query(const ASQL: string; const ATransaction: TIBCTransaction;
+      const AContextOwned: Boolean): TIBCQuery; overload; virtual;
 
-    function Query(const ASQL: string; const ATransaction: TMyTransaction;
+    function Query(const ASQL: string; const ATransaction: TIBCTransaction;
       const AContextOwned: Boolean;
-      const AOnBeforeOpen: TProc<TMyQuery>): TMyQuery; overload; virtual;
+      const AOnBeforeOpen: TProc<TIBCQuery>): TIBCQuery; overload; virtual;
 
-    procedure Query(const ASQL: string; const ATransaction: TMyTransaction;
-      const AOnBeforeOpen: TProc<TMyQuery>;
-      const AOnDataSetReady: TProc<TMyQuery>); overload; virtual;
+    procedure Query(const ASQL: string; const ATransaction: TIBCTransaction;
+      const AOnBeforeOpen: TProc<TIBCQuery>;
+      const AOnDataSetReady: TProc<TIBCQuery>); overload; virtual;
 
     function SetName<T: TComponent>(const AComponent: T; const AName: string): T; overload;
 
-    procedure InTransaction(const ADoSomething: TProc<TMyTransaction>);
+    procedure InTransaction(const ADoSomething: TProc<TIBCTransaction>);
 
-    property Connection: TMyConnection read GetConnection;
+    property Connection: TIBCConnection read GetConnection;
     property ConnectionDefName: string read FConnectionDefName write SetConnectionDefName;
     property Activation: IMARSActivation read FActivation;
 
@@ -124,8 +123,8 @@ type
       const ASliceName: string = ''): TArray<string>;
     class procedure CloseConnectionDefs(const AConnectionDefNames: TArray<string>);
     class function CreateConnectionByDefName(const AConnectionDefName: string;
-      const AActivation: IMARSActivation = nil): TMyConnection;
-    class function CreateConnectionByConnectString(const AConnectString: string): TMyConnection;
+      const AActivation: IMARSActivation = nil): TIBCConnection;
+    class function CreateConnectionByConnectString(const AConnectString: string): TIBCConnection;
 
     class constructor CreateClass;
     class destructor DestroyClass;
@@ -138,11 +137,11 @@ implementation
 uses
   StrUtils, Variants
 , MARS.Core.Activation
-, MARS.Data.MyDAC.InjectionService
-, MARS.Data.MyDAC.ReadersAndWriters
+, MARS.Data.IBDAC.InjectionService
+, MARS.Data.IBDAC.ReadersAndWriters
 ;
 
-// Name=Value pairs, separated by ';' (MyDAC connect string format)
+// Name=Value pairs, separated by ';' (IBDAC connect string format)
 function GetAsConnectString(const AParameters: TMARSParameters): string;
 var
   LParam: TPair<string, TValue>;
@@ -156,7 +155,7 @@ begin
   end;
 end;
 
-class function TMARSMyDAC.LoadConnectionDefs(const AParameters: TMARSParameters;
+class function TMARSIBDAC.LoadConnectionDefs(const AParameters: TMARSParameters;
   const ASliceName: string = ''): TArray<string>;
 var
   LData, LConnectionParams: TMARSParameters;
@@ -198,15 +197,15 @@ begin
   end;
 end;
 
-function TMARSMyDAC.Query(const ASQL: string;
-  const ATransaction: TMyTransaction): TMyQuery;
+function TMARSIBDAC.Query(const ASQL: string;
+  const ATransaction: TIBCTransaction): TIBCQuery;
 begin
   Result := Query(ASQL, ATransaction, True);
 end;
 
-function TMARSMyDAC.Query(const ASQL: string;
-  const ATransaction: TMyTransaction; const AContextOwned: Boolean;
-  const AOnBeforeOpen: TProc<TMyQuery>): TMyQuery;
+function TMARSIBDAC.Query(const ASQL: string;
+  const ATransaction: TIBCTransaction; const AContextOwned: Boolean;
+  const AOnBeforeOpen: TProc<TIBCQuery>): TIBCQuery;
 begin
   Result := CreateQuery(ASQL, ATransaction, AContextOwned);
   try
@@ -220,15 +219,15 @@ begin
   end;
 end;
 
-function TMARSMyDAC.Query(const ASQL: string): TMyQuery;
+function TMARSIBDAC.Query(const ASQL: string): TIBCQuery;
 begin
   Result := Query(ASQL, nil, True);
 end;
 
-procedure TMARSMyDAC.Query(const ASQL: string; const ATransaction: TMyTransaction;
-  const AOnBeforeOpen, AOnDataSetReady: TProc<TMyQuery>);
+procedure TMARSIBDAC.Query(const ASQL: string; const ATransaction: TIBCTransaction;
+  const AOnBeforeOpen, AOnDataSetReady: TProc<TIBCQuery>);
 var
-  LQuery: TMyQuery;
+  LQuery: TIBCQuery;
 begin
   LQuery := Query(ASQL, ATransaction, False, AOnBeforeOpen);
   try
@@ -239,15 +238,15 @@ begin
   end;
 end;
 
-function TMARSMyDAC.Query(const ASQL: string;
-  const ATransaction: TMyTransaction; const AContextOwned: Boolean): TMyQuery;
+function TMARSIBDAC.Query(const ASQL: string;
+  const ATransaction: TIBCTransaction; const AContextOwned: Boolean): TIBCQuery;
 begin
   Result := Query(ASQL, ATransaction, AContextOwned, nil);
 end;
 
-class function TMARSMyDAC.CreateConnectionByConnectString(const AConnectString: string): TMyConnection;
+class function TMARSIBDAC.CreateConnectionByConnectString(const AConnectString: string): TIBCConnection;
 begin
-  Result := TMyConnection.Create(nil);
+  Result := TIBCConnection.Create(nil);
   try
     if AConnectString <> '' then
       Result.ConnectString := AConnectString;
@@ -258,8 +257,8 @@ begin
   end;
 end;
 
-class function TMARSMyDAC.CreateConnectionByDefName(
-  const AConnectionDefName: string; const AActivation: IMARSActivation): TMyConnection;
+class function TMARSIBDAC.CreateConnectionByDefName(
+  const AConnectionDefName: string; const AActivation: IMARSActivation): TIBCConnection;
 var
   LConnectString: string;
   LFound: Boolean;
@@ -274,7 +273,7 @@ begin
       TMonitor.Exit(FConnectionDefs);
     end;
     if not LFound then
-      raise EMARSMyDACException.CreateFmt('MyDAC connection definition not found: %s', [AConnectionDefName]);
+      raise EMARSIBDACException.CreateFmt('IBDAC connection definition not found: %s', [AConnectionDefName]);
   end;
 
   Result := CreateConnectionByConnectString(LConnectString);
@@ -305,23 +304,15 @@ begin
   FSQLStatement := ASQLStatement;
 end;
 
-{ TMARSMyDAC }
+{ TMARSIBDAC }
 
-// MySQL has one transaction per connection: MyDAC commands and queries have no
-// Transaction property, they take part in the active transaction of their connection.
-procedure TMARSMyDAC.CheckTransaction(const ATransaction: TMyTransaction);
-begin
-  if Assigned(ATransaction) and (ATransaction.DefaultConnection <> Connection) then
-    raise EMARSMyDACException.Create('The transaction does not belong to the connection of this TMARSMyDAC instance');
-end;
-
-class procedure TMARSMyDAC.AddContextValueProvider(
+class procedure TMARSIBDAC.AddContextValueProvider(
   const AContextValueProviderProc: TContextValueProviderProc);
 begin
   FContextValueProviders := FContextValueProviders + [TContextValueProviderProc(AContextValueProviderProc)];
 end;
 
-class procedure TMARSMyDAC.CloseConnectionDefs(
+class procedure TMARSIBDAC.CloseConnectionDefs(
   const AConnectionDefNames: TArray<string>);
 var
   LConnectionDefName: string;
@@ -335,7 +326,7 @@ begin
   end;
 end;
 
-constructor TMARSMyDAC.Create(const AConnectionDefName: string;
+constructor TMARSIBDAC.Create(const AConnectionDefName: string;
   const AActivation: IMARSActivation);
 begin
   inherited Create();
@@ -343,20 +334,20 @@ begin
   FActivation := AActivation;
 end;
 
-class constructor TMARSMyDAC.CreateClass;
+class constructor TMARSIBDAC.CreateClass;
 begin
   FContextValueProviders := [];
   FAfterCreateConnection := nil;
   FConnectionDefs := TDictionary<string, string>.Create();
 end;
 
-function TMARSMyDAC.CreateCommand(const ASQL: string;
-  const ATransaction: TMyTransaction; const AContextOwned: Boolean): TMyCommand;
+function TMARSIBDAC.CreateCommand(const ASQL: string;
+  const ATransaction: TIBCTransaction; const AContextOwned: Boolean): TIBCSQL;
 begin
-  Result := TMyCommand.Create(nil);
+  Result := TIBCSQL.Create(nil);
   try
     Result.Connection := Connection;
-    CheckTransaction(ATransaction);
+    Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
     if AContextOwned and Assigned(Activation) then
@@ -367,14 +358,14 @@ begin
   end;
 end;
 
-function TMARSMyDAC.CreateQuery(const ASQL: string; const ATransaction: TMyTransaction;
-  const AContextOwned: Boolean; const AName: string): TMyQuery;
+function TMARSIBDAC.CreateQuery(const ASQL: string; const ATransaction: TIBCTransaction;
+  const AContextOwned: Boolean; const AName: string): TIBCQuery;
 begin
-  Result := TMyQuery.Create(nil);
+  Result := TIBCQuery.Create(nil);
   try
     Result.Name := AName;
     Result.Connection := Connection;
-    CheckTransaction(ATransaction);
+    Result.Transaction := ATransaction;
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
     if AContextOwned and Assigned(Activation) then
@@ -385,11 +376,11 @@ begin
   end;
 end;
 
-function TMARSMyDAC.CreateTransaction(const AContextOwned: Boolean): TMyTransaction;
+function TMARSIBDAC.CreateTransaction(const AContextOwned: Boolean): TIBCTransaction;
 begin
-  Result := TMyTransaction.Create(nil);
+  Result := TIBCTransaction.Create(nil);
   try
-    // MyDAC starts a transaction only on an active connection
+    // IBDAC starts a transaction only on an active connection
     if not Connection.Connected then
       Connection.Connect;
     Result.DefaultConnection := Connection;
@@ -401,21 +392,21 @@ begin
   end;
 end;
 
-destructor TMARSMyDAC.Destroy;
+destructor TMARSIBDAC.Destroy;
 begin
   FreeAndNil(FConnection);
   inherited;
 end;
 
-class destructor TMARSMyDAC.DestroyClass;
+class destructor TMARSIBDAC.DestroyClass;
 begin
   FreeAndNil(FConnectionDefs);
 end;
 
-function TMARSMyDAC.ExecuteSQL(const ASQL: string; const ATransaction: TMyTransaction;
-  const ABeforeExecute, AAfterExecute: TProc<TMyCommand>): Integer;
+function TMARSIBDAC.ExecuteSQL(const ASQL: string; const ATransaction: TIBCTransaction;
+  const ABeforeExecute, AAfterExecute: TProc<TIBCSQL>): Integer;
 var
-  LCommand: TMyCommand;
+  LCommand: TIBCSQL;
 begin
   LCommand := CreateCommand(ASQL, ATransaction, False);
   try
@@ -430,14 +421,14 @@ begin
   end;
 end;
 
-function TMARSMyDAC.GetConnection: TMyConnection;
+function TMARSIBDAC.GetConnection: TIBCConnection;
 begin
   if not Assigned(FConnection) then
     FConnection := CreateConnectionByDefName(ConnectionDefName, FActivation);
   Result := FConnection;
 end;
 
-class function TMARSMyDAC.GetContextValue(const AName: string; const AActivation: IMARSActivation;
+class function TMARSIBDAC.GetContextValue(const AName: string; const AActivation: IMARSActivation;
   const ADesiredType: TFieldType): TValue;
 var
   LCustomProvider: TContextValueProviderProc;
@@ -449,7 +440,7 @@ begin
       LCustomProvider(AActivation, AName, ADesiredType, Result);
 end;
 
-procedure TMARSMyDAC.InjectMacroAndParamValues(
+procedure TMARSIBDAC.InjectMacroAndParamValues(
   const ACommand: TCustomDASQL; const AOnlyIfEmpty: Boolean);
 begin
   if not Assigned(ACommand) then
@@ -458,7 +449,7 @@ begin
   InjectParamValues(ACommand.Params, AOnlyIfEmpty);
 end;
 
-procedure TMARSMyDAC.InjectMacroAndParamValues(
+procedure TMARSIBDAC.InjectMacroAndParamValues(
   const ADataSet: TCustomDADataSet; const AOnlyIfEmpty: Boolean);
 begin
   if not Assigned(ADataSet) then
@@ -467,7 +458,7 @@ begin
   InjectParamValues(ADataSet.Params, AOnlyIfEmpty);
 end;
 
-procedure TMARSMyDAC.InjectMacroValues(const AMacros: TMacros; const AOnlyIfEmpty: Boolean);
+procedure TMARSIBDAC.InjectMacroValues(const AMacros: TMacros; const AOnlyIfEmpty: Boolean);
 var
   LIndex: Integer;
   LMacro: TMacro;
@@ -488,7 +479,7 @@ begin
   end;
 end;
 
-procedure TMARSMyDAC.InjectParamValues(const AParams: TDAParams; const AOnlyIfEmpty: Boolean);
+procedure TMARSIBDAC.InjectParamValues(const AParams: TDAParams; const AOnlyIfEmpty: Boolean);
 var
   LIndex: Integer;
   LParam: TDAParam;
@@ -504,9 +495,9 @@ begin
   end;
 end;
 
-procedure TMARSMyDAC.InTransaction(const ADoSomething: TProc<TMyTransaction>);
+procedure TMARSIBDAC.InTransaction(const ADoSomething: TProc<TIBCTransaction>);
 var
-  LTransaction: TMyTransaction;
+  LTransaction: TIBCTransaction;
 begin
   if Assigned(ADoSomething) then
   begin
@@ -526,7 +517,7 @@ begin
   end;
 end;
 
-procedure TMARSMyDAC.SetConnectionDefName(const Value: string);
+procedure TMARSIBDAC.SetConnectionDefName(const Value: string);
 begin
   if FConnectionDefName <> Value then
   begin
@@ -535,7 +526,7 @@ begin
   end;
 end;
 
-function TMARSMyDAC.SetName<T>(const AComponent: T; const AName: string): T;
+function TMARSIBDAC.SetName<T>(const AComponent: T; const AName: string): T;
 begin
   AComponent.Name := AName;
   Result := AComponent;

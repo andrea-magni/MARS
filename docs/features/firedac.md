@@ -202,6 +202,22 @@ Datasets (`TMemDataSet` descendants, i.e. `TMyQuery`, `TVirtualTable`) are writt
 MySQL has one transaction per connection: the `ATransaction` arguments of `TMARSMyDAC` only check that the transaction belongs to the same connection, and every statement on that connection takes part in it.
 :::
 
+## IBDAC
+
+The `MARS.Data.IBDAC.*` units (package `MARS.IBDAC`) provide the same support for **Devart IBDAC** (InterBase and Firebird): enable the `MARS_IBDAC` define, load the definitions from the `IBDAC` slice with `TMARSIBDAC.LoadConnectionDefs(FEngine.Parameters, 'IBDAC')`, and inject a `TIBCConnection` or the `TMARSIBDAC` helper. Everything else works as described for MyDAC above, with `TIBCQuery`, `TIBCSQL` and `TIBCTransaction`, the `IBDAC.ConnectionDefName` parameter and the `application/json-ibdac` media type.
+
+```ini
+IBDAC.MAIN_DB.Server=localhost
+IBDAC.MAIN_DB.Port=3050
+IBDAC.MAIN_DB.Database=C:\Data\MARS.fdb
+IBDAC.MAIN_DB.User ID=SYSDBA
+IBDAC.MAIN_DB.Password=secret
+IBDAC.MAIN_DB.Client Library=fbclient.dll
+IBDAC.MAIN_DB.Charset=UTF8
+```
+
+InterBase and Firebird support several transactions per connection: the `ATransaction` arguments of `TMARSIBDAC` are assigned to the commands and queries, as with FireDAC.
+
 ::: warning
-`MARS.Data.FireDAC`, `MARS.Data.UniDAC` and `MARS.Data.MyDAC` all declare `ConnectionAttribute`: if a unit uses more than one of them, the last one in the `uses` wins. Enable only one Devart integration (UniDAC or MyDAC) per project: both register writers for `TMemDataSet`.
+`MARS.Data.FireDAC`, `MARS.Data.UniDAC`, `MARS.Data.MyDAC` and `MARS.Data.IBDAC` all declare `ConnectionAttribute`: if a unit uses more than one of them, the last one in the `uses` wins. In a unit that needs two of them, use the unambiguous names `[MyDACConnection('REPORTS')]` and `[IBDACConnection('REPORTS')]`. MyDAC and IBDAC can be used in the same server (their JSON media types differ); enable only one of UniDAC and MyDAC/IBDAC per project: UniDAC already covers those databases, and its writers are registered for the same `TMemDataSet` type.
 :::
