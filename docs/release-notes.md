@@ -2,7 +2,9 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included.
 
-## Unreleased {#unreleased}
+## 1.9.2 {#v1-9-2}
+
+<Badge type="tip" text="latest" /> **10 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.2) · [changes since 1.9.1](https://github.com/andrea-magni/MARS/compare/v.1.9.1...v.1.9.2)
 
 **Changed**
 - YAML depends on the new `MARS_YAML` define (`MARS.inc`), set where Neslib.Yaml has libyaml: Windows, Android, iOS, 32-bit macOS. The `{$IFNDEF LINUX}` guards of the OpenAPI units, templates and demos became `{$IFDEF MARS_YAML}`, and `MARS.YAML.ReadersAndWriters` compiles empty elsewhere. [YAML](/features/serialization#yaml) ([#229](https://github.com/andrea-magni/MARS/issues/229))
@@ -14,7 +16,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## 1.9.1 {#v1-9-1}
 
-<Badge type="tip" text="latest" /> **9 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.1) · [changes since 1.9.0](https://github.com/andrea-magni/MARS/compare/v.1.9.0...v.1.9.1)
+**9 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.1) · [changes since 1.9.0](https://github.com/andrea-magni/MARS/compare/v.1.9.0...v.1.9.1)
 
 **New**
 - [Data Access](/features/data-access): the model shared by the data access integrations, now four. [FireDACDemo](/demos/#firedacdemo), [UniDACDemo](/demos/#unidacdemo), [MyDACDemo](/demos/#mydacdemo), [IBDACDemo](/demos/#ibdacdemo): the same customers application (server, FMX client, tests) with each library.
