@@ -31,6 +31,13 @@ Affinity breaks ties when several writers qualify:
 
 The reader side works symmetrically against **`[Consumes]`** and the request `Content-Type`.
 
+### When no writer matches
+
+When the `Accept` header shares no media type with `[Produces]`, MARS answers with the method's own media types (as if the client accepted anything). When no writer qualifies, the status tells who has to act:
+
+- **`406 Not Acceptable`**: the client asks only for media types no registered writer produces for this result, although others are available (i.e. `Accept: application/x-yaml` where the YAML writer is not registered). The plain-text body lists the media types the endpoint can produce. This applies to resources and [routes](/server/routes) alike.
+- **`500 Internal Server Error`**: no writer can produce the result in any media type the method declares (or, without `[Produces]`, in `application/json`), whatever the client accepts: a configuration error on the server, such as a writer unit missing from the `uses` clause.
+
 ## Built-in writers
 
 Registered by `MARS.Core.MessageBodyWriters.pas` (and data units):

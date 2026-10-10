@@ -55,6 +55,14 @@ type
     function Get: string;
   end;
 
+  // declares a media type no writer produces, as OpenAPI with YAML where MARS_YAML is not defined
+  [Path('negotiation')]
+  TNegotiationResource = class
+  public
+    [GET, Produces(TMediaType.APPLICATION_JSON), Produces('application/x-nowriter')]
+    function Get: TRouteThing;
+  end;
+
   TRouteMock = record
     Request: IMARSRequest;
     Response: IMARSResponse;
@@ -185,6 +193,12 @@ type
     procedure TestNextTwiceNamesTheMiddleware;
     [Test]
     procedure TestMiddlewareNameInContext;
+    [Test]
+    procedure TestNotAcceptableIs406;
+    [Test]
+    procedure TestNotAcceptableIs406OnResource;
+    [Test]
+    procedure TestNoWriterForTheResultIs500;
   end;
 
 implementation
@@ -249,6 +263,13 @@ end;
 function TSkipMiddlewareResource.Get: string;
 begin
   Result := 'skipped';
+end;
+
+{ TNegotiationResource }
+
+function TNegotiationResource.Get: TRouteThing;
+begin
+  Result := TRouteThing.Create('Negotiated');
 end;
 
 { TRouteBodyThing }
@@ -1243,9 +1264,85 @@ begin
   Assert.AreEqual('named', HeaderOf(LMock.Response, 'X-Named-Name'), 'class: MiddlewareName');
 end;
 
+function AcceptHeader(const AValue: string): TMARSHeaders;
+var
+  LHeader: TMARSHeader;
+begin
+  LHeader.Name := 'Accept';
+  LHeader.Value := AValue;
+  Result := [LHeader];
+end;
+
+procedure TMARSRoutesFixture.TestNotAcceptableIs406;
+begin
+  // objects have JSON writers only (records and primitive types have a */* writer)
+  MARSRoutesOf(FApplication).Get<TRouteThing>('negotiation-route',
+    function (const C: TMARSRouteContext): TRouteThing
+    begin
+      Result := TRouteThing.Create('Negotiated');
+    end
+  ).Produces(TMediaType.APPLICATION_JSON).Produces('application/x-nowriter');
+
+  // a declared media type that no writer produces
+  var LMock := Send('GET', 'negotiation-route', '', AcceptHeader('application/x-nowriter'));
+  Assert.AreEqual(406, LMock.Response.StatusCode);
+  Assert.Contains(LMock.Response.Content, TMediaType.APPLICATION_JSON, 'available media types');
+
+  // what the server can produce
+  LMock := Send('GET', 'negotiation-route');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType);
+
+  LMock := Send('GET', 'negotiation-route', '', AcceptHeader('application/x-nowriter, application/json;q=0.5'));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType);
+
+  // no Produces: an Accept that nothing writes
+  MARSRoutesOf(FApplication).Get<TRouteThing>('negotiation-default',
+    function (const C: TMARSRouteContext): TRouteThing
+    begin
+      Result := TRouteThing.Create('Default');
+    end
+  );
+  LMock := Send('GET', 'negotiation-default', '', AcceptHeader('application/x-nowriter'));
+  Assert.AreEqual(406, LMock.Response.StatusCode);
+  Assert.AreEqual(0, GThingsAlive, 'results are freed');
+end;
+
+procedure TMARSRoutesFixture.TestNotAcceptableIs406OnResource;
+begin
+  Assert.IsTrue(FApplication.AddResource('Tests.Routes.TNegotiationResource'));
+
+  var LMock := Send('GET', 'negotiation', '', AcceptHeader('application/x-nowriter'));
+  Assert.AreEqual(406, LMock.Response.StatusCode);
+  Assert.Contains(LMock.Response.Content, 'TNegotiationResource.Get');
+
+  LMock := Send('GET', 'negotiation', '', AcceptHeader(TMediaType.APPLICATION_JSON));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType);
+end;
+
+procedure TMARSRoutesFixture.TestNoWriterForTheResultIs500;
+begin
+  // only media types no writer produces: a server error, whatever the client accepts
+  MARSRoutesOf(FApplication).Get<TRouteThing>('no-writer',
+    function (const C: TMARSRouteContext): TRouteThing
+    begin
+      Result := TRouteThing.Create('No writer');
+    end
+  ).Produces('application/x-nowriter');
+
+  var LMock := Send('GET', 'no-writer');
+  Assert.AreEqual(500, LMock.Response.StatusCode);
+  LMock := Send('GET', 'no-writer', '', AcceptHeader('application/x-nowriter'));
+  Assert.AreEqual(500, LMock.Response.StatusCode);
+  Assert.AreEqual(0, GThingsAlive, 'results are freed');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRoutesFixture);
   MARSRegister(TSkipMiddlewareResource);
+  MARSRegister(TNegotiationResource);
 
   MARSRoutes('Tests.Routes.Middleware', 'mw',
     procedure (const R: TMARSRouter)

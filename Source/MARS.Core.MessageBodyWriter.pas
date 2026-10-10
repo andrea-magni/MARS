@@ -78,6 +78,10 @@ type
     procedure FindWriter(const AActivation: IMARSActivation;
       const AAccept: string; const AReturnType: TRttiType;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType); overload;
+    // Media types a registered writer can produce for AReturnType within the Produces list of the
+    // activation (or the defaults), whatever the client accepts. Empty: no writer for the type.
+    function GetWritableMediaTypes(const AActivation: IMARSActivation;
+      const AReturnType: TRttiType): TArray<string>;
 
 
     procedure Enumerate(const AProc: TProc<TEntryInfo>);
@@ -312,6 +316,58 @@ begin
     end;
   finally
     LAcceptParser.Free;
+  end;
+end;
+
+function TMARSMessageBodyRegistry.GetWritableMediaTypes(
+  const AActivation: IMARSActivation; const AReturnType: TRttiType): TArray<string>;
+var
+  LWriterEntry: TEntryInfo;
+  LMethodProducesMediaTypes, LWriterMediaTypes: TMediaTypeList;
+  LAllowedMediaTypes, LMediaTypes: TArray<string>;
+  LMediaType: string;
+  LMethodAttributes: TArray<TCustomAttribute>;
+  LResult: TList<string>;
+begin
+  Result := [];
+  if not Assigned(AReturnType) then
+    Exit;
+
+  LMethodAttributes := AActivation.MethodAttributes;
+
+  // the same defaults FindWriter applies when the client accepts anything
+  LMethodProducesMediaTypes := GetProducesMediaTypes(AActivation);
+  try
+    if LMethodProducesMediaTypes.Count > 0 then
+      LAllowedMediaTypes := LMethodProducesMediaTypes.ToArrayOfString
+    else
+      LAllowedMediaTypes := [TMediaType.APPLICATION_JSON, TMediaType.WILDCARD];
+  finally
+    LMethodProducesMediaTypes.Free;
+  end;
+
+  LResult := TList<string>.Create;
+  try
+    for LWriterEntry in FRegistry do
+    begin
+      LWriterMediaTypes := GetProducesMediaTypes(FRttiContext.FindType(LWriterEntry.RttiName));
+      try
+        if LWriterMediaTypes.Contains(TMediaType.WILDCARD) then
+          LMediaTypes := LAllowedMediaTypes
+        else
+          LMediaTypes := TMediaTypeList.Intersect(LAllowedMediaTypes, LWriterMediaTypes);
+        for LMediaType in LMediaTypes do
+          if (not LResult.Contains(LMediaType))
+            and LWriterEntry.IsWritable(AReturnType, LMethodAttributes, LMediaType)
+          then
+            LResult.Add(LMediaType);
+      finally
+        LWriterMediaTypes.Free;
+      end;
+    end;
+    Result := LResult.ToArray;
+  finally
+    LResult.Free;
   end;
 end;
 

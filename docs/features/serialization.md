@@ -178,4 +178,4 @@ YAML uses libyaml through the bundled Neslib.Yaml, which is available on Windows
 {$ENDIF}
 ```
 
-On Linux and 64-bit macOS (OSX64, OSXARM64) the unit compiles empty and registers no writer: a method that produces JSON and YAML answers in JSON (no `Accept`, `*/*` or `application/json`), while a request that accepts only `application/x-yaml` gets an error because there is no writer for it.
+On Linux and 64-bit macOS (OSX64, OSXARM64) the unit compiles empty and registers no writer: a method that produces JSON and YAML answers in JSON (no `Accept`, `*/*` or `application/json`), while a request that accepts only `application/x-yaml` gets `406 Not Acceptable` (see [When no writer matches](/server/content-negotiation#when-no-writer-matches)).

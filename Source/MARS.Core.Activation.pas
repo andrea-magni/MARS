@@ -575,7 +575,18 @@ begin
     TMARSMessageBodyRegistry.Instance.FindWriter(Self, LAccept, LReturnType, FWriter, FWriterMediaType);
     try
       if not Assigned(FWriter) then
+      begin
+        // a writer for the result exists, but not for what the client accepts: 406.
+        // No writer at all (or a server-chosen content type): a server error, 500.
+        if not ARewriteAccept then
+        begin
+          var LWritableMediaTypes := TMARSMessageBodyRegistry.Instance.GetWritableMediaTypes(Self, LReturnType);
+          if Length(LWritableMediaTypes) > 0 then
+            raise EMARSHttpException.CreateFmt('Not Acceptable: %s produces %s'
+              , [GetEndpointName, string.Join(', ', LWritableMediaTypes)], 406);
+        end;
         raise EMARSHttpException.CreateFmt('MessageBodyWriter not found for %s', [GetEndpointName]);
+      end;
 
       if AValueContentType = AOriginalContentType then
         Response.ContentType := FWriterMediaType.ToString;

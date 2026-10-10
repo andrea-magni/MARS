@@ -6,6 +6,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 **Changed**
 - YAML depends on the new `MARS_YAML` define (`MARS.inc`), set where Neslib.Yaml has libyaml: Windows, Android, iOS, 32-bit macOS. The `{$IFNDEF LINUX}` guards of the OpenAPI units, templates and demos became `{$IFDEF MARS_YAML}`, and `MARS.YAML.ReadersAndWriters` compiles empty elsewhere. [YAML](/features/serialization#yaml) ([#229](https://github.com/andrea-magni/MARS/issues/229))
+- A request that accepts only media types no writer produces for the result gets `406 Not Acceptable`, listing the available ones, instead of `500` ("MessageBodyWriter not found"); `500` remains when no writer can produce the result at all. `TMARSMessageBodyRegistry.GetWritableMediaTypes`. [When no writer matches](/server/content-negotiation#when-no-writer-matches) ([#230](https://github.com/andrea-magni/MARS/issues/230))
 
 **Fixed**
 - macOS 64-bit (OSX64, OSXARM64): a server with `MARS.OpenAPI.v3.InjectionService` did not compile (E1054 in `Neslib.LibYaml`); the OpenAPI document is served as JSON there ([#229](https://github.com/andrea-magni/MARS/issues/229)).
