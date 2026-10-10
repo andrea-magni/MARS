@@ -57,7 +57,7 @@ on the textual files served by `TFileSystemResource` (see
 - **`*/*`** (`WILDCARD`) matches any type; writers/readers registered for it act as fallbacks (lowest affinity).
 - **Dataset formats**: `…-firedac`, `…-unidac`, `…-mydac` and `…-ibdac` carry datasets in the native format of the data access library (for the Delphi client components); plain `application/json` carries them as an interoperable array of objects. See [Data Access](/features/data-access#writing-datasets).
 - **`text/event-stream`** is used by [Server-Sent Events](/features/sse).
-- **`application/x-yaml`** requires `MARS.YAML.ReadersAndWriters` to be registered (used by the [OpenAPI](/features/openapi) endpoint).
+- **`application/x-yaml`** requires `MARS.YAML.ReadersAndWriters` to be registered (used by the [OpenAPI](/features/openapi) endpoint), on the platforms where `MARS_YAML` is defined: not on Linux and 64-bit macOS. See [YAML](/features/serialization#yaml).
 
 ## Parsing and matching
 

@@ -4,6 +4,9 @@ interface
 
 {$I MARS.INC}
 
+// Without MARS_YAML (Linux, 64-bit macOS: see MARS.inc) the unit is empty, so listing it in a
+// uses clause does not break the build there; no YAML writer is registered.
+{$IFDEF MARS_YAML}
 uses
   Classes, SysUtils, Rtti
 , MARS.Core.Attributes, MARS.Core.Declarations, MARS.Core.MediaType
@@ -82,9 +85,11 @@ type
     class function TValueToYAML(const AValue: TValue): IYamlDocument; overload;
     class function TValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue): Boolean; overload;
   end;
+{$ENDIF}
 
 implementation
 
+{$IFDEF MARS_YAML}
 uses
   System.TypInfo, DateUtils, Generics.Collections
 , MARS.Core.Utils, MARS.Rtti.Utils
@@ -693,5 +698,6 @@ end;
 
 initialization
   RegisterWriters;
+{$ENDIF}
 
 end.

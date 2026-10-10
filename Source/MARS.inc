@@ -9,6 +9,14 @@
 {$define MARS_ZLIB}
 {$define MARS_ZIP}
 
+// YAML support (MARS.YAML.ReadersAndWriters, YAMLName) needs Neslib.Yaml, which binds libyaml
+// only on Windows (32/64 bit), Android, iOS and 32-bit macOS: no Linux, no 64-bit macOS
+// (OSX64, OSXARM64). The list mirrors the platforms of ThirdParty\Neslib.Yaml\Neslib.LibYaml.pas.
+// Without MARS_YAML, OpenAPI and the other resources are served as JSON only.
+{$if Defined(WIN32) or Defined(WIN64) or Defined(ANDROID) or Defined(IOS) or Defined(MACOS32)}
+  {$define MARS_YAML}
+{$endif}
+
 // MARS-Curiosity supports Delphi 10.4 Sydney and later
 {$if CompilerVersion < 34}
   {$message fatal 'MARS-Curiosity requires Delphi 10.4 Sydney or later'}

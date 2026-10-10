@@ -2,6 +2,8 @@ unit MARS.OpenAPI.v3.Utils;
 
 interface
 
+{$I MARS.inc}
+
 uses
   Classes, SysUtils, System.Rtti, System.TypInfo, MARS.Rtti.Utils
 , MARS.OpenAPI.v3
@@ -51,7 +53,7 @@ uses
 , MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT, MARS.Core.Utils
 , MARS.Metadata.Reader, MARS.Metadata.Attributes
 , MARS.Core.MediaType, MARS.Core.JSON
-{$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
+{$IFDEF MARS_YAML}, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
 
 { TOpenAPIHelper }
@@ -160,7 +162,7 @@ begin
             LJSONName := AAttr.Name;
           end
         );
-{$IFNDEF LINUX}
+{$IFDEF MARS_YAML}
         var LYAMLName := LMember.Name;
         LMember.HasAttribute<YAMLNameAttribute>(
           procedure (AAttr: YAMLNameAttribute)

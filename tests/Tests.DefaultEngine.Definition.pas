@@ -44,7 +44,7 @@ uses
 {$ELSE}
 , MARS.JOSEJWT.Token
 {$ENDIF}
-{$IFNDEF LINUX}
+{$IFDEF MARS_YAML}
 , MARS.YAML.ReadersAndWriters
 {$ENDIF}
 , MARS.OpenAPI.v3.InjectionService

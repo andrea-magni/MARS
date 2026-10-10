@@ -169,3 +169,13 @@ end;
 ## YAML
 
 With `MARS.YAML.ReadersAndWriters` in your ignition `uses`, methods that `[Produces(TMediaType.APPLICATION_YAML)]` can emit YAML for the same record/object types — this is how the [OpenAPI](/features/openapi) endpoint serves both JSON and YAML from one method.
+
+YAML uses libyaml through the bundled Neslib.Yaml, which is available on Windows (32 and 64 bit), Android, iOS and 32-bit macOS. `Source\MARS.inc` defines `MARS_YAML` on those platforms only; guard the unit in your `uses` with it, as the templates do:
+
+```pascal
+{$IFDEF MARS_YAML}
+, MARS.YAML.ReadersAndWriters
+{$ENDIF}
+```
+
+On Linux and 64-bit macOS (OSX64, OSXARM64) the unit compiles empty and registers no writer: a method that produces JSON and YAML answers in JSON (no `Accept`, `*/*` or `application/json`), while a request that accepts only `application/x-yaml` gets an error because there is no writer for it.

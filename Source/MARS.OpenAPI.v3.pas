@@ -2,10 +2,12 @@ unit MARS.OpenAPI.v3;
 
 interface
 
+{$I MARS.inc}
+
 uses
   Classes, SysUtils, Generics.Collections, System.Rtti, System.TypInfo
 , MARS.Core.JSON
-{$IFNDEF LINUX}, MARS.YAML.ReadersAndWriters{$ENDIF}
+{$IFDEF MARS_YAML}, MARS.YAML.ReadersAndWriters{$ENDIF}
 , MARS.Rtti.Utils, MARS.Core.Attributes
 ;
 
@@ -57,7 +59,7 @@ type
 
   TReferenceableType = class
   public
-    [JSONName('$ref'){$IFNDEF LINUX}, YAMLName('$ref'){$ENDIF}] ref: string;
+    [JSONName('$ref'){$IFDEF MARS_YAML}, YAMLName('$ref'){$ENDIF}] ref: string;
   end;
 
   TContact = class
@@ -93,7 +95,7 @@ type
     contact: TContact;
     license: TLicense;
     version: string; // required
-    [JSONName('x-logo'){$IFNDEF LINUX}, YAMLName('x-logo'){$ENDIF}] x_logo: TXLogo;
+    [JSONName('x-logo'){$IFDEF MARS_YAML}, YAMLName('x-logo'){$ENDIF}] x_logo: TXLogo;
   end;
 
   TServerVariable = class
@@ -334,8 +336,8 @@ type
     security: TObjectList<TDictionary<string, TSecurityRequirement>>;
     tags: TObjectList<TTag>;
     externalDocs: TExternalDocumentation;
-    [JSONName(''){$IFNDEF LINUX}, YAMLName(''){$ENDIF}] FBearerSecurityConfigured: Boolean;
-    [JSONName(''){$IFNDEF LINUX}, YAMLName(''){$ENDIF}] FCookieSecurityConfigured: Boolean;
+    [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] FBearerSecurityConfigured: Boolean;
+    [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] FCookieSecurityConfigured: Boolean;
   end;
 
 implementation

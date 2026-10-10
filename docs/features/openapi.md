@@ -56,7 +56,7 @@ Notes:
 
 - `[MetaVisible(False)]` keeps these helper resources out of the generated spec itself.
 - `[JSONSkipEmptyValues]` produces a clean document without empty members.
-- `GET …/openapi` returns the spec; an `Accept: application/yaml` header (with `MARS.YAML.ReadersAndWriters` registered) returns YAML instead.
+- `GET …/openapi` returns the spec; an `Accept: application/x-yaml` header (with `MARS.YAML.ReadersAndWriters` registered) returns YAML instead. YAML needs the `MARS_YAML` define, so on Linux and 64-bit macOS the spec is served as JSON only (see [YAML](/features/serialization#yaml)).
 - `TStaticContentResource` serves the bundled Swagger UI from the repository's `www/swagger-ui-*` folder via `TFileSystemResource` + `[RootFolder]`.
 
 Endpoints (under application `/default`):
