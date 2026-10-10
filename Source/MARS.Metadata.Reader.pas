@@ -21,6 +21,7 @@ type
   private
     FEngine: IMARSEngine;
     FMetadata: TMARSEngineMetadata;
+    FDefaultProduces: string;
   protected
     procedure ReadApplication(const AApplication: IMARSApplication); virtual;
     procedure ReadResource(const AApplication: IMARSApplication;
@@ -43,6 +44,8 @@ type
 
     property Engine: IMARSEngine read FEngine;
     property Metadata: TMARSEngineMetadata read FMetadata;
+    // Produces.Default of the application being read: what its endpoints without [Produces] produce
+    property DefaultProduces: string read FDefaultProduces;
   end;
 
 implementation
@@ -50,7 +53,7 @@ implementation
 uses
   Generics.Collections
 , MARS.Core.Utils, MARS.Core.URL, MARS.Rtti.Utils, MARS.Core.Attributes
-, MARS.Core.Exceptions, MARS.Metadata.Attributes
+, MARS.Core.Exceptions, MARS.Metadata.Attributes, MARS.Core.MessageBodyWriter
 ;
 
 
@@ -95,6 +98,7 @@ begin
   try
     LApplicationMetadata.Name := AApplication.Name;
     LApplicationMetadata.Path := AApplication.BasePath;
+    FDefaultProduces := string.Join(',', TMARSMessageBodyRegistry.GetDefaultProduces(AApplication));
 
     AApplication.EnumerateResources(
       procedure (APath: string; AConstructorInfo: TMARSConstructorInfo)
@@ -153,6 +157,8 @@ begin
     else if not AResourceMetadata.Produces.IsEmpty then
       LMethodMetadata.Produces := SmartConcat([LMethodMetadata.Produces, AResourceMetadata.Produces]);
     LMethodMetadata.Produces := SmartConcat(LMethodMetadata.Produces.Split([',']).RemoveDuplicates, ',');
+    if LMethodMetadata.Produces.IsEmpty then
+      LMethodMetadata.Produces := FDefaultProduces;
 
     AMethod.ForEachAttribute<ConsumesAttribute>(
       procedure (Attribute: ConsumesAttribute)
@@ -392,7 +398,7 @@ begin
 
     // route values, then group values (as ReadMethod)
     ReadRouteAttributes(ARoute.Attributes, LProduces, LConsumes, LAuthorization);
-    LMethodMetadata.Produces := StringFallback([LProduces, AResourceMetadata.Produces]);
+    LMethodMetadata.Produces := StringFallback([LProduces, AResourceMetadata.Produces, FDefaultProduces]);
     LMethodMetadata.Consumes := StringFallback([LConsumes, AResourceMetadata.Consumes]);
     LMethodMetadata.Authorization := LAuthorization;
 

@@ -476,6 +476,15 @@ begin
   if not TRttiHelper.IfHasAttribute<ProducesAttribute>(AActivation.MethodAttributes, LProducesProc) then
     TRttiHelper.IfHasAttribute<ProducesAttribute>(AActivation.ResourceAttributes, LProducesProc);
 
+  // nothing declared: the Produces.Default parameter of the application, as for the negotiation
+  if not LFound then
+    for var LDefault in TMARSMessageBodyRegistry.GetDefaultProduces(AActivation.Application) do
+    begin
+      LProduces := LDefault;
+      LFound := True;
+      Break;
+    end;
+
   Result := LFound;
   if Result then
     AContentType := LProduces;

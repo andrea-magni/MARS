@@ -10,7 +10,7 @@ interface
 uses
   Classes, SysUtils, Rtti, Generics.Defaults, Generics.Collections
 , MARS.Core.MediaType, MARS.Core.Declarations, MARS.Core.Classes
-, MARS.Core.Activation.Interfaces
+, MARS.Core.Activation.Interfaces, MARS.Core.Application.Interfaces
 ;
 
 type
@@ -78,6 +78,10 @@ type
     procedure FindWriter(const AActivation: IMARSActivation;
       const AAccept: string; const AReturnType: TRttiType;
       out AWriter: IMessageBodyWriter; out AMediaType: TMediaType); overload;
+    // Media types of the Produces.Default parameter of the application (comma separated):
+    // what an endpoint produces when neither its method nor its resource declares [Produces]
+    class function GetDefaultProduces(const AApplication: IMARSApplication): TArray<string>;
+
     // Media types a registered writer can produce for AReturnType within the Produces list of the
     // activation (or the defaults), whatever the client accepts. Empty: no writer for the type.
     function GetWritableMediaTypes(const AActivation: IMARSActivation;
@@ -95,6 +99,8 @@ type
     const AFFINITY_LOW = 10;
     const AFFINITY_VERY_LOW = 1;
     const AFFINITY_ZERO = 0;
+
+    const PRODUCES_DEFAULT_PARAM = 'Produces.Default';
   end;
 
   TMARSMessageBodyWriter = class
@@ -468,12 +474,29 @@ begin
          );
       end;
     end;
+
+    // nothing declared: the default of the application, if any
+    if LList.Count = 0 then
+      for var LDefault in GetDefaultProduces(AActivation.Application) do
+        LList.Add(TMediaType.Create(LDefault));
   except
     LList.Free;
     raise;
   end;
 
   Result := LList;
+end;
+
+class function TMARSMessageBodyRegistry.GetDefaultProduces(
+  const AApplication: IMARSApplication): TArray<string>;
+begin
+  Result := [];
+  if not Assigned(AApplication) then
+    Exit;
+
+  for var LMediaType in AApplication.Parameters.ByName(PRODUCES_DEFAULT_PARAM, '').AsString.Split([',']) do
+    if LMediaType.Trim <> '' then
+      Result := Result + [LMediaType.Trim];
 end;
 
 function TMARSMessageBodyRegistry.GetProducesMediaTypes(

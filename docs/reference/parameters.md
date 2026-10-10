@@ -179,6 +179,12 @@ into the `.ini` files of every project it creates.
 
 Defaults are those of `DefaultMARSJSONSerializationOptions`; resource and method attributes win over these parameters. See [Serialization options](/features/serialization#serialization-options).
 
+## Content negotiation parameters (per application)
+
+| Parameter | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `Produces.Default` | string (media types, comma separated) | — | What the endpoints without `[Produces]` produce, as an implicit `[Produces]` on each of them (negotiation, `/metadata`, OpenAPI). `application/json` makes strings and numbers JSON too. See [A default for the application](/server/content-negotiation#a-default-for-the-application-produces-default). |
+
 ## Routes parameters (per application)
 
 | Name | Type | Default | Description |

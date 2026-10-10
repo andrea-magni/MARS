@@ -4,7 +4,11 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## Unreleased {#unreleased}
 
+**New**
+- `Produces.Default` application parameter: the media types of the endpoints without `[Produces]`, as an implicit `[Produces]` for negotiation, `/metadata` and OpenAPI (i.e. `application/json` to make strings and numbers JSON too). [A default for the application](/server/content-negotiation#a-default-for-the-application-produces-default) ([#233](https://github.com/andrea-magni/MARS/issues/233))
+
 **Changed**
+- `/metadata` declares `[Produces(application/json)]`, its only format ([#233](https://github.com/andrea-magni/MARS/issues/233)).
 - Methods without `[Produces]`, requested with no `Accept` or `*/*`: strings and numbers are `text/plain; charset=utf-8` and arrays JSON on every platform, whether `MARS.YAML.ReadersAndWriters` is registered or not; the response Content-Type is never `*/*`. [Without Produces](/server/content-negotiation#without-produces) ([#232](https://github.com/andrea-magni/MARS/issues/232))
 
 **Fixed**

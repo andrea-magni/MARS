@@ -41,6 +41,17 @@ When the method declares no `[Produces]` and the client accepts anything (no `Ac
 
 The response never carries `*/*` as Content-Type: a writer chosen for `*/*` writes its own media type. Declaring `[Produces]` is the way to choose the format explicitly.
 
+### A default for the application: `Produces.Default`
+
+The `Produces.Default` application parameter sets what the endpoints without `[Produces]` (on the method, on the resource class or its ancestors, on the route or its group) produce. It works as an implicit `[Produces]` on each of them: for negotiation, for the `406` check, for the Content-Type of the text writer, and in `/metadata` and the [OpenAPI](/features/openapi) document (which otherwise shows `*/*`). A declared `[Produces]` always wins.
+
+```ini
+[DefaultEngine]
+DefaultApp.Produces.Default=application/json
+```
+
+With `application/json`, every result is JSON: scalars too (`{"result":42}`), also for a client that asks for `text/plain`, since an `Accept` outside the list is answered with the list. More media types are comma separated (`application/json, application/x-yaml`) and negotiated as a `[Produces]` list. The parameter applies to responses only (readers still follow `[Consumes]` and `Content-Type`).
+
 ### When no writer matches
 
 When the `Accept` header shares no media type with `[Produces]`, MARS answers with the method's own media types (as if the client accepted anything). When no writer qualifies, the status tells who has to act:

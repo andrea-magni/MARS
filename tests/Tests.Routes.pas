@@ -205,6 +205,14 @@ type
     procedure TestPrimitiveResultsWithoutProduces;
     [Test]
     procedure TestWildcardIsNotTheContentType;
+    [Test]
+    procedure TestProducesDefaultJSON;
+    [Test]
+    procedure TestProducesDefaultText;
+{$IFDEF MARS_YAML}
+    [Test]
+    procedure TestProducesDefaultList;
+{$ENDIF}
 {$IFDEF MARS_YAML}
     [Test]
     procedure TestPrimitiveArraysAsYAML;
@@ -1448,6 +1456,97 @@ begin
 
   LMock := Send('GET', 'yaml-empty', '', AcceptHeader(TMediaType.APPLICATION_YAML));
   Assert.AreEqual(200, LMock.Response.StatusCode);
+end;
+{$ENDIF}
+
+procedure TMARSRoutesFixture.TestProducesDefaultJSON;
+begin
+  FApplication.Parameters.Values['Produces.Default'] := TMediaType.APPLICATION_JSON;
+
+  MARSRoutesOf(FApplication).Get<Integer>('defaultanswer',
+    function (const C: TMARSRouteContext): Integer
+    begin
+      Result := 42;
+    end
+  );
+  MARSRoutesOf(FApplication).Get<string>('declaredtext',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := 'declared';
+    end
+  ).Produces(TMediaType.TEXT_PLAIN);
+
+  // no [Produces]: JSON, whatever the client accepts
+  for var LAccept in ['', TMediaType.WILDCARD, TMediaType.TEXT_PLAIN] do
+  begin
+    var LMock := Send('GET', 'defaultanswer', '', AcceptHeader(LAccept));
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType, 'route, Accept: ' + LAccept);
+    Assert.AreEqual('{"result":42}', LMock.Response.Content);
+
+    LMock := Send('GET', 'helloworld', '', AcceptHeader(LAccept));
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType, 'resource, Accept: ' + LAccept);
+    Assert.AreEqual('{"result":"Hello, world!"}', LMock.Response.Content);
+  end;
+
+  // a declared [Produces] wins over the default
+  var LMock := Send('GET', 'declaredtext');
+  Assert.StartsWith(TMediaType.TEXT_PLAIN, LMock.Response.ContentType);
+  Assert.AreEqual('declared', LMock.Response.Content);
+
+  // the OpenAPI document shows the default instead of */*
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    for var LOperationId in ['GetContent', 'get_defaultanswer'] do
+    begin
+      var LOperation := OperationById(LOpenAPI, LOperationId);
+      Assert.IsNotNull(LOperation, LOperationId);
+      Assert.IsTrue(LOperation.responses['200'].content.ContainsKey(TMediaType.APPLICATION_JSON), LOperationId + ': JSON');
+      Assert.IsFalse(LOperation.responses['200'].content.ContainsKey(TMediaType.WILDCARD), LOperationId + ': */*');
+    end;
+    var LOperation := OperationById(LOpenAPI, 'get_declaredtext');
+    Assert.IsNotNull(LOperation, 'get_declaredtext');
+    Assert.IsTrue(LOperation.responses['200'].content.ContainsKey(TMediaType.TEXT_PLAIN), 'declared');
+    Assert.IsFalse(LOperation.responses['200'].content.ContainsKey(TMediaType.APPLICATION_JSON), 'declared, not the default');
+  finally
+    LOpenAPI.Free;
+  end;
+end;
+
+procedure TMARSRoutesFixture.TestProducesDefaultText;
+begin
+  // the Content-Type of TPrimitiveTypesWriter follows the default as it follows [Produces]
+  FApplication.Parameters.Values['Produces.Default'] := TMediaType.TEXT_HTML;
+
+  var LMock := Send('GET', 'helloworld');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('text/html; charset=utf-8', LMock.Response.ContentType);
+  Assert.AreEqual('Hello, world!', LMock.Response.Content);
+end;
+
+{$IFDEF MARS_YAML}
+procedure TMARSRoutesFixture.TestProducesDefaultList;
+begin
+  // more media types, comma separated (spaces allowed): negotiated as a [Produces] list
+  FApplication.Parameters.Values['Produces.Default'] := 'application/json, ' + TMediaType.APPLICATION_YAML;
+
+  MARSRoutesOf(FApplication).Get<TRoutePerson>('defaultperson',
+    function (const C: TMARSRouteContext): TRoutePerson
+    begin
+      Result.Id := 5;
+      Result.Name := 'Five';
+    end
+  );
+
+  var LMock := Send('GET', 'defaultperson');
+  Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType);
+  Assert.AreEqual('{"Id":5,"Name":"Five"}', LMock.Response.Content);
+
+  LMock := Send('GET', 'defaultperson', '', AcceptHeader(TMediaType.APPLICATION_YAML));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.StartsWith(TMediaType.APPLICATION_YAML, LMock.Response.ContentType);
+  Assert.Contains(LMock.Response.Content, 'Five');
 end;
 {$ENDIF}
 

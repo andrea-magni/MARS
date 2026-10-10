@@ -45,6 +45,7 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 | `JSON.SkipEmptyValues`, `JSON.SkipEmptyStrings`, `JSON.SkipEmptyNumbers`, `JSON.SkipEmptyBooleans`, `JSON.SkipEmptyObjects`, `JSON.SkipEmptyArrays`, `JSON.SkipNullValues`, `JSON.DateIsUTC`, `JSON.UseDisplayFormatForNumericFields` | JSON serialization options per application (responses and request readers); order: `DefaultMARSJSONSerializationOptions` < these parameters < resource attributes < method attributes |
 | `Middlewares.Resources` | default `TMARSRouteTable.DefaultMiddlewaresOnResources` (`false`); `true` makes the application middlewares of routes (`MARSRoutesOf(App).Use`) wrap the resource methods too (see `routes.md`) |
 | `JSON.EscapeNonASCII` | default `true` (characters above 127 sent as `\uXXXX` in JSON responses); `false` writes them as they are (Unicode response encodings only); code-level default `TJSONValueWriter.DefaultEscapeNonASCII` |
+| `Produces.Default` | media types (comma separated) for the endpoints without `[Produces]` (method, resource class and ancestors, route and group): an implicit `[Produces]` for negotiation, `/metadata` and OpenAPI; a declared `[Produces]` wins. Unset: no Accept or `*/*` gives `text/plain` for strings and numbers, JSON for records, objects and arrays; `application/json` makes everything JSON (`{"result":42}`) |
 
 ## Reading parameters in code
 

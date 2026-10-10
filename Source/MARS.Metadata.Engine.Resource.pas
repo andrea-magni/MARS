@@ -19,7 +19,8 @@ uses
 
 type
 
-  [Path('/metadata')]
+  // JSON only (TMARSMetadataJSONWriter), whatever the Produces.Default of the application
+  [Path('/metadata'), Produces(TMediaType.APPLICATION_JSON)]
   TMetadataResource = class
   private
   protected
