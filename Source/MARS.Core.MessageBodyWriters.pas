@@ -692,7 +692,15 @@ begin
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
-        Result := TMARSMessageBodyRegistry.AFFINITY_ZERO;
+        // strings, numbers and the like for a client that accepts anything (no Accept, */*,
+        // no [Produces]): as text/plain rather than wrapped by TStandardMethodWriter
+        if (AMediaType = TMediaType.WILDCARD)
+          and (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
+            tkString, tkWChar, tkLString, tkWString, tkUString])
+        then
+          Result := TMARSMessageBodyRegistry.AFFINITY_VERY_LOW
+        else
+          Result := TMARSMessageBodyRegistry.AFFINITY_ZERO;
       end
   );
 end;

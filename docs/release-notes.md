@@ -2,6 +2,14 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included.
 
+## Unreleased {#unreleased}
+
+**Changed**
+- Methods without `[Produces]`, requested with no `Accept` or `*/*`: strings and numbers are `text/plain; charset=utf-8` and arrays JSON on every platform, whether `MARS.YAML.ReadersAndWriters` is registered or not; the response Content-Type is never `*/*`. [Without Produces](/server/content-negotiation#without-produces) ([#232](https://github.com/andrea-magni/MARS/issues/232))
+
+**Fixed**
+- With `MARS.YAML.ReadersAndWriters` registered, primitive results without `[Produces]` were written by the YAML writer with `Content-Type: */*`, and arrays of numbers or booleans came out empty (`[]`); YAML arrays of numbers and booleans are now written ([#232](https://github.com/andrea-magni/MARS/issues/232)).
+
 ## 1.9.2 {#v1-9-2}
 
 <Badge type="tip" text="latest" /> **10 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.1.9.2) · [changes since 1.9.1](https://github.com/andrea-magni/MARS/compare/v.1.9.1...v.1.9.2)

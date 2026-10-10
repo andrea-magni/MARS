@@ -31,6 +31,16 @@ Affinity breaks ties when several writers qualify:
 
 The reader side works symmetrically against **`[Consumes]`** and the request `Content-Type`.
 
+### Without `[Produces]`
+
+When the method declares no `[Produces]` and the client accepts anything (no `Accept`, or `*/*`):
+
+- **strings, numbers, booleans, enumerations** are written as `text/plain; charset=utf-8` (`TPrimitiveTypesWriter`);
+- **records, objects, arrays** as JSON; an array of primitives through `TStandardMethodWriter`, i.e. `{"result":[1,2,3]}`;
+- with `Accept: application/json`, scalars are JSON too (`{"result":42}`).
+
+The response never carries `*/*` as Content-Type: a writer chosen for `*/*` writes its own media type. Declaring `[Produces]` is the way to choose the format explicitly.
+
 ### When no writer matches
 
 When the `Accept` header shares no media type with `[Produces]`, MARS answers with the method's own media types (as if the client accepted anything). When no writer qualifies, the status tells who has to act:

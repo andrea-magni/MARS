@@ -302,6 +302,23 @@ begin
 
       if LFound then
       begin
+        // */* is not a media type for the response: use the first one the writer declares
+        // (writers that declare only */*, i.e. TPrimitiveTypesWriter, set their own)
+        if LCandidateMediaType = TMediaType.WILDCARD then
+        begin
+          LWriterMediaTypes := GetProducesMediaTypes(FRttiContext.FindType(LCandidate.RttiName));
+          try
+            for LMediaType in LWriterMediaTypes.ToArrayOfString do
+              if LMediaType <> TMediaType.WILDCARD then
+              begin
+                LCandidateMediaType := LMediaType;
+                Break;
+              end;
+          finally
+            LWriterMediaTypes.Free;
+          end;
+        end;
+
         AWriter := LCandidate.CreateInstance();
         AMediaType := TMediaType.Create(LCandidateMediaType);
         {$IFDEF DEBUG}

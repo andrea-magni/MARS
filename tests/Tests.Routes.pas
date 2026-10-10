@@ -2,6 +2,8 @@ unit Tests.Routes;
 
 interface
 
+{$I MARS.inc}
+
 uses
   Classes, SysUtils, Rtti, Types, TypInfo
 , DUnitX.TestFramework
@@ -199,6 +201,14 @@ type
     procedure TestNotAcceptableIs406OnResource;
     [Test]
     procedure TestNoWriterForTheResultIs500;
+    [Test]
+    procedure TestPrimitiveResultsWithoutProduces;
+    [Test]
+    procedure TestWildcardIsNotTheContentType;
+{$IFDEF MARS_YAML}
+    [Test]
+    procedure TestPrimitiveArraysAsYAML;
+{$ENDIF}
   end;
 
 implementation
@@ -1338,6 +1348,108 @@ begin
   Assert.AreEqual(500, LMock.Response.StatusCode);
   Assert.AreEqual(0, GThingsAlive, 'results are freed');
 end;
+
+procedure TMARSRoutesFixture.TestPrimitiveResultsWithoutProduces;
+begin
+  // no [Produces], no Accept or */* (also with MARS.YAML.ReadersAndWriters registered):
+  // scalars as text/plain, arrays as JSON
+  MARSRoutesOf(FApplication).Get<TArray<Integer>>('integers',
+    function (const C: TMARSRouteContext): TArray<Integer>
+    begin
+      Result := [1, 2, 3];
+    end
+  );
+  MARSRoutesOf(FApplication).Get<Integer>('answer',
+    function (const C: TMARSRouteContext): Integer
+    begin
+      Result := 42;
+    end
+  );
+
+  for var LAccept in ['', TMediaType.WILDCARD] do
+  begin
+    var LMock := Send('GET', 'integers', '', AcceptHeader(LAccept));
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType, 'integers, Accept: ' + LAccept);
+    Assert.AreEqual('{"result":[1,2,3]}', LMock.Response.Content);
+
+    LMock := Send('GET', 'answer', '', AcceptHeader(LAccept));
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.AreEqual('text/plain; charset=utf-8', LMock.Response.ContentType, 'answer, Accept: ' + LAccept);
+    Assert.AreEqual('42', LMock.Response.Content);
+  end;
+
+  // asking for JSON explicitly
+  var LMock := Send('GET', 'answer', '', AcceptHeader(TMediaType.APPLICATION_JSON));
+  Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType);
+  Assert.AreEqual('{"result":42}', LMock.Response.Content);
+end;
+
+procedure TMARSRoutesFixture.TestWildcardIsNotTheContentType;
+begin
+  MARSRoutesOf(FApplication).Get<TStream>('stream',
+    function (const C: TMARSRouteContext): TStream
+    begin
+      Result := TStringStream.Create('bytes');
+    end
+  );
+  MARSRoutesOf(FApplication).Get<TArray<Double>>('doubles',
+    function (const C: TMARSRouteContext): TArray<Double>
+    begin
+      Result := [1.5, 2];
+    end
+  );
+  MARSRoutesOf(FApplication).Get<string>('text',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := 'text';
+    end
+  );
+
+  for var LPath in ['stream', 'doubles', 'text'] do
+    for var LAccept in ['', TMediaType.WILDCARD] do
+    begin
+      var LMock := Send('GET', LPath, '', AcceptHeader(LAccept));
+      Assert.AreEqual(200, LMock.Response.StatusCode);
+      Assert.IsFalse(LMock.Response.ContentType.StartsWith(TMediaType.WILDCARD), LPath + ', Accept: ' + LAccept);
+    end;
+end;
+
+{$IFDEF MARS_YAML}
+procedure TMARSRoutesFixture.TestPrimitiveArraysAsYAML;
+begin
+  MARSRoutesOf(FApplication).Get<TArray<Integer>>('yaml-integers',
+    function (const C: TMARSRouteContext): TArray<Integer>
+    begin
+      Result := [1, 0, 3];
+    end
+  );
+  MARSRoutesOf(FApplication).Get<TArray<Boolean>>('yaml-booleans',
+    function (const C: TMARSRouteContext): TArray<Boolean>
+    begin
+      Result := [True, False];
+    end
+  );
+  MARSRoutesOf(FApplication).Get<TArray<Integer>>('yaml-empty',
+    function (const C: TMARSRouteContext): TArray<Integer>
+    begin
+      Result := [];
+    end
+  );
+
+  var LMock := Send('GET', 'yaml-integers', '', AcceptHeader(TMediaType.APPLICATION_YAML));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.StartsWith(TMediaType.APPLICATION_YAML, LMock.Response.ContentType);
+  Assert.AreEqual('- 1'#10'- 0'#10'- 3', LMock.Response.Content.Replace(#13, '').Trim);
+
+  LMock := Send('GET', 'yaml-booleans', '', AcceptHeader(TMediaType.APPLICATION_YAML));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('- true'#10'- false', LMock.Response.Content.Replace(#13, '').Trim);
+
+  LMock := Send('GET', 'yaml-empty', '', AcceptHeader(TMediaType.APPLICATION_YAML));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+end;
+{$ENDIF}
 
 initialization
   TDUnitX.RegisterTestFixture(TMARSRoutesFixture);

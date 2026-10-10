@@ -469,7 +469,8 @@ begin
     begin
       LDocument := LStream.AddSequence;
       LDocument.Root.SequenceStyle := TYamlSequenceStyle.Block;
-      TValueToYAML(LDocument.Root, '', AValue);
+      if AValue.GetArrayLength > 0 then
+        TValueToYAML(LDocument.Root, '', AValue);
     end
     else if AValue.IsObject or TRttiContext.Create.GetType(AValue.TypeInfo).IsRecord then
     begin
@@ -495,7 +496,7 @@ var
   LBool: Boolean;
   LString: string;
   LIndex: Integer;
-  LSequence: TYamlNode;
+  LSequence, LNested: TYamlNode;
   LElement: TValue;
 begin
   Result := False;
@@ -535,8 +536,31 @@ begin
         ObjectToYAML(LSequence, '', LElement.AsObject)
       else if LElement.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}] then
         RecordToYAML(LSequence, '', LElement)
-      else if LElement.Kind in [tkString, tkShortString, tkWString, tkUString, tkChar, tkWChar] then
-        LSequence.Add(LElement.AsString); //AM TODO Numbers, Boolean, ...
+      else if LElement.Kind in [tkString, tkShortString, tkWString, tkUString, tkChar, tkWChar, tkLString] then
+        LSequence.Add(LElement.AsString)
+      // elements keep their position: False, 0 and empty values are written too
+      else if LElement.IsType<Boolean> then
+        LSequence.Add(LElement.AsType<Boolean>)
+      else if LElement.TypeInfo = TypeInfo(TDateTime) then
+        LSequence.Add(DateToISO8601(LElement.AsType<TDateTime>, False))
+      else if LElement.TypeInfo = TypeInfo(TDate) then
+        LSequence.Add(DateToISO8601(LElement.AsType<TDate>, False))
+      else if LElement.TypeInfo = TypeInfo(TTime) then
+        LSequence.Add(DateToISO8601(LElement.AsType<TTime>, False))
+      else if LElement.Kind = tkInt64 then
+        LSequence.Add(LElement.AsType<Int64>)
+      else if LElement.Kind = tkInteger then
+        LSequence.Add(LElement.AsType<Integer>)
+      else if LElement.Kind = tkFloat then
+        LSequence.Add(LElement.AsType<Double>)
+      else if LElement.IsArray then
+      begin
+        LNested := LSequence.AddSequence;
+        if LElement.GetArrayLength > 0 then
+          TValueToYaml(LNested, '', LElement);
+      end
+      else
+        LSequence.Add(LElement.ToString);
     end;
   end
 
@@ -628,7 +652,9 @@ begin
       begin
         Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
           tkString, tkSet, tkWChar, tkLString, tkWString,
-          tkVariant, tkArray, tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}, tkInt64, tkDynArray, tkUString]);
+          tkVariant, tkArray, tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}, tkInt64, tkDynArray, tkUString])
+          // YAML only: without this check the writer took */* requests (no Accept) from the JSON writers
+          and AMediaType.Contains('yaml');
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin
