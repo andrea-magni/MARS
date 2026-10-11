@@ -136,7 +136,7 @@ The JSON of records is for any client (a browser, another language); the native 
 
 ### Reading datasets
 
-A method parameter of type `TArray<TFDMemTable>` (FireDAC) or `TArray<TMemDataSet>` (Devart, the datasets are `TVirtualTable`s) with `[BodyParam]` receives the datasets of the body in the native JSON format. The reader is chosen by the `[Consumes]` of the method: declare it, i.e. `Consumes(APPLICATION_JSON_MyDAC)`, so the integrations can coexist. MARS frees the datasets after the method.
+A method parameter of type `TArray<TFDMemTable>` (FireDAC) or `TArray<TMemDataSet>` (Devart, the datasets are `TVirtualTable`s) with `[BodyParam]` receives the datasets of the body in the native JSON format. The reader is chosen by the `[Consumes]` of the method: declare it, i.e. `Consumes(APPLICATION_JSON_MyDAC)`, so the integrations can coexist. MARS frees the datasets after the method. A body that is missing, is not a JSON object or does not hold datasets in that format is a `400`, with the reason in the message.
 
 ### Plain JSON into a dataset {#plain-json-into-a-dataset}
 

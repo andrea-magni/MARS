@@ -141,6 +141,9 @@ type
     procedure TestDataSetBody;
 
     [Test]
+    procedure TestNativeDataSetBody;
+
+    [Test]
     procedure TestUnknownApplicationOrEngineIs404;
   end;
 
@@ -150,7 +153,8 @@ uses
   {$IFDEF MSWINDOWS}Winapi.Windows, {$ENDIF}IOUtils, DateUtils, System.TimeSpan
 , MARS.Core.JSON
 , IdCustomHTTPServer, Web.HTTPApp, MARS.http.Server.Indy
-, Mock.IMARSRequest, Mock.IMARSResponse;
+, Mock.IMARSRequest, Mock.IMARSResponse
+, Data.DB, FireDAC.Comp.Client, FireDAC.Comp.DataSet, MARS.Data.FireDAC.Utils, MARS.Data.FireDAC.ReadersAndWriters, System.JSON;
 
 const
   STATIC_FILE_NAME = 'mars-static-test.txt';
@@ -527,6 +531,48 @@ begin
 
   // TDataSet itself cannot hold data: a mistake of the server
   Assert.AreEqual(500, Post('datasets/abstract', '[{"id":1}]', LContent));
+end;
+
+procedure TMARSDefaultEngineFixture.TestNativeDataSetBody;
+
+  function Post(const ABody: string; out AContent: string): Integer;
+  var
+    LHeader: TMARSHeader;
+  begin
+    LHeader.Name := 'Content-Type';
+    LHeader.Value := TMediaType.APPLICATION_JSON_FireDAC;
+    var LMock := MockRequestAndResponse('POST', ResourcePath('datasets/native'), ABody, [LHeader]);
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+    Result := LMock.Response.StatusCode;
+    AContent := LMock.Response.Content;
+  end;
+
+var
+  LContent: string;
+begin
+  // a valid body: the datasets of a FireDAC client
+  var LTable := TFDMemTable.Create(nil);
+  try
+    LTable.FieldDefs.Add('id', ftInteger);
+    LTable.CreateDataSet;
+    LTable.AppendRecord([7]);
+    var LJSON := TFDDataSets.ToJSON([TFDDataSet(LTable)]);
+    try
+      Assert.AreEqual(200, Post(LJSON.ToJSON, LContent), LContent);
+      Assert.AreEqual('DataSet0:1 id=7;', LContent);
+    finally
+      LJSON.Free;
+    end;
+  finally
+    LTable.Free;
+  end;
+
+  // what the client got wrong: 400 (it was an empty array, or 500)
+  Assert.AreEqual(400, Post('', LContent), 'missing');
+  Assert.AreEqual(400, Post('not json', LContent), 'not JSON');
+  Assert.AreEqual(400, Post('[1]', LContent), 'not an object');
+  Assert.AreEqual(400, Post('{"a":1}', LContent), 'not a dataset');
+  Assert.AreEqual(400, Post('{"a":"bm90IGEgZGF0YXNldA=="}', LContent), 'not the FireDAC format');
 end;
 
 procedure TMARSDefaultEngineFixture.TestObjectListBody;

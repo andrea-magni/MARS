@@ -177,6 +177,9 @@ type
     function Many([BodyParam] const AData: TArray<TFDMemTable>): string;
     [POST, Path('abstract'), Consumes(TMediaType.APPLICATION_JSON)]
     function Abstract([BodyParam] const AData: TDataSet): string;
+    // the native format of FireDAC
+    [POST, Path('native'), Consumes(TMediaType.APPLICATION_JSON_FireDAC)]
+    function Native([BodyParam] const AData: TArray<TFDMemTable>): string;
   end;
 
   // a TObjectList<T> body
@@ -413,6 +416,13 @@ end;
 function TDataSetsResource.Abstract(const AData: TDataSet): string;
 begin
   Result := 'unreachable';
+end;
+
+function TDataSetsResource.Native(const AData: TArray<TFDMemTable>): string;
+begin
+  Result := '';
+  for var LDataSet in AData do
+    Result := Result + DescribeDataSet(LDataSet) + ';';
 end;
 
 { TListsResource }

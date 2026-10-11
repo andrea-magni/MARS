@@ -167,20 +167,27 @@ var
   LMemTable: TFDMemTable;
 begin
   Result := [];
-  for LPair in AJSON do
-  begin
-    if not (LPair.JsonValue is TJSONString) then
-      raise EMARSException.Create('Invalid JSON format [JSONToFDDataSets]');
+  try
+    for LPair in AJSON do
+    begin
+      if not (LPair.JsonValue is TJSONString) then
+        raise EMARSException.Create('Invalid JSON format [JSONToFDDataSets]');
 
-    LMemTable := TFDMemTable.Create(nil);
-    try
-      EncodedBinaryStringToDataSet((LPair.JsonValue as TJSONString).Value, LMemTable);
-      LMemTable.Name := LPair.JsonString.Value;
-      Result := Result + [LMemTable];
-    except
-      LMemTable.Free;
-      raise;
+      LMemTable := TFDMemTable.Create(nil);
+      try
+        EncodedBinaryStringToDataSet((LPair.JsonValue as TJSONString).Value, LMemTable);
+        LMemTable.Name := LPair.JsonString.Value;
+        Result := Result + [LMemTable];
+      except
+        LMemTable.Free;
+        raise;
+      end;
     end;
+  except
+    // the datasets already read: nobody else frees them
+    for var LDataSet in Result do
+      LDataSet.Free;
+    raise;
   end;
 end;
 

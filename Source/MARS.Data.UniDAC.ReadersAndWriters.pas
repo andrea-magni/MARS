@@ -131,15 +131,24 @@ const AInputData: TBytes;
   const AActivation: IMARSActivation
 ): TValue;
 var
-  LJSON: TJSONObject;
+  LJSON: TJSONValue;
 begin
   Result := TValue.Empty;
 
-  LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONObject>;
-  if not Assigned(LJSON) then
-    Exit;
+  // the datasets in the native format: an object, one member per dataset. A body the client got
+  // wrong (missing, not JSON, not an object, not datasets) is a 400 (it was an empty array or 500)
+  LJSON := TJSONValueReader.ReadJSONValue(AInputData, ADestination, AMediaType, AActivation).AsType<TJSONValue>;
   try
-    Result := TValue.From<TArray<TMemDataSet>>(TUniDataSets.FromJSON(LJSON));
+    if not (LJSON is TJSONObject) then
+      raise EMARSHttpException.Create('Malformed or missing request body (JSON object of UniDAC datasets expected)', 400);
+    try
+      Result := TValue.From<TArray<TMemDataSet>>(TUniDataSets.FromJSON(TJSONObject(LJSON)));
+    except
+      on E: EMARSHttpException do
+        raise;
+      on E: Exception do
+        raise EMARSHttpException.Create('Malformed request body (UniDAC datasets): ' + E.Message, 400);
+    end;
   finally
     LJSON.Free;
   end;
