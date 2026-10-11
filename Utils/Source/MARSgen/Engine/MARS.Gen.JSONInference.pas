@@ -88,6 +88,10 @@ const
   RE_DATE = '^\d{4}-\d{2}-\d{2}$';
   RE_GUID = '^\{?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}?$';
 
+var
+  // compiled once
+  GDateTime, GDate, GGuid: TRegEx;
+
 { TGenInferenceOptions }
 
 class function TGenInferenceOptions.Default: TGenInferenceOptions;
@@ -154,11 +158,11 @@ begin
     Include(FKinds, TGenSampleKind.String);
     LText := TJSONString(AValue).Value;
     Inc(FStrings);
-    if TRegEx.IsMatch(LText, RE_DATE_TIME) then
+    if GDateTime.IsMatch(LText) then
       Inc(FDateTimes)
-    else if TRegEx.IsMatch(LText, RE_DATE) then
+    else if GDate.IsMatch(LText) then
       Inc(FDates);
-    if TRegEx.IsMatch(LText, RE_GUID) then
+    if GGuid.IsMatch(LText) then
       Inc(FGuids);
   end
 
@@ -378,5 +382,10 @@ begin
     LInference.Free;
   end;
 end;
+
+initialization
+  GDateTime := TRegEx.Create(RE_DATE_TIME);
+  GDate := TRegEx.Create(RE_DATE);
+  GGuid := TRegEx.Create(RE_GUID);
 
 end.

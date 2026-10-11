@@ -53,6 +53,10 @@ const
   RE_INT_HEX = '^0x[0-9a-fA-F]+$';
   RE_FLOAT = '^[-+]?(\.[0-9]+|[0-9]+(\.[0-9]*)?)([eE][-+]?[0-9]+)?$';
 
+var
+  // compiled once: a large document has a million scalars
+  GNull, GTrue, GFalse, GInt, GIntOct, GIntHex, GFloat, GFloatDot: TRegEx;
+
 function TryOctalToInt64(const ADigits: string; out AValue: Int64): Boolean;
 begin
   AValue := 0;
@@ -82,20 +86,24 @@ begin
   then
     Exit(TJSONString.Create(LText));
 
-  if TRegEx.IsMatch(LText, RE_NULL) then
+  // only scalars starting like null, a boolean or a number can be anything but a string
+  if (LText <> '') and not CharInSet(LText[1], ['0'..'9', '-', '+', '.', '~', 'n', 'N', 't', 'T', 'f', 'F']) then
+    Exit(TJSONString.Create(LText));
+
+  if GNull.IsMatch(LText) then
     Result := TJSONNull.Create
-  else if TRegEx.IsMatch(LText, RE_BOOL_TRUE) then
+  else if GTrue.IsMatch(LText) then
     Result := TJSONBool.Create(True)
-  else if TRegEx.IsMatch(LText, RE_BOOL_FALSE) then
+  else if GFalse.IsMatch(LText) then
     Result := TJSONBool.Create(False)
-  else if TRegEx.IsMatch(LText, RE_INT) then
+  else if GInt.IsMatch(LText) then
     // the text as it is (no Int64 range limit, leading + removed)
     Result := TJSONNumber.Create(LText.TrimLeft(['+']))
-  else if TRegEx.IsMatch(LText, RE_INT_OCT) and TryOctalToInt64(LText.Substring(2), LInt) then
+  else if GIntOct.IsMatch(LText) and TryOctalToInt64(LText.Substring(2), LInt) then
     Result := TJSONNumber.Create(LInt)
-  else if TRegEx.IsMatch(LText, RE_INT_HEX) and TryStrToInt64('$' + LText.Substring(2), LInt) then
+  else if GIntHex.IsMatch(LText) and TryStrToInt64('$' + LText.Substring(2), LInt) then
     Result := TJSONNumber.Create(LInt)
-  else if TRegEx.IsMatch(LText, RE_FLOAT) then
+  else if GFloat.IsMatch(LText) then
   begin
     // JSON wants a digit around the dot: .5 -> 0.5, 1. -> 1.0
     LText := LText.TrimLeft(['+']);
@@ -103,7 +111,7 @@ begin
       LText := '0' + LText
     else if LText.StartsWith('-.') then
       LText := '-0' + LText.Substring(1);
-    LText := TRegEx.Replace(LText, '\.([eE]|$)', '.0$1');
+    LText := GFloatDot.Replace(LText, '.0$1');
     Result := TJSONNumber.Create(LText);
   end
   else
@@ -337,5 +345,15 @@ begin
   else
     Result := FromFile(AFileNameOrURL, AFormat);
 end;
+
+initialization
+  GNull := TRegEx.Create(RE_NULL);
+  GTrue := TRegEx.Create(RE_BOOL_TRUE);
+  GFalse := TRegEx.Create(RE_BOOL_FALSE);
+  GInt := TRegEx.Create(RE_INT);
+  GIntOct := TRegEx.Create(RE_INT_OCT);
+  GIntHex := TRegEx.Create(RE_INT_HEX);
+  GFloat := TRegEx.Create(RE_FLOAT);
+  GFloatDot := TRegEx.Create('\.([eE]|$)');
 
 end.

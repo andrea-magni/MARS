@@ -1,0 +1,4698 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "Stripe API",
+  "description": "The Stripe REST API. Please see https://stripe.com/docs/api for more details.",
+  "termsOfService": "https://stripe.com/us/terms/",
+  "contact": {
+   "name": "Stripe Dev Platform Team",
+   "url": "https://stripe.com",
+   "email": "dev-platform@stripe.com"
+  },
+  "version": "2026-09-30.endive",
+  "x-stripeReleasePhase": "ga",
+  "x-stripeSpecAudience": "public",
+  "x-stripeSpecFilename": "spec3.ga.public"
+ },
+ "servers": [
+  {
+   "url": "https://api.stripe.com/"
+  }
+ ],
+ "security": [
+  {
+   "basicAuth": []
+  },
+  {
+   "bearerAuth": []
+  }
+ ],
+ "paths": {
+  "/v2/core/accounts/{account_id}/persons": {
+   "get": {
+    "summary": "List persons",
+    "description": "Returns a paginated list of Persons associated with an Account.",
+    "operationId": "GetV2CoreAccountsAccountIdPersons",
+    "parameters": [
+     {
+      "name": "account_id",
+      "in": "path",
+      "description": "Account the Persons are associated with.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "The upper limit on the number of accounts returned by the List Account request.",
+      "required": false,
+      "style": "form",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "description": "The page token to navigate to next or previous batch of accounts given by the list request.",
+      "required": false,
+      "style": "form",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "required": [
+          "data",
+          "next_page_url",
+          "previous_page_url"
+         ],
+         "type": "object",
+         "properties": {
+          "data": {
+           "type": "array",
+           "description": "A list of retrieved Person objects.",
+           "items": {
+            "$ref": "#/components/schemas/v2.core.account_person"
+           }
+          },
+          "next_page_url": {
+           "type": "string",
+           "description": "URL to fetch the next page of the list. If there are no more pages, the value is null.",
+           "nullable": true
+          },
+          "previous_page_url": {
+           "type": "string",
+           "description": "URL to fetch the previous page of the list. If there are no previous pages, the value is null.",
+           "nullable": true
+          }
+         }
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "Error response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "oneOf": [
+          {
+           "$ref": "#/components/schemas/v2.error.account_not_yet_compatible_with_v2"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.account_rate_limit_exceeded"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.non_connect_platform_accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_account_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_customer_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "Create a person",
+    "description": "Create a Person. Adds an individual to an Account's identity. You can set relationship attributes and identity information at creation.",
+    "operationId": "PostV2CoreAccountsAccountIdPersons",
+    "parameters": [
+     {
+      "name": "account_id",
+      "in": "path",
+      "description": "Account the Person should be associated with.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "additional_addresses": {
+          "type": "array",
+          "description": "Additional addresses associated with the person.",
+          "items": {
+           "required": [
+            "country",
+            "purpose"
+           ],
+           "type": "object",
+           "properties": {
+            "city": {
+             "type": "string",
+             "description": "City, district, suburb, town, or village."
+            },
+            "country": {
+             "type": "string",
+             "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+            },
+            "line1": {
+             "type": "string",
+             "description": "Address line 1 (e.g., street, PO Box, or company name)."
+            },
+            "line2": {
+             "type": "string",
+             "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+            },
+            "postal_code": {
+             "type": "string",
+             "description": "ZIP or postal code."
+            },
+            "purpose": {
+             "type": "string",
+             "description": "Purpose of additional address.",
+             "enum": [
+              "registered"
+             ]
+            },
+            "state": {
+             "type": "string",
+             "description": "State, county, province, or region."
+            },
+            "town": {
+             "type": "string",
+             "description": "Town or district."
+            }
+           }
+          }
+         },
+         "additional_names": {
+          "type": "array",
+          "description": "Additional names (e.g. aliases) associated with the person.",
+          "items": {
+           "required": [
+            "purpose"
+           ],
+           "type": "object",
+           "properties": {
+            "full_name": {
+             "type": "string",
+             "description": "The person's full name."
+            },
+            "given_name": {
+             "type": "string",
+             "description": "The person's first or given name."
+            },
+            "purpose": {
+             "type": "string",
+             "description": "The purpose or type of the additional name.",
+             "enum": [
+              "alias",
+              "maiden"
+             ]
+            },
+            "surname": {
+             "type": "string",
+             "description": "The person's last or family name."
+            }
+           }
+          }
+         },
+         "additional_terms_of_service": {
+          "type": "object",
+          "properties": {
+           "account": {
+            "required": [
+             "date",
+             "ip"
+            ],
+            "type": "object",
+            "properties": {
+             "date": {
+              "type": "string",
+              "description": "The time when the Account's representative accepted the terms of service. Represented as a RFC 3339 date & time UTC value in millisecond precision, for example: 2022-09-18T13:22:18.123Z.",
+              "format": "date-time"
+             },
+             "ip": {
+              "type": "string",
+              "description": "The IP address from which the Account's representative accepted the terms of service."
+             },
+             "user_agent": {
+              "type": "string",
+              "description": "The user agent of the browser from which the Account's representative accepted the terms of service."
+             }
+            },
+            "description": "Stripe terms of service agreement."
+           }
+          },
+          "description": "Attestations of accepted terms of service agreements."
+         },
+         "address": {
+          "required": [
+           "country"
+          ],
+          "type": "object",
+          "properties": {
+           "city": {
+            "type": "string",
+            "description": "City, district, suburb, town, or village."
+           },
+           "country": {
+            "type": "string",
+            "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+           },
+           "line1": {
+            "type": "string",
+            "description": "Address line 1 (e.g., street, PO Box, or company name)."
+           },
+           "line2": {
+            "type": "string",
+            "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+           },
+           "postal_code": {
+            "type": "string",
+            "description": "ZIP or postal code."
+           },
+           "state": {
+            "type": "string",
+            "description": "State, county, province, or region."
+           },
+           "town": {
+            "type": "string",
+            "description": "Town or district."
+           }
+          },
+          "description": "The person's residential address."
+         },
+         "date_of_birth": {
+          "required": [
+           "day",
+           "month",
+           "year"
+          ],
+          "type": "object",
+          "properties": {
+           "day": {
+            "type": "integer",
+            "description": "The day of birth."
+           },
+           "month": {
+            "type": "integer",
+            "description": "The month of birth."
+           },
+           "year": {
+            "type": "integer",
+            "description": "The year of birth."
+           }
+          },
+          "description": "The person's date of birth."
+         },
+         "documents": {
+          "type": "object",
+          "properties": {
+           "company_authorization": {
+            "required": [
+             "files",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "files": {
+              "type": "array",
+              "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+              "items": {
+               "type": "string"
+              }
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the document. Currently supports `files` only.",
+              "enum": [
+               "files"
+              ]
+             }
+            },
+            "description": "One or more documents that demonstrate proof that this person is authorized to represent the company."
+           },
+           "passport": {
+            "required": [
+             "files",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "files": {
+              "type": "array",
+              "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+              "items": {
+               "type": "string"
+              }
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the document. Currently supports `files` only.",
+              "enum": [
+               "files"
+              ]
+             }
+            },
+            "description": "One or more documents showing the person's passport page with photo and personal data."
+           },
+           "primary_verification": {
+            "required": [
+             "front_back",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "front_back": {
+              "required": [
+               "front"
+              ],
+              "type": "object",
+              "properties": {
+               "back": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the back of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               },
+               "front": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the front of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               }
+              },
+              "description": "The [file upload](https://docs.stripe.com/api/persons/update#create_file) tokens referring to each side of the document."
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the verification document. Currently supports `front_back` only.",
+              "enum": [
+               "front_back"
+              ]
+             }
+            },
+            "description": "An identifying document showing the person's name, either a passport or local ID card."
+           },
+           "secondary_verification": {
+            "required": [
+             "front_back",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "front_back": {
+              "required": [
+               "front"
+              ],
+              "type": "object",
+              "properties": {
+               "back": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the back of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               },
+               "front": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the front of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               }
+              },
+              "description": "The [file upload](https://docs.stripe.com/api/persons/update#create_file) tokens referring to each side of the document."
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the verification document. Currently supports `front_back` only.",
+              "enum": [
+               "front_back"
+              ]
+             }
+            },
+            "description": "A document showing address, either a passport, local ID card, or utility bill from a well-known utility company."
+           },
+           "visa": {
+            "required": [
+             "files",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "files": {
+              "type": "array",
+              "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+              "items": {
+               "type": "string"
+              }
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the document. Currently supports `files` only.",
+              "enum": [
+               "files"
+              ]
+             }
+            },
+            "description": "One or more documents showing the person's visa required for living in the country where they are residing."
+           }
+          },
+          "description": "Documents that may be submitted to satisfy various informational requests."
+         },
+         "email": {
+          "type": "string",
+          "description": "Email."
+         },
+         "given_name": {
+          "type": "string",
+          "description": "The person's first name."
+         },
+         "id_numbers": {
+          "type": "array",
+          "description": "The identification numbers (e.g., SSN) associated with the person.",
+          "items": {
+           "required": [
+            "type",
+            "value"
+           ],
+           "type": "object",
+           "properties": {
+            "type": {
+             "type": "string",
+             "description": "The ID number type of an individual.",
+             "enum": [
+              "ae_eid",
+              "ao_nif",
+              "ar_cuil",
+              "ar_dni",
+              "at_stn",
+              "az_tin",
+              "bd_brc",
+              "bd_etin",
+              "bd_nid",
+              "be_nrn",
+              "bg_ucn",
+              "bn_nric",
+              "br_cpf",
+              "ca_sin",
+              "ch_oasi",
+              "cl_rut",
+              "cn_pp",
+              "co_nuip",
+              "cr_ci",
+              "cr_cpf",
+              "cr_dimex",
+              "cr_nite",
+              "cy_tic",
+              "cz_rc",
+              "de_stn",
+              "dk_cpr",
+              "do_cie",
+              "do_rcn",
+              "ec_ci",
+              "ee_ik",
+              "es_nif",
+              "fi_hetu",
+              "fr_nir",
+              "gb_nino",
+              "gr_afm",
+              "gt_nit",
+              "hk_id",
+              "hr_oib",
+              "hu_ad",
+              "id_nik",
+              "ie_ppsn",
+              "is_kt",
+              "it_cf",
+              "jp_inc",
+              "ke_pin",
+              "kz_iin",
+              "li_peid",
+              "lt_ak",
+              "lu_nif",
+              "lv_pk",
+              "mx_rfc",
+              "my_nric",
+              "mz_nuit",
+              "ng_nin",
+              "nl_bsn",
+              "no_nin",
+              "nz_ird",
+              "pe_dni",
+              "pk_cnic",
+              "pk_snic",
+              "pl_pesel",
+              "pt_nif",
+              "ro_cnp",
+              "sa_tin",
+              "se_pin",
+              "sg_fin",
+              "sg_nric",
+              "sk_dic",
+              "th_lc",
+              "th_pin",
+              "tr_tin",
+              "us_itin",
+              "us_itin_last_4",
+              "us_ssn",
+              "us_ssn_last_4",
+              "uy_dni",
+              "za_id"
+             ]
+            },
+            "value": {
+             "type": "string",
+             "description": "The value of the ID number."
+            }
+           }
+          }
+         },
+         "legal_gender": {
+          "type": "string",
+          "description": "The person's gender (International regulations require either \"male\" or \"female\").",
+          "enum": [
+           "female",
+           "male"
+          ]
+         },
+         "metadata": {
+          "type": "object",
+          "additionalProperties": {
+           "type": "string"
+          },
+          "description": "Set of key-value pairs that you can attach to an object. This can be useful for storing additional information about the object in a structured format."
+         },
+         "nationalities": {
+          "type": "array",
+          "description": "The nationalities (countries) this person is associated with.",
+          "items": {
+           "type": "string"
+          }
+         },
+         "person_token": {
+          "type": "string",
+          "description": "The person token generated by the person token api."
+         },
+         "phone": {
+          "type": "string",
+          "description": "The phone number for this person."
+         },
+         "political_exposure": {
+          "type": "string",
+          "description": "The person's political exposure.",
+          "enum": [
+           "existing",
+           "none"
+          ]
+         },
+         "relationship": {
+          "type": "object",
+          "properties": {
+           "authorizer": {
+            "type": "boolean",
+            "description": "Whether the individual is an authorizer of the Account's identity."
+           },
+           "director": {
+            "type": "boolean",
+            "description": "Indicates whether the person is a director of the associated legal entity."
+           },
+           "executive": {
+            "type": "boolean",
+            "description": "Indicates whether the person is an executive of the associated legal entity."
+           },
+           "legal_guardian": {
+            "type": "boolean",
+            "description": "Indicates whether the person is a legal guardian of the associated legal entity."
+           },
+           "owner": {
+            "type": "boolean",
+            "description": "Indicates whether the person is an owner of the associated legal entity."
+           },
+           "percent_ownership": {
+            "type": "string",
+            "description": "The percentage of ownership the person has in the associated legal entity.",
+            "format": "decimal"
+           },
+           "representative": {
+            "type": "boolean",
+            "description": "Indicates whether the person is a representative of the associated legal entity."
+           },
+           "title": {
+            "type": "string",
+            "description": "The title or position the person holds in the associated legal entity."
+           }
+          },
+          "description": "The relationship that this person has with the Account's business or legal entity."
+         },
+         "script_addresses": {
+          "type": "object",
+          "properties": {
+           "kana": {
+            "required": [
+             "country"
+            ],
+            "type": "object",
+            "properties": {
+             "city": {
+              "type": "string",
+              "description": "City, district, suburb, town, or village."
+             },
+             "country": {
+              "type": "string",
+              "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+             },
+             "line1": {
+              "type": "string",
+              "description": "Address line 1 (e.g., street, PO Box, or company name)."
+             },
+             "line2": {
+              "type": "string",
+              "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+             },
+             "postal_code": {
+              "type": "string",
+              "description": "ZIP or postal code."
+             },
+             "state": {
+              "type": "string",
+              "description": "State, county, province, or region."
+             },
+             "town": {
+              "type": "string",
+              "description": "Town or district."
+             }
+            },
+            "description": "Kana Address."
+           },
+           "kanji": {
+            "required": [
+             "country"
+            ],
+            "type": "object",
+            "properties": {
+             "city": {
+              "type": "string",
+              "description": "City, district, suburb, town, or village."
+             },
+             "country": {
+              "type": "string",
+              "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+             },
+             "line1": {
+              "type": "string",
+              "description": "Address line 1 (e.g., street, PO Box, or company name)."
+             },
+             "line2": {
+              "type": "string",
+              "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+             },
+             "postal_code": {
+              "type": "string",
+              "description": "ZIP or postal code."
+             },
+             "state": {
+              "type": "string",
+              "description": "State, county, province, or region."
+             },
+             "town": {
+              "type": "string",
+              "description": "Town or district."
+             }
+            },
+            "description": "Kanji Address."
+           }
+          },
+          "description": "The script addresses (e.g., non-Latin characters) associated with the person."
+         },
+         "script_names": {
+          "type": "object",
+          "properties": {
+           "kana": {
+            "type": "object",
+            "properties": {
+             "given_name": {
+              "type": "string",
+              "description": "The person's first or given name."
+             },
+             "surname": {
+              "type": "string",
+              "description": "The person's last or family name."
+             }
+            },
+            "description": "Persons name in kana script."
+           },
+           "kanji": {
+            "type": "object",
+            "properties": {
+             "given_name": {
+              "type": "string",
+              "description": "The person's first or given name."
+             },
+             "surname": {
+              "type": "string",
+              "description": "The person's last or family name."
+             }
+            },
+            "description": "Persons name in kanji script."
+           }
+          },
+          "description": "The script names (e.g. non-Latin characters) associated with the person."
+         },
+         "surname": {
+          "type": "string",
+          "description": "The person's last name."
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/v2.core.account_person"
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "Error response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "oneOf": [
+          {
+           "$ref": "#/components/schemas/v2.error.account_not_yet_compatible_with_v2"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.account_rate_limit_exceeded"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.additional_legal_guardian_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.additional_representative_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.additional_tos_only_allowed_for_legal_guardian"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_characters_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_country_identity_country_mismatch"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_country_mismatch"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_country_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_postal_code_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_state_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_town_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.authorizer_duplicate"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.authorizer_relationship_invalid_for_representative"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.date_of_birth_age_restriction"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.date_of_birth_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.document_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.document_purpose_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.duplicate_person_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.email_domain_invalid_for_recipient"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.email_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.id_number_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.identity_country_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.incorrect_account_for_person_token"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.incorrect_id_number_for_country"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.incorrect_token_wrong_type"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.individual_additional_person_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.invalid_person_token"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.invalid_relationship_for_identity_type_structure_and_country"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.ip_address_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.legal_guardian_representative_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.legal_guardian_requires_existing_representative"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.non_connect_platform_accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.non_jp_kana_kanji_address"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.param_alongside_person_token"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.person_percent_ownership_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.person_token_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.phone_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.platform_registration_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.postal_code_required_for_jp_address"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.script_characters_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.token_already_used"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.token_expired"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.total_person_ownership_exceeded"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.unsupported_postal_code"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.unsupported_state"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_account_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_customer_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_token_invalid_in_v2"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v2/core/accounts/{account_id}/persons/{id}": {
+   "get": {
+    "summary": "Retrieve a person",
+    "description": "Retrieves a Person associated with an Account.",
+    "operationId": "GetV2CoreAccountsAccountIdPersonsId",
+    "parameters": [
+     {
+      "name": "account_id",
+      "in": "path",
+      "description": "The Account the Person is associated with.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "description": "The ID of the Person to retrieve.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/v2.core.account_person"
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "Error response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "oneOf": [
+          {
+           "$ref": "#/components/schemas/v2.error.account_not_yet_compatible_with_v2"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.account_rate_limit_exceeded"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.non_connect_platform_accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.not_found"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_account_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_customer_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "Update a person",
+    "description": "Updates a Person associated with an Account.",
+    "operationId": "PostV2CoreAccountsAccountIdPersonsId",
+    "parameters": [
+     {
+      "name": "account_id",
+      "in": "path",
+      "description": "The Account the Person is associated with.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "description": "The ID of the Person to update.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "additional_addresses": {
+          "type": "array",
+          "description": "Additional addresses associated with the person.",
+          "items": {
+           "required": [
+            "purpose"
+           ],
+           "type": "object",
+           "properties": {
+            "city": {
+             "type": "string",
+             "description": "City, district, suburb, town, or village."
+            },
+            "country": {
+             "type": "string",
+             "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+            },
+            "line1": {
+             "type": "string",
+             "description": "Address line 1 (e.g., street, PO Box, or company name)."
+            },
+            "line2": {
+             "type": "string",
+             "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+            },
+            "postal_code": {
+             "type": "string",
+             "description": "ZIP or postal code."
+            },
+            "purpose": {
+             "type": "string",
+             "description": "Purpose of additional address.",
+             "enum": [
+              "registered"
+             ]
+            },
+            "state": {
+             "type": "string",
+             "description": "State, county, province, or region."
+            },
+            "town": {
+             "type": "string",
+             "description": "Town or district."
+            }
+           }
+          }
+         },
+         "additional_names": {
+          "type": "array",
+          "description": "Additional names (e.g. aliases) associated with the person.",
+          "items": {
+           "required": [
+            "purpose"
+           ],
+           "type": "object",
+           "properties": {
+            "full_name": {
+             "type": "string",
+             "description": "The person's full name."
+            },
+            "given_name": {
+             "type": "string",
+             "description": "The person's first or given name."
+            },
+            "purpose": {
+             "type": "string",
+             "description": "The purpose or type of the additional name.",
+             "enum": [
+              "alias",
+              "maiden"
+             ]
+            },
+            "surname": {
+             "type": "string",
+             "description": "The person's last or family name."
+            }
+           }
+          }
+         },
+         "additional_terms_of_service": {
+          "type": "object",
+          "properties": {
+           "account": {
+            "type": "object",
+            "properties": {
+             "date": {
+              "type": "string",
+              "description": "The time when the Account's representative accepted the terms of service. Represented as a RFC 3339 date & time UTC value in millisecond precision, for example: 2022-09-18T13:22:18.123Z.",
+              "format": "date-time"
+             },
+             "ip": {
+              "type": "string",
+              "description": "The IP address from which the Account's representative accepted the terms of service."
+             },
+             "user_agent": {
+              "type": "string",
+              "description": "The user agent of the browser from which the Account's representative accepted the terms of service."
+             }
+            },
+            "description": "Stripe terms of service agreement."
+           }
+          },
+          "description": "Attestations of accepted terms of service agreements."
+         },
+         "address": {
+          "type": "object",
+          "properties": {
+           "city": {
+            "type": "string",
+            "description": "City, district, suburb, town, or village."
+           },
+           "country": {
+            "type": "string",
+            "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+           },
+           "line1": {
+            "type": "string",
+            "description": "Address line 1 (e.g., street, PO Box, or company name)."
+           },
+           "line2": {
+            "type": "string",
+            "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+           },
+           "postal_code": {
+            "type": "string",
+            "description": "ZIP or postal code."
+           },
+           "state": {
+            "type": "string",
+            "description": "State, county, province, or region."
+           },
+           "town": {
+            "type": "string",
+            "description": "Town or district."
+           }
+          },
+          "description": "The primary address associated with the person."
+         },
+         "date_of_birth": {
+          "required": [
+           "day",
+           "month",
+           "year"
+          ],
+          "type": "object",
+          "properties": {
+           "day": {
+            "type": "integer",
+            "description": "The day of the birth."
+           },
+           "month": {
+            "type": "integer",
+            "description": "The month of birth."
+           },
+           "year": {
+            "type": "integer",
+            "description": "The year of birth."
+           }
+          },
+          "description": "The person's date of birth."
+         },
+         "documents": {
+          "type": "object",
+          "properties": {
+           "company_authorization": {
+            "required": [
+             "files",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "files": {
+              "type": "array",
+              "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+              "items": {
+               "type": "string"
+              }
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the document. Currently supports `files` only.",
+              "enum": [
+               "files"
+              ]
+             }
+            },
+            "description": "One or more documents that demonstrate proof that this person is authorized to represent the company."
+           },
+           "passport": {
+            "required": [
+             "files",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "files": {
+              "type": "array",
+              "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+              "items": {
+               "type": "string"
+              }
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the document. Currently supports `files` only.",
+              "enum": [
+               "files"
+              ]
+             }
+            },
+            "description": "One or more documents showing the person's passport page with photo and personal data."
+           },
+           "primary_verification": {
+            "required": [
+             "front_back",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "front_back": {
+              "type": "object",
+              "properties": {
+               "back": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the back of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               },
+               "front": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the front of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               }
+              },
+              "description": "The [file upload](https://docs.stripe.com/api/persons/update#create_file) tokens referring to each side of the document."
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the verification document. Currently supports `front_back` only.",
+              "enum": [
+               "front_back"
+              ]
+             }
+            },
+            "description": "An identifying document showing the person's name, either a passport or local ID card."
+           },
+           "secondary_verification": {
+            "required": [
+             "front_back",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "front_back": {
+              "type": "object",
+              "properties": {
+               "back": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the back of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               },
+               "front": {
+                "type": "string",
+                "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the front of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+               }
+              },
+              "description": "The [file upload](https://docs.stripe.com/api/persons/update#create_file) tokens referring to each side of the document."
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the verification document. Currently supports `front_back` only.",
+              "enum": [
+               "front_back"
+              ]
+             }
+            },
+            "description": "A document showing address, either a passport, local ID card, or utility bill from a well-known utility company."
+           },
+           "visa": {
+            "required": [
+             "files",
+             "type"
+            ],
+            "type": "object",
+            "properties": {
+             "files": {
+              "type": "array",
+              "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+              "items": {
+               "type": "string"
+              }
+             },
+             "type": {
+              "type": "string",
+              "description": "The format of the document. Currently supports `files` only.",
+              "enum": [
+               "files"
+              ]
+             }
+            },
+            "description": "One or more documents showing the person's visa required for living in the country where they are residing."
+           }
+          },
+          "description": "Documents that may be submitted to satisfy various informational requests."
+         },
+         "email": {
+          "type": "string",
+          "description": "Email."
+         },
+         "given_name": {
+          "type": "string",
+          "description": "The person's first name."
+         },
+         "id_numbers": {
+          "type": "array",
+          "description": "The identification numbers (e.g., SSN) associated with the person.",
+          "items": {
+           "required": [
+            "type",
+            "value"
+           ],
+           "type": "object",
+           "properties": {
+            "type": {
+             "type": "string",
+             "description": "The ID number type of an individual.",
+             "enum": [
+              "ae_eid",
+              "ao_nif",
+              "ar_cuil",
+              "ar_dni",
+              "at_stn",
+              "az_tin",
+              "bd_brc",
+              "bd_etin",
+              "bd_nid",
+              "be_nrn",
+              "bg_ucn",
+              "bn_nric",
+              "br_cpf",
+              "ca_sin",
+              "ch_oasi",
+              "cl_rut",
+              "cn_pp",
+              "co_nuip",
+              "cr_ci",
+              "cr_cpf",
+              "cr_dimex",
+              "cr_nite",
+              "cy_tic",
+              "cz_rc",
+              "de_stn",
+              "dk_cpr",
+              "do_cie",
+              "do_rcn",
+              "ec_ci",
+              "ee_ik",
+              "es_nif",
+              "fi_hetu",
+              "fr_nir",
+              "gb_nino",
+              "gr_afm",
+              "gt_nit",
+              "hk_id",
+              "hr_oib",
+              "hu_ad",
+              "id_nik",
+              "ie_ppsn",
+              "is_kt",
+              "it_cf",
+              "jp_inc",
+              "ke_pin",
+              "kz_iin",
+              "li_peid",
+              "lt_ak",
+              "lu_nif",
+              "lv_pk",
+              "mx_rfc",
+              "my_nric",
+              "mz_nuit",
+              "ng_nin",
+              "nl_bsn",
+              "no_nin",
+              "nz_ird",
+              "pe_dni",
+              "pk_cnic",
+              "pk_snic",
+              "pl_pesel",
+              "pt_nif",
+              "ro_cnp",
+              "sa_tin",
+              "se_pin",
+              "sg_fin",
+              "sg_nric",
+              "sk_dic",
+              "th_lc",
+              "th_pin",
+              "tr_tin",
+              "us_itin",
+              "us_itin_last_4",
+              "us_ssn",
+              "us_ssn_last_4",
+              "uy_dni",
+              "za_id"
+             ]
+            },
+            "value": {
+             "type": "string",
+             "description": "The value of the ID number."
+            }
+           }
+          }
+         },
+         "legal_gender": {
+          "type": "string",
+          "description": "The person's gender (International regulations require either \"male\" or \"female\").",
+          "enum": [
+           "female",
+           "male"
+          ]
+         },
+         "metadata": {
+          "type": "object",
+          "additionalProperties": {
+           "type": "string",
+           "nullable": true
+          },
+          "description": "Set of key-value pairs that you can attach to an object. This can be useful for storing additional information about the object in a structured format."
+         },
+         "nationalities": {
+          "type": "array",
+          "description": "The nationalities (countries) this person is associated with.",
+          "items": {
+           "type": "string"
+          }
+         },
+         "person_token": {
+          "type": "string",
+          "description": "The person token generated by the person token api."
+         },
+         "phone": {
+          "type": "string",
+          "description": "The phone number for this person."
+         },
+         "political_exposure": {
+          "type": "string",
+          "description": "The person's political exposure.",
+          "enum": [
+           "existing",
+           "none"
+          ]
+         },
+         "relationship": {
+          "type": "object",
+          "properties": {
+           "authorizer": {
+            "type": "boolean",
+            "description": "Whether the individual is an authorizer of the Account's identity."
+           },
+           "director": {
+            "type": "boolean",
+            "description": "Indicates whether the person is a director of the associated legal entity."
+           },
+           "executive": {
+            "type": "boolean",
+            "description": "Indicates whether the person is an executive of the associated legal entity."
+           },
+           "legal_guardian": {
+            "type": "boolean",
+            "description": "Indicates whether the person is a legal guardian of the associated legal entity."
+           },
+           "owner": {
+            "type": "boolean",
+            "description": "Indicates whether the person is an owner of the associated legal entity."
+           },
+           "percent_ownership": {
+            "type": "string",
+            "description": "The percentage of ownership the person has in the associated legal entity.",
+            "format": "decimal"
+           },
+           "representative": {
+            "type": "boolean",
+            "description": "Indicates whether the person is a representative of the associated legal entity."
+           },
+           "title": {
+            "type": "string",
+            "description": "The title or position the person holds in the associated legal entity."
+           }
+          },
+          "description": "The relationship that this person has with the Account's business or legal entity."
+         },
+         "script_addresses": {
+          "type": "object",
+          "properties": {
+           "kana": {
+            "type": "object",
+            "properties": {
+             "city": {
+              "type": "string",
+              "description": "City, district, suburb, town, or village."
+             },
+             "country": {
+              "type": "string",
+              "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+             },
+             "line1": {
+              "type": "string",
+              "description": "Address line 1 (e.g., street, PO Box, or company name)."
+             },
+             "line2": {
+              "type": "string",
+              "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+             },
+             "postal_code": {
+              "type": "string",
+              "description": "ZIP or postal code."
+             },
+             "state": {
+              "type": "string",
+              "description": "State, county, province, or region."
+             },
+             "town": {
+              "type": "string",
+              "description": "Town or district."
+             }
+            },
+            "description": "Kana Address."
+           },
+           "kanji": {
+            "type": "object",
+            "properties": {
+             "city": {
+              "type": "string",
+              "description": "City, district, suburb, town, or village."
+             },
+             "country": {
+              "type": "string",
+              "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+             },
+             "line1": {
+              "type": "string",
+              "description": "Address line 1 (e.g., street, PO Box, or company name)."
+             },
+             "line2": {
+              "type": "string",
+              "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+             },
+             "postal_code": {
+              "type": "string",
+              "description": "ZIP or postal code."
+             },
+             "state": {
+              "type": "string",
+              "description": "State, county, province, or region."
+             },
+             "town": {
+              "type": "string",
+              "description": "Town or district."
+             }
+            },
+            "description": "Kanji Address."
+           }
+          },
+          "description": "The script addresses (e.g., non-Latin characters) associated with the person."
+         },
+         "script_names": {
+          "type": "object",
+          "properties": {
+           "kana": {
+            "type": "object",
+            "properties": {
+             "given_name": {
+              "type": "string",
+              "description": "The person's first or given name."
+             },
+             "surname": {
+              "type": "string",
+              "description": "The person's last or family name."
+             }
+            },
+            "description": "Persons name in kana script."
+           },
+           "kanji": {
+            "type": "object",
+            "properties": {
+             "given_name": {
+              "type": "string",
+              "description": "The person's first or given name."
+             },
+             "surname": {
+              "type": "string",
+              "description": "The person's last or family name."
+             }
+            },
+            "description": "Persons name in kanji script."
+           }
+          },
+          "description": "The script names (e.g. non-Latin characters) associated with the person."
+         },
+         "surname": {
+          "type": "string",
+          "description": "The person's last name."
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/v2.core.account_person"
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "Error response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "oneOf": [
+          {
+           "$ref": "#/components/schemas/v2.error.account_not_yet_compatible_with_v2"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.account_rate_limit_exceeded"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.additional_legal_guardian_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.additional_representative_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.additional_tos_only_allowed_for_legal_guardian"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_characters_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_country_identity_country_mismatch"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_country_mismatch"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_country_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_postal_code_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_state_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.address_town_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.date_of_birth_age_restriction"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.date_of_birth_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.document_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.document_purpose_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.duplicate_person_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.email_domain_invalid_for_recipient"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.email_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.id_number_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.identity_country_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.immutable_identity_param"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.incorrect_account_for_person_token"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.incorrect_id_number_for_country"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.incorrect_token_wrong_type"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.invalid_person_token"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.ip_address_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.legal_guardian_representative_not_allowed"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.legal_guardian_requires_existing_representative"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.non_connect_platform_accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.non_jp_kana_kanji_address"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.not_found"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.param_alongside_person_token"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.person_percent_ownership_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.person_token_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.phone_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.platform_registration_required"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.postal_code_required_for_jp_address"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.script_characters_invalid"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.token_already_used"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.token_expired"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.total_person_ownership_exceeded"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.unsupported_postal_code"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.unsupported_state"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_account_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_customer_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_token_invalid_in_v2"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Delete a person",
+    "description": "Delete a Person associated with an Account.",
+    "operationId": "DeleteV2CoreAccountsAccountIdPersonsId",
+    "parameters": [
+     {
+      "name": "account_id",
+      "in": "path",
+      "description": "The Account the Person is associated with.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "description": "The ID of the Person to delete.",
+      "required": true,
+      "style": "simple",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/v2.deleted_object"
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "Error response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "oneOf": [
+          {
+           "$ref": "#/components/schemas/v2.error.account_not_yet_compatible_with_v2"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.account_rate_limit_exceeded"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.non_connect_platform_accounts_v2_access_blocked"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.not_found"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_account_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.v1_customer_instead_of_v2_account"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v2/billing/meter_events": {
+   "post": {
+    "summary": "Create a Meter Event with synchronous validation",
+    "description": "Creates a meter event. Events are validated synchronously, but are processed asynchronously. Supports up to 1,000 events per second in livemode. For higher rate-limits, please use meter event streams instead.",
+    "operationId": "PostV2BillingMeterEvents",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "required": [
+         "event_name",
+         "payload"
+        ],
+        "type": "object",
+        "properties": {
+         "event_name": {
+          "type": "string",
+          "description": "The name of the meter event. Corresponds with the `event_name` field on a meter."
+         },
+         "identifier": {
+          "type": "string",
+          "description": "A unique identifier for the event. If not provided, one will be generated.\nWe recommend using a globally unique identifier for this. We'll enforce\nuniqueness within a rolling 24 hour period."
+         },
+         "payload": {
+          "type": "object",
+          "additionalProperties": {
+           "type": "string"
+          },
+          "description": "The payload of the event. This must contain the fields corresponding to a meter's\n`customer_mapping.event_payload_key` (default is `stripe_customer_id`) and\n`value_settings.event_payload_key` (default is `value`). Read more about\nthe\n[payload](https://docs.stripe.com/billing/subscriptions/usage-based/recording-usage#payload-key-overrides)."
+         },
+         "timestamp": {
+          "type": "string",
+          "description": "The time of the event. Must be within the past 35 calendar days or up to\n5 minutes in the future. Defaults to current timestamp if not specified.",
+          "format": "date-time"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/v2.billing.meter_event"
+        }
+       }
+      }
+     },
+     "default": {
+      "description": "Error response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "oneOf": [
+          {
+           "$ref": "#/components/schemas/v2.error.archived_meter"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.duplicate_meter_event"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.no_meter"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.payload_invalid_value"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.payload_no_customer_defined"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.payload_no_value_defined"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error.too_many_concurrent_requests"
+          },
+          {
+           "$ref": "#/components/schemas/v2.error"
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "v2.billing.meter_event": {
+    "title": "Meter Event",
+    "required": [
+     "created",
+     "event_name",
+     "identifier",
+     "livemode",
+     "object",
+     "payload",
+     "timestamp"
+    ],
+    "type": "object",
+    "properties": {
+     "created": {
+      "type": "string",
+      "description": "The creation time of this meter event.",
+      "format": "date-time"
+     },
+     "event_name": {
+      "type": "string",
+      "description": "The name of the meter event. Corresponds with the `event_name` field on a meter."
+     },
+     "identifier": {
+      "type": "string",
+      "description": "A unique identifier for the event. If not provided, one will be generated. We recommend using a globally unique identifier for this. We'll enforce uniqueness within a rolling 24 hour period."
+     },
+     "livemode": {
+      "type": "boolean",
+      "description": "Has the value `true` if the object exists in live mode or the value `false` if the object exists in test mode."
+     },
+     "object": {
+      "type": "string",
+      "description": "String representing the object's type. Objects of the same type share the same value of the object field.",
+      "enum": [
+       "v2.billing.meter_event"
+      ]
+     },
+     "payload": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      },
+      "description": "The payload of the event. This must contain the fields corresponding to a meter's\n`customer_mapping.event_payload_key` (default is `stripe_customer_id`) and\n`value_settings.event_payload_key` (default is `value`). Read more about\nthe [payload](https://docs.stripe.com/billing/subscriptions/usage-based/recording-usage#payload-key-overrides).."
+     },
+     "timestamp": {
+      "type": "string",
+      "description": "The time of the event. Must be within the past 35 calendar days or up to\n5 minutes in the future. Defaults to current timestamp if not specified.",
+      "format": "date-time"
+     }
+    },
+    "description": "A Meter Event is a usage record that captures billable activity for usage-based billing. Meter Events contain an event name, timestamp, and payload with customer mapping and usage value, enabling accurate usage tracking and billing."
+   },
+   "v2.core.account_person": {
+    "title": "Person",
+    "required": [
+     "account",
+     "created",
+     "id",
+     "livemode",
+     "object",
+     "updated"
+    ],
+    "type": "object",
+    "properties": {
+     "account": {
+      "type": "string",
+      "description": "The account ID which the individual belongs to."
+     },
+     "additional_addresses": {
+      "type": "array",
+      "description": "Additional addresses associated with the person.",
+      "items": {
+       "required": [
+        "purpose"
+       ],
+       "type": "object",
+       "properties": {
+        "city": {
+         "type": "string",
+         "description": "City, district, suburb, town, or village."
+        },
+        "country": {
+         "type": "string",
+         "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+        },
+        "line1": {
+         "type": "string",
+         "description": "Address line 1 (e.g., street, PO Box, or company name)."
+        },
+        "line2": {
+         "type": "string",
+         "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+        },
+        "postal_code": {
+         "type": "string",
+         "description": "ZIP or postal code."
+        },
+        "purpose": {
+         "type": "string",
+         "description": "Purpose of additional address.",
+         "enum": [
+          "registered"
+         ]
+        },
+        "state": {
+         "type": "string",
+         "description": "State, county, province, or region."
+        },
+        "town": {
+         "type": "string",
+         "description": "Town or district."
+        }
+       }
+      }
+     },
+     "additional_names": {
+      "type": "array",
+      "description": "Additional names (e.g. aliases) associated with the person.",
+      "items": {
+       "required": [
+        "purpose"
+       ],
+       "type": "object",
+       "properties": {
+        "full_name": {
+         "type": "string",
+         "description": "The individual's full name."
+        },
+        "given_name": {
+         "type": "string",
+         "description": "The individual's first or given name."
+        },
+        "purpose": {
+         "type": "string",
+         "description": "The purpose or type of the additional name.",
+         "enum": [
+          "alias",
+          "maiden"
+         ]
+        },
+        "surname": {
+         "type": "string",
+         "description": "The individual's last or family name."
+        }
+       }
+      }
+     },
+     "additional_terms_of_service": {
+      "type": "object",
+      "properties": {
+       "account": {
+        "type": "object",
+        "properties": {
+         "date": {
+          "type": "string",
+          "description": "The time when the Account's representative accepted the terms of service. Represented as a RFC 3339 date & time UTC value in millisecond precision, for example: 2022-09-18T13:22:18.123Z.",
+          "format": "date-time"
+         },
+         "ip": {
+          "type": "string",
+          "description": "The IP address from which the Account's representative accepted the terms of service."
+         },
+         "user_agent": {
+          "type": "string",
+          "description": "The user agent of the browser from which the Account's representative accepted the terms of service."
+         }
+        },
+        "description": "Stripe terms of service agreement."
+       }
+      },
+      "description": "Attestations of accepted terms of service agreements."
+     },
+     "address": {
+      "type": "object",
+      "properties": {
+       "city": {
+        "type": "string",
+        "description": "City, district, suburb, town, or village."
+       },
+       "country": {
+        "type": "string",
+        "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+       },
+       "line1": {
+        "type": "string",
+        "description": "Address line 1 (e.g., street, PO Box, or company name)."
+       },
+       "line2": {
+        "type": "string",
+        "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+       },
+       "postal_code": {
+        "type": "string",
+        "description": "ZIP or postal code."
+       },
+       "state": {
+        "type": "string",
+        "description": "State, county, province, or region."
+       },
+       "town": {
+        "type": "string",
+        "description": "Town or district."
+       }
+      },
+      "description": "The person's residential address."
+     },
+     "created": {
+      "type": "string",
+      "description": "Time at which the object was created. Represented as a RFC 3339 date & time UTC value in millisecond precision, for example: 2022-09-18T13:22:18.123Z.",
+      "format": "date-time"
+     },
+     "date_of_birth": {
+      "required": [
+       "day",
+       "month",
+       "year"
+      ],
+      "type": "object",
+      "properties": {
+       "day": {
+        "type": "integer",
+        "description": "The day of birth, between 1 and 31."
+       },
+       "month": {
+        "type": "integer",
+        "description": "The month of birth, between 1 and 12."
+       },
+       "year": {
+        "type": "integer",
+        "description": "The four-digit year of birth."
+       }
+      },
+      "description": "The person's date of birth."
+     },
+     "documents": {
+      "type": "object",
+      "properties": {
+       "company_authorization": {
+        "required": [
+         "files",
+         "type"
+        ],
+        "type": "object",
+        "properties": {
+         "files": {
+          "type": "array",
+          "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+          "items": {
+           "type": "string"
+          }
+         },
+         "type": {
+          "type": "string",
+          "description": "The format of the document. Currently supports `files` only.",
+          "enum": [
+           "files"
+          ]
+         }
+        },
+        "description": "One or more documents that demonstrate proof that this person is authorized to represent the company."
+       },
+       "passport": {
+        "required": [
+         "files",
+         "type"
+        ],
+        "type": "object",
+        "properties": {
+         "files": {
+          "type": "array",
+          "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+          "items": {
+           "type": "string"
+          }
+         },
+         "type": {
+          "type": "string",
+          "description": "The format of the document. Currently supports `files` only.",
+          "enum": [
+           "files"
+          ]
+         }
+        },
+        "description": "One or more documents showing the person's passport page with photo and personal data."
+       },
+       "primary_verification": {
+        "required": [
+         "front_back",
+         "type"
+        ],
+        "type": "object",
+        "properties": {
+         "front_back": {
+          "required": [
+           "front"
+          ],
+          "type": "object",
+          "properties": {
+           "back": {
+            "type": "string",
+            "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the back of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+           },
+           "front": {
+            "type": "string",
+            "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the front of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+           }
+          },
+          "description": "The [file upload](https://docs.stripe.com/api/persons/update#create_file) tokens for the front and back of the verification document."
+         },
+         "type": {
+          "type": "string",
+          "description": "The format of the verification document. Currently supports `front_back` only.",
+          "enum": [
+           "front_back"
+          ]
+         }
+        },
+        "description": "An identifying document showing the person's name, either a passport or local ID card."
+       },
+       "secondary_verification": {
+        "required": [
+         "front_back",
+         "type"
+        ],
+        "type": "object",
+        "properties": {
+         "front_back": {
+          "required": [
+           "front"
+          ],
+          "type": "object",
+          "properties": {
+           "back": {
+            "type": "string",
+            "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the back of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+           },
+           "front": {
+            "type": "string",
+            "description": "A [file upload](https://docs.stripe.com/api/persons/update#create_file) token representing the front of the verification document. The purpose of the uploaded file should be 'identity_document'. The uploaded file needs to be a color image (smaller than 8,000px by 8,000px), in JPG, PNG, or PDF format, and less than 10 MB in size."
+           }
+          },
+          "description": "The [file upload](https://docs.stripe.com/api/persons/update#create_file) tokens for the front and back of the verification document."
+         },
+         "type": {
+          "type": "string",
+          "description": "The format of the verification document. Currently supports `front_back` only.",
+          "enum": [
+           "front_back"
+          ]
+         }
+        },
+        "description": "A document showing address, either a passport, local ID card, or utility bill from a well-known utility company."
+       },
+       "visa": {
+        "required": [
+         "files",
+         "type"
+        ],
+        "type": "object",
+        "properties": {
+         "files": {
+          "type": "array",
+          "description": "One or more document IDs returned by a [file upload](https://docs.stripe.com/api/persons/update#create_file) with a purpose value of `account_requirement`.",
+          "items": {
+           "type": "string"
+          }
+         },
+         "type": {
+          "type": "string",
+          "description": "The format of the document. Currently supports `files` only.",
+          "enum": [
+           "files"
+          ]
+         }
+        },
+        "description": "One or more documents showing the person's visa required for living in the country where they are residing."
+       }
+      },
+      "description": "Documents that may be submitted to satisfy various informational requests."
+     },
+     "email": {
+      "type": "string",
+      "description": "The person's email address."
+     },
+     "given_name": {
+      "type": "string",
+      "description": "The person's first name."
+     },
+     "id": {
+      "type": "string",
+      "description": "Unique identifier for the Person."
+     },
+     "id_numbers": {
+      "type": "array",
+      "description": "The identification numbers (e.g., SSN) associated with the person.",
+      "items": {
+       "required": [
+        "type"
+       ],
+       "type": "object",
+       "properties": {
+        "type": {
+         "type": "string",
+         "description": "The ID number type of an individual.",
+         "enum": [
+          "ae_eid",
+          "ao_nif",
+          "ar_cuil",
+          "ar_dni",
+          "at_stn",
+          "az_tin",
+          "bd_brc",
+          "bd_etin",
+          "bd_nid",
+          "be_nrn",
+          "bg_ucn",
+          "bn_nric",
+          "br_cpf",
+          "ca_sin",
+          "ch_oasi",
+          "cl_rut",
+          "cn_pp",
+          "co_nuip",
+          "cr_ci",
+          "cr_cpf",
+          "cr_dimex",
+          "cr_nite",
+          "cy_tic",
+          "cz_rc",
+          "de_stn",
+          "dk_cpr",
+          "do_cie",
+          "do_rcn",
+          "ec_ci",
+          "ee_ik",
+          "es_nif",
+          "fi_hetu",
+          "fr_nir",
+          "gb_nino",
+          "gr_afm",
+          "gt_nit",
+          "hk_id",
+          "hr_oib",
+          "hu_ad",
+          "id_nik",
+          "ie_ppsn",
+          "is_kt",
+          "it_cf",
+          "jp_inc",
+          "ke_pin",
+          "kz_iin",
+          "li_peid",
+          "lt_ak",
+          "lu_nif",
+          "lv_pk",
+          "mx_rfc",
+          "my_nric",
+          "mz_nuit",
+          "ng_nin",
+          "nl_bsn",
+          "no_nin",
+          "nz_ird",
+          "pe_dni",
+          "pk_cnic",
+          "pk_snic",
+          "pl_pesel",
+          "pt_nif",
+          "ro_cnp",
+          "sa_tin",
+          "se_pin",
+          "sg_fin",
+          "sg_nric",
+          "sk_dic",
+          "th_lc",
+          "th_pin",
+          "tr_tin",
+          "us_itin",
+          "us_itin_last_4",
+          "us_ssn",
+          "us_ssn_last_4",
+          "uy_dni",
+          "za_id"
+         ]
+        }
+       }
+      }
+     },
+     "legal_gender": {
+      "type": "string",
+      "description": "The person's gender (International regulations require either \"male\" or \"female\").",
+      "enum": [
+       "female",
+       "male"
+      ]
+     },
+     "livemode": {
+      "type": "boolean",
+      "description": "Has the value `true` if the object exists in live mode or the value `false` if the object exists in test mode."
+     },
+     "metadata": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      },
+      "description": "Set of key-value pairs that you can attach to an object. This can be useful for storing additional information about the object in a structured format."
+     },
+     "nationalities": {
+      "type": "array",
+      "description": "The countries where the person is a national. Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)).",
+      "items": {
+       "type": "string"
+      }
+     },
+     "object": {
+      "type": "string",
+      "description": "String representing the object's type. Objects of the same type share the same value of the object field.",
+      "enum": [
+       "v2.core.account_person"
+      ]
+     },
+     "phone": {
+      "type": "string",
+      "description": "The person's phone number."
+     },
+     "political_exposure": {
+      "type": "string",
+      "description": "The person's political exposure.",
+      "enum": [
+       "existing",
+       "none"
+      ]
+     },
+     "relationship": {
+      "type": "object",
+      "properties": {
+       "authorizer": {
+        "type": "boolean",
+        "description": "Whether the individual is an authorizer of the Account's identity."
+       },
+       "director": {
+        "type": "boolean",
+        "description": "Whether the individual is a director of the Account's identity. Directors are typically members of the governing board of the company or are responsible for making sure that the company meets its regulatory obligations."
+       },
+       "executive": {
+        "type": "boolean",
+        "description": "Whether the individual has significant responsibility to control, manage, or direct the organization."
+       },
+       "legal_guardian": {
+        "type": "boolean",
+        "description": "Whether the individual is the legal guardian of the Account's representative."
+       },
+       "owner": {
+        "type": "boolean",
+        "description": "Whether the individual is an owner of the Account's identity."
+       },
+       "percent_ownership": {
+        "type": "string",
+        "description": "The percentage of the Account's identity that the individual owns.",
+        "format": "decimal"
+       },
+       "representative": {
+        "type": "boolean",
+        "description": "Whether the individual is authorized as the primary representative of the Account. This is the person nominated by the business to provide information about themselves, and general information about the account. There can only be one representative at any given time. At the time the account is created, this person should be set to the person responsible for opening the account."
+       },
+       "title": {
+        "type": "string",
+        "description": "The individual's title (e.g., CEO, Support Engineer)."
+       }
+      },
+      "description": "The relationship that this person has with the Account's business or legal entity."
+     },
+     "script_addresses": {
+      "type": "object",
+      "properties": {
+       "kana": {
+        "type": "object",
+        "properties": {
+         "city": {
+          "type": "string",
+          "description": "City, district, suburb, town, or village."
+         },
+         "country": {
+          "type": "string",
+          "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+         },
+         "line1": {
+          "type": "string",
+          "description": "Address line 1 (e.g., street, PO Box, or company name)."
+         },
+         "line2": {
+          "type": "string",
+          "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+         },
+         "postal_code": {
+          "type": "string",
+          "description": "ZIP or postal code."
+         },
+         "state": {
+          "type": "string",
+          "description": "State, county, province, or region."
+         },
+         "town": {
+          "type": "string",
+          "description": "Town or district."
+         }
+        },
+        "description": "Kana Address."
+       },
+       "kanji": {
+        "type": "object",
+        "properties": {
+         "city": {
+          "type": "string",
+          "description": "City, district, suburb, town, or village."
+         },
+         "country": {
+          "type": "string",
+          "description": "Two-letter country code ([ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2))."
+         },
+         "line1": {
+          "type": "string",
+          "description": "Address line 1 (e.g., street, PO Box, or company name)."
+         },
+         "line2": {
+          "type": "string",
+          "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+         },
+         "postal_code": {
+          "type": "string",
+          "description": "ZIP or postal code."
+         },
+         "state": {
+          "type": "string",
+          "description": "State, county, province, or region."
+         },
+         "town": {
+          "type": "string",
+          "description": "Town or district."
+         }
+        },
+        "description": "Kanji Address."
+       }
+      },
+      "description": "The script addresses (e.g., non-Latin characters) associated with the person."
+     },
+     "script_names": {
+      "type": "object",
+      "properties": {
+       "kana": {
+        "type": "object",
+        "properties": {
+         "given_name": {
+          "type": "string",
+          "description": "The person's first or given name."
+         },
+         "surname": {
+          "type": "string",
+          "description": "The person's last or family name."
+         }
+        },
+        "description": "Persons name in kana script."
+       },
+       "kanji": {
+        "type": "object",
+        "properties": {
+         "given_name": {
+          "type": "string",
+          "description": "The person's first or given name."
+         },
+         "surname": {
+          "type": "string",
+          "description": "The person's last or family name."
+         }
+        },
+        "description": "Persons name in kanji script."
+       }
+      },
+      "description": "The script names (e.g. non-Latin characters) associated with the person."
+     },
+     "surname": {
+      "type": "string",
+      "description": "The person's last name."
+     },
+     "updated": {
+      "type": "string",
+      "description": "Time at which the object was last updated. Represented as a RFC 3339 date & time UTC value in millisecond precision, for example: 2022-09-18T13:22:18.123Z.",
+      "format": "date-time"
+     }
+    },
+    "description": "A Person represents an individual associated with an Account's identity (for example, an owner, director, executive, or representative). Use Persons to provide and update identity information for verification and compliance."
+   },
+   "v2.deleted_object": {
+    "required": [
+     "id"
+    ],
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "description": "The ID of the object that's being deleted."
+     },
+     "object": {
+      "type": "string",
+      "description": "String representing the type of the object that has been deleted. Objects of the same type share the same value of the object field."
+     }
+    }
+   },
+   "v2.error": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically"
+       },
+       "doc_url": {
+        "type": "string",
+        "description": "A URL to more information about the error reported"
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "type": {
+        "type": "string",
+        "description": "The type of error returned"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Stripe error response"
+   },
+   "v2.error.account_not_yet_compatible_with_v2": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "account_not_yet_compatible_with_v2"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Account is not yet compatible with V2 APIs."
+   },
+   "v2.error.account_rate_limit_exceeded": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "type"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "account_rate_limit_exceeded"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "type": {
+        "type": "string",
+        "description": "The type of error returned",
+        "enum": [
+         "rate_limit"
+        ]
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Account cannot exceed a configured concurrency rate limit on updates."
+   },
+   "v2.error.accounts_v2_access_blocked": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "accounts_v2_access_blocked"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Accounts v2 is not enabled for your merchant."
+   },
+   "v2.error.additional_legal_guardian_not_allowed": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "additional_legal_guardian_not_allowed"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "More than one legal guardian is added to an account."
+   },
+   "v2.error.additional_representative_not_allowed": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "additional_representative_not_allowed"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "More than one representative is added to an account."
+   },
+   "v2.error.additional_tos_only_allowed_for_legal_guardian": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "additional_tos_only_allowed_for_legal_guardian"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Additional terms of service are signed by someone other than the legal guardian."
+   },
+   "v2.error.address_characters_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "address_characters_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Invalid characters are provided for address fields."
+   },
+   "v2.error.address_country_identity_country_mismatch": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "address_country_identity_country_mismatch"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Address country doesn't match identity country."
+   },
+   "v2.error.address_country_mismatch": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "address_country_mismatch"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Registered/script address country doesn't match residential address country."
+   },
+   "v2.error.address_country_required": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "address_country_required"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Address country is required but not provided."
+   },
+   "v2.error.address_postal_code_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "address_postal_code_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Address postal code is invalid."
+   },
+   "v2.error.address_state_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "address_state_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Address state is invalid."
+   },
+   "v2.error.address_town_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "address_town_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Address town is invalid."
+   },
+   "v2.error.archived_meter": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "archived_meter"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The meter must be Active to submit events."
+   },
+   "v2.error.authorizer_duplicate": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "authorizer_duplicate"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "There can only be one authorizer."
+   },
+   "v2.error.authorizer_relationship_invalid_for_representative": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "authorizer_relationship_invalid_for_representative"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "An authorizer cannot be a representative."
+   },
+   "v2.error.date_of_birth_age_restriction": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "age_limit",
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "age_limit": {
+        "type": "string",
+        "description": "Representative age should be greater than or equal to the age_limit."
+       },
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "date_of_birth_age_restriction"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Representative date of birth does not meet the age limit."
+   },
+   "v2.error.date_of_birth_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "date_of_birth_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Representative date of birth is provided an invalid date or a future date."
+   },
+   "v2.error.document_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "document_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Provided file tokens for documents are invalid, not found, deleted, or belong to a different account."
+   },
+   "v2.error.document_purpose_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "document_purpose_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Provided file tokens for documents are of the wrong purpose."
+   },
+   "v2.error.duplicate_meter_event": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "duplicate_meter_event"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "A meter event with a duplicate identifier has already been submitted."
+   },
+   "v2.error.duplicate_person_not_allowed": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "duplicate_person_id",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "duplicate_person_not_allowed"
+        ]
+       },
+       "duplicate_person_id": {
+        "type": "string",
+        "description": "The ID of the other person with identical fields."
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Duplicate person is added to an account."
+   },
+   "v2.error.email_domain_invalid_for_recipient": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "email_domain_invalid_for_recipient"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Email contains unsupported domain."
+   },
+   "v2.error.email_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "email_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Incorrect email is provided."
+   },
+   "v2.error.id_number_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "id_number_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Provided ID number is of the wrong format for the given type."
+   },
+   "v2.error.identity_country_required": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "identity_country_required"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The `identity.country` value is required but not provided."
+   },
+   "v2.error.immutable_identity_param": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "immutable_identity_param"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Identity param has been made immutable due to the state of the account."
+   },
+   "v2.error.incorrect_account_for_person_token": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "incorrect_account_for_person_token"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "A person token is created with one account but used on a different account."
+   },
+   "v2.error.incorrect_id_number_for_country": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "incorrect_id_number_for_country"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Incorrect ID number is provided for a country."
+   },
+   "v2.error.incorrect_token_wrong_type": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "incorrect_token_wrong_type"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The incorrect token type is provided ."
+   },
+   "v2.error.individual_additional_person_not_allowed": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "individual_additional_person_not_allowed"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Additional person is added for an individual business type."
+   },
+   "v2.error.invalid_person_token": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "invalid_person_token"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Invalid person token."
+   },
+   "v2.error.invalid_relationship_for_identity_type_structure_and_country": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "invalid_relationship_for_identity_type_structure_and_country"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Some relationships are specific to type, structure, and country."
+   },
+   "v2.error.ip_address_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "ip_address_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Invalid IP address is provided."
+   },
+   "v2.error.legal_guardian_representative_not_allowed": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "legal_guardian_representative_not_allowed"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Person is designated as both legal guardian and representative."
+   },
+   "v2.error.legal_guardian_requires_existing_representative": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "legal_guardian_requires_existing_representative"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "A legal guardian may not be added to the account without an existing representative."
+   },
+   "v2.error.no_meter": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "no_meter"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "A meter must exist to submit events."
+   },
+   "v2.error.non_connect_platform_accounts_v2_access_blocked": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "non_connect_platform_accounts_v2_access_blocked"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Needs to use the newer API version or onboard to Connect."
+   },
+   "v2.error.non_jp_kana_kanji_address": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "non_jp_kana_kanji_address"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Kana Kanji script addresses must have JP country."
+   },
+   "v2.error.not_found": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "not_found"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The resource wasn't found."
+   },
+   "v2.error.param_alongside_person_token": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "param_alongside_person_token"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Parameter cannot be passed alongside person_token."
+   },
+   "v2.error.payload_invalid_value": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "payload_invalid_value"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The value must be a positive integer."
+   },
+   "v2.error.payload_no_customer_defined": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "payload_no_customer_defined"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The payload must have a reference to the customer."
+   },
+   "v2.error.payload_no_value_defined": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "payload_no_value_defined"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The payload must have a value."
+   },
+   "v2.error.person_percent_ownership_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "person_percent_ownership_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Error returned when relationship.owner is set to true but the ownership percentage is set to 0%."
+   },
+   "v2.error.person_token_required": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "doc_url",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "person_token_required"
+        ]
+       },
+       "doc_url": {
+        "type": "string",
+        "description": "A URL to more information about the error reported"
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Person token required for platforms in mandated countries (e.g., France)."
+   },
+   "v2.error.phone_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "phone_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Phone number is invalid."
+   },
+   "v2.error.platform_registration_required": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "platform_registration_required"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The direct merchant has not signed up for Connect and cannot create connected accounts."
+   },
+   "v2.error.postal_code_required_for_jp_address": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "postal_code_required_for_jp_address"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Postal code is required for Japanese addresses."
+   },
+   "v2.error.script_characters_invalid": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "script_characters_invalid"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Provided script characters are invalid for the script."
+   },
+   "v2.error.token_already_used": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "token_already_used"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "The token is re-used with a different idempotency key."
+   },
+   "v2.error.token_expired": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "token_expired"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Token has expired."
+   },
+   "v2.error.too_many_concurrent_requests": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "too_many_concurrent_requests"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Cannot create multiple usage events for the same customer, meter concurrently."
+   },
+   "v2.error.total_person_ownership_exceeded": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "total_person_ownership_exceeded"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Total ownership percentages of all Persons on the account exceeds 100%."
+   },
+   "v2.error.unsupported_postal_code": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "unsupported_postal_code"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Address is in an unsupported postal code."
+   },
+   "v2.error.unsupported_state": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message",
+       "user_message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "unsupported_state"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       },
+       "user_message": {
+        "type": "string",
+        "description": "A user-friendly message that can be shown to end-users"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "Address is in an unsupported state."
+   },
+   "v2.error.v1_account_instead_of_v2_account": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "v1_account_instead_of_v2_account"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "V1 Account ID cannot be used in V2 Account APIs."
+   },
+   "v2.error.v1_customer_instead_of_v2_account": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "v1_customer_instead_of_v2_account"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "V1 Customer ID cannot be used in V2 Account APIs."
+   },
+   "v2.error.v1_token_invalid_in_v2": {
+    "required": [
+     "error"
+    ],
+    "type": "object",
+    "properties": {
+     "error": {
+      "required": [
+       "code",
+       "message"
+      ],
+      "type": "object",
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Short code to identify the error, should not be handled programmatically",
+        "enum": [
+         "v1_token_invalid_in_v2"
+        ]
+       },
+       "message": {
+        "type": "string",
+        "description": "A human-readable message providing more details about the error"
+       }
+      },
+      "description": "Information about the error that occurred"
+     }
+    },
+    "description": "A v1 token ID is passed in v2 APIs."
+   }
+  },
+  "securitySchemes": {
+   "basicAuth": {
+    "type": "http",
+    "description": "Basic HTTP authentication. Allowed headers-- Authorization: Basic <api_key> | Authorization: Basic <base64 hash of `api_key:`>",
+    "scheme": "basic"
+   },
+   "bearerAuth": {
+    "type": "http",
+    "description": "Bearer HTTP authentication. Allowed headers-- Authorization: Bearer <api_key>",
+    "scheme": "bearer",
+    "bearerFormat": "auth-scheme"
+   }
+  }
+ }
+}

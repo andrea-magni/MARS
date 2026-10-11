@@ -41,6 +41,40 @@ uses
 
 const
   INDENT = '  ';
+  // Delphi refuses lines longer than 1023 characters (F2069): comments and enumerations wrap
+  WRAP_WIDTH = 100;
+
+// AText in lines of at most AWidth characters, broken at spaces; a longer word is split
+function WrapWords(const AText: string; const AWidth: Integer): TArray<string>;
+var
+  LLine: string;
+begin
+  Result := [];
+  LLine := '';
+  for var LWord in AText.Split([' '], TStringSplitOptions.ExcludeEmpty) do
+  begin
+    var LRest := LWord;
+    while Length(LRest) > AWidth do
+    begin
+      if LLine <> '' then
+        Result := Result + [LLine];
+      Result := Result + [LRest.Substring(0, AWidth)];
+      LRest := LRest.Substring(AWidth);
+      LLine := '';
+    end;
+    if LLine = '' then
+      LLine := LRest
+    else if Length(LLine) + 1 + Length(LRest) <= AWidth then
+      LLine := LLine + ' ' + LRest
+    else
+    begin
+      Result := Result + [LLine];
+      LLine := LRest;
+    end;
+  end;
+  if LLine <> '' then
+    Result := Result + [LLine];
+end;
 
 { TGenTypesEmitter }
 
@@ -65,10 +99,11 @@ end;
 procedure TGenTypesEmitter.AddComments(const AComments: TArray<string>; const AIndent: string);
 begin
   for var LLine in AComments do
-    if LLine = '' then
+    if LLine.Trim = '' then
       Add(AIndent + '//')
     else
-      Add(AIndent + '// ' + LLine);
+      for var LWrapped in WrapWords(LLine, WRAP_WIDTH) do
+        Add(AIndent + '// ' + LWrapped);
 end;
 
 procedure TGenTypesEmitter.EmitHeader;
@@ -104,12 +139,39 @@ end;
 procedure TGenTypesEmitter.EmitEnum(const AType: TGenDelphiType);
 var
   LNames: TArray<string>;
+  LLine, LText: string;
 begin
   AddComments(AType.Comments, INDENT);
   LNames := [];
   for var LValue in AType.EnumValues do
     LNames := LNames + [LValue.Name];
-  Add(INDENT + AType.Name + ' = (' + string.Join(', ', LNames) + ');');
+  LLine := INDENT + AType.Name + ' = (' + string.Join(', ', LNames) + ');';
+  if Length(LLine) <= WRAP_WIDTH then
+    Add(LLine)
+  else
+  begin
+    // many values: on more lines
+    Add(INDENT + AType.Name + ' = (');
+    LLine := '';
+    for var LIndex := 0 to High(LNames) do
+    begin
+      LText := LNames[LIndex];
+      if LIndex < High(LNames) then
+        LText := LText + ','
+      else
+        LText := LText + ');';
+      if (LLine <> '') and (Length(LLine) + 1 + Length(LText) > WRAP_WIDTH) then
+      begin
+        Add(LLine);
+        LLine := '';
+      end;
+      if LLine = '' then
+        LLine := INDENT + INDENT + LText
+      else
+        LLine := LLine + ' ' + LText;
+    end;
+    Add(LLine);
+  end;
   Add;
 end;
 

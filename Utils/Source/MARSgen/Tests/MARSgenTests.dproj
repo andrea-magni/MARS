@@ -78,6 +78,7 @@
         <DCCReference Include="Tests.MARSgen.Inference.pas"/>
         <DCCReference Include="Tests.MARSgen.Compile.pas"/>
         <DCCReference Include="Tests.MARSgen.CLI.pas"/>
+        <DCCReference Include="Tests.MARSgen.RealDocuments.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -80,6 +80,10 @@ Tests\bin\MARSgenTests.exe
 
 The exit code is 0 when all the tests pass; `--pause` waits for Enter at the end.
 
+The documents are in `Tests\Corpus` ([README](Tests/Corpus/README.md)): written for the tests, the
+examples of the OpenAPI Initiative and excerpts of the GitHub and Stripe APIs. Whole documents can be
+checked too, with the `MARSGEN_FULL_CORPUS` environment variable.
+
 The `Compile` test writes the units generated from the corpus, compiles them with `dcc32` (found
 through the `BDS` environment variable or the registry) into a probe program and runs it: every
 record must read a JSON instance and write the same JSON back through MARS. Without Delphi or the

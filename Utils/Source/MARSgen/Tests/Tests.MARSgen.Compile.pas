@@ -47,7 +47,7 @@ type
 const
   // a JSON instance for a record of each unit: read and written back, the same
   // (no zero numbers, false booleans, empty strings and dates: MARS skips or reformats them)
-  INSTANCES: array[0..11] of TInstance = (
+  INSTANCES: array[0..13] of TInstance = (
     (TypeName: 'Model.PetStore.TPet';
      JSON: '{"name":"Rex","tag":"good","status":"pending","category":{"id":2,"name":"Dogs"},"id":7}'),
     (TypeName: 'Model.PetStore.TOrder';
@@ -78,10 +78,34 @@ const
        + '"coupon":{"c":1},"externalId":9007199254740993,"priority":"high","notes":"x",'
        + '"shipping":{"carrier":"DHL","address":{"line":"L","country":"IT"}}}'),
     (TypeName: 'Model.Customer.TCustomer';
-     JSON: '{"id":1,"name":"Ann","vip":true}')
+     JSON: '{"id":1,"name":"Ann","vip":true}'),
+    // excerpts of real APIs
+    (TypeName: 'Model.Real.GitHubIssues.TSimpleUser';
+     JSON: '{"login":"octocat","id":583231,"node_id":"MDQ6VXNlcjU4MzIzMQ==",'
+       + '"avatar_url":"https://avatars.githubusercontent.com/u/583231?v=4","url":"https://api.github.com/users/octocat",'
+       + '"type":"User","site_admin":true}'),
+    (TypeName: 'Model.Real.StripeV2Persons.TV2BillingMeterEvent';
+     JSON: '{"event_name":"api_call","identifier":"evt_1","livemode":true,"object":"v2.billing.meter_event",'
+       + '"payload":{"stripe_customer_id":"cus_1","value":"25"}}')
   );
 
-  CORPUS: array[0..2] of string = ('petstore-3.0.yaml', 'features-3.1.json', 'mapping-3.0.yaml');
+  // OpenAPI documents of the corpus and their units (empty: the default, from the title)
+  CORPUS: array[0..13] of array[0..1] of string = (
+    ('petstore-3.0.yaml', ''),
+    ('features-3.1.json', ''),
+    ('mapping-3.0.yaml', ''),
+    ('oai\v3.0-api-with-examples.yaml', 'Model.OAI.ApiWithExamples'),
+    ('oai\v3.0-callback-example.yaml', 'Model.OAI.CallbackExample'),
+    ('oai\v3.0-link-example.yaml', 'Model.OAI.LinkExample'),
+    ('oai\v3.0-petstore.yaml', 'Model.OAI.Petstore'),
+    ('oai\v3.0-petstore-expanded.yaml', 'Model.OAI.PetstoreExpanded'),
+    ('oai\v3.0-uspto.yaml', 'Model.OAI.Uspto'),
+    ('oai\v3.1-non-oauth-scopes.yaml', 'Model.OAI.NonOAuthScopes'),
+    ('oai\v3.1-tictactoe.yaml', 'Model.OAI.TicTacToe'),
+    ('oai\v3.1-webhook-example.yaml', 'Model.OAI.WebhookExample'),
+    ('real\github-issues.yaml', 'Model.Real.GitHubIssues'),
+    ('real\stripe-v2-persons.json', 'Model.Real.StripeV2Persons')
+  );
 
   // JSON samples: root name and files
   SAMPLES: array[0..1] of array[0..2] of string = (
@@ -255,6 +279,7 @@ var
   LExpected, LActual: TJSONValue;
   LParts: TArray<string>;
   LInferenceOptions: TGenInferenceOptions;
+  LTypeOptions: TGenTypeOptions;
   LFiles: TArray<string>;
 begin
   LCompiler := FindCompiler;
@@ -267,11 +292,13 @@ begin
 
   // the units of the corpus
   LUnits := [];
-  for var LCorpus in CORPUS do
+  for var LCorpus := Low(CORPUS) to High(CORPUS) do
   begin
-    LApi := TGenOpenAPIReader.Load(CorpusFile(LCorpus));
+    LTypeOptions := TGenTypeOptions.Default;
+    LTypeOptions.UnitName := CORPUS[LCorpus][1];
+    LApi := TGenOpenAPIReader.Load(CorpusFile(CORPUS[LCorpus][0]));
     try
-      LFile := TGenTypesEmitter.WriteUnit(LApi, TGenTypeOptions.Default, FFolder);
+      LFile := TGenTypesEmitter.WriteUnit(LApi, LTypeOptions, FFolder);
       LUnits := LUnits + [TPath.GetFileNameWithoutExtension(LFile)];
     finally
       LApi.Free;

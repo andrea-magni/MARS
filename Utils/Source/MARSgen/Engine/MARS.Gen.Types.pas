@@ -112,6 +112,8 @@ type
     function RawJSON(const ASchema: TGenSchema; const AReason: string): string;
     function IsRecordSchema(const ASchema: TGenSchema): Boolean;
     function EnumCanBeType(const ASchema: TGenSchema): Boolean;
+    // the only schema of a wrapper (allOf: [X], anyOf: [X, null]), nil when it is not one
+    function SingleAlternative(const ASchema: TGenSchema): TGenSchema;
     function NewType(const ASchema: TGenSchema; const AKind: TGenDelphiTypeKind;
       const AName: string): TGenDelphiType;
     procedure FillRecord(const AType: TGenDelphiType);
@@ -472,6 +474,47 @@ begin
   end;
 end;
 
+function TGenTypeMapper.SingleAlternative(const ASchema: TGenSchema): TGenSchema;
+
+  // {type: null}: the null alternative of a nullable schema
+  function IsNullOnly(const AAlternative: TGenSchema): Boolean;
+  begin
+    Result := (AAlternative.Types = [TGenSchemaType.Null]) and (AAlternative.Properties.Count = 0)
+      and not Assigned(AAlternative.Items) and not AAlternative.IsComposition;
+  end;
+
+var
+  LAlternatives: TList<TGenSchema>;
+begin
+  Result := nil;
+  // the wrapper adds nothing but descriptions and nullability
+  if (ASchema.Properties.Count > 0) or Assigned(ASchema.Items) or (Length(ASchema.Enum) > 0)
+    or Assigned(ASchema.AdditionalProperties) or Assigned(ASchema.Discriminator)
+    or not ((ASchema.NonNullTypes = []) or (ASchema.NonNullTypes = [TGenSchemaType.Object]))
+  then
+    Exit;
+
+  if (ASchema.AllOf.Count = 1) and (ASchema.OneOf.Count = 0) and (ASchema.AnyOf.Count = 0) then
+    Result := ASchema.AllOf[0]
+  else if (ASchema.AllOf.Count = 0) and ((ASchema.OneOf.Count = 0) <> (ASchema.AnyOf.Count = 0)) then
+  begin
+    LAlternatives := ASchema.OneOf;
+    if LAlternatives.Count = 0 then
+      LAlternatives := ASchema.AnyOf;
+    for var LAlternative in LAlternatives do
+      if not IsNullOnly(LAlternative) then
+      begin
+        // a second real alternative: a choice, not a wrapper
+        if Assigned(Result) then
+          Exit(nil);
+        Result := LAlternative;
+      end;
+  end;
+
+  if Result = ASchema then
+    Result := nil;
+end;
+
 function TGenTypeMapper.TypeOf(const ASchema: TGenSchema; const AContext: string;
   out ATarget: TGenDelphiType; out AViaArray: Boolean): string;
 var
@@ -479,12 +522,18 @@ var
   LItemTarget: TGenDelphiType;
   LItemViaArray: Boolean;
   LName, LItemName: string;
+  LSingle: TGenSchema;
 begin
   ATarget := nil;
   AViaArray := False;
 
   if not Assigned(ASchema) or ASchema.IsAny then
     Exit(RawJSON(ASchema, 'any value'));
+
+  // a wrapper of a single schema: allOf: [X], anyOf: [X, {type: null}]... is X
+  LSingle := SingleAlternative(ASchema);
+  if Assigned(LSingle) then
+    Exit(TypeOf(LSingle, AContext, ATarget, AViaArray));
 
   // already a record or an enumeration
   if FTypeBySchema.TryGetValue(ASchema, ATarget) then

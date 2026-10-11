@@ -901,7 +901,8 @@ begin
         if Assigned(LResponse) then
           Result.Responses.Add(LResponse);
       end
-    else
+    else if FApi.OpenAPIVersion.StartsWith('3.0') then
+      // required in 3.0, optional in 3.1
       Diagnostic(TGenSeverity.Warning, APointer, 'responses missing');
 
     if Assigned(AValue.GetValue('security')) then

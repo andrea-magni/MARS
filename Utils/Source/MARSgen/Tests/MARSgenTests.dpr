@@ -28,7 +28,8 @@ uses
   Tests.MARSgen.Types in 'Tests.MARSgen.Types.pas',
   Tests.MARSgen.Inference in 'Tests.MARSgen.Inference.pas',
   Tests.MARSgen.Compile in 'Tests.MARSgen.Compile.pas',
-  Tests.MARSgen.CLI in 'Tests.MARSgen.CLI.pas';
+  Tests.MARSgen.CLI in 'Tests.MARSgen.CLI.pas',
+  Tests.MARSgen.RealDocuments in 'Tests.MARSgen.RealDocuments.pas';
 
 var
   LResults: IRunResults;
