@@ -256,8 +256,8 @@ begin
   Assert.Contains(TFile.ReadAllText(LIgnition), 'AddApplication(''DefaultApp'', ''/v2'', [ ''Server.Resources.*'']);');
   Assert.Contains(TFile.ReadAllText(LIni), sLineBreak + 'BasePath=/api' + sLineBreak);
   Assert.Contains(TFile.ReadAllText(LIni), 'OpenAPI.info.title=Pet $tore');
-  // 1.0 is a number for the ini files of MARS, and its OpenAPI wants text: the one of the template
-  Assert.Contains(TFile.ReadAllText(LIni), 'OpenAPI.info.version=0.1.0');
+  // a number for the ini files of MARS, read as text by its OpenAPI (#251)
+  Assert.Contains(TFile.ReadAllText(LIni), 'OpenAPI.info.version=1.0');
 end;
 
 procedure TGenProjectTest.CommandLine;

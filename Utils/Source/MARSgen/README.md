@@ -59,8 +59,7 @@ be empty. Then it writes the units of the server into it and links them:
   `/<engine>/<application>/<resource>`: `/v1` gives `BasePath=/` in `bin\Server.ini` and the
   application `/v1` in `Server.Ignition`; `/api/v2` gives `/api` and `/v2`. A document at the root, or
   with more than two segments, keeps the `/rest/default` of the templates, with a note;
-- its title and version as `OpenAPI.info` in `bin\Server.ini` (when they read as text: MARS reads
-  `1.0` in an ini file as a number).
+- its title and version as `OpenAPI.info` in `bin\Server.ini`.
 
 The resources of the template stay (`helloworld`, `token`, `openapi`); a path of the document with the
 name of one of them (`/token/...`) is reported, and that resource is not created. The project

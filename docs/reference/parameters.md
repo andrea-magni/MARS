@@ -118,6 +118,19 @@ file is found as `JWT.Secret` in code, and `Feature.X` in a base file and `featu
 including file are the same parameter (the first spelling is kept). Parameters read from JSON
 (`LoadFromJSON`) keep matching the exact case.
 
+## Values from `.ini` files are typed
+
+A value read from an `.ini` file becomes an integer, a float, a boolean or a date when it looks
+like one (`Port=8080` is read with `.AsInteger`), else a string. Their text is kept too:
+`ByNameAsText` returns it as written, whatever the type (`Version=1.10` gives `'1.10'`, not the
+`Double` 1.1), and converts the values set in code or read from JSON. Use it for values that are
+text even when they look like numbers (versions, codes, names): `.AsString` on such a value raises
+`EInvalidCast`. The `OpenAPI.info.*` parameters are read this way.
+
+```pascal
+var LVersion := FEngine.Parameters.ByNameAsText('OpenAPI.info.version', '0.1.0');
+```
+
 ## Engine parameters
 
 | Parameter | Type | Default | Purpose |

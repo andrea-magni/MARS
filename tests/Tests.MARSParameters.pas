@@ -142,6 +142,8 @@ type
     [Test] procedure IniIsCaseInsensitive;
     [Test] procedure JSONStaysCaseSensitive;
     [Test] procedure ApplicationCopyKeepsCaseInsensitivity;
+    [Test] procedure IniValuesKeepTheirText;
+    [Test] procedure OpenAPIInfoFromNumbersIsText;
   end;
 
 implementation
@@ -149,6 +151,7 @@ implementation
 
 uses
   IniFiles, IOUtils, StrUtils
+, MARS.Core.Engine, MARS.Core.Engine.Interfaces, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
 , MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
 ;
@@ -576,6 +579,71 @@ begin
   finally
     LApp.Free;
     LEngine.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.IniValuesKeepTheirText;
+begin
+  var LIni := WriteIni('Project.ini', '''
+    [DefaultEngine]
+    Port=8080
+    Version=1.10
+    Flag=true
+    Name=Mars
+    [DefaultApp]
+    Ratio=2.50
+    ''');
+
+  var LEngine := TMARSParameters.Create('DefaultEngine');
+  var LApp := TMARSParameters.Create('DefaultApp');
+  try
+    TMARSParametersIniFileReaderWriter.Load(LEngine, LIni);
+    // the values are guessed as before...
+    Assert.AreEqual(8080, LEngine.ByName('Port').AsInteger);
+    Assert.IsTrue(LEngine.ByName('Version').Kind = tkFloat);
+    Assert.IsTrue(LEngine.ByName('Flag').AsBoolean);
+    // ...and their text is kept
+    Assert.AreEqual('8080', LEngine.ByNameAsText('Port'));
+    Assert.AreEqual('1.10', LEngine.ByNameAsText('version'), 'found ignoring case, not 1.1');
+    Assert.AreEqual('true', LEngine.ByNameAsText('Flag'));
+    Assert.AreEqual('Mars', LEngine.ByNameAsText('Name'));
+    Assert.AreEqual('none', LEngine.ByNameAsText('Missing', 'none'));
+
+    // through the copy of an application
+    LApp.CopyFrom(LEngine, 'DefaultApp');
+    Assert.AreEqual('2.50', LApp.ByNameAsText('Ratio'));
+
+    // set in code: the text goes, the value is converted
+    LEngine.Values['Version'] := 2;
+    Assert.AreEqual('2', LEngine.ByNameAsText('Version'));
+  finally
+    LApp.Free;
+    LEngine.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.OpenAPIInfoFromNumbersIsText;
+begin
+  // an info value that looks like a number, a boolean or a date (#251)
+  var LIni := WriteIni('Project.ini', '''
+    [DefaultEngine]
+    OpenAPI.info.title=2048
+    OpenAPI.info.version=1.0
+    OpenAPI.info.description=true
+    ''');
+
+  var LEngine: IMARSEngine := TMARSEngine.Create('DefaultEngine');
+  TMARSParametersIniFileReaderWriter.Load(LEngine.Parameters, LIni);
+  var LApplication := LEngine.AddApplication('DefaultApp', '/default', []);
+  // what the OpenAPI resource of the templates gets injected (it raised EInvalidCast)
+  var LOpenAPI := TOpenAPI.BuildFrom(LEngine, LApplication);
+  try
+    Assert.AreEqual('2048', LOpenAPI.info.title);
+    Assert.AreEqual('1.0', LOpenAPI.info.version);
+    Assert.AreEqual('true', LOpenAPI.info.description);
+    Assert.AreEqual('MARS Developer', LOpenAPI.info.contact.name, 'the defaults');
+  finally
+    LOpenAPI.Free;
   end;
 end;
 

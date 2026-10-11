@@ -150,7 +150,7 @@ begin
       LName := LValues.Names[LIndex];
       LValue := LValues.ValueFromIndex[LIndex];
 
-      AParameters.SetValueIgnoringCase(LName, GuessTValueFromString(LValue));
+      AParameters.SetValueIgnoringCase(LName, GuessTValueFromString(LValue), LValue);
     end;
 
 
@@ -170,7 +170,7 @@ begin
 
           LParameterName := TMARSParameters.CombineSliceAndParamName(LSection, LName);
 
-          AParameters.SetValueIgnoringCase(LParameterName, GuessTValueFromString(LValue));
+          AParameters.SetValueIgnoringCase(LParameterName, GuessTValueFromString(LValue), LValue);
         end;
       end;
     finally

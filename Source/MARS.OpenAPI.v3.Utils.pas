@@ -440,31 +440,32 @@ end;
 
 procedure TOpenAPIHelper.ReadInfoFromParams(const AParams: TMARSParameters);
 
-  function FromParams(const AName: string; const ADefault: TValue): TValue;
+  // as text whatever the value: an ini file makes info.version=1.0 a Double (#251)
+  function FromParams(const AName: string; const ADefault: string): string;
   begin
-    Result := AParams.ByNameText('OpenAPI.' + AName, ADefault);
+    Result := AParams.ByNameAsText('OpenAPI.' + AName, ADefault);
   end;
 
 begin
-  info.title          := FromParams('info.title', 'MARS API').AsString;
-  info.summary        := FromParams('info.summary', '').AsString;
-  info.description    := FromParams('info.description', '').AsString;
-  info.termsOfService := FromParams('info.termsOfService', '').AsString;
+  info.title          := FromParams('info.title', 'MARS API');
+  info.summary        := FromParams('info.summary', '');
+  info.description    := FromParams('info.description', '');
+  info.termsOfService := FromParams('info.termsOfService', '');
 
-  info.contact.name   := FromParams('info.contact.name', 'MARS Developer').AsString;
-  info.contact.url    := FromParams('info.contact.url', 'https://mars.space').AsString;
-  info.contact.email  := FromParams('info.contact.email', 'me@mars.space').AsString;
+  info.contact.name   := FromParams('info.contact.name', 'MARS Developer');
+  info.contact.url    := FromParams('info.contact.url', 'https://mars.space');
+  info.contact.email  := FromParams('info.contact.email', 'me@mars.space');
 
-  info.license.name       := FromParams('info.license.name', '').AsString;
-  info.license.identifier := FromParams('info.license.identifier', '').AsString;
-  info.license.url        := FromParams('info.license.url', '').AsString;
+  info.license.name       := FromParams('info.license.name', '');
+  info.license.identifier := FromParams('info.license.identifier', '');
+  info.license.url        := FromParams('info.license.url', '');
 
-  info.x_logo.url := FromParams('info.x-logo.url', 'https://andreamagni.eu/images/MARS-Curiosity-d.png').AsString;
-  info.x_logo.backgroundColor := FromParams('info.x-logo.backgroundColor', '#FFFFFF').AsString;
-  info.x_logo.altText := FromParams('info.x-logo.altText', 'Powered by MARS-Curiosity REST library').AsString;
-  info.x_logo.href := FromParams('info.x-logo.href', 'https://github.com/andrea-magni/MARS').AsString;
+  info.x_logo.url := FromParams('info.x-logo.url', 'https://andreamagni.eu/images/MARS-Curiosity-d.png');
+  info.x_logo.backgroundColor := FromParams('info.x-logo.backgroundColor', '#FFFFFF');
+  info.x_logo.altText := FromParams('info.x-logo.altText', 'Powered by MARS-Curiosity REST library');
+  info.x_logo.href := FromParams('info.x-logo.href', 'https://github.com/andrea-magni/MARS');
 
-  info.version := FromParams('info.version', '0.1.0').AsString;
+  info.version := FromParams('info.version', '0.1.0');
 end;
 
 procedure TOpenAPIHelper.ReadOperation(const AOperation: TOperation;

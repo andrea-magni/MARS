@@ -58,7 +58,7 @@ type
 implementation
 
 uses
-  System.IOUtils, System.StrUtils, System.RegularExpressions, System.DateUtils,
+  System.IOUtils, System.StrUtils, System.RegularExpressions,
   MARS.Cmd;
 
 function ReadText(const AFileName: string; out AEncoding: TEncoding): string;
@@ -94,21 +94,6 @@ begin
   else
     LGroup := LMatch.Groups[0];
   ASource := ASource.Substring(0, LGroup.Index - 1) + AText + ASource.Substring(LGroup.Index - 1 + LGroup.Length);
-end;
-
-// MARS reads the values of the ini files as numbers, booleans and dates when they look like them
-// (GuessTValueFromString) and its OpenAPI wants the info as text: a version 1.0 would break it
-function ReadsAsText(const AValue: string): Boolean;
-var
-  LInt64: Int64;
-  LDouble: Double;
-  LBoolean: Boolean;
-  LDate: TDateTime;
-begin
-  Result := (AValue <> '') and not TryStrToInt64(AValue, LInt64)
-    and not TryStrToFloat(AValue, LDouble) and not TryStrToFloat(AValue, LDouble, TFormatSettings.Invariant)
-    and not TryStrToBool(AValue, LBoolean)
-    and not ((AValue.CountChar('-') >= 2) and TryISO8601ToDate(AValue, LDate));
 end;
 
 { TGenBasePath }
@@ -297,9 +282,9 @@ begin
       if not ReplaceFirst(LNew, '(?m)^;?BasePath=[^\r\n]*', 'BasePath=' + ABasePath.EnginePath) then
         AMessages.Add(Format('Set BasePath=%s in [DefaultEngine] of %s', [ABasePath.EnginePath, LFile]));
     end;
-    if ReadsAsText(AApi.Title) then
+    if AApi.Title <> '' then
       ReplaceFirst(LNew, '(?m)^OpenAPI\.info\.title=[^\r\n]*', 'OpenAPI.info.title=' + AApi.Title);
-    if ReadsAsText(AApi.Version) then
+    if AApi.Version <> '' then
       ReplaceFirst(LNew, '(?m)^OpenAPI\.info\.version=[^\r\n]*', 'OpenAPI.info.version=' + AApi.Version);
     if LNew <> LSource then
       WriteText(LFile, LNew, LEncoding);
