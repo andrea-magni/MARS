@@ -520,6 +520,7 @@ procedure TGenOpenAPIReader.ReadSchemaContent(const ASchema: TGenSchema; const A
 
 var
   LValue, LEnumValue: TJSONValue;
+  LEnumItems: TArray<TJSONValue>;
   LType: TGenSchemaType;
   LTypes: TGenSchemaTypes;
   LRequired: TArray<string>;
@@ -573,10 +574,16 @@ begin
     LEnum := LEnum + [ScalarText(LValue)];
   ASchema.Enum := LEnum;
 
-  // an enum without a type: from its values
-  if (LTypes - [TGenSchemaType.Null] = []) and (LEnumValue is TJSONArray) and (Length(LEnum) > 0) then
+  // an enum (or const) without a type: from its values
+  if (LTypes - [TGenSchemaType.Null] = []) and (Length(LEnum) > 0) then
   begin
-    for var LItem in TJSONArray(LEnumValue) do
+    LEnumItems := [];
+    if LEnumValue is TJSONArray then
+      for var LItem in TJSONArray(LEnumValue) do
+        LEnumItems := LEnumItems + [LItem];
+    if Assigned(AObject.GetValue('const')) then
+      LEnumItems := LEnumItems + [AObject.GetValue('const')];
+    for var LItem in LEnumItems do
       if (LItem is TJSONString) and not (LItem is TJSONNumber) then
         Include(LTypes, TGenSchemaType.String)
       else if LItem is TJSONNumber then

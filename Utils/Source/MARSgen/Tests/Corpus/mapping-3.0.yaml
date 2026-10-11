@@ -1,0 +1,142 @@
+# MARSgen test corpus: the edge cases of the mapping to Delphi types
+openapi: 3.0.3
+info:
+  title: Mapping cases
+  version: '1'
+paths:
+  /things/{id}:
+    get:
+      operationId: get-thing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: an inline object, with an inline object inside
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  extra:
+                    type: object
+                    properties:
+                      nested:
+                        type: object
+                        properties:
+                          deep:
+                            type: string
+  /things:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+      responses:
+        '204':
+          description: no content
+    get:
+      operationId: listThings
+      responses:
+        '200':
+          description: an array of a component
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Weird'
+components:
+  schemas:
+    Weird:
+      type: object
+      properties:
+        type:
+          type: string
+        end:
+          type: integer
+        private:
+          type: boolean
+        '@id':
+          type: string
+        first name:
+          type: string
+        2fa:
+          type: boolean
+        a-b:
+          type: string
+        a_b:
+          type: string
+        petId:
+          type: integer
+          format: int64
+        Counter:
+          $ref: '#/components/schemas/Counter'
+        price:
+          $ref: '#/components/schemas/Price'
+        mood:
+          $ref: '#/components/schemas/Mood'
+        color:
+          $ref: '#/components/schemas/Colors'
+    Mood:
+      type: string
+      enum: [happy, not-sure, begin]
+    Colors:
+      type: string
+      enum: [red, Red]
+    Level:
+      type: string
+      enum: [low, begin, end]
+    Counter:
+      type: integer
+    Price:
+      type: number
+    Pet:
+      type: object
+      properties:
+        category:
+          type: object
+          properties:
+            label:
+              type: string
+        level:
+          $ref: '#/components/schemas/Level'
+    PetCategory:
+      type: object
+      properties:
+        code:
+          type: string
+    A:
+      type: object
+      properties:
+        name:
+          type: string
+        b:
+          $ref: '#/components/schemas/B'
+    B:
+      type: object
+      properties:
+        name:
+          type: string
+        a:
+          $ref: '#/components/schemas/A'
+    Tree:
+      type: object
+      properties:
+        label:
+          type: string
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tree'

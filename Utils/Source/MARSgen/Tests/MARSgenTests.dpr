@@ -17,8 +17,14 @@ uses
   MARS.Gen.Model in '..\Engine\MARS.Gen.Model.pas',
   MARS.Gen.JSONSource in '..\Engine\MARS.Gen.JSONSource.pas',
   MARS.Gen.OpenAPI.Reader in '..\Engine\MARS.Gen.OpenAPI.Reader.pas',
+  MARS.Gen.Naming in '..\Engine\MARS.Gen.Naming.pas',
+  MARS.Gen.Types in '..\Engine\MARS.Gen.Types.pas',
+  MARS.Gen.Emit.Types in '..\Engine\MARS.Gen.Emit.Types.pas',
   Tests.MARSgen.JSONSource in 'Tests.MARSgen.JSONSource.pas',
-  Tests.MARSgen.OpenAPIReader in 'Tests.MARSgen.OpenAPIReader.pas';
+  Tests.MARSgen.OpenAPIReader in 'Tests.MARSgen.OpenAPIReader.pas',
+  Tests.MARSgen.Naming in 'Tests.MARSgen.Naming.pas',
+  Tests.MARSgen.Types in 'Tests.MARSgen.Types.pas',
+  Tests.MARSgen.Compile in 'Tests.MARSgen.Compile.pas';
 
 var
   LResults: IRunResults;

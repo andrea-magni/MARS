@@ -25,6 +25,19 @@ samples. Work in progress: see the plan in
   - What is not supported (external `$ref`, callbacks, webhooks, links, `not`, `if`, tuple
     `items`...) becomes a diagnostic with its JSON pointer, never silently dropped.
   - A document that is not OpenAPI 3.x (Swagger 2.0 included) raises `EGenError`.
+- `MARS.Gen.Naming`: Delphi identifiers from the names of the document (PascalCase, sanitizing,
+  `&` for reserved words, singulars, unique names).
+- `MARS.Gen.Types`: maps the schemas to records and scoped enumerations, as MARS serializes them.
+  - `[JSONName]` where the JSON name differs from the field; `allOf` merged into one record;
+    inline schemas named after their context (`TPetCategory`, `TGetThingResponse`).
+  - Types declared before use; a record containing itself, or a cycle of records, is broken with
+    `TJSONRawString` (Delphi has no forward declarations of records). Arrays of the record itself
+    are fine.
+  - What has no Delphi type (any value, `oneOf`/`anyOf`, mixed types, maps) is `TJSONRawString`,
+    the JSON as text, with the reason in a comment and a diagnostic.
+  - Options (`TGenTypeOptions`): unit name, `Int64` for integers without format, `Currency`,
+    enumerations or strings, `[JSONName]` always, field names as in JSON.
+- `MARS.Gen.Emit.Types`: writes the `Model.<Api>` unit.
 
 ## Tests
 
@@ -36,3 +49,8 @@ Tests\bin\MARSgenTests.exe
 ```
 
 The exit code is 0 when all the tests pass; `--pause` waits for Enter at the end.
+
+The `Compile` test writes the units generated from the corpus, compiles them with `dcc32` (found
+through the `BDS` environment variable or the registry) into a probe program and runs it: every
+record must read a JSON instance and write the same JSON back through MARS. Without Delphi or the
+MARS sources it is skipped.
