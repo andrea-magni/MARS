@@ -21,12 +21,14 @@ uses
   MARS.Gen.Types in '..\Engine\MARS.Gen.Types.pas',
   MARS.Gen.Emit.Types in '..\Engine\MARS.Gen.Emit.Types.pas',
   MARS.Gen.JSONInference in '..\Engine\MARS.Gen.JSONInference.pas',
+  MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas',
   Tests.MARSgen.JSONSource in 'Tests.MARSgen.JSONSource.pas',
   Tests.MARSgen.OpenAPIReader in 'Tests.MARSgen.OpenAPIReader.pas',
   Tests.MARSgen.Naming in 'Tests.MARSgen.Naming.pas',
   Tests.MARSgen.Types in 'Tests.MARSgen.Types.pas',
   Tests.MARSgen.Inference in 'Tests.MARSgen.Inference.pas',
-  Tests.MARSgen.Compile in 'Tests.MARSgen.Compile.pas';
+  Tests.MARSgen.Compile in 'Tests.MARSgen.Compile.pas',
+  Tests.MARSgen.CLI in 'Tests.MARSgen.CLI.pas';
 
 var
   LResults: IRunResults;

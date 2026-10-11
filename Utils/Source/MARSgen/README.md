@@ -4,11 +4,31 @@ A tool to generate MARS-Curiosity servers, clients and types from OpenAPI 3.x do
 samples. Work in progress: see the plan in
 [#234](https://github.com/andrea-magni/MARS/issues/234).
 
+## Command line
+
+`MARSgen.exe` (`CLI\MARSgen.dproj`, built into `Utils\Bin\Win32`):
+
+```
+MARSgen openapi <file|url> [--types] [options]
+MARSgen json <file> [<file> ...] [--name <Name>] [options]
+MARSgen --help
+```
+
+- `openapi`: the types of an OpenAPI 3.0/3.1 document, JSON or YAML, from a file or a URL.
+- `json`: the types of one or more JSON samples, merged; `--name Order` gives `TOrder`.
+- Options: `--dest`, `--unit`, `--int64`, `--currency`, `--enums-as-strings`, `--json-name-always`,
+  `--field-names-as-json`, `--strict`, `--verbose`; for `json` also `--no-dates` and
+  `--name-after-parent`. `MARSgen --help` describes them.
+- Warnings and errors are listed with the JSON pointer of the construct. Exit codes: 0 done, 1
+  warnings with `--strict`, 2 errors (the unit is still written when the document could be read),
+  3 a wrong command line.
+
 ## Layout
 
 | Folder | Content |
 | --- | --- |
 | `Engine` | The engine, shared by the command line and the GUI front ends (units `MARS.Gen.*`). |
+| `CLI` | `MARSgen.exe`: the command line, a thin program around `MARS.Gen.CLI`. |
 | `Tests` | `MARSgenTests`, the DUnitX tests of the engine, and `Tests\Corpus`, the documents they read. |
 
 ## Engine
@@ -38,6 +58,7 @@ samples. Work in progress: see the plan in
   - Options (`TGenTypeOptions`): unit name, `Int64` for integers without format, `Currency`,
     enumerations or strings, `[JSONName]` always, field names as in JSON.
 - `MARS.Gen.Emit.Types`: writes the `Model.<Api>` unit.
+- `MARS.Gen.CLI`: the command line as a function of its arguments (the tests call it directly).
 - `MARS.Gen.JSONInference`: infers the schemas of one or more JSON samples into the same model, so
   the same mapping and emitter give their Delphi types.
   - More samples are merged: a key missing in some of them is optional, integers and decimals give
