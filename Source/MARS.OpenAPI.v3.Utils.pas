@@ -515,8 +515,12 @@ begin
 
           LParam.schema.FillFromAttributes(LParameter);
 
-          LParam.required := LParam.schema.required;
+          // [Required] (or a path parameter), or [OAPIRequired]
+          LParam.required := AParam.Required or LParam.schema.required;
         end;
+        // a path parameter is always required (OpenAPI: required: true)
+        if LIn = 'path' then
+          LParam.required := True;
       end;
     end);
 
@@ -602,20 +606,33 @@ begin
     end;
   end;
 
+  // a [Required] body parameter
+  if LConsumes <> '' then
+    for var LParamMD in AMethodMetadata.ParametersByKind('BodyParam') do
+      if LParamMD.Required then
+        AOperation.requestBody.required := True;
+
   // responses
   var LResponse := AOperation.AddResponse('200');
   LResponse.description := 'Successful response';
-  for var LMediaType in AMethodMetadata.Produces.Split([',']) do
-    LResponse.AddContent(LMediaType).schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
+  // a procedure has no content
+  if Assigned(AMethodMetadata.DataTypeRttiType) then
+  begin
+    for var LMediaType in AMethodMetadata.Produces.Split([',']) do
+      LResponse.AddContent(LMediaType).schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
 
-  if LResponse.content.Count = 0 then
-    LResponse.AddContent('*/*').schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
+    if LResponse.content.Count = 0 then
+      LResponse.AddContent('*/*').schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
+  end;
 
   AOperation.AddResponse('500').description := 'Internal server error';
 
   // authorization
   var LMetAuthorization := AMethodMetadata.FullAuthorization;
-  if LMetAuthorization <> '' then //AM TODO Check what happens with Deny DenyAll etc
+  // PermitAll is stronger than roles (DenyAll is stronger than both): a public operation
+  if MatchText('PermitAll', LMetAuthorization.Split([','])) and not MatchText('DenyAll', LMetAuthorization.Split([','])) then
+    LMetAuthorization := '';
+  if LMetAuthorization <> '' then
   begin
     if FBearerSecurityConfigured then
       AOperation.AddSecurityRequirement('JWT_bearer', LMetAuthorization.Split([',']));

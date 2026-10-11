@@ -167,6 +167,16 @@ type
     function PostBody([BodyParam, Required] const AItem: TItem): string;
   end;
 
+  // the OpenAPI of authorization and of procedures
+  [Path('openapicases'), RolesAllowed('admin')]
+  TOpenAPICasesResource = class
+  public
+    [GET, PermitAll, Produces(TMediaType.TEXT_PLAIN)]
+    function Anyone: string;
+    [DELETE]
+    procedure Remove;
+  end;
+
   [Path('item'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
   TItemResource = class
   private
@@ -334,6 +344,17 @@ end;
 
 { TRequiredResource }
 
+{ TOpenAPICasesResource }
+
+function TOpenAPICasesResource.Anyone: string;
+begin
+  Result := 'anyone';
+end;
+
+procedure TOpenAPICasesResource.Remove;
+begin
+end;
+
 function TRequiredResource.GetQuery(name: string): string;
 begin
   Result := 'query ' + name;
@@ -350,7 +371,7 @@ begin
 end;
 
 initialization
-  MARSRegister([TRequiredResource]);
+  MARSRegister([TRequiredResource, TOpenAPICasesResource]);
   MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TTestTokenResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);

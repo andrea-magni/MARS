@@ -74,7 +74,9 @@ The generator reads metadata and JSON-schema attributes so you can produce a ric
 - **Visibility** — `[MetaVisible(False)]` hides a resource or method.
 - **OpenAPI-specific text** — `[OAPISummary]` and `[OAPIDescription]` override the `[Meta…]` values in the generated document only; they can be put on a resource class, on a method, on a record/class type or one of its fields, and on a method parameter.
 - **Schema hints** — `[OAPIRequired]`, `[OAPIDefault]`, `[OAPIPattern]`, `[OAPIMinimum]`, `[OAPIMaximum]`, `[OAPIMinLength]`, `[OAPIMaxLength]` on record/class fields and on method parameters.
-- **Security** — `[RolesAllowed]` / `[PermitAll]` / `[DenyAll]` are reflected as security requirements; when JWT is configured, Bearer and cookie security schemes are added automatically.
+- **Required** — `[Required]` parameters and bodies (and every path parameter) are `required: true`, as with `[OAPIRequired(True)]`.
+- **Security** — `[RolesAllowed]` and `[DenyAll]` are reflected as security requirements (the roles as scopes), `[PermitAll]` as none (a public operation, also in a `[RolesAllowed]` resource); when JWT is configured, Bearer and cookie security schemes are added automatically.
+- **Responses** — `200` with the media types of the method and the schema of its result; a procedure has no content.
 
 ```pascal
 [Path('users')]

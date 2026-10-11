@@ -18,6 +18,7 @@ type
     [Test] procedure QueryOperationNeedsOpenAPI32;
     [Test] procedure RequestBodyWithoutConsumes;
     [Test] procedure MetaRequestBody;
+    [Test] procedure RequiredPermitAllAndProcedures;
   end;
 
 implementation
@@ -171,6 +172,39 @@ begin
       // a type that does not exist: no body, no error
       LOperation := OperationById(LOpenAPI, 'ManualWrong');
       Assert.AreEqual(0, LOperation.requestBody.content.Count);
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.RequiredPermitAllAndProcedures;
+begin
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    try
+      // [Required] parameters and bodies; path parameters always
+      var LRequired := LOpenAPI.paths['/required'];
+      Assert.IsTrue(LRequired.get.parameters[0].required, 'query [Required]');
+      Assert.IsTrue(LRequired.post.requestBody.required, 'body [Required]');
+      Assert.IsTrue(LOpenAPI.paths['/required/header'].get.parameters[0].required, 'header [Required]');
+      Assert.IsTrue(LOpenAPI.paths['/item/{id}'].get.parameters[0].required, 'path');
+      Assert.IsFalse(LOpenAPI.paths['/item/single'].post.requestBody.required, 'body without [Required]');
+
+      // PermitAll in a RolesAllowed resource: public; the others keep the roles
+      var LCases := LOpenAPI.paths['/openapicases'];
+      Assert.AreEqual(0, LCases.get.security.Count, 'PermitAll: no security requirement');
+      Assert.IsFalse(LCases.get.responses.ContainsKey('403'));
+      for var LRequirement in LCases.delete.security do
+        for var LScopes in LRequirement.Values do
+          Assert.DoesNotContain(string.Join(',', LScopes), 'PermitAll');
+
+      // a procedure: a response without content
+      Assert.AreEqual(0, LCases.delete.responses['200'].content.Count, 'no content for a procedure');
+      Assert.AreEqual(1, LCases.get.responses['200'].content.Count);
     finally
       LOpenAPI.Free;
     end;
