@@ -90,6 +90,23 @@ type
     function GetPet(AId: Integer; AVerbose: Boolean): TRoutePerson; override;
   end;
 
+  TTypedColor = (red, green, blue);
+
+  // parameters of every location and type: invalid values are a 400 (#249)
+  [Path('typedparams')]
+  TTypedParamsResource = class
+  public
+    [GET, Path('int/{id}')]
+    function PathInt([PathParam('id')] AId: Int64): string;
+    [GET, Path('query')]
+    function Query([QueryParam('n')] AN: Integer; [QueryParam('f')] AF: Double; [QueryParam('b')] AB: Boolean;
+      [QueryParam('e')] AE: TTypedColor; [QueryParam('d')] AD: TDate; [QueryParam('r'), Required] AR: Integer): string;
+    [GET, Path('header')]
+    function Header([HeaderParam('X-N')] AN: Integer): string;
+    [GET, Path('cookie')]
+    function Cookie([CookieParam('c')] AC: Integer): string;
+  end;
+
   TRouteMock = record
     Request: IMARSRequest;
     Response: IMARSResponse;
@@ -237,6 +254,12 @@ type
     [Test]
     procedure TestInheritedResourcePath;
     [Test]
+    procedure TestTypedParamsValid;
+    [Test]
+    procedure TestTypedParamsInvalidAre400;
+    [Test]
+    procedure TestTypedRouteParamInvalidIs400;
+    [Test]
     procedure TestOwnResourcePathWins;
     [Test]
     procedure TestTextContentTypeIsNegotiated;
@@ -255,7 +278,7 @@ type
 implementation
 
 uses
-  System.Threading, System.SyncObjs, MARS.Core.Registry
+  System.Threading, System.SyncObjs, System.DateUtils, MARS.Core.Registry
 , MARS.Core.Engine, MARS.Core.Exceptions, MARS.Core.Activation
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
 {$IFDEF MSWINDOWS}
@@ -1776,11 +1799,116 @@ begin
   Assert.AreEqual(404, LMock.Response.StatusCode, 'the inherited path is not used');
 end;
 
+{ TTypedParamsResource }
+
+function TTypedParamsResource.PathInt(AId: Int64): string;
+begin
+  Result := AId.ToString;
+end;
+
+function TTypedParamsResource.Query(AN: Integer; AF: Double; AB: Boolean; AE: TTypedColor; AD: TDate;
+  AR: Integer): string;
+begin
+  Result := Format('%d|%s|%s|%d|%s|%d', [AN, FloatToStr(AF, TFormatSettings.Invariant), BoolToStr(AB, True),
+    Ord(AE), DateToISO8601(AD), AR]);
+end;
+
+function TTypedParamsResource.Header(AN: Integer): string;
+begin
+  Result := AN.ToString;
+end;
+
+function TTypedParamsResource.Cookie(AC: Integer): string;
+begin
+  Result := AC.ToString;
+end;
+
+function Header(const AName, AValue: string): TMARSHeaders;
+var
+  LHeader: TMARSHeader;
+begin
+  LHeader.Name := AName;
+  LHeader.Value := AValue;
+  Result := [LHeader];
+end;
+
+procedure TMARSRoutesFixture.TestTypedParamsValid;
+begin
+  Assert.IsTrue(FApplication.AddResource('Tests.Routes.TTypedParamsResource'));
+
+  var LMock := Send('GET', 'typedparams/int/9007199254740993');
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('9007199254740993', LMock.Response.Content);
+
+  // enumerations by name (any case) or ordinal; dates ISO 8601
+  LMock := Send('GET', 'typedparams/query?n=-3&f=1.5&b=true&e=GREEN&d=2026-10-11&r=7');
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.StartsWith('-3|1.5|True|1|2026-10-11', LMock.Response.Content);
+  Assert.EndsWith('|7', LMock.Response.Content);
+  LMock := Send('GET', 'typedparams/query?e=2&r=1');
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.StartsWith('0|0|False|2|', LMock.Response.Content, 'missing: the defaults');
+
+  // empty: the default, when not required
+  LMock := Send('GET', 'typedparams/query?n=&r=1');
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+
+  Assert.AreEqual('12', Send('GET', 'typedparams/header', '', Header('X-N', '12')).Response.Content);
+  Assert.AreEqual('5', Send('GET', 'typedparams/cookie', '', Header('Cookie', 'a=x; c=5')).Response.Content);
+  Assert.AreEqual('0', Send('GET', 'typedparams/cookie').Response.Content, 'no cookie: the default');
+end;
+
+procedure TMARSRoutesFixture.TestTypedParamsInvalidAre400;
+const
+  // path, then a part of the message
+  INVALID: array[0..7] of array[0..1] of string = (
+    ('typedparams/int/abc', 'Invalid path parameter id: "abc" is not an integer'),
+    ('typedparams/query?n=ten&r=1', 'Invalid query parameter n: "ten" is not an integer'),
+    ('typedparams/query?f=x1&r=1', 'Invalid query parameter f: "x1" is not a number'),
+    ('typedparams/query?b=maybe&r=1', 'Invalid query parameter b: "maybe" is not a Boolean'),
+    ('typedparams/query?e=purple&r=1', 'Invalid query parameter e: "purple" is not one of the values of TTypedColor'),
+    ('typedparams/query?e=7&r=1', 'is not one of the values of TTypedColor'),
+    ('typedparams/query?d=yesterday&r=1', 'Invalid query parameter d: "yesterday" is not a date'),
+    ('typedparams/query?r=', 'Required query parameter empty: r')
+  );
+begin
+  Assert.IsTrue(FApplication.AddResource('Tests.Routes.TTypedParamsResource'));
+  for var LIndex := Low(INVALID) to High(INVALID) do
+  begin
+    var LMock := Send('GET', INVALID[LIndex][0]);
+    Assert.AreEqual(400, LMock.Response.StatusCode, INVALID[LIndex][0] + ': ' + LMock.Response.Content);
+    Assert.Contains(LMock.Response.Content, INVALID[LIndex][1], INVALID[LIndex][0]);
+  end;
+  var LMock := Send('GET', 'typedparams/header', '', Header('X-N', '1x'));
+  Assert.AreEqual(400, LMock.Response.StatusCode);
+  Assert.Contains(LMock.Response.Content, 'Invalid header parameter X-N');
+  LMock := Send('GET', 'typedparams/cookie', '', Header('Cookie', 'c=one'));
+  Assert.AreEqual(400, LMock.Response.StatusCode);
+  Assert.Contains(LMock.Response.Content, 'Invalid cookie parameter c');
+end;
+
+procedure TMARSRoutesFixture.TestTypedRouteParamInvalidIs400;
+begin
+  // without a constraint: the value reaches the conversion
+  MARSRoutesOf(FApplication).Get<string>('typedroute/{id}',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := C.Path<Int64>('id').ToString;
+    end
+  ).Produces(TMediaType.TEXT_PLAIN);
+
+  Assert.AreEqual('42', Send('GET', 'typedroute/42').Response.Content);
+  var LMock := Send('GET', 'typedroute/abc');
+  Assert.AreEqual(400, LMock.Response.StatusCode);
+  Assert.Contains(LMock.Response.Content, '"abc" is not an integer');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TMARSRoutesFixture);
   MARSRegister(TSkipMiddlewareResource);
   MARSRegister(TInheritedPathResource);
   MARSRegister(TOwnPathResource);
+  MARSRegister(TTypedParamsResource);
   MARSRegister(TNegotiationResource);
 
   MARSRoutes('Tests.Routes.Middleware', 'mw',

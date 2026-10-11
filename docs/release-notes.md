@@ -10,6 +10,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 **Changed**
 - `/metadata` declares `[Produces(application/json)]`, its only format ([#233](https://github.com/andrea-magni/MARS/issues/233)).
+- Path, query, header, cookie and form parameters: a value that is not of the type of the parameter (`abc` for an `Int64`, `maybe` for a `Boolean`) is a `400 Bad Request` naming the parameter, instead of becoming 0, `False` or the first value; enumerations are converted by name; an empty value of a `[Required]` parameter is a `400` too. [Parameters from the text of the request](/server/error-handling#parameters-from-the-text-of-the-request) ([#249](https://github.com/andrea-magni/MARS/issues/249))
 - Methods without `[Produces]`, requested with no `Accept` or `*/*`: strings and numbers are `text/plain; charset=utf-8` and arrays JSON on every platform, whether `MARS.YAML.ReadersAndWriters` is registered or not; the response Content-Type is never `*/*`. [Without Produces](/server/content-negotiation#without-produces) ([#232](https://github.com/andrea-magni/MARS/issues/232))
 
 **Fixed**

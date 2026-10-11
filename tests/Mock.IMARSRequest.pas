@@ -129,6 +129,11 @@ begin
   for var LIndex := Low(LQueryTokens) to High(LQueryTokens) do
     FQueryParams := FQueryParams + [TMARSQueryParam.Create(LQueryTokens[LIndex].Key, LQueryTokens[LIndex].Value)];
 
+  // the Cookie header (name=value; name=value) into cookies
+  for var LPair in GetHeaderParamValue('Cookie').Split([';'], TStringSplitOptions.ExcludeEmpty) do
+    if LPair.Contains('=') then
+      FCookies := FCookies + [TMARSCookie.Create(LPair.Split(['='], 2)[0].Trim, LPair.Split(['='], 2)[1].Trim)];
+
   // parse a form-urlencoded body into form params
   if (ABody <> '') and ContainsText(GetHeaderParamValue('Content-Type'), 'application/x-www-form-urlencoded') then
   begin

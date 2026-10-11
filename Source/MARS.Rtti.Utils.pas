@@ -155,6 +155,9 @@ type
   procedure SetArrayLength(var AArray: TValue; const AArrayType: TRttiType; const ANewSize: PNativeInt);
 
   function StringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
+  // as StringToTValue, but a value that is not of the type raises EConvertError (i.e. 'abc' for an
+  // integer, 'maybe' for a Boolean) instead of becoming its default; enumerations by name
+  function StrictStringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
 
   function IsDictionaryOfStringAndT(const ATypeName: string): Boolean;
   function IsObjectListOfT(const ATypeName: string): Boolean; overload;
@@ -321,6 +324,85 @@ begin
       else
         Result := AString;
     end;
+  end;
+end;
+
+function StrictStringToTValue(const AString: string; const ADesiredType: TRttiType): TValue;
+
+  procedure Invalid(const AExpected: string);
+  begin
+    raise EConvertError.CreateFmt('"%s" is not %s', [AString, AExpected]);
+  end;
+
+var
+  LInteger: Integer;
+  LInt64: Int64;
+  LFloat: Double;
+  LBoolean: Boolean;
+  LDate: TDateTime;
+  LOrdinal: Integer;
+begin
+  // empty: the default of the type, as StringToTValue
+  if AString = '' then
+    Exit(StringToTValue(AString, ADesiredType));
+
+  if ADesiredType.IsObjectOfType<TJSONValue> then
+  begin
+    Result := TJSONObject.ParseJSONValue(AString);
+    if Result.AsObject = nil then
+      Invalid('JSON');
+    Exit;
+  end;
+
+  case ADesiredType.TypeKind of
+    tkInteger:
+      if TryStrToInt(AString, LInteger) then
+        Result := TValue.FromOrdinal(ADesiredType.Handle, LInteger)
+      else
+        Invalid('an integer');
+    tkInt64:
+      if TryStrToInt64(AString, LInt64) then
+        Result := LInt64
+      else
+        Invalid('an integer');
+    tkEnumeration:
+      if SameText(ADesiredType.Name, 'Boolean') then
+      begin
+        if TryStrToBool(AString, LBoolean) then
+          Result := LBoolean
+        else
+          Invalid('a Boolean');
+      end
+      else
+      begin
+        // the name of a value (case-insensitive), or its ordinal
+        LOrdinal := GetEnumValue(ADesiredType.Handle, AString);
+        if (LOrdinal < 0) and TryStrToInt(AString, LInteger)
+          and (LInteger >= ADesiredType.AsOrdinal.MinValue) and (LInteger <= ADesiredType.AsOrdinal.MaxValue)
+        then
+          LOrdinal := LInteger;
+        if LOrdinal < 0 then
+          Invalid('one of the values of ' + ADesiredType.Name);
+        Result := TValue.FromOrdinal(ADesiredType.Handle, LOrdinal);
+      end;
+    tkFloat:
+      if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1 then
+      begin
+        if not TryISO8601ToDate(AString, LDate) and not TryStrToDateTime(AString, LDate) then
+          Invalid('a date');
+        if ADesiredType.Handle = TypeInfo(TDate) then
+          Result := TValue.From<TDate>(LDate)
+        else if ADesiredType.Handle = TypeInfo(TTime) then
+          Result := TValue.From<TTime>(LDate)
+        else
+          Result := TValue.From<TDateTime>(LDate);
+      end
+      else if TryStrToFloat(AString, LFloat, TFormatSettings.Invariant) or TryStrToFloat(AString, LFloat) then
+        Result := LFloat
+      else
+        Invalid('a number');
+  else
+    Result := StringToTValue(AString, ADesiredType);
   end;
 end;
 

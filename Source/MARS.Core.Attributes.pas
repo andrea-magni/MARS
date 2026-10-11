@@ -179,6 +179,9 @@ type
     function GetSwaggerKind: string; virtual;
     function GetActualName(const ADestination: TRttiObject): string; virtual;
     procedure CheckRequiredAttribute(const ADestination: TRttiObject); virtual;
+    // the text of the request as the type of ADestination: a value that is not of that type
+    // (i.e. 'abc' for an integer) is a client error, 400
+    function ConvertValue(const AValue: string; const ADestination: TRttiObject): TValue; virtual;
   public
     function IsRequired(const ADestination: TRttiObject): Boolean; virtual;
 
@@ -465,7 +468,7 @@ begin
   begin
     case ADestination.GetRttiType.TypeKind of
       tkInt64, tkInteger, tkFloat, tkChar
-      , tkLString, tkWString, tkString: StringToTValue(AActivation.Request.Content, ADestination.GetRttiType);
+      , tkLString, tkWString, tkString: Result := ConvertValue(AActivation.Request.Content, ADestination);
 
       tkUString: Result := TEncoding.UTF8.GetString(AActivation.Request.RawContent);
 
@@ -590,6 +593,31 @@ begin
     Result := TRttiNamedObject(ADestination).Name;
 end;
 
+function RequestParamAttribute.ConvertValue(const AValue: string;
+  const ADestination: TRttiObject): TValue;
+var
+  LKind: string;
+begin
+  LKind := GetSwaggerKind;
+  if LKind = '' then
+    LKind := Kind;
+
+  // empty: the default of the type; when required, a client error (an empty string is a string)
+  if (AValue = '') and IsRequired(ADestination)
+    and not (ADestination.GetRttiType.TypeKind in [tkString, tkLString, tkWString, tkUString, tkChar, tkWChar])
+  then
+    raise ERequiredException.CreateFmt('Required %s parameter empty: %s'
+      , [LKind, GetActualName(ADestination)], 400);
+
+  try
+    Result := StrictStringToTValue(AValue, ADestination.GetRttiType);
+  except
+    on E: EConvertError do
+      raise EMARSHttpException.CreateFmt('Invalid %s parameter %s: %s'
+        , [LKind, GetActualName(ADestination), E.Message], 400);
+  end;
+end;
+
 function RequestParamAttribute.GetKind: string;
 begin
   Result := ClassName.Replace('Attribute', '');
@@ -639,10 +667,7 @@ begin
       end
     else // 2 - fallback (raw)
     begin
-      Result := StringToTValue(
-          AActivation.Request.GetQueryParamValue(LIndex)
-        , ADestination.GetRttiType
-      );
+      Result := ConvertValue(AActivation.Request.GetQueryParamValue(LIndex), ADestination);
     end;
   end;
 end;
@@ -689,7 +714,7 @@ begin
         FreeAndNil(LMediaType);
       end
     else // 2 - fallback (raw)
-      Result := StringToTValue(AActivation.Request.GetFormParamValue(LParamIndex), ADestination.GetRttiType);
+      Result := ConvertValue(AActivation.Request.GetFormParamValue(LParamIndex), ADestination);
   end;
 end;
 
@@ -728,7 +753,7 @@ function HeaderParamAttribute.GetValue(const ADestination: TRttiObject;
       end
     else // 2 - fallback (raw)
     begin
-      Result := StringToTValue(LValue, TheDestination.GetRttiType);
+      Result := ConvertValue(LValue, TheDestination);
     end;
   end;
 
@@ -776,11 +801,12 @@ var
 begin
   LIndex := AActivation.Request.GetCookieParamIndex(GetActualName(ADestination));
   if LIndex = -1 then
+  begin
     CheckRequiredAttribute(ADestination);
-  Result := StringToTValue(
-      AActivation.Request.GetCookieParamValue(LIndex)
-    , ADestination.GetRttiType
-  );
+    // not there: the default of the type
+    Exit(StringToTValue('', ADestination.GetRttiType));
+  end;
+  Result := ConvertValue(AActivation.Request.GetCookieParamValue(LIndex), ADestination);
 end;
 
 { PathParamAttribute }
@@ -824,7 +850,7 @@ begin
       end;
     end;
 
-    Result := StringToTValue(LValue, ADestination.GetRttiType);
+    Result := ConvertValue(LValue, ADestination);
   end
   else
     CheckRequiredAttribute(ADestination);

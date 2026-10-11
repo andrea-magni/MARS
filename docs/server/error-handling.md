@@ -149,6 +149,28 @@ earlier versions:
 Follow the same convention in your own readers: raise `EMARSHttpException` with `400` for input the
 client got wrong, and let genuinely unexpected failures surface as `500`.
 
+### Parameters from the text of the request
+
+`[PathParam]`, `[QueryParam]`, `[HeaderParam]`, `[CookieParam]` and `[FormParam]` (and a `[BodyParam]`
+of a simple type) convert their text to the type of the parameter. A value that is not of that type
+is a `400 Bad Request` naming the parameter, not a default:
+
+| Type | Accepted | Not accepted (`400`) |
+| --- | --- | --- |
+| `Integer`, `Int64` | `42`, `-7` | `abc`, `1.5`, a number out of range |
+| `Double`, `Currency` | `1.5` (or the decimal separator of the server) | `x1` |
+| `Boolean` | `true`, `false`, `1`, `0` (any case) | `maybe` |
+| enumerations | the name of a value (any case), or its ordinal | other names, ordinals out of range |
+| `TDateTime`, `TDate`, `TTime` | ISO 8601 (`2026-10-11`, `2026-10-11T09:30:00Z`), or the format of the server | `yesterday` |
+
+```
+GET /rest/default/pets/abc  ->  400  Invalid path parameter id: "abc" is not an integer
+```
+
+A parameter that is missing, or empty (`?limit=`), gets the default of its type (0, `False`, the first
+value of an enumeration); with `[Required]` it is a `400` instead (an empty string is still a string).
+Routes (`C.Path<Int64>('id')` and the like) behave the same way.
+
 ## Centralized error handling
 
 Register a global handler during ignition to map domain exceptions to HTTP responses in one place:

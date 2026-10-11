@@ -379,8 +379,7 @@ end;
 procedure TGenServerTest.ServerAnswers;
 const
   // method, path, body, roles of the token (- for no token), expected status, expected JSON (or empty)
-  // (GET pets/abc, an Int64 path parameter, answers 200 with id 0: a MARS issue, #249)
-  REQUESTS: array[0..9] of array[0..5] of string = (
+  REQUESTS: array[0..10] of array[0..5] of string = (
     ('GET', 'pets', '', '-', '401', ''),
     ('GET', 'pets', '', '', '200', '[{"name":"Rex","status":"available","category":{"id":0},"id":1},{"name":"Tom","status":"available","category":{"id":0},"id":2}]'),
     ('GET', 'pets/7', '', '-', '200', '{"name":"Pet 7","status":"available","category":{"id":0},"id":7}'),
@@ -389,6 +388,8 @@ const
     ('DELETE', 'pets/7', '', 'admin', '204', ''),
     ('POST', 'store/orders', '{"id":1,"quantity":2}', '', '501', ''),
     ('GET', 'store/orders', '', '', '404', ''),
+    // an Int64 path parameter that is not a number (#249)
+    ('GET', 'pets/abc', '', '-', '400', ''),
     ('PUT', 'pets', '', '', '404', ''),
     ('GET', 'nothing', '', '', '404', '')
   );
