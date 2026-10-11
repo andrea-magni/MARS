@@ -1,7 +1,8 @@
 unit Tests.MARSgen.Compile;
 
-// The generated units compile, and MARS reads JSON into their records and writes the same JSON
-// back. The units of the corpus are compiled with dcc32 into a probe program, then run.
+// The generated units compile, and MARS reads JSON into their records (or classes) and writes the
+// same JSON back. The units of the corpus are compiled with dcc32 into a probe program, then run;
+// with classes the probe also checks that reading and freeing them leaks nothing.
 //
 // Needs Delphi (dcc32.exe, found through the BDS environment variable or the registry) and the
 // MARS sources (found upwards from the test executable); without them the test is skipped.
@@ -17,6 +18,7 @@ type
   TGenCompileTest = class
   private
     FFolder: string;
+    procedure CompileAndRoundTrip(const AClasses: Boolean);
   public
     [Setup]
     procedure Setup;
@@ -25,6 +27,9 @@ type
 
     [Test]
     procedure GeneratedTypesCompileAndRoundTrip;
+    // #244
+    [Test]
+    procedure GeneratedClassesCompileAndRoundTrip;
   end;
 
 implementation
@@ -52,7 +57,7 @@ const
     (TypeName: 'Model.PetStore.TError';
      JSON: '{"code":404,"message":"Not found"}'),
     (TypeName: 'Model.Features.TTreeNode';
-     JSON: '{"name":"root","parent":{"name":"up"},"children":[{"name":"leaf","weight":1,"kind":"node"}],'
+     JSON: '{"name":"root","parent":{"name":"up","weight":0.5,"kind":"node"},"children":[{"name":"leaf","weight":1,"kind":"node"}],'
        + '"tags":["a","b"],"weight":2.5,"kind":"node","anything":[1,"x"],"attributes":{"w":1}}'),
     (TypeName: 'Model.Features.TCircle';
      JSON: '{"shapeType":"circle","radius":1.5}'),
@@ -124,6 +129,16 @@ begin
 end;
 
 procedure TGenCompileTest.GeneratedTypesCompileAndRoundTrip;
+begin
+  CompileAndRoundTrip(False);
+end;
+
+procedure TGenCompileTest.GeneratedClassesCompileAndRoundTrip;
+begin
+  CompileAndRoundTrip(True);
+end;
+
+procedure TGenCompileTest.CompileAndRoundTrip(const AClasses: Boolean);
 var
   LCompiler, LSources, LOutput, LProgram, LDifference: string;
   LUnits: TArray<string>;
@@ -150,6 +165,7 @@ begin
   begin
     LTypeOptions := TGenTypeOptions.Default;
     LTypeOptions.UnitName := CORPUS[LCorpus][1];
+    LTypeOptions.Classes := AClasses;
     LApi := TGenOpenAPIReader.Load(CorpusFile(CORPUS[LCorpus][0]));
     try
       LFile := TGenTypesEmitter.WriteUnit(LApi, LTypeOptions, FFolder);
@@ -170,36 +186,82 @@ begin
         LFiles := LFiles + [CorpusFile('samples\' + SAMPLES[LSample][LIndex])];
     LApi := TGenJSONInference.FromFiles(LFiles, LInferenceOptions);
     try
-      LFile := TGenTypesEmitter.WriteUnit(LApi, TGenTypeOptions.Default, FFolder);
+      LTypeOptions := TGenTypeOptions.Default;
+      LTypeOptions.Classes := AClasses;
+      LFile := TGenTypesEmitter.WriteUnit(LApi, LTypeOptions, FFolder);
       LUnits := LUnits + [TPath.GetFileNameWithoutExtension(LFile)];
     finally
       LApi.Free;
     end;
   end;
 
-  // the probe: each instance read into its record and written back
+  // the probe: each instance read into its record (or object) and written back
   LLines := TStringList.Create;
   try
     LLines.Add('program Probe;');
     LLines.Add('{$APPTYPE CONSOLE}');
     LLines.Add('uses System.SysUtils, System.JSON, MARS.Core.JSON, ' + string.Join(', ', LUnits) + ';');
-    LLines.Add('type TProbe = class class function RoundTrip<T: record>(const AJSON: string): string; end;');
-    LLines.Add('class function TProbe.RoundTrip<T>(const AJSON: string): string;');
-    LLines.Add('var LIn, LOut: TJSONObject; LRecord: T;');
+    if AClasses then
+    begin
+      LLines.Add('type TProbe = class class function RoundTrip<T: class, constructor>(const AJSON: string): string; end;');
+      LLines.Add('class function TProbe.RoundTrip<T>(const AJSON: string): string;');
+      LLines.Add('var LIn, LOut: TJSONObject; LObject: T;');
+      LLines.Add('begin');
+      LLines.Add('  LIn := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;');
+      LLines.Add('  try');
+      LLines.Add('    LObject := TJSONObject.JSONToObject<T>(LIn);');
+      LLines.Add('    try');
+      LLines.Add('      LOut := TJSONObject.ObjectToJSON(LObject);');
+      LLines.Add('      try Result := LOut.ToJSON; finally LOut.Free; end;');
+      LLines.Add('    finally');
+      LLines.Add('      LObject.Free;');
+      LLines.Add('    end;');
+      LLines.Add('  finally');
+      LLines.Add('    LIn.Free;');
+      LLines.Add('  end;');
+      LLines.Add('end;');
+    end
+    else
+    begin
+      LLines.Add('type TProbe = class class function RoundTrip<T: record>(const AJSON: string): string; end;');
+      LLines.Add('class function TProbe.RoundTrip<T>(const AJSON: string): string;');
+      LLines.Add('var LIn, LOut: TJSONObject; LRecord: T;');
+      LLines.Add('begin');
+      LLines.Add('  LIn := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;');
+      LLines.Add('  try');
+      LLines.Add('    LRecord := LIn.ToRecord<T>;');
+      LLines.Add('    LOut := TJSONObject.RecordToJSON<T>(LRecord);');
+      LLines.Add('    try Result := LOut.ToJSON; finally LOut.Free; end;');
+      LLines.Add('  finally');
+      LLines.Add('    LIn.Free;');
+      LLines.Add('  end;');
+      LLines.Add('end;');
+    end;
+    // the memory in use (FastMM): the same after reading and freeing everything again
+    LLines.Add('function Allocated: Int64;');
+    LLines.Add('var LState: TMemoryManagerState;');
     LLines.Add('begin');
-    LLines.Add('  LIn := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;');
-    LLines.Add('  try');
-    LLines.Add('    LRecord := LIn.ToRecord<T>;');
-    LLines.Add('    LOut := TJSONObject.RecordToJSON<T>(LRecord);');
-    LLines.Add('    try Result := LOut.ToJSON; finally LOut.Free; end;');
-    LLines.Add('  finally');
-    LLines.Add('    LIn.Free;');
-    LLines.Add('  end;');
+    LLines.Add('  GetMemoryManagerState(LState);');
+    LLines.Add('  Result := LState.TotalAllocatedMediumBlockSize + LState.TotalAllocatedLargeBlockSize;');
+    LLines.Add('  for var LBlock in LState.SmallBlockTypeStates do');
+    LLines.Add('    Inc(Result, Int64(LBlock.AllocatedBlockCount) * LBlock.UseableBlockSize);');
     LLines.Add('end;');
+    LLines.Add('procedure All(const AWrite: Boolean);');
+    LLines.Add('var LJSON: string;');
     LLines.Add('begin');
     for var LInstance in INSTANCES do
-      LLines.Add('  Writeln(''' + LInstance.TypeName + '|'' + TProbe.RoundTrip<' + LInstance.TypeName + '>('''
-        + LInstance.JSON.Replace('''', '''''') + '''));');
+    begin
+      LLines.Add('  LJSON := TProbe.RoundTrip<' + LInstance.TypeName + '>(''' + LInstance.JSON.Replace('''', '''''') + ''');');
+      LLines.Add('  if AWrite then Writeln(''' + LInstance.TypeName + '|'' + LJSON);');
+    end;
+    LLines.Add('end;');
+    LLines.Add('var LBefore: Int64;');
+    LLines.Add('begin');
+    LLines.Add('  All(True);');
+    LLines.Add('  LBefore := Allocated;');
+    LLines.Add('  All(False);');
+    LLines.Add('  All(False);');
+    LLines.Add('  Writeln(''LEAK|'', Allocated - LBefore);');
     LLines.Add('end.');
     LProgram := TPath.Combine(FFolder, 'Probe.dpr');
     LLines.SaveToFile(LProgram, TEncoding.UTF8);
@@ -218,7 +280,9 @@ begin
   LLines := TStringList.Create;
   try
     LLines.Text := LOutput;
-    Assert.AreEqual(Length(INSTANCES), LLines.Count, LOutput);
+    Assert.AreEqual(Length(INSTANCES) + 1, LLines.Count, LOutput);
+    // nothing left allocated by two more rounds (the first one fills the caches of RTTI)
+    Assert.AreEqual('LEAK|0', LLines[LLines.Count - 1], 'memory not freed');
     for var LIndex := 0 to High(INSTANCES) do
     begin
       LParts := LLines[LIndex].Split(['|'], 2);

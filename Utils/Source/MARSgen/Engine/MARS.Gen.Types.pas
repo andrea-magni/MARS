@@ -5,8 +5,13 @@
 *)
 unit MARS.Gen.Types;
 
-// Maps the schemas of the model (MARS.Gen.Model) to Delphi types: records and enumerations,
-// declared in dependency order, as MARS serializes them (MARS.Core.JSON).
+// Maps the schemas of the model (MARS.Gen.Model) to Delphi types: records (or classes, an option)
+// and enumerations, declared in dependency order, as MARS serializes them (MARS.Core.JSON).
+//
+// Classes: allOf with a single base of the components is inheritance (TPet = class(TNewPet)), the
+// other compositions are merged; classes are declared forward, so they reference each other
+// freely (no cycles to break); what has no Delphi type is a TJSONValue (an owned copy); a
+// destructor frees the objects of the fields and of their arrays.
 //
 // - string, integer (int32/int64), number, boolean, date-time/date/time, arrays (TArray<T>);
 // - objects with properties and allOf: records ([JSONName] where the JSON name differs);
@@ -37,6 +42,8 @@ type
     JSONNameAlways: Boolean;
     // field names as in JSON when they are valid identifiers (False: PascalCase)
     FieldNamesAsInJSON: Boolean;
+    // classes instead of records
+    Classes: Boolean;
     class function Default: TGenTypeOptions; static;
   end;
 
@@ -81,6 +88,7 @@ type
     FFields: TObjectList<TGenDelphiField>;
     FEnumValues: TArray<TGenEnumValue>;
     FComments: TArray<string>;
+    FBaseType: TGenDelphiType;
   public
     constructor Create;
     destructor Destroy; override;
@@ -91,6 +99,8 @@ type
     property Fields: TObjectList<TGenDelphiField> read FFields;
     property EnumValues: TArray<TGenEnumValue> read FEnumValues write FEnumValues;
     property Comments: TArray<string> read FComments write FComments;
+    // classes: the class it inherits from (allOf with a single base), nil for none
+    property BaseType: TGenDelphiType read FBaseType write FBaseType;
   end;
 
   TGenTypeMapper = class
@@ -103,7 +113,10 @@ type
     FRawSchemas: TDictionary<TGenSchema, string>;
     FNames: TGenNameScope;
     FUsesRawJSON: Boolean;
+    FUsesJSONValue: Boolean;
     FUsesJSONName: Boolean;
+    // records (classes) being filled: not a base yet
+    FFilling: TList<TGenDelphiType>;
     FOperationTypes: TDictionary<string, string>;
     FComponentNames: TDictionary<TGenSchema, string>;
   protected
@@ -114,6 +127,8 @@ type
     function EnumCanBeType(const ASchema: TGenSchema): Boolean;
     // the only schema of a wrapper (allOf: [X], anyOf: [X, null]), nil when it is not one
     function SingleAlternative(const ASchema: TGenSchema): TGenSchema;
+    // classes: the type of the single base of allOf, nil for none
+    function BaseOf(const AType: TGenDelphiType): TGenDelphiType;
     function NewType(const ASchema: TGenSchema; const AKind: TGenDelphiTypeKind;
       const AName: string): TGenDelphiType;
     procedure FillRecord(const AType: TGenDelphiType);
@@ -148,11 +163,21 @@ type
     // records and enumerations in declaration order
     property Types: TList<TGenDelphiType> read FOrdered;
     property UsesRawJSON: Boolean read FUsesRawJSON;
+    // classes: TJSONValue fields (System.JSON)
+    property UsesJSONValue: Boolean read FUsesJSONValue;
     property UsesJSONName: Boolean read FUsesJSONName;
   end;
 
 const
   RAW_JSON_TYPE = 'TJSONRawString';
+  // classes: the JSON value itself, an owned copy
+  JSON_VALUE_TYPE = 'TJSONValue';
+  // classes: the members of TObject, and the destructor, are not field names
+  OBJECT_MEMBERS: array[0..24] of string = ('Create', 'Destroy', 'Free', 'ClassName', 'ClassType',
+    'ClassInfo', 'ClassParent', 'Equals', 'GetHashCode', 'ToString', 'InheritsFrom', 'FieldAddress',
+    'Dispatch', 'DefaultHandler', 'NewInstance', 'FreeInstance', 'AfterConstruction',
+    'BeforeDestruction', 'InitInstance', 'CleanupInstance', 'MethodAddress', 'MethodName',
+    'InstanceSize', 'UnitName', 'DisposeOf');
 
 implementation
 
@@ -173,6 +198,7 @@ begin
   Result.EnumsAsTypes := True;
   Result.JSONNameAlways := False;
   Result.FieldNamesAsInJSON := False;
+  Result.Classes := False;
 end;
 
 { TGenDelphiField }
@@ -219,15 +245,17 @@ begin
   FOperationTypes := TDictionary<string, string>.Create;
   FComponentNames := TDictionary<TGenSchema, string>.Create;
   FNames := TGenNameScope.Create;
+  FFilling := TList<TGenDelphiType>.Create;
   // names of the units used by the generated unit
   for var LName in ['TJSONRawString', 'JSONNameAttribute', 'TDateTime', 'TDate', 'TTime',
-    'TArray', 'TObject', 'TValue']
+    'TArray', 'TObject', 'TValue', 'TJSONValue', 'TJSONObject', 'TJSONArray']
   do
     FNames.Reserve(LName);
 end;
 
 destructor TGenTypeMapper.Destroy;
 begin
+  FFilling.Free;
   FNames.Free;
   FComponentNames.Free;
   FOperationTypes.Free;
@@ -259,13 +287,21 @@ end;
 
 function TGenTypeMapper.RawJSON(const ASchema: TGenSchema; const AReason: string): string;
 begin
-  FUsesRawJSON := True;
-  Result := RAW_JSON_TYPE;
+  if FOptions.Classes then
+  begin
+    FUsesJSONValue := True;
+    Result := JSON_VALUE_TYPE;
+  end
+  else
+  begin
+    FUsesRawJSON := True;
+    Result := RAW_JSON_TYPE;
+  end;
   // one warning per schema
   if Assigned(ASchema) and not FRawSchemas.ContainsKey(ASchema) then
   begin
     FRawSchemas.Add(ASchema, AReason);
-    FApi.AddDiagnostic(TGenSeverity.Info, ASchema.Pointer, AReason + ': mapped to ' + RAW_JSON_TYPE);
+    FApi.AddDiagnostic(TGenSeverity.Info, ASchema.Pointer, AReason + ': mapped to ' + Result);
   end;
 end;
 
@@ -425,27 +461,80 @@ begin
   if (Length(LSchema.Enum) > 0) and not FTypeBySchema.ContainsKey(LSchema) then
     LFlags := LFlags + ['values: ' + string.Join(', ', LSchema.Enum)];
   if FRawSchemas.TryGetValue(LSchema, LReason) then
-    LFlags := LFlags + ['JSON as text: ' + LReason];
+    LFlags := LFlags + [IfThen(FOptions.Classes, 'JSON value: ', 'JSON as text: ') + LReason];
   if Length(LFlags) > 0 then
     Result := Result + [string.Join('; ', LFlags)];
 end;
 
+function TGenTypeMapper.BaseOf(const AType: TGenDelphiType): TGenDelphiType;
+var
+  LBase: TGenSchema;
+  LViaArray: Boolean;
+begin
+  Result := nil;
+  // one part of allOf is a component that maps to a class: the base; the others are merged
+  LBase := nil;
+  for var LPart in AType.Schema.AllOf do
+    if FComponentNames.ContainsKey(LPart) and (LPart <> AType.Schema) and IsRecordSchema(LPart) then
+    begin
+      if Assigned(LBase) then
+        Exit(nil); // more bases: merged
+      LBase := LPart;
+    end;
+  if not Assigned(LBase) then
+    Exit;
+  TypeOf(LBase, FComponentNames[LBase], Result, LViaArray);
+  // a base still being filled (allOf in a cycle): merged
+  if Assigned(Result) and ((Result.Kind <> TGenDelphiTypeKind.Record) or FFilling.Contains(Result)) then
+    Result := nil;
+end;
+
 procedure TGenTypeMapper.FillRecord(const AType: TGenDelphiType);
 var
-  LProperties: TList<TGenProperty>;
+  LProperties, LBaseProperties: TList<TGenProperty>;
   LRequired: TList<string>;
   LVisited: TList<TGenSchema>;
   LScope: TGenNameScope;
   LField: TGenDelphiField;
-  LTarget: TGenDelphiType;
+  LTarget, LAncestor: TGenDelphiType;
   LViaArray: Boolean;
 begin
   LProperties := TList<TGenProperty>.Create;
+  LBaseProperties := TList<TGenProperty>.Create;
   LRequired := TList<string>.Create;
   LVisited := TList<TGenSchema>.Create;
   LScope := TGenNameScope.Create;
+  FFilling.Add(AType);
   try
+    if FOptions.Classes then
+    begin
+      for var LMember in OBJECT_MEMBERS do
+        LScope.Reserve(LMember);
+      AType.BaseType := BaseOf(AType);
+    end;
+
     CollectProperties(AType.Schema, LProperties, LRequired, LVisited);
+
+    // the properties of the base are inherited: the names of its fields taken
+    if Assigned(AType.BaseType) then
+    begin
+      LVisited.Clear;
+      CollectProperties(AType.BaseType.Schema, LBaseProperties, LRequired, LVisited);
+      for var LIndex := LProperties.Count - 1 downto 0 do
+        for var LBaseProperty in LBaseProperties do
+          if LBaseProperty.Name = LProperties[LIndex].Name then
+          begin
+            LProperties.Delete(LIndex);
+            Break;
+          end;
+      LAncestor := AType.BaseType;
+      while Assigned(LAncestor) do
+      begin
+        for var LBaseField in LAncestor.Fields do
+          LScope.Reserve(LBaseField.Name.TrimLeft(['&']));
+        LAncestor := LAncestor.BaseType;
+      end;
+    end;
 
     if AType.Schema.AdditionalProperties <> nil then
       FApi.AddDiagnostic(TGenSeverity.Info, AType.Schema.Pointer
@@ -467,9 +556,11 @@ begin
         FUsesJSONName := True;
     end;
   finally
+    FFilling.Remove(AType);
     LScope.Free;
     LVisited.Free;
     LRequired.Free;
+    LBaseProperties.Free;
     LProperties.Free;
   end;
 end;
@@ -695,6 +786,15 @@ var
   LCycleWith: string;
 begin
   AState.AddOrSetValue(AType, VISITING);
+  // classes: the base before (inheritance); the fields refer to classes declared forward
+  if FOptions.Classes then
+  begin
+    if Assigned(AType.BaseType) and not AState.ContainsKey(AType.BaseType) then
+      Visit(AType.BaseType, AState);
+    AState.AddOrSetValue(AType, DONE);
+    FOrdered.Add(AType);
+    Exit;
+  end;
   for var LField in AType.Fields do
   begin
     if not Assigned(LField.Target) then

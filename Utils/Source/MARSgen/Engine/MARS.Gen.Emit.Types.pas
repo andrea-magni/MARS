@@ -23,6 +23,11 @@ type
     procedure EmitHeader;
     procedure EmitEnum(const AType: TGenDelphiType);
     procedure EmitRecord(const AType: TGenDelphiType);
+    // classes
+    function IsOwned(const AField: TGenDelphiField; out ADepth: Integer): Boolean;
+    function OwnsObjects(const AType: TGenDelphiType): Boolean;
+    procedure EmitClass(const AType: TGenDelphiType);
+    procedure EmitDestructor(const AType: TGenDelphiType);
   public
     constructor Create(const AMapper: TGenTypeMapper);
     destructor Destroy; override;
@@ -81,6 +86,7 @@ procedure TGenTypesEmitter.EmitHeader;
 var
   LApi: TGenApi;
   LSource: string;
+  LUnits: TArray<string>;
 begin
   LApi := FMapper.Api;
   LSource := '"' + LApi.Title + '"';
@@ -99,10 +105,15 @@ begin
   Add;
   Add('{$SCOPEDENUMS ON}');
   Add;
+  LUnits := [];
+  if FMapper.UsesJSONValue then
+    LUnits := LUnits + ['System.JSON'];
   if FMapper.UsesRawJSON or FMapper.UsesJSONName then
+    LUnits := LUnits + ['MARS.Core.JSON'];
+  if Length(LUnits) > 0 then
   begin
     Add('uses');
-    Add(INDENT + 'MARS.Core.JSON;');
+    Add(INDENT + string.Join(', ', LUnits) + ';');
     Add;
   end;
 end;
@@ -164,19 +175,128 @@ begin
   Add;
 end;
 
+// a field the class frees: an object (a class of the unit, a TJSONValue), or an array of them;
+// ADepth: the levels of TArray<>
+function TGenTypesEmitter.IsOwned(const AField: TGenDelphiField; out ADepth: Integer): Boolean;
+var
+  LTypeName: string;
+begin
+  ADepth := 0;
+  LTypeName := AField.TypeName;
+  while LTypeName.StartsWith('TArray<') and LTypeName.EndsWith('>') do
+  begin
+    Inc(ADepth);
+    LTypeName := LTypeName.Substring(7, Length(LTypeName) - 8);
+  end;
+  Result := LTypeName = JSON_VALUE_TYPE;
+  if not Result then
+    for var LType in FMapper.Types do
+      if (LType.Kind = TGenDelphiTypeKind.Record) and (LType.Name = LTypeName) then
+        Exit(True);
+end;
+
+function TGenTypesEmitter.OwnsObjects(const AType: TGenDelphiType): Boolean;
+var
+  LDepth: Integer;
+begin
+  for var LField in AType.Fields do
+    if IsOwned(LField, LDepth) then
+      Exit(True);
+  Result := False;
+end;
+
+procedure TGenTypesEmitter.EmitClass(const AType: TGenDelphiType);
+var
+  LLine: string;
+begin
+  AddComments(AType.Comments, INDENT);
+  if Assigned(AType.BaseType) then
+    Add(INDENT + AType.Name + ' = class(' + AType.BaseType.Name + ')')
+  else
+    Add(INDENT + AType.Name + ' = class');
+  Add(INDENT + 'public');
+  for var LField in AType.Fields do
+  begin
+    AddComments(LField.Comments, INDENT + INDENT);
+    LLine := INDENT + INDENT;
+    if LField.NeedsJSONName or FMapper.Options.JSONNameAlways then
+      LLine := LLine + '[JSONName(''' + LField.JSONName.Replace('''', '''''') + ''')] ';
+    Add(LLine + LField.Name + ': ' + LField.TypeName + ';');
+  end;
+  if OwnsObjects(AType) then
+  begin
+    Add(INDENT + INDENT + '// frees the objects of the fields (MARS creates them reading JSON)');
+    Add(INDENT + INDENT + 'destructor Destroy; override;');
+  end;
+  Add(INDENT + 'end;');
+  Add;
+end;
+
+procedure TGenTypesEmitter.EmitDestructor(const AType: TGenDelphiType);
+var
+  LDepth: Integer;
+  LItem, LIndent: string;
+begin
+  if not OwnsObjects(AType) then
+    Exit;
+  Add('destructor ' + AType.Name + '.Destroy;');
+  Add('begin');
+  for var LField in AType.Fields do
+    if IsOwned(LField, LDepth) then
+    begin
+      if LDepth = 0 then
+      begin
+        Add(INDENT + LField.Name + '.Free;');
+        Continue;
+      end;
+      // arrays: their elements (arrays of arrays: one loop per level)
+      LItem := LField.Name;
+      LIndent := INDENT;
+      for var LLevel := 1 to LDepth do
+      begin
+        Add(LIndent + 'for var LItem' + LLevel.ToString + ' in ' + LItem + ' do');
+        LItem := 'LItem' + LLevel.ToString;
+        LIndent := LIndent + INDENT;
+      end;
+      Add(LIndent + LItem + '.Free;');
+    end;
+  Add(INDENT + 'inherited;');
+  Add('end;');
+  Add;
+end;
+
 function TGenTypesEmitter.Execute: string;
+var
+  LHasClasses: Boolean;
 begin
   FLines.Clear;
   EmitHeader;
+  LHasClasses := False;
 
   if FMapper.Types.Count > 0 then
   begin
     Add('type');
     for var LType in FMapper.Types do
       if LType.Kind = TGenDelphiTypeKind.Enumeration then
-        EmitEnum(LType)
-      else
-        EmitRecord(LType);
+        EmitEnum(LType);
+    if FMapper.Options.Classes then
+    begin
+      // declared forward: the classes reference each other in any order
+      for var LType in FMapper.Types do
+        if LType.Kind = TGenDelphiTypeKind.Record then
+        begin
+          Add(INDENT + LType.Name + ' = class;');
+          LHasClasses := True;
+        end;
+      if LHasClasses then
+        Add;
+    end;
+    for var LType in FMapper.Types do
+      if LType.Kind = TGenDelphiTypeKind.Record then
+        if FMapper.Options.Classes then
+          EmitClass(LType)
+        else
+          EmitRecord(LType);
   end
   else
   begin
@@ -186,6 +306,10 @@ begin
 
   Add('implementation');
   Add;
+  if LHasClasses then
+    for var LType in FMapper.Types do
+      if LType.Kind = TGenDelphiTypeKind.Record then
+        EmitDestructor(LType);
   Add('end.');
   Result := FLines.Text;
 end;

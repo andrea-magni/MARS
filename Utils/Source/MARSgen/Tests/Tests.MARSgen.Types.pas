@@ -45,6 +45,13 @@ type
     procedure Options;
     [Test]
     procedure EmittedUnit;
+    // #244
+    [Test]
+    procedure Classes;
+    [Test]
+    procedure ClassesInheritance;
+    [Test]
+    procedure EmittedClasses;
   end;
 
 implementation
@@ -313,6 +320,93 @@ begin
   LSource := TGenTypesEmitter.Emit(FMapper);
   Assert.Contains(LSource, '  TLevel = (low, &begin, &end);');
   Assert.Contains(LSource, '    [JSONName(''first name'')] FirstName: string;');
+end;
+
+function ClassOptions: TGenTypeOptions;
+begin
+  Result := TGenTypeOptions.Default;
+  Result.Classes := True;
+end;
+
+procedure TGenTypesTest.Classes;
+begin
+  // classes reference themselves and each other: no cycle to break
+  Map('features-3.1.json', ClassOptions);
+  Assert.AreEqual('TTreeNode', FieldOf('TTreeNode', 'parent').TypeName);
+  Assert.AreEqual('TArray<TTreeNode>', FieldOf('TTreeNode', 'children').TypeName);
+  Assert.IsFalse(HasDiagnostic('a cycle of records'));
+  // what has no Delphi type: a JSON value
+  Assert.AreEqual('TJSONValue', FieldOf('TTreeNode', 'anything').TypeName);
+  Assert.AreEqual('TJSONValue', FieldOf('TTreeNode', 'attributes').TypeName);
+  Assert.Contains(string.Join('|', FieldOf('TTreeNode', 'anything').Comments), 'JSON value: any value');
+  Assert.IsTrue(FMapper.UsesJSONValue);
+  Assert.IsFalse(FMapper.UsesRawJSON);
+
+  Map('mapping-3.0.yaml', ClassOptions);
+  Assert.AreEqual('TB', FieldOf('TA', 'b').TypeName);
+  Assert.AreEqual('TA', FieldOf('TB', 'a').TypeName);
+end;
+
+procedure TGenTypesTest.ClassesInheritance;
+const
+  DOCUMENT = '{"openapi":"3.0.3","info":{"title":"Shapes","version":"1"},"paths":{},"components":{"schemas":{'
+    + '"Base":{"type":"object","properties":{"id":{"type":"integer"},"Free":{"type":"string"}}},'
+    + '"Extra":{"type":"object","properties":{"note":{"type":"string"}}},'
+    // one base: inheritance, its own properties only (id again: inherited)
+    + '"Derived":{"allOf":[{"$ref":"#/components/schemas/Base"},{"type":"object","properties":{'
+    + '"id":{"type":"integer"},"size":{"type":"number"},"destroy":{"type":"boolean"}}}]},'
+    // a derived class of a derived class
+    + '"Leaf":{"allOf":[{"$ref":"#/components/schemas/Derived"}],"properties":{"leaf":{"type":"boolean"}}},'
+    // two bases: merged
+    + '"Both":{"allOf":[{"$ref":"#/components/schemas/Base"},{"$ref":"#/components/schemas/Extra"}]}'
+    + '}}}';
+begin
+  FreeAndNil(FMapper);
+  FreeAndNil(FApi);
+  FApi := TGenOpenAPIReader.ReadText(DOCUMENT, 'shapes');
+  FMapper := TGenTypeMapper.Create(FApi, ClassOptions);
+  FMapper.Execute;
+
+  Assert.IsNull(TypeNamed('TBase').BaseType);
+  Assert.AreEqual('TBase', TypeNamed('TDerived').BaseType.Name);
+  Assert.AreEqual('TDerived', TypeNamed('TLeaf').BaseType.Name);
+  Assert.IsNull(TypeNamed('TBoth').BaseType, 'two bases: merged');
+
+  // the members of TObject are not field names (the JSON name stays)
+  Assert.AreEqual('Free2', FieldOf('TBase', 'Free').Name);
+  Assert.AreEqual('Destroy2', FieldOf('TDerived', 'destroy').Name);
+  // inherited properties are not fields again
+  Assert.AreEqual(2, TypeNamed('TDerived').Fields.Count, 'size, destroy');
+  Assert.IsNull(TypeNamed('TDerived').FindField('id'));
+  Assert.AreEqual(1, TypeNamed('TLeaf').Fields.Count, 'leaf');
+  Assert.AreEqual(3, TypeNamed('TBoth').Fields.Count, 'id, Free, note');
+
+  // the bases first
+  Assert.IsTrue(IndexOfType('TBase') < IndexOfType('TDerived'));
+  Assert.IsTrue(IndexOfType('TDerived') < IndexOfType('TLeaf'));
+end;
+
+procedure TGenTypesTest.EmittedClasses;
+var
+  LSource: string;
+begin
+  Map('petstore-3.0.yaml', ClassOptions);
+  LSource := TGenTypesEmitter.Emit(FMapper);
+  Assert.Contains(LSource, 'uses'#13#10'  System.JSON, MARS.Core.JSON;');
+  // forward declarations, then the classes
+  Assert.Contains(LSource, '  TNewPet = class;'#13#10'  TCategory = class;'#13#10'  TPet = class;');
+  Assert.Contains(LSource, '  TPet = class(TNewPet)'#13#10'  public'#13#10'    // required; read-only'#13#10
+    + '    [JSONName(''id'')] Id: Int64;'#13#10'  end;');
+  Assert.Contains(LSource, '    [JSONName(''category'')] Category: TCategory;');
+  Assert.Contains(LSource, '    destructor Destroy; override;');
+  // the destructors free the objects of the fields
+  Assert.Contains(LSource, 'destructor TNewPet.Destroy;'#13#10'begin'#13#10'  Category.Free;'#13#10'  inherited;'#13#10'end;');
+  Assert.Contains(LSource, 'destructor TOrder.Destroy;'#13#10'begin'#13#10'  Notes.Free;');
+  Assert.DoesNotContain(LSource, 'TCategory.Destroy', 'nothing to free');
+
+  Map('features-3.1.json', ClassOptions);
+  LSource := TGenTypesEmitter.Emit(FMapper);
+  Assert.Contains(LSource, '  Parent.Free;'#13#10'  for var LItem1 in Children do'#13#10'    LItem1.Free;');
 end;
 
 initialization

@@ -92,6 +92,8 @@ begin
     TypeOptions.JSONNameAlways := AManifest.Options.JSONNameAlways;
   if not IsGiven('--field-names-as-json') then
     TypeOptions.FieldNamesAsInJSON := AManifest.Options.FieldNamesAsInJSON;
+  if not IsGiven('--classes') then
+    TypeOptions.Classes := AManifest.Options.Classes;
   if (Command = 'openapi') and not IsGiven('--types') and not IsGiven('--server') then
     Server := SameText(AManifest.Mode, 'server');
 end;
@@ -140,6 +142,8 @@ begin
     '  --enums-as-strings       string enums as string (default: Delphi enumerations)',
     '  --json-name-always       [JSONName] on every field (default: where the names differ)',
     '  --field-names-as-json    field names as in JSON when valid (default: PascalCase)',
+    '  --classes                classes instead of records: allOf with one base is inheritance, the',
+    '                           objects of the fields are freed by the destructor, cycles are fine',
     '  --force                  overwrite the generated files changed by hand (or not written by MARSgen)',
     '  --strict                 exit code 1 when there are warnings',
     '  --verbose                also the informational messages',
@@ -236,6 +240,8 @@ begin
       Result.TypeOptions.JSONNameAlways := True
     else if SameText(LArg, '--field-names-as-json') then
       Result.TypeOptions.FieldNamesAsInJSON := True
+    else if SameText(LArg, '--classes') then
+      Result.TypeOptions.Classes := True
     else if SameText(LArg, '--force') then
       Result.Force := True
     else if SameText(LArg, '--strict') then

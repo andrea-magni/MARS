@@ -160,6 +160,7 @@ begin
       FOptions.EnumsAsTypes := not LObject.GetValue<Boolean>('enumsAsStrings', False);
       FOptions.JSONNameAlways := LObject.GetValue<Boolean>('jsonNameAlways', False);
       FOptions.FieldNamesAsInJSON := LObject.GetValue<Boolean>('fieldNamesAsJson', False);
+      FOptions.Classes := LObject.GetValue<Boolean>('classes', False);
     end;
 
     LObject := LRoot.GetValue<TJSONObject>('generated', nil);
@@ -204,6 +205,7 @@ begin
     LObject.AddPair('enumsAsStrings', TJSONBool.Create(not FOptions.EnumsAsTypes));
     LObject.AddPair('jsonNameAlways', TJSONBool.Create(FOptions.JSONNameAlways));
     LObject.AddPair('fieldNamesAsJson', TJSONBool.Create(FOptions.FieldNamesAsInJSON));
+    LObject.AddPair('classes', TJSONBool.Create(FOptions.Classes));
 
     // sorted: a stable file, readable in a diff
     LObject := TJSONObject.Create;

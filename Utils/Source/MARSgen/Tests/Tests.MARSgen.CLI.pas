@@ -35,6 +35,8 @@ type
     procedure JSONSamples;
     [Test]
     procedure Server;
+    [Test]
+    procedure Classes;
   end;
 
 implementation
@@ -199,6 +201,21 @@ begin
 
   // a server needs an OpenAPI document
   Assert.AreEqual(EXIT_USAGE, Run(['json', CorpusFile('samples\order-1.json'), '--server']));
+end;
+
+procedure TGenCLITest.Classes;
+var
+  LSource: string;
+begin
+  Assert.AreEqual(EXIT_OK, Run(['openapi', CorpusFile('petstore-3.0.yaml'), '--classes', '--dest', FFolder]));
+  LSource := Written('Model.PetStore');
+  Assert.Contains(LSource, '  TPet = class(TNewPet)');
+  Assert.Contains(LSource, 'destructor TNewPet.Destroy;');
+  Assert.Contains(TFile.ReadAllText(TPath.Combine(FFolder, 'PetStore.marsgen.json')), '"classes": true');
+
+  // the next import: classes again, from the manifest
+  Assert.AreEqual(EXIT_OK, Run(['openapi', CorpusFile('petstore-3.0.yaml'), '--dest', FFolder]));
+  Assert.Contains(Written('Model.PetStore'), '  TPet = class(TNewPet)');
 end;
 
 initialization

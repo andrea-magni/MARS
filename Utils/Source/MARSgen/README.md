@@ -24,11 +24,26 @@ MARSgen --help
 - `update`: imports again the OpenAPI document of a folder, as last time (see below).
 - `compare`: the conformance of a server to a document (see below).
 - Options: `--dest`, `--unit`, `--int64`, `--currency`, `--enums-as-strings`, `--json-name-always`,
-  `--field-names-as-json`, `--force`, `--strict`, `--verbose`; for `--project` also `--template`,
+  `--field-names-as-json`, `--classes`, `--force`, `--strict`, `--verbose`; for `--project` also `--template`,
   `--mars` and `--allow-inside`; for `json` also `--no-dates` and `--name-after-parent`. `MARSgen --help` describes them.
 - Warnings and errors are listed with the JSON pointer of the construct. Exit codes: 0 done, 1
   warnings with `--strict`, 2 errors (the unit is still written when the document could be read),
   3 a wrong command line.
+
+## Classes
+
+`--classes` generates classes instead of records (`TGenTypeOptions.Classes`):
+
+- `allOf` with a single base among the components is inheritance (`TPet = class(TNewPet)`, with its own
+  fields only); other compositions are merged, as for records;
+- the classes are declared forward, so they reference each other in any order: a class containing
+  itself, or a cycle of classes, keeps its types (records need `TJSONRawString` there);
+- what has no Delphi type is a `TJSONValue` (an owned copy) instead of `TJSONRawString`;
+- fields are public, as MARS reads and writes them (`TJSONObject.JSONToObject`, `ObjectToJSON`);
+  fields named as members of `TObject` (`Free`, `Destroy`...) get another name, with `[JSONName]`;
+- a destructor frees the objects of the fields and of their arrays (`TArray<TPet>`: MARS reads
+  arrays, not lists), as MARS creates them reading JSON; MARS frees the results of a resource, and
+  their arrays, so the generated servers work with classes too.
 
 ## Server
 
@@ -183,7 +198,9 @@ checked too, with the `MARSGEN_FULL_CORPUS` environment variable.
 
 The `Compile` test writes the units generated from the corpus, compiles them with `dcc32` (found
 through the `BDS` environment variable or the registry) into a probe program and runs it: every
-record must read a JSON instance and write the same JSON back through MARS. Without Delphi or the
+record must read a JSON instance and write the same JSON back through MARS. The same with
+`--classes`, where the probe also measures the memory of FastMM: reading and freeing the objects
+again must leave nothing allocated. Without Delphi or the
 MARS sources it is skipped.
 
 The `ServersOfTheCorpusConform` test compiles the server of every document of the corpus with an
