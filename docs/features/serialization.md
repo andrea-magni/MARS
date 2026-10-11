@@ -45,6 +45,19 @@ nested JSON object fills them, it does not replace them), and `ToObject` on an e
 merges the keys present into it. Declare a `_AssignedValues: TArray<string>` field to be told which
 members actually came from the JSON. Members of a record start zeroed, so the same rule applies.
 
+A `TObjectList<T>` member is read from a JSON array, its elements as `T`: a list the constructor
+created is emptied and filled (the same instance), a `nil` member gets a new list that owns its
+objects (`Create(True)`). Either way the object that holds the list frees it in its destructor:
+
+```pascal
+TOrder = class
+public
+  Number: string;
+  Lines: TObjectList<TOrderLine>; // {"Lines": [{...}, {...}]}
+  destructor Destroy; override;    // Lines.Free
+end;
+```
+
 ## Serialization options
 
 `TMARSJSONSerializationOptions` controls how empty/null values and dates are emitted. There is a global default you can tune once during ignition:

@@ -111,6 +111,9 @@ type
     [Test] procedure MissingKeysKeepCurrentValues;
     [Test] procedure MissingKeysKeepValuesOnExistingInstance;
     [Test] procedure PresentNestedObjectIsFilledInPlace;
+    [Test] procedure ObjectListIsCreated;
+    [Test] procedure ObjectListIsFilledInPlace;
+    [Test] procedure ObjectListRoundTrip;
   end;
 
 
@@ -1118,6 +1121,87 @@ begin
       Assert.AreEqual('sent', LOwner.Detail.Name);
     finally
       LOwner.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
+procedure TMARSJSONToObjectTest.ObjectListIsCreated;
+var
+  LJSONObj: TJSONObject;
+begin
+  LJSONObj := TJSONObject.ParseJSONValue('{"Name":"x","Tags":[{"Name":"a"},{"Name":"b"}]}') as TJSONObject;
+  try
+    var LTagged := TJSONObject.JSONToObject<TTagged>(LJSONObj);
+    try
+      Assert.IsNotNull(LTagged.Tags, 'a new list');
+      Assert.IsTrue(LTagged.Tags.OwnsObjects, 'owning its objects');
+      Assert.AreEqual(2, LTagged.Tags.Count);
+      Assert.AreEqual('a', LTagged.Tags[0].Name);
+      Assert.AreEqual('b', LTagged.Tags[1].Name);
+    finally
+      LTagged.Free;
+    end;
+
+    // an empty array: an empty list; null: none
+    LJSONObj.Free;
+    LJSONObj := TJSONObject.ParseJSONValue('{"Tags":[]}') as TJSONObject;
+    LTagged := TJSONObject.JSONToObject<TTagged>(LJSONObj);
+    try
+      Assert.IsNotNull(LTagged.Tags);
+      Assert.AreEqual(0, LTagged.Tags.Count);
+    finally
+      LTagged.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
+procedure TMARSJSONToObjectTest.ObjectListIsFilledInPlace;
+var
+  LJSONObj: TJSONObject;
+begin
+  LJSONObj := TJSONObject.ParseJSONValue('{"Tags":[{"Name":"new"}]}') as TJSONObject;
+  try
+    var LTagged := TTaggedWithList.Create;
+    try
+      var LList := LTagged.Tags;
+      var LOld := TTag.Create;
+      LOld.Name := 'old';
+      LTagged.Tags.Add(LOld);
+
+      LJSONObj.ToObject<TTaggedWithList>(LTagged);
+
+      Assert.IsTrue(LTagged.Tags = LList, 'the list of the constructor, not a new one');
+      Assert.AreEqual(1, LTagged.Tags.Count, 'emptied, then filled');
+      Assert.AreEqual('new', LTagged.Tags[0].Name);
+    finally
+      LTagged.Free;
+    end;
+  finally
+    LJSONObj.Free;
+  end;
+end;
+
+procedure TMARSJSONToObjectTest.ObjectListRoundTrip;
+var
+  LJSONObj, LWritten: TJSONObject;
+begin
+  LJSONObj := TJSONObject.ParseJSONValue('{"Name":"x","Tags":[{"Name":"a"},{"Name":"b"}]}') as TJSONObject;
+  try
+    var LTagged := TJSONObject.JSONToObject<TTaggedWithList>(LJSONObj);
+    try
+      LWritten := TJSONObject.ObjectToJSON(LTagged);
+      try
+        Assert.AreEqual('[{"Name":"a"},{"Name":"b"}]', LWritten.GetValue('Tags').ToJSON);
+        Assert.AreEqual('x', LWritten.GetValue<string>('Name'));
+      finally
+        LWritten.Free;
+      end;
+    finally
+      LTagged.Free;
     end;
   finally
     LJSONObj.Free;

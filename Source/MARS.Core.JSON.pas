@@ -1603,6 +1603,64 @@ begin
   TJSONValueToTValue(AValue, ADesiredType, ATValue, DefaultMARSJSONSerializationOptions);
 end;
 
+// the elements of AArray into a TObjectList<T> (AListType): the instance in ACurrent, emptied, or a
+// new one (Create(AOwnsObjects = True)); the elements are read as values of AElementType
+function JSONArrayToObjectList(const AArray: TJSONArray; const AListType, AElementType: TRttiType;
+  const ACurrent: TValue; const AOptions: TMARSJSONSerializationOptions): TValue;
+var
+  LList: TObject;
+  LCreated: Boolean;
+  LConstructor, LAdd, LClear: TRttiMethod;
+  LParameters: TArray<TRttiParameter>;
+  LElement: TValue;
+begin
+  LList := nil;
+  if ACurrent.Kind = tkClass then
+    LList := ACurrent.AsObject;
+  if Assigned(LList) and not LList.InheritsFrom(AListType.AsInstance.MetaclassType) then
+    LList := nil;
+
+  LCreated := not Assigned(LList);
+  if LCreated then
+  begin
+    LConstructor := nil;
+    for var LMethod in AListType.GetMethods('Create') do
+      if LMethod.IsConstructor then
+      begin
+        LParameters := LMethod.GetParameters;
+        if (Length(LParameters) = 1) and (LParameters[0].ParamType.Handle = TypeInfo(Boolean)) then
+        begin
+          LConstructor := LMethod;
+          Break;
+        end;
+      end;
+    if not Assigned(LConstructor) then
+      raise Exception.CreateFmt('TJSONObjectHelper: %s has no Create(AOwnsObjects: Boolean)', [AListType.Name]);
+    LList := LConstructor.Invoke(AListType.AsInstance.MetaclassType, [True]).AsObject;
+  end
+  else
+  begin
+    LClear := AListType.GetMethod('Clear');
+    LClear.Invoke(LList, []);
+  end;
+
+  try
+    LAdd := AListType.GetMethod('Add');
+    for var LJSONElement in AArray do
+    begin
+      LElement := nil; // a new instance for each element
+      TJSONObject.TJSONValueToTValue(LJSONElement, AElementType, LElement, AOptions);
+      LAdd.Invoke(LList, [LElement]);
+    end;
+  except
+    if LCreated then
+      LList.Free;
+    raise;
+  end;
+
+  TValue.Make(@LList, AListType.Handle, Result);
+end;
+
 class procedure TJSONObjectHelper.TJSONValueToTValue(const AValue: TJSONValue;
   const ADesiredType: TRttiType; var ATValue: TValue;
   const AOptions: TMARSJSONSerializationOptions);
@@ -1719,7 +1777,11 @@ begin
         LArray.SetArrayElement(LIndex, LElement);
       end;
       ATValue := LArray;
-    end;
+    end
+    // TObjectList<T>: the list in ATValue (i.e. created by a constructor) emptied and filled,
+    // else a new one, owning its objects
+    else if ADesiredType.IsInstance and ADesiredType.IsObjectListOfT(LElementType) then
+      ATValue := JSONArrayToObjectList(LJSONArray, ADesiredType, LElementType, ATValue, AOptions);
   end
   else
     raise Exception.CreateFmt('Unable to put JSON Value [%s] in TValue', [AValue.ClassName]);

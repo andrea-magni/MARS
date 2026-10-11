@@ -2,6 +2,9 @@ unit Tests.Objects.Types;
 
 interface
 
+uses
+  System.Generics.Collections;
+
 type
   TObjectWithProperties = class
   private
@@ -60,6 +63,25 @@ type
     property Detail: TTag read FDetail write FDetail;
   end;
 
+  // TObjectList<T> fields: created by MARS reading JSON (nil before)...
+  TTagged = class
+  public
+    Name: string;
+    Tags: TObjectList<TTag>;
+    destructor Destroy; override;
+  end;
+
+  // ...or created by the constructor, filled in place
+  TTaggedWithList = class
+  private
+    FTags: TObjectList<TTag>;
+  public
+    Name: string;
+    constructor Create;
+    destructor Destroy; override;
+    property Tags: TObjectList<TTag> read FTags write FTags;
+  end;
+
   TPerson = class
   private
     FName: string;
@@ -75,6 +97,28 @@ type
 
 
 implementation
+
+{ TTagged }
+
+destructor TTagged.Destroy;
+begin
+  Tags.Free;
+  inherited;
+end;
+
+{ TTaggedWithList }
+
+constructor TTaggedWithList.Create;
+begin
+  inherited Create;
+  FTags := TObjectList<TTag>.Create(True);
+end;
+
+destructor TTaggedWithList.Destroy;
+begin
+  FTags.Free;
+  inherited;
+end;
 
 
 { TOwnerWithDefaults }
