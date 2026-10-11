@@ -77,6 +77,7 @@ The generator reads metadata and JSON-schema attributes so you can produce a ric
 - **Required** — `[Required]` parameters and bodies (and every path parameter) are `required: true`, as with `[OAPIRequired(True)]`.
 - **Security** — `[RolesAllowed]` and `[DenyAll]` are reflected as security requirements (the roles as scopes); `[Authenticated]`, and `[PermitAll]` with roles on the endpoint, as a requirement without scopes (any valid token); `[PermitAll]` alone as none (public). When JWT is configured, Bearer and cookie security schemes are added automatically.
 - **Responses** — `200` with the media types of the method and the schema of its result; a procedure has no content.
+- **JSON values and streams** — a `TJSONValue` is any JSON value (a schema without a type), a `TJSONObject` an object, a `TJSONArray` an array, a `TStream` a string (its bytes), not objects with the properties of their Delphi classes.
 
 ```pascal
 [Path('users')]

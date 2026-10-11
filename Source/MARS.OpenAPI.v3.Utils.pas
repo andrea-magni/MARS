@@ -49,7 +49,7 @@ type
 implementation
 
 uses
-  StrUtils
+  StrUtils, System.JSON
 , MARS.Core.Registry.Utils, MARS.Core.URL, MARS.Utils.JWT, MARS.Core.Utils
 , MARS.Metadata.Reader, MARS.Metadata.Attributes
 , MARS.Core.MediaType, MARS.Core.JSON
@@ -119,7 +119,7 @@ var
 //  LProperty: TSchema;
 begin
   //AM TODO Add some mechanism to deal with special types
-  // (i.e. TDataset descendants, TStream descendants, TJSONValue descendants, TYamlNode descendants...)
+  // (i.e. TDataset descendants, TYamlNode descendants...)
 
   Result := False;
   LSchemaExists := components.HasSchema(AType.Name);
@@ -128,7 +128,23 @@ begin
     Result := True;
     LSchema := components.AddSchema(AType.Name);
 
-    if (AType.IsInstance) or (AType.IsRecord) then
+    // a JSON value is JSON, not an object with the properties of its Delphi class
+    if AType.IsInstance and AType.AsInstance.MetaclassType.InheritsFrom(TJSONValue) then
+    begin
+      LSchema.description := 'JSON value (' + AType.Name + ')';
+      if AType.AsInstance.MetaclassType.InheritsFrom(TJSONObject) then
+        LSchema.SetType('object')
+      else if AType.AsInstance.MetaclassType.InheritsFrom(TJSONArray) then
+        LSchema.SetType('array');
+      // else: any JSON value, no type
+    end
+    // a stream is its bytes
+    else if AType.IsInstance and AType.AsInstance.MetaclassType.InheritsFrom(TStream) then
+    begin
+      LSchema.SetType('string');
+      LSchema.description := 'Binary content (' + AType.Name + ')';
+    end
+    else if (AType.IsInstance) or (AType.IsRecord) then
       FillSchemaForObjectOrRecord(LSchema, AType, Self)
     else if AType is TRttiEnumerationType then
     begin

@@ -3,7 +3,7 @@ unit Tests.DefaultEngine.Resources;
 interface
 
 uses
-  SysUtils, Classes
+  SysUtils, Classes, System.JSON
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Core.JSON, MARS.Core.Response
 , MARS.WebServer.Resources
@@ -167,6 +167,15 @@ type
     function PostBody([BodyParam, Required] const AItem: TItem): string;
   end;
 
+  // the OpenAPI of JSON values and streams
+  TOpenAPIJSONHolder = class
+  public
+    Value: TJSONValue;
+    Obj: TJSONObject;
+    Arr: TJSONArray;
+    Data: TStream;
+  end;
+
   // the OpenAPI of authorization and of procedures
   [Path('openapicases')]
   TOpenAPICasesResource = class
@@ -182,6 +191,8 @@ type
     function Signed: string;
     [GET, Path('anytoken'), RolesAllowed('admin'), PermitAll, Produces(TMediaType.TEXT_PLAIN)]
     function AnyToken: string;
+    [GET, Path('holder'), Produces(TMediaType.APPLICATION_JSON)]
+    function Holder: TOpenAPIJSONHolder;
   end;
 
   [Path('item'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
@@ -370,6 +381,11 @@ end;
 function TOpenAPICasesResource.AnyToken: string;
 begin
   Result := 'any token';
+end;
+
+function TOpenAPICasesResource.Holder: TOpenAPIJSONHolder;
+begin
+  Result := TOpenAPIJSONHolder.Create;
 end;
 
 function TRequiredResource.GetQuery(name: string): string;

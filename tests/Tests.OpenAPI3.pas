@@ -19,6 +19,7 @@ type
     [Test] procedure RequestBodyWithoutConsumes;
     [Test] procedure MetaRequestBody;
     [Test] procedure RequiredPermitAllAndProcedures;
+    [Test] procedure JSONValuesAndStreams;
   end;
 
 implementation
@@ -216,6 +217,31 @@ begin
       // a procedure: a response without content
       Assert.AreEqual(0, LCases.delete.responses['200'].content.Count, 'no content for a procedure');
       Assert.AreEqual(1, LCases.get.responses['200'].content.Count);
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.JSONValuesAndStreams;
+begin
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    try
+      Assert.IsTrue(LOpenAPI.components.schemas.ContainsKey('TOpenAPIJSONHolder'));
+      // JSON values are JSON: any value, an object, an array; not their Delphi properties
+      var LValue := LOpenAPI.components.schemas['TJSONValue'];
+      Assert.AreEqual('', LValue.&type, 'any JSON value');
+      Assert.AreEqual(0, LValue.properties.Count);
+      Assert.AreEqual('object', LOpenAPI.components.schemas['TJSONObject'].&type);
+      Assert.AreEqual(0, LOpenAPI.components.schemas['TJSONObject'].properties.Count);
+      Assert.AreEqual('array', LOpenAPI.components.schemas['TJSONArray'].&type);
+      // a stream: its bytes
+      Assert.AreEqual('string', LOpenAPI.components.schemas['TStream'].&type);
+      Assert.AreEqual(0, LOpenAPI.components.schemas['TStream'].properties.Count);
     finally
       LOpenAPI.Free;
     end;
