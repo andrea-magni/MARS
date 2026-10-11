@@ -3,7 +3,7 @@ unit Tests.DefaultEngine.Resources;
 interface
 
 uses
-  SysUtils, Classes, System.JSON, Generics.Collections
+  SysUtils, Classes, System.JSON, Generics.Collections, Data.DB, FireDAC.Comp.Client
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Core.JSON, MARS.Core.Response
 , MARS.WebServer.Resources
@@ -165,6 +165,18 @@ type
 
     [POST, Consumes(TMediaType.APPLICATION_JSON)]
     function PostBody([BodyParam, Required] const AItem: TItem): string;
+  end;
+
+  // datasets from plain JSON
+  [Path('datasets'), Produces(TMediaType.TEXT_PLAIN)]
+  TDataSetsResource = class
+  public
+    [POST, Consumes(TMediaType.APPLICATION_JSON)]
+    function One([BodyParam] const AData: TFDMemTable): string;
+    [POST, Path('many'), Consumes(TMediaType.APPLICATION_JSON)]
+    function Many([BodyParam] const AData: TArray<TFDMemTable>): string;
+    [POST, Path('abstract'), Consumes(TMediaType.APPLICATION_JSON)]
+    function Abstract([BodyParam] const AData: TDataSet): string;
   end;
 
   // a TObjectList<T> body
@@ -375,6 +387,34 @@ end;
 
 { TRequiredResource }
 
+{ TDataSetsResource }
+
+function DescribeDataSet(const ADataSet: TDataSet): string;
+begin
+  // name: records; the first record, field=value
+  Result := ADataSet.Name + ':' + ADataSet.RecordCount.ToString;
+  ADataSet.First;
+  for var LField in ADataSet.Fields do
+    Result := Result + ' ' + LField.FieldName + '=' + LField.AsString;
+end;
+
+function TDataSetsResource.One(const AData: TFDMemTable): string;
+begin
+  Result := DescribeDataSet(AData);
+end;
+
+function TDataSetsResource.Many(const AData: TArray<TFDMemTable>): string;
+begin
+  Result := '';
+  for var LDataSet in AData do
+    Result := Result + DescribeDataSet(LDataSet) + ';';
+end;
+
+function TDataSetsResource.Abstract(const AData: TDataSet): string;
+begin
+  Result := 'unreachable';
+end;
+
 { TListsResource }
 
 function TListsResource.Names(const ATags: TObjectList<TListTag>): string;
@@ -426,7 +466,7 @@ begin
 end;
 
 initialization
-  MARSRegister([TRequiredResource, TOpenAPICasesResource, TListsResource]);
+  MARSRegister([TRequiredResource, TOpenAPICasesResource, TListsResource, TDataSetsResource]);
   MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TTestTokenResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);

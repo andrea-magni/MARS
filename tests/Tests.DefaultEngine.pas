@@ -138,6 +138,9 @@ type
     procedure TestObjectListBody;
 
     [Test]
+    procedure TestDataSetBody;
+
+    [Test]
     procedure TestUnknownApplicationOrEngineIs404;
   end;
 
@@ -493,6 +496,37 @@ begin
   Check('http://localhost:8080' + DefaultEngine.Engine.BasePath, 'unknown application');
   // the known ones still work
   Assert.AreEqual(200, StaticRequestStatus('GET', 'helloworld'));
+end;
+
+procedure TMARSDefaultEngineFixture.TestDataSetBody;
+
+  function Post(const APath, ABody: string; out AContent: string): Integer;
+  begin
+    var LMock := MockRequestAndResponse('POST', ResourcePath(APath), ABody);
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+    Result := LMock.Response.StatusCode;
+    AContent := LMock.Response.Content;
+  end;
+
+var
+  LContent: string;
+begin
+  // a plain JSON array into a TFDMemTable, its fields from the data (freed by MARS)
+  Assert.AreEqual(200, Post('datasets', '[{"id":1,"city":"Rome","geo":{"zone":7}},{"id":2,"city":null}]', LContent), LContent);
+  Assert.AreEqual(':2 id=1 city=Rome geo.zone=7', LContent);
+
+  // an array of datasets: one per member, named after it
+  Assert.AreEqual(200, Post('datasets/many', '{"customers":[{"id":1}],"orders":[{"n":"A"},{"n":"B"}]}', LContent), LContent);
+  Assert.AreEqual('customers:1 id=1;orders:2 n=A;', LContent);
+
+  // client errors
+  Assert.AreEqual(400, Post('datasets', '{"id":1}', LContent), 'not an array');
+  Assert.AreEqual(400, Post('datasets', 'not json', LContent), 'not JSON');
+  Assert.AreEqual(400, Post('datasets', '[1,2]', LContent), 'not objects');
+  Assert.AreEqual(400, Post('datasets/many', '[{"id":1}]', LContent), 'not an object of arrays');
+
+  // TDataSet itself cannot hold data: a mistake of the server
+  Assert.AreEqual(500, Post('datasets/abstract', '[{"id":1}]', LContent));
 end;
 
 procedure TMARSDefaultEngineFixture.TestObjectListBody;

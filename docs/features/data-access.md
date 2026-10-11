@@ -140,22 +140,28 @@ A method parameter of type `TArray<TFDMemTable>` (FireDAC) or `TArray<TMemDataSe
 
 ### Plain JSON into a dataset {#plain-json-into-a-dataset}
 
-What a browser or another API sends is a plain JSON array of objects, without field definitions. `JSONArrayToDataSet` (`MARS.Data.Utils`) loads it into any `TDataSet`: a `TFDMemTable`, a Devart `TVirtualTable`, a `TClientDataSet`:
+What a browser or another API sends is a plain JSON array of objects, without field definitions. A `[BodyParam]` of a dataset type reads it from `application/json` (`MARS.Data.MessageBodyWriters`, in the uses of the templates): MARS creates a dataset of the type of the parameter, fills it, and frees it after the method:
 
 ```pascal
 [POST, Consumes(TMediaType.APPLICATION_JSON)]
-function Import([BodyParam] const AItems: TJSONArray): Integer;
+function Import([BodyParam] const AItems: TFDMemTable): Integer;   // [{"id": 1, ...}, ...]
 
-function TOrdersResource.Import(const AItems: TJSONArray): Integer;
-begin
-  var LTable := TFDMemTable.Create(nil);
-  try
-    JSONArrayToDataSet(AItems, LTable); // no fields: created from the data
-    Result := LTable.RecordCount;
-    // ... LTable as any dataset
-  finally
-    LTable.Free;
-  end;
+[POST, Path('many'), Consumes(TMediaType.APPLICATION_JSON)]
+function ImportMany([BodyParam] const AData: TArray<TFDMemTable>): Integer;
+// {"customers": [...], "orders": [...]}: one dataset per member, named after it
+```
+
+The type must be a concrete dataset class (`TFDMemTable`, `TClientDataSet`, `TVirtualTable`...): `TDataSet` itself holds no data. A body that is not an array of objects (or, for an array of datasets, an object of arrays) is a `400`. The native formats keep their readers: declare their media type in `[Consumes]` to receive them.
+
+Underneath, `JSONArrayToDataSet` (`MARS.Data.Utils`) loads a JSON array into any `TDataSet`, also in your own code:
+
+```pascal
+var LTable := TFDMemTable.Create(nil);
+try
+  JSONArrayToDataSet(AItems, LTable); // no fields: created from the data
+  // ... LTable as any dataset
+finally
+  LTable.Free;
 end;
 ```
 
