@@ -1,0 +1,152 @@
+# MARSgen test corpus: the edge cases of the mapping to MARS resources
+openapi: 3.0.3
+info:
+  title: Server cases
+  version: '1'
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+    oauth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.com/token
+          scopes:
+            read: read the items
+            write: write the items
+    key:
+      type: apiKey
+      name: X-Key
+      in: header
+paths:
+  /:
+    get:
+      operationId: root
+      responses:
+        '200':
+          description: text
+          content:
+            text/plain:
+              schema:
+                type: string
+  /items/{id}:
+    get:
+      operationId: getItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: an inline object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+  /items/mine:
+    get:
+      # a reserved word; a literal path declared after a template
+      operationId: type
+      security:
+        - oauth: [read, write]
+      responses:
+        '200':
+          description: no content
+  /items:
+    post:
+      # a member of TObject
+      operationId: free
+      security:
+        - key: []
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '202':
+          description: accepted
+    put:
+      security:
+        - {}
+        - bearer: []
+      parameters:
+        - name: X-Trace
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: session
+          in: cookie
+          schema:
+            type: string
+        - name: when
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: n
+          in: query
+          schema:
+            type: number
+        - name: flag
+          in: query
+          required: true
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /{tenant}/things:
+    get:
+      responses:
+        '200':
+          description: a path starting with a parameter
+  /files/{name}.{ext}:
+    get:
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: ext
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: a segment that mixes text and parameters
+  /blobs:
+    get:
+      operationId: listBlobs
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: any JSON
+          content:
+            application/json:
+              schema: {}

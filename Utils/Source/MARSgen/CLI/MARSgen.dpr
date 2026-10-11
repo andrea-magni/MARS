@@ -19,6 +19,8 @@ uses
   MARS.Gen.Types in '..\Engine\MARS.Gen.Types.pas',
   MARS.Gen.Emit.Types in '..\Engine\MARS.Gen.Emit.Types.pas',
   MARS.Gen.JSONInference in '..\Engine\MARS.Gen.JSONInference.pas',
+  MARS.Gen.Server in '..\Engine\MARS.Gen.Server.pas',
+  MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas';
 
 

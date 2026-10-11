@@ -37,44 +37,13 @@ type
 implementation
 
 uses
-  System.IOUtils;
+  System.IOUtils,
+  MARS.Gen.Naming;
 
 const
   INDENT = '  ';
   // Delphi refuses lines longer than 1023 characters (F2069): comments and enumerations wrap
   WRAP_WIDTH = 100;
-
-// AText in lines of at most AWidth characters, broken at spaces; a longer word is split
-function WrapWords(const AText: string; const AWidth: Integer): TArray<string>;
-var
-  LLine: string;
-begin
-  Result := [];
-  LLine := '';
-  for var LWord in AText.Split([' '], TStringSplitOptions.ExcludeEmpty) do
-  begin
-    var LRest := LWord;
-    while Length(LRest) > AWidth do
-    begin
-      if LLine <> '' then
-        Result := Result + [LLine];
-      Result := Result + [LRest.Substring(0, AWidth)];
-      LRest := LRest.Substring(AWidth);
-      LLine := '';
-    end;
-    if LLine = '' then
-      LLine := LRest
-    else if Length(LLine) + 1 + Length(LRest) <= AWidth then
-      LLine := LLine + ' ' + LRest
-    else
-    begin
-      Result := Result + [LLine];
-      LLine := LRest;
-    end;
-  end;
-  if LLine <> '' then
-    Result := Result + [LLine];
-end;
 
 { TGenTypesEmitter }
 
@@ -102,7 +71,7 @@ begin
     if LLine.Trim = '' then
       Add(AIndent + '//')
     else
-      for var LWrapped in WrapWords(LLine, WRAP_WIDTH) do
+      for var LWrapped in TGenNaming.WrapWords(LLine, WRAP_WIDTH) do
         Add(AIndent + '// ' + LWrapped);
 end;
 

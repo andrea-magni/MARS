@@ -33,6 +33,8 @@ type
     procedure Errors;
     [Test]
     procedure JSONSamples;
+    [Test]
+    procedure Server;
   end;
 
 implementation
@@ -175,6 +177,23 @@ begin
   Assert.Contains(LSource, '[JSONName(''createdAt'')] CreatedAt: string;');
 
   Assert.AreEqual(EXIT_ERRORS, Run(['json', TPath.Combine(FFolder, 'none.json'), '--dest', FFolder]));
+end;
+
+procedure TGenCLITest.Server;
+begin
+  Assert.AreEqual(EXIT_OK, Run(['openapi', CorpusFile('petstore-3.0.yaml'), '--server', '--dest', FFolder]));
+  Assert.Contains(Written('Server.Resources.Pets.Base'), 'TPetsResourceBase = class');
+  Assert.Contains(Written('Server.PetStore'), 'Server.Resources.Pets');
+  Written('Model.PetStore');
+  Assert.Contains(FOutput.Text, 'Created: ' + TPath.Combine(FFolder, 'Server.Resources.Pets.pas') + ' (yours: not written again)');
+  Assert.Contains(FOutput.Text, 'Add Server.PetStore to the uses of Server.Ignition');
+
+  // again: the units of the user are kept
+  Assert.AreEqual(EXIT_OK, Run(['openapi', CorpusFile('petstore-3.0.yaml'), '--server', '--dest', FFolder]));
+  Assert.Contains(FOutput.Text, 'Kept: ' + TPath.Combine(FFolder, 'Server.Resources.Pets.pas') + ' (yours)');
+
+  // a server needs an OpenAPI document
+  Assert.AreEqual(EXIT_USAGE, Run(['json', CorpusFile('samples\order-1.json'), '--server']));
 end;
 
 initialization

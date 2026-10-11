@@ -21,7 +21,10 @@ uses
   MARS.Gen.Types in '..\Engine\MARS.Gen.Types.pas',
   MARS.Gen.Emit.Types in '..\Engine\MARS.Gen.Emit.Types.pas',
   MARS.Gen.JSONInference in '..\Engine\MARS.Gen.JSONInference.pas',
+  MARS.Gen.Server in '..\Engine\MARS.Gen.Server.pas',
+  MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas',
+  Tests.MARSgen.Helpers in 'Tests.MARSgen.Helpers.pas',
   Tests.MARSgen.JSONSource in 'Tests.MARSgen.JSONSource.pas',
   Tests.MARSgen.OpenAPIReader in 'Tests.MARSgen.OpenAPIReader.pas',
   Tests.MARSgen.Naming in 'Tests.MARSgen.Naming.pas',
@@ -29,7 +32,8 @@ uses
   Tests.MARSgen.Inference in 'Tests.MARSgen.Inference.pas',
   Tests.MARSgen.Compile in 'Tests.MARSgen.Compile.pas',
   Tests.MARSgen.CLI in 'Tests.MARSgen.CLI.pas',
-  Tests.MARSgen.RealDocuments in 'Tests.MARSgen.RealDocuments.pas';
+  Tests.MARSgen.RealDocuments in 'Tests.MARSgen.RealDocuments.pas',
+  Tests.MARSgen.Server in 'Tests.MARSgen.Server.pas';
 
 var
   LResults: IRunResults;

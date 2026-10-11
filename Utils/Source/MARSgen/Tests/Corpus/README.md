@@ -11,6 +11,7 @@ Part of MARS-Curiosity, same license.
 | `petstore-3.0.yaml` | A pet store in OpenAPI 3.0 (YAML): `$ref` to every kind of component, `allOf`, security. |
 | `features-3.1.json` | The edge cases of 3.1 (JSON): type arrays, `const`, recursion, `$ref` chains, `pathItems`, discriminator, and constructs that must be diagnosed. |
 | `mapping-3.0.yaml` | The edge cases of the mapping to Delphi: reserved and invalid names, enumerations, name collisions, a cycle of records, inline types of operations. |
+| `server-3.0.yaml` | The edge cases of the mapping to MARS resources: the root, literal paths after templates, reserved operation names, every parameter location, text and binary bodies, every kind of security, paths that cannot be resources. |
 | `swagger-2.0.json` | A Swagger 2.0 document, refused. |
 | `samples\*.json` | JSON samples: two orders that differ on purpose, an array of customers. |
 

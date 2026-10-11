@@ -16,12 +16,31 @@ MARSgen --help
 
 - `openapi`: the types of an OpenAPI 3.0/3.1 document, JSON or YAML, from a file or a URL.
 - `json`: the types of one or more JSON samples, merged; `--name Order` gives `TOrder`.
+- `openapi --server`: also the MARS resources of the document (see below).
 - Options: `--dest`, `--unit`, `--int64`, `--currency`, `--enums-as-strings`, `--json-name-always`,
   `--field-names-as-json`, `--strict`, `--verbose`; for `json` also `--no-dates` and
   `--name-after-parent`. `MARSgen --help` describes them.
 - Warnings and errors are listed with the JSON pointer of the construct. Exit codes: 0 done, 1
   warnings with `--strict`, 2 errors (the unit is still written when the document could be read),
   3 a wrong command line.
+
+## Server
+
+`MARSgen openapi <document> --server` writes, besides `Model.<Api>`:
+
+| Unit | Owner | Content |
+| --- | --- | --- |
+| `Server.Resources.<Name>.Base` | generated, written again on every import | `T<Name>ResourceBase`: every attribute; per operation a public method (called by MARS) and a protected virtual `Do...` one, answering 501 Not Implemented |
+| `Server.Resources.<Name>` | yours, created only when missing | `T<Name>Resource = class(T<Name>ResourceBase)`: override the `Do...` methods; registered with `MARSRegister` |
+| `Server.<Api>` | generated | uses the units of the resources: add it to the uses of `Server.Ignition` (the application of the templates adds the `Server.Resources.*` resources) |
+
+- One resource per first segment of the paths (`/pets`, `/pets/{petId}`: `TPetsResource`), as MARS matches
+  resources by the literal prefix of the URL; literal paths are declared before templates.
+- The public method adds what MARS attributes cannot say: the success status code (i.e. 201) and
+  "authenticated, any role" (a bearer scheme without scopes: a verified token, else 401). Scopes are
+  `[RolesAllowed]`, `security: []` is `[PermitAll]`; an apiKey is not checked (a comment says so).
+- Not generated, with a warning: paths starting with a parameter (`/{tenant}/...`) and segments mixing
+  text and parameters (`/{name}.{ext}`). Arrays in the query are strings (MARS reads the first value).
 
 ## Layout
 
@@ -58,6 +77,7 @@ MARSgen --help
   - Options (`TGenTypeOptions`): unit name, `Int64` for integers without format, `Currency`,
     enumerations or strings, `[JSONName]` always, field names as in JSON.
 - `MARS.Gen.Emit.Types`: writes the `Model.<Api>` unit.
+- `MARS.Gen.Server`, `MARS.Gen.Emit.Server`: the MARS resources of the operations.
 - `MARS.Gen.CLI`: the command line as a function of its arguments (the tests call it directly).
 - `MARS.Gen.JSONInference`: infers the schemas of one or more JSON samples into the same model, so
   the same mapping and emitter give their Delphi types.

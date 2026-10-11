@@ -70,7 +70,10 @@
         <DCCReference Include="..\Engine\MARS.Gen.Types.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Types.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.JSONInference.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.Server.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.Emit.Server.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.CLI.pas"/>
+        <DCCReference Include="Tests.MARSgen.Helpers.pas"/>
         <DCCReference Include="Tests.MARSgen.JSONSource.pas"/>
         <DCCReference Include="Tests.MARSgen.OpenAPIReader.pas"/>
         <DCCReference Include="Tests.MARSgen.Naming.pas"/>
@@ -79,6 +82,7 @@
         <DCCReference Include="Tests.MARSgen.Compile.pas"/>
         <DCCReference Include="Tests.MARSgen.CLI.pas"/>
         <DCCReference Include="Tests.MARSgen.RealDocuments.pas"/>
+        <DCCReference Include="Tests.MARSgen.Server.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -29,6 +29,9 @@ type
     class function IsValidIdentifier(const AName: string): Boolean; static;
     // items -> Item, categories -> Category, addresses -> Address, status stays
     class function Singular(const AName: string): string; static;
+    // AText in lines of at most AWidth characters, broken at spaces; a longer word is split
+    // (Delphi refuses lines longer than 1023 characters)
+    class function WrapWords(const AText: string; const AWidth: Integer): TArray<string>; static;
   end;
 
   // names unique within a scope, case-insensitive like Delphi: Name, Name2, Name3...
@@ -178,6 +181,37 @@ begin
     and not LLower.EndsWith('us') and not LLower.EndsWith('is')
   then
     Result := AName.Substring(0, Length(AName) - 1);
+end;
+
+class function TGenNaming.WrapWords(const AText: string; const AWidth: Integer): TArray<string>;
+var
+  LLine: string;
+begin
+  Result := [];
+  LLine := '';
+  for var LWord in AText.Split([' '], TStringSplitOptions.ExcludeEmpty) do
+  begin
+    var LRest := LWord;
+    while Length(LRest) > AWidth do
+    begin
+      if LLine <> '' then
+        Result := Result + [LLine];
+      Result := Result + [LRest.Substring(0, AWidth)];
+      LRest := LRest.Substring(AWidth);
+      LLine := '';
+    end;
+    if LLine = '' then
+      LLine := LRest
+    else if Length(LLine) + 1 + Length(LRest) <= AWidth then
+      LLine := LLine + ' ' + LRest
+    else
+    begin
+      Result := Result + [LLine];
+      LLine := LRest;
+    end;
+  end;
+  if LLine <> '' then
+    Result := Result + [LLine];
 end;
 
 { TGenNameScope }
