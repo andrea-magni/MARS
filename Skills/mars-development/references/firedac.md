@@ -57,7 +57,7 @@ Useful members: `Query(ASQL [, ATransaction, AContextOwned, AOnBeforeOpen])`, `C
 
 **Macro/param injection**: `CreateQuery`/`CreateCommand` (so `Query` and `ExecuteSQL` too) fill the params and macros whose name is a context value: `:PathParam_id` (the `{id}` of the path), `:QueryParam_city`, `:FormParam_x`, `:Token_UserName`, `:Token_Claim_x`, `:Token_HasRole_admin`, `Request_*`/`URL_*` properties — no string concatenation. Other params stay null: set them in the `before` callback of `ExecuteSQL(sql, transaction, before, after)` (returns the rows affected; `after` reads output params). Example: `FD.Query('select * from T where ID = :PathParam_id')`. Working demo: `Demos/FireDACDemo` (CRUD, transaction, `TMARSFDDatasetResource` with deltas).
 
-Returning `TFDDataSet` / `TArray<TFDDataSet>` with `Produces(APPLICATION_JSON)` serializes rows as a JSON array. `Produces(TMediaType.APPLICATION_JSON_FireDAC)` (`application/json-firedac`) uses FireDAC's native format instead — lossless for round-tripping with Delphi clients, including deltas.
+Returning `TFDDataSet` / `TArray<TFDDataSet>` with `Produces(APPLICATION_JSON)` serializes rows as a JSON array (a null field is `null`, a field named `address.city` a nested object). A `[BodyParam]` of type `TFDMemTable` (or `TArray<TFDMemTable>` with `[Consumes(TMediaType.APPLICATION_JSON)]`) reads a plain JSON array of objects, fields from the data (`JSONArrayToDataSet` in `MARS.Data.Utils`). `Produces(TMediaType.APPLICATION_JSON_FireDAC)` (`application/json-firedac`) uses FireDAC's native format instead — lossless for round-tripping with Delphi clients, including deltas.
 
 ## Publishing CRUD datasets: TMARSFDDatasetResource
 

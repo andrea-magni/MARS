@@ -102,7 +102,7 @@ You rarely touch this directly — returning a record gives JSON, returning a `T
 ## Security model
 
 - **Authentication** is JWT-based. A login resource (typically a subclass of `TMARSTokenResource`) validates credentials and issues a signed token, delivered as a Bearer header or a cookie.
-- **Authorization** is declarative via `[PermitAll]`, `[DenyAll]` and `[RolesAllowed('admin')]` on resources/methods. The activation enforces them before invoking your code.
+- **Authorization** is declarative via `[PermitAll]`, `[DenyAll]`, `[Authenticated]` and `[RolesAllowed('admin')]` on resources/methods. The activation enforces them before invoking your code.
 
 See [Authentication](/features/authentication) and [Authorization](/features/authorization).
 

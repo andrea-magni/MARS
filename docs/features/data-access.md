@@ -153,6 +153,10 @@ function ImportMany([BodyParam] const AData: TArray<TFDMemTable>): Integer;
 
 The type must be a concrete dataset class (`TFDMemTable`, `TClientDataSet`, `TVirtualTable`...): `TDataSet` itself holds no data. A body that is not an array of objects (or, for an array of datasets, an object of arrays) is a `400`. The native formats keep their readers: declare their media type in `[Consumes]` to receive them.
 
+::: warning Declare `[Consumes]` for arrays of datasets
+MARS picks the reader by the `[Consumes]` of the method, not by the `Content-Type` of the request. A `TArray<TFDMemTable>` (or `TArray<TMemDataSet>`) parameter of a method without `[Consumes]`, in a server with an integration in its uses (`MARS.Data.FireDAC.ReadersAndWriters`, `MARS.Data.MyDAC.ReadersAndWriters`...), is read by the native reader: a plain JSON body fails. Declare `[Consumes(TMediaType.APPLICATION_JSON)]` for plain JSON, the native media type for the Delphi clients, or both on two methods. A single dataset parameter has no native reader: plain JSON reaches it anyway.
+:::
+
 Underneath, `JSONArrayToDataSet` (`MARS.Data.Utils`) loads a JSON array into any `TDataSet`, also in your own code:
 
 ```pascal

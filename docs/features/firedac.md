@@ -127,7 +127,7 @@ end;
 {"Customers": [{…}, …], "Cities": [{…}, …]}
 ```
 
-Field values follow the [serialization options](/features/serialization) (dates, `null` values, `JSON.UseDisplayFormatForNumericFields`).
+Field values follow the [serialization options](/features/serialization) (dates, `JSON.UseDisplayFormatForNumericFields`); a null field is `null`, a field named with dots a nested object (see [Writing datasets](/features/data-access#writing-datasets)).
 
 ### Parameters, macros and commands
 

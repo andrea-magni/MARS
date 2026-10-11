@@ -136,7 +136,7 @@ applies `TMARSToken.DefaultSecretPolicy`:
   `EMARSException` with an explicit message.
 
 The secret is required only where JWT is actually used: a request to a protected resource
-(`[RolesAllowed]`, `[PermitAll]`, `[DenyAll]`), or the issuing of a token. An application whose
+(`[RolesAllowed]`, `[Authenticated]`), or the issuing of a token. An application whose
 resources are all public needs no JWT configuration at all, even in `RELEASE` builds; a token
 sent to such an application cannot be verified and is simply never trusted
 (`IsVerified = False`).

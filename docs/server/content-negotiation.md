@@ -88,7 +88,8 @@ Registered by `MARS.Core.MessageBodyReaders.pas` (and data units):
 
 | Reader | Handles | Consumes |
 | --- | --- | --- |
-| `TObjectReader` / `TArrayOfObjectReader` | `TObject`, `TArray<TObject>` | `application/json` |
+| `TObjectReader` / `TArrayOfObjectReader` | `TObject` (a `TObjectList<T>` from an array), `TArray<TObject>` | `application/json` |
+| `TDataSetReaderJSON` / `TArrayDataSetReaderJSON` (`MARS.Data.MessageBodyWriters`) | a dataset of a concrete class, `TArray<T>` of datasets ([plain JSON](/features/data-access#plain-json-into-a-dataset)) | `application/json` |
 | `TRecordReader` / `TArrayOfRecordReader` | records, `TArray<record>` | `application/json` |
 | `TJSONValueReader` | `TJSONValue` | `application/json` |
 | `TXMLReader` | `IXMLDocument` | `application/xml` |

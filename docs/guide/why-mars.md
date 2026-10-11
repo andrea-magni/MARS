@@ -61,7 +61,7 @@ FireDAC, UniDAC, MyDAC and IBDAC come with ready integration. With FireDAC a met
 ## Security built in
 
 - [JWT authentication](/features/authentication) with a ready token resource, Bearer header or cookie, key rotation, token renewal;
-- declarative [authorization](/features/authorization) with roles (`[RolesAllowed]`, `[PermitAll]`, `[DenyAll]`) on resources and methods;
+- declarative [authorization](/features/authorization) with roles (`[RolesAllowed]`, `[Authenticated]`, `[PermitAll]`, `[DenyAll]`) on resources and methods;
 - a new project from [MARSCmd](/guide/installation#bootstrap-a-new-project-with-marscmd) gets its own random JWT secret.
 
 ## OpenAPI 3 out of the box

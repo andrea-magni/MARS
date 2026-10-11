@@ -12,7 +12,7 @@ Put standard MARS authorization attributes on individual tool methods:
 function RaiseSalary(const AId: Integer; const APercent: Double): TOperationResult;
 ```
 
-Semantics (same precedence as MARS class-level authorization: `DenyAll` > `PermitAll` > roles; no attributes = public tool):
+Semantics (same precedence as MARS class-level authorization: `DenyAll` > `PermitAll` > roles > `Authenticated` (any verified token); no attributes = public tool):
 
 - unauthorized tools are **hidden from `tools/list`** and `tools/call` answers `Unknown tool` (-32602) — agents without the role never learn the tool exists;
 - the check runs per request against the injected `[Context] Token`, so the same server shows different tool sets to different users;
@@ -25,7 +25,7 @@ Two options on the resource class:
 - `[RolesAllowed('standard')]` — MARS answers **403** before any MCP message is processed. Right choice for static-token setups (scripts, Open WebUI with Bearer auth, `.mcp.json` with headers).
 - `[MCPOAuth]` — unauthenticated requests answer **401** + `WWW-Authenticate: Bearer resource_metadata="..."`, which is what triggers automatic OAuth onboarding in MCP clients. Use this when OAuth is in play: a class-level `[RolesAllowed]` would answer 403 first and kill the discovery.
 
-Pitfall: **`[PermitAll]` alone does NOT require authentication in MARS** — it admits anonymous callers and only overrides role checks. To require "any authenticated user" use `[RolesAllowed]` with a role every user has.
+Pitfall: **`[PermitAll]` alone does NOT require authentication in MARS** — it admits anonymous callers and only overrides role checks. To require "any authenticated user" use `[Authenticated]`.
 
 Issue static tokens with a standard MARS token resource (see the `mars-development` skill, authentication reference): `POST /rest/default/token` with `username`/`password` form fields returns the JWT.
 

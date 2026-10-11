@@ -28,7 +28,9 @@ The parameter name is used when the attribute has no explicit name argument.
 | `CookieParam` | cookie | `[CookieParam] session: string` |
 | `BodyParam` | whole request body via MessageBodyReaders | `[BodyParam] ACustomer: TCustomer` (JSON → record/object), also `TJSONObject`, `TStream`, `TArray<TFDMemTable>`... |
 | `PathParams`, `QueryParams`, `FormParams`, `Headers`, `Cookies` | the whole collection | bind to array/record types |
-| `Required` | combined with a param attribute | `[QueryParam, Required] search: string` — raises `ERequiredException` (400) when missing |
+| `Required` | combined with a param attribute | `[QueryParam, Required] search: string` — raises `ERequiredException` (400) when missing, or empty for a non-string type |
+
+Path, query, header, cookie and form values are converted to the type of the parameter strictly: a value that is not of that type (`abc` for an `Integer`, `maybe` for a `Boolean`, an unknown enumeration name) is a 400 naming the parameter. Missing or empty (not `[Required]`): the default of the type.
 
 ## Injection (on parameters or fields)
 
@@ -58,6 +60,7 @@ Configuration values (see `configuration.md` for the parameter system):
 |---|---|
 | `[PermitAll]` | any caller passes — authenticated or not; overrides the role check, but if `[RolesAllowed]` is also present (class or method) a valid token is still required |
 | `[DenyAll]` | nobody passes |
+| `[Authenticated]` | a verified token, any role (with `[RolesAllowed]` the roles decide) |
 | `[RolesAllowed('standard')]` / `[RolesAllowed('standard,admin')]` | token must be verified and have at least one listed role (separators: comma, semicolon, space) |
 
 No authorization attribute = public endpoint. `[PermitAll]` alone requires no token (equivalent to public); however, method and class attributes are *merged*, so a method-level `[PermitAll]` on a class that has `[RolesAllowed]` still requires a valid token — it only skips the role check. See `authentication.md`.
