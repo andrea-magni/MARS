@@ -1,6 +1,6 @@
 ---
 name: mars-new-project
-description: Scaffold a new REST server project with MARS-Curiosity (Delphi REST library). Use this skill whenever the user wants to create, bootstrap, or set up a new MARS server, a new Delphi REST API/server/microservice/web service based on MARS, or asks "how do I start a MARS project". Also use it when adding a new host flavor or deploying a MARS server (console, VCL/FMX GUI, Windows service, ISAPI on IIS, Apache module, FastCGI, Linux daemon, HTTPS/SSL setup).
+description: Scaffold a new REST server project with MARS-Curiosity (Delphi REST library). Use this skill whenever the user wants to create, bootstrap, or set up a new MARS server, a new Delphi REST API/server/microservice/web service based on MARS, or asks "how do I start a MARS project". Also use it when the user has an OpenAPI (Swagger 3) document to implement as a MARS server, and when adding a new host flavor or deploying a MARS server (console, VCL/FMX GUI, Windows service, ISAPI on IIS, Apache module, FastCGI, Linux daemon, HTTPS/SSL setup).
 ---
 
 # Create a new MARS server project
@@ -53,7 +53,17 @@ For a lean, from-scratch server (one console host, HelloWorld + Token resources,
 
 Then create a `.dproj` for it (or let the user open the `.dpr` in the IDE and save). Set the output directory to `bin\` so the executable sits next to its ini file.
 
-## Project requirements (both options)
+### Option C — from an OpenAPI document (MARSgen)
+
+When the API is described by an OpenAPI 3.0/3.1 document (JSON or YAML, file or URL), generate the project with `Utils\Bin\Win32\MARSgen.exe`: it runs MARSCmd (same templates, same options) and adds the resources of every operation, the Delphi types of the schemas, and the links (`Server.<Api>` in the uses of `Server.Ignition`, the base path of the document as engine/application paths, title/version in `Server.ini`):
+
+```
+MARSgen openapi <document> --project <ProjectName> [--template MARSTemplate|MARSTemplateDCS|MARSTemplateRoutes] [--dest <folder>]
+```
+
+Every operation answers `501` until implemented: override its `Do<Operation>` method in `Server.Resources.<Name>.pas` (the user's unit; `*.Base.pas` units are generated, never edit them). Keep `<Api>.marsgen.json` with the sources: `MARSgen update <folder>` imports the document again after it changes, never touching the user's units. See the `mars-development` skill, `references/marsgen.md`.
+
+## Project requirements (all options)
 
 - **Library paths**: the project must see the MARS sources. Either the user installed MARS (Library Path already contains them) or add to the project search path: `[MARS]\Source`, `[MARS]\ThirdParty\delphi-jose-jwt\Source\Common`, `[MARS]\ThirdParty\delphi-jose-jwt\Source\JOSE` (a git submodule: clone MARS with `--recurse-submodules`), `[MARS]\ThirdParty\mORMot\Source`, `[MARS]\ThirdParty\Neslib.Yaml`, `[MARS]\ThirdParty\Neslib.Yaml\Neslib`.
 - **`{$I MARS.inc}`** must compile — it lives in `[MARS]\Source`, so that path is required even for the .dpr.

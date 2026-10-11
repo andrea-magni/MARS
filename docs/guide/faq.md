@@ -87,6 +87,10 @@ Yes, with ready integrations for Devart UniDAC, MyDAC (MySQL, MariaDB) and IBDAC
 
 Add a resource returning `TOpenAPI` (the templates already have one, `Server.Resources.OpenAPI`): the document is generated from your resources, and the templates serve Swagger UI too. See [OpenAPI 3 & Swagger](/features/openapi).
 
+### Can I generate a server from an OpenAPI document?
+
+Yes, with MARSgen (`Utils\Bin\Win32\MARSgen.exe`): `MARSgen openapi petstore.yaml --project PetStore` creates a MARS project whose resources implement every operation of the document (answering `501` until you write them), and the Delphi types of its schemas. It also generates types from JSON samples, imports a changed document again without touching your code, and checks that a server conforms to its document. See [From OpenAPI: MARSgen](/guide/marsgen).
+
 ### How do I enable CORS?
 
 Set the `CORS.*` parameters in the configuration file (`CORS.Enabled=True`, `CORS.Origin`, `CORS.Methods`, `CORS.Headers`). See [CORS](/server/engine#cors).

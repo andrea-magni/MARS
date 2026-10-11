@@ -4,7 +4,7 @@ import path from 'node:path'
 
 // public address of the site (GitHub Pages): sitemap, canonical URLs, llms.txt
 const SITE_URL = 'https://andrea-magni.github.io/MARS/'
-const SITE_DESCRIPTION = 'MARS-Curiosity: REST library for Delphi, server and client. JAX-RS style resources, JWT, OpenAPI 3, FireDAC and Devart UniDAC/MyDAC/IBDAC datasets, server-sent events, MCP servers for AI agents; Windows and Linux.'
+const SITE_DESCRIPTION = 'MARS-Curiosity: REST library for Delphi, server and client. JAX-RS style resources, JWT, OpenAPI 3, FireDAC and Devart UniDAC/MyDAC/IBDAC datasets, server-sent events, MCP servers for AI agents, MARSgen (Delphi types and servers from OpenAPI documents); Windows and Linux.'
 
 // sections of llms.txt, in the order of the sidebar
 const LLMS_SECTIONS: [string, string][] = [
@@ -209,6 +209,7 @@ export default defineConfig({
             { text: 'Why MARS?', link: '/guide/why-mars' },
             { text: 'Installation', link: '/guide/installation' },
             { text: 'Your First Server', link: '/guide/getting-started' },
+            { text: 'From OpenAPI: MARSgen', link: '/guide/marsgen' },
             { text: 'Core Concepts', link: '/guide/core-concepts' },
             { text: 'Deployment', link: '/guide/deployment' },
             { text: 'AI Agent Skills', link: '/guide/agent-skills' },

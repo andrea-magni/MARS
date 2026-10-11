@@ -99,6 +99,8 @@ The settings of the new project are in `bin\Server.ini`, shared by all its serve
 
 The new project goes to `Documents\MARS Projects\<project name>` by default; next time MARSCmd proposes the folder used last (saved in `%APPDATA%\MARS-Curiosity\MARSCmd.ini`; a saved folder that no longer exists, or that is inside the MARS folder or the temp folder, is ignored). A destination inside the MARS folder asks for confirmation, as uninstalling or upgrading MARS would delete it, and an existing folder that is not empty is never overwritten.
 
+To start from an OpenAPI document instead, [MARSgen](/guide/marsgen) creates the project from the same templates with the resources of the document already in it (`MARSgen openapi <document> --project <Name>`).
+
 The template refers to the MARS folder with relative paths (`..\..\Source`). Outside the MARS folder, MARSCmd writes them as `$(MARSDIR)\Source`, `$(MARSDIR)\ThirdParty\...`: `MARSDIR` is the IDE environment variable set by the setup to the MARS folder (Tools ▸ Options ▸ IDE ▸ Environment Variables). With TMS Smart Setup or a manual installation, define it yourself or rely on the library path.
 
 ### From the command line

@@ -1,7 +1,9 @@
 # MARSgen
 
-A tool to generate MARS-Curiosity servers, clients and types from OpenAPI 3.x documents and JSON
-samples. Work in progress: see the plan in
+A tool to generate Delphi types and MARS-Curiosity servers (and projects) from OpenAPI 3.x
+documents, and types from JSON samples. The user documentation is
+[From OpenAPI: MARSgen](https://andrea-magni.github.io/MARS/guide/marsgen); this file is about its
+design and its tests. Clients and a VCL front end are planned: see
 [#234](https://github.com/andrea-magni/MARS/issues/234).
 
 ## Command line

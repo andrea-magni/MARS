@@ -37,8 +37,8 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/rest/default/people
 - **Declarative REST resources**: `[Path]`, `[GET]`/`[POST]`/`[PUT]`/`[PATCH]`/`[DELETE]`/`[QUERY]`, `[Produces]`, `[Consumes]`, path/query/header/cookie/form/body parameters, dependency injection with `[Context]`.
 - **Or [routes in code](https://andrea-magni.github.io/MARS/server/routes)** (Express style): `R.Get<TPerson>('people/{id:int}', ...)`, with path constraints, groups, middlewares and OpenAPI, next to the resources.
 - **JSON** to and from records, objects, arrays and datasets, with options per application; YAML and XML writers too.
-- **Security**: JWT authentication (Bearer header or cookie, key rotation, token renewal), role based authorization (`[RolesAllowed]`, `[PermitAll]`, `[DenyAll]`).
-- **OpenAPI 3** generated from your code, Swagger UI included.
+- **Security**: JWT authentication (Bearer header or cookie, key rotation, token renewal), role based authorization (`[RolesAllowed]`, `[Authenticated]`, `[PermitAll]`, `[DenyAll]`).
+- **OpenAPI 3** generated from your code, Swagger UI included; and the other way round, **[MARSgen](https://andrea-magni.github.io/MARS/guide/marsgen)**: Delphi types and MARS servers (or whole projects) from OpenAPI 3.0/3.1 documents, types from JSON samples, a conformance check of a server against its document.
 - **[Data access](https://andrea-magni.github.io/MARS/features/data-access)** with FireDAC and Devart UniDAC, MyDAC, IBDAC: return datasets as JSON, XML or native formats, parameters from the request, transactions, connections from the configuration; FireDAC clients send back deltas.
 - **MCP servers for AI agents**: expose Delphi methods and data as [Model Context Protocol](https://andrea-magni.github.io/MARS/features/mcp) tools, resources and prompts (Claude, ChatGPT, Copilot, local models), with roles and OAuth 2.1.
 - **Server-sent events**, HTML and templates (WebStencils, htmx), static files.

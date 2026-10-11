@@ -160,3 +160,5 @@ You can use this metadata directly for your own tooling — for instance, the [H
 ## Consuming the spec
 
 Because the document is standard OpenAPI 3, you can feed `…/openapi` into any compatible tool: Swagger UI (bundled), Postman, client-code generators, or API gateways.
+
+The other way round, [MARSgen](/guide/marsgen) generates a MARS server from an OpenAPI document, and `MARSgen compare` compares the `…/openapi` of a running server with the document it should serve.
