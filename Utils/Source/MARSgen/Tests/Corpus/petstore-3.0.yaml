@@ -1,0 +1,224 @@
+# MARSgen test corpus: a pet store in OpenAPI 3.0 (YAML), written for the tests of MARSgen
+openapi: 3.0.3
+info:
+  title: Pet Store
+  version: 1.0
+  description: Pets, owners and orders.
+servers:
+  - url: https://{host}:{port}/rest/default
+    description: Development
+    variables:
+      host:
+        default: localhost
+      port:
+        default: '8080'
+tags:
+  - name: pets
+    description: Everything about the pets
+  - name: store
+security:
+  - bearerAuth: []
+paths:
+  /pets:
+    get:
+      tags: [pets]
+      summary: List the pets
+      operationId: listPets
+      parameters:
+        - name: limit
+          in: query
+          description: How many items to return
+          schema:
+            type: integer
+            format: int32
+            default: 20
+        - name: status
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/PetStatus'
+      responses:
+        '200':
+          description: A page of pets
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [pets]
+      operationId: addPet
+      requestBody:
+        $ref: '#/components/requestBodies/NewPet'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+  /pets/{petId}:
+    parameters:
+      - $ref: '#/components/parameters/PetId'
+    get:
+      tags: [pets]
+      operationId: getPetById
+      security: []
+      responses:
+        '200':
+          description: The pet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [pets]
+      operationId: deletePet
+      deprecated: true
+      parameters:
+        - name: X-Reason
+          in: header
+          schema:
+            type: string
+      security:
+        - apiKey: []
+        - bearerAuth: [admin]
+      responses:
+        '204':
+          description: Deleted
+  /store/orders:
+    post:
+      tags: [store]
+      operationId: placeOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: The order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+components:
+  schemas:
+    PetStatus:
+      type: string
+      enum: [available, pending, sold]
+    NewPet:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        tag:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/PetStatus'
+        category:
+          $ref: '#/components/schemas/Category'
+    Pet:
+      allOf:
+        - $ref: '#/components/schemas/NewPet'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: integer
+              format: int64
+              readOnly: true
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        petId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          default: 1
+        shipDate:
+          type: string
+          format: date-time
+        complete:
+          type: boolean
+          default: false
+        notes:
+          type: object
+          additionalProperties:
+            type: string
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+  parameters:
+    PetId:
+      name: petId
+      in: path
+      required: true
+      description: The id of the pet
+      schema:
+        type: integer
+        format: int64
+  requestBodies:
+    NewPet:
+      description: The pet to add
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NewPet'
+  responses:
+    Error:
+      description: An error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: header

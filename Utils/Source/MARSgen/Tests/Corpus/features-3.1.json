@@ -1,0 +1,127 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Features", "version": "2.1.0" },
+  "paths": {
+    "/nodes/{nodeId}": {
+      "$ref": "#/components/pathItems/Node"
+    },
+    "/shapes": {
+      "parameters": [
+        { "name": "unit", "in": "query", "schema": { "type": "string" } },
+        { "name": "session", "in": "cookie", "schema": { "type": "string" } }
+      ],
+      "get": {
+        "operationId": "listShapes",
+        "parameters": [
+          { "name": "unit", "in": "query", "required": true, "schema": { "type": "string", "enum": ["cm", "in"] } },
+          { "$ref": "#/components/parameters/Page" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shapes",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Shape" } }
+              }
+            },
+            "links": { "self": { "operationId": "listShapes" } }
+          }
+        },
+        "callbacks": {
+          "changed": { "{$request.query.callbackUrl}": { "post": { "responses": { "200": { "description": "ok" } } } } }
+        }
+      }
+    },
+    "/items/{itemId}/parts/{partId}": {
+      "get": {
+        "operationId": "getPart",
+        "parameters": [
+          { "name": "itemId", "in": "path", "schema": { "type": "integer" } },
+          { "name": "extra", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "ok", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Alias1" } } } } }
+      }
+    },
+    "/external": {
+      "get": {
+        "operationId": "listShapes",
+        "responses": {
+          "200": { "description": "ok", "content": { "application/json": { "schema": { "$ref": "other.json#/Thing" } } } }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "newShape": { "post": { "responses": { "200": { "description": "ok" } } } }
+  },
+  "components": {
+    "schemas": {
+      "TreeNode": {
+        "type": "object",
+        "description": "A recursive node",
+        "properties": {
+          "name": { "type": "string" },
+          "parent": { "$ref": "#/components/schemas/TreeNode" },
+          "children": { "type": "array", "items": { "$ref": "#/components/schemas/TreeNode" } },
+          "tags": { "type": ["array", "null"], "items": { "type": "string" } },
+          "weight": { "type": ["number", "null"] },
+          "kind": { "const": "node" },
+          "anything": true,
+          "attributes": { "type": "object", "additionalProperties": { "type": "integer" } }
+        },
+        "required": ["name"]
+      },
+      "Alias1": { "$ref": "#/components/schemas/Alias2" },
+      "Alias2": { "$ref": "#/components/schemas/Target" },
+      "Target": {
+        "type": "object",
+        "properties": { "value": { "type": "string" } }
+      },
+      "WithSibling": {
+        "$ref": "#/components/schemas/Target",
+        "description": "A 3.1 sibling of $ref"
+      },
+      "Shape": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/Circle" },
+          { "$ref": "#/components/schemas/Square" }
+        ],
+        "discriminator": {
+          "propertyName": "shapeType",
+          "mapping": { "circle": "Circle", "square": "#/components/schemas/Square" }
+        }
+      },
+      "Circle": {
+        "type": "object",
+        "properties": { "shapeType": { "type": "string" }, "radius": { "type": "number" } }
+      },
+      "Square": {
+        "type": "object",
+        "properties": { "shapeType": { "type": "string" }, "side": { "type": "number" } }
+      },
+      "NotAString": { "not": { "type": "string" } },
+      "Untyped": { "description": "Any value" },
+      "Level": { "enum": [1, 2, 3, null] }
+    },
+    "parameters": {
+      "Page": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } }
+    },
+    "pathItems": {
+      "Node": {
+        "parameters": [ { "name": "nodeId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } } ],
+        "get": {
+          "operationId": "getNode",
+          "responses": {
+            "200": { "description": "The node", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TreeNode" } } } }
+          }
+        },
+        "put": {
+          "requestBody": {
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TreeNode" } } }
+          },
+          "responses": { "204": { "description": "Updated" } }
+        }
+      }
+    }
+  }
+}
