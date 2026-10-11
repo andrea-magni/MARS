@@ -102,6 +102,7 @@ The client receives status `530` and a JSON body describing the error.
 
 | Exception | Status | Raised when |
 | --- | --- | --- |
+| `EMARSEngineException` | 404 | The URL matches neither the path of the engine nor an application. |
 | `EMARSResourceNotFoundException` | 404 | The URL matches no resource. |
 | `EMARSMethodNotFoundException` | 404 | No method matches the verb/path. |
 | `EMARSAuthenticationException` | 403 | Authentication required but the token is missing/invalid/expired. |

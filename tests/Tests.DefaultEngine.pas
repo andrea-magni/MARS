@@ -133,6 +133,9 @@ type
 
     [Test]
     procedure TestRequiredParamsAre400;
+
+    [Test]
+    procedure TestUnknownApplicationOrEngineIs404;
   end;
 
 implementation
@@ -467,6 +470,26 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual('[]', LMock.Response.Content, 'No item should match');
+end;
+
+procedure TMARSDefaultEngineFixture.TestUnknownApplicationOrEngineIs404;
+
+  procedure Check(const AURL, AExpected: string);
+  begin
+    var LMock := MockRequestAndResponse('GET', AURL);
+    // handled by the engine: no exception reaches the HTTP server (that would answer 500)
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response), AURL);
+    Assert.AreEqual(404, LMock.Response.StatusCode, AURL);
+    Assert.AreEqual(TMediaType.TEXT_PLAIN_UTF8, LMock.Response.ContentType, AURL);
+    Assert.Contains(LMock.Response.Content, AExpected, AURL);
+  end;
+
+begin
+  Check('http://localhost:8080/nothing', 'does not match engine URL');
+  Check('http://localhost:8080' + DefaultEngine.Engine.BasePath + '/other/helloworld', 'unknown application');
+  Check('http://localhost:8080' + DefaultEngine.Engine.BasePath, 'unknown application');
+  // the known ones still work
+  Assert.AreEqual(200, StaticRequestStatus('GET', 'helloworld'));
 end;
 
 procedure TMARSDefaultEngineFixture.TestRequiredParamsAre400;

@@ -257,29 +257,42 @@ begin
       if not FBeforeHandleRequest(Self, LURL, ARequest, AResponse, Result) then
         Exit;
 
-    LApplicationPath := '';
-    if LURL.HasPathTokens then
-      LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0]]);
+    // matching the engine and the application: there is no activation yet to turn an HTTP
+    // exception into a response (the HTTP servers would answer 500), so it is done here
+    try
+      LApplicationPath := '';
+      if LURL.HasPathTokens then
+        LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0]]);
 
-    if (LEnginePath <> '') and (LEnginePath <> TMARSURL.URL_PATH_SEPARATOR) then
-    begin
-      if not LURL.MatchPath(LEnginePath) then
-        raise EMARSEngineException.Create(
-            Format('Bad request [%s] does not match engine URL [%s]', [LURL.URL, LEnginePath])
-            , 404
-          );
-      if LURL.HasPathTokens(2) then
-        LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
+      if (LEnginePath <> '') and (LEnginePath <> TMARSURL.URL_PATH_SEPARATOR) then
+      begin
+        if not LURL.MatchPath(LEnginePath) then
+          raise EMARSEngineException.Create(
+              Format('Bad request [%s] does not match engine URL [%s]', [LURL.URL, LEnginePath])
+              , 404
+            );
+        if LURL.HasPathTokens(2) then
+          LApplicationPath := TMARSURL.CombinePath([LURL.PathTokens[0], LURL.PathTokens[1]]);
+      end;
+
+      if not FApplications.TryGetValue(LApplicationPath.ToLower, LApplication) then
+        LApplication := nil;
+
+      if Assigned(FOnGetApplication) then
+        FOnGetApplication(Self, LURL, ARequest, AResponse, LApplication);
+
+      if not Assigned(LApplication) then
+        raise EMARSEngineException.Create(Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath]), 404);
+    except
+      on E: EMARSHttpException do
+      begin
+        AResponse.StatusCode := E.Status;
+        AResponse.Content := E.Message;
+        AResponse.ContentType := E.ContentType;
+        AResponse.ReasonString := E.ReasonString;
+        Exit(True);
+      end;
     end;
-
-    if not FApplications.TryGetValue(LApplicationPath.ToLower, LApplication) then
-      LApplication := nil;
-
-    if Assigned(FOnGetApplication) then
-      FOnGetApplication(Self, LURL, ARequest, AResponse, LApplication);
-
-    if not Assigned(LApplication) then
-      raise EMARSEngineException.Create(Format('Bad request [%s]: unknown application [%s]', [LURL.URL, LApplicationPath]), 404);
 
     LApplicationPath := TMARSURL.CombinePath([LEnginePath, LApplication.BasePath]);
     LURL.BasePath := LApplicationPath;
