@@ -305,7 +305,10 @@ begin
   Assert.Contains(LBase, '    [GET, Path(''{petId}''), Produces(''application/json''), PermitAll]'#13#10
     + '    function GetPetById([PathParam(''petId'')] const APetId: Int64): TPet;');
   Assert.Contains(LBase, '    function AddPet([BodyParam, Required] const ABody: TNewPet): TPet;');
-  Assert.Contains(LBase, '  CheckAuthenticated;'#13#10'  Result := DoAddPet(ABody);'#13#10'  FResponse.StatusCode := 201;');
+  // a token, any role: [Authenticated]
+  Assert.Contains(LBase, '    [POST, Produces(''application/json''), Consumes(''application/json''), Authenticated]');
+  Assert.Contains(LBase, '  Result := DoAddPet(ABody);'#13#10'  FResponse.StatusCode := 201;');
+  Assert.DoesNotContain(LBase, 'CheckAuthenticated');
   Assert.Contains(LBase, '    [DELETE, Path(''{petId}''), RolesAllowed(''admin'')]');
   Assert.Contains(LBase, 'raise EMARSHttpException.Create(''Not implemented: GET /pets/{petId}'', 501);');
 
@@ -445,7 +448,7 @@ procedure TGenServerTest.ServerAnswers;
 const
   // method, path, body, roles of the token (- for no token), expected status, expected JSON (or empty)
   REQUESTS: array[0..10] of array[0..5] of string = (
-    ('GET', 'pets', '', '-', '401', ''),
+    ('GET', 'pets', '', '-', '403', ''),
     ('GET', 'pets', '', '', '200', '[{"name":"Rex","status":"available","category":{"id":0},"id":1},{"name":"Tom","status":"available","category":{"id":0},"id":2}]'),
     ('GET', 'pets/7', '', '-', '200', '{"name":"Pet 7","status":"available","category":{"id":0},"id":7}'),
     ('POST', 'pets', '{"name":"Max"}', '', '201', '{"name":"Max","status":"available","category":{"id":0},"id":100}'),

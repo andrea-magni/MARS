@@ -32,7 +32,7 @@ type
     [Test]
     procedure TemplatesByPosition;
     [Test]
-    procedure TokenWithoutRolesIsANote;
+    procedure TokenWithoutRoles;
     [Test]
     procedure OperationKeys;
     [Test]
@@ -180,16 +180,14 @@ begin
       '        shipDate:'#10'          type: string'#10'          format: date-time'#10, ''], TGenFindingKind.Difference)));
 end;
 
-procedure TGenCompareTest.TokenWithoutRolesIsANote;
-var
-  LNotes: string;
+procedure TGenCompareTest.TokenWithoutRoles;
 begin
-  // the server states no token where the document wants one without roles (MARS cannot say it)
-  Assert.AreEqual('', string.Join(#13#10, Findings(['security:'#10'  - bearerAuth: []'#10, ''], TGenFindingKind.Difference)));
-  LNotes := string.Join(#13#10, Findings(['security:'#10'  - bearerAuth: []'#10, ''], TGenFindingKind.Note));
-  Assert.Contains(LNotes, 'GET /pets: a token without roles in the document');
-  Assert.Contains(LNotes, 'POST /pets: a token without roles in the document');
-  Assert.Contains(LNotes, 'POST /store/orders: a token without roles in the document');
+  // the server states no token where the document wants one without roles ([Authenticated])
+  Assert.AreEqual(
+    'GET /pets: a token in the document, public on the server'#13#10
+    + 'POST /pets: a token in the document, public on the server'#13#10
+    + 'POST /store/orders: a token in the document, public on the server',
+    string.Join(#13#10, Findings(['security:'#10'  - bearerAuth: []'#10, ''], TGenFindingKind.Difference)));
 end;
 
 procedure TGenCompareTest.OperationKeys;

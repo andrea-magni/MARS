@@ -42,9 +42,11 @@ MARSgen --help
 
 - One resource per first segment of the paths (`/pets`, `/pets/{petId}`: `TPetsResource`), as MARS matches
   resources by the literal prefix of the URL; literal paths are declared before templates.
-- The public method adds what MARS attributes cannot say: the success status code (i.e. 201) and
-  "authenticated, any role" (a bearer scheme without scopes: a verified token, else 401). Scopes are
+- The public method adds what MARS attributes cannot say: the success status code (i.e. 201). A bearer
+  scheme without scopes is `[Authenticated]` (a verified token, any role; else 403), scopes are
   `[RolesAllowed]`, `security: []` is `[PermitAll]`; an apiKey is not checked (a comment says so).
+- A body or a response in more media types gets the JSON one only, with a warning: the server does
+  not conform there (`MARSgen compare` reports it).
 - Not generated, with a warning: paths starting with a parameter (`/{tenant}/...`) and segments mixing
   text and parameters (`/{name}.{ext}`). Arrays in the query are strings (MARS reads the first value).
 
@@ -99,8 +101,8 @@ be read).
   schemas of bodies and responses, a property missing, a type that differs, an enumeration value
   missing.
 - **Notes** (`--verbose`): what the OpenAPI of MARS cannot state, or harmless: the success status
-  code (MARS states 200; a generated server answers the one of the document in code), a token
-  without roles (checked in code), credentials that are not a token, operations, optional
+  code (MARS states 200; a generated server answers the one of the document in code),
+  credentials that are not a token, operations, optional
   parameters and properties only on the server, an array query parameter read as one value.
 
 Paths match by position of their templates (`{id}` and `{petId}` are the same), ignoring case; schemas

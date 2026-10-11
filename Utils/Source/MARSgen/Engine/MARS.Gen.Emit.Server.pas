@@ -198,6 +198,9 @@ begin
   case AEndpoint.Authorization of
     TGenAuthorization.PermitAll:
       LItems := LItems + ['PermitAll'];
+    // a token, any role
+    TGenAuthorization.Authenticated:
+      LItems := LItems + ['Authenticated'];
     TGenAuthorization.Roles:
       LItems := LItems + ['RolesAllowed(' + Quoted(string.Join(',', AEndpoint.Roles)) + ')'];
   end;
@@ -206,14 +209,8 @@ end;
 
 function TGenServerEmitter.BaseUnit(const AResource: TGenResource): string;
 var
-  LAuthenticated: Boolean;
   LCall: string;
 begin
-  LAuthenticated := False;
-  for var LEndpoint in AResource.Endpoints do
-    if LEndpoint.Authorization = TGenAuthorization.Authenticated then
-      LAuthenticated := True;
-
   FLines.Clear;
   AddHeader(True);
   Add('unit ' + AResource.BaseUnit + ';');
@@ -233,8 +230,6 @@ begin
   Add(INDENT + 'protected');
   Add(INDENT + INDENT + '[Context] FToken: TMARSToken;');
   Add(INDENT + INDENT + '[Context] FResponse: IMARSResponse;');
-  if LAuthenticated then
-    Add(INDENT + INDENT + 'procedure CheckAuthenticated; virtual;');
   Add;
   Add(INDENT + INDENT + '// the implementations: override them (by default: 501 Not Implemented)');
   for var LEndpoint in AResource.Endpoints do
@@ -258,15 +253,6 @@ begin
   Add;
   Add('{ ' + AResource.BaseClass + ' }');
 
-  if LAuthenticated then
-  begin
-    Add;
-    Add('procedure ' + AResource.BaseClass + '.CheckAuthenticated;');
-    Add('begin');
-    Add(INDENT + 'if not (Assigned(FToken) and FToken.IsVerified and not FToken.IsExpired) then');
-    Add(INDENT + INDENT + 'raise EMARSAuthenticationException.Create(''Unauthorized'', 401);');
-    Add('end;');
-  end;
 
   for var LEndpoint in AResource.Endpoints do
   begin
@@ -283,8 +269,6 @@ begin
     Add;
     Add(Signature(LEndpoint, AResource.BaseClass, LEndpoint.EndpointName, False));
     Add('begin');
-    if LEndpoint.Authorization = TGenAuthorization.Authenticated then
-      Add(INDENT + 'CheckAuthenticated;');
     LCall := LEndpoint.ImplementationName;
     if LEndpoint.Params.Count > 0 then
       LCall := LCall + '(' + Arguments(LEndpoint) + ')';

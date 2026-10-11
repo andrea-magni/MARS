@@ -384,8 +384,8 @@ begin
       Assert.AreEqual(501, Call('GET', '/v1/pets/12'));
       Assert.AreEqual(400, Call('GET', '/v1/pets/abc'));
       // a token needed
-      Assert.AreEqual(401, Call('GET', '/v1/pets'));
-      Assert.AreEqual(401, Call('POST', '/v1/store/orders', '', '{"id":1}'));
+      Assert.AreEqual(403, Call('GET', '/v1/pets'));
+      Assert.AreEqual(403, Call('POST', '/v1/store/orders', '', '{"id":1}'));
 
       // the token resource of the template: admin, the current hour as the password
       LCredentials := TStringStream.Create(Format('username=admin&password=%d', [HourOf(Now)]));

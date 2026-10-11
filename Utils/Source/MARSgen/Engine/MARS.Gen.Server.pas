@@ -414,7 +414,9 @@ begin
   if not Assigned(LContent) then
     LContent := LBody.Contents[0];
   if LBody.Contents.Count > 1 then
-    Diagnostic(TGenSeverity.Info, AEndpoint.Operation, 'body in more media types: ' + LContent.MediaType + ' only');
+    // the server does not conform to the document (MARSgen compare reports it)
+    Diagnostic(TGenSeverity.Warning, AEndpoint.Operation, 'body in more media types: ' + LContent.MediaType
+      + ' only (the server does not accept the others)');
 
   LParam := TGenEndpointParam.Create;
   AEndpoint.Params.Add(LParam);
@@ -464,7 +466,8 @@ begin
   if not Assigned(LContent) then
     LContent := LResponse.Contents[0];
   if LResponse.Contents.Count > 1 then
-    Diagnostic(TGenSeverity.Info, AEndpoint.Operation, 'response in more media types: ' + LContent.MediaType + ' only');
+    Diagnostic(TGenSeverity.Warning, AEndpoint.Operation, 'response in more media types: ' + LContent.MediaType
+      + ' only (the server does not produce the others)');
 
   AEndpoint.FProduces := LContent.MediaType;
   if LContent.MediaType = '*/*' then
@@ -636,7 +639,7 @@ begin
       begin
         LScope := TGenNameScope.Create;
         // the members of the base class and of TObject
-        for var LReserved in ['FToken', 'FResponse', 'CheckAuthenticated', 'Create', 'Destroy', 'Free',
+        for var LReserved in ['FToken', 'FResponse', 'Create', 'Destroy', 'Free',
           'ClassName', 'ClassType', 'ClassInfo', 'ClassParent', 'Equals', 'GetHashCode', 'ToString',
           'InheritsFrom', 'FieldAddress', 'Dispatch', 'DefaultHandler', 'NewInstance', 'FreeInstance',
           'AfterConstruction', 'BeforeDestruction', 'InitInstance', 'CleanupInstance', 'MethodAddress',

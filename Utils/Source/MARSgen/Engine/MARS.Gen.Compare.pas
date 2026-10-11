@@ -13,7 +13,7 @@ unit MARS.Gen.Compare;
 //   differ).
 // - Notes: what cannot be verified from the OpenAPI of MARS, or does not break the clients of the
 //   document: the success status code (MARS states 200; a generated server answers the one of the
-//   document in code), a token without roles (checked in code), credentials that are not a token,
+//   document in code), credentials that are not a token,
 //   operations only on the server, extra optional parameters and properties, formats.
 //
 // Schemas compare for JSON contents only (a binary or text body is bytes whatever its schema).
@@ -579,9 +579,9 @@ begin
   end;
   if LServerPublic then
   begin
+    // a token without roles is [Authenticated]: MARS states it
     if Length(LDocumentRoles) = 0 then
-      Add(TGenFindingKind.Note, AName, 'a token without roles in the document: MARS states roles only '
-        + '(a generated server checks the token in code)')
+      Add(TGenFindingKind.Difference, AName, 'a token in the document, public on the server')
     else
       Add(TGenFindingKind.Difference, AName, Format('roles %s in the document, public on the server',
         [string.Join(',', LDocumentRoles)]));

@@ -177,11 +177,11 @@ begin
   LMine := TFile.ReadAllText(FileIn('Server.Resources.Pets')) + '// mine' + sLineBreak;
   TFile.WriteAllText(FileIn('Server.Resources.Pets'), LMine, TEncoding.UTF8);
 
-  // kept, with a warning (the document has one already), the other files written
+  // kept, with a warning (the document has three already), the other files written
   Assert.AreEqual(EXIT_WARNINGS, Run(['openapi', Document(False), '--dest', FDest, '--strict']));
   Assert.Contains(FOutput.Text, 'warning: not written: ' + LBase + ' (changed by hand');
   Assert.Contains(FOutput.Text, 'Written: ' + FileIn('Model.PetStore'));
-  Assert.Contains(FOutput.Text, '0 errors, 2 warnings');
+  Assert.Contains(FOutput.Text, '0 errors, 4 warnings');
   Assert.Contains(TFile.ReadAllText(LBase), '// changed by hand');
   // and again next time: the manifest keeps the hash of what MARSgen wrote
   Assert.AreEqual(EXIT_OK, Run(['openapi', Document(False), '--dest', FDest]));
@@ -193,7 +193,7 @@ begin
   Assert.DoesNotContain(TFile.ReadAllText(LBase), '// changed by hand');
   Assert.AreEqual(LMine, TFile.ReadAllText(FileIn('Server.Resources.Pets')));
   Assert.AreEqual(EXIT_OK, Run(['openapi', Document(False), '--dest', FDest]));
-  Assert.Contains(FOutput.Text, '0 errors, 1 warnings');
+  Assert.Contains(FOutput.Text, '0 errors, 3 warnings');
 end;
 
 procedure TGenRegenerationTest.ForeignFilesAreKept;
