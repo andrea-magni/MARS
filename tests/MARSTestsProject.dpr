@@ -22,6 +22,7 @@ uses
   Tests.FireDAC in 'Tests.FireDAC.pas',
   Tests.JWT in 'Tests.JWT.pas',
   Tests.Data in 'Tests.Data.pas',
+  Tests.Data.JSONArray in 'Tests.Data.JSONArray.pas',
   Tests.Client in 'Tests.Client.pas',
   Tests.Client.Resources in 'Tests.Client.Resources.pas',
   Tests.Client.TestServer in 'Tests.Client.TestServer.pas',

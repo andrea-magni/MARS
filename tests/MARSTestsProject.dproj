@@ -112,6 +112,7 @@
         <DCCReference Include="Tests.FireDAC.pas"/>
         <DCCReference Include="Tests.JWT.pas"/>
         <DCCReference Include="Tests.Data.pas"/>
+        <DCCReference Include="Tests.Data.JSONArray.pas"/>
         <DCCReference Include="Tests.Client.pas"/>
         <DCCReference Include="Tests.Client.Resources.pas"/>
         <DCCReference Include="Tests.Client.TestServer.pas"/>

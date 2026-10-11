@@ -138,6 +138,31 @@ The JSON of records is for any client (a browser, another language); the native 
 
 A method parameter of type `TArray<TFDMemTable>` (FireDAC) or `TArray<TMemDataSet>` (Devart, the datasets are `TVirtualTable`s) with `[BodyParam]` receives the datasets of the body in the native JSON format. The reader is chosen by the `[Consumes]` of the method: declare it, i.e. `Consumes(APPLICATION_JSON_MyDAC)`, so the integrations can coexist. MARS frees the datasets after the method.
 
+### Plain JSON into a dataset {#plain-json-into-a-dataset}
+
+What a browser or another API sends is a plain JSON array of objects, without field definitions. `JSONArrayToDataSet` (`MARS.Data.Utils`) loads it into any `TDataSet`: a `TFDMemTable`, a Devart `TVirtualTable`, a `TClientDataSet`:
+
+```pascal
+[POST, Consumes(TMediaType.APPLICATION_JSON)]
+function Import([BodyParam] const AItems: TJSONArray): Integer;
+
+function TOrdersResource.Import(const AItems: TJSONArray): Integer;
+begin
+  var LTable := TFDMemTable.Create(nil);
+  try
+    JSONArrayToDataSet(AItems, LTable); // no fields: created from the data
+    Result := LTable.RecordCount;
+    // ... LTable as any dataset
+  finally
+    LTable.Free;
+  end;
+end;
+```
+
+- **Fields.** Keys go to the fields of the same name, ignoring case. A nested object is flattened, `{"address": {"city": "Rome"}}` into a field named `address.city`; a field named `address` gets its JSON text. An inactive dataset without fields gets them from the data (`JSONArrayToFieldDefs`, which you can also call to adjust the definitions first): `ftInteger` or `ftLargeint`, `ftFloat` (integers and decimals), `ftBoolean`, `ftDate` and `ftDateTime` (ISO 8601 strings), `ftWideString` with the longest value (`ftWideMemo` beyond 4000 characters). Then it is created: `CreateDataSet` when the class has one (FireDAC, `TClientDataSet`), else `Open` (`TVirtualTable`). Datasets with fields, or with `FieldDefs` prepared by you, keep them.
+- **Values.** Numbers, booleans and strings for fields of any type (`"12.34"` into a currency field), ISO 8601 dates and times (as written by `DataSetToJSONArray`), `null` as a null field. A value that does not fit its field raises `EJSONToDataSet`, naming the key, and that record is not posted.
+- **Options** (`TJSONToDataSetOptions`): `ReplaceContent` (empty the dataset first; by default the records are appended), `CaseSensitiveNames`, `UnknownKeysRaise` (by default keys without a field are ignored), `NestedArraysAsJSON` (by default nested arrays are skipped; with it they go into their field as JSON text, `ftWideMemo` when the fields are created).
+
 ### Changes from the client
 
 - **FireDAC** has the *delta*: the client sends only the changes of its `TFDMemTable`s, the server applies them with `ApplyUpdates` (`TMARSFDDatasetResource` does it for you) and returns the result for each dataset. See [FireDAC](/features/firedac#editing-data-from-the-client-delta).
