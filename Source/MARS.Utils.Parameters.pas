@@ -88,6 +88,8 @@ type
 
 implementation
 
+uses
+  DateUtils;
 
 { TMARSParametersSlice }
 
@@ -229,6 +231,13 @@ begin
     Result := ADefault
   else if LValue.Kind in [tkString, tkLString, tkWString, tkUString, tkChar, tkWChar] then
     Result := LValue.AsString
+  // not the format of the machine: 1.5, not 1,5 (values from JSON, or set in code)
+  else if (LValue.TypeInfo = TypeInfo(TDateTime)) or (LValue.TypeInfo = TypeInfo(TDate))
+    or (LValue.TypeInfo = TypeInfo(TTime))
+  then
+    Result := DateToISO8601(LValue.AsExtended, False)
+  else if LValue.Kind = tkFloat then
+    Result := FloatToStr(LValue.AsExtended, TFormatSettings.Invariant)
   else
     Result := LValue.ToString;
 end;

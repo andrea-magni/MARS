@@ -144,6 +144,7 @@ type
     [Test] procedure ApplicationCopyKeepsCaseInsensitivity;
     [Test] procedure IniValuesKeepTheirText;
     [Test] procedure OpenAPIInfoFromNumbersIsText;
+    [Test] procedure AsTextIsInvariant;
   end;
 
 implementation
@@ -619,6 +620,24 @@ begin
   finally
     LApp.Free;
     LEngine.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.AsTextIsInvariant;
+begin
+  // values not read from text (JSON, code): the same text on any machine
+  var LParameters := TMARSParameters.Create('');
+  var LSettings := FormatSettings;
+  try
+    FormatSettings.DecimalSeparator := ',';
+    LParameters.LoadFromJSON('{"Version": 1.5, "Count": 3, "Flag": true}');
+    Assert.AreEqual('1.5', LParameters.ByNameAsText('Version'));
+    Assert.AreEqual('3', LParameters.ByNameAsText('Count'));
+    LParameters.Values['When'] := TValue.From<TDateTime>(EncodeDate(2026, 10, 11));
+    Assert.StartsWith('2026-10-11T00:00:00', LParameters.ByNameAsText('When'));
+  finally
+    FormatSettings := LSettings;
+    LParameters.Free;
   end;
 end;
 
