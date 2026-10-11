@@ -14,6 +14,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 **Fixed**
 - With `MARS.YAML.ReadersAndWriters` registered, primitive results without `[Produces]` were written by the YAML writer with `Content-Type: */*`, and arrays of numbers or booleans came out empty (`[]`); YAML arrays of numbers and booleans are now written ([#232](https://github.com/andrea-magni/MARS/issues/232)).
 - `TPrimitiveTypesWriter`: records and arrays were written as `(Field: value)` text under any media type, i.e. labelled `application/json` (they now take that form only as `text/plain`, otherwise the JSON writers or `406`); its Content-Type was the first `[Produces]` instead of the negotiated one (i.e. `text/plain` for `Accept: text/html` on a method producing both) ([#231](https://github.com/andrea-magni/MARS/issues/231)).
+- `IMARSApplication.AddResource` ignored a `[Path]` declared on an ancestor class (the resource registry already read it), so a resource inheriting its declarations from a base class could not be added. [Attributes in a base class](/server/resources#attributes-in-a-base-class) ([#235](https://github.com/andrea-magni/MARS/issues/235))
 
 ## 1.9.2 {#v1-9-2}
 

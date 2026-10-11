@@ -83,6 +83,26 @@ function GetItem([PathParam] id, itemId: Integer): TItem;
 
 A method without a `[Path]` answers the resource root for its verb.
 
+### Attributes in a base class
+
+A resource can inherit its declarations: the class-level `[Path]` from its nearest ancestor that declares it (as `[Produces]`, `[RolesAllowed]` and the other class attributes MARS reads from ancestors), and the endpoints from the `virtual` methods of the ancestor, attributes and parameter bindings included. The subclass only overrides the methods, without attributes; a method it does not override keeps the implementation of the base class.
+
+```pascal
+[Path('pets'), Produces(TMediaType.APPLICATION_JSON)]
+TPetsResourceBase = class
+public
+  [GET, Path('{id}')]
+  function GetPet([PathParam('id')] AId: Integer): TPet; virtual;  // i.e. raises 501
+end;
+
+TPetsResource = class(TPetsResourceBase)
+public
+  function GetPet(AId: Integer): TPet; override;
+end;
+```
+
+This keeps the declarations (i.e. generated from an OpenAPI document) apart from the code. A `[Path]` on the subclass wins over the inherited one.
+
 ## HTTP verbs
 
 One verb attribute per endpoint: `[GET]`, `[POST]`, `[PUT]`, `[DELETE]`, `[PATCH]`, `[HEAD]`, `[OPTIONS]`, `[QUERY]`. The same path can be served by several methods differing only by verb.

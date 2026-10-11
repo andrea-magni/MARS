@@ -76,6 +76,7 @@ function TMARSApplication.AddResource(AResource: string): Boolean;
   begin
     LResult := False;
     LClass := AInfo.TypeTClass;
+    // [Path] of the class or, if it has none, of the nearest ancestor (as the resource registry)
     FRttiContext.GetType(LClass).HasAttribute<PathAttribute>(
       procedure (AAttribute: PathAttribute)
       var
@@ -89,6 +90,7 @@ function TMARSApplication.AddResource(AResource: string): Boolean;
           LResult := True;
         end;
       end
+    , True
     );
     Result := LResult;
   end;
