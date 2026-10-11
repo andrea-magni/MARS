@@ -539,7 +539,17 @@ begin
 
   LTypeName := string(AValue.TypeInfo^.Name);
 
-  if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString]) then
+  // raw JSON: embedded as it is (empty: null; not valid JSON: a string)
+  if AValue.TypeInfo = TypeInfo(TJSONRawString) then
+  begin
+    if AValue.AsString = '' then
+      Exit(TJSONNull.Create);
+    Result := TJSONValue.ParseJSONValue(AValue.AsString);
+    if not Assigned(Result) then
+      Result := TJSONString.Create(AValue.AsString);
+  end
+
+  else if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString]) then
     Result := TJSONString.Create(AValue.AsString)
 
   else if IsDictionaryOfStringAndT(LTypeName) then
@@ -611,6 +621,9 @@ begin
   end
   else if (AValue.IsObject and (AValue.AsObject = nil)) then
     Result := TJSONNull.Create
+  // a JSON value: a copy of it, not its properties
+  else if (AValue.IsInstanceOf(TJSONValue)) then
+    Result := TJSONValue(AValue.AsObject).Clone as TJSONValue
   else if (AValue.IsInstanceOf(TObject)) then
     Result := ObjectToJSON(AValue.AsObject, AOptions)
   else
@@ -1603,6 +1616,29 @@ var
   LNewLength: NativeInt;
   LInstance: TObject;
 begin
+  // raw JSON: the JSON text of any value (null: empty)
+  if ADesiredType.Handle = TypeInfo(TJSONRawString) then
+  begin
+    if AValue is TJSONNull then
+      ATValue := TValue.From<TJSONRawString>('')
+    else
+      ATValue := TValue.From<TJSONRawString>(TJSONRawString(AValue.ToJSON));
+    Exit;
+  end;
+
+  // a JSON value: a copy, owned by the caller (TJSONObject/TJSONArray fields: only that kind)
+  if ADesiredType.IsInstance and ADesiredType.AsInstance.MetaclassType.InheritsFrom(TJSONValue) then
+  begin
+    if AValue is TJSONNull then
+      ATValue := TValue.Empty
+    else if AValue.InheritsFrom(ADesiredType.AsInstance.MetaclassType) then
+      ATValue := TValue(TObject(AValue.Clone))
+    else
+      raise Exception.CreateFmt('TJSONObjectHelper.TJSONValueToTValue: %s expected, %s found',
+        [ADesiredType.Name, AValue.ClassName]);
+    Exit;
+  end;
+
   if AValue is TJSONBool then // Boolean
     ATValue := TJSONBool(AValue).AsBoolean
 //  else if ADesiredType.Handle = TypeInfo(Variant) then

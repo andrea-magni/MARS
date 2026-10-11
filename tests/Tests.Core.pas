@@ -62,6 +62,16 @@ type
     [Test] procedure ClassMembersGetDistinctInstances;
   end;
 
+  // raw JSON fields: TJSONRawString and TJSONValue
+  [TestFixture('RawJSON')]
+  TMARSRawJSONTest = class(TObject)
+  public
+    [Test] procedure RawStringRoundTrip;
+    [Test] procedure RawStringSpecialValues;
+    [Test] procedure JSONValueFieldsAreCopies;
+    [Test] procedure JSONValueFieldOfTheWrongKindRaises;
+  end;
+
   [TestFixture('RecordFromDataSet')]
   TMARSRecordFromDataSetTest = class(TObject)
   private
@@ -294,6 +304,130 @@ begin
     Assert.IsTrue(LURL.MatchPath('/REST/DEFAULT'), 'MatchPath /rest/default');
   finally
     LURL.Free;
+  end;
+end;
+
+{ TMARSRawJSONTest }
+
+type
+  TRawJSONRecord = record
+    Name: string;
+    Raw: TJSONRawString;
+    Value: TJSONValue;
+    Obj: TJSONObject;
+  end;
+
+procedure TMARSRawJSONTest.RawStringRoundTrip;
+var
+  LIn, LOut: TJSONObject;
+  LRecord: TRawJSONRecord;
+begin
+  // every kind of JSON value: read as its JSON text, written back as JSON (not as a string)
+  for var LRaw in ['{"x":[1,2]}', '[1,"two",null]', '"text"', '42', '1.5', 'true'] do
+  begin
+    LIn := TJSONObject.ParseJSONValue('{"Name":"n","Raw":' + LRaw + '}') as TJSONObject;
+    try
+      LRecord := LIn.ToRecord<TRawJSONRecord>;
+      Assert.AreEqual(LRaw, string(LRecord.Raw));
+      LOut := TJSONObject.RecordToJSON<TRawJSONRecord>(LRecord);
+      try
+        Assert.AreEqual('{"Name":"n","Raw":' + LRaw + '}', LOut.ToJSON);
+      finally
+        LOut.Free;
+      end;
+    finally
+      LIn.Free;
+    end;
+  end;
+end;
+
+procedure TMARSRawJSONTest.RawStringSpecialValues;
+var
+  LIn, LOut: TJSONObject;
+  LRecord: TRawJSONRecord;
+begin
+  // null: empty, and an empty raw string is null (skipped by default)
+  LIn := TJSONObject.ParseJSONValue('{"Name":"n","Raw":null}') as TJSONObject;
+  try
+    LRecord := LIn.ToRecord<TRawJSONRecord>;
+    Assert.AreEqual('', string(LRecord.Raw));
+  finally
+    LIn.Free;
+  end;
+  LOut := TJSONObject.RecordToJSON<TRawJSONRecord>(LRecord);
+  try
+    Assert.AreEqual('{"Name":"n"}', LOut.ToJSON);
+  finally
+    LOut.Free;
+  end;
+
+  // text that is not valid JSON: a string
+  LRecord.Raw := 'not json';
+  LOut := TJSONObject.RecordToJSON<TRawJSONRecord>(LRecord);
+  try
+    Assert.AreEqual('{"Name":"n","Raw":"not json"}', LOut.ToJSON);
+  finally
+    LOut.Free;
+  end;
+end;
+
+procedure TMARSRawJSONTest.JSONValueFieldsAreCopies;
+var
+  LIn, LOut: TJSONObject;
+  LRecord: TRawJSONRecord;
+begin
+  LIn := TJSONObject.ParseJSONValue('{"Name":"n","Value":[1,{"a":"b"}],"Obj":{"k":"v"}}') as TJSONObject;
+  try
+    LRecord := LIn.ToRecord<TRawJSONRecord>;
+  finally
+    // the record owns copies: they survive the source
+    LIn.Free;
+  end;
+  try
+    Assert.IsTrue(LRecord.Value is TJSONArray);
+    Assert.AreEqual('[1,{"a":"b"}]', LRecord.Value.ToJSON);
+    Assert.AreEqual('{"k":"v"}', LRecord.Obj.ToJSON);
+
+    // written as JSON, not as the properties of the Delphi objects
+    LOut := TJSONObject.RecordToJSON<TRawJSONRecord>(LRecord);
+    try
+      Assert.AreEqual('{"Name":"n","Value":[1,{"a":"b"}],"Obj":{"k":"v"}}', LOut.ToJSON);
+    finally
+      LOut.Free;
+    end;
+  finally
+    LRecord.Value.Free;
+    LRecord.Obj.Free;
+  end;
+
+  // a string into a TJSONValue field
+  LIn := TJSONObject.ParseJSONValue('{"Value":"text"}') as TJSONObject;
+  try
+    LRecord := LIn.ToRecord<TRawJSONRecord>;
+    try
+      Assert.AreEqual('"text"', LRecord.Value.ToJSON);
+    finally
+      LRecord.Value.Free;
+    end;
+  finally
+    LIn.Free;
+  end;
+end;
+
+procedure TMARSRawJSONTest.JSONValueFieldOfTheWrongKindRaises;
+var
+  LIn: TJSONObject;
+begin
+  LIn := TJSONObject.ParseJSONValue('{"Obj":[1]}') as TJSONObject;
+  try
+    Assert.WillRaise(
+      procedure
+      begin
+        LIn.ToRecord<TRawJSONRecord>;
+      end
+    );
+  finally
+    LIn.Free;
   end;
 end;
 
@@ -994,6 +1128,7 @@ initialization
   TDUnitX.RegisterTestFixture(TMARSCoreTest);
   TDUnitX.RegisterTestFixture(TMARSCoreUtilsTest);
   TDUnitX.RegisterTestFixture(TMARSRecordToJSONTest);
+  TDUnitX.RegisterTestFixture(TMARSRawJSONTest);
   TDUnitX.RegisterTestFixture(TMARSJSONToRecordTest);
   TDUnitX.RegisterTestFixture(TMARSRecordFromDataSetTest);
   TDUnitX.RegisterTestFixture(TMARSObjectToJSONTest);

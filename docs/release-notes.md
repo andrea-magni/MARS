@@ -5,6 +5,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 ## Unreleased {#unreleased}
 
 **New**
+- Raw JSON fields in records and objects: a `TJSONRawString` field holds any JSON value as text, a `TJSONValue` field a copy of it; both are written as JSON. Before, the first was written as a string and the second as the properties of the Delphi object. [Raw JSON fields](/features/serialization#raw-json-fields) ([#243](https://github.com/andrea-magni/MARS/issues/243))
 - `Produces.Default` application parameter: the media types of the endpoints without `[Produces]`, as an implicit `[Produces]` for negotiation, `/metadata` and OpenAPI (i.e. `application/json` to make strings and numbers JSON too). [A default for the application](/server/content-negotiation#a-default-for-the-application-produces-default) ([#233](https://github.com/andrea-magni/MARS/issues/233))
 
 **Changed**

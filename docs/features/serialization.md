@@ -14,7 +14,8 @@ MARS maps Delphi values to and from JSON through the helpers in `MARS.Core.JSON.
 | `record` | object (one key per field) |
 | `class` (`TObject`) | object (published/visible properties) |
 | `TArray<T>` / `TObjectList<T>` | array |
-| `TJSONValue` | passed through as-is |
+| `TJSONValue` | passed through as-is (a result, a field) |
+| `TJSONRawString` | the JSON it contains (see [Raw JSON fields](#raw-json-fields)) |
 | `TDataSet` / `TFDDataSet` | array of objects (see [Data Access](/features/data-access#writing-datasets)) |
 
 Nested records, arrays of records, and arrays of objects all serialize recursively.
@@ -163,6 +164,20 @@ begin
   Result := TJSONObject.Create;
   Result.AddPair('count', TJSONNumber.Create(ComputeCount));
   Result.AddPair('generatedAt', DateToISO8601(Now));
+end;
+```
+
+### Raw JSON fields
+
+A field that holds *any* JSON value (an object of unknown shape, a value that can be a string or a number) can be declared as:
+
+- `TJSONRawString` (`MARS.Core.JSON`): the JSON as text. It is read from any value (`{"a":1}`, `[1,2]`, `"text"` with its quotes, `42`, `true`; null gives an empty string) and written back as JSON, not as a string. An empty value is null, so the `JSON.SkipNullValues` option applies; text that is not valid JSON is written as a string. In a record this is the simplest choice: nothing to free.
+- `TJSONValue` (or `TJSONObject`, `TJSONArray`): a copy of the value, written as JSON. The copy belongs to whoever reads the record or object, which must free it; a `TJSONObject` or `TJSONArray` field accepts only that kind of value.
+
+```pascal
+TEvent = record
+  Name: string;
+  Payload: TJSONRawString;  // {"Name":"saved","Payload":{"id":7,"tags":["a"]}}
 end;
 ```
 
