@@ -2656,18 +2656,25 @@ begin
         Result := TYamlNode.CreateSequence(AAnchors, ANodeEvent.data.sequence_start);
         Sequence := Pointer(Result.FBits and VALUE_MASK);
 
-        while True do
-        begin
-          GetNextEvent(AParser, @Event);
-          try
-            if (Event._type = YAML_SEQUENCE_END_EVENT) then
-              Break;
+        { MARS local change: on a parse error, free the sequence and the
+          items already added (see ThirdParty/README.md). }
+        try
+          while True do
+          begin
+            GetNextEvent(AParser, @Event);
+            try
+              if (Event._type = YAML_SEQUENCE_END_EVENT) then
+                Break;
 
-            Value := TYamlNode.ParseInternal(AParser, AAnchors, Event);
-          finally
-            yaml_event_delete(@Event);
+              Value := TYamlNode.ParseInternal(AParser, AAnchors, Event);
+            finally
+              yaml_event_delete(@Event);
+            end;
+            Sequence.Add(Value);
           end;
-          Sequence.Add(Value);
+        except
+          Result.Free;
+          raise;
         end;
       end;
 
@@ -2676,26 +2683,38 @@ begin
         Result := TYamlNode.CreateMapping(AAnchors, ANodeEvent.data.mapping_start);
         Mapping := Pointer(Result.FBits and VALUE_MASK);
 
-        while True do
-        begin
-          GetNextEvent(AParser, @Event);
-          try
-            if (Event._type = YAML_MAPPING_END_EVENT) then
-              Break;
+        { MARS local change: on a parse error, free the mapping, the pairs
+          already added and a key whose value failed (see ThirdParty/README.md). }
+        try
+          while True do
+          begin
+            GetNextEvent(AParser, @Event);
+            try
+              if (Event._type = YAML_MAPPING_END_EVENT) then
+                Break;
 
-            Key := TYamlNode.ParseInternal(AParser, AAnchors, Event);
-          finally
-            yaml_event_delete(@Event);
+              Key := TYamlNode.ParseInternal(AParser, AAnchors, Event);
+            finally
+              yaml_event_delete(@Event);
+            end;
+
+            try
+              GetNextEvent(AParser, @Event);
+              try
+                Value := TYamlNode.ParseInternal(AParser, AAnchors, Event);
+              finally
+                yaml_event_delete(@Event);
+              end;
+            except
+              Key.Free;
+              raise;
+            end;
+
+            Mapping.AddOrReplaceValue(Key, Value);
           end;
-
-          GetNextEvent(AParser, @Event);
-          try
-            Value := TYamlNode.ParseInternal(AParser, AAnchors, Event);
-          finally
-            yaml_event_delete(@Event);
-          end;
-
-          Mapping.AddOrReplaceValue(Key, Value);
+        except
+          Result.Free;
+          raise;
         end;
       end;
 
@@ -3936,24 +3955,31 @@ begin
   Root.FBits := 0;
   Anchors := TYamlNode.TAnchors.Create;
   try
-    while True do
-    begin
-      GetNextEvent(AParser, @Event);
-      try
-        if (Event._type = YAML_DOCUMENT_END_EVENT) then
-        begin
-          if (Event.data.document_end.implicit <> 0) then
-            Include(Flags, TYamlDocumentFlag.ImplicitEnd);
-          Break;
+    { MARS local change: on a parse error after the root node, free it
+      (see ThirdParty/README.md). }
+    try
+      while True do
+      begin
+        GetNextEvent(AParser, @Event);
+        try
+          if (Event._type = YAML_DOCUMENT_END_EVENT) then
+          begin
+            if (Event.data.document_end.implicit <> 0) then
+              Include(Flags, TYamlDocumentFlag.ImplicitEnd);
+            Break;
+          end;
+
+          if (Root.FBits <> 0) then
+            raise EYamlParserError.Create(AParser, 'YAML Document contains multiple root nodes');
+
+          Root := TYamlNode.ParseInternal(AParser, Anchors, Event);
+        finally
+          yaml_event_delete(@Event);
         end;
-
-        if (Root.FBits <> 0) then
-          raise EYamlParserError.Create(AParser, 'YAML Document contains multiple root nodes');
-
-        Root := TYamlNode.ParseInternal(AParser, Anchors, Event);
-      finally
-        yaml_event_delete(@Event);
       end;
+    except
+      Root.Free;
+      raise;
     end;
   finally
     Anchors.Free;

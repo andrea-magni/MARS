@@ -25,6 +25,8 @@ type
     procedure YAMLAnchorsAliasesAndMergeKeys;
     [Test]
     procedure InvalidInputRaises;
+    [Test]
+    procedure InvalidYAMLDoesNotLeak;
   end;
 
 implementation
@@ -185,6 +187,55 @@ begin
       TGenJSONSource.FromFile('does-not-exist.yaml').Free;
     end
   , EGenSourceError);
+end;
+
+// bytes allocated by the memory manager (Windows: the tests run there)
+{$WARN SYMBOL_PLATFORM OFF}
+function MemoryInUse: NativeUInt;
+var
+  LState: TMemoryManagerState;
+begin
+  GetMemoryManagerState(LState);
+  Result := LState.TotalAllocatedMediumBlockSize + LState.TotalAllocatedLargeBlockSize;
+  for var LIndex := Low(LState.SmallBlockTypeStates) to High(LState.SmallBlockTypeStates) do
+    Inc(Result, LState.SmallBlockTypeStates[LIndex].AllocatedBlockCount
+      * LState.SmallBlockTypeStates[LIndex].UseableBlockSize);
+end;
+{$WARN SYMBOL_PLATFORM ON}
+
+procedure TGenJSONSourceTest.InvalidYAMLDoesNotLeak;
+const
+  // an error inside a sequence, inside a mapping (after a key), an unknown alias, nested
+  INVALID: array[0..3] of string = (
+    'a: [1, 2',
+    'a:'#10'  b: 1'#10' c: 2',
+    'a: 1'#10'b: *nope',
+    'root:'#10'  list:'#10'    - x: 1'#10'      y: [1, {z: 2'
+  );
+  ITERATIONS = 50;
+var
+  LBefore, LAfter: NativeUInt;
+
+  procedure ParseAll;
+  begin
+    for var LText in INVALID do
+      try
+        TGenJSONSource.FromText(LText, gsfYAML).Free;
+        Assert.Fail('no error for: ' + LText);
+      except
+        on E: EGenSourceError do ; // expected
+      end;
+  end;
+
+begin
+  // warm-up: one-time allocations (exception classes, regular expressions...)
+  ParseAll;
+  LBefore := MemoryInUse;
+  for var LIteration := 1 to ITERATIONS do
+    ParseAll;
+  LAfter := MemoryInUse;
+  Assert.IsTrue(LAfter <= LBefore + 1024
+  , Format('%d bytes more after %d parses of invalid documents', [LAfter - LBefore, ITERATIONS * Length(INVALID)]));
 end;
 
 initialization
