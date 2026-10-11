@@ -198,6 +198,7 @@ Source: "..\*.rc"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "..\*"; Excludes: "{#CommonRADStudioFilesExcludes},*.gitattributes,*.gitignore,*.gitmodules,\.github\*,\.history\*,\Documents\*,\Externals\*,\{#LibraryDCUFolder}\*,Logs\*,*.Logs.txt,Objects\*,\{#SetupFolder}\*,\{#LibraryPackagesFolder}\*,\Test"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 Source: "..\Utils\Bin\Win32\MARSCmd_VCL.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
 Source: "..\Utils\Bin\Win32\MARScmd.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
+Source: "..\Utils\Bin\Win32\MARSgen.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Uninstall"; Filename: "{uninstallexe}"

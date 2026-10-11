@@ -111,7 +111,7 @@ end;
 class function TGenCLI.Usage: string;
 begin
   Result := string.Join(sLineBreak, [
-    'MARSgen - Delphi types (and later MARS servers and clients) from OpenAPI 3.x and JSON',
+    'MARSgen - Delphi types and MARS servers from OpenAPI 3.x documents, Delphi types from JSON',
     '',
     'Usage:',
     '  MARSgen openapi <file|url> [--types] [options]',
