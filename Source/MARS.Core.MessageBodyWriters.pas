@@ -499,20 +499,35 @@ var
   LContent: string;
   LContentType: string;
   LEncodingName: string;
+  LDeclared: TMediaTypeList;
 begin
   if not TMARSMessageBodyWriter.GetDesiredEncoding(AActivation, LEncoding) then
     LEncoding := TEncoding.UTF8; // UTF8 by default
   LEncodingName := GetEncodingName(LEncoding);
 
-  LContentType := AActivation.Response.ContentType;
-  if GetProducesValue(AActivation, LContentType) then
+  // the negotiated media type when the endpoint declares it ([Produces], Produces.Default): the
+  // developer vouches for the format of the text. For a wildcard (*/*, text/*) the first declared
+  // one. Otherwise (a media type only the client asked for) the text is labelled as what it is,
+  // text/plain
+  LContentType := '';
+  if Assigned(AMediaType) and not AMediaType.ToString.Contains('*') then
   begin
-    if not LContentType.ToLower.Contains('charset=') then
-      LContentType := LContentType + '; charset=' + LEncodingName;
-    AActivation.Response.ContentType := LContentType;
+    LDeclared := TMARSMessageBodyRegistry.Instance.GetProducesMediaTypes(AActivation);
+    try
+      if LDeclared.Contains(AMediaType.ToString) then
+        LContentType := AMediaType.ToString;
+    finally
+      LDeclared.Free;
+    end;
   end
-  else
-    AActivation.Response.ContentType := 'text/plain; charset=' + LEncodingName; // default: text/plain
+  else if not GetProducesValue(AActivation, LContentType) then
+    LContentType := '';
+  if (LContentType = '') or LContentType.Contains('*') then
+    LContentType := TMediaType.TEXT_PLAIN;
+
+  if not LContentType.ToLower.Contains('charset=') then
+    LContentType := LContentType + '; charset=' + LEncodingName;
+  AActivation.Response.ContentType := LContentType;
 
   LContent := TValueToString(AValue);
 
@@ -696,8 +711,11 @@ begin
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Boolean
       begin
         Result := (AType.TypeKind in [tkInteger, tkInt64, tkChar, tkEnumeration, tkFloat,
-          tkString, tkSet, tkWChar, tkLString, tkWString,
-          tkVariant, tkArray, tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}, tkInt64, tkDynArray, tkUString]);
+          tkString, tkSet, tkWChar, tkLString, tkWString, tkVariant, tkUString])
+          // records and arrays as "(Field: value)" / "[a, b]" text: only when text/plain is what
+          // the endpoint produces or the client asks for, never under another media type
+          or ((AType.TypeKind in [tkArray, tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}, tkDynArray])
+            and AMediaType.ToLower.StartsWith(TMediaType.TEXT_PLAIN));
       end
     , function (AType: TRttiType; const AAttributes: TAttributeArray; AMediaType: string): Integer
       begin

@@ -209,6 +209,10 @@ type
     procedure TestProducesDefaultJSON;
     [Test]
     procedure TestProducesDefaultText;
+    [Test]
+    procedure TestTextContentTypeIsNegotiated;
+    [Test]
+    procedure TestRecordsAndArraysAsTextOnlyForTextPlain;
 {$IFDEF MARS_YAML}
     [Test]
     procedure TestProducesDefaultList;
@@ -1549,6 +1553,114 @@ begin
   Assert.Contains(LMock.Response.Content, 'Five');
 end;
 {$ENDIF}
+
+procedure TMARSRoutesFixture.TestTextContentTypeIsNegotiated;
+begin
+  MARSRoutesOf(FApplication).Get<string>('textorhtml',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := '<b>text</b>';
+    end
+  ).Produces(TMediaType.TEXT_PLAIN).Produces(TMediaType.TEXT_HTML);
+
+  var LMock := Send('GET', 'textorhtml', '', AcceptHeader(TMediaType.TEXT_HTML));
+  Assert.AreEqual('text/html; charset=utf-8', LMock.Response.ContentType, 'Accept: text/html');
+  Assert.AreEqual('<b>text</b>', LMock.Response.Content);
+
+  LMock := Send('GET', 'textorhtml', '', AcceptHeader(TMediaType.TEXT_PLAIN));
+  Assert.AreEqual('text/plain; charset=utf-8', LMock.Response.ContentType, 'Accept: text/plain');
+
+  // accepts anything: the first declared one
+  LMock := Send('GET', 'textorhtml');
+  Assert.AreEqual('text/plain; charset=utf-8', LMock.Response.ContentType, 'no Accept');
+
+  // a wildcard subtype is not a Content-Type
+  LMock := Send('GET', 'textorhtml', '', AcceptHeader('text/*'));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.IsFalse(LMock.Response.ContentType.Contains('*'), 'Accept: text/*: ' + LMock.Response.ContentType);
+
+  // a declared format: the text is labelled with it
+  MARSRoutesOf(FApplication).Get<string>('csv',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := 'a,b';
+    end
+  ).Produces('text/csv');
+  LMock := Send('GET', 'csv');
+  Assert.AreEqual('text/csv; charset=utf-8', LMock.Response.ContentType);
+
+  // nothing declared, a media type only the client asks for: labelled as what it is
+  MARSRoutesOf(FApplication).Get<string>('undeclaredtext',
+    function (const C: TMARSRouteContext): string
+    begin
+      Result := 'plain';
+    end
+  );
+  for var LAccept in [TMediaType.TEXT_HTML, 'text/event-stream'] do
+  begin
+    LMock := Send('GET', 'undeclaredtext', '', AcceptHeader(LAccept));
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.AreEqual('text/plain; charset=utf-8', LMock.Response.ContentType, 'Accept: ' + LAccept);
+  end;
+end;
+
+procedure TMARSRoutesFixture.TestRecordsAndArraysAsTextOnlyForTextPlain;
+begin
+  MARSRoutesOf(FApplication).Get<TRoutePerson>('person-json-nowriter',
+    function (const C: TMARSRouteContext): TRoutePerson
+    begin
+      Result.Id := 1;
+      Result.Name := 'One';
+    end
+  ).Produces(TMediaType.APPLICATION_JSON).Produces('application/x-nowriter');
+  MARSRoutesOf(FApplication).Get<TRoutePerson>('person-undeclared',
+    function (const C: TMARSRouteContext): TRoutePerson
+    begin
+      Result.Id := 2;
+      Result.Name := 'Two';
+    end
+  );
+  MARSRoutesOf(FApplication).Get<TRoutePerson>('person-text',
+    function (const C: TMARSRouteContext): TRoutePerson
+    begin
+      Result.Id := 3;
+      Result.Name := 'Three';
+    end
+  ).Produces(TMediaType.TEXT_PLAIN);
+  MARSRoutesOf(FApplication).Get<TArray<Integer>>('integers-undeclared',
+    function (const C: TMARSRouteContext): TArray<Integer>
+    begin
+      Result := [1, 2, 3];
+    end
+  );
+
+  // no text under another label: no writer for x-nowriter, the JSON one exists
+  var LMock := Send('GET', 'person-json-nowriter', '', AcceptHeader('application/x-nowriter'));
+  Assert.AreEqual(406, LMock.Response.StatusCode, 'record, x-nowriter');
+  LMock := Send('GET', 'integers-undeclared', '', AcceptHeader('application/x-nowriter'));
+  Assert.AreEqual(406, LMock.Response.StatusCode, 'array, x-nowriter');
+  LMock := Send('GET', 'person-json-nowriter');
+  Assert.AreEqual('{"Id":1,"Name":"One"}', LMock.Response.Content);
+
+  // text/plain asked or declared: the text form, labelled as such
+  LMock := Send('GET', 'person-undeclared', '', AcceptHeader(TMediaType.TEXT_PLAIN));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('text/plain; charset=utf-8', LMock.Response.ContentType);
+  Assert.AreEqual('(Id: 2, Name: Two)', LMock.Response.Content);
+
+  LMock := Send('GET', 'person-text');
+  Assert.AreEqual('text/plain; charset=utf-8', LMock.Response.ContentType);
+  Assert.AreEqual('(Id: 3, Name: Three)', LMock.Response.Content);
+
+  LMock := Send('GET', 'integers-undeclared', '', AcceptHeader(TMediaType.TEXT_PLAIN));
+  Assert.AreEqual('text/plain; charset=utf-8', LMock.Response.ContentType);
+  Assert.AreEqual('[1, 2, 3]', LMock.Response.Content);
+
+  // accepts anything: JSON
+  LMock := Send('GET', 'person-undeclared');
+  Assert.StartsWith(TMediaType.APPLICATION_JSON, LMock.Response.ContentType);
+  Assert.AreEqual('{"Id":2,"Name":"Two"}', LMock.Response.Content);
+end;
 
 initialization
   TDUnitX.RegisterTestFixture(TMARSRoutesFixture);

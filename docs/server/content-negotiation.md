@@ -68,13 +68,17 @@ Registered by `MARS.Core.MessageBodyWriters.pas` (and data units):
 | `TObjectWriter` / `TArrayOfObjectWriter` | `TObject`, `TArray<TObject>` | `application/json` |
 | `TRecordWriter` / `TArrayOfRecordWriter` | records, `TArray<record>` | `application/json` |
 | `TJSONValueWriter` | `TJSONValue`, `TArray<string>` | `application/json` |
-| `TPrimitiveTypesWriter` | numbers, booleans, strings | `*/*` |
+| `TPrimitiveTypesWriter` | numbers, booleans, strings, enumerations, sets, variants; records and arrays only as `text/plain` (`(Id: 1, Name: …)`, `[1, 2, 3]`) | `*/*` (Content-Type: the negotiated media type) |
 | `TStreamValueWriter` | `TStream` | `application/octet-stream`, `*/*` |
 | `TStandardMethodWriter` | wraps result + output params as JSON | `application/json` |
 | `TDataSetWriter` / `TArrayDataSetWriter` (data units) | `TDataSet`/`TFDDataSet` | JSON / FireDAC formats |
 
-Textual responses declare their encoding: the primitive-types writer appends `charset=…` to the
-content type (defaulting to `text/plain`) using the IANA name of the encoding — `utf-8` unless an
+The primitive-types writer labels its text with the negotiated media type when the endpoint
+declares it (`[Produces]` or `Produces.Default`): `text/html` for `Accept: text/html` on a method
+producing `text/plain` and `text/html`, `text/csv` for `Produces('text/csv')`. When the client accepts
+anything it uses the first declared one; when nothing is declared, `text/plain`, also if the client
+asked for another type (the text is not in that format). It appends `charset=…` using
+the IANA name of the encoding — `utf-8` unless an
 `[Encoding('…')]` attribute on the method or the resource says otherwise. An explicit `charset` in
 `[Produces]` is left untouched.
 

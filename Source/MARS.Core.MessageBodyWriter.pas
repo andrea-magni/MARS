@@ -55,8 +55,10 @@ type
     class function GetInstance: TMARSMessageBodyRegistry; static;
   protected
     function GetProducesMediaTypes(const AObject: TRttiObject): TMediaTypeList; overload;
-    function GetProducesMediaTypes(const AActivation: IMARSActivation): TMediaTypeList; overload;
   public
+    // What the endpoint of AActivation declares it produces: [Produces] of the method, else of the
+    // resource (or route group), else the Produces.Default of the application. The caller frees it.
+    function GetProducesMediaTypes(const AActivation: IMARSActivation): TMediaTypeList; overload;
     constructor Create;
     destructor Destroy; override;
 
