@@ -11,7 +11,7 @@ interface
 
 uses
   System.SysUtils, System.Classes,
-  MARS.Gen.Model, MARS.Gen.Types;
+  MARS.Gen.Model, MARS.Gen.Types, MARS.Gen.Output;
 
 type
   TGenTypesEmitter = class
@@ -30,7 +30,9 @@ type
 
     // the source of the unit (the mapper must have run)
     class function Emit(const AMapper: TGenTypeMapper): string; static;
-    // maps and writes <folder>\<unit>.pas, returning the file name
+    // maps and writes <unit>.pas through AOutput (manifest, files changed by hand), returning its file
+    class function WriteTo(const AApi: TGenApi; const AOptions: TGenTypeOptions; const AOutput: TGenOutput): string; static;
+    // maps and writes <folder>\<unit>.pas, with its manifest, returning the file name
     class function WriteUnit(const AApi: TGenApi; const AOptions: TGenTypeOptions; const AFolder: string): string; static;
   end;
 
@@ -200,19 +202,32 @@ begin
   end;
 end;
 
-class function TGenTypesEmitter.WriteUnit(const AApi: TGenApi; const AOptions: TGenTypeOptions;
-  const AFolder: string): string;
+class function TGenTypesEmitter.WriteTo(const AApi: TGenApi; const AOptions: TGenTypeOptions;
+  const AOutput: TGenOutput): string;
 var
   LMapper: TGenTypeMapper;
 begin
   LMapper := TGenTypeMapper.Create(AApi, AOptions);
   try
     LMapper.Execute;
-    ForceDirectories(AFolder);
-    Result := TPath.Combine(AFolder, LMapper.UnitName + '.pas');
-    TFile.WriteAllText(Result, Emit(LMapper), TEncoding.UTF8);
+    AOutput.WriteGenerated(LMapper.UnitName + '.pas', Emit(LMapper));
+    Result := TPath.Combine(AOutput.Folder, LMapper.UnitName + '.pas');
   finally
     LMapper.Free;
+  end;
+end;
+
+class function TGenTypesEmitter.WriteUnit(const AApi: TGenApi; const AOptions: TGenTypeOptions;
+  const AFolder: string): string;
+var
+  LOutput: TGenOutput;
+begin
+  LOutput := TGenOutput.Create(AFolder, TGenOutput.ApiName(AApi), False);
+  try
+    Result := WriteTo(AApi, AOptions, LOutput);
+    LOutput.Finish(AApi, 'types', '', '', AOptions);
+  finally
+    LOutput.Free;
   end;
 end;
 

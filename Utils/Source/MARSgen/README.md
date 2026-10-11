@@ -11,14 +11,16 @@ samples. Work in progress: see the plan in
 ```
 MARSgen openapi <file|url> [--types] [options]
 MARSgen json <file> [<file> ...] [--name <Name>] [options]
+MARSgen update [<folder>]
 MARSgen --help
 ```
 
 - `openapi`: the types of an OpenAPI 3.0/3.1 document, JSON or YAML, from a file or a URL.
 - `json`: the types of one or more JSON samples, merged; `--name Order` gives `TOrder`.
 - `openapi --server`: also the MARS resources of the document (see below).
+- `update`: imports again the OpenAPI document of a folder, as last time (see below).
 - Options: `--dest`, `--unit`, `--int64`, `--currency`, `--enums-as-strings`, `--json-name-always`,
-  `--field-names-as-json`, `--strict`, `--verbose`; for `json` also `--no-dates` and
+  `--field-names-as-json`, `--force`, `--strict`, `--verbose`; for `json` also `--no-dates` and
   `--name-after-parent`. `MARSgen --help` describes them.
 - Warnings and errors are listed with the JSON pointer of the construct. Exit codes: 0 done, 1
   warnings with `--strict`, 2 errors (the unit is still written when the document could be read),
@@ -41,6 +43,23 @@ MARSgen --help
   `[RolesAllowed]`, `security: []` is `[PermitAll]`; an apiKey is not checked (a comment says so).
 - Not generated, with a warning: paths starting with a parameter (`/{tenant}/...`) and segments mixing
   text and parameters (`/{name}.{ext}`). Arrays in the query are strings (MARS reads the first value).
+
+## Importing again
+
+Every import leaves a manifest in the folder, `<Api>.marsgen.json` (`PetStore.marsgen.json` for
+"Pet Store"): the document (full path or URL) and its SHA-256, the mode (`types`, `server`, `json`),
+the options, the generated files with the SHA-256 of what was written, your units, the operations.
+Keep it with the sources. The next import of the same API into the folder:
+
+- reuses the options, and `--server`, not given again (`MARSgen update <folder>` reuses the document
+  too);
+- writes the generated files again, unless one was changed by hand since the last import, or was
+  already there without being written by MARSgen: then it is kept, with a warning (move the changes
+  into your units, or `--force`);
+- never writes your units (`Server.Resources.<Name>`) again;
+- reports the operations added (they answer 501 until you override them) and removed (delete their
+  overrides), the generated files no longer generated (`Stale`: delete them, and remove them from
+  the project) and your units no longer used (`Unused`), while they exist.
 
 ## Layout
 
@@ -78,6 +97,8 @@ MARSgen --help
     enumerations or strings, `[JSONName]` always, field names as in JSON.
 - `MARS.Gen.Emit.Types`: writes the `Model.<Api>` unit.
 - `MARS.Gen.Server`, `MARS.Gen.Emit.Server`: the MARS resources of the operations.
+- `MARS.Gen.Output`: writes the files of an import and its manifest (`TGenManifest`), keeping the
+  files changed by hand, and compares it with the last one.
 - `MARS.Gen.CLI`: the command line as a function of its arguments (the tests call it directly).
 - `MARS.Gen.JSONInference`: infers the schemas of one or more JSON samples into the same model, so
   the same mapping and emitter give their Delphi types.

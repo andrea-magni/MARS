@@ -21,6 +21,7 @@ uses
   MARS.Gen.JSONInference in '..\Engine\MARS.Gen.JSONInference.pas',
   MARS.Gen.Server in '..\Engine\MARS.Gen.Server.pas',
   MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
+  MARS.Gen.Output in '..\Engine\MARS.Gen.Output.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas';
 
 

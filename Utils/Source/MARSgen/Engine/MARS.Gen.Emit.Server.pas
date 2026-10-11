@@ -17,7 +17,7 @@ interface
 
 uses
   System.SysUtils, System.Classes,
-  MARS.Gen.Model, MARS.Gen.Types, MARS.Gen.Server;
+  MARS.Gen.Model, MARS.Gen.Types, MARS.Gen.Server, MARS.Gen.Output;
 
 type
   TGenServerFiles = record
@@ -25,6 +25,8 @@ type
     Written: TArray<string>;
     Created: TArray<string>;
     Kept: TArray<string>;
+    // Server.<Api>, for the uses of Server.Ignition
+    ApiUnit: string;
   end;
 
   TGenServerEmitter = class
@@ -47,7 +49,10 @@ type
     function UserUnit(const AResource: TGenResource): string;
     function ApiUnit: string;
 
-    // the types (Model.<Api>) and the server units into AFolder; units of the user only when missing
+    // the types (Model.<Api>) and the server units through AOutput: generated files (unless changed
+    // by hand), units of the user only when missing; returns the name of the unit Server.<Api>
+    class function WriteTo(const AApi: TGenApi; const AOptions: TGenTypeOptions; const AOutput: TGenOutput): string; static;
+    // the same into AFolder, with its manifest
     class function WriteServer(const AApi: TGenApi; const AOptions: TGenTypeOptions;
       const AFolder: string): TGenServerFiles; static;
   end;
@@ -375,52 +380,31 @@ begin
   Result := FLines.Text;
 end;
 
-class function TGenServerEmitter.WriteServer(const AApi: TGenApi; const AOptions: TGenTypeOptions;
-  const AFolder: string): TGenServerFiles;
+class function TGenServerEmitter.WriteTo(const AApi: TGenApi; const AOptions: TGenTypeOptions;
+  const AOutput: TGenOutput): string;
 var
   LTypes: TGenTypeMapper;
   LServer: TGenServerMapper;
   LEmitter: TGenServerEmitter;
-  LFile: string;
 begin
-  Result.Written := [];
-  Result.Created := [];
-  Result.Kept := [];
-  ForceDirectories(AFolder);
-
   LTypes := TGenTypeMapper.Create(AApi, AOptions);
   try
     LTypes.Execute;
     LServer := TGenServerMapper.Create(AApi, LTypes);
     try
       LServer.Execute;
-
-      LFile := TPath.Combine(AFolder, LTypes.UnitName + '.pas');
-      TFile.WriteAllText(LFile, TGenTypesEmitter.Emit(LTypes), TEncoding.UTF8);
-      Result.Written := Result.Written + [LFile];
+      AOutput.WriteGenerated(LTypes.UnitName + '.pas', TGenTypesEmitter.Emit(LTypes));
 
       LEmitter := TGenServerEmitter.Create(LServer);
       try
         for var LResource in LServer.Resources do
         begin
-          LFile := TPath.Combine(AFolder, LResource.BaseUnit + '.pas');
-          TFile.WriteAllText(LFile, LEmitter.BaseUnit(LResource), TEncoding.UTF8);
-          Result.Written := Result.Written + [LFile];
-
+          AOutput.WriteGenerated(LResource.BaseUnit + '.pas', LEmitter.BaseUnit(LResource));
           // the code of the user: never written again
-          LFile := TPath.Combine(AFolder, LResource.ResourceUnit + '.pas');
-          if TFile.Exists(LFile) then
-            Result.Kept := Result.Kept + [LFile]
-          else
-          begin
-            TFile.WriteAllText(LFile, LEmitter.UserUnit(LResource), TEncoding.UTF8);
-            Result.Created := Result.Created + [LFile];
-          end;
+          AOutput.WriteUser(LResource.ResourceUnit + '.pas', LEmitter.UserUnit(LResource));
         end;
-
-        LFile := TPath.Combine(AFolder, LServer.ApiUnitName + '.pas');
-        TFile.WriteAllText(LFile, LEmitter.ApiUnit, TEncoding.UTF8);
-        Result.Written := Result.Written + [LFile];
+        AOutput.WriteGenerated(LServer.ApiUnitName + '.pas', LEmitter.ApiUnit);
+        Result := LServer.ApiUnitName;
       finally
         LEmitter.Free;
       end;
@@ -429,6 +413,23 @@ begin
     end;
   finally
     LTypes.Free;
+  end;
+end;
+
+class function TGenServerEmitter.WriteServer(const AApi: TGenApi; const AOptions: TGenTypeOptions;
+  const AFolder: string): TGenServerFiles;
+var
+  LOutput: TGenOutput;
+begin
+  LOutput := TGenOutput.Create(AFolder, TGenOutput.ApiName(AApi), False);
+  try
+    Result.ApiUnit := WriteTo(AApi, AOptions, LOutput);
+    LOutput.Finish(AApi, 'server', '', '', AOptions);
+    Result.Written := LOutput.Written;
+    Result.Created := LOutput.Created;
+    Result.Kept := LOutput.Kept;
+  finally
+    LOutput.Free;
   end;
 end;
 

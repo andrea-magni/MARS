@@ -116,9 +116,14 @@ begin
   Assert.Contains(LSource, '[JSONName(''level'')] Level: string;');
   Assert.DoesNotContain(LSource, 'TLevel =');
 
+  // another folder: the options of an import are reused by the next one in the same folder
+  FFolder := TPath.Combine(FFolder, 'json');
   Assert.AreEqual(EXIT_OK, Run(['openapi', CorpusFile('mapping-3.0.yaml'), '--dest', FFolder,
     '--unit', 'My.AsJSON', '--field-names-as-json']));
-  Assert.Contains(Written('My.AsJSON'), '    petId: Int64;');
+  LSource := Written('My.AsJSON');
+  Assert.Contains(LSource, '    petId: Int64;');
+  Assert.Contains(LSource, '    price: Double;');
+  FFolder := TPath.GetDirectoryName(FFolder);
 end;
 
 procedure TGenCLITest.WarningsAndStrict;
