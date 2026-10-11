@@ -299,8 +299,10 @@ begin
     // a value first, then a dotted name under it: that name stays flat
     LTable.FieldDefs.Add('code', ftWideString, 5);
     LTable.FieldDefs.Add('code.extra', ftWideString, 5);
+    // a type not written as JSON: left out, also when null
+    LTable.FieldDefs.Add('photo', ftBlob);
     LTable.CreateDataSet;
-    LTable.AppendRecord([1, Null, Null, 'Rome', 41.9, 'C', 'X']);
+    LTable.AppendRecord([1, Null, Null, 'Rome', 41.9, 'C', 'X', Null]);
 
     LArray := DataSetToJSONArray(LTable);
     try

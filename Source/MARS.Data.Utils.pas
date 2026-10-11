@@ -44,7 +44,9 @@ function DataSetToJSONArray(const ADataSet: TDataSet; const AAcceptFunc: TFunc<B
 
 
 type
-  // JSONArrayToDataSet: how a plain JSON array of objects goes into a dataset
+  // JSONArrayToDataSet: how a plain JSON array of objects goes into a dataset (scoped: the names of
+  // the values do not reach the units that use this one)
+  {$SCOPEDENUMS ON}
   TJSONToDataSetOption = (
     // empty the dataset first (default: the records are appended)
     ReplaceContent,
@@ -55,6 +57,7 @@ type
     // a nested array goes into its field as JSON text (default: skipped)
     NestedArraysAsJSON
   );
+  {$SCOPEDENUMS OFF}
   TJSONToDataSetOptions = set of TJSONToDataSetOption;
 
   EJSONToDataSet = class(Exception);
@@ -92,6 +95,13 @@ uses
 
 type
   TJSONFieldType = (NestedObject, NestedArray, SimpleValue);
+
+const
+  // the field types FieldToJSONObject writes (the others are left out)
+  JSON_FIELD_TYPES = [ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat, ftCurrency, ftBCD,
+    ftDate, ftTime, ftDateTime, ftAutoInc, ftMemo, ftFmtMemo, ftFixedChar, ftWideString, ftLargeint,
+    ftVariant, ftGuid, ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftLongWord, ftShortint,
+    ftByte, ftExtended, ftSingle];
 
 function NumericFieldToJSON(const AField: TField; const AUseDisplayFormat: Boolean): TJSONValue;
 var
@@ -154,8 +164,9 @@ end;
 
 procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField; const AOptions: TMARSJSONSerializationOptions);
 begin
-      // a null field: null (not an empty string, a zero or false)
-      if AField.IsNull then
+      // a null field: null (not an empty string, a zero or false); only for the types written
+      // below, so a field is in the JSON, or not, whatever its value
+      if AField.IsNull and (AField.DataType in JSON_FIELD_TYPES) then
       begin
         AObject.AddPair(APairName, TJSONNull.Create);
         Exit;
