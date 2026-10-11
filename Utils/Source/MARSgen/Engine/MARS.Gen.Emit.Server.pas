@@ -41,6 +41,7 @@ type
     function Arguments(const AEndpoint: TGenEndpoint): string;
     function Attributes(const AEndpoint: TGenEndpoint): string;
     function UsesTypes: string;
+    function SystemUnits: string;
   public
     constructor Create(const AServer: TGenServerMapper);
     destructor Destroy; override;
@@ -127,6 +128,14 @@ begin
     Add('  501 Not Implemented.');
   end;
   Add('*)');
+end;
+
+// classes: the lists of the signatures (TObjectList<TPet>)
+function TGenServerEmitter.SystemUnits: string;
+begin
+  Result := '';
+  if FServer.Types.Options.Classes then
+    Result := ', System.Generics.Collections';
 end;
 
 function TGenServerEmitter.UsesTypes: string;
@@ -218,7 +227,7 @@ begin
   Add('interface');
   Add;
   Add('uses');
-  Add(INDENT + 'System.SysUtils, System.Classes, System.JSON');
+  Add(INDENT + 'System.SysUtils, System.Classes, System.JSON' + SystemUnits);
   Add(', MARS.Core.Attributes, MARS.Core.JSON, MARS.Core.Token, MARS.Core.RequestAndResponse.Interfaces');
   Add(', ' + UsesTypes);
   Add(';');
@@ -297,7 +306,7 @@ begin
   Add('interface');
   Add;
   Add('uses');
-  Add(INDENT + 'System.SysUtils, System.Classes, System.JSON');
+  Add(INDENT + 'System.SysUtils, System.Classes, System.JSON' + SystemUnits);
   Add(', MARS.Core.Registry, MARS.Core.JSON');
   Add(', ' + UsesTypes + ', ' + AResource.BaseUnit);
   Add(';');

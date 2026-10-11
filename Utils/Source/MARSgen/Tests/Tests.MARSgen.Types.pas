@@ -333,7 +333,10 @@ begin
   // classes reference themselves and each other: no cycle to break
   Map('features-3.1.json', ClassOptions);
   Assert.AreEqual('TTreeNode', FieldOf('TTreeNode', 'parent').TypeName);
-  Assert.AreEqual('TArray<TTreeNode>', FieldOf('TTreeNode', 'children').TypeName);
+  // arrays of objects: lists owning them
+  Assert.AreEqual('TObjectList<TTreeNode>', FieldOf('TTreeNode', 'children').TypeName);
+  Assert.AreEqual('TArray<string>', FieldOf('TTreeNode', 'tags').TypeName);
+  Assert.IsTrue(FMapper.UsesObjectList);
   Assert.IsFalse(HasDiagnostic('a cycle of records'));
   // what has no Delphi type: a JSON value
   Assert.AreEqual('TJSONValue', FieldOf('TTreeNode', 'anything').TypeName);
@@ -406,7 +409,10 @@ begin
 
   Map('features-3.1.json', ClassOptions);
   LSource := TGenTypesEmitter.Emit(FMapper);
-  Assert.Contains(LSource, '  Parent.Free;'#13#10'  for var LItem1 in Children do'#13#10'    LItem1.Free;');
+  Assert.Contains(LSource, 'uses'#13#10'  System.Generics.Collections, System.JSON, MARS.Core.JSON;');
+  Assert.Contains(LSource, '    [JSONName(''children'')] Children: TObjectList<TTreeNode>;');
+  // the list owns its objects
+  Assert.Contains(LSource, '  Parent.Free;'#13#10'  Children.Free;');
 end;
 
 initialization

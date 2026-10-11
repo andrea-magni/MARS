@@ -41,9 +41,10 @@ MARSgen --help
 - what has no Delphi type is a `TJSONValue` (an owned copy) instead of `TJSONRawString`;
 - fields are public, as MARS reads and writes them (`TJSONObject.JSONToObject`, `ObjectToJSON`);
   fields named as members of `TObject` (`Free`, `Destroy`...) get another name, with `[JSONName]`;
-- a destructor frees the objects of the fields and of their arrays (`TArray<TPet>`: MARS reads
-  arrays, not lists), as MARS creates them reading JSON; MARS frees the results of a resource, and
-  their arrays, so the generated servers work with classes too.
+- arrays of objects are lists owning them (`TObjectList<TPet>`), arrays of other values
+  `TArray<T>`; a destructor frees the objects and the lists of the fields, as MARS creates them
+  reading JSON. MARS frees the results and the body parameters of a resource, lists included, so the
+  generated servers work with classes too.
 
 ## Server
 
@@ -205,7 +206,8 @@ MARS sources it is skipped.
 
 The `ServersOfTheCorpusConform` test compiles the server of every document of the corpus with an
 OpenAPI resource, runs it in process (the engine and the mocks of the MARS tests) and compares its
-OpenAPI with the document: only the differences the generator announces are expected.
+OpenAPI with the document: only the differences the generator announces are expected. The same with
+classes (`ServersOfTheCorpusConformWithClasses`).
 
 The `Project` tests create a project from the pet store (under `/v1`), build its console flavor
 with `msbuild` (`rsvars.bat` next to `dcc32`, `MARSDIR` set to the MARS folder), run it on a random

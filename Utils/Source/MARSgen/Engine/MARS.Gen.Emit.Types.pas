@@ -106,6 +106,8 @@ begin
   Add('{$SCOPEDENUMS ON}');
   Add;
   LUnits := [];
+  if FMapper.UsesObjectList then
+    LUnits := LUnits + ['System.Generics.Collections'];
   if FMapper.UsesJSONValue then
     LUnits := LUnits + ['System.JSON'];
   if FMapper.UsesRawJSON or FMapper.UsesJSONName then
@@ -183,6 +185,9 @@ var
 begin
   ADepth := 0;
   LTypeName := AField.TypeName;
+  // a list owns its objects: freeing it is enough
+  if LTypeName.StartsWith('TObjectList<') then
+    Exit(True);
   while LTypeName.StartsWith('TArray<') and LTypeName.EndsWith('>') do
   begin
     Inc(ADepth);

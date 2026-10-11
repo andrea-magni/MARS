@@ -11,7 +11,7 @@ unit MARS.Gen.Types;
 // Classes: allOf with a single base of the components is inheritance (TPet = class(TNewPet)), the
 // other compositions are merged; classes are declared forward, so they reference each other
 // freely (no cycles to break); what has no Delphi type is a TJSONValue (an owned copy); a
-// destructor frees the objects of the fields and of their arrays.
+// destructor frees the objects of the fields; arrays of objects are TObjectList<T>, owning them.
 //
 // - string, integer (int32/int64), number, boolean, date-time/date/time, arrays (TArray<T>);
 // - objects with properties and allOf: records ([JSONName] where the JSON name differs);
@@ -129,6 +129,8 @@ type
     function SingleAlternative(const ASchema: TGenSchema): TGenSchema;
     // classes: the type of the single base of allOf, nil for none
     function BaseOf(const AType: TGenDelphiType): TGenDelphiType;
+    // classes: a type that is an object (a class of the unit, a TJSONValue, a list)
+    function IsClassType(const ATypeName: string): Boolean;
     function NewType(const ASchema: TGenSchema; const AKind: TGenDelphiTypeKind;
       const AName: string): TGenDelphiType;
     procedure FillRecord(const AType: TGenDelphiType);
@@ -165,6 +167,8 @@ type
     property UsesRawJSON: Boolean read FUsesRawJSON;
     // classes: TJSONValue fields (System.JSON)
     property UsesJSONValue: Boolean read FUsesJSONValue;
+    // classes: TObjectList<T> fields (System.Generics.Collections)
+    function UsesObjectList: Boolean;
     property UsesJSONName: Boolean read FUsesJSONName;
   end;
 
@@ -248,7 +252,7 @@ begin
   FFilling := TList<TGenDelphiType>.Create;
   // names of the units used by the generated unit
   for var LName in ['TJSONRawString', 'JSONNameAttribute', 'TDateTime', 'TDate', 'TTime',
-    'TArray', 'TObject', 'TValue', 'TJSONValue', 'TJSONObject', 'TJSONArray']
+    'TArray', 'TObject', 'TValue', 'TJSONValue', 'TJSONObject', 'TJSONArray', 'TObjectList']
   do
     FNames.Reserve(LName);
 end;
@@ -466,6 +470,25 @@ begin
     Result := Result + [string.Join('; ', LFlags)];
 end;
 
+function TGenTypeMapper.UsesObjectList: Boolean;
+begin
+  // the fields (the types of the operations are used by the server units)
+  for var LType in FTypes do
+    for var LField in LType.Fields do
+      if LField.TypeName.Contains('TObjectList<') then
+        Exit(True);
+  Result := False;
+end;
+
+function TGenTypeMapper.IsClassType(const ATypeName: string): Boolean;
+begin
+  Result := (ATypeName = JSON_VALUE_TYPE) or ATypeName.StartsWith('TObjectList<');
+  if not Result then
+    for var LType in FTypes do
+      if (LType.Kind = TGenDelphiTypeKind.Record) and (LType.Name = ATypeName) then
+        Exit(True);
+end;
+
 function TGenTypeMapper.BaseOf(const AType: TGenDelphiType): TGenDelphiType;
 var
   LBase: TGenSchema;
@@ -612,7 +635,7 @@ var
   LTypes: TGenSchemaTypes;
   LItemTarget: TGenDelphiType;
   LItemViaArray: Boolean;
-  LName, LItemName: string;
+  LName, LItemName, LItemType: string;
   LSingle: TGenSchema;
 begin
   ATarget := nil;
@@ -696,7 +719,12 @@ begin
     LItemName := TGenNaming.Singular(LName);
     if SameText(LItemName, LName) then
       LItemName := LName + 'Item';
-    Result := 'TArray<' + TypeOf(ASchema.Items, LItemName, LItemTarget, LItemViaArray) + '>';
+    LItemType := TypeOf(ASchema.Items, LItemName, LItemTarget, LItemViaArray);
+    // classes: objects in a list that owns them (MARS reads and writes TObjectList<T>)
+    if FOptions.Classes and IsClassType(LItemType) then
+      Result := 'TObjectList<' + LItemType + '>'
+    else
+      Result := 'TArray<' + LItemType + '>';
     ATarget := LItemTarget;
     AViaArray := True;
   end

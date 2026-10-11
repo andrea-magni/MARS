@@ -20,6 +20,7 @@ type
     function Endpoint(const AOperationId: string): TGenEndpoint; overload;
     function Endpoint(const AMethod, APath: string): TGenEndpoint; overload;
     function HasDiagnostic(const AText: string): Boolean;
+    procedure CorpusConforms(const AClasses: Boolean);
   public
     [Setup]
     procedure Setup;
@@ -49,6 +50,9 @@ type
     [Test]
     // compiled, run, its OpenAPI compared with the document (#248)
     procedure ServersOfTheCorpusConform;
+    // the same with classes (#244)
+    [Test]
+    procedure ServersOfTheCorpusConformWithClasses;
     [Test]
     procedure ServerAnswers;
   end;
@@ -343,6 +347,16 @@ begin
 end;
 
 procedure TGenServerTest.ServersOfTheCorpusConform;
+begin
+  CorpusConforms(False);
+end;
+
+procedure TGenServerTest.ServersOfTheCorpusConformWithClasses;
+begin
+  CorpusConforms(True);
+end;
+
+procedure TGenServerTest.CorpusConforms(const AClasses: Boolean);
 const
   DOCUMENTS: array[0..13] of string = ('petstore-3.0.yaml', 'features-3.1.json', 'mapping-3.0.yaml',
     'server-3.0.yaml', 'oai\v3.0-api-with-examples.yaml', 'oai\v3.0-callback-example.yaml',
@@ -375,6 +389,7 @@ var
   LCompiler, LSources, LRoot, LFolder, LOutput, LPaths, LServerFile: string;
   LFiles: TGenServerFiles;
   LServer: TGenApi;
+  LTypeOptions: TGenTypeOptions;
   LComparison: TGenComparison;
   LDifferences: TArray<string>;
 begin
@@ -398,7 +413,9 @@ begin
     LFolder := TPath.Combine(FFolder, LIndex.ToString);
     FreeAndNil(FApi);
     FApi := TGenOpenAPIReader.Load(CorpusFile(DOCUMENTS[LIndex]));
-    LFiles := TGenServerEmitter.WriteServer(FApi, TGenTypeOptions.Default, LFolder);
+    LTypeOptions := TGenTypeOptions.Default;
+    LTypeOptions.Classes := AClasses;
+    LFiles := TGenServerEmitter.WriteServer(FApi, LTypeOptions, LFolder);
     TFile.WriteAllText(TPath.Combine(LFolder, 'Probe.OpenAPI.pas'), PROBE_UNIT);
     TFile.WriteAllText(TPath.Combine(LFolder, 'Probe.dpr'), string.Join(#13#10, [
       'program Probe;', '{$APPTYPE CONSOLE}',
