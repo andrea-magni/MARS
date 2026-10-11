@@ -135,6 +135,9 @@ type
     procedure TestRequiredParamsAre400;
 
     [Test]
+    procedure TestObjectListBody;
+
+    [Test]
     procedure TestUnknownApplicationOrEngineIs404;
   end;
 
@@ -490,6 +493,25 @@ begin
   Check('http://localhost:8080' + DefaultEngine.Engine.BasePath, 'unknown application');
   // the known ones still work
   Assert.AreEqual(200, StaticRequestStatus('GET', 'helloworld'));
+end;
+
+procedure TMARSDefaultEngineFixture.TestObjectListBody;
+begin
+  // a JSON array into a TObjectList<T> parameter (freed by MARS)
+  var LMock := MockRequestAndResponse('POST', ResourcePath('lists'), '[{"Name":"a"},{"Name":"b"}]');
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.AreEqual('a;b;', LMock.Response.Content);
+
+  LMock := MockRequestAndResponse('POST', ResourcePath('lists'), '[]');
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('', LMock.Response.Content);
+
+  // not an array: a client error
+  LMock := MockRequestAndResponse('POST', ResourcePath('lists'), '42');
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(400, LMock.Response.StatusCode);
 end;
 
 procedure TMARSDefaultEngineFixture.TestRequiredParamsAre400;

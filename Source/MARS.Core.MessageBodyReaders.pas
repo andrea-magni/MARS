@@ -280,6 +280,9 @@ begin
         , TJSONObject(LJSON)
         , JSONSerializationOptionsFor(AActivation)
         )
+    // a TObjectList<T>: from an array, as a member of that type
+    else if (LJSON is TJSONArray) and ADestination.GetRttiType.IsObjectListOfT then
+      TJSONObject.TJSONValueToTValue(LJSON, ADestination.GetRttiType, Result, JSONSerializationOptionsFor(AActivation))
     else
       raise EMARSHttpException.Create(
         'Malformed request body (JSON object expected)', 400);

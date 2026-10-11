@@ -3,7 +3,7 @@ unit Tests.DefaultEngine.Resources;
 interface
 
 uses
-  SysUtils, Classes, System.JSON
+  SysUtils, Classes, System.JSON, Generics.Collections
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Core.JSON, MARS.Core.Response
 , MARS.WebServer.Resources
@@ -165,6 +165,19 @@ type
 
     [POST, Consumes(TMediaType.APPLICATION_JSON)]
     function PostBody([BodyParam, Required] const AItem: TItem): string;
+  end;
+
+  // a TObjectList<T> body
+  TListTag = class
+  public
+    Name: string;
+  end;
+
+  [Path('lists'), Produces(TMediaType.TEXT_PLAIN)]
+  TListsResource = class
+  public
+    [POST, Consumes(TMediaType.APPLICATION_JSON)]
+    function Names([BodyParam] const ATags: TObjectList<TListTag>): string;
   end;
 
   // the OpenAPI of JSON values and streams
@@ -362,6 +375,15 @@ end;
 
 { TRequiredResource }
 
+{ TListsResource }
+
+function TListsResource.Names(const ATags: TObjectList<TListTag>): string;
+begin
+  Result := '';
+  for var LTag in ATags do
+    Result := Result + LTag.Name + ';';
+end;
+
 { TOpenAPICasesResource }
 
 function TOpenAPICasesResource.Anyone: string;
@@ -404,7 +426,7 @@ begin
 end;
 
 initialization
-  MARSRegister([TRequiredResource, TOpenAPICasesResource]);
+  MARSRegister([TRequiredResource, TOpenAPICasesResource, TListsResource]);
   MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TTestTokenResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);

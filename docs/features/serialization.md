@@ -47,7 +47,9 @@ members actually came from the JSON. Members of a record start zeroed, so the sa
 
 A `TObjectList<T>` member is read from a JSON array, its elements as `T`: a list the constructor
 created is emptied and filled (the same instance), a `nil` member gets a new list that owns its
-objects (`Create(True)`). Either way the object that holds the list frees it in its destructor:
+objects (`Create(True)`). Either way the object that holds the list frees it in its destructor.
+A `[BodyParam]` of type `TObjectList<T>` is read from a JSON array the same way (MARS frees it after
+the method):
 
 ```pascal
 TOrder = class
