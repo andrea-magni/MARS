@@ -22,6 +22,8 @@ uses
   MARS.Gen.Server in '..\Engine\MARS.Gen.Server.pas',
   MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
   MARS.Gen.Output in '..\Engine\MARS.Gen.Output.pas',
+  MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
+  MARS.Cmd in '..\..\MARScmd\MARS.Cmd.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas';
 
 

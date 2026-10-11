@@ -10,6 +10,7 @@ samples. Work in progress: see the plan in
 
 ```
 MARSgen openapi <file|url> [--types] [options]
+MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 MARSgen json <file> [<file> ...] [--name <Name>] [options]
 MARSgen update [<folder>]
 MARSgen --help
@@ -18,10 +19,11 @@ MARSgen --help
 - `openapi`: the types of an OpenAPI 3.0/3.1 document, JSON or YAML, from a file or a URL.
 - `json`: the types of one or more JSON samples, merged; `--name Order` gives `TOrder`.
 - `openapi --server`: also the MARS resources of the document (see below).
+- `openapi --project <Name>`: the same, in a new MARS project (see below).
 - `update`: imports again the OpenAPI document of a folder, as last time (see below).
 - Options: `--dest`, `--unit`, `--int64`, `--currency`, `--enums-as-strings`, `--json-name-always`,
-  `--field-names-as-json`, `--force`, `--strict`, `--verbose`; for `json` also `--no-dates` and
-  `--name-after-parent`. `MARSgen --help` describes them.
+  `--field-names-as-json`, `--force`, `--strict`, `--verbose`; for `--project` also `--template`,
+  `--mars` and `--allow-inside`; for `json` also `--no-dates` and `--name-after-parent`. `MARSgen --help` describes them.
 - Warnings and errors are listed with the JSON pointer of the construct. Exit codes: 0 done, 1
   warnings with `--strict`, 2 errors (the unit is still written when the document could be read),
   3 a wrong command line.
@@ -43,6 +45,27 @@ MARSgen --help
   `[RolesAllowed]`, `security: []` is `[PermitAll]`; an apiKey is not checked (a comment says so).
 - Not generated, with a warning: paths starting with a parameter (`/{tenant}/...`) and segments mixing
   text and parameters (`/{name}.{ext}`). Arrays in the query are strings (MARS reads the first value).
+
+## Project
+
+`MARSgen openapi <document> --project <Name> [--template <name>] [--dest <folder>]` creates a MARS
+project as MARSCmd does (the same unit, `MARS.Cmd`, and templates: `MARSTemplate` by default,
+`--template MARSTemplateRoutes`...), into `--dest` or `<current folder>\<Name>`, which must not exist or
+be empty. Then it writes the units of the server into it and links them:
+
+- `Server.<Api>` in the `uses` of `Server.Ignition` (its application adds the `Server.Resources.*`
+  resources);
+- the base path of the document (the path of its first server) as the paths of MARS, which serves
+  `/<engine>/<application>/<resource>`: `/v1` gives `BasePath=/` in `bin\Server.ini` and the
+  application `/v1` in `Server.Ignition`; `/api/v2` gives `/api` and `/v2`. A document at the root, or
+  with more than two segments, keeps the `/rest/default` of the templates, with a note;
+- its title and version as `OpenAPI.info` in `bin\Server.ini` (when they read as text: MARS reads
+  `1.0` in an ini file as a number).
+
+The resources of the template stay (`helloworld`, `token`, `openapi`); a path of the document with the
+name of one of them (`/token/...`) is reported, and that resource is not created. The project
+works with `MARSgen update` as any other folder. Without `--project`, for an existing project, the
+report says what to add to `Server.Ignition` and how to set the paths.
 
 ## Importing again
 
@@ -99,6 +122,8 @@ Keep it with the sources. The next import of the same API into the folder:
 - `MARS.Gen.Server`, `MARS.Gen.Emit.Server`: the MARS resources of the operations.
 - `MARS.Gen.Output`: writes the files of an import and its manifest (`TGenManifest`), keeping the
   files changed by hand, and compares it with the last one.
+- `MARS.Gen.Project`: a new project (through `MARS.Cmd` of `Utils\Source\MARScmd`), linked to the
+  units of the server; the base path of the document as the paths of MARS.
 - `MARS.Gen.CLI`: the command line as a function of its arguments (the tests call it directly).
 - `MARS.Gen.JSONInference`: infers the schemas of one or more JSON samples into the same model, so
   the same mapping and emitter give their Delphi types.
@@ -129,3 +154,8 @@ The `Compile` test writes the units generated from the corpus, compiles them wit
 through the `BDS` environment variable or the registry) into a probe program and runs it: every
 record must read a JSON instance and write the same JSON back through MARS. Without Delphi or the
 MARS sources it is skipped.
+
+The `Project` tests create a project from the pet store (under `/v1`), build its console flavor
+with `msbuild` (`rsvars.bat` next to `dcc32`, `MARSDIR` set to the MARS folder), run it on a random
+port and call it: the operations answer 501 (with a token of the `token` resource of the template
+where the document asks for one), invalid parameters 400, `/v1/openapi` describes them.

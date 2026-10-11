@@ -24,6 +24,8 @@ uses
   MARS.Gen.Server in '..\Engine\MARS.Gen.Server.pas',
   MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
   MARS.Gen.Output in '..\Engine\MARS.Gen.Output.pas',
+  MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
+  MARS.Cmd in '..\..\MARScmd\MARS.Cmd.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas',
   Tests.MARSgen.Helpers in 'Tests.MARSgen.Helpers.pas',
   Tests.MARSgen.JSONSource in 'Tests.MARSgen.JSONSource.pas',
@@ -35,7 +37,8 @@ uses
   Tests.MARSgen.CLI in 'Tests.MARSgen.CLI.pas',
   Tests.MARSgen.RealDocuments in 'Tests.MARSgen.RealDocuments.pas',
   Tests.MARSgen.Server in 'Tests.MARSgen.Server.pas',
-  Tests.MARSgen.Regeneration in 'Tests.MARSgen.Regeneration.pas';
+  Tests.MARSgen.Regeneration in 'Tests.MARSgen.Regeneration.pas',
+  Tests.MARSgen.Project in 'Tests.MARSgen.Project.pas';
 
 var
   LResults: IRunResults;

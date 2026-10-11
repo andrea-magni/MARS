@@ -401,7 +401,7 @@ begin
         begin
           AOutput.WriteGenerated(LResource.BaseUnit + '.pas', LEmitter.BaseUnit(LResource));
           // the code of the user: never written again
-          AOutput.WriteUser(LResource.ResourceUnit + '.pas', LEmitter.UserUnit(LResource));
+          AOutput.WriteUser(LResource.ResourceUnit + '.pas', LEmitter.UserUnit(LResource), LResource.BaseUnit);
         end;
         AOutput.WriteGenerated(LServer.ApiUnitName + '.pas', LEmitter.ApiUnit);
         Result := LServer.ApiUnitName;

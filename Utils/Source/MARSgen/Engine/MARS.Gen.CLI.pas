@@ -10,6 +10,7 @@ unit MARS.Gen.CLI;
 //
 //   MARSgen openapi <file|url> [--types|--server] [options]
 //   MARSgen json <file> [<file> ...] [--name <Name>] [options]
+//   MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 //   MARSgen update [<folder>]
 //
 // Every import leaves a manifest in the folder (<Api>.marsgen.json, see MARS.Gen.Output): the next
@@ -41,9 +42,9 @@ type
 implementation
 
 uses
-  System.IOUtils, System.StrUtils,
+  System.IOUtils, System.StrUtils, System.RegularExpressions,
   MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.JSONInference, MARS.Gen.Types,
-  MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Output;
+  MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Output, MARS.Gen.Project;
 
 type
   EUsage = class(Exception);
@@ -55,6 +56,11 @@ type
     StrictWarnings: Boolean;
     Verbose: Boolean;
     Server: Boolean;
+    // a new project (MARSCmd), from Template, in the MARS folder MARSFolder
+    Project: string;
+    Template: string;
+    MARSFolder: string;
+    AllowInside: Boolean;
     Force: Boolean;
     TypeOptions: TGenTypeOptions;
     InferenceOptions: TGenInferenceOptions;
@@ -110,6 +116,10 @@ begin
     '  MARSgen openapi <file|url> --server [options]',
     '      the types and the MARS resources of the document: Server.Resources.<Name>.Base (generated),',
     '      Server.Resources.<Name> (yours: created only when missing), Server.<Api> (links them)',
+    '  MARSgen openapi <file|url> --project <Name> [--template <name>] [options]',
+    '      the same, in a new MARS project created as MARSCmd does (<Name>Server..., Server.Ignition),',
+    '      linked: Server.<Api> in the uses of Server.Ignition, the base path of the document as the',
+    '      paths of the engine and of the application, its title and version in Server.ini',
     '  MARSgen json <file> [<file> ...] [--name <Name>] [options]',
     '      the types of JSON samples (objects or arrays), merged',
     '  MARSgen update [<folder>]',
@@ -117,7 +127,8 @@ begin
     '  MARSgen --help',
     '',
     'Options:',
-    '  --dest <folder>          where to write the unit. Default: the current folder',
+    '  --dest <folder>          where to write the unit. Default: the current folder (with --project:',
+    '                           <current folder>\<Name>, that must not exist or be empty)',
     '  --unit <name>            the unit. Default: Model.<title of the document> or Model.<Name>',
     '  --int64                  integers without a format as Int64 (default: Integer)',
     '  --currency               numbers as Currency (default: Double)',
@@ -127,6 +138,12 @@ begin
     '  --force                  overwrite the generated files changed by hand (or not written by MARSgen)',
     '  --strict                 exit code 1 when there are warnings',
     '  --verbose                also the informational messages',
+    '',
+    'Options of --project:',
+    '  --template <name|folder> the template of MARSCmd: a folder of Demos (i.e. MARSTemplateRoutes)',
+    '                           or a path. Default: MARSTemplate',
+    '  --mars <folder>          the MARS folder. Default: the one containing MARSgen.exe',
+    '  --allow-inside           allow a project inside the MARS folder',
     '',
     'Options of json:',
     '  --name <Name>            the root type: Order gives TOrder. Default: Root',
@@ -142,6 +159,7 @@ begin
     '',
     'Examples:',
     '  MARSgen openapi petstore.yaml --dest C:\Projects\PetStore',
+    '  MARSgen openapi petstore.yaml --project PetStore --dest C:\Projects\PetStore',
     '  MARSgen update C:\Projects\PetStore',
     '  MARSgen json order1.json order2.json --name Order --unit Model.Orders'
   ]);
@@ -167,6 +185,10 @@ begin
   Result.StrictWarnings := False;
   Result.Verbose := False;
   Result.Server := False;
+  Result.Project := '';
+  Result.Template := '';
+  Result.MARSFolder := '';
+  Result.AllowInside := False;
   Result.Force := False;
   Result.Given := [];
   Result.TypeOptions := TGenTypeOptions.Default;
@@ -185,6 +207,14 @@ begin
     end
     else if SameText(LArg, '--server') then
       Result.Server := True
+    else if SameText(LArg, '--project') then
+      Result.Project := Value
+    else if SameText(LArg, '--template') then
+      Result.Template := Value
+    else if SameText(LArg, '--mars') then
+      Result.MARSFolder := Value
+    else if SameText(LArg, '--allow-inside') then
+      Result.AllowInside := True
     else if SameText(LArg, '--types') then
       // the default (and, for now, the only) output
     else if SameText(LArg, '--dest') then
@@ -246,6 +276,18 @@ begin
     raise EUsage.CreateFmt('Missing input: MARSgen %s <file>', [Result.Command]);
   if Result.Server and (Result.Command <> 'openapi') then
     raise EUsage.Create('--server needs an OpenAPI document (openapi)');
+  if Result.Project <> '' then
+  begin
+    if Result.Command <> 'openapi' then
+      raise EUsage.Create('--project needs an OpenAPI document (openapi)');
+    if Result.IsGiven('--types') then
+      raise EUsage.Create('--project writes a server: not with --types');
+    if not TRegEx.IsMatch(Result.Project, '^[A-Za-z_][A-Za-z0-9_]*$') then
+      raise EUsage.CreateFmt('Invalid project name: %s (letters, digits and _, not starting with a digit)', [Result.Project]);
+    Result.Server := True;
+  end
+  else if Result.IsGiven('--template') or Result.IsGiven('--mars') or Result.IsGiven('--allow-inside') then
+    raise EUsage.Create('--template, --mars and --allow-inside go with --project');
   if (Result.Command = 'openapi') and (Length(Result.Inputs) > 1) then
     raise EUsage.Create('openapi reads one document');
 
@@ -272,6 +314,53 @@ end;
 function IsURL(const AInput: string): Boolean;
 begin
   Result := StartsText('http://', AInput) or StartsText('https://', AInput);
+end;
+
+// a first import of a server: how it is linked (--project) or has to be (an existing project), and
+// where MARS serves the operations of the document
+procedure ReportLinking(const ACommandLine: TGenCommandLine; const AApi: TGenApi; const AApiUnit: string;
+  const AOutput: TStrings);
+var
+  LBasePath: TGenBasePath;
+  LMessages: TStringList;
+begin
+  LBasePath := TGenBasePath.FromApi(AApi);
+  if ACommandLine.Project <> '' then
+  begin
+    LMessages := TStringList.Create;
+    try
+      if TGenProject.Link(ACommandLine.Folder, AApiUnit, AApi, LBasePath, LMessages) then
+        AOutput.Add('Linked: ' + AApiUnit + ' in the uses of Server.Ignition');
+      if LBasePath.Supported and not LBasePath.IsTemplateDefault then
+        AOutput.Add(Format('Base path of the document %s: BasePath=%s in Server.ini, application path %s in Server.Ignition',
+          [LBasePath.Path, LBasePath.EnginePath, LBasePath.ApplicationPath]));
+      AOutput.AddStrings(LMessages);
+    finally
+      LMessages.Free;
+    end;
+  end
+  else
+  begin
+    AOutput.Add('Add ' + AApiUnit + ' to the uses of Server.Ignition');
+    if LBasePath.Supported and not LBasePath.IsTemplateDefault then
+      AOutput.Add(Format('The operations of the document are under %s: set BasePath=%s in [DefaultEngine] of the ini '
+        + 'file of the server and %s as the path of the application in Server.Ignition',
+        [LBasePath.Path, LBasePath.EnginePath, LBasePath.ApplicationPath]));
+  end;
+
+  if not LBasePath.Supported then
+  begin
+    if LBasePath.Path = '' then
+      AOutput.Add('The operations of the document are at the root of the server: MARS serves them under '
+        + '/<engine>/<application> (/rest/default in the templates), the base URL for the clients')
+    else
+      AOutput.Add(Format('The operations of the document are under %s: MARS serves /<engine>/<application>/<resource>, '
+        + 'two segments at most (/rest/default in the templates), the base URL for the clients', [LBasePath.Path]));
+  end;
+
+  if ACommandLine.Project <> '' then
+    for var LGroup in TDirectory.GetFiles(ACommandLine.Folder, '*.groupproj') do
+      AOutput.Add('Open ' + LGroup);
 end;
 
 class function TGenCLI.Run(const AArgs: TArray<string>; const AOutput: TStrings): Integer;
@@ -304,7 +393,9 @@ begin
   end;
 
   try
-    if LCommandLine.Folder = '' then
+    if (LCommandLine.Folder = '') and (LCommandLine.Project <> '') then
+      LCommandLine.Folder := TPath.Combine(GetCurrentDir, LCommandLine.Project)
+    else if LCommandLine.Folder = '' then
       LCommandLine.Folder := GetCurrentDir
     else
       LCommandLine.Folder := TPath.GetFullPath(LCommandLine.Folder);
@@ -346,6 +437,20 @@ begin
     else
       LApi := TGenJSONInference.FromFiles(LCommandLine.Inputs, LCommandLine.InferenceOptions);
     try
+      // the project first: the units go into it (when the document could not be read, nothing is created)
+      if LCommandLine.Project <> '' then
+      begin
+        if LCommandLine.MARSFolder = '' then
+          LCommandLine.MARSFolder := TGenProject.FindMARSFolder
+        else
+          LCommandLine.MARSFolder := TPath.GetFullPath(LCommandLine.MARSFolder);
+        if LCommandLine.MARSFolder = '' then
+          raise EGenError.Create('MARS folder not found (Demos\MARSTemplate, Source) above MARSgen.exe: use --mars <folder>');
+        TGenProject.CreateProject(LCommandLine.Project, LCommandLine.Template, LCommandLine.Folder,
+          LCommandLine.MARSFolder, LCommandLine.AllowInside);
+        AOutput.Add('Project ' + LCommandLine.Project + ' created: ' + LCommandLine.Folder);
+      end;
+
       LOutput := TGenOutput.Create(LCommandLine.Folder, TGenOutput.ApiName(LApi), LCommandLine.Force);
       try
         if Assigned(LOutput.Previous) then
@@ -381,7 +486,10 @@ begin
         for var LFile in LOutput.Foreign do
           AOutput.Add('warning: not written: ' + LFile + ' (already there, not written by MARSgen: '
             + '--force to overwrite)');
-        Inc(LWarnings, Length(LOutput.Changed) + Length(LOutput.Foreign));
+        for var LFile in LOutput.Conflicts do
+          AOutput.Add('warning: not created: ' + LFile + ' (another unit with this name is already there: '
+            + 'its resource is not registered; rename that unit, or the tag in the document)');
+        Inc(LWarnings, Length(LOutput.Changed) + Length(LOutput.Foreign) + Length(LOutput.Conflicts));
         for var LFile in LOutput.Stale do
           AOutput.Add('Stale: ' + LFile + ' (no longer generated: delete it, and remove it from the project)');
         for var LFile in LOutput.Unused do
@@ -397,7 +505,7 @@ begin
           else
             AOutput.Add('Removed: ' + LOperation);
         if LCommandLine.Server and not Assigned(LOutput.Previous) then
-          AOutput.Add('Add ' + LApiUnit + ' to the uses of Server.Ignition');
+          ReportLinking(LCommandLine, LApi, LApiUnit, AOutput);
       finally
         LOutput.Free;
       end;
