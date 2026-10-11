@@ -8,7 +8,7 @@ interface
 uses
   Classes, SysUtils
 , DUnitX.TestFramework
-, Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Comp.DataSet, Datasnap.DBClient, MidasLib
+, Data.DB, Variants, FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Comp.DataSet, Datasnap.DBClient, MidasLib
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Data.Utils
 ;
 
@@ -21,6 +21,7 @@ type
     [Test] procedure ExistingFields;
     [Test] procedure Options;
     [Test] procedure RoundTrip;
+    [Test] procedure WrittenNullsAndNestedObjects;
     [Test] procedure ClientDataSet;
     [Test] procedure Errors;
   end;
@@ -223,8 +224,12 @@ var
     while not LSource.Eof do
     begin
       for var LField in LSource.Fields do
+      begin
         Assert.AreEqual(LField.AsString, ADataSet.FieldByName(LField.FieldName).AsString,
           AWhat + ': ' + LField.FieldName);
+        Assert.AreEqual(LField.IsNull, ADataSet.FieldByName(LField.FieldName).IsNull,
+          AWhat + ': null ' + LField.FieldName);
+      end;
       LSource.Next;
       ADataSet.Next;
     end;
@@ -246,11 +251,15 @@ begin
     LSource.FieldDefs.Add('Born', ftDate);
     LSource.FieldDefs.Add('At', ftDateTime);
     LSource.FieldDefs.Add('Notes', ftWideMemo);
+    // nested objects
+    LSource.FieldDefs.Add('Address.City', ftWideString, 30);
+    LSource.FieldDefs.Add('Address.Zip', ftWideString, 10);
     LSource.CreateDataSet;
     LSource.AppendRecord([1, Int64(9007199254740993), 'Ann', 'A1', 10.25, 12.5, True,
-      EncodeDate(1990, 5, 1), EncodeDateTime(2026, 10, 11, 9, 30, 15, 0), 'first']);
-    LSource.AppendRecord([2, 5, 'Bob', 'B2', 1.5, 0.75, False,
-      EncodeDate(1985, 12, 31), EncodeDateTime(2026, 10, 12, 18, 0, 0, 0), 'second']);
+      EncodeDate(1990, 5, 1), EncodeDateTime(2026, 10, 11, 9, 30, 15, 0), 'first', 'Rome', '00100']);
+    // nulls
+    LSource.AppendRecord([2, Null, 'Bob', Null, 1.5, Null, False,
+      Null, EncodeDateTime(2026, 10, 12, 18, 0, 0, 0), Null, 'Milan', Null]);
 
     LArray := DataSetToJSONArray(LSource);
     try
@@ -271,6 +280,46 @@ begin
     LCreated.Free;
     LTarget.Free;
     LSource.Free;
+  end;
+end;
+
+procedure TMARSJSONArrayToDataSetTest.WrittenNullsAndNestedObjects;
+var
+  LTable: TFDMemTable;
+  LArray: TJSONArray;
+  LObject: TJSONObject;
+begin
+  LTable := TFDMemTable.Create(nil);
+  try
+    LTable.FieldDefs.Add('id', ftInteger);
+    LTable.FieldDefs.Add('name', ftWideString, 20);
+    LTable.FieldDefs.Add('active', ftBoolean);
+    LTable.FieldDefs.Add('address.city', ftWideString, 20);
+    LTable.FieldDefs.Add('address.geo.lat', ftFloat);
+    // a value first, then a dotted name under it: that name stays flat
+    LTable.FieldDefs.Add('code', ftWideString, 5);
+    LTable.FieldDefs.Add('code.extra', ftWideString, 5);
+    LTable.CreateDataSet;
+    LTable.AppendRecord([1, Null, Null, 'Rome', 41.9, 'C', 'X']);
+
+    LArray := DataSetToJSONArray(LTable);
+    try
+      Assert.AreEqual(
+        '[{"id":1,"name":null,"active":null,"address":{"city":"Rome","geo":{"lat":41.9}},"code":"C","code.extra":"X"}]',
+        LArray.ToJSON);
+    finally
+      LArray.Free;
+    end;
+
+    // the fields under a root path, named without it
+    LObject := RecordToJSONObject(LTable, 'address');
+    try
+      Assert.AreEqual('{"city":"Rome","geo":{"lat":41.9}}', LObject.ToJSON);
+    finally
+      LObject.Free;
+    end;
+  finally
+    LTable.Free;
   end;
 end;
 

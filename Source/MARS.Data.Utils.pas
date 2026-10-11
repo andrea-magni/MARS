@@ -24,6 +24,9 @@ type
 procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField); overload;
 procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField; const AOptions: TMARSJSONSerializationOptions); overload;
 
+// The current record: one pair per field, null for a null field; a field named with dots is a
+// nested object (address.city: {"address": {"city": ...}}), unless a part is already a value
+// (then its name stays as it is). ARootPath: only the fields under it (ARootPath.x), named x
 function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string = '';
   const AFieldAccept: TFieldAcceptFunc = nil): TJSONObject; overload;
 function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string;
@@ -151,6 +154,13 @@ end;
 
 procedure FieldToJSONObject(const AObject: TJSONObject; const APairName: string; const AField: TField; const AOptions: TMARSJSONSerializationOptions);
 begin
+      // a null field: null (not an empty string, a zero or false)
+      if AField.IsNull then
+      begin
+        AObject.AddPair(APairName, TJSONNull.Create);
+        Exit;
+      end;
+
       case AField.DataType of
 //        ftUnknown: ;
         ftString: AObject.AddPair(APairName, AField.AsString);
@@ -207,13 +217,49 @@ begin
       end;
 end;
 
+// the object of a dotted name (address.city: the object "address" of AObject, created when
+// missing) and the name in it (city); AObject and the whole name when a part is already another
+// value, or the name has empty parts
+function ParentObjectFor(const AObject: TJSONObject; const AName: string; out ALeafName: string): TJSONObject;
+var
+  LParts: TArray<string>;
+  LValue: TJSONValue;
+  LParent: TJSONObject;
+begin
+  Result := AObject;
+  ALeafName := AName;
+  LParts := AName.Split(['.']);
+  if Length(LParts) < 2 then
+    Exit;
+  for var LPart in LParts do
+    if LPart = '' then
+      Exit;
+
+  LParent := AObject;
+  for var LIndex := 0 to High(LParts) - 1 do
+  begin
+    LValue := LParent.GetValue(LParts[LIndex]);
+    if not Assigned(LValue) then
+    begin
+      LValue := TJSONObject.Create;
+      LParent.AddPair(LParts[LIndex], LValue);
+    end
+    else if not (LValue is TJSONObject) then
+      Exit; // address is a value already: address.city stays as it is
+    LParent := TJSONObject(LValue);
+  end;
+  Result := LParent;
+  ALeafName := LParts[High(LParts)];
+end;
+
 function RecordToJSONObject(const ADataSet: TDataSet; const ARootPath: string;
   const AFieldAccept: TFieldAcceptFunc;
   const AOptions: TMARSJSONSerializationOptions): TJSONObject;
 var
   LField: TField;
-  LPairName: string;
+  LPairName, LLeafName: string;
   LAccept: Boolean;
+  LParent: TJSONObject;
 begin
   if not Assigned(ADataSet) then
     raise Exception.Create('DataSet not assigned');
@@ -226,21 +272,24 @@ begin
   try
     for LField in ADataSet.Fields do
     begin
-      if (ARootPath = '') or StartsStr(ARootPath + '.', LField.FieldName) then
+      // the fields under ARootPath, named without it
+      LPairName := LField.FieldName;
+      if ARootPath <> '' then
       begin
-        LPairName := LField.FieldName;
-        if ARootPath <> '' then
-          LPairName := LeftStr(LPairName, Length(ARootPath) + 1);
-
-        if ContainsStr(LPairName, '.') then
+        if not StartsStr(ARootPath + '.', LPairName) then
           Continue;
+        LPairName := Copy(LPairName, Length(ARootPath) + 2, MaxInt);
+      end;
 
-        LAccept := True;
-        if Assigned(AFieldAccept) then
-          LAccept := AFieldAccept(LPairName, LField);
+      LAccept := True;
+      if Assigned(AFieldAccept) then
+        LAccept := AFieldAccept(LPairName, LField);
 
-        if LAccept then
-          FieldToJSONObject(Result, LPairName, LField, AOptions);
+      if LAccept then
+      begin
+        // address.city: {"address": {"city": ...}}
+        LParent := ParentObjectFor(Result, LPairName, LLeafName);
+        FieldToJSONObject(LParent, LLeafName, LField, AOptions);
       end;
     end;
   except

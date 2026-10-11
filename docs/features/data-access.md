@@ -132,7 +132,7 @@ A method that returns a dataset or an array of datasets needs nothing else: MARS
 | `application/xml-firedac` | FireDAC | the FireDAC XML format |
 | `application/json-unidac`, `application/json-mydac`, `application/json-ibdac` | Devart | an object with one member per dataset: the XML of `TMemDataSet.SaveToXML`, zipped, Base64 |
 
-The JSON of records is for any client (a browser, another language); the native formats keep types and metadata and are what the Delphi client components use. The field names are the ones of the database: Firebird and InterBase write them in upper case (`"ID"`, `"NAME"`) unless the table uses quoted lower case identifiers.
+The JSON of records is for any client (a browser, another language); the native formats keep types and metadata and are what the Delphi client components use. In the JSON of records a null field is `null`, and a field named with dots is a nested object: `address.city` and `address.zip` give `{"address": {"city": …, "zip": …}}` (`DataSetToJSONArray` and `RecordToJSONObject` in `MARS.Data.Utils`; [`JSONArrayToDataSet`](#plain-json-into-a-dataset) reads them back). The field names are the ones of the database: Firebird and InterBase write them in upper case (`"ID"`, `"NAME"`) unless the table uses quoted lower case identifiers.
 
 ### Reading datasets
 
