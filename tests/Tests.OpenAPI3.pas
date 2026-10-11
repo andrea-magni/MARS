@@ -184,7 +184,10 @@ procedure TMARSOpenAPI3Test.RequiredPermitAllAndProcedures;
 begin
   var LEngine := TDefaultEngine.Create;
   try
-    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    // the security schemes need a secret
+    var LApp := LEngine.Engine.ApplicationByName('DefaultApp');
+    LApp.Parameters.Values['JWT.Secret'] := 'openapi-test-secret-0123456789-0123456789-0123456789';
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LApp);
     try
       // [Required] parameters and bodies; path parameters always
       var LRequired := LOpenAPI.paths['/required'];
@@ -194,13 +197,21 @@ begin
       Assert.IsTrue(LOpenAPI.paths['/item/{id}'].get.parameters[0].required, 'path');
       Assert.IsFalse(LOpenAPI.paths['/item/single'].post.requestBody.required, 'body without [Required]');
 
-      // PermitAll in a RolesAllowed resource: public; the others keep the roles
+      // PermitAll alone: public
       var LCases := LOpenAPI.paths['/openapicases'];
       Assert.AreEqual(0, LCases.get.security.Count, 'PermitAll: no security requirement');
       Assert.IsFalse(LCases.get.responses.ContainsKey('403'));
-      for var LRequirement in LCases.delete.security do
-        for var LScopes in LRequirement.Values do
-          Assert.DoesNotContain(string.Join(',', LScopes), 'PermitAll');
+      // roles: the scopes
+      Assert.AreEqual(2, LCases.delete.security.Count, 'bearer and cookie');
+      Assert.AreEqual('admin', string.Join(',', LCases.delete.security[0]['JWT_bearer']));
+      // a token, any role: a requirement without scopes ([Authenticated], or PermitAll with roles)
+      for var LPath in ['/openapicases/signed', '/openapicases/anytoken'] do
+      begin
+        var LOperation := LOpenAPI.paths[LPath].get;
+        Assert.AreEqual(2, LOperation.security.Count, LPath);
+        Assert.AreEqual(0, Length(LOperation.security[0]['JWT_bearer']), LPath);
+        Assert.IsTrue(LOperation.responses.ContainsKey('403'), LPath);
+      end;
 
       // a procedure: a response without content
       Assert.AreEqual(0, LCases.delete.responses['200'].content.Count, 'no content for a procedure');

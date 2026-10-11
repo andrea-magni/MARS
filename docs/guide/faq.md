@@ -103,7 +103,7 @@ Yes: static files with `TFileSystemResource`, server-side templates with WebSten
 
 ### How do I protect an endpoint with JWT?
 
-Put `[RolesAllowed('standard')]` (or `[PermitAll]`) on the resource or on the method: requests need a valid token, sent as `Authorization: Bearer <token>` or as a cookie. See [Authorization](/features/authorization).
+Put `[RolesAllowed('standard')]` (or `[Authenticated]`, for any role) on the resource or on the method: requests need a valid token, sent as `Authorization: Bearer <token>` or as a cookie. See [Authorization](/features/authorization).
 
 ### How do users log in?
 

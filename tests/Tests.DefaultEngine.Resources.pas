@@ -168,13 +168,20 @@ type
   end;
 
   // the OpenAPI of authorization and of procedures
-  [Path('openapicases'), RolesAllowed('admin')]
+  [Path('openapicases')]
   TOpenAPICasesResource = class
   public
+    // public
     [GET, PermitAll, Produces(TMediaType.TEXT_PLAIN)]
     function Anyone: string;
-    [DELETE]
+    // admin
+    [DELETE, RolesAllowed('admin')]
     procedure Remove;
+    // a token, any role: [Authenticated], or PermitAll with roles
+    [GET, Path('signed'), Authenticated, Produces(TMediaType.TEXT_PLAIN)]
+    function Signed: string;
+    [GET, Path('anytoken'), RolesAllowed('admin'), PermitAll, Produces(TMediaType.TEXT_PLAIN)]
+    function AnyToken: string;
   end;
 
   [Path('item'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
@@ -353,6 +360,16 @@ end;
 
 procedure TOpenAPICasesResource.Remove;
 begin
+end;
+
+function TOpenAPICasesResource.Signed: string;
+begin
+  Result := 'signed';
+end;
+
+function TOpenAPICasesResource.AnyToken: string;
+begin
+  Result := 'any token';
 end;
 
 function TRequiredResource.GetQuery(name: string): string;

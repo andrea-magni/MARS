@@ -40,6 +40,8 @@ type
   TMARSAuthorizationInfo = record
   public
     DenyAll, PermitAll: Boolean;
+    // [Authenticated]: a verified token, any role
+    Authenticated: Boolean;
     AllowedRoles: TArray<string>;
     function NeedsAuthentication: Boolean;
     function NeedsAuthorization: Boolean;
@@ -699,6 +701,8 @@ begin
           FAuthorizationInfo.DenyAll := True
         else if AAttribute is PermitAllAttribute then
           FAuthorizationInfo.PermitAll := True
+        else if AAttribute is AuthenticatedAttribute then
+          FAuthorizationInfo.Authenticated := True
         else if AAttribute is RolesAllowedAttribute then
           LAllowedRoles.AddStrings(RolesAllowedAttribute(AAttribute).Roles);
       end;
@@ -1294,12 +1298,13 @@ constructor TMARSAuthorizationInfo.Create(const ADenyAll, APermitAll: Boolean; c
 begin
   DenyAll := ADenyAll;
   PermitAll := APermitAll;
+  Authenticated := False;
   AllowedRoles := AAllowedRoles;
 end;
 
 function TMARSAuthorizationInfo.NeedsAuthentication: Boolean;
 begin
-  Result := Length(AllowedRoles) > 0;
+  Result := (Length(AllowedRoles) > 0) or Authenticated;
 end;
 
 function TMARSAuthorizationInfo.NeedsAuthorization: Boolean;

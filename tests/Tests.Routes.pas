@@ -186,6 +186,8 @@ type
     [Test]
     procedure TestAuthorizationBeforeMiddleware;
     [Test]
+    procedure TestAuthenticated;
+    [Test]
     procedure TestApplicationMiddleware;
     [Test]
     procedure TestApplicationMiddlewareOnResourcesByParameter;
@@ -279,7 +281,7 @@ implementation
 
 uses
   System.Threading, System.SyncObjs, System.DateUtils, MARS.Core.Registry
-, MARS.Core.Engine, MARS.Core.Exceptions, MARS.Core.Activation
+, MARS.Core.Engine, MARS.Core.Exceptions, MARS.Core.Activation, MARS.Core.Token
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
@@ -750,6 +752,49 @@ begin
   var LMock := Send('GET', 'mw/secure/data');
   Assert.AreEqual(403, LMock.Response.StatusCode);
   Assert.AreEqual('', GTrace, 'no middleware should run without authorization');
+end;
+
+procedure TMARSRoutesFixture.TestAuthenticated;
+
+  function Bearer(const ARoles: TArray<string>): TMARSHeaders;
+  var
+    LHeader: TMARSHeader;
+  begin
+    // the token class of the platform (TMARSToken itself does not sign)
+    var LToken: TMARSToken := {$IFDEF MSWINDOWS}TMARSmORMotJWTToken{$ELSE}TMARSJOSEJWTToken{$ENDIF}.Create('', FApplication.Parameters);
+    try
+      LToken.UserName := 'someone';
+      LToken.Roles := ARoles;
+      LToken.Build(FApplication.Parameters);
+      LHeader.Name := 'Authorization';
+      LHeader.Value := 'Bearer ' + LToken.Token;
+    finally
+      LToken.Free;
+    end;
+    Result := [LHeader];
+  end;
+
+begin
+  var LMock := Send('GET', 'signed');
+  Assert.AreEqual(403, LMock.Response.StatusCode, 'no token');
+  var LInvalid: TMARSHeader;
+  LInvalid.Name := 'Authorization';
+  LInvalid.Value := 'Bearer not.a.token';
+  LMock := Send('GET', 'signed', '', [LInvalid]);
+  Assert.AreEqual(403, LMock.Response.StatusCode, 'a token not verified');
+
+  // any role, or none
+  LMock := Send('GET', 'signed', '', Bearer([]));
+  Assert.AreEqual(200, LMock.Response.StatusCode, 'a token without roles');
+  Assert.AreEqual('signed', LMock.Response.Content);
+  LMock := Send('GET', 'signed', '', Bearer(['standard']));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+
+  // with RolesAllowed, the roles decide
+  LMock := Send('GET', 'signed/admin', '', Bearer(['standard']));
+  Assert.AreEqual(403, LMock.Response.StatusCode, 'another role');
+  LMock := Send('GET', 'signed/admin', '', Bearer(['admin']));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
 end;
 
 procedure TMARSRoutesFixture.TestApplicationMiddleware;
@@ -2048,6 +2093,20 @@ initialization
   MARSRoutes('Tests.Routes.Misc', '',
     procedure (const R: TMARSRouter)
     begin
+      // [Authenticated]: a verified token, any role; with roles, the roles decide
+      R.Get<string>('signed',
+        function (const C: TMARSRouteContext): string
+        begin
+          Result := 'signed';
+        end
+      ).Produces(TMediaType.TEXT_PLAIN).Authenticated;
+      R.Get<string>('signed/admin',
+        function (const C: TMARSRouteContext): string
+        begin
+          Result := 'admin';
+        end
+      ).Produces(TMediaType.TEXT_PLAIN).Authenticated.RolesAllowed('admin');
+
       R.Get<string>('ping',
         function (const C: TMARSRouteContext): string
         begin

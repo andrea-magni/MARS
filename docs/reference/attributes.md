@@ -43,7 +43,8 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 
 | Attribute | Target | Purpose |
 | --- | --- | --- |
-| `[PermitAll]` | resource, method | Allow everyone. |
+| `[PermitAll]` | resource, method | Allow everyone (with roles on the endpoint: any valid token). |
+| `[Authenticated]` | resource, method | Require a valid token, any role. |
 | `[DenyAll]` | resource, method | Deny everyone (highest priority). |
 | `[RolesAllowed('a','b')]` | resource, method | Require any listed role. |
 

@@ -207,7 +207,7 @@ Since the server is stateless it does not look at the `io.modelcontextprotocol/u
 
 `TMCPResource` descendants are ordinary MARS resources, so both levels of the standard [authorization](/features/authorization) system apply:
 
-- **Endpoint level** — put `[RolesAllowed('standard')]` on the resource class: MARS answers `403` before any MCP message is processed unless the request carries a valid `Authorization: Bearer <JWT>` with that role. Issue tokens with a regular [token resource](/features/authentication) (`POST /rest/default/token`). Note that `[PermitAll]` alone does *not* require authentication — it allows any caller.
+- **Endpoint level** — put `[RolesAllowed('standard')]` on the resource class: MARS answers `403` before any MCP message is processed unless the request carries a valid `Authorization: Bearer <JWT>` with that role. Issue tokens with a regular [token resource](/features/authentication) (`POST /rest/default/token`). Note that `[PermitAll]` alone does *not* require authentication — it allows any caller; `[Authenticated]` requires a valid token, whatever its roles (also on a tool).
 - **Per-tool level** — put `[RolesAllowed('...')]` (or `[DenyAll]`) on individual tool methods: unauthorized tools are *hidden* from `tools/list` and `tools/call` answers as if they did not exist, so agents without the role never see them.
 
 ```pascal

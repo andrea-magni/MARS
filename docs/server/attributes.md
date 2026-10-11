@@ -116,14 +116,15 @@ Applied to a **resource** (affecting all its methods) or an individual **method*
 
 | Attribute | Effect |
 | --- | --- |
-| `[PermitAll]` | Allow any caller, authenticated or not. |
+| `[PermitAll]` | Allow any caller, authenticated or not (with `[RolesAllowed]` elsewhere on the endpoint: any valid token). |
+| `[Authenticated]` | Allow callers with a valid token, whatever their roles. |
 | `[DenyAll]` | Deny everyone (highest priority). |
 | `[RolesAllowed('a','b')]` | Allow callers whose token has **any** listed role. |
 
 ```pascal
 [Path('admin'), RolesAllowed('admin')]
 TAdminResource = class
-  [GET, PermitAll]            function Ping: string;        // public
+  [GET, PermitAll]            function Ping: string;        // any valid token (roles on the resource)
   [DELETE, Path('{id}')]      procedure Remove([PathParam] id: Integer); // admin only
 end;
 ```

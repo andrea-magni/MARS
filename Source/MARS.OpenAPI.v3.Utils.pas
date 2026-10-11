@@ -628,16 +628,33 @@ begin
   AOperation.AddResponse('500').description := 'Internal server error';
 
   // authorization
-  var LMetAuthorization := AMethodMetadata.FullAuthorization;
-  // PermitAll is stronger than roles (DenyAll is stronger than both): a public operation
-  if MatchText('PermitAll', LMetAuthorization.Split([','])) and not MatchText('DenyAll', LMetAuthorization.Split([','])) then
-    LMetAuthorization := '';
-  if LMetAuthorization <> '' then
+  // as TMARSActivation: a token is needed with roles or [Authenticated]; [PermitAll] then skips
+  // the roles (any token: a requirement without scopes), alone it is public; DenyAll wins
+  var LDenyAll := False;
+  var LPermitAll := False;
+  var LAuthenticated := False;
+  var LRoles: TArray<string> := [];
+  for var LItem in AMethodMetadata.FullAuthorization.Split([','], TStringSplitOptions.ExcludeEmpty) do
+    if SameText(LItem.Trim, 'DenyAll') then
+      LDenyAll := True
+    else if SameText(LItem.Trim, 'PermitAll') then
+      LPermitAll := True
+    else if SameText(LItem.Trim, 'Authenticated') then
+      LAuthenticated := True
+    else
+      LRoles := LRoles + [LItem.Trim];
+  var LNeedsToken := LDenyAll or (Length(LRoles) > 0) or LAuthenticated;
+  var LScopes := LRoles;
+  if LDenyAll then
+    LScopes := ['DenyAll']
+  else if LPermitAll then
+    LScopes := [];
+  if LNeedsToken then
   begin
     if FBearerSecurityConfigured then
-      AOperation.AddSecurityRequirement('JWT_bearer', LMetAuthorization.Split([',']));
+      AOperation.AddSecurityRequirement('JWT_bearer', LScopes);
     if FCookieSecurityConfigured then
-      AOperation.AddSecurityRequirement('JWT_cookie', LMetAuthorization.Split([',']));
+      AOperation.AddSecurityRequirement('JWT_cookie', LScopes);
 
     if FBearerSecurityConfigured or FCookieSecurityConfigured then
       AOperation.AddResponse('403').description := 'Token missing, not valid or expired';

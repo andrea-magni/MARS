@@ -213,7 +213,7 @@ Declarations on a route or on a group have the same meaning as the attributes of
 
 | Declaration | Attribute |
 | --- | --- |
-| `RolesAllowed('admin,manager')`, `PermitAll`, `DenyAll` | `[RolesAllowed]`, `[PermitAll]`, `[DenyAll]` |
+| `RolesAllowed('admin,manager')`, `PermitAll`, `DenyAll`, `Authenticated` | `[RolesAllowed]`, `[PermitAll]`, `[DenyAll]`, `[Authenticated]` |
 | `Produces(...)`, `Consumes(...)` | `[Produces]`, `[Consumes]` |
 | `CustomHeader(Name, Value)` | `[CustomHeader]` |
 | `NoLog` | `[NoLog]` |
@@ -224,6 +224,7 @@ How route and group declarations combine, as for a resource class and its method
 - **`Produces`, `Consumes`, `[Connection]` and the like:** the route wins over its groups.
 - **Roles:** the roles of the route and of its groups add up, and any of them grants access.
 - **`PermitAll`:** means "any authenticated user" when there are roles.
+- **`Authenticated`:** any authenticated user, with or without roles elsewhere (the roles, if any, decide).
 
 ## Groups
 

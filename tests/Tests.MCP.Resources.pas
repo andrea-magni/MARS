@@ -33,6 +33,10 @@ type
     [MCPTool('secret_tool', 'Admin only tool')]
     function SecretTool: string;
 
+    [Authenticated]
+    [MCPTool('signed_tool', 'Any verified token')]
+    function SignedTool: string;
+
     [MCPResource('info://server', 'Server information resource')]
     function InfoResource: string;
 
@@ -100,6 +104,11 @@ end;
 function TTestMCPResource.SecretTool: string;
 begin
   Result := 'classified';
+end;
+
+function TTestMCPResource.SignedTool: string;
+begin
+  Result := 'signed';
 end;
 
 function TTestMCPResource.InfoResource: string;

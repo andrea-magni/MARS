@@ -202,6 +202,7 @@ type
     function RolesAllowed(const ARoles: string): TMARSRoute;
     function PermitAll: TMARSRoute;
     function DenyAll: TMARSRoute;
+    function Authenticated: TMARSRoute;
     function Produces(const AMediaType: string): TMARSRoute;
     function Consumes(const AMediaType: string): TMARSRoute;
     function CustomHeader(const AName, AValue: string): TMARSRoute;
@@ -289,6 +290,7 @@ type
     function RolesAllowed(const ARoles: string): TMARSRouter;
     function PermitAll: TMARSRouter;
     function DenyAll: TMARSRouter;
+    function Authenticated: TMARSRouter;
     function Produces(const AMediaType: string): TMARSRouter;
     function Consumes(const AMediaType: string): TMARSRouter;
     function CustomHeader(const AName, AValue: string): TMARSRouter;
@@ -1207,6 +1209,11 @@ begin
   Result := Attribute(DenyAllAttribute.Create);
 end;
 
+function TMARSRoute.Authenticated: TMARSRoute;
+begin
+  Result := Attribute(AuthenticatedAttribute.Create);
+end;
+
 function TMARSRoute.Name(const AName: string): TMARSRoute;
 begin
   FName := AName;
@@ -1407,6 +1414,11 @@ end;
 function TMARSRouter.DenyAll: TMARSRouter;
 begin
   Result := Attribute(DenyAllAttribute.Create);
+end;
+
+function TMARSRouter.Authenticated: TMARSRouter;
+begin
+  Result := Attribute(AuthenticatedAttribute.Create);
 end;
 
 function TMARSRouter.NoLog: TMARSRouter;

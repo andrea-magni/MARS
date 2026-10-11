@@ -2,30 +2,43 @@
 
 Once a request is [authenticated](/features/authentication), MARS decides whether it is *allowed* to run the selected method. Authorization is **declarative**: you annotate resources and methods, and the [activation](/server/request-lifecycle) enforces the rules before your code runs.
 
-## The three attributes
+## The attributes
 
 | Attribute | Effect |
 | --- | --- |
 | `[PermitAll]` | Skip the role check. Note: it does **not** waive authentication when roles are declared elsewhere on the endpoint (see below). |
 | `[DenyAll]` | Deny everyone. |
 | `[RolesAllowed('a', 'b')]` | Allow callers whose token holds **at least one** of the listed roles (which implies a valid token). |
+| `[Authenticated]` | Allow callers with a valid, verified token, **whatever its roles**. Alongside `[RolesAllowed]`, the roles decide. |
 
 They can be placed on a **resource** (applies to all its methods) and/or on a **method** (overrides/refines the resource rule).
 
 ## Resolution rules
 
-When evaluating an endpoint, MARS **merges** the authorization attributes from the method *and* the resource class into a single set: `DenyAll`/`PermitAll` flags plus the **union** of all `[RolesAllowed]` roles from both levels. Two checks then run, in order:
+When evaluating an endpoint, MARS **merges** the authorization attributes from the method *and* the resource class into a single set: `DenyAll`/`PermitAll`/`Authenticated` flags plus the **union** of all `[RolesAllowed]` roles from both levels. Two checks then run, in order:
 
-**Authentication first.** If the merged set contains *any* roles — whether they came from the method or from the resource class — a valid, verified token is required. A missing, invalid or expired token fails here with `403`, *before* `[PermitAll]` is even considered.
+**Authentication first.** If the merged set contains *any* roles — whether they came from the method or from the resource class — or `[Authenticated]`, a valid, verified token is required. A missing, invalid or expired token fails here with `403`, *before* `[PermitAll]` is even considered.
 
 **Then authorization**, with this precedence:
 
 1. **`[DenyAll]` wins** → `403 Forbidden`, always.
 2. Otherwise **`[PermitAll]`** → allowed (the role check is skipped — but authentication above has already run).
 3. Otherwise, if there are **allowed roles**, the token must hold at least one → else `403`.
-4. With **no authorization attribute at all**, the endpoint is open (default allow).
+4. Otherwise (`[Authenticated]` alone) → allowed: the token was verified above, its roles do not matter.
+5. With **no authorization attribute at all**, the endpoint is open (default allow).
 
-Consequence: a method-level `[PermitAll]` on a resource marked `[RolesAllowed(...)]` does **not** make that endpoint public — any valid token is still required; `[PermitAll]` only bypasses the role check. An endpoint is truly open only when no roles appear at either level.
+Consequence: a method-level `[PermitAll]` on a resource marked `[RolesAllowed(...)]` does **not** make that endpoint public — any valid token is still required; `[PermitAll]` only bypasses the role check. An endpoint is truly open only when no roles appear at either level. To require a token without any role, say it with `[Authenticated]`:
+
+```pascal
+[Path('profile'), Authenticated]   // any signed-in user
+TProfileResource = class
+  [GET] function Mine: TProfile;
+  [DELETE, RolesAllowed('admin')]  // the roles decide: admin only
+  procedure Remove;
+end;
+```
+
+The [OpenAPI](/features/openapi) document states it as a security requirement without scopes.
 
 ## Example
 

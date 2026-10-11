@@ -302,6 +302,8 @@ type
 
   PermitAllAttribute = class(AuthorizationAttribute);
   DenyAllAttribute = class(AuthorizationAttribute);
+  // a verified token, whatever its roles ([RolesAllowed] alongside: the roles decide)
+  AuthenticatedAttribute = class(AuthorizationAttribute);
   RolesAllowedAttribute = class(AuthorizationAttribute)
   private
     FRoles: TStringList;

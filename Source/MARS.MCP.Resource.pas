@@ -147,11 +147,12 @@ end;
 function TMCPResource.CanUseMethod(const AMethod: TRttiMethod): Boolean;
 var
   LAttribute: TCustomAttribute;
-  LDenyAll, LPermitAll, LHasRoles, LRoleSatisfied: Boolean;
+  LDenyAll, LPermitAll, LHasRoles, LRoleSatisfied, LAuthenticated: Boolean;
 begin
   // same semantics as MARS class/method authorization (TMARSActivation.CheckAuthorization):
-  // DenyAll > PermitAll > RolesAllowed; no attributes -> public member
+  // DenyAll > PermitAll > RolesAllowed > Authenticated (a verified token); no attributes -> public member
   LDenyAll := False;
+  LAuthenticated := False;
   LPermitAll := False;
   LHasRoles := False;
   LRoleSatisfied := False;
@@ -162,6 +163,8 @@ begin
       LDenyAll := True
     else if LAttribute is PermitAllAttribute then
       LPermitAll := True
+    else if LAttribute is AuthenticatedAttribute then
+      LAuthenticated := True
     else if LAttribute is RolesAllowedAttribute then
     begin
       LHasRoles := True;
@@ -178,6 +181,8 @@ begin
     Result := True
   else if LHasRoles then
     Result := LRoleSatisfied
+  else if LAuthenticated then
+    Result := Assigned(Token) and Token.IsVerified
   else
     Result := True;
 end;

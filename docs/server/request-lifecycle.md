@@ -9,7 +9,7 @@ Engine.HandleRequest
   └─ creates TMARSActivation, calls Invoke
        ├─ SETUP
        │   ├─ select resource + method (by URL + HTTP verb)
-       │   ├─ read authorization rules ([DenyAll]/[PermitAll]/[RolesAllowed])
+       │   ├─ read authorization rules ([DenyAll]/[PermitAll]/[RolesAllowed]/[Authenticated])
        │   ├─ check authentication (token valid & not expired, if required)
        │   ├─ check authorization (token has an allowed role, if required)
        │   ├─ instantiate the resource
@@ -32,9 +32,9 @@ If your method raises, control jumps to **error handling** (see below and [Error
 
 1. **Resource selection** — the URL path after the application base path is matched to a registered resource's `[Path]`.
 2. **Method selection** — among that resource's methods, MARS finds the one whose HTTP-verb attribute matches the request and whose `[Path]` template matches the remaining URL tokens.
-3. **Authorization rules** — `[DenyAll]`, `[PermitAll]`, `[RolesAllowed]` on the method and the resource are collected into an authorization descriptor.
+3. **Authorization rules** — `[DenyAll]`, `[PermitAll]`, `[RolesAllowed]`, `[Authenticated]` on the method and the resource are collected into an authorization descriptor.
 4. **Authentication** — if the endpoint requires it, the [token](/features/authentication) must be present, verified and not expired; otherwise `403` is raised. Expired tokens are cleared.
-5. **Authorization** — `[DenyAll]` always denies; `[PermitAll]` always allows; otherwise the token must hold at least one allowed role. See [Authorization](/features/authorization).
+5. **Authorization** — `[DenyAll]` always denies; `[PermitAll]` always allows; otherwise the token must hold at least one allowed role (with `[Authenticated]` alone, any verified token passes). See [Authorization](/features/authorization).
 6. **Instantiation** — the resource class is constructed for this request.
 7. **Argument resolution** — each method parameter is filled by binding (`[PathParam]`, `[QueryParam]`, `[BodyParam]`, …) or by `[Context]` injection. A failure here never reaches your method: it becomes an `EMARSApplicationException` naming resource, method and path, keeping the status of the original exception when it is an `EMARSHttpException` (so a malformed body is a `400`, not a `500`) — see [Error Handling](/server/error-handling#errors-while-binding-parameters).
 8. **Context injection** — `[Context]` fields and properties on the resource are set.

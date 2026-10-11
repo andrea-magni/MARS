@@ -250,6 +250,8 @@ type
     [Test] procedure Auth_SecretTool_NoToken_UnknownTool;
     [Test] procedure Auth_SecretTool_StandardRole_UnknownTool;
     [Test] procedure Auth_SecretTool_AdminRole_Succeeds;
+    // [Authenticated]: any verified token
+    [Test] procedure Auth_SignedTool_AnyToken;
 
     // endpoint-level authorization ([PermitAll] on the resource class)
     [Test] procedure Auth_SecuredEndpoint_NoToken_Returns403;
@@ -1664,8 +1666,42 @@ begin
   try
     var LTools: TJSONArray;
     Assert.IsTrue(LJSON.TryGetValue<TJSONArray>('result.tools', LTools));
-    Assert.AreEqual(4, LTools.Count);
+    Assert.AreEqual(5, LTools.Count);
     Assert.Contains(LTools.ToJSON, 'secret_tool');
+    Assert.Contains(LTools.ToJSON, 'signed_tool');
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Auth_SignedTool_AnyToken;
+begin
+  // no token: hidden (tools/list of Auth_ToolsList_NoToken_HidesRoleProtectedTool: 3 tools)
+  var LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"tools/list"}');
+  var LJSON := ParseContent(LCall);
+  try
+    Assert.DoesNotContain(LJSON.ToJSON, 'signed_tool');
+  finally
+    LJSON.Free;
+  end;
+
+  // a token without the admin role: the signed tool, not the secret one
+  LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"tools/list"}', MintToken('guest', ['standard']));
+  LJSON := ParseContent(LCall);
+  try
+    Assert.Contains(LJSON.ToJSON, 'signed_tool');
+    Assert.DoesNotContain(LJSON.ToJSON, 'secret_tool');
+  finally
+    LJSON.Free;
+  end;
+  LCall := SendMCP('POST',
+    '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"signed_tool","arguments":{}}}'
+  , MintToken('guest', ['standard']));
+  LJSON := ParseContent(LCall);
+  try
+    var LText: string;
+    Assert.IsTrue(LJSON.TryGetValue<string>('result.content[0].text', LText), LJSON.ToJSON);
+    Assert.AreEqual('signed', LText);
   finally
     LJSON.Free;
   end;
