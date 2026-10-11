@@ -1,0 +1,23 @@
+{
+  "id": 1001,
+  "number": "ORD-1001",
+  "createdAt": "2026-10-11T09:30:00Z",
+  "deliveryDate": "2026-10-15",
+  "trackingId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+  "total": 120.5,
+  "paid": true,
+  "customer": {
+    "id": 7,
+    "name": "Ann",
+    "address": { "street": "Via Roma 1", "city": "Rome" }
+  },
+  "items": [
+    { "sku": "A1", "qty": 2, "price": 10 },
+    { "sku": "B2", "qty": 1, "price": 99.5, "note": "gift" }
+  ],
+  "tags": ["new", "web"],
+  "attachments": [],
+  "coupon": null,
+  "externalId": 9007199254740993,
+  "priority": 1
+}

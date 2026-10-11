@@ -35,7 +35,7 @@ implementation
 
 uses
   System.IOUtils, System.Math, System.Generics.Collections, System.Win.Registry, Winapi.Windows,
-  MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.Types, MARS.Gen.Emit.Types,
+  MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.Types, MARS.Gen.Emit.Types, MARS.Gen.JSONInference,
   Tests.MARSgen.OpenAPIReader;
 
 type
@@ -47,7 +47,7 @@ type
 const
   // a JSON instance for a record of each unit: read and written back, the same
   // (no zero numbers, false booleans, empty strings and dates: MARS skips or reformats them)
-  INSTANCES: array[0..9] of TInstance = (
+  INSTANCES: array[0..11] of TInstance = (
     (TypeName: 'Model.PetStore.TPet';
      JSON: '{"name":"Rex","tag":"good","status":"pending","category":{"id":2,"name":"Dogs"},"id":7}'),
     (TypeName: 'Model.PetStore.TOrder';
@@ -69,10 +69,25 @@ const
     (TypeName: 'Model.MappingCases.TTree';
      JSON: '{"label":"t","branches":[{"label":"u","branches":[{"label":"v"}]}]}'),
     (TypeName: 'Model.MappingCases.TGetThingResponse';
-     JSON: '{"id":"1","extra":{"nested":{"deep":"d"}}}')
+     JSON: '{"id":"1","extra":{"nested":{"deep":"d"}}}'),
+    // inferred from JSON samples
+    (TypeName: 'Model.Order.TOrder';
+     JSON: '{"id":1001,"number":"ORD","total":120.5,"paid":true,'
+       + '"customer":{"id":7,"name":"Ann","address":{"street":"S","city":"C","zip":"Z"}},'
+       + '"items":[{"sku":"A1","qty":2,"price":10.5,"note":"n"}],"tags":["new"],"attachments":[1],'
+       + '"coupon":{"c":1},"externalId":9007199254740993,"priority":"high","notes":"x",'
+       + '"shipping":{"carrier":"DHL","address":{"line":"L","country":"IT"}}}'),
+    (TypeName: 'Model.Customer.TCustomer';
+     JSON: '{"id":1,"name":"Ann","vip":true}')
   );
 
   CORPUS: array[0..2] of string = ('petstore-3.0.yaml', 'features-3.1.json', 'mapping-3.0.yaml');
+
+  // JSON samples: root name and files
+  SAMPLES: array[0..1] of array[0..2] of string = (
+    ('Order', 'order-1.json', 'order-2.json'),
+    ('Customer', 'customers.json', '')
+  );
 
 { TGenCompileTest }
 
@@ -239,6 +254,8 @@ var
   LLines: TStringList;
   LExpected, LActual: TJSONValue;
   LParts: TArray<string>;
+  LInferenceOptions: TGenInferenceOptions;
+  LFiles: TArray<string>;
 begin
   LCompiler := FindCompiler;
   LSources := FindMARSSources;
@@ -253,6 +270,24 @@ begin
   for var LCorpus in CORPUS do
   begin
     LApi := TGenOpenAPIReader.Load(CorpusFile(LCorpus));
+    try
+      LFile := TGenTypesEmitter.WriteUnit(LApi, TGenTypeOptions.Default, FFolder);
+      LUnits := LUnits + [TPath.GetFileNameWithoutExtension(LFile)];
+    finally
+      LApi.Free;
+    end;
+  end;
+
+  // the units of the samples
+  for var LSample := Low(SAMPLES) to High(SAMPLES) do
+  begin
+    LInferenceOptions := TGenInferenceOptions.Default;
+    LInferenceOptions.RootName := SAMPLES[LSample][0];
+    LFiles := [];
+    for var LIndex := 1 to 2 do
+      if SAMPLES[LSample][LIndex] <> '' then
+        LFiles := LFiles + [CorpusFile('samples\' + SAMPLES[LSample][LIndex])];
+    LApi := TGenJSONInference.FromFiles(LFiles, LInferenceOptions);
     try
       LFile := TGenTypesEmitter.WriteUnit(LApi, TGenTypeOptions.Default, FFolder);
       LUnits := LUnits + [TPath.GetFileNameWithoutExtension(LFile)];

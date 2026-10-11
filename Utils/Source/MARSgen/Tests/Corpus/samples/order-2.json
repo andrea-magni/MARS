@@ -1,0 +1,22 @@
+{
+  "id": 1002,
+  "number": "ORD-1002",
+  "createdAt": "2026-10-12T14:00:00+02:00",
+  "total": 80,
+  "paid": false,
+  "customer": {
+    "id": 8,
+    "name": "Bob",
+    "address": { "street": "Via Po 2", "city": "Turin", "zip": "10100" }
+  },
+  "items": [
+    { "sku": "C3", "qty": 4, "price": 20 }
+  ],
+  "tags": [],
+  "priority": "high",
+  "notes": "leave at the door",
+  "shipping": {
+    "carrier": "DHL",
+    "address": { "line": "Corso Francia 3", "country": "IT" }
+  }
+}

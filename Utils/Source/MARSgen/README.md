@@ -38,6 +38,15 @@ samples. Work in progress: see the plan in
   - Options (`TGenTypeOptions`): unit name, `Int64` for integers without format, `Currency`,
     enumerations or strings, `[JSONName]` always, field names as in JSON.
 - `MARS.Gen.Emit.Types`: writes the `Model.<Api>` unit.
+- `MARS.Gen.JSONInference`: infers the schemas of one or more JSON samples into the same model, so
+  the same mapping and emitter give their Delphi types.
+  - More samples are merged: a key missing in some of them is optional, integers and decimals give
+    `Double`, the keys of the same object are united.
+  - ISO 8601 date-times and dates give `TDateTime` and `TDate`, integers beyond 32 bits `Int64`.
+  - Nested objects are named after their key (`address` -> `TAddress`, `items` -> `TItem`); a root
+    array gives its elements the root name.
+  - Values of different kinds, always null or always an empty array: `TJSONRawString`, with the
+    reason in a comment and a diagnostic.
 
 ## Tests
 
