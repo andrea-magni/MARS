@@ -74,6 +74,7 @@
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Server.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Output.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Project.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.Compare.pas"/>
         <DCCReference Include="..\..\MARScmd\MARS.Cmd.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.CLI.pas"/>
         <BuildConfiguration Include="Base">

@@ -13,6 +13,7 @@ MARSgen openapi <file|url> [--types] [options]
 MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 MARSgen json <file> [<file> ...] [--name <Name>] [options]
 MARSgen update [<folder>]
+MARSgen compare <document> <openapi of the server>
 MARSgen --help
 ```
 
@@ -21,6 +22,7 @@ MARSgen --help
 - `openapi --server`: also the MARS resources of the document (see below).
 - `openapi --project <Name>`: the same, in a new MARS project (see below).
 - `update`: imports again the OpenAPI document of a folder, as last time (see below).
+- `compare`: the conformance of a server to a document (see below).
 - Options: `--dest`, `--unit`, `--int64`, `--currency`, `--enums-as-strings`, `--json-name-always`,
   `--field-names-as-json`, `--force`, `--strict`, `--verbose`; for `--project` also `--template`,
   `--mars` and `--allow-inside`; for `json` also `--no-dates` and `--name-after-parent`. `MARSgen --help` describes them.
@@ -83,6 +85,32 @@ Keep it with the sources. The next import of the same API into the folder:
   overrides), the generated files no longer generated (`Stale`: delete them, and remove them from
   the project) and your units no longer used (`Unused`), while they exist.
 
+## Conformance
+
+`MARSgen compare <document> <openapi of the server>` compares the OpenAPI of a server (a file, or
+the URL of a running one: `http://localhost:8080/rest/default/openapi`) with a document, operation by
+operation. Exit code 0 when the server conforms, 1 when there are differences (2: a document cannot
+be read).
+
+- **Differences**: what breaks the clients of the document: an operation missing on the server; a
+  parameter missing, in another location, required on one side only, of another type; a body
+  missing, required only on the server, a media type not accepted; the success response with or
+  without content, a media type not produced; public on one side only, other roles; in the JSON
+  schemas of bodies and responses, a property missing, a type that differs, an enumeration value
+  missing.
+- **Notes** (`--verbose`): what the OpenAPI of MARS cannot state, or harmless: the success status
+  code (MARS states 200; a generated server answers the one of the document in code), a token
+  without roles (checked in code), credentials that are not a token, operations, optional
+  parameters and properties only on the server, an array query parameter read as one value.
+
+Paths match by position of their templates (`{id}` and `{petId}` are the same), ignoring case; schemas
+by shape (types, JSON names of the properties, items), not by the names of the schemas, which MARS
+takes from the Delphi types; JSON contents only (a binary body is bytes whatever its schema).
+
+A generated server conforms but for what the generator says it cannot do (with a warning or an
+informational message): the operations it skips, a body or a response in more media types (JSON
+only). After changing a server by hand, `compare` tells whether it still serves the document.
+
 ## Layout
 
 | Folder | Content |
@@ -123,6 +151,8 @@ Keep it with the sources. The next import of the same API into the folder:
   files changed by hand, and compares it with the last one.
 - `MARS.Gen.Project`: a new project (through `MARS.Cmd` of `Utils\Source\MARScmd`), linked to the
   units of the server; the base path of the document as the paths of MARS.
+- `MARS.Gen.Compare`: the conformance of a server (its OpenAPI, read into the same model) to a
+  document: differences and notes.
 - `MARS.Gen.CLI`: the command line as a function of its arguments (the tests call it directly).
 - `MARS.Gen.JSONInference`: infers the schemas of one or more JSON samples into the same model, so
   the same mapping and emitter give their Delphi types.
@@ -153,6 +183,10 @@ The `Compile` test writes the units generated from the corpus, compiles them wit
 through the `BDS` environment variable or the registry) into a probe program and runs it: every
 record must read a JSON instance and write the same JSON back through MARS. Without Delphi or the
 MARS sources it is skipped.
+
+The `ServersOfTheCorpusConform` test compiles the server of every document of the corpus with an
+OpenAPI resource, runs it in process (the engine and the mocks of the MARS tests) and compares its
+OpenAPI with the document: only the differences the generator announces are expected.
 
 The `Project` tests create a project from the pet store (under `/v1`), build its console flavor
 with `msbuild` (`rsvars.bat` next to `dcc32`, `MARSDIR` set to the MARS folder), run it on a random

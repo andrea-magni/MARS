@@ -12,6 +12,7 @@ unit MARS.Gen.CLI;
 //   MARSgen json <file> [<file> ...] [--name <Name>] [options]
 //   MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 //   MARSgen update [<folder>]
+//   MARSgen compare <document> <openapi of the server>
 //
 // Every import leaves a manifest in the folder (<Api>.marsgen.json, see MARS.Gen.Output): the next
 // import of the same API reuses its options (unless given again), keeps the files changed by hand
@@ -44,7 +45,7 @@ implementation
 uses
   System.IOUtils, System.StrUtils, System.RegularExpressions,
   MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.JSONInference, MARS.Gen.Types,
-  MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Output, MARS.Gen.Project;
+  MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Output, MARS.Gen.Project, MARS.Gen.Compare;
 
 type
   EUsage = class(Exception);
@@ -122,6 +123,10 @@ begin
     '      paths of the engine and of the application, its title and version in Server.ini',
     '  MARSgen json <file> [<file> ...] [--name <Name>] [options]',
     '      the types of JSON samples (objects or arrays), merged',
+    '  MARSgen compare <document> <openapi of the server>',
+    '      the conformance of a server to a document: its OpenAPI (a file, or a URL such as',
+    '      http://localhost:8080/rest/default/openapi) compared operation by operation; exit code 0',
+    '      when it conforms, 1 when there are differences (--verbose: also the notes)',
     '  MARSgen update [<folder>]',
     '      imports again the OpenAPI document of the folder (default: the current one), as last time',
     '  MARSgen --help',
@@ -247,8 +252,8 @@ begin
       raise EUsage.CreateFmt('Unknown option: %s', [LArg])
     else if Result.Command = '' then
     begin
-      if not MatchText(LArg, ['openapi', 'json', 'update']) then
-        raise EUsage.CreateFmt('Unknown command: %s (openapi, json or update)', [LArg]);
+      if not MatchText(LArg, ['openapi', 'json', 'update', 'compare']) then
+        raise EUsage.CreateFmt('Unknown command: %s (openapi, json, update or compare)', [LArg]);
       Result.Command := LowerCase(LArg);
     end
     else
@@ -257,7 +262,16 @@ begin
   end;
 
   if Result.Command = '' then
-    raise EUsage.Create('Missing command (openapi, json or update)');
+    raise EUsage.Create('Missing command (openapi, json, update or compare)');
+  if Result.Command = 'compare' then
+  begin
+    if Length(Result.Inputs) <> 2 then
+      raise EUsage.Create('compare: MARSgen compare <document> <openapi of the server>');
+    for var LOption in Result.Given do
+      if not MatchText(LOption, ['--verbose', '--strict']) then
+        raise EUsage.CreateFmt('compare: %s does not apply', [LOption]);
+    Exit;
+  end;
   if Result.Command = 'update' then
   begin
     // the folder, as the input or as --dest
@@ -314,6 +328,42 @@ end;
 function IsURL(const AInput: string): Boolean;
 begin
   Result := StartsText('http://', AInput) or StartsText('https://', AInput);
+end;
+
+// MARSgen compare: the findings, the summary; 0 when the server conforms, 1 otherwise
+function Compare(const ACommandLine: TGenCommandLine; const AOutput: TStrings): Integer;
+var
+  LDocument, LServer: TGenApi;
+  LComparison: TGenComparison;
+  LNotes: Integer;
+begin
+  LDocument := TGenOpenAPIReader.Load(ACommandLine.Inputs[0]);
+  try
+    LServer := TGenOpenAPIReader.Load(ACommandLine.Inputs[1]);
+    try
+      LComparison := TGenComparison.Create(LDocument, LServer);
+      try
+        LComparison.Execute;
+        for var LFinding in LComparison.Findings do
+          if ACommandLine.Verbose or (LFinding.Kind = TGenFindingKind.Difference) then
+            AOutput.Add(LFinding.ToString);
+        LNotes := LComparison.Count(TGenFindingKind.Note);
+        AOutput.Add(Format('%d of %d operations of the document on the server: %d differences, %d notes%s',
+          [LComparison.Compared, LDocument.Operations.Count, LComparison.Count(TGenFindingKind.Difference), LNotes,
+           IfThen((LNotes > 0) and not ACommandLine.Verbose, ' (--verbose to list them)', '')]));
+        if LComparison.Count(TGenFindingKind.Difference) > 0 then
+          Result := EXIT_WARNINGS
+        else
+          Result := EXIT_OK;
+      finally
+        LComparison.Free;
+      end;
+    finally
+      LServer.Free;
+    end;
+  finally
+    LDocument.Free;
+  end;
 end;
 
 // a first import of a server: how it is linked (--project) or has to be (an existing project), and
@@ -399,6 +449,9 @@ begin
       LCommandLine.Folder := GetCurrentDir
     else
       LCommandLine.Folder := TPath.GetFullPath(LCommandLine.Folder);
+
+    if LCommandLine.Command = 'compare' then
+      Exit(Compare(LCommandLine, AOutput));
 
     // update: the document and the mode of the manifest (the options are reused below)
     if LCommandLine.Command = 'update' then

@@ -23,6 +23,7 @@ uses
   MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
   MARS.Gen.Output in '..\Engine\MARS.Gen.Output.pas',
   MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
+  MARS.Gen.Compare in '..\Engine\MARS.Gen.Compare.pas',
   MARS.Cmd in '..\..\MARScmd\MARS.Cmd.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas';
 

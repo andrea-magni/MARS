@@ -47,7 +47,8 @@ type
     [Test]
     procedure UnitsOfTheUserAreNotWrittenAgain;
     [Test]
-    procedure ServersOfTheCorpusCompile;
+    // compiled, run, its OpenAPI compared with the document (#248)
+    procedure ServersOfTheCorpusConform;
     [Test]
     procedure ServerAnswers;
   end;
@@ -56,7 +57,7 @@ implementation
 
 uses
   System.IOUtils, System.JSON,
-  MARS.Gen.Emit.Server,
+  MARS.Gen.Emit.Server, MARS.Gen.Compare,
   Tests.MARSgen.OpenAPIReader, Tests.MARSgen.Helpers;
 
 { TGenServerTest }
@@ -338,16 +339,41 @@ begin
   Assert.AreEqual('// mine', TFile.ReadAllText(LUserFile));
 end;
 
-procedure TGenServerTest.ServersOfTheCorpusCompile;
+procedure TGenServerTest.ServersOfTheCorpusConform;
 const
   DOCUMENTS: array[0..13] of string = ('petstore-3.0.yaml', 'features-3.1.json', 'mapping-3.0.yaml',
     'server-3.0.yaml', 'oai\v3.0-api-with-examples.yaml', 'oai\v3.0-callback-example.yaml',
     'oai\v3.0-link-example.yaml', 'oai\v3.0-petstore.yaml', 'oai\v3.0-petstore-expanded.yaml',
     'oai\v3.0-uspto.yaml', 'oai\v3.1-non-oauth-scopes.yaml', 'oai\v3.1-tictactoe.yaml',
     'real\github-issues.yaml', 'real\stripe-v2-persons.json');
+  // what the generator cannot do, and says (a warning, or an informational message): the operations
+  // it does not generate, one media type of a body or of a response
+  EXPECTED: array[0..13] of string = (
+    'GET /pets/{petId}: response 200: application/xml not produced by the server|'
+    + 'POST /store/orders: request body application/x-www-form-urlencoded: not accepted by the server',
+    '', '',
+    'GET /{tenant}/things: missing on the server|GET /files/{name}.{ext}: missing on the server',
+    '', '', '', '', '',
+    'GET /{dataset}/{version}/fields: missing on the server|POST /{dataset}/{version}/records: missing on the server',
+    '', '', '', '');
+  // the OpenAPI of the server, as the openapi resource of the templates gives it
+  PROBE_UNIT =
+    'unit Probe.OpenAPI;'#13#10'interface'#13#10
+    + 'uses MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.JSON, MARS.Metadata.Attributes, MARS.OpenAPI.v3,'
+    + ' MARS.OpenAPI.v3.InjectionService;'#13#10
+    + 'type'#13#10'  [Path(''probeopenapi''), MetaVisible(False), JSONSkipEmptyValues]'#13#10
+    + '  TProbeOpenAPIResource = class'#13#10'  public'#13#10
+    + '    [GET, Produces(TMediaType.APPLICATION_JSON)] function GetOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;'#13#10
+    + '  end;'#13#10'implementation'#13#10'uses MARS.Core.Registry;'#13#10
+    + 'function TProbeOpenAPIResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;'#13#10'begin'#13#10
+    + '  Result := AOpenAPI;'#13#10'end;'#13#10
+    + 'initialization'#13#10'  MARSRegister(TProbeOpenAPIResource);'#13#10'end.'#13#10;
 var
-  LCompiler, LSources, LFolder, LOutput, LApiUnit: string;
+  LCompiler, LSources, LRoot, LFolder, LOutput, LPaths, LServerFile: string;
   LFiles: TGenServerFiles;
+  LServer: TGenApi;
+  LComparison: TGenComparison;
+  LDifferences: TArray<string>;
 begin
   LCompiler := TGenTestTools.FindCompiler;
   LSources := TGenTestTools.FindMARSSources;
@@ -356,23 +382,62 @@ begin
     Assert.Pass('Delphi or the MARS sources not found: skipped');
     Exit;
   end;
+  LRoot := TPath.GetDirectoryName(LSources);
+  // the mocks of the MARS tests, the token, the YAML of the OpenAPI units
+  LPaths := string.Join(';', [LSources, TPath.Combine(LRoot, 'tests'), TPath.Combine(LRoot, 'ThirdParty\mORMot\Source'),
+    TPath.Combine(LRoot, 'ThirdParty\Neslib.Yaml'), TPath.Combine(LRoot, 'ThirdParty\Neslib.Yaml\Neslib')]);
 
   FFolder := TGenTestTools.NewFolder('MARSgenServers');
-  // each document in a folder of its own (the same unit names), each server compiled
+  // each document in a folder of its own (the same unit names): its server compiled, run (in
+  // process: the engine and the mocks of the MARS tests), its OpenAPI compared with the document
   for var LIndex := Low(DOCUMENTS) to High(DOCUMENTS) do
   begin
     LFolder := TPath.Combine(FFolder, LIndex.ToString);
     FreeAndNil(FApi);
     FApi := TGenOpenAPIReader.Load(CorpusFile(DOCUMENTS[LIndex]));
     LFiles := TGenServerEmitter.WriteServer(FApi, TGenTypeOptions.Default, LFolder);
-    LApiUnit := TPath.GetFileNameWithoutExtension(LFiles.Written[High(LFiles.Written)]);
-    TFile.WriteAllText(TPath.Combine(LFolder, 'Probe.dpr'),
-      'program Probe;'#13#10'{$APPTYPE CONSOLE}'#13#10'uses ' + LApiUnit + ';'#13#10'begin'#13#10'end.'#13#10);
+    TFile.WriteAllText(TPath.Combine(LFolder, 'Probe.OpenAPI.pas'), PROBE_UNIT);
+    TFile.WriteAllText(TPath.Combine(LFolder, 'Probe.dpr'), string.Join(#13#10, [
+      'program Probe;', '{$APPTYPE CONSOLE}',
+      'uses System.SysUtils, System.IOUtils, MARS.Core.Engine, MARS.Core.Engine.Interfaces, MARS.Core.Application.Interfaces,',
+      '  MARS.Core.RequestAndResponse.Interfaces, MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders,',
+      '  MARS.Core.Token, MARS.mORMotJWT.Token, Mock.IMARSRequest, Mock.IMARSResponse, Probe.OpenAPI, ' + LFiles.ApiUnit + ';',
+      'var LEngine: IMARSEngine; LApp: IMARSApplication; LResponse: IMARSResponse;',
+      'begin',
+      '  LEngine := TMARSEngine.Create;',
+      '  LApp := LEngine.AddApplication(''App'', ''/app'', [''Server.Resources.*'', ''Probe.OpenAPI.*'']);',
+      '  LApp.Parameters.Values[''JWT.Secret''] := ''probe-secret-0123456789-0123456789-0123456789-0123456789'';',
+      '  LResponse := TMARSResponseMock.Create;',
+      '  LEngine.HandleRequest(TMARSRequestMock.Create(''GET'', ''http://localhost:8080/rest/app/probeopenapi'', [], ''''), LResponse);',
+      '  TFile.WriteAllText(ParamStr(1), LResponse.Content);',
+      '  if LResponse.StatusCode <> 200 then ExitCode := 1;',
+      '  LApp := nil; LEngine := nil;',
+      'end.', '']));
     ForceDirectories(TPath.Combine(LFolder, 'dcu'));
     if TGenTestTools.Run(Format('"%s" -B -Q -NSSystem;Winapi;System.Win;Data;REST;Web;Xml -U"%s" -I"%s" -N0dcu Probe.dpr',
-      [LCompiler, LSources, LSources]), LFolder, LOutput) <> 0
+      [LCompiler, LPaths, LPaths]), LFolder, LOutput) <> 0
     then
       Assert.Fail(DOCUMENTS[LIndex] + ': the server does not compile' + sLineBreak + LOutput);
+    LServerFile := TPath.Combine(LFolder, 'server.json');
+    Assert.AreEqual(Cardinal(0), TGenTestTools.Run(Format('"%s" "%s"', [TPath.Combine(LFolder, 'Probe.exe'), LServerFile]),
+      LFolder, LOutput), DOCUMENTS[LIndex] + ': the OpenAPI of the server' + sLineBreak + LOutput);
+
+    LServer := TGenOpenAPIReader.Load(LServerFile);
+    try
+      LComparison := TGenComparison.Create(FApi, LServer);
+      try
+        LComparison.Execute;
+        LDifferences := [];
+        for var LFinding in LComparison.Findings do
+          if LFinding.Kind = TGenFindingKind.Difference then
+            LDifferences := LDifferences + [LFinding.Operation + ': ' + LFinding.Message];
+        Assert.AreEqual(EXPECTED[LIndex], string.Join('|', LDifferences), DOCUMENTS[LIndex]);
+      finally
+        LComparison.Free;
+      end;
+    finally
+      LServer.Free;
+    end;
   end;
 end;
 

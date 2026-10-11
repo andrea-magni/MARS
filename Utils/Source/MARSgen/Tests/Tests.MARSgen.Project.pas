@@ -408,6 +408,14 @@ begin
 
       // the OpenAPI of the server describes the operations
       Assert.Contains(LClient.Get(LBase + '/v1/openapi').ContentAsString, '/pets/{petId}');
+
+      // the conformance of the running server, from its URL: what the generator cannot do
+      // (the media types it reduces to JSON), the resources of the template only on the server
+      Assert.AreEqual(1, Run(['compare', TPath.Combine(FFolder, 'petstore.yaml'), LBase + '/v1/openapi', '--verbose']),
+        FOutput.Text);
+      Assert.Contains(FOutput.Text, '5 of 5 operations of the document on the server: 2 differences');
+      Assert.Contains(FOutput.Text, 'difference: GET /pets/{petId}: response 200: application/xml not produced by the server');
+      Assert.Contains(FOutput.Text, 'note: GET /helloworld: only on the server');
     finally
       LClient.Free;
     end;
