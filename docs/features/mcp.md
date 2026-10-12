@@ -90,6 +90,26 @@ npx @modelcontextprotocol/inspector --cli http://localhost:8080/rest/default/mcp
   --transport http --method tools/list
 ```
 
+## A local server on stdio
+
+The same tools can be served by a **local** process that the client starts itself, on stdio: no HTTP server, no port, no token (the process runs with the rights of the user that starts the client). A console program is enough:
+
+```pascal
+program MyTools;
+{$APPTYPE CONSOLE}
+uses
+  MARS.MCP.Stdio, Tools.Main; // TMyTools: methods with [MCPTool], [MCPResource], [MCPPrompt]
+begin
+  TMCPStdioServer.Serve(TMyTools.Create, 'my-tools', '1.0.0');
+end.
+```
+
+The JSON-RPC messages arrive on the standard input, one per line, and the answers leave on the standard output, one per line, in UTF-8: nothing else may be written there (use the standard error for logs). The tools, resources and prompts are the ones of an HTTP server, with the same attributes; `TMCPStdioServer.Create(ADispatcher)` takes a dispatcher of your own (i.e. a `TMCPDataDispatcher`), and `Run(AInput, AOutput)` works on streams, for tests.
+
+```bash
+claude mcp add my-tools -- C:\Tools\MyTools.exe
+```
+
 ## Database tools with FireDAC
 
 Derive from `TMCPDataResource` (unit `MARS.MCP.Data`) and your tools can return any `TDataSet` — typically a `TFDQuery` obtained through the injected [`TMARSFireDAC`](/features/firedac). Rows are serialized automatically into the tool result as `structuredContent: { rowCount, rows }` plus a text fallback:
@@ -258,6 +278,7 @@ Run behind HTTPS in production (a TLS-terminating reverse proxy or a tunnel like
 
 ## Notes and current scope
 
+- Transports: Streamable HTTP (`TMCPResource`) and stdio (`TMCPStdioServer`).
 - The implementation is **stateless**: no `Mcp-Session-Id` is issued, `GET`/`DELETE` answer `405` (allowed by the specification for servers that do not offer server-initiated streams). Every JSON-RPC request is answered with a single `application/json` response.
 - Advertised capabilities cover **tools**, **resources** and **prompts** (the latter two only when the resource class declares any); subscriptions and `listChanged` notifications are not offered (they require server-initiated streams). Additional protocol methods can be added by overriding `TMCPDispatcher.DispatchRequest`.
 - When exposing the server beyond localhost, follow the MCP security guidance: validate the `Origin` header (e.g. in the engine's `BeforeHandleRequest`), bind to localhost when possible and require authentication.

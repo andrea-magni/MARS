@@ -95,6 +95,7 @@ Parameter/field types map to JSON Schema automatically: strings → `string`, in
 - Supported JSON-RPC methods: `initialize` (protocol versions 2025-06-18, 2025-03-26, 2024-11-05), `ping`, `tools/list`, `tools/call`, `resources/list`, `resources/templates/list`, `resources/read`, `prompts/list`, `prompts/get`. Notifications answer `202` with no body; `GET`/`DELETE` answer `405` (stateless server, allowed by spec). The `resources`/`prompts` capabilities are advertised only when the class declares any. Extend `TMCPDispatcher.DispatchRequest` for additional methods.
 - Tool discovery is cached per resource class (thread-safe, RTTI scanned once). The authorization filter is evaluated per request, so caching never leaks role-protected tools.
 - The dispatcher class is pluggable: override `GetDispatcherClass` on the resource (that is how `TMCPDataResource` adds dataset support).
+- A local server on stdio, without HTTP: `TMCPStdioServer.Serve(TMyTools.Create, 'name', '1.0.0')` in a console program (`MARS.MCP.Stdio`; JSON-RPC a line each on stdin/stdout, UTF-8; log only to stderr), registered with `claude mcp add name -- path\to\exe`.
 
 ## When to read the references
 

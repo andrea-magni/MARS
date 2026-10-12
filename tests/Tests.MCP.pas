@@ -9,7 +9,7 @@ uses
 , MARS.Core.JSON, System.JSON
 , MARS.Core.Engine.Interfaces
 , MARS.Core.RequestAndResponse.Interfaces
-, MARS.MCP, MARS.MCP.Attributes, MARS.MCP.Data
+, MARS.MCP, MARS.MCP.Attributes, MARS.MCP.Data, MARS.MCP.Stdio
 , Mock.IMARSResponse
 ;
 
@@ -64,6 +64,13 @@ type
     procedure Boom;
 
     procedure NotATool;
+  end;
+
+  [TestFixture('MCP.Stdio')]
+  TMCPStdioFixture = class
+  public
+    [Test]
+    procedure SessionOverStreams;
   end;
 
   [TestFixture('MCP.Dispatcher')]
@@ -2481,7 +2488,62 @@ begin
   , EMCPError, '[MCPMeta] must be a JSON object');
 end;
 
+{ TMCPStdioFixture }
+
+procedure TMCPStdioFixture.SessionOverStreams;
+var
+  LServer: TMCPStdioServer;
+  LHost: TTestToolHost;
+  LInput, LOutput: TBytesStream;
+  LLines: TArray<string>;
+  LAnswer: TJSONObject;
+begin
+  LHost := TTestToolHost.Create;
+  LServer := TMCPStdioServer.Create(TMCPDispatcher.Create(LHost, 'StdioServer', '1.2.3'), True);
+  // a message per line (LF or CRLF), a notification, an empty line, a line that is not JSON;
+  // UTF-8 both ways
+  LInput := TBytesStream.Create(TEncoding.UTF8.GetBytes(
+    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18",'
+    + '"capabilities":{},"clientInfo":{"name":"test","version":"1"}}}'#13#10
+    + '{"jsonrpc":"2.0","method":"notifications/initialized"}'#10
+    + #10
+    + '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'#10
+    + '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"say_hello","arguments":{"name":"Zo' + #$00EB + '"}}}'#10
+    + 'not json'));
+  LOutput := TBytesStream.Create;
+  try
+    LServer.Run(LInput, LOutput);
+    LLines := TEncoding.UTF8.GetString(Copy(LOutput.Bytes, 0, LOutput.Size)).TrimRight([#10]).Split([#10]);
+    // no answer to the notification and to the empty line
+    Assert.AreEqual(4, Length(LLines), string.Join(' | ', LLines));
+
+    LAnswer := TJSONValue.ParseJSONValue(LLines[0]) as TJSONObject;
+    try
+      Assert.AreEqual(1, LAnswer.GetValue<Integer>('id'));
+      Assert.AreEqual('StdioServer', LAnswer.GetValue<string>('result.serverInfo.name'));
+    finally
+      LAnswer.Free;
+    end;
+    Assert.Contains(LLines[1], '"say_hello"');
+    LAnswer := TJSONValue.ParseJSONValue(LLines[2]) as TJSONObject;
+    try
+      Assert.AreEqual(3, LAnswer.GetValue<Integer>('id'));
+      Assert.AreEqual('Hello, Zo' + #$00EB + '!', LAnswer.GetValue<TJSONArray>('result.content').Items[0].GetValue<string>('text'));
+    finally
+      LAnswer.Free;
+    end;
+    // the line that is not JSON: a parse error
+    Assert.Contains(LLines[3], '-32700');
+  finally
+    LOutput.Free;
+    LInput.Free;
+    LServer.Free;
+    LHost.Free;
+  end;
+end;
+
 initialization
+  TDUnitX.RegisterTestFixture(TMCPStdioFixture);
   TDUnitX.RegisterTestFixture(TMCPDispatcherFixture);
   TDUnitX.RegisterTestFixture(TMCPResourcesPromptsFixture);
   TDUnitX.RegisterTestFixture(TMCPDataDispatcherFixture);
