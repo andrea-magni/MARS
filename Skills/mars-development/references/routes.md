@@ -52,7 +52,7 @@ In `Server.Ignition`: `LApplication := FEngine.AddApplication(...); LApplication
 
 ## API cheat sheet
 
-- Router: `Get/Post/Put/Patch/Delete<TResult>(Path, function (const C: TMARSRouteContext): TResult)`, `Post/Put/Patch<TBody, TResult>(Path, function (const C; const ABody: TBody): TResult)`, non-generic `Get/Post/.../Delete(Path, procedure (const C))`, `Map<...>(HttpMethod, ...)` for any method (i.e. `QUERY`), `Group(Path, procedure (const G: TMARSRouter))`.
+- Router: `Get/Post/Put/Patch/Delete<TResult>(Path, function (const C: TMARSRouteContext): TResult)`, `Post/Put/Patch<TBody, TResult>(Path, function (const C; const ABody: TBody): TResult)`, `PostBody/PutBody/PatchBody<TBody>(Path, procedure (const C; const ABody: TBody))` (a body, no result), non-generic `Get/Post/.../Delete(Path, procedure (const C))`, `Map<...>(HttpMethod, ...)` for any method (i.e. `QUERY`), `Group(Path, procedure (const G: TMARSRouter))`.
 - Generic type arguments are always explicit (Delphi does not infer them from anonymous methods). Static class methods / plain functions can be passed as handlers.
 - Paths: `{name}`, `{name:int|guid|alpha}`, `{*}` (last, read with `C.Path<string>('*')`). Literal > constrained param > param > wildcard. Routes match before resources; path matched with another verb -> 405 + `Allow`.
 - Context: `C.Path<T>`, `C.Query<T>(Name[, Default])`, `C.Header<T>`, `C.Cookie<T>`, `C.Form<T>`, `C.Body<T>`, `C.Config<T>(Name, Default)`, `C.Inject<T>` (any injection service, e.g. `TMARSFireDAC`; a new value per call), `C.Token`, `C.Request`, `C.Response`, `C.URL`, `C.Activation`, `C.Own(Obj)`, `C.Created(Location)`, `C.NoContent`, `C.Status(Code)`.

@@ -200,6 +200,8 @@ type
     [Test]
     procedure TestObjectBodyIsFreed;
     [Test]
+    procedure TestBodyWithoutResult;
+    [Test]
     procedure TestResultIsReference;
     [Test]
     procedure TestGuidConstraint;
@@ -892,6 +894,51 @@ begin
   Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
   Assert.AreEqual('got box', LMock.Response.Content);
   Assert.AreEqual(0, GBodyThingsAlive, 'the body object should be freed with the activation');
+end;
+
+procedure TMARSRoutesFixture.TestBodyWithoutResult;
+var
+  LReceived: string;
+begin
+  // a typed body, no content (as a resource procedure with a [BodyParam])
+  MARSRoutesOf(FApplication).PostBody<TRoutePerson>('silent',
+    procedure (const C: TMARSRouteContext; const APerson: TRoutePerson)
+    begin
+      LReceived := APerson.Name;
+      C.NoContent;
+    end
+  ).Consumes(TMediaType.APPLICATION_JSON);
+  MARSRoutesOf(FApplication).PutBody<TRouteBodyThing>('silentthing',
+    procedure (const C: TMARSRouteContext; const AThing: TRouteBodyThing)
+    begin
+      LReceived := AThing.Name;
+    end
+  );
+
+  var LMock := Send('POST', 'silent', '{"Id":7,"Name":"Andrea"}');
+  Assert.AreEqual(204, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.AreEqual('Andrea', LReceived);
+
+  LMock := Send('PUT', 'silentthing', '{"Name":"box"}');
+  Assert.IsTrue(LMock.Response.StatusCode in [200, 204], LMock.Response.Content);
+  Assert.AreEqual('box', LReceived);
+  Assert.AreEqual(0, GBodyThingsAlive, 'the body object should be freed with the activation');
+
+  // a malformed body: 400
+  LMock := Send('POST', 'silent', '{"Id": ');
+  Assert.AreEqual(400, LMock.Response.StatusCode, LMock.Response.Content);
+
+  // the body in the OpenAPI document, no content in the response
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    var LOperation := OperationById(LOpenAPI, 'post_silent');
+    Assert.IsNotNull(LOperation, 'post_silent');
+    Assert.AreEqual('#/components/schemas/TRoutePerson'
+      , LOperation.requestBody.content['application/json'].schema.ref);
+    Assert.AreEqual(0, LOperation.responses['200'].content.Count, 'no content');
+  finally
+    LOpenAPI.Free;
+  end;
 end;
 
 procedure TMARSRoutesFixture.TestResultIsReference;

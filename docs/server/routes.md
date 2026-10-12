@@ -116,8 +116,9 @@ MARSRoutesOf(LApplication).Get<string>('ping',
 | --- | --- |
 | `Get<TResult>`, `Post<TResult>`, `Put<TResult>`, `Patch<TResult>`, `Delete<TResult>` | `function (const C: TMARSRouteContext): TResult` |
 | `Post<TBody, TResult>`, `Put<TBody, TResult>`, `Patch<TBody, TResult>` | `function (const C: TMARSRouteContext; const ABody: TBody): TResult` |
+| `PostBody<TBody>`, `PutBody<TBody>`, `PatchBody<TBody>` (a body, no result) | `procedure (const C: TMARSRouteContext; const ABody: TBody)` |
 | `Get`, `Post`, `Put`, `Patch`, `Delete` (not generic) | `procedure (const C: TMARSRouteContext)` |
-| `Map<TResult>(HttpMethod, ...)`, `Map<TBody, TResult>`, `Map` | any HTTP method, i.e. `QUERY` |
+| `Map<TResult>(HttpMethod, ...)`, `Map<TBody, TResult>`, `MapBody<TBody>`, `Map` | any HTTP method, i.e. `QUERY` |
 
 The result is written by the [message body writers](/server/content-negotiation), as the result of a resource method:
 - records, objects, arrays and datasets become JSON;

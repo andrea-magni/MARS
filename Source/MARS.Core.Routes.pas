@@ -74,6 +74,8 @@ type
 
   TMARSRouteFunc<TResult> = reference to function (const C: TMARSRouteContext): TResult;
   TMARSRouteBodyFunc<TBody, TResult> = reference to function (const C: TMARSRouteContext; const ABody: TBody): TResult;
+  // a typed body, no result (as a resource procedure with a [BodyParam])
+  TMARSRouteBodyProc<TBody> = reference to procedure (const C: TMARSRouteContext; const ABody: TBody);
   TMARSRouteProc = reference to procedure (const C: TMARSRouteContext);
   TMARSRouteDefineProc = reference to procedure (const R: TMARSRouter);
   // ANext runs the rest of the chain: the inner middlewares, the handler and the
@@ -271,6 +273,12 @@ type
     function Map<TResult>(const AHttpMethod, APath: string; const AHandler: TMARSRouteFunc<TResult>): TMARSRoute; overload;
     function Map<TBody, TResult>(const AHttpMethod, APath: string; const AHandler: TMARSRouteBodyFunc<TBody, TResult>): TMARSRoute; overload;
     function Map(const AHttpMethod, APath: string; const AHandler: TMARSRouteProc): TMARSRoute; overload;
+    // a typed body, no result: MapBody, PostBody, PutBody, PatchBody (a generic overload of Post
+    // would be ambiguous with Post<TResult>)
+    function MapBody<TBody>(const AHttpMethod, APath: string; const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
+    function PostBody<TBody>(const APath: string; const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
+    function PutBody<TBody>(const APath: string; const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
+    function PatchBody<TBody>(const APath: string; const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
 
     function Get<TResult>(const APath: string; const AHandler: TMARSRouteFunc<TResult>): TMARSRoute; overload;
     function Get(const APath: string; const AHandler: TMARSRouteProc): TMARSRoute; overload;
@@ -1314,6 +1322,36 @@ begin
       Result := TValue.From<TResult>(AHandler(LContext, LContext.Body<TBody>));
     end
   );
+end;
+
+function TMARSRouter.MapBody<TBody>(const AHttpMethod, APath: string;
+  const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
+begin
+  Result := AddRoute(AHttpMethod, APath, nil, TypeInfo(TBody),
+    function (const AActivation: IMARSActivation): TValue
+    var
+      LContext: TMARSRouteContext;
+    begin
+      LContext := TMARSRouteContext.Create(AActivation);
+      AHandler(LContext, LContext.Body<TBody>);
+      Result := TValue.Empty;
+    end
+  );
+end;
+
+function TMARSRouter.PostBody<TBody>(const APath: string; const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
+begin
+  Result := MapBody<TBody>('POST', APath, AHandler);
+end;
+
+function TMARSRouter.PutBody<TBody>(const APath: string; const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
+begin
+  Result := MapBody<TBody>('PUT', APath, AHandler);
+end;
+
+function TMARSRouter.PatchBody<TBody>(const APath: string; const AHandler: TMARSRouteBodyProc<TBody>): TMARSRoute;
+begin
+  Result := MapBody<TBody>('PATCH', APath, AHandler);
 end;
 
 function TMARSRouter.Map(const AHttpMethod, APath: string; const AHandler: TMARSRouteProc): TMARSRoute;
