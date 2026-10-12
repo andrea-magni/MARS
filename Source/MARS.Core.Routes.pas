@@ -178,6 +178,7 @@ type
     FSegments: TArray<TMARSRouteSegment>;
     FResultType: PTypeInfo;
     FBodyType: PTypeInfo;
+    FBodyRequired: Boolean;
     FInvoker: TMARSRouteInvoker;
     FName: string;
     FNameSet: Boolean;
@@ -212,6 +213,9 @@ type
     function ResultIsReference: TMARSRoute;
     function Attribute(const AAttribute: TCustomAttribute): TMARSRoute;
     function Name(const AName: string): TMARSRoute;
+    // the typed body is required (default) or optional, in the OpenAPI document (as [Required] on
+    // the body parameter of a resource method)
+    function BodyRequired(const ARequired: Boolean): TMARSRoute;
 
     // documentation (OpenAPI)
     function Summary(const AText: string): TMARSRoute;
@@ -237,6 +241,7 @@ type
     property Segments: TArray<TMARSRouteSegment> read FSegments;
     property ResultType: PTypeInfo read FResultType;
     property BodyType: PTypeInfo read FBodyType;
+    property IsBodyRequired: Boolean read FBodyRequired;
     property Router: TMARSRouter read FRouter;
     property RouteName: string read FName;
     // Name(...) when given, otherwise derived from method and path (i.e. get_people_id)
@@ -843,6 +848,7 @@ begin
   FTemplate := CombineRoutePath(ARouter.FullPath, APath);
   FResultType := AResultType;
   FBodyType := ABodyType;
+  FBodyRequired := True;
   FInvoker := AInvoker;
   FName := FHttpMethod + ' ' + FTemplate;
   FParams := [];
@@ -915,6 +921,12 @@ end;
 function TMARSRoute.Hidden: TMARSRoute;
 begin
   FHidden := True;
+  Result := Self;
+end;
+
+function TMARSRoute.BodyRequired(const ARequired: Boolean): TMARSRoute;
+begin
+  FBodyRequired := ARequired;
   Result := Self;
 end;
 

@@ -368,6 +368,8 @@ R.Get<TArray<TPerson>>('',
 
 `QueryParam<T>`, `HeaderParam<T>`, `CookieParam<T>` and `FormParam<T>` take a name, a description and a `Required` flag: a required parameter missing from the request gives 400 before the handler runs. `Summary`, `Description` and `Hidden` are available on routes and groups.
 
+The typed body of a route is described as required; `BodyRequired(False)` describes it as optional, as a body parameter of a resource method without `[Required]`.
+
 ## Resources or routes?
 
 Both styles are first-class and can be mixed in the same application. Pick per part of the API:

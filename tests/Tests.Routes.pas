@@ -913,7 +913,7 @@ begin
     begin
       LReceived := AThing.Name;
     end
-  );
+  ).BodyRequired(False);
 
   var LMock := Send('POST', 'silent', '{"Id":7,"Name":"Andrea"}');
   Assert.AreEqual(204, LMock.Response.StatusCode, LMock.Response.Content);
@@ -936,6 +936,10 @@ begin
     Assert.AreEqual('#/components/schemas/TRoutePerson'
       , LOperation.requestBody.content['application/json'].schema.ref);
     Assert.AreEqual(0, LOperation.responses['200'].content.Count, 'no content');
+    Assert.IsTrue(LOperation.requestBody.required, 'required by default');
+    LOperation := OperationById(LOpenAPI, 'put_silentthing');
+    Assert.IsNotNull(LOperation, 'put_silentthing');
+    Assert.IsFalse(LOperation.requestBody.required, 'BodyRequired(False)');
   finally
     LOpenAPI.Free;
   end;

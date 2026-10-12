@@ -421,7 +421,7 @@ begin
 
     // typed body
     if Assigned(ARoute.BodyType) then
-      AddParam(LMethodMetadata, 'BodyParam', 'body', 'body', ARoute.BodyType, '', True);
+      AddParam(LMethodMetadata, 'BodyParam', 'body', 'body', ARoute.BodyType, '', ARoute.IsBodyRequired);
 
     AResourceMetadata.GetParent.AddPath(
       TMARSURL.CombinePath([AResourceMetadata.Path, LMethodMetadata.Path]), LMethodMetadata);
