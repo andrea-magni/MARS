@@ -24,6 +24,7 @@ type
     [Test] procedure JSONValuesAndStreams;
 {$IFDEF MARS_YAML}
     [Test] procedure SecurityAsYAML;
+    [Test] procedure StringsStayStringsInYAML;
 {$ENDIF}
   end;
 
@@ -33,7 +34,7 @@ uses
   System.Rtti, System.TypInfo
 , System.JSON, MARS.Core.JSON
 , Tests.Objects.Types, Tests.DefaultEngine.Definition
-{$IFDEF MARS_YAML}, Neslib.Yaml, MARS.YAML.ReadersAndWriters{$ENDIF}
+{$IFDEF MARS_YAML}, Neslib.Yaml, Neslib.Utf8, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
 
 function QueryOperationIds(const AOpenAPI: TOpenAPI): TArray<string>;
@@ -291,6 +292,33 @@ begin
       Assert.AreEqual(LOpenAPI.components.schemas['TOpenAPIJSONHolder'].properties.Count, LProperties.Count);
       Assert.AreEqual('#/components/schemas/TJSONValue', LProperties.Values['Value'].Values['$ref'].ToString);
       Assert.IsFalse(LProperties.Contains('Capacity'), 'no properties of the list');
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.StringsStayStringsInYAML;
+begin
+  // strings that plain YAML reads as numbers, booleans or null are quoted
+  var LYAML := TMARSYAML.TValueToYAML(TValue.From<TArray<string>>(['8080', '0', '-1.5', 'true', 'null', 'abc', 'v1'])).ToYaml;
+  for var LQuoted in ['''8080''', '''0''', '''-1.5''', '''true''', '''null'''] do
+    Assert.IsTrue(LYAML.Contains('- ' + LQuoted), LQuoted + ' in ' + LYAML);
+  Assert.IsFalse(LYAML.Contains('!'), 'no tags: ' + LYAML);
+  Assert.IsTrue(LYAML.Contains('- abc'), 'abc plain');
+  Assert.IsTrue(LYAML.Contains('- v1'), 'v1 plain');
+  Assert.AreEqual('''8080''', TMARSYAML.TValueToYAML('8080').ToYaml.Trim);
+
+  // the status codes, keys of the responses
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    try
+      LYAML := TMARSYAML.ObjectToYAML(LOpenAPI).ToYaml;
+      Assert.IsTrue(LYAML.Contains('''200'':'), 'quoted status code');
+      Assert.IsFalse(LYAML.Contains(' 200:'), 'no plain status code');
     finally
       LOpenAPI.Free;
     end;

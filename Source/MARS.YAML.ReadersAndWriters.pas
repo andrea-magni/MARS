@@ -92,9 +92,52 @@ implementation
 
 {$IFDEF MARS_YAML}
 uses
-  System.TypInfo, DateUtils, Generics.Collections
+  System.TypInfo, DateUtils, StrUtils, Generics.Collections
 , MARS.Core.Utils, MARS.Rtti.Utils
 ;
+
+// a string that YAML would read as another type (a number, a boolean, null)
+function IsAmbiguousString(const AString: string): Boolean;
+begin
+  if AString = '' then
+    Exit(True);
+  case AString[1] of
+    '0'..'9': Exit(True);
+    '-', '+', '.':
+      if (Length(AString) > 1) and CharInSet(AString[2], ['0'..'9', '.']) then
+        Exit(True);
+  end;
+  Result := MatchText(AString, ['true', 'false', 'yes', 'no', 'on', 'off', 'y', 'n', 'null', '~'
+    , '.inf', '-.inf', '+.inf', '.nan']);
+end;
+
+// strings stay strings: quoted when plain they would be read as another type ("200", "8080")
+function StringStyle(const AString: string): TYamlScalarStyle;
+begin
+  if IsAmbiguousString(AString) then
+    Result := TYamlScalarStyle.SingleQuoted
+  else
+    Result := TYamlScalarStyle.Plain;
+end;
+
+// the keys of dictionaries are data, e.g. the status codes of the responses
+procedure QuoteKey(const AMapping: TYamlNode; const AKey: string);
+var
+  LIndex: Integer;
+  LKey: TYamlNode;
+begin
+  if not IsAmbiguousString(AKey) then
+    Exit;
+  for LIndex := AMapping.Count - 1 downto 0 do
+  begin
+    LKey := AMapping.Elements[LIndex].Key;
+    if LKey.ToString = AKey then
+    begin
+      LKey.ScalarStyle := TYamlScalarStyle.SingleQuoted;
+      Break;
+    end;
+  end;
+end;
 
 { TYAMLObjectWriter }
 
@@ -258,6 +301,7 @@ begin
         LNode.AddOrSetSequence(AKey.ToString).SequenceStyle := TYamlSequenceStyle.Flow
       else
         TValueToYaml(LNode, AKey.ToString, AValue);
+      QuoteKey(LNode, AKey.ToString);
     end
   );
 
@@ -293,6 +337,7 @@ begin
         LNode.AddOrSetSequence(LKey).SequenceStyle := TYamlSequenceStyle.Flow
       else
         TValueToYaml(LNode, LKey, LValue);
+      QuoteKey(LNode, LKey);
     end
   );
 
@@ -525,7 +570,11 @@ begin
       TValueToYAML(LDocument.Root, '', AValue);
     end
     else
+    begin
       LDocument := LStream.AddScalar(AValue.ToString);
+      if AValue.Kind in [tkString, tkUString, tkChar, tkWChar, tkLString, tkWString] then
+        LDocument.Root.ScalarStyle := StringStyle(AValue.ToString);
+    end;
 
     LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
     Result := LDocument;
@@ -587,7 +636,7 @@ begin
       else if LElement.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}] then
         RecordToYAML(LSequence, '', LElement)
       else if LElement.Kind in [tkString, tkShortString, tkWString, tkUString, tkChar, tkWChar, tkLString] then
-        LSequence.Add(LElement.AsString)
+        LSequence.Add(LElement.AsString).ScalarStyle := StringStyle(LElement.AsString)
       // elements keep their position: False, 0 and empty values are written too
       else if LElement.IsType<Boolean> then
         LSequence.Add(LElement.AsType<Boolean>)
@@ -622,7 +671,7 @@ begin
     LString := AValue.AsString;
     if LString <> '' then
     begin
-      ARoot.AddOrSetValue(AKeyName, LString).ScalarStyle := TYamlScalarStyle.Plain;
+      ARoot.AddOrSetValue(AKeyName, LString).ScalarStyle := StringStyle(LString);
       Result := True;
     end;
   end

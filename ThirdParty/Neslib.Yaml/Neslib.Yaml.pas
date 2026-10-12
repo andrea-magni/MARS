@@ -2252,7 +2252,10 @@ begin
   Scalar.FBase.Init(0, nil, nil, nil);
   Scalar.FValue := AValue;
   Scalar.FValueLength := AValueLength;
-  Scalar.FFlags := [TScalarFlag.PlainImplicit];
+  { MARS local change: also QuotedImplicit, as the parser does, so that a
+    quoted scalar without a tag is written as '8080', not as ! '8080' (read
+    as a number). See ThirdParty/README.md. }
+  Scalar.FFlags := [TScalarFlag.PlainImplicit, TScalarFlag.QuotedImplicit];
   Scalar.FStyle := TYamlScalarStyle.Any;
   if (AOwnsValue) then
     Include(Scalar.FFlags, TScalarFlag.OwnsValue);
