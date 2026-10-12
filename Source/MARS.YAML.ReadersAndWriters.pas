@@ -233,7 +233,6 @@ class function TMARSYAML.DictionaryToYAML(const ARoot: TYamlNode; const AName: s
   const ADictionary: TObject): Boolean;
 var
   LResult: Boolean;
-  LElement: TYamlNode;
   LNode: TYamlNode;
 begin
   LResult := False;
@@ -243,13 +242,21 @@ begin
     begin
       if not LResult then
       begin
-        LNode := ARoot.AddOrSetMapping(AName);
+        // as for objects: an element of a sequence (e.g. the security requirements), a named member or the root
+        if ARoot.IsSequence then
+          LNode := ARoot.AddMapping
+        else if AName <> '' then
+          LNode := ARoot.AddOrSetMapping(AName)
+        else
+          LNode := ARoot;
         LResult := True;
       end;
 
-      LElement := LNode.AddOrSetMapping(AKey.ToString);
-
-      TValueToYaml(LElement, '', AValue);
+      // the key of a dictionary is data: an empty array is written too (a security requirement without scopes)
+      if AValue.IsArray and (AValue.GetArrayLength = 0) then
+        LNode.AddOrSetSequence(AKey.ToString).SequenceStyle := TYamlSequenceStyle.Flow
+      else
+        TValueToYaml(LNode, AKey.ToString, AValue);
     end
   );
 
@@ -269,7 +276,10 @@ begin
     begin
       if not LResult then
       begin
-        LNode := ARoot.AddOrSetSequence(AName);
+        if ARoot.IsSequence then
+          LNode := ARoot.AddSequence
+        else
+          LNode := ARoot.AddOrSetSequence(AName);
         LResult := True;
       end;
 
@@ -502,10 +512,11 @@ begin
   Result := False;
   LTypeName := string(AValue.TypeInfo^.Name);
 
-  if LTypeName.Contains('TDictionary<System.string,') or LTypeName.Contains('TObjectDictionary<System.string,')  then
+  // the start of the name: TObjectList<TDictionary<string, ...>> contains the name of a dictionary
+  if IsDictionaryOfStringAndT(LTypeName) then
     Result := DictionaryToYaml(ARoot, AKeyName, AValue.AsObject)
 
-  else if LTypeName.Contains('TObjectList<') then
+  else if IsObjectListOfT(LTypeName) then
     Result := ObjectListToYaml(ARoot, AKeyName, AValue.AsObject)
 
   {$IFDEF Delphi11Alexandria_UP}

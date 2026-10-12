@@ -1,5 +1,7 @@
 unit Tests.OpenAPI3;
 
+{$I MARS.inc}
+
 interface
 uses
   Classes, SysUtils, Generics.Collections
@@ -20,6 +22,9 @@ type
     [Test] procedure MetaRequestBody;
     [Test] procedure RequiredPermitAllAndProcedures;
     [Test] procedure JSONValuesAndStreams;
+{$IFDEF MARS_YAML}
+    [Test] procedure SecurityAsYAML;
+{$ENDIF}
   end;
 
 implementation
@@ -28,6 +33,7 @@ uses
   System.Rtti, System.TypInfo
 , System.JSON, MARS.Core.JSON
 , Tests.Objects.Types, Tests.DefaultEngine.Definition
+{$IFDEF MARS_YAML}, Neslib.Yaml, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
 
 function QueryOperationIds(const AOpenAPI: TOpenAPI): TArray<string>;
@@ -249,6 +255,43 @@ begin
     LEngine.Free;
   end;
 end;
+
+{$IFDEF MARS_YAML}
+procedure TMARSOpenAPI3Test.SecurityAsYAML;
+begin
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LApp := LEngine.Engine.ApplicationByName('DefaultApp');
+    LApp.Parameters.Values['JWT.Secret'] := 'openapi-test-secret-0123456789-0123456789-0123456789';
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LApp);
+    try
+      // security requirements: a list of objects, each a name with its scopes
+      var LYAML := TMARSYAML.ObjectToYAML(LOpenAPI).ToYaml;
+      var LDocument := TYamlDocument.Parse(LYAML);
+      var LPaths := LDocument.Root.Values['paths'];
+
+      var LSecurity := LPaths.Values['/openapicases'].Values['delete'].Values['security'];
+      Assert.IsTrue(LSecurity.IsSequence, 'security: a sequence');
+      Assert.AreEqual(2, LSecurity.Count, 'bearer and cookie');
+      Assert.AreEqual('admin', LSecurity.Nodes[0].Values['JWT_bearer'].Nodes[0].ToString);
+      Assert.AreEqual('admin', LSecurity.Nodes[1].Values['JWT_cookie'].Nodes[0].ToString);
+
+      // a token, any role: the scopes are an empty sequence, not missing ({} would be public)
+      LSecurity := LPaths.Values['/openapicases/anytoken'].Values['get'].Values['security'];
+      Assert.AreEqual(2, LSecurity.Count);
+      Assert.IsTrue(LSecurity.Nodes[0].Values['JWT_bearer'].IsSequence, 'JWT_bearer: []');
+      Assert.AreEqual(0, LSecurity.Nodes[0].Values['JWT_bearer'].Count);
+
+      // the other dictionaries as before
+      Assert.IsTrue(LPaths.Values['/openapicases'].Values['get'].Values['responses'].Values['200'].IsMapping);
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+{$ENDIF}
 
 initialization
   TDUnitX.RegisterTestFixture(TMARSOpenAPI3Test);
