@@ -89,7 +89,7 @@ type
 implementation
 
 uses
-  DateUtils;
+  DateUtils, TypInfo;
 
 { TMARSParametersSlice }
 

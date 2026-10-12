@@ -120,7 +120,7 @@ type
 
 implementation
 
-uses DateUtils
+uses DateUtils, System.JSON
 , MARS.Core.JSON, MARS.Core.Exceptions
 ;
 
