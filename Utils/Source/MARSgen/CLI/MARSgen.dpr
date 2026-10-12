@@ -30,13 +30,21 @@ uses
   MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
   MARS.Gen.Compare in '..\Engine\MARS.Gen.Compare.pas',
   MARS.Cmd in '..\..\MARScmd\MARS.Cmd.pas',
-  MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas';
+  MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas',
+  MARS.Gen.MCP in '..\Engine\MARS.Gen.MCP.pas';
 
 
 var
   LArgs: TArray<string>;
   LOutput: TStringList;
 begin
+  // MARSgen mcp: an MCP server on stdio, for AI agents (nothing else on the standard output)
+  if (ParamCount = 1) and SameText(ParamStr(1), 'mcp') then
+  begin
+    TGenMCPTools.Serve;
+    Exit;
+  end;
+
   LArgs := [];
   for var LIndex := 1 to ParamCount do
     LArgs := LArgs + [ParamStr(LIndex)];

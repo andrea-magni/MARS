@@ -203,6 +203,23 @@ A generated server conforms except for what the generator said it could not do. 
 
 `Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, with resources or routes, a client and datasets), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. *Select…* chooses a part of the document: its tags, its operations and, for the types only, its schemas, with check boxes (whole tags become `--tags`, the rest `--operations`). *Preview* generates into a temporary folder and shows the units with their code and the messages, without writing anything to the destination. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
 
+## For AI agents
+
+`MARSgen mcp` is an [MCP](/features/mcp) server on stdio: an AI agent (Claude Code, Claude Desktop, any MCP client) starts it and calls MARSgen as tools.
+
+```bash
+claude mcp add marsgen -- C:\MARS\Utils\Bin\Win32\MARSgen.exe mcp
+```
+
+| Tool | What it does |
+| --- | --- |
+| `marsgen_outline` | the title, servers, tags, operations (with the key for `--operations`) and schemas of an OpenAPI document, as JSON |
+| `marsgen_preview` | the code of the units a command would write (`openapi` or `json`), generated into a temporary folder: nothing written |
+| `marsgen_types_from_json` | the Delphi types (records or classes) of a JSON sample given as text |
+| `marsgen` | a command line of MARSgen (`openapi`, `json`, `update`, `compare`, `--help`), as `MARSgen.exe` runs it: it writes the units |
+
+So an agent can look at a large document, choose a part of it, read the code before writing it, and generate it; the [Agent Skills](/guide/agent-skills) of MARS tell it to prefer MARSgen to writing those units by hand.
+
 ## Exit codes and diagnostics
 
 Warnings and errors name the construct of the document (a JSON pointer, `#/paths/~1pets/get`). Exit codes: `0` done, `1` warnings with `--strict` (or differences, for `compare`), `2` errors (the units are still written when the document could be read), `3` a wrong command line. MARSgen reads OpenAPI 3.0 and 3.1 (JSON or YAML, files or URLs); Swagger 2.0 is not supported.

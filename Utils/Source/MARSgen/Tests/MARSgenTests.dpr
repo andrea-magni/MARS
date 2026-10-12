@@ -34,6 +34,7 @@ uses
   MARS.Cmd in '..\..\MARScmd\MARS.Cmd.pas',
   MARS.Gen.Arguments in '..\Engine\MARS.Gen.Arguments.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas',
+  MARS.Gen.MCP in '..\Engine\MARS.Gen.MCP.pas',
   Tests.MARSgen.Helpers in 'Tests.MARSgen.Helpers.pas',
   Tests.MARSgen.JSONSource in 'Tests.MARSgen.JSONSource.pas',
   Tests.MARSgen.OpenAPIReader in 'Tests.MARSgen.OpenAPIReader.pas',
@@ -51,7 +52,8 @@ uses
   Tests.MARSgen.Client in 'Tests.MARSgen.Client.pas',
   Tests.MARSgen.Selection in 'Tests.MARSgen.Selection.pas',
   Tests.MARSgen.Datasets in 'Tests.MARSgen.Datasets.pas',
-  Tests.MARSgen.Routes in 'Tests.MARSgen.Routes.pas';
+  Tests.MARSgen.Routes in 'Tests.MARSgen.Routes.pas',
+  Tests.MARSgen.MCP in 'Tests.MARSgen.MCP.pas';
 
 var
   LResults: IRunResults;

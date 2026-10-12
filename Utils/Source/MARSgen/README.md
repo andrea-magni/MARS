@@ -16,6 +16,14 @@ removed (`ApplyCustomHeaders` with empty values). The manifest records the optio
 Tests: `Tests.MARSgen.Client` (mapping, unit, command line, the clients of the corpus compile, and
 the client of the pet store calls the generated server over HTTP, an Indy server in the probe).
 
+## MCP
+
+`MARSgen mcp` (`MARS.Gen.MCP`, intercepted in `MARSgen.dpr` before the command line) serves
+`TGenMCPTools` with `TMCPStdioServer` of MARS: `marsgen` (a command line through `TGenCLI.Run`),
+`marsgen_preview` (the same into a temporary folder, the units returned), `marsgen_types_from_json`
+and `marsgen_outline`. The CLI project needs the MARS sources in its search path. Tests:
+`Tests.MARSgen.MCP` (the tools through `HandleLine`, as a client calls them).
+
 ## Routes
 
 `--routes` writes the server as routes (`MARS.Gen.Emit.Routes`), from the same `TGenServerMapper`:
@@ -68,6 +76,7 @@ MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 MARSgen openapi <file|url> --client [--server] [options]
 MARSgen openapi <file|url> | json <file> ... --datasets [options]
 MARSgen openapi <file|url> --routes [--project <Name>] [options]
+MARSgen mcp
 MARSgen openapi <file|url> [--tags <a,b>] [--operations <a,b>] [--schemas <A,B>] [--all] [options]
 MARSgen json <file> [<file> ...] [--name <Name>] [options]
 MARSgen update [<folder>]

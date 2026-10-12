@@ -13,6 +13,7 @@ MARSgen openapi <file|url> --tags a,b | --operations id1,id2 [...]        a part
 MARSgen openapi <file|url> --types --schemas A,B                          some schemas and the ones they use
 MARSgen openapi <file|url> | json <files> --datasets                      + Data.<Api>: Define<Type>(FieldDefs) per type
 MARSgen openapi <file|url> --routes [--project <Name>]                    the server as routes (Server.Routes.<Name>)
+MARSgen mcp                                                               an MCP server on stdio (tools: marsgen, marsgen_preview, marsgen_types_from_json, marsgen_outline)
 MARSgen json <file> [<file> ...] --name <Name> [--dest <folder>]          types inferred from JSON samples
 MARSgen update [<folder>]                                                 import the document of the folder again
 MARSgen compare <document> <openapi of the server>                        conformance of a server (exit 0 = conforms)

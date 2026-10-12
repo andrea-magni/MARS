@@ -32,7 +32,7 @@
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_DcuOutput>lib\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>bin</DCC_ExeOutput>
-        <DCC_UnitSearchPath>..\Engine;..\..\..\..\ThirdParty\Neslib.Yaml;..\..\..\..\ThirdParty\Neslib.Yaml\Neslib;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\Engine;..\..\..\..\Source;..\..\..\..\ThirdParty\Neslib.Yaml;..\..\..\..\ThirdParty\Neslib.Yaml\Neslib;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_E>false</DCC_E>
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
@@ -83,6 +83,7 @@
         <DCCReference Include="..\..\MARScmd\MARS.Cmd.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Arguments.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.CLI.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.MCP.pas"/>
         <DCCReference Include="Tests.MARSgen.Helpers.pas"/>
         <DCCReference Include="Tests.MARSgen.JSONSource.pas"/>
         <DCCReference Include="Tests.MARSgen.OpenAPIReader.pas"/>
@@ -101,6 +102,7 @@
         <DCCReference Include="Tests.MARSgen.Selection.pas"/>
         <DCCReference Include="Tests.MARSgen.Datasets.pas"/>
         <DCCReference Include="Tests.MARSgen.Routes.pas"/>
+        <DCCReference Include="Tests.MARSgen.MCP.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
