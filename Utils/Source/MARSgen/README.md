@@ -3,8 +3,17 @@
 A tool to generate Delphi types and MARS-Curiosity servers (and projects) from OpenAPI 3.x
 documents, and types from JSON samples. The user documentation is
 [From OpenAPI: MARSgen](https://andrea-magni.github.io/MARS/guide/marsgen); this file is about its
-design and its tests. Clients and a VCL front end are planned: see
+design and its tests. Clients are planned: see
 [#234](https://github.com/andrea-magni/MARS/issues/234).
+
+## Window
+
+`MARSgen_VCL.exe` (`VCL\MARSgen_VCL.dproj`, built into `Utils\Bin\Win32`) is a front end of the
+same commands: `TGenRequest` (`Engine\MARS.Gen.Arguments.pas`) holds the fields of the window,
+builds the arguments of the command line (shown, and copied, as they are) and runs them with
+`TGenCLI.Run` in a thread, so the window and the command line cannot drift apart
+(`Tests.MARSgen.Arguments` runs the generated arguments). The fields are saved in
+`MARS-Curiosity\MARSgen.ini` of the application data folder (`--force` is never saved).
 
 ## Command line
 

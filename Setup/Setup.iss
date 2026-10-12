@@ -199,10 +199,12 @@ Source: "..\*"; Excludes: "{#CommonRADStudioFilesExcludes},*.gitattributes,*.git
 Source: "..\Utils\Bin\Win32\MARSCmd_VCL.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
 Source: "..\Utils\Bin\Win32\MARScmd.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
 Source: "..\Utils\Bin\Win32\MARSgen.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
+Source: "..\Utils\Bin\Win32\MARSgen_VCL.exe"; DestDir: "{app}\Utils\Bin\Win32\"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Uninstall"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\MARSCmd"; Filename: "{app}\Utils\Bin\Win32\MARSCmd_VCL.exe"; WorkingDir: "{app}\Utils\Bin\Win32\";
+Name: "{userdesktop}\MARSgen"; Filename: "{app}\Utils\Bin\Win32\MARSgen_VCL.exe"; WorkingDir: "{app}\Utils\Bin\Win32\";
 
 [Run]
 Filename: "{app}\{#LibrarySamplesFolder}"; Description: "{cm:SetupOpenSamplesFolder}"; Flags: shellexec runasoriginaluser postinstall;

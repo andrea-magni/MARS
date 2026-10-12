@@ -76,6 +76,7 @@
         <DCCReference Include="..\Engine\MARS.Gen.Project.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Compare.pas"/>
         <DCCReference Include="..\..\MARScmd\MARS.Cmd.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.Arguments.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.CLI.pas"/>
         <DCCReference Include="Tests.MARSgen.Helpers.pas"/>
         <DCCReference Include="Tests.MARSgen.JSONSource.pas"/>
@@ -90,6 +91,7 @@
         <DCCReference Include="Tests.MARSgen.Regeneration.pas"/>
         <DCCReference Include="Tests.MARSgen.Project.pas"/>
         <DCCReference Include="Tests.MARSgen.Compare.pas"/>
+        <DCCReference Include="Tests.MARSgen.Arguments.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -1,6 +1,6 @@
 # MARSgen: code from OpenAPI documents and JSON samples
 
-`Utils\Bin\Win32\MARSgen.exe` in the MARS folder (sources in `Utils\Source\MARSgen`) generates Delphi code. Prefer it over writing by hand the types or the resources that a document describes; `MARSgen --help` lists every option. Documentation: https://andrea-magni.github.io/MARS/guide/marsgen
+`Utils\Bin\Win32\MARSgen.exe` in the MARS folder (sources in `Utils\Source\MARSgen`) generates Delphi code. Prefer it over writing by hand the types or the resources that a document describes; `MARSgen --help` lists every option; `MARSgen_VCL.exe` runs the same commands from a window (for people; you use the command line). Documentation: https://andrea-magni.github.io/MARS/guide/marsgen
 
 ## Commands
 

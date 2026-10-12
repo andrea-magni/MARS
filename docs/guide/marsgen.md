@@ -12,7 +12,7 @@ MARSgen generates Delphi code from what describes an API:
 
 and then keeps working with you: importing the document again after it changes never touches your code, and `MARSgen compare` checks that a running server still serves the document.
 
-It is a command line tool, `Utils\Bin\Win32\MARSgen.exe` in the MARS folder (its sources are in `Utils\Source\MARSgen`). `MARSgen --help` lists every command and option.
+It is a command line tool, `Utils\Bin\Win32\MARSgen.exe` in the MARS folder (its sources are in `Utils\Source\MARSgen`). `MARSgen --help` lists every command and option. The same commands have a window, `MARSgen_VCL.exe` (see [The MARSgen window](#the-marsgen-window)).
 
 ## A server from a document in two minutes
 
@@ -124,6 +124,10 @@ compares the OpenAPI of a server (a file, or the URL of a running one) with a do
 - **Notes** (`--verbose`) are what the OpenAPI of MARS cannot state or what does not break clients: the status code of success (MARS states `200`; the generated code answers the one of the document), credentials that are not a token, operations and optional parameters only on the server.
 
 A generated server conforms except for what the generator said it could not do. After you change a server by hand, `compare` tells whether it still serves its document; it works with any MARS server, generated or not.
+
+## The MARSgen window
+
+`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
 
 ## Exit codes and diagnostics
 

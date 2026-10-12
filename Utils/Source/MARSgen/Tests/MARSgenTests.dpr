@@ -27,6 +27,7 @@ uses
   MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
   MARS.Gen.Compare in '..\Engine\MARS.Gen.Compare.pas',
   MARS.Cmd in '..\..\MARScmd\MARS.Cmd.pas',
+  MARS.Gen.Arguments in '..\Engine\MARS.Gen.Arguments.pas',
   MARS.Gen.CLI in '..\Engine\MARS.Gen.CLI.pas',
   Tests.MARSgen.Helpers in 'Tests.MARSgen.Helpers.pas',
   Tests.MARSgen.JSONSource in 'Tests.MARSgen.JSONSource.pas',
@@ -40,7 +41,8 @@ uses
   Tests.MARSgen.Server in 'Tests.MARSgen.Server.pas',
   Tests.MARSgen.Regeneration in 'Tests.MARSgen.Regeneration.pas',
   Tests.MARSgen.Project in 'Tests.MARSgen.Project.pas',
-  Tests.MARSgen.Compare in 'Tests.MARSgen.Compare.pas';
+  Tests.MARSgen.Compare in 'Tests.MARSgen.Compare.pas',
+  Tests.MARSgen.Arguments in 'Tests.MARSgen.Arguments.pas';
 
 var
   LResults: IRunResults;
