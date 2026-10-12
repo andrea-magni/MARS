@@ -82,10 +82,11 @@ begin
   FRequest.EnumsAsStrings := True;
   FRequest.JSONNameAlways := True;
   FRequest.FieldNamesAsJSON := True;
+  FRequest.Datasets := True;
   FRequest.Force := True;
   FRequest.Verbose := True;
   Assert.AreEqual('openapi|pets.yaml|--server|--dest|C:\Out|--unit|My.Pets|--classes|--int64|--currency|'
-    + '--enums-as-strings|--json-name-always|--field-names-as-json|--force|--verbose', Joined);
+    + '--enums-as-strings|--json-name-always|--field-names-as-json|--datasets|--force|--verbose', Joined);
 
   // a project; the template only when given
   FRequest.Mode := TGenOpenAPIMode.Project;
@@ -97,6 +98,7 @@ begin
   FRequest.EnumsAsStrings := False;
   FRequest.JSONNameAlways := False;
   FRequest.FieldNamesAsJSON := False;
+  FRequest.Datasets := False;
   FRequest.Force := False;
   FRequest.Verbose := False;
   Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--dest|C:\Out', Joined);

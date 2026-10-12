@@ -16,6 +16,14 @@ removed (`ApplyCustomHeaders` with empty values). The manifest records the optio
 Tests: `Tests.MARSgen.Client` (mapping, unit, command line, the clients of the corpus compile, and
 the client of the pet store calls the generated server over HTTP, an Indy server in the probe).
 
+## Datasets
+
+`--datasets` writes `Data.<Api>` (`MARS.Gen.Emit.Datasets`, from the types of the type mapper): per
+record (or class) a procedure `Define<Type>(AFieldDefs)`, the fields flattened as `JSONArrayToFieldDefs`
+of `MARS.Data.Utils` does (dotted names for nested objects, `ftWideMemo` for arrays and untyped
+values), so `JSONArrayToDataSet` and `DataSetToJSONArray` read and write the JSON of the document.
+Tests: `Tests.MARSgen.Datasets`, with a round trip through a `TFDMemTable` compiled and run.
+
 ## Selection
 
 `--tags`, `--operations` (operationId or `METHOD /path`) and `--schemas` (types only) select a part
@@ -47,6 +55,7 @@ server) and shows the units.
 MARSgen openapi <file|url> [--types] [options]
 MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 MARSgen openapi <file|url> --client [--server] [options]
+MARSgen openapi <file|url> | json <file> ... --datasets [options]
 MARSgen openapi <file|url> [--tags <a,b>] [--operations <a,b>] [--schemas <A,B>] [--all] [options]
 MARSgen json <file> [<file> ...] [--name <Name>] [options]
 MARSgen update [<folder>]

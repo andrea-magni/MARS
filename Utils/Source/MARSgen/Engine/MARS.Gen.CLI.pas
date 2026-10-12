@@ -46,7 +46,7 @@ uses
   System.IOUtils, System.StrUtils, System.RegularExpressions,
   MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.JSONInference, MARS.Gen.Types,
   MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Emit.Client, MARS.Gen.Output, MARS.Gen.Project,
-  MARS.Gen.Compare, MARS.Gen.Selection;
+  MARS.Gen.Compare, MARS.Gen.Selection, MARS.Gen.Emit.Datasets;
 
 type
   EUsage = class(Exception);
@@ -60,6 +60,8 @@ type
     Server: Boolean;
     // also the typed client (Client.<Api>)
     Client: Boolean;
+    // also the field definitions of datasets (Data.<Api>)
+    Datasets: Boolean;
     // a part of the document; All: the whole document (a selection of the last import removed)
     Selection: TGenSelection;
     All: Boolean;
@@ -105,6 +107,8 @@ begin
   // --types alone: the types only
   if (Command = 'openapi') and not IsGiven('--client') and not IsGiven('--types') then
     Client := AManifest.Client;
+  if not IsGiven('--datasets') and not IsGiven('--types') then
+    Datasets := AManifest.Datasets;
   if (Command = 'openapi') and Selection.IsEmpty and not All then
     Selection := AManifest.Selection;
 end;
@@ -139,6 +143,9 @@ begin
     '      operation, on top of the MARS client (TMARSNetClient)',
     '  MARSgen json <file> [<file> ...] [--name <Name>] [options]',
     '      the types of JSON samples (objects or arrays), merged',
+    '  MARSgen openapi <file|url> | json <files> --datasets [options]',
+    '      also the fields of the types for datasets: Data.<Api> (generated), a procedure per type',
+    '      adding its FieldDefs (TFDMemTable, TVirtualTable...), as MARS reads and writes their JSON',
     '  MARSgen openapi <file|url> --tags <a,b> | --operations <a,b> | --schemas <A,B> [options]',
     '      a part of the document: the operations with these tags, these operations (operationId,',
     '      or "GET /path"), with the types they use; or (types only) these schemas and the ones',
@@ -214,6 +221,7 @@ begin
   Result.Verbose := False;
   Result.Server := False;
   Result.Client := False;
+  Result.Datasets := False;
   Result.Selection := TGenSelection.Empty;
   Result.All := False;
   Result.Project := '';
@@ -240,6 +248,8 @@ begin
       Result.Server := True
     else if SameText(LArg, '--client') then
       Result.Client := True
+    else if SameText(LArg, '--datasets') then
+      Result.Datasets := True
     else if SameText(LArg, '--tags') then
       Result.Selection.Tags := Result.Selection.Tags + TGenSelection.Split(Value)
     else if SameText(LArg, '--operations') then
@@ -570,7 +580,8 @@ begin
         LOutput.Selection := LCommandLine.Selection;
 
         LApiUnit := '';
-        if LCommandLine.Server or LCommandLine.Client then
+        LOutput.Datasets := LCommandLine.Datasets;
+        if LCommandLine.Server or LCommandLine.Client or LCommandLine.Datasets then
         begin
           // one mapping of the types for all the units
           LTypes := TGenTypeMapper.Create(LApi, LCommandLine.TypeOptions);
@@ -581,6 +592,8 @@ begin
               LApiUnit := TGenServerEmitter.WriteTo(LApi, LTypes, LOutput);
             if LCommandLine.Client then
               TGenClientEmitter.WriteTo(LApi, LTypes, LOutput);
+            if LCommandLine.Datasets then
+              TGenDatasetsEmitter.WriteTo(LTypes, LOutput);
           finally
             LTypes.Free;
           end;

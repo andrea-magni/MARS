@@ -29,6 +29,7 @@ type
     FDocument: string;
     FMode: TGenOpenAPIMode;
     FClient: Boolean;
+    FDatasets: Boolean;
     FTags: TArray<string>;
     FOperations: TArray<string>;
     FSchemas: TArray<string>;
@@ -80,6 +81,8 @@ type
     property Mode: TGenOpenAPIMode read FMode write FMode;
     // also the typed client (--client)
     property Client: Boolean read FClient write FClient;
+    // also the fields of datasets (--datasets: OpenAPI and JSON)
+    property Datasets: Boolean read FDatasets write FDatasets;
     // a part of the document (--tags, --operations, --schemas; none: the whole document, or the
     // selection of the last import in the destination)
     property Tags: TArray<string> read FTags write FTags;
@@ -149,6 +152,8 @@ begin
     AArgs := AArgs + ['--json-name-always'];
   if FFieldNamesAsJSON then
     AArgs := AArgs + ['--field-names-as-json'];
+  if FDatasets then
+    AArgs := AArgs + ['--datasets'];
   if FForce then
     AArgs := AArgs + ['--force'];
   if FVerbose then
@@ -313,6 +318,7 @@ begin
   AIni.WriteString(ASection, 'Document', FDocument);
   AIni.WriteString(ASection, 'Mode', GetEnumName(TypeInfo(TGenOpenAPIMode), Ord(FMode)));
   AIni.WriteBool(ASection, 'Client', FClient);
+  AIni.WriteBool(ASection, 'Datasets', FDatasets);
   AIni.WriteString(ASection, 'Tags', string.Join(',', FTags));
   AIni.WriteString(ASection, 'Operations', string.Join(',', FOperations));
   AIni.WriteString(ASection, 'Schemas', string.Join(',', FSchemas));
@@ -359,6 +365,7 @@ begin
   FNameAfterParent := AIni.ReadBool(ASection, 'NameAfterParent', FNameAfterParent);
   FClasses := AIni.ReadBool(ASection, 'Classes', FClasses);
   FClient := AIni.ReadBool(ASection, 'Client', FClient);
+  FDatasets := AIni.ReadBool(ASection, 'Datasets', FDatasets);
   FTags := AIni.ReadString(ASection, 'Tags', '').Split([','], TStringSplitOptions.ExcludeEmpty);
   FOperations := AIni.ReadString(ASection, 'Operations', '').Split([','], TStringSplitOptions.ExcludeEmpty);
   FSchemas := AIni.ReadString(ASection, 'Schemas', '').Split([','], TStringSplitOptions.ExcludeEmpty);

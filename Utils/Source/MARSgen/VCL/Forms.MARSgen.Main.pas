@@ -77,6 +77,7 @@ type
     EnumsAsStringsCheckBox: TCheckBox;
     JSONNameAlwaysCheckBox: TCheckBox;
     FieldNamesAsJSONCheckBox: TCheckBox;
+    DatasetsCheckBox: TCheckBox;
     ActionPanel: TPanel;
     RunButton: TButton;
     PreviewButton: TButton;
@@ -245,6 +246,7 @@ begin
     EnumsAsStringsCheckBox.Checked := FRequest.EnumsAsStrings;
     JSONNameAlwaysCheckBox.Checked := FRequest.JSONNameAlways;
     FieldNamesAsJSONCheckBox.Checked := FRequest.FieldNamesAsJSON;
+    DatasetsCheckBox.Checked := FRequest.Datasets;
     FolderEdit.Text := FRequest.Folder;
     // the document of Compare: the one of OpenAPI unless set
     CompareDocumentEdit.Text := FRequest.Document;
@@ -284,6 +286,7 @@ begin
   FRequest.EnumsAsStrings := EnumsAsStringsCheckBox.Checked;
   FRequest.JSONNameAlways := JSONNameAlwaysCheckBox.Checked;
   FRequest.FieldNamesAsJSON := FieldNamesAsJSONCheckBox.Checked;
+  FRequest.Datasets := DatasetsCheckBox.Checked;
   FRequest.Force := ForceCheckBox.Checked;
   FRequest.Folder := Trim(FolderEdit.Text);
   FRequest.ServerOpenAPI := Trim(ServerEdit.Text);

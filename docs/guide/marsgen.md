@@ -10,6 +10,7 @@ MARSgen generates Delphi code from what describes an API:
 - **servers**: the MARS resources of an OpenAPI document, ready to compile, answering `501 Not Implemented` until you implement each operation;
 - **projects**: a new MARS project, created from the [MARSCmd templates](/guide/installation#bootstrap-a-new-project-with-marscmd), with the server of the document already linked in;
 - **clients**: a typed client of the API, a class with a method per operation, for any server that serves the document (MARS or not);
+- **datasets**: the fields of the types for `TFDMemTable`, `TVirtualTable` or any other dataset, as MARS reads and writes their JSON;
 
 and then keeps working with you: importing the document again after it changes never touches your code, and `MARSgen compare` checks that a running server still serves the document.
 
@@ -134,6 +135,23 @@ MARSgen json order-1.json order-2.json --name Order
 - `json` infers the types of samples: more samples are merged (a key missing in some is optional), ISO 8601 strings are dates, integers beyond 32 bits `Int64`.
 - Options: `--int64` (integers without a format), `--currency` (numbers), `--enums-as-strings`, `--field-names-as-json`; for `json`, `--no-dates` and `--name-after-parent`.
 
+### Datasets
+
+```
+MARSgen openapi petstore-3.0.yaml --datasets
+MARSgen json orders.json --name Order --datasets
+```
+
+`--datasets` also writes `Data.<Api>.pas`: per object type, a procedure adding its fields to the `FieldDefs` of a dataset, any of them (`TFDMemTable`, Devart `TVirtualTable`, `TClientDataSet`: the unit uses `Data.DB` only).
+
+```pascal
+DefinePet(FDMemTable1.FieldDefs);
+JSONArrayToDataSet(LPets, FDMemTable1);   // MARS.Data.Utils: creates the dataset and fills it
+LJSON := DataSetToJSONArray(FDMemTable1); // the same JSON back
+```
+
+The fields follow the [JSON of the datasets of MARS](/features/data-access#plain-json-into-a-dataset): nested objects flattened (`category.name`, written back as nested objects), arrays and values without a type as JSON text (`ftWideMemo`), strings `ftWideString(255)` (an enumeration as long as its longest value), numbers `ftInteger`, `ftLargeint`, `ftFloat` (`ftCurrency` with `--currency`), dates `ftDate`, `ftDateTime`, `ftTime`. Unlike the fields `JSONArrayToDataSet` infers from the data, these do not depend on the rows at hand: an empty array, or a value missing in every row, still gets its field.
+
 ### Classes
 
 `--classes` generates classes instead:
@@ -171,7 +189,7 @@ A generated server conforms except for what the generator said it could not do. 
 
 ## The MARSgen window
 
-`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, and a client), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. *Select…* chooses a part of the document: its tags, its operations and, for the types only, its schemas, with check boxes (whole tags become `--tags`, the rest `--operations`). *Preview* generates into a temporary folder and shows the units with their code and the messages, without writing anything to the destination. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
+`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, a client and datasets), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. *Select…* chooses a part of the document: its tags, its operations and, for the types only, its schemas, with check boxes (whole tags become `--tags`, the rest `--operations`). *Preview* generates into a temporary folder and shows the units with their code and the messages, without writing anything to the destination. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
 
 ## Exit codes and diagnostics
 

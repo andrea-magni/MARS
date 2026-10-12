@@ -504,7 +504,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 232
     Width = 800
-    Height = 148
+    Height = 172
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
@@ -588,7 +588,7 @@ object MainForm: TMainForm
       Left = 11
       Top = 71
       Width = 778
-      Height = 72
+      Height = 96
       Margins.Left = 11
       Margins.Right = 11
       Align = alTop
@@ -646,6 +646,15 @@ object MainForm: TMainForm
         Height = 20
         Caption = 'Field names as in JSON'
         TabOrder = 5
+        OnClick = ControlChange
+      end
+      object DatasetsCheckBox: TCheckBox
+        Left = 12
+        Top = 68
+        Width = 600
+        Height = 20
+        Caption = 'Also their fields for datasets (Data.<Api>: TFDMemTable, TVirtualTable...)'
+        TabOrder = 6
         OnClick = ControlChange
       end
     end

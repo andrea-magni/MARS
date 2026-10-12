@@ -28,6 +28,7 @@ type
     FDocumentHash: string;
     FMode: string;
     FClient: Boolean;
+    FDatasets: Boolean;
     FSelection: TGenSelection;
     FOptions: TGenTypeOptions;
     FGenerated: TDictionary<string, string>;
@@ -47,6 +48,8 @@ type
     property Mode: string read FMode write FMode;
     // also the client (Client.<Api>)
     property Client: Boolean read FClient write FClient;
+    // also the field definitions of datasets (Data.<Api>)
+    property Datasets: Boolean read FDatasets write FDatasets;
     // a part of the document (empty: all of it)
     property Selection: TGenSelection read FSelection write FSelection;
     property Options: TGenTypeOptions read FOptions write FOptions;
@@ -63,6 +66,7 @@ type
     FFolder: string;
     FManifestFile: string;
     FSelection: TGenSelection;
+    FDatasets: Boolean;
     FForce: Boolean;
     FPrevious: TGenManifest;
     FCurrent: TGenManifest;
@@ -94,6 +98,8 @@ type
     property Previous: TGenManifest read FPrevious;
     // the selection to record (set before Finish)
     property Selection: TGenSelection read FSelection write FSelection;
+    // the datasets to record (set before Finish)
+    property Datasets: Boolean read FDatasets write FDatasets;
     // full file names
     property Written: TArray<string> read FWritten;
     property Created: TArray<string> read FCreated;
@@ -176,6 +182,7 @@ begin
     FDocumentHash := LRoot.GetValue<string>('documentHash', '');
     FMode := LRoot.GetValue<string>('mode', '');
     FClient := LRoot.GetValue<Boolean>('client', False);
+    FDatasets := LRoot.GetValue<Boolean>('datasets', False);
     FImportedAt := LRoot.GetValue<string>('importedAt', '');
 
     LObject := LRoot.GetValue<TJSONObject>('options', nil);
@@ -233,6 +240,7 @@ begin
     LRoot.AddPair('documentHash', FDocumentHash);
     LRoot.AddPair('mode', FMode);
     LRoot.AddPair('client', TJSONBool.Create(FClient));
+    LRoot.AddPair('datasets', TJSONBool.Create(FDatasets));
     LRoot.AddPair('importedAt', FImportedAt);
 
     LObject := TJSONObject.Create;
@@ -395,6 +403,7 @@ begin
   FCurrent.Mode := AMode;
   FCurrent.Client := AClient;
   FCurrent.Selection := FSelection;
+  FCurrent.Datasets := FDatasets;
   FCurrent.Options := AOptions;
   FCurrent.ImportedAt := DateToISO8601(Now, False);
   for var LItem in AApi.Operations do
