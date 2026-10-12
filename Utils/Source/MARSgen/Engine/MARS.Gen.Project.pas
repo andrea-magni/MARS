@@ -50,7 +50,7 @@ type
     // the engine, the title and the version into bin\Server.ini. What could not be done goes to
     // AMessages, as advice. True when AApiUnit is in the uses of Server.Ignition
     class function Link(const AFolder, AApiUnit: string; const AApi: TGenApi;
-      const ABasePath: TGenBasePath; const AMessages: TStrings): Boolean; static;
+      const ABasePath: TGenBasePath; const AMessages: TStrings; const ARoutes: Boolean = False): Boolean; static;
     // the uses of Server.Ignition with AApiUnit; False when there is no uses clause to extend
     class function AddToUses(var ASource: string; const AUnitName: string): Boolean; static;
   end;
@@ -238,11 +238,12 @@ begin
 end;
 
 class function TGenProject.Link(const AFolder, AApiUnit: string; const AApi: TGenApi;
-  const ABasePath: TGenBasePath; const AMessages: TStrings): Boolean;
+  const ABasePath: TGenBasePath; const AMessages: TStrings; const ARoutes: Boolean): Boolean;
 var
   LFile, LSource, LNew: string;
   LEncoding: TEncoding;
   LApplicationPath: string;
+  LMatch: TMatch;
 begin
   // Server.Ignition: the unit and the path of the application
   Result := False;
@@ -256,6 +257,16 @@ begin
     Result := AddToUses(LNew, AApiUnit);
     if not Result then
       AMessages.Add('Add ' + AApiUnit + ' to the uses of ' + LFile);
+    // routes: the modules added to the application (the routes template has it already)
+    if ARoutes and not ContainsText(LNew, 'AddRoutes(') then
+    begin
+      LMatch := TRegEx.Match(LNew, '(?m)^([ \t]*)(\w+)\s*:=\s*\w+\.AddApplication\([^;]*;');
+      if LMatch.Success then
+        Insert(sLineBreak + LMatch.Groups[1].Value + LMatch.Groups[2].Value + '.AddRoutes(''Server.Routes.*'');',
+          LNew, LMatch.Index + LMatch.Length)
+      else
+        AMessages.Add('Add LApplication.AddRoutes(''Server.Routes.*'') after AddApplication in ' + LFile);
+    end;
     if ABasePath.Supported and not ABasePath.IsTemplateDefault then
     begin
       LApplicationPath := ABasePath.ApplicationPath;

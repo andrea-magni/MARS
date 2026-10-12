@@ -105,9 +105,24 @@ object MainForm: TMainForm
         TabOrder = 2
         OnClick = ControlChange
       end
+      object RoutesCheckBox: TCheckBox
+        AlignWithMargins = True
+        Left = 12
+        Top = 114
+        Width = 766
+        Height = 22
+        Margins.Left = 12
+        Margins.Top = 0
+        Margins.Right = 8
+        Margins.Bottom = 0
+        Align = alTop
+        Caption = 'The server as routes (MARS.Core.Routes) instead of resource classes'
+        TabOrder = 3
+        OnClick = ControlChange
+      end
       object SelectionRow: TPanel
         Left = 0
-        Top = 114
+        Top = 136
         Width = 786
         Height = 34
         Align = alTop
@@ -115,7 +130,7 @@ object MainForm: TMainForm
         Padding.Left = 8
         Padding.Top = 6
         Padding.Right = 8
-        TabOrder = 3
+        TabOrder = 4
         object SelectionLabel: TLabel
           Left = 8
           Top = 6
@@ -151,7 +166,7 @@ object MainForm: TMainForm
       end
       object ProjectRow: TPanel
         Left = 0
-        Top = 148
+        Top = 170
         Width = 786
         Height = 34
         Align = alTop
@@ -159,7 +174,7 @@ object MainForm: TMainForm
         Padding.Left = 8
         Padding.Top = 6
         Padding.Right = 8
-        TabOrder = 4
+        TabOrder = 5
         object ProjectNameLabel: TLabel
           Left = 8
           Top = 6

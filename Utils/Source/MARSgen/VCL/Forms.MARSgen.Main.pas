@@ -28,6 +28,7 @@ type
     DocumentButton: TButton;
     ModeRadioGroup: TRadioGroup;
     ClientCheckBox: TCheckBox;
+    RoutesCheckBox: TCheckBox;
     SelectionRow: TPanel;
     SelectionLabel: TLabel;
     SelectionEdit: TEdit;
@@ -230,6 +231,7 @@ begin
     DocumentEdit.Text := FRequest.Document;
     ModeRadioGroup.ItemIndex := Ord(FRequest.Mode);
     ClientCheckBox.Checked := FRequest.Client;
+    RoutesCheckBox.Checked := FRequest.Routes;
     ProjectNameEdit.Text := FRequest.ProjectName;
     TemplateComboBox.ItemIndex := TemplateComboBox.Items.IndexOf(FRequest.Template);
     if TemplateComboBox.ItemIndex < 0 then
@@ -268,6 +270,7 @@ begin
     FRequest.Document := Trim(DocumentEdit.Text);
   FRequest.Mode := TGenOpenAPIMode(ModeRadioGroup.ItemIndex);
   FRequest.Client := ClientCheckBox.Checked;
+  FRequest.Routes := RoutesCheckBox.Checked;
   FRequest.ProjectName := Trim(ProjectNameEdit.Text);
   // MARSTemplate is the default: no --template
   if (TemplateComboBox.ItemIndex > 0) then
@@ -327,6 +330,7 @@ begin
 
   FitPageControl;
   SelectionEdit.Text := FRequest.SelectionSummary;
+  RoutesCheckBox.Enabled := FRequest.Mode in [TGenOpenAPIMode.Server, TGenOpenAPIMode.Project];
   CommandLineEdit.Text := FRequest.CommandLine;
   LProblem := FRequest.Problem;
   RunButton.Enabled := (LProblem = '') and not FRunning;
@@ -350,7 +354,7 @@ begin
     0:
     begin
       LContent := DocumentRow.Height + ModeRadioGroup.Height + ModeRadioGroup.Margins.Top
-        + ModeRadioGroup.Margins.Bottom + ClientCheckBox.Height + SelectionRow.Height;
+        + ModeRadioGroup.Margins.Bottom + ClientCheckBox.Height + RoutesCheckBox.Height + SelectionRow.Height;
       if ProjectRow.Visible then
         Inc(LContent, ProjectRow.Height);
     end;

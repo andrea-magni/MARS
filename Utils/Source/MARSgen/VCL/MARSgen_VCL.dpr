@@ -26,6 +26,7 @@ uses
   MARS.Gen.Emit.Client in '..\Engine\MARS.Gen.Emit.Client.pas',
   MARS.Gen.Selection in '..\Engine\MARS.Gen.Selection.pas',
   MARS.Gen.Emit.Datasets in '..\Engine\MARS.Gen.Emit.Datasets.pas',
+  MARS.Gen.Emit.Routes in '..\Engine\MARS.Gen.Emit.Routes.pas',
   MARS.Gen.Output in '..\Engine\MARS.Gen.Output.pas',
   MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
   MARS.Gen.Compare in '..\Engine\MARS.Gen.Compare.pas',

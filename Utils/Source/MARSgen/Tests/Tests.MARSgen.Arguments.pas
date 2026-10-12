@@ -105,6 +105,14 @@ begin
   FRequest.Template := 'MARSTemplateRoutes';
   Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--template|MARSTemplateRoutes|--dest|C:\Out', Joined);
 
+  // routes: with a server or a project only
+  FRequest.Routes := True;
+  Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--template|MARSTemplateRoutes|--routes|--dest|C:\Out', Joined);
+  FRequest.Mode := TGenOpenAPIMode.Types;
+  Assert.AreEqual('openapi|pets.yaml|--types|--dest|C:\Out', Joined);
+  FRequest.Mode := TGenOpenAPIMode.Project;
+  FRequest.Routes := False;
+
   // the client, with any mode
   FRequest.Client := True;
   Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--template|MARSTemplateRoutes|--client|--dest|C:\Out', Joined);

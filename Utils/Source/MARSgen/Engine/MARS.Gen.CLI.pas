@@ -46,7 +46,7 @@ uses
   System.IOUtils, System.StrUtils, System.RegularExpressions,
   MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.JSONInference, MARS.Gen.Types,
   MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Emit.Client, MARS.Gen.Output, MARS.Gen.Project,
-  MARS.Gen.Compare, MARS.Gen.Selection, MARS.Gen.Emit.Datasets;
+  MARS.Gen.Compare, MARS.Gen.Selection, MARS.Gen.Emit.Datasets, MARS.Gen.Emit.Routes;
 
 type
   EUsage = class(Exception);
@@ -62,6 +62,8 @@ type
     Client: Boolean;
     // also the field definitions of datasets (Data.<Api>)
     Datasets: Boolean;
+    // the server as routes (Server.Routes.*)
+    Routes: Boolean;
     // a part of the document; All: the whole document (a selection of the last import removed)
     Selection: TGenSelection;
     All: Boolean;
@@ -109,6 +111,9 @@ begin
     Client := AManifest.Client;
   if not IsGiven('--datasets') and not IsGiven('--types') then
     Datasets := AManifest.Datasets;
+  // the style of the server stays the one of the first import
+  if (Command = 'openapi') and Server and not IsGiven('--routes') then
+    Routes := AManifest.Routes;
   if (Command = 'openapi') and Selection.IsEmpty and not All then
     Selection := AManifest.Selection;
 end;
@@ -138,6 +143,9 @@ begin
     '      the same, in a new MARS project created as MARSCmd does (<Name>Server..., Server.Ignition),',
     '      linked: Server.<Api> in the uses of Server.Ignition, the base path of the document as the',
     '      paths of the engine and of the application, its title and version in Server.ini',
+    '  MARSgen openapi <file|url> --routes [--project <Name>] [options]',
+    '      the server as routes (MARS.Core.Routes) instead of resources: Server.Routes.<Name>.Base',
+    '      (generated), Server.Routes.<Name> (yours); a project from MARSTemplateRoutes by default',
     '  MARSgen openapi <file|url> --client [--server | --project <Name>] [options]',
     '      also a typed client of the API: Client.<Api> (generated), a class with a method per',
     '      operation, on top of the MARS client (TMARSNetClient)',
@@ -222,6 +230,7 @@ begin
   Result.Server := False;
   Result.Client := False;
   Result.Datasets := False;
+  Result.Routes := False;
   Result.Selection := TGenSelection.Empty;
   Result.All := False;
   Result.Project := '';
@@ -250,6 +259,8 @@ begin
       Result.Client := True
     else if SameText(LArg, '--datasets') then
       Result.Datasets := True
+    else if SameText(LArg, '--routes') then
+      Result.Routes := True
     else if SameText(LArg, '--tags') then
       Result.Selection.Tags := Result.Selection.Tags + TGenSelection.Split(Value)
     else if SameText(LArg, '--operations') then
@@ -340,6 +351,14 @@ begin
     raise EUsage.Create('--server needs an OpenAPI document (openapi)');
   if Result.Client and (Result.Command <> 'openapi') then
     raise EUsage.Create('--client needs an OpenAPI document (openapi)');
+  if Result.Routes then
+  begin
+    if Result.Command <> 'openapi' then
+      raise EUsage.Create('--routes needs an OpenAPI document (openapi)');
+    if Result.IsGiven('--types') then
+      raise EUsage.Create('--routes writes a server: not with --types');
+    Result.Server := True;
+  end;
   if (not Result.Selection.IsEmpty or Result.All) and (Result.Command <> 'openapi') then
     raise EUsage.Create('--tags, --operations, --schemas and --all select a part of an OpenAPI document (openapi)');
   if Result.All and not Result.Selection.IsEmpty then
@@ -437,7 +456,7 @@ begin
   begin
     LMessages := TStringList.Create;
     try
-      if TGenProject.Link(ACommandLine.Folder, AApiUnit, AApi, LBasePath, LMessages) then
+      if TGenProject.Link(ACommandLine.Folder, AApiUnit, AApi, LBasePath, LMessages, ACommandLine.Routes) then
         AOutput.Add('Linked: ' + AApiUnit + ' in the uses of Server.Ignition');
       if LBasePath.Supported and not LBasePath.IsTemplateDefault then
         AOutput.Add(Format('Base path of the document %s: BasePath=%s in Server.ini, application path %s in Server.Ignition',
@@ -450,6 +469,8 @@ begin
   else
   begin
     AOutput.Add('Add ' + AApiUnit + ' to the uses of Server.Ignition');
+    if ACommandLine.Routes then
+      AOutput.Add('Add LApplication.AddRoutes(''Server.Routes.*'') after AddApplication in Server.Ignition, unless it is there');
     if LBasePath.Supported and not LBasePath.IsTemplateDefault then
       AOutput.Add(Format('The operations of the document are under %s: set BasePath=%s in [DefaultEngine] of the ini '
         + 'file of the server and %s as the path of the application in Server.Ignition',
@@ -558,6 +579,9 @@ begin
           LCommandLine.MARSFolder := TPath.GetFullPath(LCommandLine.MARSFolder);
         if LCommandLine.MARSFolder = '' then
           raise EGenError.Create('MARS folder not found (Demos\MARSTemplate, Source) above MARSgen.exe: use --mars <folder>');
+        // routes: the template with routes, unless another one is given
+        if LCommandLine.Routes and (LCommandLine.Template = '') then
+          LCommandLine.Template := 'MARSTemplateRoutes';
         TGenProject.CreateProject(LCommandLine.Project, LCommandLine.Template, LCommandLine.Folder,
           LCommandLine.MARSFolder, LCommandLine.AllowInside);
         AOutput.Add('Project ' + LCommandLine.Project + ' created: ' + LCommandLine.Folder);
@@ -581,6 +605,7 @@ begin
 
         LApiUnit := '';
         LOutput.Datasets := LCommandLine.Datasets;
+        LOutput.Routes := LCommandLine.Routes and LCommandLine.Server;
         if LCommandLine.Server or LCommandLine.Client or LCommandLine.Datasets then
         begin
           // one mapping of the types for all the units
@@ -588,7 +613,9 @@ begin
           try
             LTypes.Execute;
             LOutput.WriteGenerated(LTypes.UnitName + '.pas', TGenTypesEmitter.Emit(LTypes));
-            if LCommandLine.Server then
+            if LCommandLine.Server and LCommandLine.Routes then
+              LApiUnit := TGenRoutesEmitter.WriteTo(LApi, LTypes, LOutput)
+            else if LCommandLine.Server then
               LApiUnit := TGenServerEmitter.WriteTo(LApi, LTypes, LOutput);
             if LCommandLine.Client then
               TGenClientEmitter.WriteTo(LApi, LTypes, LOutput);

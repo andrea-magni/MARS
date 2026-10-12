@@ -70,6 +70,18 @@ function AddPet([BodyParam, Required] const ABody: TNewPet): TPet;
 
 Without `--project`, `--server` writes the same units into an existing project (`--dest`): add `Server.<Api>` to the uses of `Server.Ignition`, as the output says.
 
+### Routes
+
+`--routes` writes the server as [routes](/server/routes) instead of resource classes, from the same mapping (the same operations, parameters, types and security):
+
+| Unit | Owner | Content |
+| --- | --- | --- |
+| `Server.Routes.<Name>.Base` | generated | `T<Name>RoutesBase`: a protected virtual `Do` method per operation (501), and `Routes(AClass)`, the definition of the routes with their declarations (`Name`, media types, roles, parameters) |
+| `Server.Routes.<Name>` | **yours** | `T<Name>Routes = class(T<Name>RoutesBase)`: the overrides; registered with `MARSRoutes` |
+| `Server.<Api>` | generated | uses the units of the routes |
+
+Each request is handled by a new instance of your class, as a resource is: its fields are the state of that request only, and `Context` is the [route context](/server/routes#the-context-tmarsroutecontext) (the token, the request, `Context.Inject<T>`). Integer path parameters are constrained (`{petId:int}`): a text there is a 404, not a 400. With `--project`, the project starts from `MARSTemplateRoutes` (unless `--template` says otherwise) and the ignition adds the modules (`AddRoutes('Server.Routes.*')`); in an existing project, add that line after `AddApplication`. The style is the one of the first import: `update` keeps it.
+
 ## Projects
 
 `--project <Name>` creates the project with MARSCmd (the same code and templates: `MARSTemplate` by default, `--template MARSTemplateRoutes`…) into `--dest`, or `<current folder>\<Name>`, which must not exist or be empty. Then it links the server:
@@ -189,7 +201,7 @@ A generated server conforms except for what the generator said it could not do. 
 
 ## The MARSgen window
 
-`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, a client and datasets), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. *Select…* chooses a part of the document: its tags, its operations and, for the types only, its schemas, with check boxes (whole tags become `--tags`, the rest `--operations`). *Preview* generates into a temporary folder and shows the units with their code and the messages, without writing anything to the destination. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
+`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, with resources or routes, a client and datasets), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. *Select…* chooses a part of the document: its tags, its operations and, for the types only, its schemas, with check boxes (whole tags become `--tags`, the rest `--operations`). *Preview* generates into a temporary folder and shows the units with their code and the messages, without writing anything to the destination. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
 
 ## Exit codes and diagnostics
 

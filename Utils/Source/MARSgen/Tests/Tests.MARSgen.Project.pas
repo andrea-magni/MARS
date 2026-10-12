@@ -38,6 +38,8 @@ type
     procedure UnitsOfTheTemplateAreNotReplaced;
     [Test]
     procedure ProjectBuildsAndAnswers;
+    [Test]
+    procedure RoutesProjectBuildsAndAnswers;
   end;
 
 implementation
@@ -416,6 +418,75 @@ begin
       Assert.Contains(FOutput.Text, '5 of 5 operations of the document on the server: 2 differences');
       Assert.Contains(FOutput.Text, 'difference: GET /pets/{petId}: response 200: application/xml not produced by the server');
       Assert.Contains(FOutput.Text, 'note: GET /helloworld: only on the server');
+    finally
+      LClient.Free;
+    end;
+    LServer.WriteLine('exit');
+    LServer.WaitFor(5000);
+  finally
+    LServer.Free;
+  end;
+end;
+
+procedure TGenProjectTest.RoutesProjectBuildsAndAnswers;
+var
+  LCompiler, LProject, LOutput, LIni, LBase, LIgnition: string;
+  LPort: Integer;
+  LServer: TConsoleProcess;
+  LClient: THTTPClient;
+begin
+  LCompiler := TGenTestTools.FindCompiler;
+  if LCompiler = '' then
+    Assert.Pass('Delphi not found: skipped');
+
+  // --routes: the template with routes, the modules added by the ignition
+  LProject := TPath.Combine(FFolder, 'PetRoutes');
+  Assert.AreEqual(EXIT_OK, Run(['openapi', Document('http://localhost:8080/v1'), '--project', 'PetRoutes', '--routes',
+    '--dest', LProject]), FOutput.Text);
+  Assert.Contains(FOutput.Text, 'Linked: Server.PetStore in the uses of Server.Ignition');
+  Assert.IsTrue(TFile.Exists(TPath.Combine(LProject, 'Server.Routes.pas')), 'the routes of the template');
+  Assert.IsTrue(TFile.Exists(TPath.Combine(LProject, 'Server.Routes.Pets.pas')));
+  Assert.IsFalse(TFile.Exists(TPath.Combine(LProject, 'Server.Resources.Pets.pas')));
+  LIgnition := TFile.ReadAllText(TPath.Combine(LProject, 'Server.Ignition.pas'));
+  Assert.Contains(LIgnition, 'Server.PetStore');
+  Assert.Contains(LIgnition, 'AddRoutes(''Server.Routes.*'')');
+
+  Assert.AreEqual(0, Integer(TGenTestTools.Run(Format('call "%s" >nul & set "MARSDIR=%s" & msbuild '
+    + 'PetRoutesServerConsoleApplication.dproj /t:Build /p:Config=Debug /p:Platform=Win32 /v:minimal /nologo',
+    [TPath.Combine(TPath.GetDirectoryName(LCompiler), 'rsvars.bat'), TGenProject.FindMARSFolder]),
+    LProject, LOutput)), LOutput);
+
+  LPort := 20000 + Random(20000);
+  LIni := TPath.Combine(LProject, 'bin\PetRoutesServerConsoleApplication.ini');
+  TFile.WriteAllText(LIni, TFile.ReadAllText(LIni).Replace(';Port=8081', 'Port=' + LPort.ToString));
+  LBase := Format('http://localhost:%d', [LPort]);
+
+  LServer := TConsoleProcess.Create(TPath.Combine(LProject, 'bin\PetRoutesServerConsoleApplication.exe'),
+    TPath.Combine(LProject, 'bin'), TPath.Combine(LProject, 'server.log'));
+  try
+    LServer.WriteLine('start');
+    LClient := THTTPClient.Create;
+    try
+      LClient.ConnectionTimeout := 1000;
+      for var LAttempt := 1 to 50 do
+      try
+        if LClient.Get(LBase + '/v1/helloworld').StatusCode = 200 then
+          Break;
+        Sleep(200);
+      except
+        Sleep(200);
+      end;
+      Assert.AreEqual(200, LClient.Get(LBase + '/v1/helloworld').StatusCode, 'the routes of the template are still there');
+      // public: 501 until implemented; the int constraint: no route for a text
+      Assert.AreEqual(501, LClient.Get(LBase + '/v1/pets/12').StatusCode);
+      Assert.AreEqual(404, LClient.Get(LBase + '/v1/pets/abc').StatusCode);
+      // a token needed
+      Assert.AreEqual(403, LClient.Get(LBase + '/v1/pets').StatusCode);
+
+      // the conformance of the running server: the same as with resources
+      Assert.AreEqual(1, Run(['compare', TPath.Combine(FFolder, 'petstore.yaml'), LBase + '/v1/openapi', '--verbose']),
+        FOutput.Text);
+      Assert.Contains(FOutput.Text, '5 of 5 operations of the document on the server: 2 differences');
     finally
       LClient.Free;
     end;

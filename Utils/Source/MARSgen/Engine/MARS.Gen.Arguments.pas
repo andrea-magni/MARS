@@ -30,6 +30,7 @@ type
     FMode: TGenOpenAPIMode;
     FClient: Boolean;
     FDatasets: Boolean;
+    FRoutes: Boolean;
     FTags: TArray<string>;
     FOperations: TArray<string>;
     FSchemas: TArray<string>;
@@ -83,6 +84,8 @@ type
     property Client: Boolean read FClient write FClient;
     // also the fields of datasets (--datasets: OpenAPI and JSON)
     property Datasets: Boolean read FDatasets write FDatasets;
+    // the server (or the project) with routes instead of resources (--routes)
+    property Routes: Boolean read FRoutes write FRoutes;
     // a part of the document (--tags, --operations, --schemas; none: the whole document, or the
     // selection of the last import in the destination)
     property Tags: TArray<string> read FTags write FTags;
@@ -178,6 +181,8 @@ begin
             Result := Result + ['--template', FTemplate];
         end;
       end;
+      if FRoutes and (FMode in [TGenOpenAPIMode.Server, TGenOpenAPIMode.Project]) then
+        Result := Result + ['--routes'];
       if FClient then
         Result := Result + ['--client'];
       if Length(FTags) > 0 then
@@ -319,6 +324,7 @@ begin
   AIni.WriteString(ASection, 'Mode', GetEnumName(TypeInfo(TGenOpenAPIMode), Ord(FMode)));
   AIni.WriteBool(ASection, 'Client', FClient);
   AIni.WriteBool(ASection, 'Datasets', FDatasets);
+  AIni.WriteBool(ASection, 'Routes', FRoutes);
   AIni.WriteString(ASection, 'Tags', string.Join(',', FTags));
   AIni.WriteString(ASection, 'Operations', string.Join(',', FOperations));
   AIni.WriteString(ASection, 'Schemas', string.Join(',', FSchemas));
@@ -366,6 +372,7 @@ begin
   FClasses := AIni.ReadBool(ASection, 'Classes', FClasses);
   FClient := AIni.ReadBool(ASection, 'Client', FClient);
   FDatasets := AIni.ReadBool(ASection, 'Datasets', FDatasets);
+  FRoutes := AIni.ReadBool(ASection, 'Routes', FRoutes);
   FTags := AIni.ReadString(ASection, 'Tags', '').Split([','], TStringSplitOptions.ExcludeEmpty);
   FOperations := AIni.ReadString(ASection, 'Operations', '').Split([','], TStringSplitOptions.ExcludeEmpty);
   FSchemas := AIni.ReadString(ASection, 'Schemas', '').Split([','], TStringSplitOptions.ExcludeEmpty);

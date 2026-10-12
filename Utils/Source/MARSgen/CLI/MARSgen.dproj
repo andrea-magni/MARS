@@ -76,6 +76,7 @@
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Client.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Selection.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Datasets.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.Emit.Routes.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Output.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Project.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Compare.pas"/>

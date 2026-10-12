@@ -29,6 +29,7 @@ type
     FMode: string;
     FClient: Boolean;
     FDatasets: Boolean;
+    FRoutes: Boolean;
     FSelection: TGenSelection;
     FOptions: TGenTypeOptions;
     FGenerated: TDictionary<string, string>;
@@ -50,6 +51,8 @@ type
     property Client: Boolean read FClient write FClient;
     // also the field definitions of datasets (Data.<Api>)
     property Datasets: Boolean read FDatasets write FDatasets;
+    // the server as routes (Server.Routes.*) instead of resources
+    property Routes: Boolean read FRoutes write FRoutes;
     // a part of the document (empty: all of it)
     property Selection: TGenSelection read FSelection write FSelection;
     property Options: TGenTypeOptions read FOptions write FOptions;
@@ -67,6 +70,7 @@ type
     FManifestFile: string;
     FSelection: TGenSelection;
     FDatasets: Boolean;
+    FRoutes: Boolean;
     FForce: Boolean;
     FPrevious: TGenManifest;
     FCurrent: TGenManifest;
@@ -100,6 +104,8 @@ type
     property Selection: TGenSelection read FSelection write FSelection;
     // the datasets to record (set before Finish)
     property Datasets: Boolean read FDatasets write FDatasets;
+    // routes instead of resources (set before Finish)
+    property Routes: Boolean read FRoutes write FRoutes;
     // full file names
     property Written: TArray<string> read FWritten;
     property Created: TArray<string> read FCreated;
@@ -183,6 +189,7 @@ begin
     FMode := LRoot.GetValue<string>('mode', '');
     FClient := LRoot.GetValue<Boolean>('client', False);
     FDatasets := LRoot.GetValue<Boolean>('datasets', False);
+    FRoutes := LRoot.GetValue<Boolean>('routes', False);
     FImportedAt := LRoot.GetValue<string>('importedAt', '');
 
     LObject := LRoot.GetValue<TJSONObject>('options', nil);
@@ -241,6 +248,7 @@ begin
     LRoot.AddPair('mode', FMode);
     LRoot.AddPair('client', TJSONBool.Create(FClient));
     LRoot.AddPair('datasets', TJSONBool.Create(FDatasets));
+    LRoot.AddPair('routes', TJSONBool.Create(FRoutes));
     LRoot.AddPair('importedAt', FImportedAt);
 
     LObject := TJSONObject.Create;
@@ -404,6 +412,7 @@ begin
   FCurrent.Client := AClient;
   FCurrent.Selection := FSelection;
   FCurrent.Datasets := FDatasets;
+  FCurrent.Routes := FRoutes;
   FCurrent.Options := AOptions;
   FCurrent.ImportedAt := DateToISO8601(Now, False);
   for var LItem in AApi.Operations do

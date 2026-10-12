@@ -12,6 +12,7 @@ MARSgen openapi <file|url> --client [--server] [--dest <folder>]          types 
 MARSgen openapi <file|url> --tags a,b | --operations id1,id2 [...]        a part of the document (types: the ones it uses)
 MARSgen openapi <file|url> --types --schemas A,B                          some schemas and the ones they use
 MARSgen openapi <file|url> | json <files> --datasets                      + Data.<Api>: Define<Type>(FieldDefs) per type
+MARSgen openapi <file|url> --routes [--project <Name>]                    the server as routes (Server.Routes.<Name>)
 MARSgen json <file> [<file> ...] --name <Name> [--dest <folder>]          types inferred from JSON samples
 MARSgen update [<folder>]                                                 import the document of the folder again
 MARSgen compare <document> <openapi of the server>                        conformance of a server (exit 0 = conforms)
@@ -32,6 +33,8 @@ Options: `--classes` (classes instead of records), `--int64`, `--currency`, `--e
 - Generated security: `[Authenticated]` for a bearer without scopes, `[RolesAllowed]` for scopes, `[PermitAll]` for `security: []`; API keys are not checked (do it in the `Do` method). The success status (i.e. 201) is set by the base.
 - After the document changes: `MARSgen update <folder>` (options from the manifest `<Api>.marsgen.json`, keep it in version control). The report lists operations added (implement them) and removed (delete their overrides), generated units no longer generated (delete them) and units of the user no longer used. A generated unit edited by hand is kept with a warning: move the change into the user unit, then `--force`.
 - `MARSgen compare <document> http://localhost:8080/rest/default/openapi` checks a running server (generated or hand-written) against its document: differences break clients, notes (`--verbose`) are what MARS cannot state (the 2xx status code, API keys).
+
+With `--routes` the units are `Server.Routes.<Name>.Base` (generated) and `Server.Routes.<Name>` (the user's: override the `Do` methods; a new instance per request, `Context` is the route context); the ignition needs `AddRoutes('Server.Routes.*')`.
 
 ## Generated client
 
