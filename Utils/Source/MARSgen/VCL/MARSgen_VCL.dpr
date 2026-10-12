@@ -11,6 +11,8 @@ program MARSgen_VCL;
 uses
   Vcl.Forms,
   Forms.MARSgen.Main in 'Forms.MARSgen.Main.pas' {MainForm},
+  Forms.MARSgen.Selection in 'Forms.MARSgen.Selection.pas',
+  Forms.MARSgen.Preview in 'Forms.MARSgen.Preview.pas',
   MARS.Gen.Model in '..\Engine\MARS.Gen.Model.pas',
   MARS.Gen.JSONSource in '..\Engine\MARS.Gen.JSONSource.pas',
   MARS.Gen.OpenAPI.Reader in '..\Engine\MARS.Gen.OpenAPI.Reader.pas',
@@ -22,6 +24,7 @@ uses
   MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
   MARS.Gen.Client in '..\Engine\MARS.Gen.Client.pas',
   MARS.Gen.Emit.Client in '..\Engine\MARS.Gen.Emit.Client.pas',
+  MARS.Gen.Selection in '..\Engine\MARS.Gen.Selection.pas',
   MARS.Gen.Output in '..\Engine\MARS.Gen.Output.pas',
   MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
   MARS.Gen.Compare in '..\Engine\MARS.Gen.Compare.pas',

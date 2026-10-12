@@ -108,6 +108,24 @@ begin
   Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--template|MARSTemplateRoutes|--client|--dest|C:\Out', Joined);
   FRequest.Mode := TGenOpenAPIMode.Types;
   Assert.AreEqual('openapi|pets.yaml|--types|--client|--dest|C:\Out', Joined);
+
+  // a part of the document
+  FRequest.Client := False;
+  FRequest.Tags := ['pets', 'store'];
+  FRequest.Operations := ['getPetById', 'GET /orders'];
+  Assert.AreEqual('openapi|pets.yaml|--types|--tags|pets,store|--operations|getPetById,GET /orders|--dest|C:\Out', Joined);
+  Assert.AreEqual('Tags: pets, store; 2 operations: getPetById, GET /orders', FRequest.SelectionSummary);
+  FRequest.ClearSelection;
+  FRequest.Schemas := ['Pet', 'Order', 'Category', 'Error', 'NewPet'];
+  Assert.AreEqual('openapi|pets.yaml|--types|--schemas|Pet,Order,Category,Error,NewPet|--dest|C:\Out', Joined);
+  Assert.AreEqual('5 schemas (types only): Pet, Order, Category, Error and 1 more', FRequest.SelectionSummary);
+  Assert.AreEqual('', FRequest.Problem);
+  // schemas: types only
+  FRequest.Mode := TGenOpenAPIMode.Server;
+  Assert.Contains(FRequest.Problem, 'the selection of schemas is for the types only');
+  FRequest.ClearSelection;
+  Assert.IsFalse(FRequest.HasSelection);
+  Assert.StartsWith('The whole document', FRequest.SelectionSummary);
 end;
 
 procedure TGenArgumentsTest.JSONSamples;
@@ -196,6 +214,8 @@ begin
   FRequest.RootName := 'Order';
   FRequest.Classes := True;
   FRequest.Client := True;
+  FRequest.Tags := ['pets'];
+  FRequest.Operations := ['GET /orders', 'placeOrder'];
   FRequest.Currency := True;
   FRequest.Force := True;
   FRequest.Folder := 'C:\Out';
@@ -210,6 +230,9 @@ begin
     Assert.IsTrue(LLoaded.Command = TGenCommand.Compare);
     Assert.IsTrue(LLoaded.Mode = TGenOpenAPIMode.Project);
     Assert.IsTrue(LLoaded.Client);
+    Assert.AreEqual('pets', string.Join('|', LLoaded.Tags));
+    Assert.AreEqual('GET /orders|placeOrder', string.Join('|', LLoaded.Operations));
+    Assert.AreEqual(0, Length(LLoaded.Schemas));
     Assert.AreEqual('C:\APIs\pets.yaml', LLoaded.Document);
     Assert.AreEqual('PetStore', LLoaded.ProjectName);
     Assert.AreEqual('MARSTemplateDCS', LLoaded.Template);

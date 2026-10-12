@@ -110,6 +110,18 @@ end;
 - The client creates its own `TMARSNetClient`, or uses yours (`Create(URL, MyClient)`: timeouts, proxy, logging, Indy). One client per thread.
 - Paths that a resource cannot serve (`/{tenant}/...`, `/{name}.{ext}`) are fine for a client; HEAD, OPTIONS and TRACE operations are not generated.
 
+## A part of the document
+
+```
+MARSgen openapi github.yaml --client --tags issues,pulls
+MARSgen openapi petstore-3.0.yaml --server --operations listPets,getPetById
+MARSgen openapi petstore-3.0.yaml --types --schemas Pet,Order
+```
+
+Large APIs are rarely needed whole. `--tags` keeps the operations with one of the tags, `--operations` the operations named by their `operationId` (or `"GET /pets/{petId}"`); given together, both. The types are then only the ones these operations use (their parameters, bodies and responses, and what those use in turn), so a server, a client or a types unit of a part of the document carries nothing else. `--schemas` is for types only: those schemas and the ones they use, without the types of the operations.
+
+The manifest records the selection: `update`, and a new import without a selection, keep it; `--all` goes back to the whole document. A name that matches nothing is a warning, a selection that matches nothing an error.
+
 ## Types
 
 ```
@@ -139,7 +151,7 @@ Every import leaves a manifest in the folder, `<Api>.marsgen.json`: the document
 MARSgen update C:\Projects\PetStore
 ```
 
-- the options of the last import are reused (unless given again);
+- the options of the last import are reused (unless given again), the client and the part of the document too;
 - the generated units are written again, unless one was changed by hand since the last import, or was already there without being generated: it is kept, with a warning (move your changes into your units, or use `--force`);
 - your units are never written again;
 - the report lists the operations added (they answer `501` until you override them) and removed (delete their overrides), the generated units no longer generated and your units no longer used.
@@ -159,7 +171,7 @@ A generated server conforms except for what the generator said it could not do. 
 
 ## The MARSgen window
 
-`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, and a client), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
+`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, and a client), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. *Select…* chooses a part of the document: its tags, its operations and, for the types only, its schemas, with check boxes (whole tags become `--tags`, the rest `--operations`). *Preview* generates into a temporary folder and shows the units with their code and the messages, without writing anything to the destination. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
 
 ## Exit codes and diagnostics
 

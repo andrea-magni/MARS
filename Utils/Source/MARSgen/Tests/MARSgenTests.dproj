@@ -74,6 +74,7 @@
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Server.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Client.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Client.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.Selection.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Output.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Project.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Compare.pas"/>
@@ -95,6 +96,7 @@
         <DCCReference Include="Tests.MARSgen.Compare.pas"/>
         <DCCReference Include="Tests.MARSgen.Arguments.pas"/>
         <DCCReference Include="Tests.MARSgen.Client.pas"/>
+        <DCCReference Include="Tests.MARSgen.Selection.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

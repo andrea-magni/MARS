@@ -70,6 +70,8 @@
             <Form>MainForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="Forms.MARSgen.Selection.pas"/>
+        <DCCReference Include="Forms.MARSgen.Preview.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Model.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.JSONSource.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.OpenAPI.Reader.pas"/>
@@ -81,6 +83,7 @@
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Server.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Client.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Emit.Client.pas"/>
+        <DCCReference Include="..\Engine\MARS.Gen.Selection.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Output.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Project.pas"/>
         <DCCReference Include="..\Engine\MARS.Gen.Compare.pas"/>

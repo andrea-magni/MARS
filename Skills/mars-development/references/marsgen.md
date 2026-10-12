@@ -9,6 +9,8 @@ MARSgen openapi <file|url> [--types] [--dest <folder>] [--unit <name>]    types 
 MARSgen openapi <file|url> --server [--dest <folder>]                     types + MARS resources
 MARSgen openapi <file|url> --project <Name> [--template <name>] [--dest <folder>]   a new project (MARSCmd templates)
 MARSgen openapi <file|url> --client [--server] [--dest <folder>]          types + a typed client (Client.<Api>)
+MARSgen openapi <file|url> --tags a,b | --operations id1,id2 [...]        a part of the document (types: the ones it uses)
+MARSgen openapi <file|url> --types --schemas A,B                          some schemas and the ones they use
 MARSgen json <file> [<file> ...] --name <Name> [--dest <folder>]          types inferred from JSON samples
 MARSgen update [<folder>]                                                 import the document of the folder again
 MARSgen compare <document> <openapi of the server>                        conformance of a server (exit 0 = conforms)

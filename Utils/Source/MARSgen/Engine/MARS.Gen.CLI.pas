@@ -46,7 +46,7 @@ uses
   System.IOUtils, System.StrUtils, System.RegularExpressions,
   MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.JSONInference, MARS.Gen.Types,
   MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Emit.Client, MARS.Gen.Output, MARS.Gen.Project,
-  MARS.Gen.Compare;
+  MARS.Gen.Compare, MARS.Gen.Selection;
 
 type
   EUsage = class(Exception);
@@ -60,6 +60,9 @@ type
     Server: Boolean;
     // also the typed client (Client.<Api>)
     Client: Boolean;
+    // a part of the document; All: the whole document (a selection of the last import removed)
+    Selection: TGenSelection;
+    All: Boolean;
     // a new project (MARSCmd), from Template, in the MARS folder MARSFolder
     Project: string;
     Template: string;
@@ -102,6 +105,8 @@ begin
   // --types alone: the types only
   if (Command = 'openapi') and not IsGiven('--client') and not IsGiven('--types') then
     Client := AManifest.Client;
+  if (Command = 'openapi') and Selection.IsEmpty and not All then
+    Selection := AManifest.Selection;
 end;
 
 function TGenCommandLine.Mode: string;
@@ -134,6 +139,10 @@ begin
     '      operation, on top of the MARS client (TMARSNetClient)',
     '  MARSgen json <file> [<file> ...] [--name <Name>] [options]',
     '      the types of JSON samples (objects or arrays), merged',
+    '  MARSgen openapi <file|url> --tags <a,b> | --operations <a,b> | --schemas <A,B> [options]',
+    '      a part of the document: the operations with these tags, these operations (operationId,',
+    '      or "GET /path"), with the types they use; or (types only) these schemas and the ones',
+    '      they use. Imported again with the same selection, unless --all',
     '  MARSgen compare <document> <openapi of the server>',
     '      the conformance of a server to a document: its OpenAPI (a file, or a URL such as',
     '      http://localhost:8080/rest/default/openapi) compared operation by operation; exit code 0',
@@ -205,6 +214,8 @@ begin
   Result.Verbose := False;
   Result.Server := False;
   Result.Client := False;
+  Result.Selection := TGenSelection.Empty;
+  Result.All := False;
   Result.Project := '';
   Result.Template := '';
   Result.MARSFolder := '';
@@ -229,6 +240,14 @@ begin
       Result.Server := True
     else if SameText(LArg, '--client') then
       Result.Client := True
+    else if SameText(LArg, '--tags') then
+      Result.Selection.Tags := Result.Selection.Tags + TGenSelection.Split(Value)
+    else if SameText(LArg, '--operations') then
+      Result.Selection.Operations := Result.Selection.Operations + TGenSelection.Split(Value)
+    else if SameText(LArg, '--schemas') then
+      Result.Selection.Schemas := Result.Selection.Schemas + TGenSelection.Split(Value)
+    else if SameText(LArg, '--all') then
+      Result.All := True
     else if SameText(LArg, '--project') then
       Result.Project := Value
     else if SameText(LArg, '--template') then
@@ -311,6 +330,12 @@ begin
     raise EUsage.Create('--server needs an OpenAPI document (openapi)');
   if Result.Client and (Result.Command <> 'openapi') then
     raise EUsage.Create('--client needs an OpenAPI document (openapi)');
+  if (not Result.Selection.IsEmpty or Result.All) and (Result.Command <> 'openapi') then
+    raise EUsage.Create('--tags, --operations, --schemas and --all select a part of an OpenAPI document (openapi)');
+  if Result.All and not Result.Selection.IsEmpty then
+    raise EUsage.Create('--all: the whole document, not with --tags, --operations or --schemas');
+  if (Length(Result.Selection.Schemas) > 0) and Result.Selection.SelectsOperations then
+    raise EUsage.Create('--schemas selects types only: not with --tags or --operations');
   if Result.Project <> '' then
   begin
     if Result.Command <> 'openapi' then
@@ -325,6 +350,8 @@ begin
     raise EUsage.Create('--template, --mars and --allow-inside go with --project');
   if (Result.Command = 'openapi') and (Length(Result.Inputs) > 1) then
     raise EUsage.Create('openapi reads one document');
+  if (Length(Result.Selection.Schemas) > 0) and (Result.Server or Result.Client) then
+    raise EUsage.Create('--schemas selects types only: with a server or a client, select operations (--tags, --operations)');
 
   // --name TOrder and --name Order are the same
   if (Length(Result.InferenceOptions.RootName) > 1) and (Result.InferenceOptions.RootName[1] = 'T')
@@ -534,6 +561,13 @@ begin
           if (LDocumentHash <> '') and SameText(LDocumentHash, LOutput.Previous.DocumentHash) then
             AOutput.Add('The document is the same as in the last import (' + LOutput.Previous.ImportedAt + ')');
         end;
+
+        // a selection of schemas: the types only (also when the last import had a server or a client)
+        if (Length(LCommandLine.Selection.Schemas) > 0) and (LCommandLine.Server or LCommandLine.Client) then
+          raise EGenError.Create('the selection of schemas of the last import is for types only: '
+            + 'select operations (--tags, --operations), or --all');
+        TGenSelector.Apply(LApi, LCommandLine.Selection);
+        LOutput.Selection := LCommandLine.Selection;
 
         LApiUnit := '';
         if LCommandLine.Server or LCommandLine.Client then

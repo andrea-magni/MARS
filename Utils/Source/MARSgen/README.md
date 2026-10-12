@@ -16,6 +16,15 @@ removed (`ApplyCustomHeaders` with empty values). The manifest records the optio
 Tests: `Tests.MARSgen.Client` (mapping, unit, command line, the clients of the corpus compile, and
 the client of the pet store calls the generated server over HTTP, an Indy server in the probe).
 
+## Selection
+
+`--tags`, `--operations` (operationId or `METHOD /path`) and `--schemas` (types only) select a part
+of the document: `MARS.Gen.Selection` removes the other operations from the model before the
+generation, and keeps the named schemas the selected ones use (parameters, bodies, responses, headers;
+then properties, items, additional properties, compositions, discriminator mappings), in the order
+of the document. The manifest records the selection (`"selection"`, only when there is one); the
+next import reuses it unless a selection or `--all` is given. Tests: `Tests.MARSgen.Selection`.
+
 ## Window
 
 `MARSgen_VCL.exe` (`VCL\MARSgen_VCL.dproj`, built into `Utils\Bin\Win32`) is a front end of the
@@ -24,6 +33,11 @@ builds the arguments of the command line (shown, and copied, as they are) and ru
 `TGenCLI.Run` in a thread, so the window and the command line cannot drift apart
 (`Tests.MARSgen.Arguments` runs the generated arguments). The fields are saved in
 `MARS-Curiosity\MARSgen.ini` of the application data folder (`--force` is never saved).
+*Select…* (`Forms.MARSgen.Selection`) reads the document and lists its tags, operations and, for the
+types only, schemas; `TGenSelector.FromChecked` turns what is checked into `--tags` (whole tags) or
+`--operations`. *Preview* (`Forms.MARSgen.Preview`) runs the same arguments into a temporary folder
+(with the manifest of the destination, so the options of the last import apply; a project as a
+server) and shows the units.
 
 ## Command line
 
@@ -33,6 +47,7 @@ builds the arguments of the command line (shown, and copied, as they are) and ru
 MARSgen openapi <file|url> [--types] [options]
 MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 MARSgen openapi <file|url> --client [--server] [options]
+MARSgen openapi <file|url> [--tags <a,b>] [--operations <a,b>] [--schemas <A,B>] [--all] [options]
 MARSgen json <file> [<file> ...] [--name <Name>] [options]
 MARSgen update [<folder>]
 MARSgen compare <document> <openapi of the server>

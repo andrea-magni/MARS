@@ -19,7 +19,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
-  MARS.Gen.Model, MARS.Gen.Types;
+  MARS.Gen.Model, MARS.Gen.Types, MARS.Gen.Selection;
 
 type
   TGenManifest = class
@@ -28,6 +28,7 @@ type
     FDocumentHash: string;
     FMode: string;
     FClient: Boolean;
+    FSelection: TGenSelection;
     FOptions: TGenTypeOptions;
     FGenerated: TDictionary<string, string>;
     FUserFiles: TList<string>;
@@ -46,6 +47,8 @@ type
     property Mode: string read FMode write FMode;
     // also the client (Client.<Api>)
     property Client: Boolean read FClient write FClient;
+    // a part of the document (empty: all of it)
+    property Selection: TGenSelection read FSelection write FSelection;
     property Options: TGenTypeOptions read FOptions write FOptions;
     // file name (in the folder) -> SHA-256 of its content when written
     property Generated: TDictionary<string, string> read FGenerated;
@@ -59,6 +62,7 @@ type
   private
     FFolder: string;
     FManifestFile: string;
+    FSelection: TGenSelection;
     FForce: Boolean;
     FPrevious: TGenManifest;
     FCurrent: TGenManifest;
@@ -88,6 +92,8 @@ type
     property ManifestFile: string read FManifestFile;
     // the last import, nil when this is the first one
     property Previous: TGenManifest read FPrevious;
+    // the selection to record (set before Finish)
+    property Selection: TGenSelection read FSelection write FSelection;
     // full file names
     property Written: TArray<string> read FWritten;
     property Created: TArray<string> read FCreated;
@@ -116,6 +122,24 @@ uses
 const
   MANIFEST_EXTENSION = '.marsgen.json';
   MANIFEST_VERSION = 1;
+
+function ReadStrings(const AObject: TJSONObject; const AName: string): TArray<string>;
+var
+  LArray: TJSONArray;
+begin
+  Result := [];
+  LArray := AObject.GetValue<TJSONArray>(AName, nil);
+  if Assigned(LArray) then
+    for var LItem in LArray do
+      Result := Result + [LItem.Value];
+end;
+
+function StringsToJSON(const AValues: TArray<string>): TJSONArray;
+begin
+  Result := TJSONArray.Create;
+  for var LValue in AValues do
+    Result.Add(LValue);
+end;
 
 { TGenManifest }
 
@@ -181,6 +205,15 @@ begin
     if Assigned(LArray) then
       for var LItem in LArray do
         FOperations.Add(LItem.Value);
+
+    FSelection := TGenSelection.Empty;
+    LObject := LRoot.GetValue<TJSONObject>('selection', nil);
+    if Assigned(LObject) then
+    begin
+      FSelection.Tags := ReadStrings(LObject, 'tags');
+      FSelection.Operations := ReadStrings(LObject, 'operations');
+      FSelection.Schemas := ReadStrings(LObject, 'schemas');
+    end;
   finally
     LValue.Free;
   end;
@@ -229,6 +262,16 @@ begin
     LRoot.AddPair('operations', LArray);
     for var LName in FOperations do
       LArray.Add(LName);
+
+    // only when there is one: the manifests of the whole document stay as they were
+    if not FSelection.IsEmpty then
+    begin
+      LObject := TJSONObject.Create;
+      LRoot.AddPair('selection', LObject);
+      LObject.AddPair('tags', StringsToJSON(FSelection.Tags));
+      LObject.AddPair('operations', StringsToJSON(FSelection.Operations));
+      LObject.AddPair('schemas', StringsToJSON(FSelection.Schemas));
+    end;
 
     TFile.WriteAllText(AFileName, LRoot.Format(2), TEncoding.UTF8);
   finally
@@ -351,6 +394,7 @@ begin
   FCurrent.DocumentHash := ADocumentHash;
   FCurrent.Mode := AMode;
   FCurrent.Client := AClient;
+  FCurrent.Selection := FSelection;
   FCurrent.Options := AOptions;
   FCurrent.ImportedAt := DateToISO8601(Now, False);
   for var LItem in AApi.Operations do

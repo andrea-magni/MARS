@@ -29,6 +29,9 @@ type
     FDocument: string;
     FMode: TGenOpenAPIMode;
     FClient: Boolean;
+    FTags: TArray<string>;
+    FOperations: TArray<string>;
+    FSchemas: TArray<string>;
     FProjectName: string;
     FTemplate: string;
     FDestination: string;
@@ -58,6 +61,10 @@ type
     function CommandLine: string;
     // what is missing to run (empty: ready)
     function Problem: string;
+    // the part of the document, in words
+    function SelectionSummary: string;
+    procedure ClearSelection;
+    function HasSelection: Boolean;
 
     procedure SaveToIni(const AIni: TCustomIniFile; const ASection: string);
     procedure LoadFromIni(const AIni: TCustomIniFile; const ASection: string);
@@ -73,6 +80,11 @@ type
     property Mode: TGenOpenAPIMode read FMode write FMode;
     // also the typed client (--client)
     property Client: Boolean read FClient write FClient;
+    // a part of the document (--tags, --operations, --schemas; none: the whole document, or the
+    // selection of the last import in the destination)
+    property Tags: TArray<string> read FTags write FTags;
+    property Operations: TArray<string> read FOperations write FOperations;
+    property Schemas: TArray<string> read FSchemas write FSchemas;
     property ProjectName: string read FProjectName write FProjectName;
     // a template of MARSCmd (empty: MARSTemplate)
     property Template: string read FTemplate write FTemplate;
@@ -163,6 +175,12 @@ begin
       end;
       if FClient then
         Result := Result + ['--client'];
+      if Length(FTags) > 0 then
+        Result := Result + ['--tags', string.Join(',', FTags)];
+      if Length(FOperations) > 0 then
+        Result := Result + ['--operations', string.Join(',', FOperations)];
+      if Length(FSchemas) > 0 then
+        Result := Result + ['--schemas', string.Join(',', FSchemas)];
       AddTypeOptions(Result);
     end;
     TGenCommand.JSON:
@@ -226,6 +244,8 @@ begin
         if not IsValidIdent(FProjectName) or (Pos('.', FProjectName) > 0) then
           Exit('The name of the project: letters, digits and _, not starting with a digit');
       end;
+      if (Length(FSchemas) > 0) and ((FMode <> TGenOpenAPIMode.Types) or FClient) then
+        Exit('A selection of operations: the selection of schemas is for the types only');
       if FDestination.Trim = '' then
         Exit('The destination folder');
     end;
@@ -249,12 +269,53 @@ begin
   end;
 end;
 
+function TGenRequest.HasSelection: Boolean;
+begin
+  Result := (Length(FTags) > 0) or (Length(FOperations) > 0) or (Length(FSchemas) > 0);
+end;
+
+procedure TGenRequest.ClearSelection;
+begin
+  FTags := [];
+  FOperations := [];
+  FSchemas := [];
+end;
+
+function TGenRequest.SelectionSummary: string;
+
+  function Listed(const AItems: TArray<string>): string;
+  begin
+    if Length(AItems) <= 4 then
+      Result := string.Join(', ', AItems)
+    else
+      Result := string.Join(', ', Copy(AItems, 0, 4)) + Format(' and %d more', [Length(AItems) - 4]);
+  end;
+
+begin
+  if not HasSelection then
+    Exit('The whole document (or the selection of the last import in the destination)');
+  Result := '';
+  if Length(FTags) > 0 then
+    Result := 'Tags: ' + Listed(FTags);
+  if Length(FOperations) > 0 then
+  begin
+    if Result <> '' then
+      Result := Result + '; ';
+    Result := Result + Format('%d operations: %s', [Length(FOperations), Listed(FOperations)]);
+  end;
+  if Length(FSchemas) > 0 then
+    Result := Format('%d schemas (types only): %s', [Length(FSchemas), Listed(FSchemas)]);
+end;
+
 procedure TGenRequest.SaveToIni(const AIni: TCustomIniFile; const ASection: string);
 begin
   AIni.WriteString(ASection, 'Command', GetEnumName(TypeInfo(TGenCommand), Ord(FCommand)));
   AIni.WriteString(ASection, 'Document', FDocument);
   AIni.WriteString(ASection, 'Mode', GetEnumName(TypeInfo(TGenOpenAPIMode), Ord(FMode)));
   AIni.WriteBool(ASection, 'Client', FClient);
+  AIni.WriteString(ASection, 'Tags', string.Join(',', FTags));
+  AIni.WriteString(ASection, 'Operations', string.Join(',', FOperations));
+  AIni.WriteString(ASection, 'Schemas', string.Join(',', FSchemas));
   AIni.WriteString(ASection, 'ProjectName', FProjectName);
   AIni.WriteString(ASection, 'Template', FTemplate);
   AIni.WriteString(ASection, 'Destination', FDestination);
@@ -298,6 +359,9 @@ begin
   FNameAfterParent := AIni.ReadBool(ASection, 'NameAfterParent', FNameAfterParent);
   FClasses := AIni.ReadBool(ASection, 'Classes', FClasses);
   FClient := AIni.ReadBool(ASection, 'Client', FClient);
+  FTags := AIni.ReadString(ASection, 'Tags', '').Split([','], TStringSplitOptions.ExcludeEmpty);
+  FOperations := AIni.ReadString(ASection, 'Operations', '').Split([','], TStringSplitOptions.ExcludeEmpty);
+  FSchemas := AIni.ReadString(ASection, 'Schemas', '').Split([','], TStringSplitOptions.ExcludeEmpty);
   FInt64 := AIni.ReadBool(ASection, 'Int64', FInt64);
   FCurrency := AIni.ReadBool(ASection, 'Currency', FCurrency);
   FEnumsAsStrings := AIni.ReadBool(ASection, 'EnumsAsStrings', FEnumsAsStrings);

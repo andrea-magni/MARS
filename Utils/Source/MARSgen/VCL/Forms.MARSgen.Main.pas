@@ -28,6 +28,10 @@ type
     DocumentButton: TButton;
     ModeRadioGroup: TRadioGroup;
     ClientCheckBox: TCheckBox;
+    SelectionRow: TPanel;
+    SelectionLabel: TLabel;
+    SelectionEdit: TEdit;
+    SelectionButton: TButton;
     ProjectRow: TPanel;
     ProjectNameLabel: TLabel;
     ProjectNameEdit: TEdit;
@@ -75,6 +79,7 @@ type
     FieldNamesAsJSONCheckBox: TCheckBox;
     ActionPanel: TPanel;
     RunButton: TButton;
+    PreviewButton: TButton;
     ForceCheckBox: TCheckBox;
     VerboseCheckBox: TCheckBox;
     CopyCommandButton: TButton;
@@ -101,6 +106,8 @@ type
     procedure OpenFolderButtonClick(Sender: TObject);
     procedure OpenProjectButtonClick(Sender: TObject);
     procedure FolderEditChange(Sender: TObject);
+    procedure SelectionButtonClick(Sender: TObject);
+    procedure PreviewButtonClick(Sender: TObject);
   private
     FRequest: TGenRequest;
     FMARSFolder: string;
@@ -118,6 +125,7 @@ type
     procedure FitPageControl;
     procedure ShowManifest;
     procedure ShowOutput(const AOutput: TStrings; const AExitCode: Integer);
+    procedure ShowPreview(const AFolder: string; const AOutput: TStrings);
     procedure AddOutputLine(const ALine: string; const AKind: TGenLineKind);
     function PickFolder(const AInitial: string; out AFolder: string): Boolean;
     function OutputFolder: string;
@@ -132,7 +140,8 @@ implementation
 
 uses
   System.IOUtils, System.UITypes, Winapi.ShellAPI, Vcl.Clipbrd,
-  MARS.Gen.CLI, MARS.Gen.Output, MARS.Gen.Project, MARS.Cmd;
+  MARS.Gen.CLI, MARS.Gen.Output, MARS.Gen.Project, MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Cmd,
+  Forms.MARSgen.Selection, Forms.MARSgen.Preview;
 
 const
   SETTINGS_SECTION = 'MARSgen';
@@ -288,11 +297,17 @@ begin
   ControlsToRequest;
   // a panel shown again goes where its Top says: put it back in its place first
   if not ProjectRow.Visible then
-    ProjectRow.Top := ClientCheckBox.Top + ClientCheckBox.Height + 1;
+    ProjectRow.Top := SelectionRow.Top + SelectionRow.Height + 1;
   ProjectRow.Visible := (FRequest.Command = TGenCommand.OpenAPI) and (FRequest.Mode = TGenOpenAPIMode.Project);
   if not OutputOptionsPanel.Visible then
     OutputOptionsPanel.Top := ActionPanel.Top - 1;
   OutputOptionsPanel.Visible := FRequest.Command in [TGenCommand.OpenAPI, TGenCommand.JSON];
+  // the same for the alLeft controls of the buttons: Generate, Preview, Overwrite, Verbose
+  if not PreviewButton.Visible then
+    PreviewButton.Left := RunButton.Left + RunButton.Width + 1;
+  PreviewButton.Visible := FRequest.Command in [TGenCommand.OpenAPI, TGenCommand.JSON];
+  if not ForceCheckBox.Visible then
+    ForceCheckBox.Left := VerboseCheckBox.Left - 1;
   ForceCheckBox.Visible := FRequest.Command <> TGenCommand.Compare;
   if FRequest.Mode = TGenOpenAPIMode.Project then
     DestinationLabel.Caption := 'Project folder'
@@ -308,9 +323,12 @@ begin
   end;
 
   FitPageControl;
+  SelectionEdit.Text := FRequest.SelectionSummary;
   CommandLineEdit.Text := FRequest.CommandLine;
   LProblem := FRequest.Problem;
   RunButton.Enabled := (LProblem = '') and not FRunning;
+  PreviewButton.Enabled := ((LProblem = '') or (LProblem = 'The destination folder')) and not FRunning;
+  SelectionButton.Enabled := (FRequest.Document <> '') and not FRunning;
   if FRunning then
     StatusBar.SimpleText := 'Running...'
   else if LProblem <> '' then
@@ -329,7 +347,7 @@ begin
     0:
     begin
       LContent := DocumentRow.Height + ModeRadioGroup.Height + ModeRadioGroup.Margins.Top
-        + ModeRadioGroup.Margins.Bottom + ClientCheckBox.Height;
+        + ModeRadioGroup.Margins.Bottom + ClientCheckBox.Height + SelectionRow.Height;
       if ProjectRow.Visible then
         Inc(LContent, ProjectRow.Height);
     end;
@@ -361,9 +379,12 @@ procedure TMainForm.ControlChange(Sender: TObject);
 begin
   if FLoading then
     Exit;
-  // the document of OpenAPI and of Compare are the same setting
+  // the document of OpenAPI and of Compare are the same setting; a selection is of a document
   if Sender = DocumentEdit then
-    CompareDocumentEdit.Text := DocumentEdit.Text
+  begin
+    FRequest.ClearSelection;
+    CompareDocumentEdit.Text := DocumentEdit.Text;
+  end
   else if Sender = CompareDocumentEdit then
     DocumentEdit.Text := CompareDocumentEdit.Text;
   UpdateView;
@@ -480,6 +501,14 @@ begin
         ManifestMemo.Lines.Add('Unit: ' + LManifest.Options.UnitName);
       if LManifest.Options.Classes then
         ManifestMemo.Lines.Add('Types as classes');
+      if LManifest.Client then
+        ManifestMemo.Lines.Add('With the client (Client.<Api>)');
+      if Length(LManifest.Selection.Tags) > 0 then
+        ManifestMemo.Lines.Add('Part of the document: tags ' + string.Join(', ', LManifest.Selection.Tags));
+      if Length(LManifest.Selection.Operations) > 0 then
+        ManifestMemo.Lines.Add('Part of the document: operations ' + string.Join(', ', LManifest.Selection.Operations));
+      if Length(LManifest.Selection.Schemas) > 0 then
+        ManifestMemo.Lines.Add('Part of the document: schemas ' + string.Join(', ', LManifest.Selection.Schemas));
       ManifestMemo.Lines.Add('');
       ManifestMemo.Lines.Add('The document is read again, with the options of the last import; your units are never written.');
     except
@@ -550,6 +579,123 @@ begin
         LOutput.Free;
       end;
     end).Start;
+end;
+
+procedure TMainForm.SelectionButtonClick(Sender: TObject);
+var
+  LApi: TGenApi;
+  LTags, LOperations, LSchemas: TArray<string>;
+begin
+  ControlsToRequest;
+  Screen.Cursor := crHourGlass;
+  try
+    try
+      LApi := TGenOpenAPIReader.Load(FRequest.Document);
+    except
+      on E: Exception do
+      begin
+        Screen.Cursor := crDefault;
+        MessageDlg('The document cannot be read: ' + E.Message, mtError, [mbOK], 0);
+        Exit;
+      end;
+    end;
+  finally
+    Screen.Cursor := crDefault;
+  end;
+  try
+    LTags := FRequest.Tags;
+    LOperations := FRequest.Operations;
+    LSchemas := FRequest.Schemas;
+    // schemas: for the types only
+    if TSelectionForm.Execute(LApi, (FRequest.Mode = TGenOpenAPIMode.Types) and not FRequest.Client,
+      LTags, LOperations, LSchemas)
+    then
+    begin
+      FRequest.Tags := LTags;
+      FRequest.Operations := LOperations;
+      FRequest.Schemas := LSchemas;
+      UpdateView;
+    end;
+  finally
+    LApi.Free;
+  end;
+end;
+
+procedure TMainForm.PreviewButtonClick(Sender: TObject);
+var
+  LIni: TMemIniFile;
+  LPreview: TGenRequest;
+  LFolder, LManifest: string;
+  LArgs: TArray<string>;
+begin
+  ControlsToRequest;
+  // the same request into a temporary folder; a project as a server (its units, not the project)
+  LFolder := TPath.Combine(TPath.GetTempPath, 'MARSgenPreview-' + TGUID.NewGuid.ToString.Trim(['{', '}']));
+  LPreview := TGenRequest.Create;
+  LIni := TMemIniFile.Create('');
+  try
+    FRequest.SaveToIni(LIni, SETTINGS_SECTION);
+    LPreview.LoadFromIni(LIni, SETTINGS_SECTION);
+    LPreview.Destination := LFolder;
+    LPreview.Force := False;
+    if LPreview.Mode = TGenOpenAPIMode.Project then
+      LPreview.Mode := TGenOpenAPIMode.Server;
+    if LPreview.Problem <> '' then
+      Exit;
+    LArgs := LPreview.Arguments;
+  finally
+    LIni.Free;
+    LPreview.Free;
+  end;
+
+  // the manifest of the destination: the options and the selection of the last import, as the import
+  ForceDirectories(LFolder);
+  if TDirectory.Exists(FRequest.Destination) then
+    for LManifest in TDirectory.GetFiles(FRequest.Destination, '*.marsgen.json') do
+      TFile.Copy(LManifest, TPath.Combine(LFolder, TPath.GetFileName(LManifest)));
+
+  FRunning := True;
+  UpdateView;
+  StatusBar.SimpleText := 'Preview...';
+  Screen.Cursor := crAppStart;
+  TThread.CreateAnonymousThread(
+    procedure
+    var
+      LOutput: TStringList;
+    begin
+      LOutput := TStringList.Create;
+      try
+        try
+          TGenCLI.Run(LArgs, LOutput);
+        except
+          on E: Exception do
+            LOutput.Add('error: ' + E.Message);
+        end;
+        TThread.Synchronize(nil,
+          procedure
+          begin
+            ShowPreview(LFolder, LOutput);
+          end);
+      finally
+        LOutput.Free;
+      end;
+    end).Start;
+end;
+
+procedure TMainForm.ShowPreview(const AFolder: string; const AOutput: TStrings);
+begin
+  Screen.Cursor := crDefault;
+  FRunning := False;
+  UpdateView;
+  try
+    TPreviewForm.Execute(AFolder, AOutput);
+  finally
+    try
+      TDirectory.Delete(AFolder, True);
+    except
+      // a temporary folder: never an error
+    end;
+  end;
 end;
 
 procedure TMainForm.AddOutputLine(const ALine: string; const AKind: TGenLineKind);

@@ -3,10 +3,10 @@ object MainForm: TMainForm
   Top = 0
   Caption = 'MARSgen - Delphi types and MARS servers from OpenAPI documents'
   ClientHeight = 720
-  ClientWidth = 860
+  ClientWidth = 940
   Color = clBtnFace
   Constraints.MinHeight = 640
-  Constraints.MinWidth = 860
+  Constraints.MinWidth = 940
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -105,7 +105,7 @@ object MainForm: TMainForm
         TabOrder = 2
         OnClick = ControlChange
       end
-      object ProjectRow: TPanel
+      object SelectionRow: TPanel
         Left = 0
         Top = 114
         Width = 786
@@ -116,6 +116,50 @@ object MainForm: TMainForm
         Padding.Top = 6
         Padding.Right = 8
         TabOrder = 3
+        object SelectionLabel: TLabel
+          Left = 8
+          Top = 6
+          Width = 170
+          Height = 28
+          Align = alLeft
+          AutoSize = False
+          Caption = 'Part of the document'
+          Layout = tlCenter
+        end
+        object SelectionButton: TButton
+          Left = 690
+          Top = 6
+          Width = 88
+          Height = 28
+          Align = alRight
+          Caption = 'Select...'
+          TabOrder = 1
+          OnClick = SelectionButtonClick
+        end
+        object SelectionEdit: TEdit
+          AlignWithMargins = True
+          Left = 181
+          Top = 9
+          Width = 503
+          Height = 23
+          TabStop = False
+          Align = alClient
+          Color = clBtnFace
+          ReadOnly = True
+          TabOrder = 0
+        end
+      end
+      object ProjectRow: TPanel
+        Left = 0
+        Top = 148
+        Width = 786
+        Height = 34
+        Align = alTop
+        BevelOuter = bvNone
+        Padding.Left = 8
+        Padding.Top = 6
+        Padding.Right = 8
+        TabOrder = 4
         object ProjectNameLabel: TLabel
           Left = 8
           Top = 6
@@ -630,9 +674,20 @@ object MainForm: TMainForm
       TabOrder = 0
       OnClick = RunButtonClick
     end
+    object PreviewButton: TButton
+      AlignWithMargins = True
+      Left = 137
+      Top = 7
+      Width = 90
+      Height = 28
+      Align = alLeft
+      Caption = 'Preview'
+      TabOrder = 6
+      OnClick = PreviewButtonClick
+    end
     object ForceCheckBox: TCheckBox
       AlignWithMargins = True
-      Left = 146
+      Left = 242
       Top = 7
       Width = 215
       Height = 28
