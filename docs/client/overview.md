@@ -24,6 +24,10 @@ Client.MARSEngineURL  +  /Application.AppName  +  /Resource.Resource  +  /path p
 http://localhost:8080/rest  /default            /helloworld
 ```
 
+::: tip A typed client from an OpenAPI document
+When the API has an OpenAPI document, [MARSgen](/guide/marsgen#clients) generates a typed client on top of these components: a class with a method per operation (`LClient.GetPetById(7)`), its parameters and results in Delphi types.
+:::
+
 ## A first call in code
 
 ```pascal

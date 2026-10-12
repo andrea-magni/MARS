@@ -27,6 +27,7 @@ type
     FDocument: string;
     FDocumentHash: string;
     FMode: string;
+    FClient: Boolean;
     FOptions: TGenTypeOptions;
     FGenerated: TDictionary<string, string>;
     FUserFiles: TList<string>;
@@ -43,6 +44,8 @@ type
     property DocumentHash: string read FDocumentHash write FDocumentHash;
     // types, server
     property Mode: string read FMode write FMode;
+    // also the client (Client.<Api>)
+    property Client: Boolean read FClient write FClient;
     property Options: TGenTypeOptions read FOptions write FOptions;
     // file name (in the folder) -> SHA-256 of its content when written
     property Generated: TDictionary<string, string> read FGenerated;
@@ -79,7 +82,7 @@ type
     procedure WriteUser(const AFileName, AContent: string; const AMarker: string = '');
     // compares with the last import, saves the manifest
     procedure Finish(const AApi: TGenApi; const AMode, ADocument, ADocumentHash: string;
-      const AOptions: TGenTypeOptions);
+      const AOptions: TGenTypeOptions; const AClient: Boolean = False);
 
     property Folder: string read FFolder;
     property ManifestFile: string read FManifestFile;
@@ -148,6 +151,7 @@ begin
     FDocument := LRoot.GetValue<string>('document', '');
     FDocumentHash := LRoot.GetValue<string>('documentHash', '');
     FMode := LRoot.GetValue<string>('mode', '');
+    FClient := LRoot.GetValue<Boolean>('client', False);
     FImportedAt := LRoot.GetValue<string>('importedAt', '');
 
     LObject := LRoot.GetValue<TJSONObject>('options', nil);
@@ -195,6 +199,7 @@ begin
     LRoot.AddPair('document', FDocument);
     LRoot.AddPair('documentHash', FDocumentHash);
     LRoot.AddPair('mode', FMode);
+    LRoot.AddPair('client', TJSONBool.Create(FClient));
     LRoot.AddPair('importedAt', FImportedAt);
 
     LObject := TJSONObject.Create;
@@ -338,13 +343,14 @@ begin
 end;
 
 procedure TGenOutput.Finish(const AApi: TGenApi; const AMode, ADocument, ADocumentHash: string;
-  const AOptions: TGenTypeOptions);
+  const AOptions: TGenTypeOptions; const AClient: Boolean);
 var
   LOperation: string;
 begin
   FCurrent.Document := ADocument;
   FCurrent.DocumentHash := ADocumentHash;
   FCurrent.Mode := AMode;
+  FCurrent.Client := AClient;
   FCurrent.Options := AOptions;
   FCurrent.ImportedAt := DateToISO8601(Now, False);
   for var LItem in AApi.Operations do

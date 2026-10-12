@@ -62,6 +62,8 @@ type
     procedure TestHelloWorld;
     [Test]
     procedure TestQuery;
+    [Test]
+    procedure EmptyCustomHeaderRemovesIt;
   end;
 
   [TestFixture('Client')]
@@ -83,7 +85,25 @@ type
     procedure CustomHeaders;
   end;
 
+// the X-Probe header in the JSON of test/requestDump
+function ProbeHeader(const AResponse: string): string;
+
 implementation
+
+uses
+  System.JSON;
+
+function ProbeHeader(const AResponse: string): string;
+var
+  LJSON: TJSONValue;
+begin
+  LJSON := TJSONValue.ParseJSONValue(AResponse);
+  try
+    Result := (LJSON as TJSONObject).ReadStringValue('XProbe');
+  finally
+    LJSON.Free;
+  end;
+end;
 
 
 destructor TMARSClientTest<C>.Destroy;
@@ -159,6 +179,27 @@ begin
   var LAccept := LResponse.ReadStringValue('Accept');
 
   Assert.AreEqual('application/json', LAccept);
+end;
+
+procedure TSimpleClientTestBase<C>.EmptyCustomHeaderRemovesIt;
+var
+  LHeaders: TStringList;
+begin
+  FRequest.Resource := 'test/requestDump';
+  FRequest.SpecificAccept := TMediaType.APPLICATION_JSON;
+  LHeaders := TStringList.Create;
+  try
+    LHeaders.Add('X-Probe=1');
+    Client.ApplyCustomHeaders(LHeaders);
+    Assert.AreEqual('1', ProbeHeader(FRequest.GETAsString), 'sent');
+
+    // an empty value: the header is not sent any more (not sent empty)
+    LHeaders[0] := 'X-Probe=';
+    Client.ApplyCustomHeaders(LHeaders);
+    Assert.AreEqual('(absent)', ProbeHeader(FRequest.GETAsString), 'removed');
+  finally
+    LHeaders.Free;
+  end;
 end;
 
 procedure TSimpleClientTestBase<C>.TestHelloWorld;

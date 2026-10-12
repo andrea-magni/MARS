@@ -52,7 +52,9 @@ type
 
     // the types (Model.<Api>) and the server units through AOutput: generated files (unless changed
     // by hand), units of the user only when missing; returns the name of the unit Server.<Api>
-    class function WriteTo(const AApi: TGenApi; const AOptions: TGenTypeOptions; const AOutput: TGenOutput): string; static;
+    class function WriteTo(const AApi: TGenApi; const AOptions: TGenTypeOptions; const AOutput: TGenOutput): string; overload; static;
+    // the server units only, the types mapped (and written) by the caller
+    class function WriteTo(const AApi: TGenApi; const ATypes: TGenTypeMapper; const AOutput: TGenOutput): string; overload; static;
     // the same into AFolder, with its manifest
     class function WriteServer(const AApi: TGenApi; const AOptions: TGenTypeOptions;
       const AFolder: string): TGenServerFiles; static;
@@ -377,35 +379,41 @@ class function TGenServerEmitter.WriteTo(const AApi: TGenApi; const AOptions: TG
   const AOutput: TGenOutput): string;
 var
   LTypes: TGenTypeMapper;
-  LServer: TGenServerMapper;
-  LEmitter: TGenServerEmitter;
 begin
   LTypes := TGenTypeMapper.Create(AApi, AOptions);
   try
     LTypes.Execute;
-    LServer := TGenServerMapper.Create(AApi, LTypes);
-    try
-      LServer.Execute;
-      AOutput.WriteGenerated(LTypes.UnitName + '.pas', TGenTypesEmitter.Emit(LTypes));
-
-      LEmitter := TGenServerEmitter.Create(LServer);
-      try
-        for var LResource in LServer.Resources do
-        begin
-          AOutput.WriteGenerated(LResource.BaseUnit + '.pas', LEmitter.BaseUnit(LResource));
-          // the code of the user: never written again
-          AOutput.WriteUser(LResource.ResourceUnit + '.pas', LEmitter.UserUnit(LResource), LResource.BaseUnit);
-        end;
-        AOutput.WriteGenerated(LServer.ApiUnitName + '.pas', LEmitter.ApiUnit);
-        Result := LServer.ApiUnitName;
-      finally
-        LEmitter.Free;
-      end;
-    finally
-      LServer.Free;
-    end;
+    AOutput.WriteGenerated(LTypes.UnitName + '.pas', TGenTypesEmitter.Emit(LTypes));
+    Result := WriteTo(AApi, LTypes, AOutput);
   finally
     LTypes.Free;
+  end;
+end;
+
+class function TGenServerEmitter.WriteTo(const AApi: TGenApi; const ATypes: TGenTypeMapper;
+  const AOutput: TGenOutput): string;
+var
+  LServer: TGenServerMapper;
+  LEmitter: TGenServerEmitter;
+begin
+  LServer := TGenServerMapper.Create(AApi, ATypes);
+  try
+    LServer.Execute;
+    LEmitter := TGenServerEmitter.Create(LServer);
+    try
+      for var LResource in LServer.Resources do
+      begin
+        AOutput.WriteGenerated(LResource.BaseUnit + '.pas', LEmitter.BaseUnit(LResource));
+        // the code of the user: never written again
+        AOutput.WriteUser(LResource.ResourceUnit + '.pas', LEmitter.UserUnit(LResource), LResource.BaseUnit);
+      end;
+      AOutput.WriteGenerated(LServer.ApiUnitName + '.pas', LEmitter.ApiUnit);
+      Result := LServer.ApiUnitName;
+    finally
+      LEmitter.Free;
+    end;
+  finally
+    LServer.Free;
   end;
 end;
 

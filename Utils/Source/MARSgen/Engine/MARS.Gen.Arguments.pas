@@ -28,6 +28,7 @@ type
     FCommand: TGenCommand;
     FDocument: string;
     FMode: TGenOpenAPIMode;
+    FClient: Boolean;
     FProjectName: string;
     FTemplate: string;
     FDestination: string;
@@ -70,6 +71,8 @@ type
     // OpenAPI, Compare: a file or a URL
     property Document: string read FDocument write FDocument;
     property Mode: TGenOpenAPIMode read FMode write FMode;
+    // also the typed client (--client)
+    property Client: Boolean read FClient write FClient;
     property ProjectName: string read FProjectName write FProjectName;
     // a template of MARSCmd (empty: MARSTemplate)
     property Template: string read FTemplate write FTemplate;
@@ -158,6 +161,8 @@ begin
             Result := Result + ['--template', FTemplate];
         end;
       end;
+      if FClient then
+        Result := Result + ['--client'];
       AddTypeOptions(Result);
     end;
     TGenCommand.JSON:
@@ -249,6 +254,7 @@ begin
   AIni.WriteString(ASection, 'Command', GetEnumName(TypeInfo(TGenCommand), Ord(FCommand)));
   AIni.WriteString(ASection, 'Document', FDocument);
   AIni.WriteString(ASection, 'Mode', GetEnumName(TypeInfo(TGenOpenAPIMode), Ord(FMode)));
+  AIni.WriteBool(ASection, 'Client', FClient);
   AIni.WriteString(ASection, 'ProjectName', FProjectName);
   AIni.WriteString(ASection, 'Template', FTemplate);
   AIni.WriteString(ASection, 'Destination', FDestination);
@@ -291,6 +297,7 @@ begin
   FNoDates := AIni.ReadBool(ASection, 'NoDates', FNoDates);
   FNameAfterParent := AIni.ReadBool(ASection, 'NameAfterParent', FNameAfterParent);
   FClasses := AIni.ReadBool(ASection, 'Classes', FClasses);
+  FClient := AIni.ReadBool(ASection, 'Client', FClient);
   FInt64 := AIni.ReadBool(ASection, 'Int64', FInt64);
   FCurrency := AIni.ReadBool(ASection, 'Currency', FCurrency);
   FEnumsAsStrings := AIni.ReadBool(ASection, 'EnumsAsStrings', FEnumsAsStrings);

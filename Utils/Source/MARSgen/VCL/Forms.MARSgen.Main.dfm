@@ -90,9 +90,24 @@ object MainForm: TMainForm
         TabOrder = 1
         OnClick = ControlChange
       end
+      object ClientCheckBox: TCheckBox
+        AlignWithMargins = True
+        Left = 12
+        Top = 92
+        Width = 766
+        Height = 22
+        Margins.Left = 12
+        Margins.Top = 0
+        Margins.Right = 8
+        Margins.Bottom = 0
+        Align = alTop
+        Caption = 'Also a typed client of the API (Client.<Api>)'
+        TabOrder = 2
+        OnClick = ControlChange
+      end
       object ProjectRow: TPanel
         Left = 0
-        Top = 92
+        Top = 114
         Width = 786
         Height = 34
         Align = alTop
@@ -100,7 +115,7 @@ object MainForm: TMainForm
         Padding.Left = 8
         Padding.Top = 6
         Padding.Right = 8
-        TabOrder = 2
+        TabOrder = 3
         object ProjectNameLabel: TLabel
           Left = 8
           Top = 6

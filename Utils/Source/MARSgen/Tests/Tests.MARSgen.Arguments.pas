@@ -102,6 +102,12 @@ begin
   Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--dest|C:\Out', Joined);
   FRequest.Template := 'MARSTemplateRoutes';
   Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--template|MARSTemplateRoutes|--dest|C:\Out', Joined);
+
+  // the client, with any mode
+  FRequest.Client := True;
+  Assert.AreEqual('openapi|pets.yaml|--project|PetStore|--template|MARSTemplateRoutes|--client|--dest|C:\Out', Joined);
+  FRequest.Mode := TGenOpenAPIMode.Types;
+  Assert.AreEqual('openapi|pets.yaml|--types|--client|--dest|C:\Out', Joined);
 end;
 
 procedure TGenArgumentsTest.JSONSamples;
@@ -189,6 +195,7 @@ begin
   FRequest.JSONFiles.Add('b.json');
   FRequest.RootName := 'Order';
   FRequest.Classes := True;
+  FRequest.Client := True;
   FRequest.Currency := True;
   FRequest.Force := True;
   FRequest.Folder := 'C:\Out';
@@ -202,6 +209,7 @@ begin
     LLoaded.LoadFromIni(LIni, 'MARSgen');
     Assert.IsTrue(LLoaded.Command = TGenCommand.Compare);
     Assert.IsTrue(LLoaded.Mode = TGenOpenAPIMode.Project);
+    Assert.IsTrue(LLoaded.Client);
     Assert.AreEqual('C:\APIs\pets.yaml', LLoaded.Document);
     Assert.AreEqual('PetStore', LLoaded.ProjectName);
     Assert.AreEqual('MARSTemplateDCS', LLoaded.Template);

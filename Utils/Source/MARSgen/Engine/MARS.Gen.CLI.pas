@@ -8,7 +8,7 @@ unit MARS.Gen.CLI;
 // The command line of MARSgen (MARSgen.exe), as a function of its arguments: the program only
 // passes them and prints the output, the tests call it directly.
 //
-//   MARSgen openapi <file|url> [--types|--server] [options]
+//   MARSgen openapi <file|url> [--types|--server] [--client] [options]
 //   MARSgen json <file> [<file> ...] [--name <Name>] [options]
 //   MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
 //   MARSgen update [<folder>]
@@ -45,7 +45,8 @@ implementation
 uses
   System.IOUtils, System.StrUtils, System.RegularExpressions,
   MARS.Gen.Model, MARS.Gen.OpenAPI.Reader, MARS.Gen.JSONInference, MARS.Gen.Types,
-  MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Output, MARS.Gen.Project, MARS.Gen.Compare;
+  MARS.Gen.Emit.Types, MARS.Gen.Emit.Server, MARS.Gen.Emit.Client, MARS.Gen.Output, MARS.Gen.Project,
+  MARS.Gen.Compare;
 
 type
   EUsage = class(Exception);
@@ -57,6 +58,8 @@ type
     StrictWarnings: Boolean;
     Verbose: Boolean;
     Server: Boolean;
+    // also the typed client (Client.<Api>)
+    Client: Boolean;
     // a new project (MARSCmd), from Template, in the MARS folder MARSFolder
     Project: string;
     Template: string;
@@ -96,6 +99,9 @@ begin
     TypeOptions.Classes := AManifest.Options.Classes;
   if (Command = 'openapi') and not IsGiven('--types') and not IsGiven('--server') then
     Server := SameText(AManifest.Mode, 'server');
+  // --types alone: the types only
+  if (Command = 'openapi') and not IsGiven('--client') and not IsGiven('--types') then
+    Client := AManifest.Client;
 end;
 
 function TGenCommandLine.Mode: string;
@@ -123,6 +129,9 @@ begin
     '      the same, in a new MARS project created as MARSCmd does (<Name>Server..., Server.Ignition),',
     '      linked: Server.<Api> in the uses of Server.Ignition, the base path of the document as the',
     '      paths of the engine and of the application, its title and version in Server.ini',
+    '  MARSgen openapi <file|url> --client [--server | --project <Name>] [options]',
+    '      also a typed client of the API: Client.<Api> (generated), a class with a method per',
+    '      operation, on top of the MARS client (TMARSNetClient)',
     '  MARSgen json <file> [<file> ...] [--name <Name>] [options]',
     '      the types of JSON samples (objects or arrays), merged',
     '  MARSgen compare <document> <openapi of the server>',
@@ -161,7 +170,7 @@ begin
     '                           instead of after their key (TCustomer)',
     '',
     'Importing again: the folder keeps a manifest (<Api>.marsgen.json). The next import of the API',
-    'reuses its options (unless given again) and --server, never touches your units, keeps the',
+    'reuses its options (unless given again), --server and --client, never touches your units, keeps the',
     'generated files changed by hand (unless --force) and reports the operations added and removed.',
     '',
     'Exit codes: 0 done, 1 warnings (with --strict), 2 errors, 3 wrong command line.',
@@ -169,6 +178,7 @@ begin
     'Examples:',
     '  MARSgen openapi petstore.yaml --dest C:\Projects\PetStore',
     '  MARSgen openapi petstore.yaml --project PetStore --dest C:\Projects\PetStore',
+    '  MARSgen openapi petstore.yaml --client --dest C:\Projects\PetStoreClient',
     '  MARSgen update C:\Projects\PetStore',
     '  MARSgen json order1.json order2.json --name Order --unit Model.Orders'
   ]);
@@ -194,6 +204,7 @@ begin
   Result.StrictWarnings := False;
   Result.Verbose := False;
   Result.Server := False;
+  Result.Client := False;
   Result.Project := '';
   Result.Template := '';
   Result.MARSFolder := '';
@@ -216,6 +227,8 @@ begin
     end
     else if SameText(LArg, '--server') then
       Result.Server := True
+    else if SameText(LArg, '--client') then
+      Result.Client := True
     else if SameText(LArg, '--project') then
       Result.Project := Value
     else if SameText(LArg, '--template') then
@@ -296,6 +309,8 @@ begin
     raise EUsage.CreateFmt('Missing input: MARSgen %s <file>', [Result.Command]);
   if Result.Server and (Result.Command <> 'openapi') then
     raise EUsage.Create('--server needs an OpenAPI document (openapi)');
+  if Result.Client and (Result.Command <> 'openapi') then
+    raise EUsage.Create('--client needs an OpenAPI document (openapi)');
   if Result.Project <> '' then
   begin
     if Result.Command <> 'openapi' then
@@ -425,6 +440,7 @@ var
   LApi: TGenApi;
   LOutput: TGenOutput;
   LManifest: TGenManifest;
+  LTypes: TGenTypeMapper;
   LDocument, LDocumentHash, LApiUnit: string;
   LWarnings, LErrors: Integer;
 begin
@@ -520,11 +536,25 @@ begin
         end;
 
         LApiUnit := '';
-        if LCommandLine.Server then
-          LApiUnit := TGenServerEmitter.WriteTo(LApi, LCommandLine.TypeOptions, LOutput)
+        if LCommandLine.Server or LCommandLine.Client then
+        begin
+          // one mapping of the types for all the units
+          LTypes := TGenTypeMapper.Create(LApi, LCommandLine.TypeOptions);
+          try
+            LTypes.Execute;
+            LOutput.WriteGenerated(LTypes.UnitName + '.pas', TGenTypesEmitter.Emit(LTypes));
+            if LCommandLine.Server then
+              LApiUnit := TGenServerEmitter.WriteTo(LApi, LTypes, LOutput);
+            if LCommandLine.Client then
+              TGenClientEmitter.WriteTo(LApi, LTypes, LOutput);
+          finally
+            LTypes.Free;
+          end;
+        end
         else
           TGenTypesEmitter.WriteTo(LApi, LCommandLine.TypeOptions, LOutput);
-        LOutput.Finish(LApi, LCommandLine.Mode, LDocument, LDocumentHash, LCommandLine.TypeOptions);
+        LOutput.Finish(LApi, LCommandLine.Mode, LDocument, LDocumentHash, LCommandLine.TypeOptions,
+          LCommandLine.Client);
 
         for var LDiagnostic in LApi.Diagnostics do
           if LCommandLine.Verbose or (LDiagnostic.Severity <> TGenSeverity.Info) then

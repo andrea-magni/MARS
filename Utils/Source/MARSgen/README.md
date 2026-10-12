@@ -3,8 +3,18 @@
 A tool to generate Delphi types and MARS-Curiosity servers (and projects) from OpenAPI 3.x
 documents, and types from JSON samples. The user documentation is
 [From OpenAPI: MARSgen](https://andrea-magni.github.io/MARS/guide/marsgen); this file is about its
-design and its tests. Clients are planned: see
-[#234](https://github.com/andrea-magni/MARS/issues/234).
+design and its tests. The plan: [#234](https://github.com/andrea-magni/MARS/issues/234).
+
+## Client
+
+`--client` writes `Client.<Api>` (`MARS.Gen.Client` maps the operations, `MARS.Gen.Emit.Client` writes
+the unit): a class with a method per operation, on top of `TMARSCustomClient` (a `TMARSNetClient` of
+its own by default). Bodies and results go through the JSON of MARS (`TValueToJSONValue`,
+`TJSONValueToTValue`), so the types of `Model.<Api>` are read and written as by a MARS server.
+Parameters are sent as text (percent-encoded in URLs); the per-request headers are applied and then
+removed (`ApplyCustomHeaders` with empty values). The manifest records the option (`"client": true`).
+Tests: `Tests.MARSgen.Client` (mapping, unit, command line, the clients of the corpus compile, and
+the client of the pet store calls the generated server over HTTP, an Indy server in the probe).
 
 ## Window
 
@@ -22,6 +32,7 @@ builds the arguments of the command line (shown, and copied, as they are) and ru
 ```
 MARSgen openapi <file|url> [--types] [options]
 MARSgen openapi <file|url> --project <Name> [--template <name>] [options]
+MARSgen openapi <file|url> --client [--server] [options]
 MARSgen json <file> [<file> ...] [--name <Name>] [options]
 MARSgen update [<folder>]
 MARSgen compare <document> <openapi of the server>
@@ -32,6 +43,7 @@ MARSgen --help
 - `json`: the types of one or more JSON samples, merged; `--name Order` gives `TOrder`.
 - `openapi --server`: also the MARS resources of the document (see below).
 - `openapi --project <Name>`: the same, in a new MARS project (see below).
+- `openapi --client`: also a typed client, `Client.<Api>` (see below).
 - `update`: imports again the OpenAPI document of a folder, as last time (see below).
 - `compare`: the conformance of a server to a document (see below).
 - Options: `--dest`, `--unit`, `--int64`, `--currency`, `--enums-as-strings`, `--json-name-always`,

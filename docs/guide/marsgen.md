@@ -1,5 +1,5 @@
 ---
-description: "MARSgen, the code generator of MARS-Curiosity: Delphi types (records or classes) from OpenAPI 3.0/3.1 documents and JSON samples, MARS servers and whole projects from an OpenAPI document, imports again that keep your code, and a conformance report of a server against its document."
+description: "MARSgen, the code generator of MARS-Curiosity: Delphi types (records or classes) from OpenAPI 3.0/3.1 documents and JSON samples, MARS servers, whole projects and typed clients from an OpenAPI document, imports again that keep your code, and a conformance report of a server against its document."
 ---
 
 # From OpenAPI: MARSgen
@@ -9,6 +9,7 @@ MARSgen generates Delphi code from what describes an API:
 - **types**: records (or classes) for the schemas of an OpenAPI 3.0/3.1 document, or for JSON samples;
 - **servers**: the MARS resources of an OpenAPI document, ready to compile, answering `501 Not Implemented` until you implement each operation;
 - **projects**: a new MARS project, created from the [MARSCmd templates](/guide/installation#bootstrap-a-new-project-with-marscmd), with the server of the document already linked in;
+- **clients**: a typed client of the API, a class with a method per operation, for any server that serves the document (MARS or not);
 
 and then keeps working with you: importing the document again after it changes never touches your code, and `MARSgen compare` checks that a running server still serves the document.
 
@@ -78,6 +79,37 @@ Without `--project`, `--server` writes the same units into an existing project (
 
 The resources of the template stay (`helloworld`, `token`, `openapi`). A path of the document named like one of them (`/token/...`) is reported and not generated.
 
+## Clients
+
+```
+MARSgen openapi petstore-3.0.yaml --client --dest C:\Projects\PetStoreClient
+```
+
+`--client` also writes `Client.<Api>.pas` (with `Model.<Api>.pas`; with `--server` or `--project` too): a class, `T<Api>Client`, with a method per operation, on top of the [MARS client](/client/overview). It is generated: written again on every import, and `update` keeps generating it.
+
+```pascal
+uses Client.PetStore, Model.PetStore;
+
+var LClient := TPetStoreClient.Create('http://localhost:8080/rest/default');
+try
+  LClient.Token := LToken;                  // when the API needs a token
+  for var LPet in LClient.ListPets(10) do   // TArray<TPet>
+    Writeln(LPet.Name);
+  var LPet := LClient.GetPetById(7);        // TPet
+  LClient.DeletePet(7, 'sold');             // X-Reason: sold
+finally
+  LClient.Free;
+end;
+```
+
+- The methods have the names of the endpoints of the server (`operationId`, else method and path). The default base URL is the first server of the document (`DefaultBaseURL`).
+- Parameters: path, query, header and cookie parameters with their types (`Integer`, `Int64`, `Double`, `Boolean`, `string`; arrays of them in the query and in headers). Required ones first, then the optional ones with a default value: the default of the schema, else the empty value. An optional parameter is not sent when it equals its default.
+- Bodies and results: JSON in the types of `Model.<Api>` (records, or classes with `--classes`), any JSON as `TJSONValue`, binary content as `TBytes`, text as `string`; no content: a procedure. Objects, lists and `TJSONValue` results belong to the caller.
+- Security: the token of the client (`Token`, sent as a Bearer header) for bearer, OAuth2 and OpenID Connect schemes; a property per API key scheme (`ApiKey`), sent where the document requires it. Other schemes are reported.
+- Errors: the exceptions of the MARS client, [`EMARSClientHttpException`](/client/overview) with the status code and the content of the response.
+- The client creates its own `TMARSNetClient`, or uses yours (`Create(URL, MyClient)`: timeouts, proxy, logging, Indy). One client per thread.
+- Paths that a resource cannot serve (`/{tenant}/...`, `/{name}.{ext}`) are fine for a client; HEAD, OPTIONS and TRACE operations are not generated.
+
 ## Types
 
 ```
@@ -127,7 +159,7 @@ A generated server conforms except for what the generator said it could not do. 
 
 ## The MARSgen window
 
-`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
+`Utils\Bin\Win32\MARSgen_VCL.exe` (a desktop shortcut, *MARSgen*, after the setup) runs the same commands from a window, one tab each: *OpenAPI document* (types, a server or a new project, and a client), *JSON samples*, *Import again* and *Compare*. The options are the ones of the command line, and the window shows the command line it runs, ready to copy into a build script. The output is colored (units written, units of yours kept, warnings, errors, differences); *Open folder* and *Open project* open the result. The *Import again* tab shows the manifest of the folder (the document, the options and the date of the last import) before importing it again. The window remembers its fields in `MARS-Curiosity\MARSgen.ini` of your application data folder.
 
 ## Exit codes and diagnostics
 

@@ -20,6 +20,8 @@ uses
   MARS.Gen.JSONInference in '..\Engine\MARS.Gen.JSONInference.pas',
   MARS.Gen.Server in '..\Engine\MARS.Gen.Server.pas',
   MARS.Gen.Emit.Server in '..\Engine\MARS.Gen.Emit.Server.pas',
+  MARS.Gen.Client in '..\Engine\MARS.Gen.Client.pas',
+  MARS.Gen.Emit.Client in '..\Engine\MARS.Gen.Emit.Client.pas',
   MARS.Gen.Output in '..\Engine\MARS.Gen.Output.pas',
   MARS.Gen.Project in '..\Engine\MARS.Gen.Project.pas',
   MARS.Gen.Compare in '..\Engine\MARS.Gen.Compare.pas',

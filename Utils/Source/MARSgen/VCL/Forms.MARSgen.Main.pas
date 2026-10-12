@@ -27,6 +27,7 @@ type
     DocumentEdit: TEdit;
     DocumentButton: TButton;
     ModeRadioGroup: TRadioGroup;
+    ClientCheckBox: TCheckBox;
     ProjectRow: TPanel;
     ProjectNameLabel: TLabel;
     ProjectNameEdit: TEdit;
@@ -218,6 +219,7 @@ begin
     PageControl.ActivePageIndex := Ord(FRequest.Command);
     DocumentEdit.Text := FRequest.Document;
     ModeRadioGroup.ItemIndex := Ord(FRequest.Mode);
+    ClientCheckBox.Checked := FRequest.Client;
     ProjectNameEdit.Text := FRequest.ProjectName;
     TemplateComboBox.ItemIndex := TemplateComboBox.Items.IndexOf(FRequest.Template);
     if TemplateComboBox.ItemIndex < 0 then
@@ -254,6 +256,7 @@ begin
   else
     FRequest.Document := Trim(DocumentEdit.Text);
   FRequest.Mode := TGenOpenAPIMode(ModeRadioGroup.ItemIndex);
+  FRequest.Client := ClientCheckBox.Checked;
   FRequest.ProjectName := Trim(ProjectNameEdit.Text);
   // MARSTemplate is the default: no --template
   if (TemplateComboBox.ItemIndex > 0) then
@@ -285,7 +288,7 @@ begin
   ControlsToRequest;
   // a panel shown again goes where its Top says: put it back in its place first
   if not ProjectRow.Visible then
-    ProjectRow.Top := ModeRadioGroup.Top + ModeRadioGroup.Height + 1;
+    ProjectRow.Top := ClientCheckBox.Top + ClientCheckBox.Height + 1;
   ProjectRow.Visible := (FRequest.Command = TGenCommand.OpenAPI) and (FRequest.Mode = TGenOpenAPIMode.Project);
   if not OutputOptionsPanel.Visible then
     OutputOptionsPanel.Top := ActionPanel.Top - 1;
@@ -326,7 +329,7 @@ begin
     0:
     begin
       LContent := DocumentRow.Height + ModeRadioGroup.Height + ModeRadioGroup.Margins.Top
-        + ModeRadioGroup.Margins.Bottom;
+        + ModeRadioGroup.Margins.Bottom + ClientCheckBox.Height;
       if ProjectRow.Visible then
         Inc(LContent, ProjectRow.Height);
     end;

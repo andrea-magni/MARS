@@ -8,6 +8,7 @@
 MARSgen openapi <file|url> [--types] [--dest <folder>] [--unit <name>]    types of the schemas (Model.<Api>)
 MARSgen openapi <file|url> --server [--dest <folder>]                     types + MARS resources
 MARSgen openapi <file|url> --project <Name> [--template <name>] [--dest <folder>]   a new project (MARSCmd templates)
+MARSgen openapi <file|url> --client [--server] [--dest <folder>]          types + a typed client (Client.<Api>)
 MARSgen json <file> [<file> ...] --name <Name> [--dest <folder>]          types inferred from JSON samples
 MARSgen update [<folder>]                                                 import the document of the folder again
 MARSgen compare <document> <openapi of the server>                        conformance of a server (exit 0 = conforms)
@@ -28,6 +29,14 @@ Options: `--classes` (classes instead of records), `--int64`, `--currency`, `--e
 - Generated security: `[Authenticated]` for a bearer without scopes, `[RolesAllowed]` for scopes, `[PermitAll]` for `security: []`; API keys are not checked (do it in the `Do` method). The success status (i.e. 201) is set by the base.
 - After the document changes: `MARSgen update <folder>` (options from the manifest `<Api>.marsgen.json`, keep it in version control). The report lists operations added (implement them) and removed (delete their overrides), generated units no longer generated (delete them) and units of the user no longer used. A generated unit edited by hand is kept with a warning: move the change into the user unit, then `--force`.
 - `MARSgen compare <document> http://localhost:8080/rest/default/openapi` checks a running server (generated or hand-written) against its document: differences break clients, notes (`--verbose`) are what MARS cannot state (the 2xx status code, API keys).
+
+## Generated client
+
+`--client` writes `Client.<Api>` (generated, never edit): `T<Api>Client`, a method per operation on top of the MARS client.
+
+- `TPetStoreClient.Create(BaseURL)` (default: the first server of the document) creates its own `TMARSNetClient`; `Create(BaseURL, AClient)` uses a given `TMARSCustomClient` (not freed). Set `Token` for bearer/OAuth2 APIs, the API key properties (`ApiKey`) for apiKey schemes. One client per thread.
+- Required parameters first, optional ones with defaults (not sent when equal to the default); bodies and results in the `Model.<Api>` types, `TJSONValue` for any JSON, `TBytes` for binary, `string` for text. The caller frees objects, lists and `TJSONValue` results.
+- HTTP errors raise `EMARSClientHttpException` (`StatusCode`, `ContentAsString`, `ContentAs<T>`).
 
 ## Types
 

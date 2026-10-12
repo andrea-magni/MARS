@@ -14,6 +14,8 @@ type
   TRequestDump = record
     Accept: string;
     ContentType: string;
+    // the X-Probe header, (absent) when not sent
+    XProbe: string;
   end;
 
   TLoginData = record
@@ -91,6 +93,10 @@ function TTestResource.GetRequestDump: TRequestDump;
 begin
   Result.Accept := FRequest.Accept;
   Result.ContentType := FRequest.GetHeaderParamValue('ContentType');
+  if FRequest.GetHeaderParamIndex('X-Probe') < 0 then
+    Result.XProbe := '(absent)'
+  else
+    Result.XProbe := FRequest.GetHeaderParamValue('X-Probe');
 end;
 
 initialization
