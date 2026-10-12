@@ -284,6 +284,13 @@ begin
 
       // the other dictionaries as before
       Assert.IsTrue(LPaths.Values['/openapicases'].Values['get'].Values['responses'].Values['200'].IsMapping);
+
+      // the properties of a schema (a list of pairs): a mapping of schemas, not the Delphi list
+      var LProperties := LDocument.Root.Values['components'].Values['schemas'].Values['TOpenAPIJSONHolder'].Values['properties'];
+      Assert.IsTrue(LProperties.IsMapping, 'properties: a mapping');
+      Assert.AreEqual(LOpenAPI.components.schemas['TOpenAPIJSONHolder'].properties.Count, LProperties.Count);
+      Assert.AreEqual('#/components/schemas/TJSONValue', LProperties.Values['Value'].Values['$ref'].ToString);
+      Assert.IsFalse(LProperties.Contains('Capacity'), 'no properties of the list');
     finally
       LOpenAPI.Free;
     end;

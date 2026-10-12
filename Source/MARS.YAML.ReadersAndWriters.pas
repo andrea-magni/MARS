@@ -71,6 +71,7 @@ type
   private
   public
     class function DictionaryToYAML(const ARoot: TYamlNode; const AName: string; const ADictionary: TObject): Boolean;
+    class function ListOfPairsToYAML(const ARoot: TYamlNode; const AName: string; const AList: TObject): Boolean;
     class function ObjectListToYAML(const ARoot: TYamlNode; const AName: string; const AObjectList: TObject): Boolean;
     class function ObjectToYAML(const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class function ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): Boolean; overload;
@@ -257,6 +258,41 @@ begin
         LNode.AddOrSetSequence(AKey.ToString).SequenceStyle := TYamlSequenceStyle.Flow
       else
         TValueToYaml(LNode, AKey.ToString, AValue);
+    end
+  );
+
+  Result := LResult;
+end;
+
+class function TMARSYAML.ListOfPairsToYAML(const ARoot: TYamlNode; const AName: string;
+  const AList: TObject): Boolean;
+var
+  LResult: Boolean;
+  LNode: TYamlNode;
+begin
+  LResult := False;
+
+  // TList<TPair<string, T>>: a mapping, in the order of the list (e.g. the properties of an OpenAPI schema)
+  TRttiHelper.EnumerateListOfPairOf(AList
+  , procedure (APair: TValue)
+    begin
+      if not LResult then
+      begin
+        if ARoot.IsSequence then
+          LNode := ARoot.AddMapping
+        else if AName <> '' then
+          LNode := ARoot.AddOrSetMapping(AName)
+        else
+          LNode := ARoot;
+        LResult := True;
+      end;
+
+      var LKey := ReadFieldValue(APair, 'Key').AsString;
+      var LValue := ReadFieldValue(APair, 'Value');
+      if LValue.IsArray and (LValue.GetArrayLength = 0) then
+        LNode.AddOrSetSequence(LKey).SequenceStyle := TYamlSequenceStyle.Flow
+      else
+        TValueToYaml(LNode, LKey, LValue);
     end
   );
 
@@ -518,6 +554,9 @@ begin
 
   else if IsObjectListOfT(LTypeName) then
     Result := ObjectListToYaml(ARoot, AKeyName, AValue.AsObject)
+
+  else if IsListOfPairOfStringAndT(LTypeName) then
+    Result := ListOfPairsToYAML(ARoot, AKeyName, AValue.AsObject)
 
   {$IFDEF Delphi11Alexandria_UP}
   else if AValue.IsObjectInstance then
