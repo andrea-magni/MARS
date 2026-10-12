@@ -24,12 +24,14 @@ type
     [Test] procedure WrittenNullsAndNestedObjects;
     [Test] procedure ClientDataSet;
     [Test] procedure Errors;
+    // the date fields written with the options given (DateIsUTC), not the default ones
+    [Test] procedure WrittenDatesFollowTheOptions;
   end;
 
 implementation
 
 uses
-  System.JSON, System.DateUtils, FMTBcd;
+  System.JSON, System.DateUtils, System.Generics.Collections, FMTBcd;
 
 const
   PEOPLE =
@@ -372,6 +374,46 @@ begin
       Raises(procedure begin JSONArrayToDataSet(LArray, LTable); end, 'id: "abc" is not a value for the field');
       Assert.AreEqual(0, LTable.RecordCount);
       Assert.AreEqual(dsBrowse, LTable.State);
+    finally
+      LArray.Free;
+    end;
+  finally
+    LTable.Free;
+  end;
+end;
+
+procedure TMARSJSONArrayToDataSetTest.WrittenDatesFollowTheOptions;
+var
+  LTable: TFDMemTable;
+  LArray: TJSONArray;
+  LOptions: TMARSJSONSerializationOptions;
+  LAt: TDateTime;
+begin
+  LAt := EncodeDateTime(2026, 7, 15, 9, 30, 0, 0);
+  LTable := TFDMemTable.Create(nil);
+  try
+    LTable.FieldDefs.Add('at', ftDateTime);
+    LTable.FieldDefs.Add('born', ftDate);
+    LTable.CreateDataSet;
+    LTable.AppendRecord([LAt, EncodeDate(1990, 5, 1)]);
+
+    for var LIsUTC in [True, False] do
+    begin
+      LOptions := DefaultMARSJSONSerializationOptions;
+      LOptions.DateIsUTC := LIsUTC;
+      LArray := DataSetToJSONArray(LTable, LOptions);
+      try
+        Assert.AreEqual(DateToJSON(LAt, LOptions), (LArray.Items[0] as TJSONObject).GetValue<string>('at'));
+        Assert.AreEqual(DateToJSON(EncodeDate(1990, 5, 1), LOptions),
+          (LArray.Items[0] as TJSONObject).GetValue<string>('born'));
+      finally
+        LArray.Free;
+      end;
+    end;
+    LOptions.DateIsUTC := True;
+    LArray := DataSetToJSONArray(LTable, LOptions);
+    try
+      Assert.AreEqual('2026-07-15T09:30:00.000Z', (LArray.Items[0] as TJSONObject).GetValue<string>('at'));
     finally
       LArray.Free;
     end;

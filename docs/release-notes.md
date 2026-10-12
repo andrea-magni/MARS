@@ -40,6 +40,7 @@ Coming from 1.9.2, these changes can reach your server or its clients:
 - **Your ignition**: nothing to change; the readers of plain JSON for datasets are in `MARS.Data.MessageBodyWriters`, already in the uses of the templates.
 
 **Fixed**
+- Datasets as JSON (`DataSetToJSONArray`, `RecordToJSONObject`): the date and time fields ignored the options given (`DateIsUTC`, also from the `JSON.DateIsUTC` parameter) and used the default ones. [Writing datasets](/features/data-access#writing-datasets) ([#274](https://github.com/andrea-magni/MARS/issues/274))
 - Dates as JSON and YAML (datasets, records, objects): a local time that does not exist, in the gap of the change to daylight saving time (a `date` field at midnight where it starts at midnight: Chile, Paraguay, Cuba...), raised `ELocalTimeInvalid`; now it takes the offset before the change (`MARSDateToISO8601` of `MARS.Core.Utils`). ([#171](https://github.com/andrea-magni/MARS/issues/171))
 - OpenAPI as YAML (`Accept: application/x-yaml`): an Access Violation (`500`) when an endpoint has security requirements (`[RolesAllowed]`, `[Authenticated]`); the requirements are written as in JSON, scopes included, and an empty list of scopes stays `[]`. [OpenAPI](/features/openapi) ([#261](https://github.com/andrea-magni/MARS/issues/261))
 - OpenAPI as YAML: the `properties` of the schemas were the Delphi list that holds them (`Capacity`, `Count`, `PList`...); now the schemas of the fields, in their order, as in JSON. [OpenAPI](/features/openapi) ([#262](https://github.com/andrea-magni/MARS/issues/262))

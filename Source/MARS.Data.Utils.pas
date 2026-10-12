@@ -182,9 +182,9 @@ begin
         ftFloat: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
         ftCurrency: AObject.AddPair(APairName, TJSONNumber.Create(AField.AsCurrency));
         ftBCD: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
-        ftDate: AObject.AddPair(APairName, DateFieldToJSON(AField));
-        ftTime: AObject.AddPair(APairName, DateFieldToJSON(AField));
-        ftDateTime: AObject.AddPair(APairName, DateFieldToJSON(AField));
+        ftDate: AObject.AddPair(APairName, DateFieldToJSON(AField, AOptions));
+        ftTime: AObject.AddPair(APairName, DateFieldToJSON(AField, AOptions));
+        ftDateTime: AObject.AddPair(APairName, DateFieldToJSON(AField, AOptions));
 //        ftBytes: ;
 //        ftVarBytes: ;
         ftAutoInc: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
@@ -209,7 +209,7 @@ begin
 //        ftInterface: ;
 //        ftIDispatch: ;
         ftGuid: AObject.AddPair(APairName, AField.AsString);
-        ftTimeStamp: AObject.AddPair(APairName, DateFieldToJSON(AField));
+        ftTimeStamp: AObject.AddPair(APairName, DateFieldToJSON(AField, AOptions));
         ftFMTBcd: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
         ftFixedWideChar: AObject.AddPair(APairName, AField.AsWideString);
         ftWideMemo: AObject.AddPair(APairName, AField.AsWideString);
