@@ -89,7 +89,8 @@ type
 implementation
 
 uses
-  DateUtils, TypInfo;
+  DateUtils, TypInfo
+, MARS.Core.Utils;
 
 { TMARSParametersSlice }
 
@@ -235,7 +236,7 @@ begin
   else if (LValue.TypeInfo = TypeInfo(TDateTime)) or (LValue.TypeInfo = TypeInfo(TDate))
     or (LValue.TypeInfo = TypeInfo(TTime))
   then
-    Result := DateToISO8601(LValue.AsExtended, False)
+    Result := MARSDateToISO8601(LValue.AsExtended, False)
   else if LValue.Kind = tkFloat then
     Result := FloatToStr(LValue.AsExtended, TFormatSettings.Invariant)
   else

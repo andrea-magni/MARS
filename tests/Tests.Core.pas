@@ -27,6 +27,8 @@ type
   private
   public
     [Test] procedure GuessTValueFromStr;
+    // #171: a date at midnight where daylight saving time starts at midnight
+    [Test] procedure DateInDaylightSavingGap;
   end;
 
 
@@ -122,7 +124,7 @@ implementation
 { TMARSCoreTest }
 
 uses
-  Rtti, Variants, Math, DateUtils, System.JSON
+  Rtti, Variants, Math, DateUtils, TimeSpan, System.JSON
 , FireDAC.Comp.Client, Data.DB
 , MARS.Core.JSON, MARS.Rtti.Utils
 , Tests.Records.Types, Tests.Objects.Types
@@ -698,6 +700,67 @@ begin
 end;
 
 { TMARSCoreUtilsTest }
+
+type
+  // a time zone as America/Santiago: UTC-4, daylight saving time (UTC-3) from 2026-09-06 00:00,
+  // so 00:00-01:00 of that day does not exist
+  TGapTimeZone = class(TTimeZone)
+  protected
+    procedure DoGetOffsetsAndType(const ADateTime: TDateTime; out AOffset, ADstSave: Int64;
+      out AType: TLocalTimeType); override;
+    function DoGetDisplayName(const ADateTime: TDateTime; const ForceDaylight: Boolean): string; override;
+    function DoGetID: string; override;
+  end;
+
+procedure TGapTimeZone.DoGetOffsetsAndType(const ADateTime: TDateTime; out AOffset, ADstSave: Int64;
+  out AType: TLocalTimeType);
+begin
+  AOffset := -4 * SecsPerHour;
+  ADstSave := SecsPerHour;
+  if ADateTime < EncodeDate(2026, 9, 6) then
+    AType := lttStandard
+  else if ADateTime < EncodeDateTime(2026, 9, 6, 1, 0, 0, 0) then
+    AType := lttInvalid
+  else
+    AType := lttDaylight;
+end;
+
+function TGapTimeZone.DoGetDisplayName(const ADateTime: TDateTime; const ForceDaylight: Boolean): string;
+begin
+  Result := 'Gap';
+end;
+
+function TGapTimeZone.DoGetID: string;
+begin
+  Result := 'Gap';
+end;
+
+procedure TMARSCoreUtilsTest.DateInDaylightSavingGap;
+var
+  LZone: TTimeZone;
+begin
+  LZone := TGapTimeZone.Create;
+  try
+    // the RTL cannot give an offset to a time that does not exist
+    Assert.WillRaise(procedure begin LZone.GetUtcOffset(EncodeDate(2026, 9, 6)); end, ELocalTimeInvalid);
+
+    // the offset before the change
+    Assert.AreEqual('2026-09-06T00:00:00.000-04:00', MARSDateToISO8601(EncodeDate(2026, 9, 6), False, LZone));
+    Assert.AreEqual('2026-09-06T00:30:00.000-04:00',
+      MARSDateToISO8601(EncodeDateTime(2026, 9, 6, 0, 30, 0, 0), False, LZone));
+    // the times around it, as the RTL writes them
+    Assert.AreEqual('2026-09-05T00:00:00.000-04:00', MARSDateToISO8601(EncodeDate(2026, 9, 5), False, LZone));
+    Assert.AreEqual('2026-09-06T01:00:00.000-03:00',
+      MARSDateToISO8601(EncodeDateTime(2026, 9, 6, 1, 0, 0, 0), False, LZone));
+    Assert.AreEqual('2026-09-06T00:00:00.000Z', MARSDateToISO8601(EncodeDate(2026, 9, 6), True, LZone));
+  finally
+    LZone.Free;
+  end;
+
+  // the local time zone: as the RTL
+  for var LDate in [EncodeDate(2026, 1, 15), EncodeDateTime(2026, 7, 15, 13, 45, 10, 500)] do
+    Assert.AreEqual(DateToISO8601(LDate, False), MARSDateToISO8601(LDate, False));
+end;
 
 procedure TMARSCoreUtilsTest.GuessTValueFromStr;
 var

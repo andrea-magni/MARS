@@ -641,11 +641,11 @@ begin
       else if LElement.IsType<Boolean> then
         LSequence.Add(LElement.AsType<Boolean>)
       else if LElement.TypeInfo = TypeInfo(TDateTime) then
-        LSequence.Add(DateToISO8601(LElement.AsType<TDateTime>, False))
+        LSequence.Add(MARSDateToISO8601(LElement.AsType<TDateTime>, False))
       else if LElement.TypeInfo = TypeInfo(TDate) then
-        LSequence.Add(DateToISO8601(LElement.AsType<TDate>, False))
+        LSequence.Add(MARSDateToISO8601(LElement.AsType<TDate>, False))
       else if LElement.TypeInfo = TypeInfo(TTime) then
-        LSequence.Add(DateToISO8601(LElement.AsType<TTime>, False))
+        LSequence.Add(MARSDateToISO8601(LElement.AsType<TTime>, False))
       else if LElement.Kind = tkInt64 then
         LSequence.Add(LElement.AsType<Int64>)
       else if LElement.Kind = tkInteger then
@@ -688,17 +688,17 @@ begin
 
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
   begin
-    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TDateTime>, False));
+    ARoot.AddOrSetValue(AKeyName, MARSDateToISO8601(AValue.AsType<TDateTime>, False));
     Result := True;
   end
   else if AValue.TypeInfo = TypeInfo(TDate) then
   begin
-    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TDate>, False));
+    ARoot.AddOrSetValue(AKeyName, MARSDateToISO8601(AValue.AsType<TDate>, False));
     Result := True;
   end
   else if AValue.TypeInfo = TypeInfo(TTime) then
   begin
-    ARoot.AddOrSetValue(AKeyName, DateToISO8601(AValue.AsType<TTime>, False));
+    ARoot.AddOrSetValue(AKeyName, MARSDateToISO8601(AValue.AsType<TTime>, False));
     Result := True;
   end
 

@@ -10,7 +10,7 @@ unit MARS.Core.Utils;
 interface
 
 uses
-  SysUtils, Classes, RTTI, SyncObjs, Math, Generics.Collections
+  SysUtils, Classes, RTTI, SyncObjs, Math, Generics.Collections, DateUtils
 , REST.JSON
 , System.JSON
 , MARS.Core.JSON
@@ -95,6 +95,11 @@ type
     AOverWriteDest: Boolean = True; AThenResetDestPosition: Boolean = True);
 
 
+  // DateToISO8601 of the RTL, but a local time that does not exist (in the gap of a change to
+  // daylight saving time, i.e. midnight where it starts at midnight) takes the offset before the
+  // change instead of raising ELocalTimeInvalid. ATimeZone: nil for TTimeZone.Local.
+  function MARSDateToISO8601(const ADate: TDateTime; const AInputIsUTC: Boolean;
+    const ATimeZone: TTimeZone = nil): string;
 
   function DateToJSON(const ADate: TDateTime): string; overload;
   function DateToJSON(const ADate: TDateTime; const AOptions: TMARSJSONSerializationOptions): string; overload;
@@ -122,7 +127,7 @@ implementation
 
 uses
   TypInfo
-  , StrUtils, DateUtils, Masks
+  , StrUtils, Masks, TimeSpan
 {$IFDEF MARS_ZLIB}, ZLib {$ENDIF}
 {$IFDEF MARS_ZIP}, Zip {$ENDIF}
   , NetEncoding
@@ -456,6 +461,35 @@ begin
 end;
 
 
+function MARSDateToISO8601(const ADate: TDateTime; const AInputIsUTC: Boolean;
+  const ATimeZone: TTimeZone): string;
+var
+  LTimeZone: TTimeZone;
+  LProbe: TDateTime;
+  LOffset, LTries: Integer;
+begin
+  Result := DateToISO8601(ADate, True);
+  if AInputIsUTC then
+    Exit;
+
+  LTimeZone := ATimeZone;
+  if not Assigned(LTimeZone) then
+    LTimeZone := TTimeZone.Local;
+  // a local time in a gap: the offset of the time before the gap (no gap is longer than a few hours)
+  LProbe := ADate;
+  LTries := 0;
+  while (LTimeZone.GetLocalTimeType(LProbe) = lttInvalid) and (LTries < 12) do
+  begin
+    LProbe := IncMinute(LProbe, -30);
+    Inc(LTries);
+  end;
+  LOffset := Trunc(LTimeZone.GetUtcOffset(LProbe).TotalMinutes);
+  if LOffset <> 0 then
+    // the Z replaced by the offset, as the RTL does
+    Result := Format('%s%s%.2d:%.2d', [Result.Substring(0, Result.Length - 1),
+      IfThen(LOffset < 0, '-', '+'), Abs(LOffset) div MinsPerHour, Abs(LOffset) mod MinsPerHour]);
+end;
+
 function DateToJSON(const ADate: TDateTime): string;
 begin
   Result := DateToJSON(ADate, DefaultMARSJSONSerializationOptions);
@@ -466,9 +500,9 @@ begin
   Result := '';
   if ADate <> 0 then
 {$IFDEF MARS_JSON_LEGACY}
-    Result := DateToISO8601(ADate, joDateIsUTC in AOptions);
+    Result := MARSDateToISO8601(ADate, joDateIsUTC in AOptions);
 {$ELSE}
-    Result := DateToISO8601(ADate, AOptions.DateIsUTC);
+    Result := MARSDateToISO8601(ADate, AOptions.DateIsUTC);
 {$ENDIF}
 end;
 
