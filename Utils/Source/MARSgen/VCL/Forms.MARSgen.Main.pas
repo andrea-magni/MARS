@@ -283,7 +283,12 @@ var
   LProblem: string;
 begin
   ControlsToRequest;
+  // a panel shown again goes where its Top says: put it back in its place first
+  if not ProjectRow.Visible then
+    ProjectRow.Top := ModeRadioGroup.Top + ModeRadioGroup.Height + 1;
   ProjectRow.Visible := (FRequest.Command = TGenCommand.OpenAPI) and (FRequest.Mode = TGenOpenAPIMode.Project);
+  if not OutputOptionsPanel.Visible then
+    OutputOptionsPanel.Top := ActionPanel.Top - 1;
   OutputOptionsPanel.Visible := FRequest.Command in [TGenCommand.OpenAPI, TGenCommand.JSON];
   ForceCheckBox.Visible := FRequest.Command <> TGenCommand.Compare;
   if FRequest.Mode = TGenOpenAPIMode.Project then
