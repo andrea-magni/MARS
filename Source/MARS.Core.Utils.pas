@@ -498,10 +498,11 @@ end;
 function DateToJSON(const ADate: TDateTime; const AOptions: TMARSJSONSerializationOptions): string;
 begin
   Result := '';
-  if ADate <> 0 then
 {$IFDEF MARS_JSON_LEGACY}
+  if ADate <> 0 then
     Result := MARSDateToISO8601(ADate, joDateIsUTC in AOptions);
 {$ELSE}
+  if (ADate <> 0) or not AOptions.ZeroDateAsEmpty then
     Result := MARSDateToISO8601(ADate, AOptions.DateIsUTC);
 {$ENDIF}
 end;

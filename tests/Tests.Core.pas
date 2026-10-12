@@ -52,6 +52,8 @@ type
     [Test] procedure SkipEmptyArrays;
     [Test] procedure CustomDateTimeValues;
     [Test] procedure OrderOfMembers;
+    // #161: a zero date as "" (no date) or, with ZeroDateAsEmpty False, as a date
+    [Test] procedure ZeroDate;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -126,7 +128,7 @@ implementation
 uses
   Rtti, Variants, Math, DateUtils, TimeSpan, System.JSON
 , FireDAC.Comp.Client, Data.DB
-, MARS.Core.JSON, MARS.Rtti.Utils
+, MARS.Core.JSON, MARS.Rtti.Utils, MARS.Utils.Parameters, MARS.Data.Utils
 , Tests.Records.Types, Tests.Objects.Types
 ;
 
@@ -553,6 +555,77 @@ begin
 
 end;
 
+procedure TMARSRecordToJSONTest.ZeroDate;
+const
+  ZERO_DATE = '1899-12-30T00:00:00.000Z';
+var
+  LOptions: TMARSJSONSerializationOptions;
+  LJSONObj: TJSONObject;
+  LArray: TJSONArray;
+  LTable: TFDMemTable;
+  LParameters: TMARSParameters;
+begin
+  var LRecord := TPersonRecord.Create('John', 'Doe', 0);
+  LOptions := DefaultMARSJSONSerializationOptions;
+  LOptions.DateIsUTC := True;
+  Assert.IsTrue(LOptions.ZeroDateAsEmpty, 'the default: no date');
+
+  // the default: "", omitted by SkipEmptyStrings
+  LJSONObj := TJSONObject.RecordToJSON<TPersonRecord>(LRecord, LOptions);
+  try
+    Assert.IsNull(LJSONObj.FindValue('DateOfBirth'), LJSONObj.ToJSON);
+  finally
+    LJSONObj.Free;
+  end;
+  LOptions.IncludeEmptyOrNullValues;
+  LJSONObj := TJSONObject.RecordToJSON<TPersonRecord>(LRecord, LOptions);
+  try
+    Assert.AreEqual('', LJSONObj.GetValue<string>('DateOfBirth'));
+  finally
+    LJSONObj.Free;
+  end;
+
+  // as a date, also with SkipEmptyStrings
+  LOptions := DefaultMARSJSONSerializationOptions;
+  LOptions.DateIsUTC := True;
+  LOptions.ZeroDateAsEmpty := False;
+  LJSONObj := TJSONObject.RecordToJSON<TPersonRecord>(LRecord, LOptions);
+  try
+    Assert.AreEqual(ZERO_DATE, LJSONObj.GetValue<string>('DateOfBirth'));
+    // and read back as zero
+    var LRead := LJSONObj.ToRecord<TPersonRecord>(LOptions);
+    Assert.IsTrue(LRead.DateOfBirth = 0, DateToStr(LRead.DateOfBirth));
+  finally
+    LJSONObj.Free;
+  end;
+  Assert.AreEqual(ZERO_DATE, DateToJSON(0, LOptions));
+
+  // a dataset field
+  LTable := TFDMemTable.Create(nil);
+  try
+    LTable.FieldDefs.Add('EndDate', ftDate);
+    LTable.CreateDataSet;
+    LTable.AppendRecord([EncodeDate(1899, 12, 30)]);
+    LArray := DataSetToJSONArray(LTable, LOptions);
+    try
+      Assert.AreEqual(ZERO_DATE, (LArray.Items[0] as TJSONObject).GetValue<string>('EndDate'));
+    finally
+      LArray.Free;
+    end;
+  finally
+    LTable.Free;
+  end;
+
+  // the parameter of the application
+  LParameters := TMARSParameters.Create('');
+  try
+    LParameters.Values['JSON.ZeroDateAsEmpty'] := 'false';
+    Assert.IsFalse(DefaultMARSJSONSerializationOptions.AdjustWith(LParameters).ZeroDateAsEmpty);
+  finally
+    LParameters.Free;
+  end;
+end;
+
 procedure TMARSRecordToJSONTest.SkipEmptyArrays;
 begin
   var LRecord: TArrayNamedIntegerRecord := Default(TArrayNamedIntegerRecord);
@@ -742,7 +815,7 @@ begin
   LZone := TGapTimeZone.Create;
   try
     // the RTL cannot give an offset to a time that does not exist
-    Assert.WillRaise(procedure begin LZone.GetUtcOffset(EncodeDate(2026, 9, 6)); end, ELocalTimeInvalid);
+    Assert.WillRaise(procedure begin LZone.GetUtcOffset(EncodeDate(2026, 9, 6)); end, System.DateUtils.ELocalTimeInvalid);
 
     // the offset before the change
     Assert.AreEqual('2026-09-06T00:00:00.000-04:00', MARSDateToISO8601(EncodeDate(2026, 9, 6), False, LZone));

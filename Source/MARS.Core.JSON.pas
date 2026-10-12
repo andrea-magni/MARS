@@ -30,6 +30,7 @@ const
   JSON_SKIPEMPTYARRAYS_PARAM = 'JSON.SkipEmptyArrays';
   JSON_SKIPNULLVALUES_PARAM = 'JSON.SkipNullValues';
   JSON_DATEISUTC_PARAM = 'JSON.DateIsUTC';
+  JSON_ZERODATEASEMPTY_PARAM = 'JSON.ZeroDateAsEmpty';
   JSON_USEDISPLAYFORMATFORNUMERICFIELDS_PARAM = 'JSON.UseDisplayFormatForNumericFields';
 
 type
@@ -86,6 +87,8 @@ type
     SkipNullValues: Boolean;
 
     DateIsUTC: Boolean;
+    // a zero date (0, 1899-12-30) is "" (no date; then omitted by SkipEmptyStrings); False: written as a date
+    ZeroDateAsEmpty: Boolean;
     DateFormat: TMARSJSONDateFormat; // not used yet: dates are always ISO 8601
 //    joDateFormatUnix
 //    joDateFormatISO8601
@@ -344,6 +347,7 @@ type
     SkipEmptyArrays: True;
     SkipNullValues: True;
     DateIsUTC: True; // check the initialization section of this unit!
+    ZeroDateAsEmpty: True;
     DateFormat: ISO8601;
     UseDisplayFormatForNumericFields: False;
   );
@@ -2261,6 +2265,8 @@ begin
     Result.SkipNullValues := LBoolean;
   if TryGetBoolean(JSON_DATEISUTC_PARAM, LBoolean) then
     Result.DateIsUTC := LBoolean;
+  if TryGetBoolean(JSON_ZERODATEASEMPTY_PARAM, LBoolean) then
+    Result.ZeroDateAsEmpty := LBoolean;
   if TryGetBoolean(JSON_USEDISPLAYFORMATFORNUMERICFIELDS_PARAM, LBoolean) then
     Result.UseDisplayFormatForNumericFields := LBoolean;
 end;

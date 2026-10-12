@@ -86,6 +86,7 @@ The fields you can set:
 | `SkipEmptyObjects` / `SkipEmptyArrays` | Omit empty `{}` / `[]`. |
 | `SkipNullValues` | Omit `null`. |
 | `DateIsUTC` | Treat `TDateTime` as UTC. |
+| `ZeroDateAsEmpty` | Write a zero date (`0`, 1899-12-30) as `""`, "no date" (default `True`; then omitted by `SkipEmptyStrings`). `False` writes it as a date (`1899-12-30T00:00:00.000Z`). |
 | `DateFormat` | Reserved: dates are always written and read as ISO 8601. |
 | `UseDisplayFormatForNumericFields` | Use a field's display format for dataset numbers. |
 
