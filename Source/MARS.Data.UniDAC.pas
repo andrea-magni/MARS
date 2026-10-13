@@ -474,6 +474,15 @@ begin
   FConnectionDefs := TDictionary<string, string>.Create();
 end;
 
+// With a transaction, the commit is left to it (InTransaction, a transaction of yours): the
+// AutoCommit of UniDAC (True by default) would commit each statement on its own (Firebird and
+// InterBase: commit retaining) and leave nothing to roll back (#279). Without a transaction,
+// commit after the execution, as FireDAC does.
+procedure SetAutoCommit(const AComponent: TComponent; const ATransaction: TUniTransaction);
+begin
+  TDBAccessUtils.SetAutoCommit(AComponent, not Assigned(ATransaction));
+end;
+
 function TMARSUniDAC.CreateCommand(const ASQL: string;
   const ATransaction: TUniTransaction; const AContextOwned: Boolean): TUniSQL;
 begin
@@ -481,6 +490,7 @@ begin
   try
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
+    SetAutoCommit(Result, ATransaction);
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
     if AContextOwned and Assigned(Activation) then
@@ -499,6 +509,7 @@ begin
     Result.Name := AName;
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
+    SetAutoCommit(Result, ATransaction);
     Result.SQL.Text := ASQL;
     InjectMacroAndParamValues(Result);
     if AContextOwned and Assigned(Activation) then
@@ -518,6 +529,7 @@ begin
     Result.Name := AName;
     Result.Connection := Connection;
     Result.Transaction := ATransaction;
+    SetAutoCommit(Result, ATransaction);
     Result.StoredProcName := AStoredProcName;
     // the parameters, from the metadata of the procedure
     Result.PrepareSQL(ASelectable);

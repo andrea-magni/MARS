@@ -122,7 +122,7 @@ method. See [Engine parameters](/reference/parameters#engine-parameters).
 
 ## Transactions
 
-`InTransaction` runs a procedure in a new `TUniTransaction`: commit when it ends, rollback when it raises an exception. The `ATransaction` arguments of the helper are assigned to the queries and commands (with databases that have one transaction per connection, like MySQL, every statement of the connection takes part in the active one).
+`InTransaction` runs a procedure in a new `TUniTransaction`: commit when it ends, rollback when it raises an exception. The `ATransaction` arguments of the helper are assigned to the queries and commands (with databases that have one transaction per connection, like MySQL, every statement of the connection takes part in the active one). The queries, commands and stored procedures created with a transaction leave the commit to it (`AutoCommit` off: with Firebird and InterBase it would commit each statement on its own, and leave nothing to roll back); those created without one commit after each execution.
 
 ```pascal
 UniDAC.InTransaction(
