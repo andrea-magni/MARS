@@ -30,6 +30,7 @@ uses
   Tests.Client.FireDAC in 'Tests.Client.FireDAC.pas',
   Tests.Client.Async in 'Tests.Client.Async.pas',
   Tests.RequestTarget in 'Tests.RequestTarget.pas',
+  Tests.Engine.COM in 'Tests.Engine.COM.pas',
   Tests.DCS in 'Tests.DCS.pas',
   Tests.MARSParameters in 'Tests.MARSParameters.pas',
   Tests.Activation in 'Tests.Activation.pas',

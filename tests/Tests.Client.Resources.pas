@@ -60,6 +60,10 @@ type
     function PostForm([FormParam('name')] const AName: string): string;
     [PUT, Path('form'), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), Produces(TMediaType.TEXT_PLAIN)]
     function PutForm([FormParam('name')] const AName: string; [FormParam('city')] const ACity: string): string;
+
+    // COM in the thread of the request: 'initialized' when the engine did it (COM.Initialize)
+    [GET, Path('com'), Produces(TMediaType.TEXT_PLAIN)]
+    function GetCOM: string;
   end;
 
 
@@ -86,6 +90,7 @@ implementation
 
 uses
   System.IOUtils, System.DateUtils, Variants
+{$IFDEF MSWINDOWS}, Winapi.Windows, Winapi.ActiveX{$ENDIF}
 , FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Def, FireDAC.Stan.Async, FireDAC.DApt, FireDAC.DApt.Intf
 , FireDAC.Phys.SQLite
 , MARS.Core.Registry, MARS.Core.Exceptions
@@ -137,6 +142,26 @@ function TTestResource.PutForm(const AName, ACity: string): string;
 begin
   Result := 'put: ' + AName + ', ' + ACity;
 end;
+
+function TTestResource.GetCOM: string;
+{$IFDEF MSWINDOWS}
+var
+  LResult: HRESULT;
+begin
+  // S_FALSE: COM was already initialized in this thread (multithreaded apartment)
+  LResult := CoInitializeEx(nil, COINIT_MULTITHREADED);
+  if Succeeded(LResult) then
+    CoUninitialize;
+  if LResult = S_FALSE then
+    Result := 'initialized'
+  else
+    Result := 'not initialized';
+end;
+{$ELSE}
+begin
+  Result := 'not Windows';
+end;
+{$ENDIF}
 
 function TTestResource.GetBig: string;
 begin

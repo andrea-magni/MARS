@@ -38,11 +38,15 @@ type
     FOnException: TExceptionProc;
   protected
     procedure PatchCORS(const ARequest: IMARSRequest; const AResponse: IMARSResponse); virtual;
+    function DoHandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean; virtual;
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
     destructor Destroy; override;
 
     // IMARSEngine -------------------------------------------------------------
+    // the request; with the COM.Initialize parameter (Windows), COM initialized for it in the
+    // thread that serves it (multithreaded apartment), for COM based components (ADO, OLE DB
+    // providers, MSXML...)
     function HandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean; virtual;
 
     function AddApplication(const AName, ABasePath: string;
@@ -127,6 +131,9 @@ type
 implementation
 
 uses
+{$IFDEF MSWINDOWS}
+  Winapi.ActiveX,
+{$ENDIF}
   MARS.Core.Utils
 , MARS.Core.Activation, MARS.Core.Activation.Interfaces
 , MARS.Core.Application
@@ -235,6 +242,29 @@ begin
 end;
 
 function TMARSEngine.HandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean;
+{$IFDEF MSWINDOWS}
+var
+  LCOMInitialized: Boolean;
+{$ENDIF}
+begin
+{$IFDEF MSWINDOWS}
+  // balanced in the same thread: CoUninitialize only when CoInitializeEx succeeded (S_OK, or
+  // S_FALSE when the thread already has COM); RPC_E_CHANGED_MODE (the thread is in another
+  // apartment) leaves COM as it is (#117)
+  LCOMInitialized := Parameters.ByName('COM.Initialize', False).AsBoolean
+    and Succeeded(CoInitializeEx(nil, COINIT_MULTITHREADED));
+  try
+{$ENDIF}
+    Result := DoHandleRequest(ARequest, AResponse);
+{$IFDEF MSWINDOWS}
+  finally
+    if LCOMInitialized then
+      CoUninitialize;
+  end;
+{$ENDIF}
+end;
+
+function TMARSEngine.DoHandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean;
 var
   LApplication: IMARSApplication;
   LURL: TMARSURL;

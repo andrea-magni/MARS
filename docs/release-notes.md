@@ -5,6 +5,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 ## Unreleased {#unreleased}
 
 **New**
+- `COM.Initialize` engine parameter (Windows): COM initialized for each request in the thread that serves it, and uninitialized after it, for COM based components (ADO, OLE DB providers such as UniDAC or SDAC with SQL Server, MSXML) without `CoInitialize` in every method. [Engine parameters](/reference/parameters#engine-parameters) ([#117](https://github.com/andrea-magni/MARS/issues/117))
 - Routes: a typed body without a result, `PostBody<TBody>`, `PutBody<TBody>`, `PatchBody<TBody>` and `MapBody<TBody>`, as a resource procedure with a `[BodyParam]`. [Routes](/server/routes#methods-and-handlers) ([#269](https://github.com/andrea-magni/MARS/issues/269))
 - Routes: `BodyRequired(False)`, an optional typed body in the OpenAPI document (it is required by default, as before). [Routes](/server/routes#openapi) ([#270](https://github.com/andrea-magni/MARS/issues/270))
 - MCP on stdio: `TMCPStdioServer` (`MARS.MCP.Stdio`) serves the tools, resources and prompts of an object to a client that starts the process (Claude Code, Claude Desktop), without HTTP. [MCP](/features/mcp#a-local-server-on-stdio) ([#272](https://github.com/andrea-magni/MARS/issues/272))
