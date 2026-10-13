@@ -16,7 +16,7 @@ TMARSNetClient / TMARSIndyClient        (connection: host, port, protocol)
   - `TMARSClientResource` — generic;
   - `TMARSClientResourceJSON` — response parsed as JSON;
   - `TMARSClientResourceStream` — binary;
-  - `TMARSClientResourceFormData` / `TMARSClientResourceFormUrlEncoded` — form posts;
+  - `TMARSClientResourceFormData` / `TMARSClientResourceFormUrlEncoded` — form posts (FormUrlEncoded: POST and PUT with every client; the `TMARSParameters` passed in are copied, the caller frees its own);
   - `TMARSClientResourceSSE` — server-sent events;
   - `TMARSFDResource` (`MARS.Client.FireDAC`) — datasets + deltas;
   - `TMARSUniDACResource`/`TMARSMyDACResource`/`TMARSIBDACResource` (`MARS.Client.UniDAC`/`MyDAC`/`IBDAC`) — Devart datasets in `TVirtualTable`s, whole datasets back with `SendData` (see `devart.md`);
@@ -42,7 +42,7 @@ HelloWorldResource.GET(
 );
 ```
 
-`TMARSClientResourceJSON` also offers a `Response: TJSONValue` property (change notifications via `AddJSONChangedEvent`, or override `AfterGET`). Async variants (`GETAsync`, `POSTAsync`) take completion/exception handlers and don't block; there are also fluent sync/async param builders in `MARS.Client.CustomResource` (`IMARSClientSyncParams` with `BeforeExecute/AfterExecute/OnException/Go`; `IMARSClientAsyncParams` with `OnCompletion` instead of `AfterExecute`).
+`TMARSClientResourceJSON` also offers a `Response: TJSONValue` property (change notifications via `AddJSONChangedEvent`, or override `AfterGET`). Async variants (`GETAsync`, `POSTAsync`) take completion/exception handlers and don't block (they run on copies of resource, application and client, so the components stay usable; an Indy IOHandler you assigned, i.e. SSL, is cloned); there are also fluent sync/async param builders in `MARS.Client.CustomResource` (`IMARSClientSyncParams` with `BeforeExecute/AfterExecute/OnException/Go`; `IMARSClientAsyncParams` with `OnCompletion` instead of `AfterExecute`).
 
 Path/query values: fill `PathParamsValues` (in order of `{segments}`) and `QueryParams` (`name=value` strings) before calling.
 

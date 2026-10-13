@@ -37,6 +37,11 @@ The templates serve Swagger UI from the `www` folder of MARS with a relative Win
 ```
 
 `{bin}` is the folder of the executable; `PathDelim` makes the same code work on Windows and Linux.
+
+The other documentation page of the templates, Stoplight Elements (`<application>/docs`), has no
+files to copy: it loads Elements from a CDN. For a server without access to the internet, serve a
+copy of `web-components.min.js` and `styles.min.css` and point `OpenAPI.Elements.Script` and
+`OpenAPI.Elements.Stylesheet` to it (see [OpenAPI](/features/openapi#stoplight-elements)).
 :::
 
 ## Windows service

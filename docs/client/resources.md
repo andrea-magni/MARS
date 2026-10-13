@@ -117,7 +117,7 @@ DocResource.FormData := [
 DocResource.POST;
 ```
 
-`TMARSClientResourceFormUrlEncoded` does the same for `application/x-www-form-urlencoded` key/value pairs.
+`TMARSClientResourceFormUrlEncoded` does the same for `application/x-www-form-urlencoded` key/value pairs, with every client (Indy, Net, Http) and with `POST` and `PUT`. The resource owns its `FormUrlEncoded` parameters: the `TMARSParameters` you pass to `POST`, `PUT`, `POSTAsync` or assign to the property are copied, so free your own object as usual.
 
 ## Asynchronous calls
 
@@ -139,6 +139,8 @@ PeopleResource.GETAsync(
 ```
 
 The UI stays responsive while the request is in flight.
+
+Each asynchronous call runs on copies of the resource, its application and its client, made when it starts and freed when it ends: the components you dropped are never used by the worker thread, and you can start another call right after. With the Indy client, an IOHandler you assigned (i.e. `TIdSSLIOHandlerSocketOpenSSL`) is cloned for the copy with its options and events.
 
 ## Server-Sent Events
 

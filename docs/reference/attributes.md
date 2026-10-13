@@ -83,6 +83,7 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | `[JSONName('key')]` | field | Custom JSON key. |
 | `[JSONSkip]` | field | Exclude from (de)serialization. |
 | `[JSONSkipEmptyValues]` `[JSONIncludeEmptyValues]` | field, resource, method | Empty/null inclusion policy. |
+| `[JSONDateIsUTC]` `[JSONDateIsUTC(False)]` | resource, method | Dates as UTC (`...Z`) or as local times with their offset, whatever `JSON.DateIsUTC` says. See [Serialization](/features/serialization). |
 
 ## Data — FireDAC (`MARS.Data.FireDAC.*`)
 

@@ -113,6 +113,13 @@ end;
 
 How to get the key of a new record depends on the database: `last_insert_id()` with MySQL (the [UniDACDemo](/demos/#unidacdemo)), `returning` with Firebird or PostgreSQL. Macros use the UniDAC syntax (`&QueryParam_orderBy`): validate their value.
 
+::: tip SQL Server through OLE DB, ADO and other COM components
+Providers based on COM, such as SQL Server through OLE DB, need COM initialized in the thread that
+uses them, and the threads of the HTTP servers do not have it. Set the `COM.Initialize=true` engine
+parameter (Windows): the engine initializes COM for each request instead of `CoInitialize` in every
+method. See [Engine parameters](/reference/parameters#engine-parameters).
+:::
+
 ## Transactions
 
 `InTransaction` runs a procedure in a new `TUniTransaction`: commit when it ends, rollback when it raises an exception. The `ATransaction` arguments of the helper are assigned to the queries and commands (with databases that have one transaction per connection, like MySQL, every statement of the connection takes part in the active one).
