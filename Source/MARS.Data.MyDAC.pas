@@ -92,6 +92,21 @@ type
       const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TMyQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TMyTransaction; virtual;
 
+    // A stored procedure, prepared (its parameters from the database) and with the values of its
+    // input parameters injected as for queries (path, query, form... parameters with the same
+    // name); its output parameters are not touched. Context owned: freed after the request.
+    function CreateStoredProc(const AStoredProcName: string; const ATransaction: TMyTransaction = nil;
+      const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TMyStoredProc; virtual;
+    // a stored procedure that returns a result set, open: return it from a method as a dataset
+    function OpenStoredProc(const AStoredProcName: string; const ATransaction: TMyTransaction = nil;
+      const AOnBeforeOpen: TProc<TMyStoredProc> = nil; const AContextOwned: Boolean = True;
+      const AName: string = 'DataSet'): TMyStoredProc; virtual;
+    // a stored procedure executed (no result set): the rows affected; its output parameters in
+    // AOnAfterExecute
+    function ExecStoredProc(const AStoredProcName: string; const ATransaction: TMyTransaction = nil;
+      const AOnBeforeExecute: TProc<TMyStoredProc> = nil;
+      const AOnAfterExecute: TProc<TMyStoredProc> = nil): Integer; virtual;
+
     function ExecuteSQL(const ASQL: string; const ATransaction: TMyTransaction = nil;
       const ABeforeExecute: TProc<TMyCommand> = nil;
       const AAfterExecute: TProc<TMyCommand> = nil): Integer; virtual;
@@ -385,6 +400,61 @@ begin
   end;
 end;
 
+function TMARSMyDAC.CreateStoredProc(const AStoredProcName: string;
+  const ATransaction: TMyTransaction; const AContextOwned: Boolean; const AName: string): TMyStoredProc;
+begin
+  Result := TMyStoredProc.Create(nil);
+  try
+    Result.Name := AName;
+    Result.Connection := Connection;
+    CheckTransaction(ATransaction);
+    Result.StoredProcName := AStoredProcName;
+    // the parameters, from the metadata of the procedure
+    Result.PrepareSQL;
+    InjectParamValues(Result.Params);
+    if AContextOwned and Assigned(Activation) then
+      Activation.AddToContext(Result);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSMyDAC.OpenStoredProc(const AStoredProcName: string;
+  const ATransaction: TMyTransaction; const AOnBeforeOpen: TProc<TMyStoredProc>;
+  const AContextOwned: Boolean; const AName: string): TMyStoredProc;
+begin
+  Result := CreateStoredProc(AStoredProcName, ATransaction, AContextOwned, AName);
+  try
+    if Assigned(AOnBeforeOpen) then
+      AOnBeforeOpen(Result);
+    Result.Open;
+  except
+    if not (AContextOwned and Assigned(Activation)) then
+      Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSMyDAC.ExecStoredProc(const AStoredProcName: string;
+  const ATransaction: TMyTransaction; const AOnBeforeExecute,
+  AOnAfterExecute: TProc<TMyStoredProc>): Integer;
+var
+  LStoredProc: TMyStoredProc;
+begin
+  LStoredProc := CreateStoredProc(AStoredProcName, ATransaction, False);
+  try
+    if Assigned(AOnBeforeExecute) then
+      AOnBeforeExecute(LStoredProc);
+    LStoredProc.ExecProc;
+    Result := LStoredProc.RowsAffected;
+    if Assigned(AOnAfterExecute) then
+      AOnAfterExecute(LStoredProc);
+  finally
+    LStoredProc.Free;
+  end;
+end;
+
 function TMARSMyDAC.CreateTransaction(const AContextOwned: Boolean): TMyTransaction;
 begin
   Result := TMyTransaction.Create(nil);
@@ -499,6 +569,9 @@ begin
   for LIndex := 0 to AParams.Count-1 do
   begin
     LParam := AParams[LIndex];
+    // the values of the request go into the input parameters only (stored procedures, #65)
+    if LParam.ParamType in [ptOutput, ptResult] then
+      Continue;
     if ((not AOnlyIfEmpty) or LParam.IsNull) then
       LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
   end;

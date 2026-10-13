@@ -80,6 +80,7 @@ The helpers have the same members (with the types of their library):
 | `Query(sql)` and overloads | Opens a query. With `AContextOwned = True` (the default) the query belongs to the request and MARS frees it after writing the response, so it can be the result of the method. Overloads take a transaction, a callback before `Open` and one when the dataset is ready (then the query is freed at once). |
 | `CreateQuery`, `CreateCommand`, `CreateTransaction` | Create the objects, bound to the connection, with parameters and macros already filled. |
 | `ExecuteSQL(sql, transaction, before, after)` | Executes a statement that returns no rows, returns the number of affected rows. `before` sets parameters, `after` reads output parameters. |
+| `OpenStoredProc(name, transaction, before)`, `ExecStoredProc(name, transaction, before, after)`, `CreateStoredProc(name)` | Stored procedures, as `Query`, `ExecuteSQL` and `CreateQuery`: prepared (the parameters come from the database), the input parameters named after the request filled, the output ones left alone. `OpenStoredProc` returns the rows (Firebird/InterBase: a selectable procedure), `ExecStoredProc` the affected rows. See [FireDAC ▸ Stored procedures](/features/firedac#stored-procedures). |
 | `InTransaction(proc)` | Runs `proc` in a new transaction: commit when it ends, rollback if it raises an exception. |
 | `SetName<T>(component, name)` | Names a dataset (the name of its member in a multi-dataset response). |
 | `Connection` | The connection, created on first use. |

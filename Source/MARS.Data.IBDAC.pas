@@ -91,6 +91,24 @@ type
       const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TIBCQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TIBCTransaction; virtual;
 
+    // A stored procedure, prepared (its parameters from the database) and with the values of its
+    // input parameters injected as for queries (path, query, form... parameters with the same
+    // name); its output parameters are not touched. Context owned: freed after the request.
+    // ASelectable: a procedure that returns rows (Firebird, InterBase: SELECT * FROM, not EXECUTE
+    // PROCEDURE), as OpenStoredProc prepares it
+    function CreateStoredProc(const AStoredProcName: string; const ATransaction: TIBCTransaction = nil;
+      const AContextOwned: Boolean = True; const AName: string = 'DataSet';
+      const ASelectable: Boolean = False): TIBCStoredProc; virtual;
+    // a stored procedure that returns a result set, open: return it from a method as a dataset
+    function OpenStoredProc(const AStoredProcName: string; const ATransaction: TIBCTransaction = nil;
+      const AOnBeforeOpen: TProc<TIBCStoredProc> = nil; const AContextOwned: Boolean = True;
+      const AName: string = 'DataSet'): TIBCStoredProc; virtual;
+    // a stored procedure executed (no result set): the rows affected; its output parameters in
+    // AOnAfterExecute
+    function ExecStoredProc(const AStoredProcName: string; const ATransaction: TIBCTransaction = nil;
+      const AOnBeforeExecute: TProc<TIBCStoredProc> = nil;
+      const AOnAfterExecute: TProc<TIBCStoredProc> = nil): Integer; virtual;
+
     function ExecuteSQL(const ASQL: string; const ATransaction: TIBCTransaction = nil;
       const ABeforeExecute: TProc<TIBCSQL> = nil;
       const AAfterExecute: TProc<TIBCSQL> = nil): Integer; virtual;
@@ -380,6 +398,63 @@ begin
   end;
 end;
 
+function TMARSIBDAC.CreateStoredProc(const AStoredProcName: string;
+  const ATransaction: TIBCTransaction; const AContextOwned: Boolean; const AName: string;
+  const ASelectable: Boolean): TIBCStoredProc;
+begin
+  Result := TIBCStoredProc.Create(nil);
+  try
+    Result.Name := AName;
+    Result.Connection := Connection;
+    Result.Transaction := ATransaction;
+    Result.AutoCommit := not Assigned(ATransaction); // see CreateCommand
+    Result.StoredProcName := AStoredProcName;
+    // the parameters, from the metadata of the procedure
+    Result.PrepareSQL(ASelectable);
+    InjectParamValues(Result.Params);
+    if AContextOwned and Assigned(Activation) then
+      Activation.AddToContext(Result);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSIBDAC.OpenStoredProc(const AStoredProcName: string;
+  const ATransaction: TIBCTransaction; const AOnBeforeOpen: TProc<TIBCStoredProc>;
+  const AContextOwned: Boolean; const AName: string): TIBCStoredProc;
+begin
+  Result := CreateStoredProc(AStoredProcName, ATransaction, AContextOwned, AName, True);
+  try
+    if Assigned(AOnBeforeOpen) then
+      AOnBeforeOpen(Result);
+    Result.Open;
+  except
+    if not (AContextOwned and Assigned(Activation)) then
+      Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSIBDAC.ExecStoredProc(const AStoredProcName: string;
+  const ATransaction: TIBCTransaction; const AOnBeforeExecute,
+  AOnAfterExecute: TProc<TIBCStoredProc>): Integer;
+var
+  LStoredProc: TIBCStoredProc;
+begin
+  LStoredProc := CreateStoredProc(AStoredProcName, ATransaction, False);
+  try
+    if Assigned(AOnBeforeExecute) then
+      AOnBeforeExecute(LStoredProc);
+    LStoredProc.ExecProc;
+    Result := LStoredProc.RowsAffected;
+    if Assigned(AOnAfterExecute) then
+      AOnAfterExecute(LStoredProc);
+  finally
+    LStoredProc.Free;
+  end;
+end;
+
 function TMARSIBDAC.CreateTransaction(const AContextOwned: Boolean): TIBCTransaction;
 begin
   Result := TIBCTransaction.Create(nil);
@@ -494,6 +569,9 @@ begin
   for LIndex := 0 to AParams.Count-1 do
   begin
     LParam := AParams[LIndex];
+    // the values of the request go into the input parameters only (stored procedures, #65)
+    if LParam.ParamType in [ptOutput, ptResult] then
+      Continue;
     if ((not AOnlyIfEmpty) or LParam.IsNull) then
       LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
   end;

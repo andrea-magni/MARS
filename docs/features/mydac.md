@@ -77,6 +77,7 @@ The rules are the ones of [Data Access](/features/data-access#injection): `[Conn
 | `Query(sql)` and overloads | Opens a `TMyQuery` owned by the request: return it from the method. Overloads take a transaction, the ownership, a callback before `Open`, a callback when ready. |
 | `CreateQuery`, `CreateCommand` (`TMyCommand`), `CreateTransaction` (`TMyTransaction`) | The objects, with parameters and macros already filled. |
 | `ExecuteSQL(sql, transaction, before, after)` | Executes a statement, returns the number of affected rows. |
+| `OpenStoredProc`, `ExecStoredProc`, `CreateStoredProc` (`TMyStoredProc`) | Stored procedures: the rows (owned by the request), or the affected rows and the output parameters; input parameters filled from the request. As in [Data Access](/features/data-access#the-helper). |
 | `InTransaction(proc)` | Commit when `proc` ends, rollback when it raises an exception. |
 | `InjectParamValues(params)`, `InjectMacroValues(macros)`, `InjectMacroAndParamValues(command or dataset)` | Fill parameters and macros from the request. |
 | `SetName<T>`, `Connection`, `ConnectionDefName`, `Activation` | As in [Data Access](/features/data-access#the-helper). |

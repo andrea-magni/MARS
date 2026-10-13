@@ -99,6 +99,8 @@ type
 
     procedure InjectParamValues(const ACommand: TUniSQL;
       const AOnlyIfEmpty: Boolean = True); overload; virtual;
+    procedure InjectParamValues(const AParams: TUniParams;
+      const AOnlyIfEmpty: Boolean = True); overload; virtual;
     procedure InjectParamValues(const ACommand: TUniQuery;
       const AOnlyIfEmpty: Boolean = True); overload; virtual;
     procedure InjectMacroValues(const ACommand: TUniSQL;
@@ -127,6 +129,24 @@ type
     function CreateQuery(const ASQL: string = ''; const ATransaction: TUniTransaction = nil;
       const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TUniQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TUniTransaction; virtual;
+
+    // A stored procedure, prepared (its parameters from the database) and with the values of its
+    // input parameters injected as for queries (path, query, form... parameters with the same
+    // name); its output parameters are not touched. Context owned: freed after the request.
+    // ASelectable: a procedure that returns rows (Firebird, InterBase: SELECT * FROM, not EXECUTE
+    // PROCEDURE), as OpenStoredProc prepares it
+    function CreateStoredProc(const AStoredProcName: string; const ATransaction: TUniTransaction = nil;
+      const AContextOwned: Boolean = True; const AName: string = 'DataSet';
+      const ASelectable: Boolean = False): TUniStoredProc; virtual;
+    // a stored procedure that returns a result set, open: return it from a method as a dataset
+    function OpenStoredProc(const AStoredProcName: string; const ATransaction: TUniTransaction = nil;
+      const AOnBeforeOpen: TProc<TUniStoredProc> = nil; const AContextOwned: Boolean = True;
+      const AName: string = 'DataSet'): TUniStoredProc; virtual;
+    // a stored procedure executed (no result set): the rows affected; its output parameters in
+    // AOnAfterExecute
+    function ExecStoredProc(const AStoredProcName: string; const ATransaction: TUniTransaction = nil;
+      const AOnBeforeExecute: TProc<TUniStoredProc> = nil;
+      const AOnAfterExecute: TProc<TUniStoredProc> = nil): Integer; virtual;
 
     function ExecuteSQL(const ASQL: string; const ATransaction: TUniTransaction = nil;
       const ABeforeExecute: TProc<TUniSQL> = nil;
@@ -489,6 +509,62 @@ begin
   end;
 end;
 
+function TMARSUniDAC.CreateStoredProc(const AStoredProcName: string;
+  const ATransaction: TUniTransaction; const AContextOwned: Boolean; const AName: string;
+  const ASelectable: Boolean): TUniStoredProc;
+begin
+  Result := TUniStoredProc.Create(nil);
+  try
+    Result.Name := AName;
+    Result.Connection := Connection;
+    Result.Transaction := ATransaction;
+    Result.StoredProcName := AStoredProcName;
+    // the parameters, from the metadata of the procedure
+    Result.PrepareSQL(ASelectable);
+    InjectParamValues(Result.Params);
+    if AContextOwned and Assigned(Activation) then
+      Activation.AddToContext(Result);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSUniDAC.OpenStoredProc(const AStoredProcName: string;
+  const ATransaction: TUniTransaction; const AOnBeforeOpen: TProc<TUniStoredProc>;
+  const AContextOwned: Boolean; const AName: string): TUniStoredProc;
+begin
+  Result := CreateStoredProc(AStoredProcName, ATransaction, AContextOwned, AName, True);
+  try
+    if Assigned(AOnBeforeOpen) then
+      AOnBeforeOpen(Result);
+    Result.Open;
+  except
+    if not (AContextOwned and Assigned(Activation)) then
+      Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSUniDAC.ExecStoredProc(const AStoredProcName: string;
+  const ATransaction: TUniTransaction; const AOnBeforeExecute,
+  AOnAfterExecute: TProc<TUniStoredProc>): Integer;
+var
+  LStoredProc: TUniStoredProc;
+begin
+  LStoredProc := CreateStoredProc(AStoredProcName, ATransaction, False);
+  try
+    if Assigned(AOnBeforeExecute) then
+      AOnBeforeExecute(LStoredProc);
+    LStoredProc.ExecProc;
+    Result := LStoredProc.RowsAffected;
+    if Assigned(AOnAfterExecute) then
+      AOnAfterExecute(LStoredProc);
+  finally
+    LStoredProc.Free;
+  end;
+end;
+
 function TMARSUniDAC.CreateTransaction(const AContextOwned: Boolean): TUniTransaction;
 begin
   Result := TUniTransaction.Create(nil);
@@ -659,30 +735,32 @@ begin
   end;
 end;
 
-procedure TMARSUniDAC.InjectParamValues(const ACommand: TUniSQL; const AOnlyIfEmpty: Boolean);
+procedure TMARSUniDAC.InjectParamValues(const AParams: TUniParams; const AOnlyIfEmpty: Boolean);
 var
   LIndex: Integer;
   LParam: TUniParam;
 begin
-  for LIndex := 0 to ACommand.Params.Count-1 do
+  if not Assigned(AParams) then
+    Exit;
+  for LIndex := 0 to AParams.Count-1 do
   begin
-    LParam := ACommand.Params[LIndex];
+    LParam := AParams[LIndex];
+    // the values of the request go into the input parameters only (stored procedures, #65)
+    if LParam.ParamType in [ptOutput, ptResult] then
+      Continue;
     if ((not AOnlyIfEmpty) or LParam.IsNull) then
       LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
   end;
 end;
 
-procedure TMARSUniDAC.InjectParamValues(const ACommand: TUniQuery; const AOnlyIfEmpty: Boolean);
-var
-  LIndex: Integer;
-  LParam: TUniParam;
+procedure TMARSUniDAC.InjectParamValues(const ACommand: TUniSQL; const AOnlyIfEmpty: Boolean);
 begin
-  for LIndex := 0 to ACommand.Params.Count-1 do
-  begin
-    LParam := ACommand.Params[LIndex];
-    if ((not AOnlyIfEmpty) or LParam.IsNull) then
-      LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
-  end;
+  InjectParamValues(ACommand.Params, AOnlyIfEmpty);
+end;
+
+procedure TMARSUniDAC.InjectParamValues(const ACommand: TUniQuery; const AOnlyIfEmpty: Boolean);
+begin
+  InjectParamValues(ACommand.Params, AOnlyIfEmpty);
 end;
 
 procedure TMARSUniDAC.InTransaction(const ADoSomething: TProc<TUniTransaction>);

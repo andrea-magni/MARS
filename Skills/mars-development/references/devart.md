@@ -66,7 +66,7 @@ end;
 ```
 
 - `[UniDACConnection]`, `[MyDACConnection]`, `[IBDACConnection]` are aliases of the `ConnectionAttribute` of each unit: use them when a unit uses two integrations (Delphi has no unit-qualified attribute names).
-- Helper members (as `TMARSFireDAC`, without `ApplyUpdates`): `Query` overloads, `CreateQuery`, `CreateCommand`, `CreateTransaction`, `ExecuteSQL(sql, transaction, before, after): Integer` (rows affected), `InTransaction(proc)`, `SetName<T>`, `AddContextValueProvider`.
+- Helper members (as `TMARSFireDAC`, without `ApplyUpdates`): `Query` overloads, `CreateQuery`, `CreateCommand`, `CreateTransaction`, `ExecuteSQL(sql, transaction, before, after): Integer` (rows affected), `OpenStoredProc(name, transaction, before)` / `ExecStoredProc(name, transaction, before, after)` / `CreateStoredProc(name)` (stored procedures, prepared, input params injected; IBDAC/UniDAC prepare `OpenStoredProc` as selectable, `SELECT * FROM`), `InTransaction(proc)`, `SetName<T>`, `AddContextValueProvider`.
 - Parameters and macros named after the request are filled: `:PathParam_id`, `:QueryParam_city`, `:FormParam_x`, `:Token_UserName`, `:Token_Claim_x`, `:Token_HasRole_admin`; set the others in the `before` callback of `ExecuteSQL`.
 - Arrays of datasets: `TArray<TMemDataSet>` (`MemDS`), named with `SetName`.
 - Writers: `application/json` (array of records, `MARS.Data.MessageBodyWriters`: null fields `null`, dotted names nested objects), `application/xml`, the native type (an object with one member per dataset: `SaveToXML`, zipped, Base64).
