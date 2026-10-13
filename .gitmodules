@@ -4,3 +4,4 @@
 [submodule "ThirdParty/Delphi-Mocks"]
 	path = ThirdParty/Delphi-Mocks
 	url = https://github.com/VSoftTechnologies/Delphi-Mocks.git
+	ignore = dirty
