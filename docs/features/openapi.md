@@ -1,6 +1,6 @@
 # OpenAPI 3 & Swagger
 
-MARS can generate an **OpenAPI 3** specification for an application directly from your resources — no hand-written YAML. It reflects over the registered resources, methods, parameters, return types and authorization rules to build a `TOpenAPI` document (`MARS.OpenAPI.v3.pas`), which you expose as JSON or YAML and render with **Swagger UI**.
+MARS can generate an **OpenAPI 3** specification for an application directly from your resources — no hand-written YAML. It reflects over the registered resources, methods, parameters, return types and authorization rules to build a `TOpenAPI` document (`MARS.OpenAPI.v3.pas`), which you expose as JSON or YAML and render with **Swagger UI** or **Stoplight Elements**.
 
 ## How it works
 
@@ -64,7 +64,37 @@ Endpoints (under application `/default`):
 ```
 GET /rest/default/openapi        → OpenAPI 3 JSON (or YAML)
 GET /rest/default/www/           → Swagger UI, pointed at the spec
+GET /rest/default/docs           → Stoplight Elements, pointed at the spec
 ```
+
+## Stoplight Elements
+
+[Stoplight Elements](https://stoplight.io/open-source/elements) is an open source alternative to
+Swagger UI: a three-column page with the operations, their parameters and schemas, code samples
+and a "Send API Request" panel. `TOpenAPIElementsResource` (`MARS.OpenAPI.Elements`) serves it;
+derive a resource with a path (the templates have it as `docs`):
+
+```pascal
+uses MARS.OpenAPI.Elements;
+
+type
+  [Path('docs'), MetaVisible(False)]
+  TDocsResource = class(TOpenAPIElementsResource)
+  end;
+
+initialization
+  MARSRegister(TDocsResource);
+```
+
+The page loads Elements from a CDN (unpkg, a fixed version: `OPENAPI_ELEMENTS_VERSION`) and the
+document from `<application>/openapi`, with the hash router (the navigation of the page never
+reaches the server). Application parameters change it:
+
+| Parameter | Default | Purpose |
+| --- | --- | --- |
+| `OpenAPI.Elements.SpecPath` | `openapi` | The path of the OpenAPI document in the application. |
+| `OpenAPI.Elements.Layout` | `sidebar` | `sidebar` or `stacked`. |
+| `OpenAPI.Elements.Script`, `OpenAPI.Elements.Stylesheet` | unpkg | The URLs of `web-components.min.js` and `styles.min.css`, i.e. copies of your own for a server without access to the internet. |
 
 ## Enriching the spec
 

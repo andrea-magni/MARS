@@ -123,6 +123,7 @@
         <DCCReference Include="Tests.Engine.COM.pas"/>
         <DCCReference Include="Tests.JSONDateIsUTC.pas"/>
         <DCCReference Include="Tests.RateLimiter.pas"/>
+        <DCCReference Include="Tests.OpenAPIElements.pas"/>
         <DCCReference Include="Tests.DCS.pas"/>
         <DCCReference Include="Tests.MARSParameters.pas"/>
         <DCCReference Include="Tests.Activation.pas"/>

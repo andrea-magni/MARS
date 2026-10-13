@@ -33,6 +33,7 @@ uses
   Tests.Engine.COM in 'Tests.Engine.COM.pas',
   Tests.JSONDateIsUTC in 'Tests.JSONDateIsUTC.pas',
   Tests.RateLimiter in 'Tests.RateLimiter.pas',
+  Tests.OpenAPIElements in 'Tests.OpenAPIElements.pas',
   Tests.DCS in 'Tests.DCS.pas',
   Tests.MARSParameters in 'Tests.MARSParameters.pas',
   Tests.Activation in 'Tests.Activation.pas',

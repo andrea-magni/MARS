@@ -5,6 +5,7 @@ interface
 uses
   SysUtils, Classes
 , FireDAC.Comp.Client, FireDAC.Comp.DataSet
+, MARS.OpenAPI.Elements, MARS.Metadata.Attributes
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.Data.FireDAC.Utils
 , MARS.Core.JSON, MARS.Core.Response
@@ -78,6 +79,10 @@ type
     function GetCOM: string;
   end;
 
+
+  // the documentation of the application with Stoplight Elements (Tests.OpenAPIElements)
+  [Path('docs'), MetaVisible(False)]
+  TDocsResource = class(TOpenAPIElementsResource);
 
   // the dates of a database table, for the FireDAC client components (Tests.Client.FireDAC): the
   // datasets in the native format, their deltas applied as a FireDAC server does, plain JSON
@@ -279,6 +284,7 @@ end;
 initialization
   MARSRegister(TTestResource);
   MARSRegister(TFDDatesResource);
+  MARSRegister(TDocsResource);
 
 finalization
   FreeAndNil(GDatesConnection);
