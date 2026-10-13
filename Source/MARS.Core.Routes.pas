@@ -179,6 +179,9 @@ type
     FResultType: PTypeInfo;
     FBodyType: PTypeInfo;
     FBodyRequired: Boolean;
+    FResultTypeName: string;
+    FResultMetaType: PTypeInfo;
+    FResultDescription: string;
     FInvoker: TMARSRouteInvoker;
     FName: string;
     FNameSet: Boolean;
@@ -216,6 +219,11 @@ type
     // the typed body is required (default) or optional, in the OpenAPI document (as [Required] on
     // the body parameter of a resource method)
     function BodyRequired(const ARequired: Boolean): TMARSRoute;
+    // the shape of the result for the documentation (OpenAPI), as [MetaResult] of a resource
+    // method, i.e. the rows of a dataset: MetaResult(TypeInfo(TArray<TCustomerRow>)), or by
+    // qualified name ('Unit.TType', 'TArray<Unit.TType>': the type must be used elsewhere too)
+    function MetaResult(const ATypeInfo: PTypeInfo; const ADescription: string = ''): TMARSRoute; overload;
+    function MetaResult(const ATypeName: string; const ADescription: string = ''): TMARSRoute; overload;
 
     // documentation (OpenAPI)
     function Summary(const AText: string): TMARSRoute;
@@ -242,6 +250,9 @@ type
     property ResultType: PTypeInfo read FResultType;
     property BodyType: PTypeInfo read FBodyType;
     property IsBodyRequired: Boolean read FBodyRequired;
+    property ResultTypeName: string read FResultTypeName;
+    property ResultMetaType: PTypeInfo read FResultMetaType;
+    property ResultDescription: string read FResultDescription;
     property Router: TMARSRouter read FRouter;
     property RouteName: string read FName;
     // Name(...) when given, otherwise derived from method and path (i.e. get_people_id)
@@ -927,6 +938,22 @@ end;
 function TMARSRoute.BodyRequired(const ARequired: Boolean): TMARSRoute;
 begin
   FBodyRequired := ARequired;
+  Result := Self;
+end;
+
+function TMARSRoute.MetaResult(const ATypeName, ADescription: string): TMARSRoute;
+begin
+  FResultTypeName := ATypeName;
+  FResultMetaType := nil;
+  FResultDescription := ADescription;
+  Result := Self;
+end;
+
+function TMARSRoute.MetaResult(const ATypeInfo: PTypeInfo; const ADescription: string): TMARSRoute;
+begin
+  FResultMetaType := ATypeInfo;
+  FResultTypeName := '';
+  FResultDescription := ADescription;
   Result := Self;
 end;
 

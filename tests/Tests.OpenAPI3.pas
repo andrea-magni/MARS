@@ -36,6 +36,8 @@ type
     [Test] procedure JSONValuesAndStreams;
     // #149: a member left out of the JSON (JSONName('')) is not a property named ""
     [Test] procedure MembersLeftOutOfTheJSON;
+    // #276: the JSON on the wire, not the Delphi classes (datasets, token, framework types)
+    [Test] procedure DataSetsAndFrameworkTypes;
 {$IFDEF MARS_YAML}
     [Test] procedure SecurityAsYAML;
     [Test] procedure StringsStayStringsInYAML;
@@ -45,7 +47,7 @@ type
 implementation
 
 uses
-  System.Rtti, System.TypInfo
+  System.Rtti, System.TypInfo, System.StrUtils, MARS.Core.MediaType
 , System.JSON
 , Tests.Objects.Types, Tests.DefaultEngine.Definition
 {$IFDEF MARS_YAML}, Neslib.Yaml, Neslib.Utf8, MARS.YAML.ReadersAndWriters{$ENDIF}
@@ -263,6 +265,82 @@ begin
       // a stream: its bytes
       Assert.AreEqual('string', LOpenAPI.components.schemas['TStream'].&type);
       Assert.AreEqual(0, LOpenAPI.components.schemas['TStream'].properties.Count);
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.DataSetsAndFrameworkTypes;
+
+  function Schema(const AOpenAPI: TOpenAPI; const APath: string; const AGet: Boolean; const AMediaType: string): TSchema;
+  var
+    LContent: TDictionary<string, TMediaTypeObj>;
+  begin
+    Assert.IsTrue(AOpenAPI.paths.ContainsKey(APath), APath);
+    if AGet then
+      LContent := AOpenAPI.paths[APath].get.responses['200'].content
+    else
+      LContent := AOpenAPI.paths[APath].post.requestBody.content;
+    Assert.IsTrue(LContent.ContainsKey(AMediaType), APath + ' ' + AMediaType + ': ' + string.Join(',', LContent.Keys.ToArray));
+    Result := LContent[AMediaType].schema;
+  end;
+
+begin
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    try
+      // no types of the libraries: FireDAC, DB, events, interfaces, pointers, MARS internals
+      for var LName in LOpenAPI.components.schemas.Keys do
+      begin
+        Assert.IsFalse(LName.StartsWith('TFD') or LName.StartsWith('IFD') or LName.StartsWith('EFD'), LName);
+        Assert.IsFalse(MatchText(LName, ['TDataSet', 'TField', 'TFields', 'TNotifyEvent', 'Pointer',
+          'IInterface', 'TClass', 'TMARSParameters', 'TCollection', 'TPersistent']), LName);
+      end;
+
+      // a dataset: its rows in JSON, opaque in the native format
+      var LRows := Schema(LOpenAPI, '/openapidata/query', True, TMediaType.APPLICATION_JSON);
+      Assert.AreEqual('array', LRows.&type);
+      Assert.AreEqual('object', LRows.items.&type);
+      Assert.AreEqual('object', Schema(LOpenAPI, '/openapidata/query', True, TMediaType.APPLICATION_JSON_FireDAC).&type);
+      // arrays of datasets: a member per dataset; in input as their native format too
+      Assert.AreEqual('object', Schema(LOpenAPI, '/openapidata/sets', True, TMediaType.APPLICATION_JSON).&type);
+      Assert.AreEqual('object', Schema(LOpenAPI, '/openapidata/deltas', False, TMediaType.APPLICATION_JSON_FireDAC).&type);
+      Assert.AreEqual('array', Schema(LOpenAPI, '/openapidata/rows', False, TMediaType.APPLICATION_JSON).&type);
+
+      // [MetaResult]: the shape chosen by the developer
+      var LTyped := Schema(LOpenAPI, '/openapidata/typed', True, TMediaType.APPLICATION_JSON);
+      Assert.AreEqual('array', LTyped.&type);
+      Assert.AreEqual('#/components/schemas/TDataRow', LTyped.items.ref);
+      Assert.AreEqual('The rows', LTyped.description);
+      Assert.AreEqual('#/components/schemas/TDataRow', Schema(LOpenAPI, '/openapidata/single', True, TMediaType.APPLICATION_JSON).ref);
+      Assert.IsTrue(LOpenAPI.components.schemas.ContainsKey('TDataRow'));
+      // a wrong name: the declared type
+      Assert.AreEqual('array', Schema(LOpenAPI, '/openapidata/wrong', True, TMediaType.APPLICATION_JSON).&type);
+
+      // a class: its data only; a dataset member as rows, a component opaque
+      Assert.IsTrue(LOpenAPI.components.schemas.ContainsKey('TComponentHolder'), 'TComponentHolder');
+      var LHolder := LOpenAPI.components.schemas['TComponentHolder'];
+      var LNames: TArray<string> := [];
+      for var LProperty in LHolder.properties do
+        LNames := LNames + [LProperty.Key];
+      Assert.AreEqual('Name,Rows,Owner', string.Join(',', LNames));
+      Assert.AreEqual('array', LHolder.GetProperty('Rows').&type, 'a dataset member: its rows');
+      Assert.IsTrue(LOpenAPI.components.schemas.ContainsKey('TComponent'), 'TComponent: ' + string.Join(',', LOpenAPI.components.schemas.Keys.ToArray));
+      Assert.AreEqual('object', LOpenAPI.components.schemas['TComponent'].&type, 'a component: opaque');
+      Assert.AreEqual(0, LOpenAPI.components.schemas['TComponent'].properties.Count);
+
+      // the token as TMARSTokenWriterJSON writes it
+      Assert.IsTrue(LOpenAPI.components.schemas.ContainsKey('TMARSToken'), 'TMARSToken');
+      var LToken := LOpenAPI.components.schemas['TMARSToken'];
+      LNames := [];
+      for var LProperty in LToken.properties do
+        LNames := LNames + [LProperty.Key];
+      Assert.AreEqual('Token,IsVerified,UserName,Roles,Expiration,IssuedAt,Claims', string.Join(',', LNames));
+      Assert.AreEqual('string', LToken.GetProperty('Roles').&type, 'comma separated');
     finally
       LOpenAPI.Free;
     end;

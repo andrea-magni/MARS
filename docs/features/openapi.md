@@ -108,6 +108,8 @@ The generator reads metadata and JSON-schema attributes so you can produce a ric
 - **Security** — `[RolesAllowed]` and `[DenyAll]` are reflected as security requirements (the roles as scopes); `[Authenticated]`, and `[PermitAll]` with roles on the endpoint, as a requirement without scopes (any valid token); `[PermitAll]` alone as none (public). When JWT is configured, Bearer and cookie security schemes are added automatically.
 - **Responses** — `200` with the media types of the method and the schema of its result; a procedure has no content.
 - **JSON values and streams** — a `TJSONValue` is any JSON value (a schema without a type), a `TJSONObject` an object, a `TJSONArray` an array, a `TStream` a string (its bytes), not objects with the properties of their Delphi classes.
+- **Datasets** — see [Datasets and the shape of a result](#datasets-and-the-shape-of-a-result).
+- **Only data** — the schemas describe the JSON on the wire: the members of a class that are not data (events, interfaces, pointers, class references) are left out, and a component (`TComponent` descendant) is an object without properties. The token of the token resource has the shape its writer gives it (`Token`, `IsVerified`, `UserName`, `Roles` as a string separated by commas, `Expiration`, `IssuedAt`, `Claims`).
 
 ```pascal
 [Path('users')]
@@ -139,6 +141,42 @@ function DoLogin: TMARSToken;
 ```
 
 Parameters describing the body, if any, take precedence. Without `[Consumes]` the media type follows the type, as for `[BodyParam]`. A name that cannot be resolved is ignored.
+
+### Datasets and the shape of a result
+
+A method that returns a dataset (`TFDQuery`, `TFDMemTable`, `TMyQuery`, `TIBCQuery`, `TUniQuery`...) is documented with what goes on the wire, not with the properties of the Delphi component:
+
+| Result | `application/json` | native formats (`application/json-firedac`, Devart, XML...) |
+| --- | --- | --- |
+| a dataset | an array of objects (its rows) | the format of the library (an object for the JSON ones, a string otherwise) |
+| `TArray<...>` of datasets | an object with a member per dataset (its name), its rows as an array | idem |
+
+A `[BodyParam]` of a dataset type (deltas, plain JSON into a dataset) is documented the same way.
+
+The fields of the rows depend on the query, so the generator does not know them. Tell it with `[MetaResult]` (unit `MARS.Metadata.Attributes`): the type of the result, or of its elements, for the JSON media types of the response (`application/json`, `*/*`, `+json`):
+
+```pascal
+type
+  // a row of the query, for the documentation
+  TCustomerRow = record
+    ID: Integer;
+    NAME: string;
+    CITY: string;
+  end;
+
+  ...
+
+  [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
+  [MetaResult(TypeInfo(TCustomerRow), True, 'The customers')] // True: an array of them
+  function List: TFDQuery;
+```
+
+`[MetaResult]` works for any result whose type does not tell its shape (a `TJSONObject` built by hand, a `TStream` with JSON, a method that writes the response by itself). It has two forms:
+
+- `[MetaResult(TypeInfo(TType), AIsArray, 'description')]`: preferred. The type is checked by the compiler and stays in the program.
+- `[MetaResult('Unit.TType', 'description')]` or `'TArray<Unit.TType>'`: by qualified name. The type must be used elsewhere in the program too: the linker leaves out the types nothing refers to, and a name that cannot be resolved is ignored (the declared type is documented).
+
+Routes declare it with `MetaResult`: `R.Get<TFDQuery>(...).MetaResult(TypeInfo(TArray<TCustomerRow>))`.
 
 Where each `[OAPI…]` attribute is read:
 

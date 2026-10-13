@@ -201,6 +201,9 @@ type
     procedure TestObjectBodyIsFreed;
     [Test]
     procedure TestBodyWithoutResult;
+    // #276: the shape of the result for the documentation, as [MetaResult]
+    [Test]
+    procedure TestMetaResult;
     [Test]
     procedure TestResultIsReference;
     [Test]
@@ -282,7 +285,7 @@ type
 implementation
 
 uses
-  System.Threading, System.SyncObjs, System.DateUtils, MARS.Core.Registry
+  System.Threading, System.SyncObjs, System.DateUtils, System.JSON, MARS.Core.Registry
 , MARS.Core.Engine, MARS.Core.Exceptions, MARS.Core.Activation, MARS.Core.Token
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
 {$IFDEF MSWINDOWS}
@@ -940,6 +943,29 @@ begin
     LOperation := OperationById(LOpenAPI, 'put_silentthing');
     Assert.IsNotNull(LOperation, 'put_silentthing');
     Assert.IsFalse(LOperation.requestBody.required, 'BodyRequired(False)');
+  finally
+    LOpenAPI.Free;
+  end;
+end;
+
+procedure TMARSRoutesFixture.TestMetaResult;
+begin
+  MARSRoutesOf(FApplication).Get<TJSONObject>('people',
+    function (const C: TMARSRouteContext): TJSONObject
+    begin
+      Result := TJSONObject.Create;
+    end
+  ).Produces(TMediaType.APPLICATION_JSON)
+   .MetaResult(TypeInfo(TArray<TRoutePerson>), 'The people');
+
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    var LOperation := OperationById(LOpenAPI, 'get_people');
+    Assert.IsNotNull(LOperation, 'get_people');
+    var LSchema := LOperation.responses['200'].content['application/json'].schema;
+    Assert.AreEqual('array', LSchema.&type);
+    Assert.AreEqual('#/components/schemas/TRoutePerson', LSchema.items.ref);
+    Assert.AreEqual('The people', LSchema.description);
   finally
     LOpenAPI.Free;
   end;

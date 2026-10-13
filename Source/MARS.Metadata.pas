@@ -83,6 +83,11 @@ type
     DataType: string;
     DataTypeRttiType: TRttiType;
     RttiMethod: TRttiMethod;
+    // the shape of the result chosen by the developer ([MetaResult], MetaResult of a route):
+    // a type, or the type of the elements of an array (ResultIsArray); nil when not set
+    ResultType: TRttiType;
+    ResultIsArray: Boolean;
+    ResultDescription: string;
 
     constructor Create(const AParent: TMARSMetadata); override;
     destructor Destroy; override;

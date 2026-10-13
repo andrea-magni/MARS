@@ -347,6 +347,8 @@ end;
 
 ## OpenAPI
 
+`MetaResult` gives the shape of a result whose type does not tell it, as `[MetaResult]` of a resource method, i.e. the rows of a dataset: `R.Get<TFDQuery>('customers', ...).MetaResult(TypeInfo(TArray<TCustomerRow>), 'The customers')`. See [OpenAPI ▸ Datasets and the shape of a result](/features/openapi#datasets-and-the-shape-of-a-result).
+
 Routes are part of the [OpenAPI document](/features/openapi) and of `/metadata`:
 - **Parameters and schemas:** path parameters are typed by their constraint (`{id:int}` is an integer); the typed body and result are described with their schemas.
 - **Media types and security:** `Produces`, `Consumes` and roles are documented.

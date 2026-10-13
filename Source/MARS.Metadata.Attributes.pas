@@ -8,7 +8,7 @@ unit MARS.Metadata.Attributes;
 interface
 
 uses
-  Classes, SysUtils, System.Rtti
+  Classes, SysUtils, System.Rtti, System.TypInfo
 , MARS.Core.Attributes
 ;
 
@@ -57,11 +57,90 @@ type
     property Description: string read FDescription;
   end;
 
+  // Shape of the result of a method, for the documentation (OpenAPI), when the declared type
+  // does not tell it: a dataset (TFDQuery...) whose rows are records, a TJSONValue, a TStream, a
+  // method that writes the response by itself. It describes the JSON media types of the
+  // response (application/json, */*, +json); the others keep the declared type.
+  //   [MetaResult(TypeInfo(TCustomerRow), True)]  an array of TCustomerRow: the type stays in the
+  //                                               program and is checked by the compiler
+  //   [MetaResult('Server.Types.TCustomerRow')]   by qualified name, or 'TArray<...>' of it: the
+  //                                               type must be used elsewhere too, or the linker
+  //                                               leaves it out and the declared type is used
+  MetaResultAttribute = class(MetadataAttribute)
+  private
+    FTypeInfo: PTypeInfo;
+    FTypeName: string;
+    FIsArray: Boolean;
+    FDescription: string;
+  public
+    constructor Create(const ATypeInfo: PTypeInfo; const AIsArray: Boolean = False;
+      const ADescription: string = ''); overload;
+    constructor Create(const ATypeName: string; const ADescription: string = ''); overload;
+    // the type of the result, or of its elements when IsArray; nil if it cannot be found
+    function FindType: TRttiType;
+    // a type name ('Unit.TType' or 'TArray<Unit.TType>'): the type, AIsArray for TArray<...>
+    class function ResolveType(const ATypeName: string; out AIsArray: Boolean): TRttiType; static;
+    property TypeName: string read FTypeName;
+    property Description: string read FDescription;
+    // an array of the type
+    property IsArray: Boolean read FIsArray;
+  end;
+
 implementation
 
 uses
   MARS.Core.URL, MARS.Rtti.Utils
 ;
+
+{ MetaResultAttribute }
+
+constructor MetaResultAttribute.Create(const ATypeInfo: PTypeInfo; const AIsArray: Boolean;
+  const ADescription: string);
+begin
+  inherited Create;
+  FTypeInfo := ATypeInfo;
+  FIsArray := AIsArray;
+  FDescription := ADescription;
+end;
+
+constructor MetaResultAttribute.Create(const ATypeName, ADescription: string);
+begin
+  inherited Create;
+  FTypeName := ATypeName.Trim;
+  ResolveType(FTypeName, FIsArray);
+  FDescription := ADescription;
+end;
+
+function MetaResultAttribute.FindType: TRttiType;
+var
+  LContext: TRttiContext;
+  LIsArray: Boolean;
+begin
+  if Assigned(FTypeInfo) then
+  begin
+    LContext := TRttiContext.Create;
+    Result := LContext.GetType(FTypeInfo);
+  end
+  else
+    Result := ResolveType(FTypeName, LIsArray);
+end;
+
+class function MetaResultAttribute.ResolveType(const ATypeName: string; out AIsArray: Boolean): TRttiType;
+var
+  LContext: TRttiContext;
+  LName: string;
+begin
+  LName := ATypeName.Trim;
+  AIsArray := LName.StartsWith('TArray<', True) and LName.EndsWith('>');
+  if AIsArray then
+    LName := LName.Substring(Length('TArray<'), LName.Length - Length('TArray<') - 1).Trim;
+  Result := nil;
+  if LName <> '' then
+  begin
+    LContext := TRttiContext.Create;
+    Result := LContext.FindType(LName);
+  end;
+end;
 
 
 { MetadataBooleanAttribute }

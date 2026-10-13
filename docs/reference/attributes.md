@@ -68,6 +68,8 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 
 ## Metadata & OpenAPI (`MARS.Metadata.Attributes`, OpenAPI units)
 
+`[MetaResult(TypeInfo(TType), AIsArray, 'description')]` (or by qualified name, `[MetaResult('Unit.TType')]`) on a method: the shape of its result in the JSON media types of the OpenAPI document, i.e. the rows of a dataset. See [OpenAPI ▸ Datasets and the shape of a result](/features/openapi#datasets-and-the-shape-of-a-result).
+
 | Attribute | Target | Purpose |
 | --- | --- | --- |
 | `[MetaSummary('...')]` | resource, method | Short summary. |

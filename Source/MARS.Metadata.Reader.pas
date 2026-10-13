@@ -133,6 +133,13 @@ begin
     LMethodMetadata.Summary := MetaSummaryAttribute.RetrieveText(AMethod);
     LMethodMetadata.Description := MetaDescriptionAttribute.RetrieveText(AMethod);
     LMethodMetadata.Visible := MetaVisibleAttribute.RetrieveValue(AMethod, True);
+    var LMetaResult := AMethod.GetAttribute<MetaResultAttribute>;
+    if Assigned(LMetaResult) then
+    begin
+      LMethodMetadata.ResultType := LMetaResult.FindType;
+      LMethodMetadata.ResultIsArray := LMetaResult.IsArray;
+      LMethodMetadata.ResultDescription := LMetaResult.Description;
+    end;
 
     LMethodMetadata.DataType := '';
     if (AMethod.MethodKind in [mkFunction, mkClassFunction]) then
@@ -388,6 +395,11 @@ begin
     LMethodMetadata.Description := ARoute.DescriptionText;
     LMethodMetadata.Visible := not ARoute.IsHidden;
     LMethodMetadata.HttpMethod := ARoute.HttpMethod;
+    if Assigned(ARoute.ResultMetaType) then
+      LMethodMetadata.ResultType := TRttiContext.Create.GetType(ARoute.ResultMetaType)
+    else if ARoute.ResultTypeName <> '' then
+      LMethodMetadata.ResultType := MetaResultAttribute.ResolveType(ARoute.ResultTypeName, LMethodMetadata.ResultIsArray);
+    LMethodMetadata.ResultDescription := ARoute.ResultDescription;
 
     LMethodMetadata.DataType := '';
     if Assigned(ARoute.ResultType) then

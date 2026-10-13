@@ -34,6 +34,14 @@ type
     // describes the request body with the type of [MetaRequestBody], if any
     procedure ApplyMetaRequestBody(const AMethodMetadata: TMARSMethodMetadata;
       const ARequestBody: TRequestBody; const AContent: TMediaTypeObj);
+    // the schema of a body or a result of type AType in AMediaType: the JSON on the wire, so
+    // datasets as their rows (JSON) or as their native format, other types as SetType (#276)
+    procedure SetContentSchema(const ASchema: TSchema; const AMediaType: string; const AType: TRttiType);
+    // datasets and arrays of datasets: False for other types
+    function SetDataSetSchema(const ASchema: TSchema; const AMediaType: string; const AType: TRttiType): Boolean;
+    // the JSON media types of a response, described by [MetaResult]: True when it did
+    function ApplyMetaResult(const AMethodMetadata: TMARSMethodMetadata; const ASchema: TSchema;
+      const AMediaType: string): Boolean;
   public
     class procedure FillSchemaForObjectOrRecord(const ASchema: TSchema; const AType: TRttiType; const AddTo: TOpenAPI);
     function EnsureTypeInComponentsSchemas(const AType: TRttiType): Boolean;
@@ -109,6 +117,133 @@ class function TOpenAPIHelper.BuildFrom(
   Result := BuildFrom(AActivation.Engine, AActivation.Application);
 end;
 
+const
+  DATASET_ROWS_DESCRIPTION = 'The rows of a dataset: an object per row, its fields as members';
+
+// AType is AUnitName.AClassName or a descendant (by name: no dependency on the unit)
+function ClassInherits(const AType: TRttiType; const AUnitName, AClassName: string): Boolean;
+var
+  LClass: TClass;
+begin
+  Result := False;
+  if not Assigned(AType) or not AType.IsInstance then
+    Exit;
+  LClass := AType.AsInstance.MetaclassType;
+  while Assigned(LClass) do
+  begin
+    if SameText(LClass.ClassName, AClassName) and SameText(LClass.UnitName, AUnitName) then
+      Exit(True);
+    LClass := LClass.ClassParent;
+  end;
+end;
+
+function IsDataSetType(const AType: TRttiType): Boolean;
+begin
+  Result := ClassInherits(AType, 'Data.DB', 'TDataSet');
+end;
+
+// application/json, */*, ...+json (parameters of the media type ignored)
+function IsJSONMediaType(const AMediaType: string): Boolean;
+var
+  LMediaType: string;
+begin
+  LMediaType := AMediaType.Split([';'])[0].Trim.ToLower;
+  Result := (LMediaType = TMediaType.APPLICATION_JSON) or (LMediaType = TMediaType.WILDCARD)
+    or LMediaType.EndsWith('+json');
+end;
+
+// TMARSTokenWriterJSON (MARS.Core.Token.ReadersAndWriters)
+procedure FillTokenSchema(const ASchema: TSchema);
+
+  procedure Add(const AName, AType, ADescription: string; const AFormat: string = '');
+  begin
+    var LProperty := ASchema.GetProperty(AName);
+    LProperty.SetType(AType);
+    LProperty.description := ADescription;
+    LProperty.format := AFormat;
+  end;
+
+begin
+  ASchema.SetType('object');
+  ASchema.description := 'The token of the user';
+  Add('Token', 'string', 'The JWT');
+  Add('IsVerified', 'boolean', 'The token is valid (signature, expiration)');
+  Add('UserName', 'string', 'The user');
+  Add('Roles', 'string', 'The roles of the user, separated by commas');
+  Add('Expiration', 'string', 'Expiration (ISO 8601)', 'date-time');
+  Add('IssuedAt', 'string', 'Issue time (ISO 8601)', 'date-time');
+  Add('Claims', 'object', 'The other claims of a verified token');
+end;
+
+procedure TOpenAPIHelper.SetContentSchema(const ASchema: TSchema; const AMediaType: string;
+  const AType: TRttiType);
+begin
+  if not SetDataSetSchema(ASchema, AMediaType, AType) then
+    ASchema.SetType(AType, Self);
+end;
+
+function TOpenAPIHelper.SetDataSetSchema(const ASchema: TSchema; const AMediaType: string;
+  const AType: TRttiType): Boolean;
+var
+  LElementType: TRttiType;
+  LIsArray: Boolean;
+begin
+  Result := False;
+  if not Assigned(AType) then
+    Exit;
+  LIsArray := AType.IsArray(LElementType) and IsDataSetType(LElementType);
+  if not (LIsArray or IsDataSetType(AType)) then
+    Exit;
+
+  Result := True;
+  if not IsJSONMediaType(AMediaType) then
+  begin
+    // the native formats of the data access libraries (FireDAC, Devart): theirs
+    if AMediaType.ToLower.Contains('json') then
+      ASchema.SetType('object')
+    else
+    begin
+      // XML is text; binary (octet-stream) bytes
+      ASchema.SetType('string');
+      if SameText(AMediaType.Split([';'])[0].Trim, TMediaType.APPLICATION_OCTET_STREAM) then
+        ASchema.format := 'binary';
+    end;
+    ASchema.description := 'Datasets in the native format of their library (' + AMediaType + ')';
+  end
+  else if LIsArray then
+  begin
+    // TArray<dataset>: a member per dataset (its name), its rows as an array of objects
+    ASchema.SetType('object');
+    ASchema.description := 'Datasets: a member per dataset (its name), its rows as an array of objects';
+  end
+  else
+  begin
+    ASchema.SetType('array');
+    ASchema.items.SetType('object');
+    ASchema.description := DATASET_ROWS_DESCRIPTION;
+  end;
+end;
+
+function TOpenAPIHelper.ApplyMetaResult(const AMethodMetadata: TMARSMethodMetadata;
+  const ASchema: TSchema; const AMediaType: string): Boolean;
+begin
+  Result := False;
+  // not set, or a name that cannot be found: the declared type (never a broken document)
+  if not Assigned(AMethodMetadata.ResultType) or not IsJSONMediaType(AMediaType) then
+    Exit;
+  var LType := AMethodMetadata.ResultType;
+
+  if AMethodMetadata.ResultIsArray then
+  begin
+    ASchema.SetType('array');
+    ASchema.items.SetType(MARSDataTypeToOpenAPIType(LType));
+  end
+  else
+    ASchema.SetType(LType, Self);
+  ASchema.description := AMethodMetadata.ResultDescription;
+  Result := True;
+end;
+
 function TOpenAPIHelper.EnsureTypeInComponentsSchemas(
   const AType: TRttiType): Boolean;
 var
@@ -118,9 +253,6 @@ var
 //  LJSONName, LYAMLName: string;
 //  LProperty: TSchema;
 begin
-  //AM TODO Add some mechanism to deal with special types
-  // (i.e. TDataset descendants, TYamlNode descendants...)
-
   Result := False;
   LSchemaExists := components.HasSchema(AType.Name);
   if not LSchemaExists then
@@ -143,6 +275,22 @@ begin
     begin
       LSchema.SetType('string');
       LSchema.description := 'Binary content (' + AType.Name + ')';
+    end
+    // a dataset (i.e. a member of a class) is written as its rows (#276)
+    else if IsDataSetType(AType) then
+    begin
+      LSchema.SetType('array');
+      LSchema.items.SetType('object');
+      LSchema.description := DATASET_ROWS_DESCRIPTION;
+    end
+    // the token: what TMARSTokenWriterJSON writes, not the Delphi object
+    else if ClassInherits(AType, 'MARS.Core.Token', 'TMARSToken') then
+      FillTokenSchema(LSchema)
+    // a component of the framework or of a library: not a data type, not described (#276)
+    else if AType.IsInstance and AType.AsInstance.MetaclassType.InheritsFrom(TComponent) then
+    begin
+      LSchema.SetType('object');
+      LSchema.description := 'Delphi component (' + AType.Name + '), not described';
     end
     else if (AType.IsInstance) or (AType.IsRecord) then
       FillSchemaForObjectOrRecord(LSchema, AType, Self)
@@ -170,6 +318,11 @@ begin
       begin
         if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
           Continue;
+        // not data (events, interfaces, pointers, class references): never on the wire (#276)
+        var LMemberType := LMember.GetRttiType;
+        if not Assigned(LMemberType)
+          or (LMemberType.TypeKind in [tkMethod, tkInterface, tkPointer, tkClassRef, tkProcedure]) then
+          Continue;
 
         // the schema describes the JSON: a member left out of it (JSONName('')) is not a property,
         // whatever its YAML name (a property named "" leaked its schema, #149)
@@ -186,7 +339,15 @@ begin
         if Assigned(AddTo) then
         begin
           var LProperty := ASchema.GetProperty(LJSONName);
-          LProperty.SetType(LMember.GetRttiType, AddTo);
+          // a dataset member: its rows, inline (no schema named after its class, #276)
+          if IsDataSetType(LMember.GetRttiType) then
+          begin
+            LProperty.SetType('array');
+            LProperty.items.SetType('object');
+            LProperty.description := DATASET_ROWS_DESCRIPTION;
+          end
+          else
+            LProperty.SetType(LMember.GetRttiType, AddTo);
 
           var LDescriptionAttr := LMember.GetAttribute<OAPIDescriptionAttribute>;
           if Assigned(LDescriptionAttr) then
@@ -576,7 +737,7 @@ begin
 //              LContent.schema.additionalProperties := True;
 //            end
 //            else begin
-              LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
+              SetContentSchema(LContent.schema, LMediaType, LParamMD.DataTypeRttiType);
               LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
               if Assigned(LParamMD.RttiParameter) then
               begin
@@ -594,7 +755,7 @@ begin
         var LParamMD := AMethodMetadata.ParameterByKind('BodyParam');
         if Assigned(LParamMD) then
         begin
-          LContent.schema.SetType(LParamMD.DataTypeRttiType, Self);
+          SetContentSchema(LContent.schema, LMediaType, LParamMD.DataTypeRttiType);
           LRequestBody.description := LParamMD.Description;
           if LRequestBody.description = ''then
             LRequestBody.description := LParamMD.Name + ': ' + LParamMD.DataTypeRttiType.Name;
@@ -625,11 +786,20 @@ begin
   // a procedure has no content
   if Assigned(AMethodMetadata.DataTypeRttiType) then
   begin
+    // the declared type, or the shape the developer chose with [MetaResult] (#276)
     for var LMediaType in AMethodMetadata.Produces.Split([',']) do
-      LResponse.AddContent(LMediaType).schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
+    begin
+      var LSchema := LResponse.AddContent(LMediaType).schema;
+      if not ApplyMetaResult(AMethodMetadata, LSchema, LMediaType) then
+        SetContentSchema(LSchema, LMediaType, AMethodMetadata.DataTypeRttiType);
+    end;
 
     if LResponse.content.Count = 0 then
-      LResponse.AddContent('*/*').schema.SetType(AMethodMetadata.DataTypeRttiType, Self);
+    begin
+      var LSchema := LResponse.AddContent('*/*').schema;
+      if not ApplyMetaResult(AMethodMetadata, LSchema, '*/*') then
+        SetContentSchema(LSchema, '*/*', AMethodMetadata.DataTypeRttiType);
+    end;
   end;
 
   AOperation.AddResponse('500').description := 'Internal server error';

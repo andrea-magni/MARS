@@ -204,6 +204,47 @@ type
     Data: TStream;
   end;
 
+  // the OpenAPI of datasets and framework types: the JSON on the wire (#276)
+  TDataRow = record
+    Id: Integer;
+    Name: string;
+  end;
+
+  TComponentHolder = class
+  private
+    FOnChange: TNotifyEvent;
+  public
+    Name: string;
+    Rows: TFDMemTable;
+    Owner: TComponent;
+    Intf: IInterface;
+    Ptr: Pointer;
+    Kind: TClass;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
+  end;
+
+  [Path('openapidata')]
+  TOpenAPIDataResource = class
+  public
+    [GET, Path('query'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
+    function Query: TFDQuery;
+    [GET, Path('typed'), Produces(TMediaType.APPLICATION_JSON),
+     MetaResult(TypeInfo(TDataRow), True, 'The rows')]
+    function Typed: TFDMemTable;
+    [GET, Path('single'), Produces(TMediaType.APPLICATION_JSON), MetaResult('Tests.DefaultEngine.Resources.TDataRow')]
+    function Single: TJSONObject;
+    [GET, Path('wrong'), Produces(TMediaType.APPLICATION_JSON), MetaResult('Nowhere.TNothing')]
+    function Wrong: TFDMemTable;
+    [GET, Path('sets'), Produces(TMediaType.APPLICATION_JSON)]
+    function Sets: TArray<TFDMemTable>;
+    [POST, Path('deltas'), Consumes(TMediaType.APPLICATION_JSON_FireDAC), Produces(TMediaType.APPLICATION_JSON)]
+    function Deltas([BodyParam] const ADeltas: TArray<TFDMemTable>): Integer;
+    [POST, Path('rows'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+    function Rows([BodyParam] const ARows: TFDMemTable): Integer;
+    [GET, Path('holder'), Produces(TMediaType.APPLICATION_JSON)]
+    function Holder: TComponentHolder;
+  end;
+
   // the OpenAPI of authorization and of procedures
   [Path('openapicases')]
   TOpenAPICasesResource = class
@@ -475,8 +516,51 @@ begin
   Result := 'body ' + AItem.Description;
 end;
 
+{ TOpenAPIDataResource }
+
+// the documentation only: never called
+function TOpenAPIDataResource.Query: TFDQuery;
+begin
+  Result := nil;
+end;
+
+function TOpenAPIDataResource.Typed: TFDMemTable;
+begin
+  Result := nil;
+end;
+
+function TOpenAPIDataResource.Single: TJSONObject;
+begin
+  Result := nil;
+end;
+
+function TOpenAPIDataResource.Wrong: TFDMemTable;
+begin
+  Result := nil;
+end;
+
+function TOpenAPIDataResource.Sets: TArray<TFDMemTable>;
+begin
+  Result := [];
+end;
+
+function TOpenAPIDataResource.Deltas(const ADeltas: TArray<TFDMemTable>): Integer;
+begin
+  Result := Length(ADeltas);
+end;
+
+function TOpenAPIDataResource.Rows(const ARows: TFDMemTable): Integer;
+begin
+  Result := 0;
+end;
+
+function TOpenAPIDataResource.Holder: TComponentHolder;
+begin
+  Result := nil;
+end;
+
 initialization
-  MARSRegister([TRequiredResource, TOpenAPICasesResource, TListsResource, TDataSetsResource]);
+  MARSRegister([TRequiredResource, TOpenAPICasesResource, TListsResource, TDataSetsResource, TOpenAPIDataResource]);
   MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TTestTokenResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);

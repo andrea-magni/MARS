@@ -6,6 +6,14 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 **New**
 - Templates and demos: a **Stoplight** button next to **OpenAPI** in the VCL and FMX server forms, opening the Stoplight Elements page of the application (`<application>/docs`, now registered by every demo too). [OpenAPI ▸ Stoplight Elements](/features/openapi#stoplight-elements)
+- `[MetaResult]` (`MARS.Metadata.Attributes`) and `MetaResult` of routes: the shape of a result whose type does not tell it, i.e. the rows of a dataset, in the OpenAPI document; the data demos use it for their customers. [OpenAPI ▸ Datasets and the shape of a result](/features/openapi#datasets-and-the-shape-of-a-result) ([#276](https://github.com/andrea-magni/MARS/issues/276))
+
+**Changed**
+- OpenAPI: the schemas describe the JSON on the wire, not the Delphi classes. Datasets are their rows (`application/json`) or their native format, not the properties of `TFDQuery` and the like; the members of a class that are not data (events, interfaces, pointers, class references) are left out, components are objects without properties; the token has the shape its writer gives it. The FireDAC demo went from 216 schemas (FireDAC, DB, RTL types) to 5. [OpenAPI](/features/openapi#datasets-and-the-shape-of-a-result) ([#276](https://github.com/andrea-magni/MARS/issues/276))
+
+**Upgrade notes**
+
+- **OpenAPI documents** ([#276](https://github.com/andrea-magni/MARS/issues/276)): the documents of servers returning datasets, components or the token change: those schemas described the Delphi objects and were not usable by clients; regenerate the clients made from them. Add `[MetaResult]` to document the rows of a dataset.
 
 **Fixed**
 - Demos (FMX server forms of ErrorObjects, HtmxDemo, OTPDemo, SSEDemo, TokenRenew, WebStencilsDemo): the OpenAPI button raised "available on Microsoft Windows only" on Windows, a swapped `{$IFNDEF MSWINDOWS}`.
