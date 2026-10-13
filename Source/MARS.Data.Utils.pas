@@ -91,7 +91,7 @@ implementation
 
 uses
   Rtti, StrUtils, DateUtils, System.JSON, Generics.Collections, FMTBcd
-, MARS.Rtti.Utils, MARS.Core.Utils;
+, MARS.Rtti.Utils, MARS.Core.Utils, MARS.Utils.FloatText;
 
 type
   TJSONFieldType = (NestedObject, NestedArray, SimpleValue);
@@ -120,12 +120,15 @@ begin
       Result := TJSONNumber.Create(AField.AsInteger)
     else if AField.DataType in [ftLargeInt] then
       Result := TJSONNumber.Create(AField.AsLargeInt)
-    else if AField.DataType in [ftSingle, ftExtended, ftFloat, ftBCD, ftFMTBcd] then
-      Result := TJSONNumber.Create(AField.AsFloat)
+    // the shortest text that reads back to the same value, not 15 digits (#278)
+    else if AField.DataType in [ftSingle] then
+      Result := SingleToJSONNumber(AField.AsSingle)
+    else if AField.DataType in [ftExtended, ftFloat, ftBCD, ftFMTBcd] then
+      Result := DoubleToJSONNumber(AField.AsFloat)
     else if AField.DataType in [ftCurrency] then
       Result := TJSONNumber.Create(AField.AsCurrency)
     else
-      Result := TJSONNumber.Create(AField.AsFloat)
+      Result := DoubleToJSONNumber(AField.AsFloat)
   end;
 end;
 
@@ -645,7 +648,13 @@ begin
     ftLargeint:
       AField.AsLargeInt := StrToInt64(LText);
     ftFloat, ftSingle, ftExtended:
-      AField.AsFloat := StrToFloat(LText, TFormatSettings.Invariant);
+    begin
+      // correctly rounded (#278)
+      var LFloat: Double;
+      if not TryJSONTextToFloat(LText, LFloat) then
+        LFloat := StrToFloat(LText, TFormatSettings.Invariant);
+      AField.AsFloat := LFloat;
+    end;
     ftCurrency:
       AField.AsCurrency := StrToCurr(LText, TFormatSettings.Invariant);
     ftBCD, ftFMTBcd:

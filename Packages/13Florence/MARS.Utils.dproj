@@ -182,6 +182,7 @@
         <DCCReference Include="..\..\Source\MARS.Rtti.Utils.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.IniFile.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.pas"/>
+        <DCCReference Include="..\..\Source\MARS.Utils.FloatText.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.RateLimiter.pas"/>
         <DCCReference Include="..\..\Source\MARS.Utils.Parameters.JSON.pas"/>
         <DCCReference Include="..\..\Source\MARS.Core.JSON.pas"/>

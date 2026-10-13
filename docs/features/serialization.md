@@ -20,6 +20,17 @@ MARS maps Delphi values to and from JSON through the helpers in `MARS.Core.JSON.
 
 Nested records, arrays of records, and arrays of objects all serialize recursively.
 
+### Floating point numbers
+
+`Double`, `Single` and float fields of datasets are written with the shortest text that reads back
+to the same value, as JavaScript, Python or Java do: `0.1`, `0.30000000000000004` (`0.1 + 0.2`),
+`1.2345678901234567`, `3.0`, `1E-20`; a `Single` with its own digits (`0.1`, not
+`0.100000001490116`). JSON numbers are read as the nearest `Double`, a `Currency` from its text (all
+its 19 digits). `TJSONNumber.Create` and `AsDouble` of the RTL use 15 significant digits and are not
+correctly rounded: to build or read JSON by hand without losing precision, use `DoubleToJSONNumber`,
+`SingleToJSONNumber` and `JSONNumberToFloat` (`MARS.Core.JSON`), or `FloatToJSONText` and
+`TryJSONTextToFloat` (`MARS.Utils.FloatText`).
+
 ## Direct conversion helpers
 
 When you need to convert explicitly (not through a resource result), use the `TJSONObject` class helpers:

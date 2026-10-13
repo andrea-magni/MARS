@@ -329,6 +329,14 @@ type
   end;
 
 
+  // A floating point value as a JSON number: the shortest text that reads back to the same
+  // value (MARS.Utils.FloatText), where TJSONNumber.Create of the RTL writes 15 significant
+  // digits and loses precision (#278)
+  function DoubleToJSONNumber(const AValue: Double): TJSONNumber;
+  function SingleToJSONNumber(const AValue: Single): TJSONNumber;
+  // the Double nearest to a JSON number (TJSONNumber.AsDouble is not correctly rounded)
+  function JSONNumberToFloat(const AValue: TJSONNumber): Double;
+
   function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
   function JsonArrayToStringArray(const AJSONArray: TJSONArray): TArray<string>;
   function IntegerArrayToJsonArray(const AIntegerArray: TArray<Integer>): TJSONArray;
@@ -370,7 +378,7 @@ implementation
 
 uses
   System.DateUtils, System.TimeSpan, System.Variants, System.StrUtils, System.Math
-, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.Utils, MARS.Rtti.Utils, MARS.Utils.FloatText
 ;
 
 type
@@ -626,7 +634,15 @@ begin
     Result := TJSONNumber.Create( AValue.AsType<Integer> )
 
   else if (AValue.Kind in [tkFloat]) then
-    Result := TJSONNumber.Create( AValue.AsType<Double> )
+  begin
+    case GetTypeData(AValue.TypeInfo)^.FloatType of
+      TFloatType.ftSingle: Result := SingleToJSONNumber( AValue.AsType<Single> );
+      TFloatType.ftCurr: Result := TJSONNumber.Create( AValue.AsType<Currency> );
+      TFloatType.ftComp: Result := TJSONNumber.Create( AValue.AsType<Int64> );
+      else
+        Result := DoubleToJSONNumber( AValue.AsType<Double> );
+    end;
+  end
 
   else if (AValue.Kind in [tkVariant]) then
   begin
@@ -634,8 +650,10 @@ begin
     case VarType(LVariantValue) of
       varSmallint, varInteger, varShortInt, varByte, varWord {$ifdef Delphi11Alexandria_UP}, varUInt32, varUInt64 {$ifend}:
         Result := TValueToJSONValue(StrToInt(VarToStr(LVariantValue)), AOptions);
-      varSingle, varDouble:
-        Result := TValueToJSONValue(StrToFloat(VarToStr(LVariantValue)), AOptions);
+      varSingle:
+        Result := SingleToJSONNumber(LVariantValue);
+      varDouble:
+        Result := DoubleToJSONNumber(LVariantValue);
       varCurrency:
         Result := TValueToJSONValue(StrToCurr(VarToStr(LVariantValue)), AOptions);
       varBoolean:
@@ -661,6 +679,26 @@ begin
   else
     Result := TJSONString.Create(AValue.ToString);
 
+end;
+
+function DoubleToJSONNumber(const AValue: Double): TJSONNumber;
+begin
+  if AValue.IsNan or AValue.IsInfinity then // as the RTL does
+    Exit(TJSONNumber.Create(AValue));
+  Result := TJSONNumber.Create(FloatToJSONText(AValue));
+end;
+
+function SingleToJSONNumber(const AValue: Single): TJSONNumber;
+begin
+  if AValue.IsNan or AValue.IsInfinity then // as the RTL does
+    Exit(TJSONNumber.Create(Double(AValue)));
+  Result := TJSONNumber.Create(SingleToJSONText(AValue));
+end;
+
+function JSONNumberToFloat(const AValue: TJSONNumber): Double;
+begin
+  if not TryJSONTextToFloat(AValue.Value, Result) then
+    Result := AValue.AsDouble; // its error (or what the RTL reads)
 end;
 
 function StringArrayToJsonArray(const AStringArray: TArray<string>): TJSONArray;
@@ -774,7 +812,7 @@ begin
     if LItem is TJSONString then
       Result := Result + [TJSONString(LItem).Value]
     else if LItem is TJSONNumber then
-      Result := Result + [TJSONNumber(LItem).AsDouble]
+      Result := Result + [JSONNumberToFloat(TJSONNumber(LItem))]
     else if LItem is TJSONBool then
       Result := Result + [TJSONBool(LItem).AsBoolean]
     else if LItem is TJSONNull then
@@ -1259,7 +1297,7 @@ var
 begin
   Result := ADefault;
   if Assigned(Self) and TryGetValue<TJSONNumber>(AName, LValue) then
-    Result := LValue.AsDouble;
+    Result := JSONNumberToFloat(LValue);
 end;
 
 function TJSONObjectHelper.AddArray(const AName: string): TJSONArray;
@@ -1747,8 +1785,11 @@ begin
     begin
       if ADesiredType.Handle = TypeInfo(TValue) then
         ATValue := GuessTValueFromString(AValue.ToString)
+      // a Currency from its text, not through a Double (#278)
+      else if ADesiredType.Handle = TypeInfo(Currency) then
+        ATValue := TValue.From<Currency>(StrToCurr(TJSONNumber(AValue).Value, TFormatSettings.Invariant))
       else
-        ATValue := TJSONNumber(AValue).AsDouble;
+        ATValue := JSONNumberToFloat(TJSONNumber(AValue));
     end;
 
   end
@@ -2067,7 +2108,7 @@ procedure TJSONObjectHelper.WriteDoubleValue(const AName: string;
   const AValue: Double);
 begin
   DeletePair(AName);
-  AddPair(AName, TJSONNumber.Create(AValue));
+  AddPair(AName, DoubleToJSONNumber(AValue));
 end;
 
 procedure TJSONObjectHelper.WriteInt64Value(const AName: string;
