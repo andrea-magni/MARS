@@ -25,6 +25,8 @@ type
     [Test] procedure HttpsRequest;
     [Test] procedure MissingCertificateFailsToStart;
     [Test] procedure NoPortFailsToStart;
+    // the request-target in absolute-form (#30)
+    [Test] procedure AbsoluteFormRequest;
   end;
 
 implementation
@@ -35,6 +37,7 @@ uses
 , MARS.Core.RequestAndResponse.Interfaces
 , Net.CrossSslDemoCert
 , System.Net.HttpClient, System.Net.URLClient
+, Tests.RequestTarget
 ;
 
 const
@@ -123,6 +126,25 @@ begin
     LServer.Active := True;
     LBody := Get(Format('http://localhost:%d/rest/default/dcscheck', [HTTP_PORT]), LSetCookie);
     Assert.Contains(LBody, 'IsSecure=False');
+  finally
+    LServer.Free;
+  end;
+end;
+
+procedure TMARSDCSServerTest.AbsoluteFormRequest;
+var
+  LServer: TMARShttpServerDCS;
+  LResponse: string;
+begin
+  LServer := NewServer;
+  try
+    LServer.Active := True;
+    LResponse := RawRequest(HTTP_PORT, Format('GET http://localhost:%d/rest/default/dcscheck?a=1 HTTP/1.1', [HTTP_PORT]));
+    Assert.Contains(LResponse, 'HTTP/1.1 200', LResponse);
+    Assert.Contains(LResponse, Format('URL=http://localhost:%d/rest/default/dcscheck?a=1', [HTTP_PORT]));
+    // a path outside the engine: 404, now from the engine
+    Assert.Contains(RawRequest(HTTP_PORT, 'GET /other HTTP/1.1'), 'HTTP/1.1 404');
+    Assert.Contains(RawRequest(HTTP_PORT, Format('GET http://localhost:%d/other HTTP/1.1', [HTTP_PORT])), 'HTTP/1.1 404');
   finally
     LServer.Free;
   end;

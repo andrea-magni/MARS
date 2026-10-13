@@ -199,7 +199,7 @@ implementation
 uses
   StrUtils, DateUtils, System.Rtti
 , IdCookie
-, MARS.Core.Utils, MARS.Utils.Parameters
+, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Core.URL
 ;
 
 { TMARShttpServerIndy }
@@ -715,7 +715,8 @@ end;
 
 function TMARSWebRequest.GetRawPath: string;
 begin
-  Result := FWebRequest.RawPathInfo;
+  // the absolute-form of the request-target as the origin-form (#30)
+  Result := TMARSURL.OriginForm(FWebRequest.RawPathInfo);
 end;
 
 function TMARSWebRequest.GetRemoteIP: string;

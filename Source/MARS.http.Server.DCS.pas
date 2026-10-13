@@ -188,7 +188,7 @@ implementation
 uses
   System.IOUtils
 , Net.CrossHttpParams
-, MARS.Core.Utils;
+, MARS.Core.Utils, MARS.Core.URL;
 
 { TMARShttpServerDCS }
 
@@ -234,7 +234,6 @@ function TMARShttpServerDCS.CreateServer(const APort: Integer; const ASsl: Boole
 var
   LEngine: IMARSEngine;
   LHandler: TCrossHttpRouterProc;
-  LBasePath: string;
 begin
   try
     Result := TCrossHttpServer.Create(0, ASsl);
@@ -267,18 +266,10 @@ begin
         LResponse.Send;
     end;
 
-  // the DCS router matches by path segment and '*' is a wildcard only as a whole last segment
-  // ('/rest/*'): '/rest*' would match a single segment
-  LBasePath := FEngine.BasePath;
-  while LBasePath.EndsWith('/') do
-    LBasePath := LBasePath.Substring(0, LBasePath.Length - 1);
-  if LBasePath = '' then
-    Result.All('*', LHandler)
-  else
-  begin
-    Result.All(LBasePath, LHandler);
-    Result.All(LBasePath + '/*', LHandler);
-  end;
+  // every request to the engine: the DCS router matches its path, which for a request-target in
+  // absolute-form (http://host:port/path) is the whole URI, so no route by the base path would
+  // match it (#30); the engine answers 404 to a path outside its own
+  Result.All('*', LHandler);
 end;
 
 procedure TMARShttpServerDCS.LoadCertificate(const AServer: ICrossHttpServer);
@@ -814,8 +805,8 @@ end;
 
 function TMARSDCSRequest.GetRawPath: string;
 begin
-//AM TODO controllare RawPathAndParams?
-  Result := FDCSRequest.Path;
+  // the absolute-form of the request-target as the origin-form (#30)
+  Result := TMARSURL.OriginForm(FDCSRequest.Path);
 end;
 
 function TMARSDCSRequest.GetRemoteIP: string;

@@ -107,6 +107,10 @@ type
     class function URLDecode(const AStrings: TArray<string>): TArray<string>; overload;
 
     class function ExtractPathParams(const APath: string; const APurgeBrackets: Boolean = True): TArray<string>;
+
+    // the path of a request-target: the absolute-form (http://host:port/path, RFC 9112 3.2.2,
+    // which servers must accept) as the origin-form (/path); any other target as it is
+    class function OriginForm(const ARequestTarget: string): string;
   end;
 
 implementation
@@ -145,6 +149,25 @@ begin
 
   // set value
   URL := AURL;
+end;
+
+class function TMARSURL.OriginForm(const ARequestTarget: string): string;
+var
+  LSchemeEnd, LPathStart: Integer;
+begin
+  Result := ARequestTarget;
+  // scheme "://" authority path: a scheme is a letter, then letters, digits, + - .
+  LSchemeEnd := Pos('://', Result);
+  if (LSchemeEnd < 2) or not CharInSet(Result[1], ['a'..'z', 'A'..'Z']) then
+    Exit;
+  for var LIndex := 2 to LSchemeEnd - 1 do
+    if not CharInSet(Result[LIndex], ['a'..'z', 'A'..'Z', '0'..'9', '+', '-', '.']) then
+      Exit;
+  LPathStart := Pos('/', Result, LSchemeEnd + 3);
+  if LPathStart = 0 then
+    Result := '/'
+  else
+    Result := Copy(Result, LPathStart, MaxInt);
 end;
 
 procedure TMARSURL.BasePathChanged;
