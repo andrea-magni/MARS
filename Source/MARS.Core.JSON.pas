@@ -1115,7 +1115,8 @@ begin
       var LKey := ReadFieldValue(APair, 'Key');
       var LValue := ReadFieldValue(APair, 'Value');
 
-      AJSON.AddPair(LKey.AsString, TValueToJSONValue(LValue, AOptions));
+      // TJSONPair: AddPair(string, TJSONValue) of the RTL up to Delphi 12 leaks the value of an empty key
+      AJSON.AddPair(TJSONPair.Create(LKey.AsString, TValueToJSONValue(LValue, AOptions)));
     end
   );
 end;
@@ -1266,7 +1267,8 @@ begin
   TRttiHelper.EnumerateDictionary(ADictionary,
     procedure (AKey: TValue; AValue: TValue)
     begin
-      AJSONObject.AddPair(AKey.ToString, TValueToJSONValue(AValue, AOptions));
+      // TJSONPair: AddPair(string, TJSONValue) of the RTL up to Delphi 12 leaks the value of an empty key
+      AJSONObject.AddPair(TJSONPair.Create(AKey.ToString, TValueToJSONValue(AValue, AOptions)));
     end
   );
 end;

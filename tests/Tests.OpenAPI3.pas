@@ -9,9 +9,21 @@ uses
 , MARS.Core.URL, MARS.Core.Utils
 
 , MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
+, MARS.Core.JSON
 ;
 
 type
+  // #149: members left out of the JSON
+  TOpenAPIHiddenMembers = class
+  private
+    FSecret: string;
+  public
+    Name: string;
+    [JSONName('')] Hidden: string;
+    [JSONName('alias')] Renamed: string;
+    [JSONName('')] property Secret: string read FSecret write FSecret;
+  end;
+
   [TestFixture('OpenAPI3')]
   TMARSOpenAPI3Test = class(TObject)
   private
@@ -22,6 +34,8 @@ type
     [Test] procedure MetaRequestBody;
     [Test] procedure RequiredPermitAllAndProcedures;
     [Test] procedure JSONValuesAndStreams;
+    // #149: a member left out of the JSON (JSONName('')) is not a property named ""
+    [Test] procedure MembersLeftOutOfTheJSON;
 {$IFDEF MARS_YAML}
     [Test] procedure SecurityAsYAML;
     [Test] procedure StringsStayStringsInYAML;
@@ -32,7 +46,7 @@ implementation
 
 uses
   System.Rtti, System.TypInfo
-, System.JSON, MARS.Core.JSON
+, System.JSON
 , Tests.Objects.Types, Tests.DefaultEngine.Definition
 {$IFDEF MARS_YAML}, Neslib.Yaml, Neslib.Utf8, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
@@ -254,6 +268,29 @@ begin
     end;
   finally
     LEngine.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.MembersLeftOutOfTheJSON;
+begin
+  var LType := TRttiContext.Create.GetType(TOpenAPIHiddenMembers);
+  var LOpenAPI := TOpenAPI.Create;
+  try
+    Assert.IsTrue(LOpenAPI.EnsureTypeInComponentsSchemas(LType));
+    var LSchema := LOpenAPI.components.schemas[LType.Name];
+    var LNames: TArray<string> := [];
+    for var LProperty in LSchema.properties do
+      LNames := LNames + [LProperty.Key];
+    Assert.AreEqual('Name,alias', string.Join(',', LNames));
+
+    var LJSON := TJSONObject.ObjectToJSON(LOpenAPI);
+    try
+      Assert.DoesNotContain(LJSON.ToJSON, '"":');
+    finally
+      LJSON.Free;
+    end;
+  finally
+    LOpenAPI.Free;
   end;
 end;
 

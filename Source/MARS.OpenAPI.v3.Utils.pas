@@ -171,6 +171,8 @@ begin
         if (LMember.Visibility < TMemberVisibility.mvPublic) or (not LMember.IsReadable) then
           Continue;
 
+        // the schema describes the JSON: a member left out of it (JSONName('')) is not a property,
+        // whatever its YAML name (a property named "" leaked its schema, #149)
         var LJSONName := LMember.Name;
         LMember.HasAttribute<JSONNameAttribute>(
           procedure (AAttr: JSONNameAttribute)
@@ -178,18 +180,7 @@ begin
             LJSONName := AAttr.Name;
           end
         );
-{$IFDEF MARS_YAML}
-        var LYAMLName := LMember.Name;
-        LMember.HasAttribute<YAMLNameAttribute>(
-          procedure (AAttr: YAMLNameAttribute)
-          begin
-            LYAMLName := AAttr.Name;
-          end
-        );
-{$ELSE}
-        var LYAMLName := '';
-{$ENDIF}
-        if (LJSONName = '') and (LYAMLName = '') then
+        if LJSONName = '' then
           Continue;
 
         if Assigned(AddTo) then

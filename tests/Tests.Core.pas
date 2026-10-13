@@ -54,6 +54,8 @@ type
     [Test] procedure OrderOfMembers;
     // #161: a zero date as "" (no date) or, with ZeroDateAsEmpty False, as a date
     [Test] procedure ZeroDate;
+    // #149: an empty key of a dictionary is a pair named ""
+    [Test] procedure EmptyDictionaryKey;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -553,6 +555,26 @@ begin
     LJSONObj.Free;
   end;
 
+end;
+
+procedure TMARSRecordToJSONTest.EmptyDictionaryKey;
+var
+  LDictionary: TDictionary<string, string>;
+  LJSON: TJSONObject;
+begin
+  LDictionary := TDictionary<string, string>.Create;
+  try
+    LDictionary.Add('', 'empty');
+    LJSON := TJSONObject.Create;
+    try
+      TJSONObject.DictionaryToJSON(LJSON, LDictionary, DefaultMARSJSONSerializationOptions);
+      Assert.AreEqual('{"":"empty"}', LJSON.ToJSON);
+    finally
+      LJSON.Free;
+    end;
+  finally
+    LDictionary.Free;
+  end;
 end;
 
 procedure TMARSRecordToJSONTest.ZeroDate;
