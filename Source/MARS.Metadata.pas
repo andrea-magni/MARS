@@ -86,6 +86,8 @@ type
     // the shape of the result chosen by the developer ([MetaResult], MetaResult of a route):
     // a type, or the type of the elements of an array (ResultIsArray); nil when not set
     ResultType: TRttiType;
+    // Consumes declared by the method (or the route) itself, not only inherited from the resource
+    OwnConsumes: Boolean;
     ResultIsArray: Boolean;
     ResultDescription: string;
 

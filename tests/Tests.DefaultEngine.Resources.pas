@@ -243,6 +243,9 @@ type
     function Rows([BodyParam] const ARows: TFDMemTable): Integer;
     [GET, Path('holder'), Produces(TMediaType.APPLICATION_JSON)]
     function Holder: TComponentHolder;
+    // a method that reads the body by itself: its own Consumes (#277)
+    [POST, Path('raw'), Consumes(TMediaType.TEXT_PLAIN), Produces(TMediaType.TEXT_PLAIN)]
+    function Raw: string;
   end;
 
   // the OpenAPI of authorization and of procedures
@@ -557,6 +560,11 @@ end;
 function TOpenAPIDataResource.Holder: TComponentHolder;
 begin
   Result := nil;
+end;
+
+function TOpenAPIDataResource.Raw: string;
+begin
+  Result := '';
 end;
 
 initialization

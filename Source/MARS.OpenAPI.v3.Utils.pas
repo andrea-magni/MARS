@@ -695,7 +695,14 @@ begin
   // REQUEST BODY
   var LConsumes := AMethodMetadata.Consumes;
   if LConsumes = '' then
-    LConsumes := DefaultRequestMediaType(AMethodMetadata);
+    LConsumes := DefaultRequestMediaType(AMethodMetadata)
+  // a Consumes inherited from the resource alone is not a body: a body parameter, form
+  // parameters, [MetaRequestBody] or a Consumes of the method itself are (#277)
+  else if not AMethodMetadata.OwnConsumes
+    and (Length(AMethodMetadata.ParametersByKind('BodyParam')) = 0)
+    and (Length(AMethodMetadata.ParametersByKind('FormParam')) = 0)
+    and not Assigned(RequestBodyTypeOf(AMethodMetadata)) then
+    LConsumes := '';
   if LConsumes <> '' then
   begin
     var LRequestBody := AOperation.requestBody;

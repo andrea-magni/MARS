@@ -171,6 +171,7 @@ begin
       procedure (Attribute: ConsumesAttribute)
       begin
         LMethodMetadata.Consumes := SmartConcat([LMethodMetadata.Consumes, Attribute.Value]);
+        LMethodMetadata.OwnConsumes := True;
       end);
     if LMethodMetadata.Consumes.IsEmpty then
       LMethodMetadata.Consumes := AResourceMetadata.Consumes
@@ -412,6 +413,7 @@ begin
     ReadRouteAttributes(ARoute.Attributes, LProduces, LConsumes, LAuthorization);
     LMethodMetadata.Produces := StringFallback([LProduces, AResourceMetadata.Produces, FDefaultProduces]);
     LMethodMetadata.Consumes := StringFallback([LConsumes, AResourceMetadata.Consumes]);
+    LMethodMetadata.OwnConsumes := LConsumes <> '';
     LMethodMetadata.Authorization := LAuthorization;
 
     // path parameters: from the template, typed by the constraint

@@ -38,6 +38,8 @@ type
     [Test] procedure MembersLeftOutOfTheJSON;
     // #276: the JSON on the wire, not the Delphi classes (datasets, token, framework types)
     [Test] procedure DataSetsAndFrameworkTypes;
+    // #277: no request body for the methods without one, whatever the Consumes of the resource
+    [Test] procedure NoBodyWithoutBody;
 {$IFDEF MARS_YAML}
     [Test] procedure SecurityAsYAML;
     [Test] procedure StringsStayStringsInYAML;
@@ -341,6 +343,28 @@ begin
         LNames := LNames + [LProperty.Key];
       Assert.AreEqual('Token,IsVerified,UserName,Roles,Expiration,IssuedAt,Claims', string.Join(',', LNames));
       Assert.AreEqual('string', LToken.GetProperty('Roles').&type, 'comma separated');
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+procedure TMARSOpenAPI3Test.NoBodyWithoutBody;
+begin
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LEngine.Engine.ApplicationByName('DefaultApp'));
+    try
+      // TItemResource declares Consumes(application/json) on the class
+      Assert.AreEqual(0, LOpenAPI.paths['/item/{id}'].get.requestBody.content.Count, 'GET without a body');
+      Assert.AreEqual(0, LOpenAPI.paths['/item'].get.requestBody.content.Count, 'GET without a body');
+      Assert.AreEqual(1, LOpenAPI.paths['/item'].post.requestBody.content.Count, 'a [BodyParam]');
+      Assert.AreEqual(1, LOpenAPI.paths['/item/single'].post.requestBody.content.Count, 'a [BodyParam]');
+      // a Consumes of the method itself (TOpenAPIDataResource.Deltas, with a body parameter too)
+      Assert.AreEqual(1, LOpenAPI.paths['/openapidata/deltas'].post.requestBody.content.Count);
+      Assert.AreEqual(1, LOpenAPI.paths['/openapidata/raw'].post.requestBody.content.Count, 'own Consumes, no parameter');
     finally
       LOpenAPI.Free;
     end;

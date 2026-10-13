@@ -16,6 +16,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 - **OpenAPI documents** ([#276](https://github.com/andrea-magni/MARS/issues/276)): the documents of servers returning datasets, components or the token change: those schemas described the Delphi objects and were not usable by clients; regenerate the clients made from them. Add `[MetaResult]` to document the rows of a dataset.
 
 **Fixed**
+- OpenAPI: with `[Consumes]` on the resource class, every method got a request body, also the ones without a body (i.e. `GET`), with media types and no schema; now only the methods with a body parameter, form parameters, `[MetaRequestBody]` or their own `[Consumes]`. [OpenAPI](/features/openapi) ([#277](https://github.com/andrea-magni/MARS/issues/277))
 - Demos (FMX server forms of ErrorObjects, HtmxDemo, OTPDemo, SSEDemo, TokenRenew, WebStencilsDemo): the OpenAPI button raised "available on Microsoft Windows only" on Windows, a swapped `{$IFNDEF MSWINDOWS}`.
 
 ## 2.0.0 {#v2-0-0}
