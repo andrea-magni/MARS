@@ -119,6 +119,21 @@ type
       const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TFDQuery; virtual;
     function CreateTransaction(const AContextOwned: Boolean = True): TFDTransaction; virtual;
 
+    // A stored procedure, prepared (its parameters from the database) and with the values of its
+    // input parameters injected as for queries (path, query, form... parameters with the same
+    // name); its output parameters are not touched. Context owned: freed after the request.
+    function CreateStoredProc(const AStoredProcName: string; const ATransaction: TFDTransaction = nil;
+      const AContextOwned: Boolean = True; const AName: string = 'DataSet'): TFDStoredProc; virtual;
+    // a stored procedure that returns a result set, open: return it from a method as a dataset
+    function OpenStoredProc(const AStoredProcName: string; const ATransaction: TFDTransaction = nil;
+      const AOnBeforeOpen: TProc<TFDStoredProc> = nil; const AContextOwned: Boolean = True;
+      const AName: string = 'DataSet'): TFDStoredProc; virtual;
+    // a stored procedure executed (no result set): the rows affected; its output parameters in
+    // AOnAfterExecute
+    function ExecStoredProc(const AStoredProcName: string; const ATransaction: TFDTransaction = nil;
+      const AOnBeforeExecute: TProc<TFDStoredProc> = nil;
+      const AOnAfterExecute: TProc<TFDStoredProc> = nil): Integer; virtual;
+
     function ExecuteSQL(const ASQL: string; const ATransaction: TFDTransaction = nil;
       const ABeforeExecute: TProc<TFDCommand> = nil;
       const AAfterExecute: TProc<TFDCommand> = nil): Integer; virtual;
@@ -484,6 +499,61 @@ begin
   end;
 end;
 
+function TMARSFireDAC.CreateStoredProc(const AStoredProcName: string;
+  const ATransaction: TFDTransaction; const AContextOwned: Boolean; const AName: string): TFDStoredProc;
+begin
+  Result := TFDStoredProc.Create(nil);
+  try
+    Result.Name := AName;
+    Result.Connection := Connection;
+    Result.Transaction := ATransaction;
+    Result.StoredProcName := AStoredProcName;
+    // the parameters, from the metadata of the procedure
+    Result.Prepare;
+    InjectParamValues(Result.Command);
+    if AContextOwned and Assigned(Activation) then
+      Activation.AddToContext(Result);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSFireDAC.OpenStoredProc(const AStoredProcName: string;
+  const ATransaction: TFDTransaction; const AOnBeforeOpen: TProc<TFDStoredProc>;
+  const AContextOwned: Boolean; const AName: string): TFDStoredProc;
+begin
+  Result := CreateStoredProc(AStoredProcName, ATransaction, AContextOwned, AName);
+  try
+    if Assigned(AOnBeforeOpen) then
+      AOnBeforeOpen(Result);
+    Result.Open;
+  except
+    if not (AContextOwned and Assigned(Activation)) then
+      Result.Free;
+    raise;
+  end;
+end;
+
+function TMARSFireDAC.ExecStoredProc(const AStoredProcName: string;
+  const ATransaction: TFDTransaction; const AOnBeforeExecute,
+  AOnAfterExecute: TProc<TFDStoredProc>): Integer;
+var
+  LStoredProc: TFDStoredProc;
+begin
+  LStoredProc := CreateStoredProc(AStoredProcName, ATransaction, False);
+  try
+    if Assigned(AOnBeforeExecute) then
+      AOnBeforeExecute(LStoredProc);
+    LStoredProc.ExecProc;
+    Result := LStoredProc.RowsAffected;
+    if Assigned(AOnAfterExecute) then
+      AOnAfterExecute(LStoredProc);
+  finally
+    LStoredProc.Free;
+  end;
+end;
+
 function TMARSFireDAC.CreateTransaction(const AContextOwned: Boolean): TFDTransaction;
 begin
   Result := TFDTransaction.Create(nil);
@@ -587,6 +657,9 @@ begin
   for LIndex := 0 to ACommand.Params.Count-1 do
   begin
     LParam := ACommand.Params[LIndex];
+    // the values of the request go into the input parameters only (stored procedures, #65)
+    if LParam.ParamType in [ptOutput, ptResult] then
+      Continue;
     if ((not AOnlyIfEmpty) or LParam.IsNull) then
       LParam.Value := GetContextValue(LParam.Name, Activation, LParam.DataType).AsVariant;
   end;

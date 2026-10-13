@@ -171,6 +171,44 @@ end;
 
 Without a transaction the statements run in auto-commit mode.
 
+### Stored procedures
+
+`CreateStoredProc`, `OpenStoredProc` and `ExecStoredProc` work as `CreateQuery`, `Query` and `ExecuteSQL` for stored procedures. The procedure is prepared, so its parameters come from the database, and its input parameters named after the request are filled automatically, as for queries; output parameters are left alone.
+
+```pascal
+// a procedure that returns rows (Firebird: a selectable one, with SUSPEND): a dataset, written
+// as any other (JSON, the native formats of FireDAC)
+[GET, Path('{id}/orders')]
+function GetOrders: TFDStoredProc;
+begin
+  Result := FD.OpenStoredProc('CUSTOMER_ORDERS', nil,
+    procedure (AProc: TFDStoredProc)
+    begin
+      AProc.ParamByName('CUSTOMER_ID').AsInteger := FId;
+    end);
+end;
+
+// an executable procedure: its output parameters after the execution
+[POST, Path('{id}/discount')]
+function Discount: Double;
+var
+  LDiscount: Double;
+begin
+  FD.ExecStoredProc('APPLY_DISCOUNT', nil,
+    procedure (AProc: TFDStoredProc)
+    begin
+      AProc.ParamByName('CUSTOMER_ID').AsInteger := FId;
+    end,
+    procedure (AProc: TFDStoredProc)
+    begin
+      LDiscount := AProc.ParamByName('DISCOUNT').AsFloat;
+    end);
+  Result := LDiscount;
+end;
+```
+
+`OpenStoredProc` returns a stored procedure owned by the request (freed after it), as `Query`; `ExecStoredProc` frees its own and returns the rows affected, as the driver reports them. A `TFDStoredProc` is a FireDAC dataset: it is written (JSON, the native formats) as a `TFDQuery`.
+
 ## Transactions
 
 `InTransaction` runs a procedure in a new transaction: commit when it ends, rollback when it raises an exception (the exception reaches the client, i.e. an `EMARSHttpException` with its status):

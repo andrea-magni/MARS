@@ -38,6 +38,9 @@ type
 
     [Test]
     procedure ParamsInjection;
+    // #65: the values of the request go into input parameters only (stored procedures)
+    [Test]
+    procedure ParamsInjectionSkipsOutput;
   end;
 
 implementation
@@ -182,6 +185,41 @@ begin
       LQuery.Free;
     end;
   finally
+    LFD.Free;
+  end;
+end;
+
+procedure TMARSFireDACReaderWriterTest.ParamsInjectionSkipsOutput;
+var
+  LFD: TMARSFireDAC;
+  LCommand: TFDCommand;
+begin
+  LFD := TMARSFireDAC.Create('MAIN_DB');
+  LCommand := TFDCommand.Create(nil);
+  try
+    LFD.AddContextValueProvider(
+      procedure (const AActivation: IMARSActivation;
+      const AName: string; const ADesiredType: TFieldType; out AValue: TValue)
+      begin
+        if AName.StartsWith('Custom65_', True) then
+          AValue := 65;
+      end
+    );
+    with LCommand.Params.Add('Custom65_IN', ftInteger) do
+      ParamType := ptInput;
+    with LCommand.Params.Add('Custom65_INOUT', ftInteger) do
+      ParamType := ptInputOutput;
+    with LCommand.Params.Add('Custom65_OUT', ftInteger) do
+      ParamType := ptOutput;
+    with LCommand.Params.Add('Custom65_RESULT', ftInteger) do
+      ParamType := ptResult;
+    LFD.InjectParamValues(LCommand);
+    Assert.AreEqual(65, LCommand.ParamByName('Custom65_IN').AsInteger);
+    Assert.AreEqual(65, LCommand.ParamByName('Custom65_INOUT').AsInteger);
+    Assert.IsTrue(LCommand.ParamByName('Custom65_OUT').IsNull);
+    Assert.IsTrue(LCommand.ParamByName('Custom65_RESULT').IsNull);
+  finally
+    LCommand.Free;
     LFD.Free;
   end;
 end;
