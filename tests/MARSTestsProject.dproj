@@ -117,6 +117,7 @@
         <DCCReference Include="Tests.Client.Resources.pas"/>
         <DCCReference Include="Tests.Client.TestServer.pas"/>
         <DCCReference Include="Tests.Client.Log.pas"/>
+        <DCCReference Include="Tests.Client.FireDAC.pas"/>
         <DCCReference Include="Tests.DCS.pas"/>
         <DCCReference Include="Tests.MARSParameters.pas"/>
         <DCCReference Include="Tests.Activation.pas"/>
