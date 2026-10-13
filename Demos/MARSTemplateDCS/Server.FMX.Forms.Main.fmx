@@ -63,6 +63,14 @@ object MainForm: TMainForm
       Position.Y = 64.000000000000000000
       TabOrder = 5
     end
+    object StoplightButton: TButton
+      Action = StoplightAction
+      ImageIndex = -1
+      Position.X = 456.000000000000000000
+      Position.Y = 64.000000000000000000
+      TabOrder = 6
+      TextSettings.Trimming = None
+    end
     object StopButton: TButton
       Action = StopServerAction
       ImageIndex = -1
@@ -88,6 +96,11 @@ object MainForm: TMainForm
     object OpenAPIAction: TAction
       Text = 'OpenAPI'
       OnExecute = OpenAPIActionExecute
+      OnUpdate = OpenAPIActionUpdate
+    end
+    object StoplightAction: TAction
+      Text = 'Stoplight'
+      OnExecute = StoplightActionExecute
       OnUpdate = OpenAPIActionUpdate
     end
   end

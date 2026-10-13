@@ -2,6 +2,14 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
+## Unreleased {#unreleased}
+
+**New**
+- Templates and demos: a **Stoplight** button next to **OpenAPI** in the VCL and FMX server forms, opening the Stoplight Elements page of the application (`<application>/docs`, now registered by every demo too). [OpenAPI ▸ Stoplight Elements](/features/openapi#stoplight-elements)
+
+**Fixed**
+- Demos (FMX server forms of ErrorObjects, HtmxDemo, OTPDemo, SSEDemo, TokenRenew, WebStencilsDemo): the OpenAPI button raised "available on Microsoft Windows only" on Windows, a swapped `{$IFNDEF MSWINDOWS}`.
+
 ## 2.0.0 {#v2-0-0}
 
 <Badge type="tip" text="latest" /> **13 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.0) · [changes since 1.9.2](https://github.com/andrea-magni/MARS/compare/v.1.9.2...v.2.0.0)

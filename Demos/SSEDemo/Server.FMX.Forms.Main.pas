@@ -26,6 +26,8 @@ type
     StartButton: TButton;
     StopButton: TButton;
     OpenAPIAction: TAction;
+    StoplightAction: TAction;
+    StoplightButton: TButton;
     Button1: TButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCreate(Sender: TObject);
@@ -36,6 +38,7 @@ type
     procedure PortNumberEditChange(Sender: TObject);
     procedure OpenAPIActionUpdate(Sender: TObject);
     procedure OpenAPIActionExecute(Sender: TObject);
+    procedure StoplightActionExecute(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
   public
@@ -75,16 +78,27 @@ var
   LURL: string;
 begin
   LURL := STATIC_CONTENT_URL + 'index.html' + '?openAPIURL=' + TURLEncoding.URL.Encode(OPENAPI_URL);
-{$IFNDEF MSWINDOWS}
+{$IFDEF MSWINDOWS}
   ShellExecute(0, nil, PWideChar(LURL), nil, nil, SW_SHOWDEFAULT);
 {$ELSE}
   raise Exception.Create('This is currently available on Microsoft Windows only. Open your browser at ' + LURL);
 {$ENDIF}
 end;
 
+procedure TMainForm.StoplightActionExecute(Sender: TObject);
+const
+  DOCS_URL = 'http://localhost:8080/rest/default/docs';
+begin
+{$IFDEF MSWINDOWS}
+  ShellExecute(0, nil, PWideChar(DOCS_URL), nil, nil, SW_SHOWDEFAULT);
+{$ELSE}
+  raise Exception.Create('This is currently available on Microsoft Windows only. Open your browser at ' + DOCS_URL);
+{$ENDIF}
+end;
+
 procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
 begin
-  OpenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
+  (Sender as TAction).Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);

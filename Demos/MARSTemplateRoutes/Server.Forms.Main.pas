@@ -31,6 +31,8 @@ type
     Label2: TLabel;
     OpenAPIButton: TButton;
     OpenAPIAction: TAction;
+    StoplightAction: TAction;
+    StoplightButton: TButton;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -42,11 +44,14 @@ type
     procedure MainTreeViewClick(Sender: TObject);
     procedure OpenAPIActionUpdate(Sender: TObject);
     procedure OpenAPIActionExecute(Sender: TObject);
+    procedure StoplightActionExecute(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
   protected
     procedure RenderEngines(const ATreeView: TTreeView);
+    function AppBaseURL: string;
     function OpenAPIURL: string;
+    function StoplightURL: string;
   public
   end;
 
@@ -205,24 +210,33 @@ end;
 
 // Swagger UI (static content of TStaticContentResource) on the OpenAPI document of DefaultApp,
 // with the actual ports and base paths
-function TMainForm.OpenAPIURL: string;
+// DefaultApp, with the actual ports and base paths
+function TMainForm.AppBaseURL: string;
 var
   LEngine: IMARSEngine;
   LApplication: IMARSApplication;
-  LBaseURL: string;
 begin
   LEngine := TServerEngine.Default;
   if LEngine.Port <> 0 then
-    LBaseURL := 'http://localhost:' + LEngine.Port.ToString
+    Result := 'http://localhost:' + LEngine.Port.ToString
   else
-    LBaseURL := 'https://localhost:' + LEngine.PortSSL.ToString;
-  LBaseURL := LBaseURL + LEngine.BasePath;
+    Result := 'https://localhost:' + LEngine.PortSSL.ToString;
+  Result := Result + LEngine.BasePath;
   LApplication := LEngine.ApplicationByName('DefaultApp');
   if Assigned(LApplication) then
-    LBaseURL := TMARSURL.CombinePath([LBaseURL, LApplication.BasePath]);
+    Result := TMARSURL.CombinePath([Result, LApplication.BasePath]);
+end;
 
-  Result := TMARSURL.CombinePath([LBaseURL, 'www/index.html'])
-    + '?openAPIURL=' + TURLEncoding.URL.Encode(TMARSURL.CombinePath([LBaseURL, 'openapi']));
+function TMainForm.OpenAPIURL: string;
+begin
+  Result := TMARSURL.CombinePath([AppBaseURL, 'www/index.html'])
+    + '?openAPIURL=' + TURLEncoding.URL.Encode(TMARSURL.CombinePath([AppBaseURL, 'openapi']));
+end;
+
+// Stoplight Elements (TDocsResource) on the OpenAPI document of DefaultApp
+function TMainForm.StoplightURL: string;
+begin
+  Result := TMARSURL.CombinePath([AppBaseURL, 'docs']);
 end;
 
 procedure TMainForm.OpenAPIActionExecute(Sender: TObject);
@@ -230,9 +244,14 @@ begin
   ShellExecute(0, nil, PWideChar(OpenAPIURL), nil, nil, SW_SHOWDEFAULT);
 end;
 
+procedure TMainForm.StoplightActionExecute(Sender: TObject);
+begin
+  ShellExecute(0, nil, PWideChar(StoplightURL), nil, nil, SW_SHOWDEFAULT);
+end;
+
 procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
 begin
-  OpenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
+  (Sender as TAction).Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);

@@ -57,6 +57,15 @@ object MainForm: TMainForm
       TabOrder = 3
       TextSettings.Trimming = None
     end
+    object StoplightButton: TButton
+      Action = StoplightAction
+      Anchors = [akTop, akRight]
+      ImageIndex = -1
+      Position.X = 456.000000000000000000
+      Position.Y = 64.000000000000000000
+      TabOrder = 4
+      TextSettings.Trimming = None
+    end
   end
   object MainActionList: TActionList
     Left = 384
@@ -74,6 +83,11 @@ object MainForm: TMainForm
     object OpenAPIAction: TAction
       Text = 'OpenAPI'
       OnExecute = OpenAPIActionExecute
+      OnUpdate = OpenAPIActionUpdate
+    end
+    object StoplightAction: TAction
+      Text = 'Stoplight'
+      OnExecute = StoplightActionExecute
       OnUpdate = OpenAPIActionUpdate
     end
   end

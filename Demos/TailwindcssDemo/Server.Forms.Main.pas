@@ -31,6 +31,8 @@ type
     Label2: TLabel;
     OpenAPIButton: TButton;
     OpenAPIAction: TAction;
+    StoplightAction: TAction;
+    StoplightButton: TButton;
     procedure StartServerActionExecute(Sender: TObject);
     procedure StartServerActionUpdate(Sender: TObject);
     procedure StopServerActionExecute(Sender: TObject);
@@ -42,6 +44,7 @@ type
     procedure MainTreeViewClick(Sender: TObject);
     procedure OpenAPIActionUpdate(Sender: TObject);
     procedure OpenAPIActionExecute(Sender: TObject);
+    procedure StoplightActionExecute(Sender: TObject);
   private
     FServer: TMARShttpServerIndy;
   protected
@@ -194,9 +197,17 @@ begin
   ShellExecute(0, nil, PWideChar(LURL), nil, nil, SW_SHOWDEFAULT);
 end;
 
+procedure TMainForm.StoplightActionExecute(Sender: TObject);
+const
+  // Stoplight Elements (TDocsResource) on the OpenAPI document
+  DOCS_URL = 'http://localhost:8080/rest/default/docs';
+begin
+  ShellExecute(0, nil, PWideChar(DOCS_URL), nil, nil, SW_SHOWDEFAULT);
+end;
+
 procedure TMainForm.OpenAPIActionUpdate(Sender: TObject);
 begin
-  OpenAPIAction.Enabled := Assigned(FServer) and FServer.Active;
+  (Sender as TAction).Enabled := Assigned(FServer) and FServer.Active;
 end;
 
 procedure TMainForm.PortNumberEditChange(Sender: TObject);

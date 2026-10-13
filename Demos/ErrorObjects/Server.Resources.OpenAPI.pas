@@ -12,7 +12,7 @@ uses
   SysUtils, Classes
 , MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.URL
 , MARS.WebServer.Resources
-, MARS.OpenAPI.v3, MARS.Metadata.Attributes
+, MARS.OpenAPI.v3, MARS.OpenAPI.Elements, MARS.Metadata.Attributes
 ;
 
 type
@@ -26,6 +26,11 @@ type
 
   [Path('www/{*}'), RootFolder('{bin}\..\..\..\www\swagger-ui-3.52.5-dist', True), MetaVisible(False)]
   TStaticContentResource = class(TFileSystemResource)
+  end;
+
+  // the documentation of the API with Stoplight Elements (loaded from a CDN): <application>/docs
+  [Path('docs'), MetaVisible(False)]
+  TDocsResource = class(TOpenAPIElementsResource)
   end;
 
 implementation
@@ -45,6 +50,7 @@ initialization
   MARSRegister([
     TOpenAPIResource
   , TStaticContentResource
+  , TDocsResource
   ]);
 
 end.
