@@ -917,7 +917,7 @@ begin
     tkEnumeration:
     begin
       if LTypeInfo = TypeInfo(Boolean) then
-        Result := AJSONValue is TJSONTrue
+        Result := (AJSONValue is TJSONBool) and TJSONBool(AJSONValue).AsBoolean
       else
       begin
         LOrdinal := GetEnumValue(LTypeInfo, AJSONValue.Value);

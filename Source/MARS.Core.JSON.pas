@@ -670,9 +670,9 @@ begin
       Result[LIndex] := TJSONString(LElement).Value
     else if LElement is TJSONNumber then
       Result[LIndex] := TJSONNumber(LElement).ToString
-    else if LElement is TJSONTrue then
+    else if (LElement is TJSONBool) and TJSONBool(LElement).AsBoolean then
       Result[LIndex] := 'true'
-    else if LElement is TJSONFalse then
+    else if LElement is TJSONBool then
       Result[LIndex] := 'false'
     else
       Result[LIndex] := LElement.ToString;
@@ -1205,8 +1205,9 @@ var
   LValue: TJSONBool;
 begin
   Result := ADefault;
+  // the value, not the class: a TJSONBool is not always a TJSONTrue/TJSONFalse (#127)
   if Assigned(Self) and TryGetValue<TJSONBool>(AName, LValue) then
-    Result := LValue is TJSONTrue;
+    Result := LValue.AsBoolean;
 end;
 
 

@@ -56,6 +56,8 @@ type
     [Test] procedure ZeroDate;
     // #149: an empty key of a dictionary is a pair named ""
     [Test] procedure EmptyDictionaryKey;
+    // #127: booleans read by their value, whatever the class of the TJSONBool
+    [Test] procedure ReadBooleans;
   end;
 
   [TestFixture('JSONToRecord')]
@@ -555,6 +557,27 @@ begin
     LJSONObj.Free;
   end;
 
+end;
+
+procedure TMARSRecordToJSONTest.ReadBooleans;
+var
+  LJSON: TJSONObject;
+begin
+  LJSON := TJSONObject.ParseJSONValue('{"t": true, "f": false, "s": "true"}') as TJSONObject;
+  try
+    Assert.IsTrue(LJSON.ReadBoolValue('t'));
+    Assert.IsFalse(LJSON.ReadBoolValue('f', True));
+    Assert.IsTrue(LJSON.ReadBoolValue('s', True), 'not a boolean: the default');
+    Assert.IsFalse(LJSON.ReadBoolValue('missing'));
+
+    // created in code
+    LJSON.AddPair('ct', TJSONBool.Create(True));
+    LJSON.AddPair('cf', TJSONBool.Create(False));
+    Assert.IsTrue(LJSON.ReadBoolValue('ct'));
+    Assert.IsFalse(LJSON.ReadBoolValue('cf', True));
+  finally
+    LJSON.Free;
+  end;
 end;
 
 procedure TMARSRecordToJSONTest.EmptyDictionaryKey;
