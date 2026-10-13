@@ -81,6 +81,40 @@ initialization
           // after the handler: C.Response, C.Activation.MethodResult
         end
       );
+
+      // a stored procedure as a dataset (FireDAC: uses MARS.Data.FireDAC, FireDAC.Comp.Client);
+      // its input parameters named after the request are filled, the others in the callback
+      R.Get<TFDStoredProc>('orders/{customerId}',
+        function (const C: TMARSRouteContext): TFDStoredProc
+        begin
+          Result := C.Inject<TMARSFireDAC>.OpenStoredProc('CUSTOMER_ORDERS', nil,
+            procedure (AProc: TFDStoredProc)
+            begin
+              AProc.ParamByName('CUSTOMER_ID').AsInteger := C.Path<Integer>('customerId');
+            end);
+        end
+      ).Produces(TMediaType.APPLICATION_JSON);
+
+      // a rate limit of its own for a route (uses MARS.Utils.RateLimiter): 5 requests per
+      // minute for each client, on top of the RateLimit.* of the engine (Server.Ignition)
+      R.Get<string>('expensive',
+        function (const C: TMARSRouteContext): string
+        begin
+          Result := 'Done';
+        end
+      ).Use('expensive-limit',
+        procedure (const C: TMARSRouteContext; const ANext: TProc)
+        begin
+          // GExpensiveLimiter: a TMARSRateLimiter created once (initialization), shared
+          if GExpensiveLimiter.Check(C.Request.RemoteIP, 5, 60).Allowed then
+            ANext()
+          else
+          begin
+            C.Response.StatusCode := 429;
+            C.Response.SetHeader('Retry-After', '60');
+          end;
+        end
+      );
 *)
     end
   );

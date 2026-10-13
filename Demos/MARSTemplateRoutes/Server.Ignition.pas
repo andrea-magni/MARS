@@ -72,6 +72,10 @@ begin
 
   MARS.Core.JSON.DefaultMARSJSONSerializationOptions.IncludeEmptyOrNullValues;
 //  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.SkipAllEmptyOrNullValues;
+  // dates as UTC ("...Z") or local times with their offset (also JSON.DateIsUTC in Server.ini,
+  // [JSONDateIsUTC] on a resource or a method); zero dates as dates instead of "" (JSON.ZeroDateAsEmpty)
+//  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.DateIsUTC := True;
+//  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.ZeroDateAsEmpty := False;
 
   // Application configuration: the endpoints are routes (Server.Routes), token and
   // OpenAPI are resources (Server.Resources.*)
@@ -118,6 +122,25 @@ begin
       , TFDTxIsolation.xiUnspecified
       );
     end;
+*)
+{$ENDREGION}
+{$REGION 'Rate limiting example'}
+(*
+  // each client (its IP) gets 120 requests per 60 seconds, bursts included; over the limit a
+  // 429 with Retry-After, before any routing. Also as RateLimit.* in Server.ini.
+  // For limits per route or per user: TMARSRateLimiter (MARS.Utils.RateLimiter) in a middleware.
+  FEngine.Parameters.Values['RateLimit.Requests'] := 120;
+  FEngine.Parameters.Values['RateLimit.Window'] := 60;
+  // behind a trusted reverse proxy only: the client is the first address of this header
+//  FEngine.Parameters.Values['RateLimit.ClientIPHeader'] := 'X-Forwarded-For';
+*)
+{$ENDREGION}
+{$REGION 'COM initialization example'}
+(*
+  // Windows: COM initialized for each request, in the thread that serves it, for COM based
+  // components (ADO, OLE DB providers such as UniDAC/SDAC with SQL Server, MSXML).
+  // Also as COM.Initialize in Server.ini.
+  FEngine.Parameters.Values['COM.Initialize'] := True;
 *)
 {$ENDREGION}
 {$REGION 'BeforeHandleRequest example'}
