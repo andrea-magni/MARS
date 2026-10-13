@@ -13,7 +13,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB
 , MemDS, MyAccess
-, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Exceptions
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Exceptions, MARS.Metadata.Attributes
 , MARS.Data.MyDAC, MARS.Data.MyDAC.Utils
 ;
 
@@ -28,6 +28,15 @@ type
   // the response of POST customers/import
   TImportResult = record
     imported: Integer;
+  end;
+
+  // a row of CUSTOMERS as the queries return it (MySQL/MariaDB: names as declared), for the
+  // documentation: [MetaResult] shows its fields as the rows of the results in OpenAPI
+  TCustomerRow = record
+    id: Integer;
+    name: string;
+    city: string;
+    credit: Currency;
   end;
 
   /// <summary> CRUD and more on the CUSTOMERS table, with Devart MyDAC. Each method returns a
@@ -46,6 +55,7 @@ type
 
     /// <summary> GET customers, GET customers?city=London </summary>
     [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_XML), Produces(APPLICATION_JSON_MyDAC)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function List([QueryParam('city')] const ACity: string): TMyQuery;
 
     /// <summary> Two datasets in one response: the customers and the totals by city </summary>
@@ -63,12 +73,15 @@ type
     function Import([BodyParam] const AData: TArray<TMemDataSet>): TImportResult;
 
     [GET, Path('{id}'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_XML), Produces(APPLICATION_JSON_MyDAC)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function GetCustomer: TMyQuery;
 
     [POST, Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function Add([BodyParam] const ACustomer: TCustomer): TMyQuery;
 
     [PUT, Path('{id}'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function Update([BodyParam] const ACustomer: TCustomer): TMyQuery;
 
     [DELETE, Path('{id}')]

@@ -13,7 +13,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB
 , MemDS, IBC
-, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Exceptions
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Exceptions, MARS.Metadata.Attributes
 , MARS.Data.IBDAC, MARS.Data.IBDAC.Utils
 ;
 
@@ -28,6 +28,15 @@ type
   // the response of POST customers/import
   TImportResult = record
     imported: Integer;
+  end;
+
+  // a row of CUSTOMERS as the queries return it (Firebird: names in upper case), for the
+  // documentation: [MetaResult] shows its fields as the rows of the results in OpenAPI
+  TCustomerRow = record
+    ID: Integer;
+    NAME: string;
+    CITY: string;
+    CREDIT: Currency;
   end;
 
   /// <summary> CRUD and more on the CUSTOMERS table, with Devart IBDAC. Each method returns a
@@ -46,6 +55,7 @@ type
 
     /// <summary> GET customers, GET customers?city=London </summary>
     [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_XML), Produces(APPLICATION_JSON_IBDAC)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function List([QueryParam('city')] const ACity: string): TIBCQuery;
 
     /// <summary> Two datasets in one response: the customers and the totals by city </summary>
@@ -63,12 +73,15 @@ type
     function Import([BodyParam] const AData: TArray<TMemDataSet>): TImportResult;
 
     [GET, Path('{id}'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_XML), Produces(APPLICATION_JSON_IBDAC)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function GetCustomer: TIBCQuery;
 
     [POST, Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function Add([BodyParam] const ACustomer: TCustomer): TIBCQuery;
 
     [PUT, Path('{id}'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function Update([BodyParam] const ACustomer: TCustomer): TIBCQuery;
 
     [DELETE, Path('{id}')]

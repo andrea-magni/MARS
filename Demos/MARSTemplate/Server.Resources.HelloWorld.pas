@@ -21,6 +21,12 @@ type
     Name: string;
     At: TDateTime;
   end;
+
+  // a row of the stored procedure CUSTOMER_ORDERS, for the documentation ([MetaResult])
+  TOrderRow = record
+    ORDER_ID: Integer;
+    AMOUNT: Currency;
+  end;
 *)
 
   [Path('helloworld')]
@@ -39,7 +45,9 @@ type
     // a stored procedure as a dataset (FireDAC: uses MARS.Data.FireDAC, FireDAC.Comp.Client and
     // the FD field above); input parameters named after the request (PathParam_customerId...)
     // are filled, the others are set in the callback
+    // [MetaResult]: the fields of the rows in the OpenAPI document (unit MARS.Metadata.Attributes)
     [GET, Path('orders/{customerId}'), Produces(TMediaType.APPLICATION_JSON)]
+    [MetaResult(TypeInfo(TOrderRow), True, 'The orders')]
     function GetOrders([PathParam] customerId: Integer): TFDStoredProc;
 *)
   end;

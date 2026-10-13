@@ -13,7 +13,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB
 , FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Param
-, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Exceptions
+, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Exceptions, MARS.Metadata.Attributes
 , MARS.Data.FireDAC, MARS.Data.FireDAC.Resources
 ;
 
@@ -23,6 +23,15 @@ type
     name: string;
     city: string;
     credit: Currency;
+  end;
+
+  // a row of CUSTOMERS as the queries return it (Firebird: names in upper case), for the
+  // documentation: [MetaResult] shows its fields as the rows of the results in OpenAPI
+  TCustomerRow = record
+    ID: Integer;
+    NAME: string;
+    CITY: string;
+    CREDIT: Currency;
   end;
 
   /// <summary> CRUD and more on the CUSTOMERS table, with FireDAC. Each method returns a dataset
@@ -41,6 +50,7 @@ type
 
     /// <summary> GET customers, GET customers?city=London </summary>
     [GET, Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function List([QueryParam('city')] const ACity: string): TFDQuery;
 
     /// <summary> Two datasets in one response: the customers and the totals by city </summary>
@@ -53,12 +63,15 @@ type
     function Transfer: string;
 
     [GET, Path('{id}'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_XML), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function GetCustomer: TFDQuery;
 
     [POST, Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function Add([BodyParam] const ACustomer: TCustomer): TFDQuery;
 
     [PUT, Path('{id}'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
     function Update([BodyParam] const ACustomer: TCustomer): TFDQuery;
 
     [DELETE, Path('{id}')]
