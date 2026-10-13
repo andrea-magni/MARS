@@ -468,19 +468,42 @@ procedure TMARSCmd.ReplaceEverywhere;
 var
   LFile: string;
   LSearchReplace: TPair<string, string>;
-  LNewFileName: string;
+  LRelativeName, LNewFileName: string;
+  LFolders: TArray<string>;
 begin
   for LFile in TDirectory.GetFiles(DestinationPath, '*.*', TSearchOption.soAllDirectories) do
   begin
     if MatchAtLeastOnePattern(ReplaceMatches, LFile) then
       ReplaceInFile(LFile);
 
-    LNewFileName := LFile;
+    // the names inside the destination only (its own path may contain the text), folders too:
+    // bin\MARSTemplateClient\AndroidManifest.xml goes to bin\<Name>Client\, created if missing (#52)
+    LRelativeName := ExtractRelativePath(IncludeTrailingPathDelimiter(DestinationPath), LFile);
     for LSearchReplace in ReplacePatterns do
-      LNewFileName := LNewFileName.Replace(LSearchReplace.Key, LSearchReplace.Value, [rfReplaceAll]);
+      LRelativeName := LRelativeName.Replace(LSearchReplace.Key, LSearchReplace.Value, [rfReplaceAll]);
+    LNewFileName := TPath.Combine(DestinationPath, LRelativeName);
     if LNewFileName <> LFile then
+    begin
+      ForceDirectories(ExtractFileDir(LNewFileName));
       TFile.Move(LFile, LNewFileName);
+    end;
   end;
+
+  // the folders left empty by the moves (the deepest first)
+  LFolders := TDirectory.GetDirectories(DestinationPath, '*', TSearchOption.soAllDirectories);
+  TArray.Sort<string>(LFolders, TComparer<string>.Construct(
+    function (const ALeft, ARight: string): Integer
+    begin
+      Result := ARight.Length - ALeft.Length;
+    end));
+  for var LFolder in LFolders do
+    if TDirectory.IsEmpty(LFolder) then
+      for LSearchReplace in ReplacePatterns do
+        if ExtractRelativePath(IncludeTrailingPathDelimiter(DestinationPath), LFolder).Contains(LSearchReplace.Key) then
+        begin
+          TDirectory.Delete(LFolder);
+          Break;
+        end;
 end;
 
 procedure TMARSCmd.ReplaceInFile(const AFileName: string);

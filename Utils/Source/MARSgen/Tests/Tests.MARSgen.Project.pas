@@ -36,6 +36,9 @@ type
     procedure CommandLine;
     [Test]
     procedure UnitsOfTheTemplateAreNotReplaced;
+    // MARSCmd: the name of the template in folders too, also in the path of the destination (#52)
+    [Test]
+    procedure TemplateNameInFolders;
     [Test]
     procedure ProjectBuildsAndAnswers;
     [Test]
@@ -47,7 +50,7 @@ implementation
 uses
   System.IOUtils, System.Net.HttpClient, System.Net.URLClient, System.JSON, System.DateUtils,
   Winapi.Windows,
-  MARS.Gen.Model, MARS.Gen.Project,
+  MARS.Gen.Model, MARS.Gen.Project, MARS.Cmd,
   Tests.MARSgen.OpenAPIReader, Tests.MARSgen.Helpers;
 
 type
@@ -288,6 +291,42 @@ begin
     TPath.Combine(TGenProject.FindMARSFolder, 'Demos\MARSgenNotHere')]));
   Assert.Contains(FOutput.Text, 'inside the MARS folder');
   Assert.IsFalse(TDirectory.Exists(TPath.Combine(TGenProject.FindMARSFolder, 'Demos\MARSgenNotHere')));
+end;
+
+procedure TGenProjectTest.TemplateNameInFolders;
+var
+  LRoot, LTemplate, LDestination: string;
+  LCmd: TMARSCmd;
+begin
+  LRoot := TGenTestTools.NewFolder('MARSCmdFolders');
+  try
+    LTemplate := TPath.Combine(LRoot, 'XTpl');
+    ForceDirectories(TPath.Combine(LTemplate, 'bin\XTplClient\sub'));
+    TFile.WriteAllText(TPath.Combine(LTemplate, 'XTplServer.dpr'), 'program XTplServer;');
+    TFile.WriteAllText(TPath.Combine(LTemplate, 'bin\XTplClient\AndroidManifest.xml'), '<manifest/>');
+    TFile.WriteAllText(TPath.Combine(LTemplate, 'bin\XTplClient\sub\XTplClient.txt'), 'x');
+    // the destination contains the name of the template too
+    LDestination := TPath.Combine(LRoot, 'XTplProjects\Foo');
+
+    LCmd := TMARSCmd.Create(TGenProject.FindMARSFolder);
+    try
+      LCmd.TemplatePath := LTemplate;
+      LCmd.DestinationPath := LDestination;
+      LCmd.PrepareNewProject('XTpl', 'Foo', TMARSCmd.DEFAULT_MATCHES);
+      LCmd.Execute;
+    finally
+      LCmd.Free;
+    end;
+
+    Assert.AreEqual('program FooServer;', TFile.ReadAllText(TPath.Combine(LDestination, 'FooServer.dpr')).Trim);
+    Assert.IsTrue(TFile.Exists(TPath.Combine(LDestination, 'bin\FooClient\AndroidManifest.xml')));
+    Assert.IsTrue(TFile.Exists(TPath.Combine(LDestination, 'bin\FooClient\sub\FooClient.txt')));
+    // no folder of the template left
+    Assert.IsFalse(TDirectory.Exists(TPath.Combine(LDestination, 'bin\XTplClient')));
+    Assert.IsFalse(TDirectory.Exists(TPath.Combine(LRoot, 'FooProjects')));
+  finally
+    TGenTestTools.DeleteFolder(LRoot);
+  end;
 end;
 
 procedure TGenProjectTest.UnitsOfTheTemplateAreNotReplaced;
