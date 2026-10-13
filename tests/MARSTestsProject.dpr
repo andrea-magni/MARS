@@ -28,6 +28,7 @@ uses
   Tests.Client.TestServer in 'Tests.Client.TestServer.pas',
   Tests.Client.Log in 'Tests.Client.Log.pas',
   Tests.Client.FireDAC in 'Tests.Client.FireDAC.pas',
+  Tests.Client.Async in 'Tests.Client.Async.pas',
   Tests.DCS in 'Tests.DCS.pas',
   Tests.MARSParameters in 'Tests.MARSParameters.pas',
   Tests.Activation in 'Tests.Activation.pas',

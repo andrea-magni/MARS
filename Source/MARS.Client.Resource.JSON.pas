@@ -258,11 +258,16 @@ begin
   LDest := Dest as TMARSClientResourceJSON;
   if Assigned(LDest) then
   begin
+    // a copy of the response: each resource frees its own (it was shared, #98); set before the
+    // subscribers are copied, not to notify them of the destination
     LDest.FNotifyList.Clear;
+    if Assigned(FResponse) then
+      LDest.RefreshResponse(FResponse.Clone as TJSONValue)
+    else
+      LDest.RefreshResponse(TJSONValue(nil));
+
     for LNotifyEvent in FNotifyList do
       LDest.FNotifyList.Add(LNotifyEvent);
-
-    LDest.RefreshResponse(FResponse);
   end;
 end;
 
@@ -277,9 +282,12 @@ begin
   begin
     if Assigned(LSource.Response) then
     begin
+      // the previous response freed, as RefreshResponse does (it leaked, #98); the subscribers
+      // are not notified here: this runs in the thread of the asynchronous call
+      var LPrevious := FResponse;
       FResponse := LSource.Response.Clone as TJSONValue;
       FResponse.Owned := False;
-//      RefreshResponse(LSource.Response.Clone as TJSONValue)
+      LPrevious.Free;
     end
     else
       RefreshResponse(TJSONValue(nil));

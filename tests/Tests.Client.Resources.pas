@@ -54,6 +54,10 @@ type
 
     [GET, Path('big'), Produces(TMediaType.TEXT_PLAIN)]
     function GetBig: string;
+
+    // a form (TMARSClientResourceFormUrlEncoded)
+    [POST, Path('form'), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), Produces(TMediaType.TEXT_PLAIN)]
+    function PostForm([FormParam('name')] const AName: string): string;
   end;
 
 
@@ -120,6 +124,11 @@ end;
 function TTestResource.GetNotFound: string;
 begin
   raise EMARSHttpException.Create('nothing here', 404);
+end;
+
+function TTestResource.PostForm(const AName: string): string;
+begin
+  Result := 'form: ' + AName;
 end;
 
 function TTestResource.GetBig: string;

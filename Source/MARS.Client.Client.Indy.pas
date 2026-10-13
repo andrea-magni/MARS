@@ -89,12 +89,77 @@ implementation
 
 uses
     Rtti, TypInfo
+  , IdIOHandler
   , MARS.Client.CustomResource
   , MARS.Client.Resource
   , MARS.Client.Resource.JSON
   , MARS.Client.Resource.Stream
   , MARS.Client.Application
 ;
+
+// A copy of AIOHandler for ADestination, owned by it: same class, same published properties
+// (i.e. the SSLOptions and the events of an SSL IOHandler); other components referenced, not copied.
+// A connection cannot share its IOHandler: the socket is the IOHandler's (#98, #27).
+function CloneIOHandler(const AIOHandler: TIdIOHandler; const ADestination: TIdHTTP): TIdIOHandler;
+var
+  LProperties: PPropList;
+  LCount: Integer;
+  LSource, LTarget: TObject;
+begin
+  Result := TIdIOHandlerClass(AIOHandler.ClassType).Create(ADestination);
+  try
+    LCount := GetPropList(AIOHandler.ClassInfo, tkAny, nil);
+    GetMem(LProperties, LCount * SizeOf(PPropInfo));
+    try
+      GetPropList(AIOHandler.ClassInfo, tkAny, LProperties);
+      for var LIndex := 0 to LCount - 1 do
+      begin
+        var LProperty := LProperties^[LIndex];
+        if SameText(string(LProperty^.Name), 'Name') then
+          Continue;
+        var LWritable := Assigned(LProperty^.SetProc);
+        case LProperty^.PropType^.Kind of
+          tkClass:
+          begin
+            LSource := GetObjectProp(AIOHandler, LProperty);
+            LTarget := GetObjectProp(Result, LProperty);
+            if LSource is TComponent then
+            begin
+              if LWritable then
+                SetObjectProp(Result, LProperty, LSource);
+            end
+            else if (LSource is TPersistent) and (LTarget is TPersistent) then
+              try
+                TPersistent(LTarget).Assign(TPersistent(LSource));
+              except
+                on EConvertError do ; // not assignable: left as created
+              end;
+          end;
+          tkMethod:
+            if LWritable then
+              SetMethodProp(Result, LProperty, GetMethodProp(AIOHandler, LProperty));
+          tkInteger, tkChar, tkWChar, tkEnumeration, tkSet:
+            if LWritable then
+              SetOrdProp(Result, LProperty, GetOrdProp(AIOHandler, LProperty));
+          tkInt64:
+            if LWritable then
+              SetInt64Prop(Result, LProperty, GetInt64Prop(AIOHandler, LProperty));
+          tkFloat:
+            if LWritable then
+              SetFloatProp(Result, LProperty, GetFloatProp(AIOHandler, LProperty));
+          tkString, tkLString, tkUString, tkWString:
+            if LWritable then
+              SetStrProp(Result, LProperty, GetStrProp(AIOHandler, LProperty));
+        end;
+      end;
+    finally
+      FreeMem(LProperties);
+    end;
+  except
+    Result.Free;
+    raise;
+  end;
+end;
 
 { TMARSIndyClient }
 
@@ -138,7 +203,15 @@ begin
     LDestClient := Dest as TMARSIndyClient;
     LDestClient.ProtocolVersion := ProtocolVersion;
     LDestClient.AuthEndorsement := AuthEndorsement;
-    LDestClient.HttpClient.IOHandler := HttpClient.IOHandler;
+    // an IOHandler set by the user (i.e. SSL) is cloned; the one Indy creates by itself is not
+    // copied: the destination creates its own when it connects
+    if Assigned(HttpClient.IOHandler) and not HttpClient.ManagedIOHandler then
+    begin
+      var LPrevious := LDestClient.HttpClient.IOHandler;
+      LDestClient.HttpClient.IOHandler := CloneIOHandler(HttpClient.IOHandler, LDestClient.HttpClient);
+      if Assigned(LPrevious) and (LPrevious.Owner = LDestClient.HttpClient) then
+        LPrevious.Free;
+    end;
     LDestClient.HttpClient.AllowCookies := HttpClient.AllowCookies;
     CloneCookies(LDestClient.HttpClient, HttpClient);
     LDestClient.HttpClient.ProxyParams.BasicAuthentication := HttpClient.ProxyParams.BasicAuthentication;

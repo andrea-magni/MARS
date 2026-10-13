@@ -28,6 +28,7 @@ type
     procedure AfterPOST(const AContent: TStream); override;
     procedure AfterPUT(const AContent: TStream); override;
     function GetResponseAsString: string; override;
+    procedure SetFormUrlEncoded(const AValue: TMARSParameters);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -64,7 +65,9 @@ type
     function ResponseAsArray<T: record>: TArray<T>;
     procedure CloneStatus(const ASource: TMARSClientCustomResource); override;
   published
-    property FormUrlEncoded: TMARSParameters read FFormUrlEncoded write FFormUrlEncoded;
+    // the resource owns its parameters: setting the property, or passing them to POST, PUT and
+    // POSTAsync, copies the values (the caller keeps and frees its own object)
+    property FormUrlEncoded: TMARSParameters read FFormUrlEncoded write SetFormUrlEncoded;
     property Response: TMemoryStream read FResponse;
     property ResponseAsString;
   end;
@@ -99,8 +102,9 @@ end;
 procedure TMARSClientResourceFormUrlEncoded.AssignTo(Dest: TPersistent);
 begin
   inherited;
+  // a copy of the values: the destination owns (and frees) its own (#98)
   if Dest is TMARSClientResourceFormUrlEncoded then
-    TMARSClientResourceFormUrlEncoded(Dest).FFormUrlEncoded := FFormUrlEncoded;
+    TMARSClientResourceFormUrlEncoded(Dest).FFormUrlEncoded.CopyFrom(FFormUrlEncoded);
 end;
 
 procedure TMARSClientResourceFormUrlEncoded.CloneStatus(
@@ -141,7 +145,7 @@ procedure TMARSClientResourceFormUrlEncoded.POST(const AFormUrlEncoded: TMARSPar
   const ABeforeExecute: TProc<TMemoryStream>; const AAfterExecute: TMARSClientResponseProc;
   const AOnException: TMARSClientExecptionProc);
 begin
-  FFormUrlEncoded := AFormUrlEncoded;
+  SetFormUrlEncoded(AFormUrlEncoded);
   POST(ABeforeExecute, AAfterExecute, AOnException);
 end;
 
@@ -149,7 +153,7 @@ procedure TMARSClientResourceFormUrlEncoded.POSTAsync(const AFormUrlEncoded: TMA
   const ABeforeExecute: TProc<TMemoryStream>; const ACompletionHandler: TProc<TMARSClientCustomResource>;
   const AOnException: TMARSClientExecptionProc; const ASynchronize: Boolean);
 begin
-  FFormUrlEncoded := AFormUrlEncoded;
+  SetFormUrlEncoded(AFormUrlEncoded);
   inherited POSTAsync(ABeforeExecute, ACompletionHandler, AOnException, ASynchronize);
 end;
 
@@ -157,8 +161,19 @@ procedure TMARSClientResourceFormUrlEncoded.PUT(const AFormUrlEncoded: TMARSPara
   const ABeforeExecute: TProc<TMemoryStream>; const AAfterExecute: TMARSClientResponseProc;
   const AOnException: TMARSClientExecptionProc);
 begin
-  FFormUrlEncoded := AFormUrlEncoded;
+  SetFormUrlEncoded(AFormUrlEncoded);
   PUT(ABeforeExecute, AAfterExecute, AOnException);
+end;
+
+procedure TMARSClientResourceFormUrlEncoded.SetFormUrlEncoded(const AValue: TMARSParameters);
+begin
+  // a copy of the values: the resource frees its own object, the caller its own (#98)
+  if AValue = FFormUrlEncoded then
+    Exit;
+  if Assigned(AValue) then
+    FFormUrlEncoded.CopyFrom(AValue)
+  else
+    FFormUrlEncoded.Clear;
 end;
 
 function TMARSClientResourceFormUrlEncoded.ResponseAs<T>: T;
