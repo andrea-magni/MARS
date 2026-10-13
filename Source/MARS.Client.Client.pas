@@ -154,6 +154,10 @@ type
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); overload; virtual;
 
+    // the body of a form (application/x-www-form-urlencoded): name=value&..., names and values
+    // URL encoded (UTF-8), as THTTPClient writes it
+    class function FormUrlEncodedContent(const AFormUrlEncoded: TMARSParameters): TStringStream;
+
     function LastCmdSuccess: Boolean; virtual;
     function ResponseStatusCode: Integer; virtual;
     function ResponseText: string; virtual;
@@ -244,7 +248,7 @@ function MARSQueryParam(const AName: string; const AValue: string = ''): TMARSQu
 implementation
 
 uses
-  Rtti, TypInfo, DateUtils, Diagnostics
+  Rtti, TypInfo, DateUtils, Diagnostics, NetEncoding
 , MARS.Core.URL
 , MARS.Client.CustomResource
 , MARS.Client.Resource
@@ -1103,6 +1107,19 @@ begin
   finally
     LClient.Free;
   end;
+end;
+
+class function TMARSCustomClient.FormUrlEncodedContent(const AFormUrlEncoded: TMARSParameters): TStringStream;
+var
+  LPairs: TArray<string>;
+begin
+  LPairs := [];
+  if Assigned(AFormUrlEncoded) then
+    // the names and values of AsStrings, as the Net and Http clients send them with POST
+    for var LItem in AFormUrlEncoded do
+      LPairs := LPairs + [TNetEncoding.URL.EncodeForm(LItem.Key, [], TEncoding.UTF8) + '='
+        + TNetEncoding.URL.EncodeForm(LItem.Value.ToString, [], TEncoding.UTF8)];
+  Result := TStringStream.Create(string.Join('&', LPairs), TEncoding.ASCII, False);
 end;
 
 procedure TMARSCustomClient.Put(const AURL: string; const AFormUrlEncoded: TMARSParameters; const AResponse: TStream;

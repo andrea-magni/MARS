@@ -117,6 +117,10 @@ type
 
     procedure Put(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
+    // a form: its body as a stream (it sent nothing)
+    procedure Put(const AURL: string; const AFormUrlEncoded: TMARSParameters;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Put(const AURL: string; const AFormData: System.TArray<TFormParam>;
       const AResponse: TStream; const AAuthToken: string;
       const AAccept: string; const AContentType: string); override;
@@ -767,6 +771,20 @@ begin
       end);
   finally
     LFormUrlEncoded.Free;
+  end;
+end;
+
+procedure TMARSHttpClient.Put(const AURL: string; const AFormUrlEncoded: TMARSParameters;
+  const AResponse: TStream; const AAuthToken, AAccept, AContentType: string);
+var
+  LContent: TStringStream;
+begin
+  // not inherited: the stream overload does it all
+  LContent := FormUrlEncodedContent(AFormUrlEncoded);
+  try
+    Put(AURL, LContent, AResponse, AAuthToken, AAccept, AContentType);
+  finally
+    LContent.Free;
   end;
 end;
 

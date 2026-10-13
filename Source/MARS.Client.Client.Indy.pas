@@ -11,7 +11,7 @@ interface
 
 uses
   SysUtils, Classes
-  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client
+  , MARS.Core.JSON, MARS.Client.Utils, MARS.Core.Utils, MARS.Client.Client, MARS.Utils.Parameters
   , MARS.Client.Log
 
   // Indy
@@ -65,6 +65,12 @@ type
     procedure Put(const AURL: string; AContent, AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Put(const AURL: string; const AFormData: TArray<TFormParam>;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
+    procedure Post(const AURL: string; const AFormUrlEncoded: TMARSParameters;
+      const AResponse: TStream;
+      const AAuthToken: string; const AAccept: string; const AContentType: string); override;
+    procedure Put(const AURL: string; const AFormUrlEncoded: TMARSParameters;
       const AResponse: TStream;
       const AAuthToken: string; const AAccept: string; const AContentType: string); override;
     procedure Query(const AURL: string; AContent, AResponse: TStream;
@@ -427,6 +433,33 @@ begin
     begin
       FHttpClient.Put(AURL, AContent, AResponse);
     end);
+end;
+
+// a form: its body as a stream (not inherited: the stream overload does it all)
+procedure TMARSIndyClient.Post(const AURL: string; const AFormUrlEncoded: TMARSParameters;
+  const AResponse: TStream; const AAuthToken, AAccept, AContentType: string);
+var
+  LContent: TStringStream;
+begin
+  LContent := FormUrlEncodedContent(AFormUrlEncoded);
+  try
+    Post(AURL, LContent, AResponse, AAuthToken, AAccept, AContentType);
+  finally
+    LContent.Free;
+  end;
+end;
+
+procedure TMARSIndyClient.Put(const AURL: string; const AFormUrlEncoded: TMARSParameters;
+  const AResponse: TStream; const AAuthToken, AAccept, AContentType: string);
+var
+  LContent: TStringStream;
+begin
+  LContent := FormUrlEncodedContent(AFormUrlEncoded);
+  try
+    Put(AURL, LContent, AResponse, AAuthToken, AAccept, AContentType);
+  finally
+    LContent.Free;
+  end;
 end;
 
 procedure TMARSIndyClient.Query(const AURL: string; AContent, AResponse: TStream;

@@ -58,6 +58,8 @@ type
     // a form (TMARSClientResourceFormUrlEncoded)
     [POST, Path('form'), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), Produces(TMediaType.TEXT_PLAIN)]
     function PostForm([FormParam('name')] const AName: string): string;
+    [PUT, Path('form'), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), Produces(TMediaType.TEXT_PLAIN)]
+    function PutForm([FormParam('name')] const AName: string; [FormParam('city')] const ACity: string): string;
   end;
 
 
@@ -129,6 +131,11 @@ end;
 function TTestResource.PostForm(const AName: string): string;
 begin
   Result := 'form: ' + AName;
+end;
+
+function TTestResource.PutForm(const AName, ACity: string): string;
+begin
+  Result := 'put: ' + AName + ', ' + ACity;
 end;
 
 function TTestResource.GetBig: string;

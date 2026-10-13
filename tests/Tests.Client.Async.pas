@@ -34,6 +34,9 @@ type
     // a form resource: its parameters copied by the copy of the asynchronous call, the caller's own
     [Test]
     procedure FormPOSTAsyncTwice;
+    // a form with every client, POST and PUT, values to encode
+    [Test]
+    procedure FormPOSTAndPUT;
   end;
 
   [TestFixture('Client Async')]
@@ -175,9 +178,6 @@ var
   LResource: TMARSClientResourceFormUrlEncoded;
   LParameters: TMARSParameters;
 begin
-  // a form (x-www-form-urlencoded) is not sent by the Indy client yet
-  if TObject(Client) is TMARSIndyClient then
-    Exit;
   LResource := TMARSClientResourceFormUrlEncoded.Create(nil);
   LParameters := TMARSParameters.Create('');
   try
@@ -203,6 +203,26 @@ begin
   finally
     // the caller frees its parameters, the resource its own
     LParameters.Free;
+    LResource.Free;
+  end;
+end;
+
+procedure TAsyncClientTestBase<C>.FormPOSTAndPUT;
+var
+  LResource: TMARSClientResourceFormUrlEncoded;
+begin
+  LResource := TMARSClientResourceFormUrlEncoded.Create(nil);
+  try
+    LResource.Application := FApplication;
+    LResource.Resource := 'test/form';
+    LResource.SpecificAccept := TMediaType.TEXT_PLAIN;
+    LResource.FormUrlEncoded.Values['name'] := 'Ann & Bob=1+1';
+    LResource.FormUrlEncoded.Values['city'] := 'Citt' + #$E0 + ' ' + #$20AC;
+    LResource.POST;
+    Assert.AreEqual('form: Ann & Bob=1+1', LResource.ResponseAsString);
+    LResource.PUT;
+    Assert.AreEqual('put: Ann & Bob=1+1, Citt' + #$E0 + ' ' + #$20AC, LResource.ResponseAsString);
+  finally
     LResource.Free;
   end;
 end;
