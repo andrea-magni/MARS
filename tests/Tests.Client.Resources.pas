@@ -152,11 +152,13 @@ begin
   try
     GDatesConnection.ExecSQL('drop table if exists DATES');
     GDatesConnection.ExecSQL('create table DATES (ID integer primary key, NAME varchar(20), BORN date, '
-      + 'AT datetime, ENDDATE date)');
+      + 'AT datetime, ENDDATE date, QTY integer, PRICE float)');
     LQuery.Open;
-    LQuery.AppendRecord([1, 'Ann', EncodeDate(1990, 5, 1), EncodeDateTime(2026, 7, 15, 9, 30, 0, 0), Null]);
-    // a zero date: not a null
-    LQuery.AppendRecord([2, 'Bob', EncodeDate(1985, 12, 31), EncodeDateTime(2026, 10, 12, 18, 0, 0, 0), TDateTime(0)]);
+    LQuery.AppendRecord([1, 'Ann', EncodeDate(1990, 5, 1), EncodeDateTime(2026, 7, 15, 9, 30, 0, 0), Null,
+      Null, Null]);
+    // a zero date, zero numbers: not nulls
+    LQuery.AppendRecord([2, 'Bob', EncodeDate(1985, 12, 31), EncodeDateTime(2026, 10, 12, 18, 0, 0, 0), TDateTime(0),
+      0, 0.0]);
   finally
     LQuery.Free;
   end;

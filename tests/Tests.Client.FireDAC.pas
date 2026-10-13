@@ -2,7 +2,8 @@ unit Tests.Client.FireDAC;
 
 // The FireDAC client components (TMARSFDResource, TMARSFDDataSetResource) against a server: the
 // dates of the datasets and of their deltas (native format of FireDAC), and the dates of plain JSON,
-// which follow the JSON.DateIsUTC parameter of the application (#274).
+// which follow the JSON.DateIsUTC parameter of the application (#274); null numbers stay null, zero
+// numbers zero (#131).
 
 interface
 
@@ -25,6 +26,8 @@ type
     procedure DataSetResource;
     [Test]
     procedure PlainJSONFollowsTheOptions;
+    [Test]
+    procedure NullNumbers;
   end;
 
 implementation
@@ -188,6 +191,62 @@ begin
     end;
   finally
     LParameters.Values['JSON.DateIsUTC'] := DefaultMARSJSONSerializationOptions.DateIsUTC;
+  end;
+end;
+
+procedure TMARSClientFireDACTest.NullNumbers;
+var
+  LTable: TFDMemTable;
+  LResource: TMARSFDResource;
+  LItem: TMARSFDResourceDatasetsItem;
+begin
+  Reset;
+
+  // native format
+  LTable := TFDMemTable.Create(nil);
+  LResource := TMARSFDResource.Create(nil);
+  try
+    LResource.Application := FApplication;
+    LResource.Resource := 'fddates';
+    LItem := LResource.ResourceDataSets.Add;
+    LItem.DataSetName := 'dates';
+    LItem.DataSet := LTable;
+    LResource.GET;
+    Assert.IsTrue(LTable.Locate('ID', 1, []));
+    Assert.IsTrue(LTable.FieldByName('QTY').IsNull);
+    Assert.IsTrue(LTable.FieldByName('PRICE').IsNull);
+    Assert.IsTrue(LTable.Locate('ID', 2, []));
+    Assert.IsFalse(LTable.FieldByName('QTY').IsNull);
+    Assert.AreEqual(0, LTable.FieldByName('QTY').AsInteger);
+    Assert.IsFalse(LTable.FieldByName('PRICE').IsNull);
+  finally
+    LResource.Free;
+    LTable.Free;
+  end;
+
+  // plain JSON, with the default options (SkipNullValues too): null and 0
+  FRequest.Resource := 'fddates/plain';
+  FRequest.GET;
+  var LArray := FRequest.Response as TJSONArray;
+  Assert.AreEqual('{"QTY":null,"PRICE":null}', Format('{"QTY":%s,"PRICE":%s}', [
+    (LArray.Items[0] as TJSONObject).Values['QTY'].ToJSON, (LArray.Items[0] as TJSONObject).Values['PRICE'].ToJSON]));
+  Assert.AreEqual('0', (LArray.Items[1] as TJSONObject).Values['QTY'].ToJSON);
+  Assert.IsTrue((LArray.Items[1] as TJSONObject).Values['PRICE'] is TJSONNumber);
+  Assert.AreEqual(0.0, (LArray.Items[1] as TJSONObject).GetValue<Double>('PRICE'), 0);
+
+  // into a dataset: null and 0
+  LTable := TFDMemTable.Create(nil);
+  try
+    JSONArrayToDataSet(LArray, LTable);
+    Assert.IsTrue(LTable.Locate('ID', 1, []));
+    Assert.IsTrue(LTable.FieldByName('QTY').IsNull);
+    Assert.IsTrue(LTable.FieldByName('PRICE').IsNull);
+    Assert.IsTrue(LTable.Locate('ID', 2, []));
+    Assert.IsFalse(LTable.FieldByName('QTY').IsNull);
+    Assert.AreEqual(0, LTable.FieldByName('QTY').AsInteger);
+    Assert.IsFalse(LTable.FieldByName('PRICE').IsNull);
+  finally
+    LTable.Free;
   end;
 end;
 
