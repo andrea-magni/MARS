@@ -23,8 +23,10 @@ type
     procedure AbsoluteFormIndy;
   end;
 
-// sends ARequestLine (and a Host header) to localhost:APort as it is; the response, headers and body
-function RawRequest(const APort: Integer; const ARequestLine: string): string;
+// sends ARequestLine (and a Host header, AHeaders: more header lines) to localhost:APort as it
+// is; the response, headers and body
+function RawRequest(const APort: Integer; const ARequestLine: string;
+  const AHeaders: TArray<string> = []): string;
 
 implementation
 
@@ -34,9 +36,11 @@ uses
 , Tests.Client.TestServer
 ;
 
-function RawRequest(const APort: Integer; const ARequestLine: string): string;
+function RawRequest(const APort: Integer; const ARequestLine: string;
+  const AHeaders: TArray<string>): string;
 var
   LClient: TIdTCPClient;
+  LHeaders: string;
 begin
   LClient := TIdTCPClient.Create(nil);
   try
@@ -46,8 +50,11 @@ begin
     LClient.ReadTimeout := 5000;
     LClient.Connect;
     try
+      LHeaders := '';
+      for var LHeader in AHeaders do
+        LHeaders := LHeaders + LHeader + #13#10;
       LClient.IOHandler.Write(ARequestLine + #13#10
-        + 'Host: localhost:' + APort.ToString + #13#10
+        + 'Host: localhost:' + APort.ToString + #13#10 + LHeaders
         + 'Connection: close' + #13#10#13#10, IndyTextEncoding_ASCII);
       Result := LClient.IOHandler.AllData(IndyTextEncoding_UTF8);
     finally

@@ -176,6 +176,7 @@ These flavors build a library or a FastCGI program that the web server loads; po
 - **HTTPS**: a reverse proxy, or DCS directly (see above).
 - **Indy**: `Indy.KeepAlive=true` (the `MARSTemplate` default since 1.8.1) and `ThreadPoolSize` at least as large as the expected concurrent connections: each open connection holds a thread and the pool size is also the connection limit.
 - **CORS** parameters if browsers call the API from other origins.
+- **Rate limit**: `RateLimit.Requests` and `RateLimit.Window` against floods and brute force; behind a proxy, `RateLimit.ClientIPHeader` too. See [Engine ▸ Rate limiting](/server/engine#rate-limiting).
 - **Logging**: the [JSON logger](/features/logging#file-logging-for-grafana-json) for Grafana/Loki, or the daemon output collected by journald or Docker.
 - **Static files** copied next to the executable with a portable `RootFolder` (see above).
 - **Many cores, many concurrent requests**: the default Delphi memory manager serializes allocations from many threads; a multi-threaded memory manager (i.e. FastMM5) lets the server use all the cores.

@@ -257,7 +257,7 @@ R.Use(
 
 `Use` is available on a route, on a group (nested groups included) or on all the routes of an application with `MARSRoutesOf(LApplication).Use(...)`. Typical uses:
 - timing and auditing;
-- rate limiting and caching;
+- rate limiting (per route or per user, with `TMARSRateLimiter`; for every request there is the [engine rate limit](/server/engine#rate-limiting)) and caching;
 - common headers;
 - authorization checks that roles cannot express.
 

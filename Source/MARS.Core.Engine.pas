@@ -13,6 +13,7 @@ interface
 uses
   SysUtils, Classes, Generics.Collections, SyncObjs
 , MARS.Core.Classes, MARS.Core.Registry
+, MARS.Utils.RateLimiter
 , MARS.Core.Exceptions
 , MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
@@ -36,8 +37,15 @@ type
     FAfterHandleRequest: TAfterHandleRequestProc;
     FOnGetApplication: TGetApplicationProc;
     FOnException: TExceptionProc;
+    FRateLimiter: TMARSRateLimiter;
   protected
     procedure PatchCORS(const ARequest: IMARSRequest; const AResponse: IMARSResponse); virtual;
+    // the RateLimit.* parameters: False when the client went over the limit (the response is a
+    // 429, ready); the RateLimit-* headers on every response when enabled
+    function CheckRateLimit(const ARequest: IMARSRequest; const AResponse: IMARSResponse): Boolean; virtual;
+    // the client of ARequest for the rate limit: its IP, or the first address in the
+    // RateLimit.ClientIPHeader header (behind a trusted reverse proxy)
+    function RateLimitKey(const ARequest: IMARSRequest): string; virtual;
     function DoHandleRequest(ARequest: IMARSRequest; AResponse: IMARSResponse): Boolean; virtual;
   public
     constructor Create(const AName: string = DEFAULT_ENGINE_NAME); virtual;
@@ -57,6 +65,8 @@ type
 
     procedure EnumerateApplications(const ADoSomething: TProc<string, IMARSApplication>); virtual;
     function IsCORSEnabled: Boolean; virtual;
+    // the rate limiter of the RateLimit.* parameters
+    property RateLimiter: TMARSRateLimiter read FRateLimiter;
 
     function GetApplications: TMARSApplicationDictionary;
     function GetParameters: TMARSParameters;
@@ -195,6 +205,7 @@ begin
 
   FApplications := TMARSApplicationDictionary.Create();
   FCriticalSection := TCriticalSection.Create;
+  FRateLimiter := TMARSRateLimiter.Create;
   FParameters := TMARSParameters.Create(FName);
 
   FBeforeHandleRequest := nil;
@@ -219,6 +230,7 @@ begin
     TMARSEngineRegistry.Instance.UnregisterEngine(Self);
 
   FParameters.Free;
+  FRateLimiter.Free;
   FCriticalSection.Free;
   FApplications.Free;
   inherited;
@@ -279,6 +291,10 @@ begin
 
   PatchCORS(ARequest, AResponse);
 
+  // before anything else: a client over the limit costs as little as possible (#119)
+  if not CheckRateLimit(ARequest, AResponse) then
+    Exit(True);
+
   LEnginePath := GetBasePath;
 
   LURL := TMARSURL.Create(ARequest);
@@ -338,6 +354,46 @@ begin
       FAfterHandleRequest(Self, LURL, ARequest, AResponse, Result); // TODO: switch to Activation
   finally
     LURL.Free;
+  end;
+end;
+
+function TMARSEngine.RateLimitKey(const ARequest: IMARSRequest): string;
+var
+  LHeader: string;
+begin
+  Result := '';
+  LHeader := Parameters.ByName('RateLimit.ClientIPHeader', '').ToString;
+  if LHeader <> '' then
+    // X-Forwarded-For: client, proxy1, proxy2
+    Result := ARequest.GetHeaderParamValue(LHeader).Split([','])[0].Trim;
+  if Result = '' then
+    Result := ARequest.RemoteIP;
+end;
+
+function TMARSEngine.CheckRateLimit(const ARequest: IMARSRequest;
+  const AResponse: IMARSResponse): Boolean;
+var
+  LLimit, LWindow: Integer;
+  LResult: TMARSRateLimitResult;
+begin
+  Result := True;
+  LLimit := StrToIntDef(Parameters.ByName('RateLimit.Requests', 0).ToString, 0);
+  if LLimit <= 0 then
+    Exit;
+  LWindow := StrToIntDef(Parameters.ByName('RateLimit.Window', 60).ToString, 60);
+
+  LResult := FRateLimiter.Check(RateLimitKey(ARequest), LLimit, LWindow);
+  AResponse.SetHeader('RateLimit-Limit', LResult.Limit.ToString);
+  AResponse.SetHeader('RateLimit-Remaining', LResult.Remaining.ToString);
+  AResponse.SetHeader('RateLimit-Reset', LResult.ResetSecs.ToString);
+  if not LResult.Allowed then
+  begin
+    AResponse.StatusCode := 429;
+    AResponse.ReasonString := 'Too Many Requests';
+    AResponse.SetHeader('Retry-After', LResult.RetryAfterSecs.ToString);
+    AResponse.ContentType := 'text/plain; charset=utf-8';
+    AResponse.Content := 'Too Many Requests';
+    Result := False;
   end;
 end;
 

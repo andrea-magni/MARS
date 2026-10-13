@@ -194,6 +194,50 @@ terminating TLS it is `False`, and the `X-Forwarded-Proto` header tells the orig
 
 When CORS is enabled (via parameters such as `CORS.Origin`, `CORS.Methods`, `CORS.Headers`), the engine adds the appropriate `Access-Control-*` headers. Check `FEngine.IsCORSEnabled` and handle the `OPTIONS` pre-flight in `BeforeHandleRequest` as shown above.
 
+## Rate limiting
+
+The engine can limit the requests of each client, before any routing (a client over the limit
+costs as little as possible, also when it calls paths that do not exist). It is off by default;
+set the engine parameters:
+
+```ini
+[DefaultEngine]
+; 120 requests per 60 seconds for each client, bursts up to 120
+RateLimit.Requests=120
+RateLimit.Window=60
+; behind a reverse proxy only: the client is the first address of this header
+;RateLimit.ClientIPHeader=X-Forwarded-For
+```
+
+The limit is a token bucket: a client can send `RateLimit.Requests` requests at once, then one
+every `RateLimit.Window / RateLimit.Requests` seconds. Every response carries `RateLimit-Limit`,
+`RateLimit-Remaining` and `RateLimit-Reset` (seconds until the full limit is back); a request over
+the limit gets `429 Too Many Requests` with `Retry-After` (seconds).
+
+The client is the remote IP of the connection. Behind a reverse proxy every request comes from the
+proxy: set `RateLimit.ClientIPHeader` to the header where the proxy writes the address of the
+client (`X-Forwarded-For`, `X-Real-IP`). Set it only behind a proxy you trust, that overwrites the
+header: otherwise any client can send its own value and get a new limit at every request.
+
+The counters live in memory, per engine: each server of a farm counts its own requests. For other
+keys or other limits (per user, per route), use `TMARSRateLimiter` (`MARS.Utils.RateLimiter`) in a
+[middleware](/server/routes#middlewares) or in `BeforeHandleRequest`:
+
+```pascal
+var
+  GLoginLimiter: TMARSRateLimiter; // created at startup
+
+R.Post('login', ...).Use('login-limit',
+  procedure (const C: TMARSRouteContext; const ANext: TProc)
+  begin
+    // 5 attempts per minute for each client
+    if GLoginLimiter.Check(C.Request.RemoteIP, 5, 60).Allowed then
+      ANext()
+    else
+      C.Response.StatusCode := 429;
+  end);
+```
+
 ## Cross-cutting concerns at the engine level
 
 Two facilities are commonly configured during ignition:
