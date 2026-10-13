@@ -26,12 +26,14 @@ type
     [Test] procedure Errors;
     // the date fields written with the options given (DateIsUTC), not the default ones
     [Test] procedure WrittenDatesFollowTheOptions;
+    // #280: fields with a time zone offset (datetimeoffset), written and read with their offset
+    [Test] procedure TimeStampOffsetFields;
   end;
 
 implementation
 
 uses
-  System.JSON, System.DateUtils, System.Generics.Collections, FMTBcd;
+  System.JSON, System.DateUtils, System.Generics.Collections, FMTBcd, Data.SqlTimSt;
 
 const
   PEOPLE =
@@ -418,6 +420,73 @@ begin
       LArray.Free;
     end;
   finally
+    LTable.Free;
+  end;
+end;
+
+procedure TMARSJSONArrayToDataSetTest.TimeStampOffsetFields;
+const
+  EXPECTED: array[0..3] of string = ('2026-07-15T09:30:15.123+03:00', '2026-07-15T09:30:15.000-05:30',
+    '2026-01-02T00:00:00.000Z', '');
+var
+  LTable, LCopy: TFDMemTable;
+  LArray: TJSONArray;
+  LAt: TDateTime;
+begin
+  LAt := EncodeDateTime(2026, 7, 15, 9, 30, 15, 123);
+  LTable := TFDMemTable.Create(nil);
+  LCopy := TFDMemTable.Create(nil);
+  try
+    LTable.FieldDefs.Add('id', ftInteger);
+    LTable.FieldDefs.Add('at', ftTimeStampOffset);
+    LTable.CreateDataSet;
+    LTable.AppendRecord([1]);
+    LTable.Edit;
+    LTable.FieldByName('at').AsSQLTimeStampOffset := DateTimeToSQLTimeStampOffset(LAt, 3, 0);
+    LTable.Post;
+    LTable.AppendRecord([2]);
+    LTable.Edit;
+    LTable.FieldByName('at').AsSQLTimeStampOffset := DateTimeToSQLTimeStampOffset(RecodeMilliSecond(LAt, 0), -5, 30); // -05:30
+    LTable.Post;
+    LTable.AppendRecord([3]);
+    LTable.Edit;
+    LTable.FieldByName('at').AsSQLTimeStampOffset := DateTimeToSQLTimeStampOffset(EncodeDate(2026, 1, 2), 0, 0);
+    LTable.Post;
+    LTable.AppendRecord([4]); // null
+
+    LArray := DataSetToJSONArray(LTable);
+    try
+      for var LIndex := 0 to 2 do
+        Assert.AreEqual(EXPECTED[LIndex], (LArray.Items[LIndex] as TJSONObject).GetValue<string>('at'));
+      Assert.IsTrue((LArray.Items[3] as TJSONObject).GetValue('at') is TJSONNull);
+
+      // and back, with the offsets
+      LCopy.FieldDefs.Add('id', ftInteger);
+      LCopy.FieldDefs.Add('at', ftTimeStampOffset);
+      LCopy.CreateDataSet;
+      JSONArrayToDataSet(LArray, LCopy);
+    finally
+      LArray.Free;
+    end;
+    LTable.First;
+    LCopy.First;
+    while not LTable.Eof do
+    begin
+      Assert.AreEqual(LTable.FieldByName('at').IsNull, LCopy.FieldByName('at').IsNull);
+      if not LTable.FieldByName('at').IsNull then
+      begin
+        var LExpected := LTable.FieldByName('at').AsSQLTimeStampOffset;
+        var LActual := LCopy.FieldByName('at').AsSQLTimeStampOffset;
+        Assert.AreEqual(SQLTimeStampOffsetToStr('', LExpected), SQLTimeStampOffsetToStr('', LActual));
+        Assert.AreEqual(Integer(LExpected.Fractions), Integer(LActual.Fractions));
+        Assert.AreEqual(Integer(LExpected.TimeZoneHour), Integer(LActual.TimeZoneHour));
+        Assert.AreEqual(Integer(LExpected.TimeZoneMinute), Integer(LActual.TimeZoneMinute));
+      end;
+      LTable.Next;
+      LCopy.Next;
+    end;
+  finally
+    LCopy.Free;
     LTable.Free;
   end;
 end;

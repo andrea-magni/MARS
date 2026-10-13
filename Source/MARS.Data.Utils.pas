@@ -90,7 +90,7 @@ function DatasetMetadataToJSONObject(const ADataSet: TDataSet): TJSONObject;
 implementation
 
 uses
-  Rtti, StrUtils, DateUtils, System.JSON, Generics.Collections, FMTBcd
+  Rtti, StrUtils, DateUtils, System.JSON, Generics.Collections, FMTBcd, Data.SqlTimSt
 , MARS.Rtti.Utils, MARS.Core.Utils, MARS.Utils.FloatText;
 
 type
@@ -101,7 +101,7 @@ const
   JSON_FIELD_TYPES = [ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat, ftCurrency, ftBCD,
     ftDate, ftTime, ftDateTime, ftAutoInc, ftMemo, ftFmtMemo, ftFixedChar, ftWideString, ftLargeint,
     ftVariant, ftGuid, ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftLongWord, ftShortint,
-    ftByte, ftExtended, ftSingle];
+    ftByte, ftExtended, ftSingle, ftTimeStampOffset];
 
 function NumericFieldToJSON(const AField: TField; const AUseDisplayFormat: Boolean): TJSONValue;
 var
@@ -147,6 +147,64 @@ begin
     Result := AField.DisplayText
   else
     Result := DateToJSON(AField.AsDateTime, AOptions);
+end;
+
+// a field with a time zone offset (SQL Server datetimeoffset...): ISO 8601 with its own offset,
+// "2026-07-15T09:30:15.123+03:00" ("Z" for zero), whatever DateIsUTC says (#280)
+function TimeStampOffsetFieldToJSON(const AField: TField): string;
+var
+  LValue: TSQLTimeStampOffset;
+  LOffset: Integer;
+begin
+  if (AField is TSQLTimeStampField) and (TSQLTimeStampField(AField).DisplayFormat <> '') then
+    Exit(AField.DisplayText);
+
+  LValue := AField.AsSQLTimeStampOffset;
+  Result := Format('%.4d-%.2d-%.2dT%.2d:%.2d:%.2d.%.3d', [LValue.Year, LValue.Month, LValue.Day,
+    LValue.Hour, LValue.Minute, LValue.Second, LValue.Fractions]);
+  LOffset := Abs(LValue.TimeZoneHour) * 60 + Abs(LValue.TimeZoneMinute);
+  if LOffset = 0 then
+    Result := Result + 'Z'
+  else if (LValue.TimeZoneHour < 0) or (LValue.TimeZoneMinute < 0) then
+    Result := Result + Format('-%.2d:%.2d', [LOffset div 60, LOffset mod 60])
+  else
+    Result := Result + Format('+%.2d:%.2d', [LOffset div 60, LOffset mod 60]);
+end;
+
+// an ISO 8601 string into a value with an offset: the offset of the string, the local one when
+// it has none (#280)
+function JSONToTimeStampOffset(const AText: string; const AOptions: TMARSJSONSerializationOptions): TSQLTimeStampOffset;
+var
+  LIndex, LTimeStart, LSign, LHours, LMinutes: Integer;
+  LOffset: string;
+begin
+  LTimeStart := Pos('T', UpperCase(AText));
+  if (AText <> '') and CharInSet(AText[Length(AText)], ['Z', 'z']) then
+    Exit(DateTimeToSQLTimeStampOffset(ISO8601ToDate(Copy(AText, 1, Length(AText) - 1), True), 0, 0));
+
+  if LTimeStart > 0 then
+    for LIndex := Length(AText) downto LTimeStart + 1 do
+      if CharInSet(AText[LIndex], ['+', '-']) then
+      begin
+        LOffset := StringReplace(Copy(AText, LIndex + 1, MaxInt), ':', '', []);
+        if (Length(LOffset) in [2, 4]) and TryStrToInt(Copy(LOffset, 1, 2), LHours)
+          and TryStrToInt('0' + Copy(LOffset, 3, 2), LMinutes) then
+        begin
+          if AText[LIndex] = '-' then
+            LSign := -1
+          else
+            LSign := 1;
+          // the clock time of the string, as it is; the sign on the hours (-05:30 is -5, 30),
+          // on the minutes only without hours
+          if LHours = 0 then
+            LMinutes := LSign * LMinutes;
+          Exit(DateTimeToSQLTimeStampOffset(ISO8601ToDate(Copy(AText, 1, LIndex - 1), True),
+            LSign * LHours, LMinutes));
+        end;
+        Break;
+      end;
+
+  Result := DateTimeToSQLTimeStampOffset(JSONToDate(AText, AOptions));
 end;
 
 function DateFieldToJSON(const AField: TField): string; overload;
@@ -225,7 +283,7 @@ begin
 //        ftConnection: ;
 //        ftParams: ;
 //        ftStream: ;
-//        ftTimeStampOffset: ;
+        ftTimeStampOffset: AObject.AddPair(APairName, TimeStampOffsetFieldToJSON(AField));
 //        ftObject: ;
         ftSingle: AObject.AddPair(APairName, NumericFieldToJSON(AField, AOptions.UseDisplayFormatForNumericFields));
       end;
@@ -661,6 +719,8 @@ begin
       AField.AsBCD := StrToBcd(LText, TFormatSettings.Invariant);
     ftDate, ftTime, ftDateTime, ftTimeStamp:
       AField.AsDateTime := JSONToDate(LText, AJSONOptions);
+    ftTimeStampOffset:
+      AField.AsSQLTimeStampOffset := JSONToTimeStampOffset(LText, AJSONOptions);
     ftWideString, ftFixedWideChar, ftWideMemo:
       AField.AsWideString := LText;
   else
