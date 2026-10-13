@@ -152,6 +152,8 @@ begin
     Assert.Contains(LResponse, 'Too Many Requests');
     // also for a path that does not exist: the limit comes first
     Assert.Contains(RawRequest(8080, 'GET /rest/nothing HTTP/1.1', [LClient]), 'HTTP/1.1 429');
+    // a request without the header: the remote IP (it was an Access Violation)
+    Assert.Contains(RawRequest(8080, 'GET /rest/default/test/helloworld HTTP/1.1'), 'HTTP/1.1 200');
     // another client
     Assert.Contains(RawRequest(8080, 'GET /rest/default/test/helloworld HTTP/1.1',
       ['X-Test-Client: another-' + IntToStr(Random(MaxInt))]), 'HTTP/1.1 200');

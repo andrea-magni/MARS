@@ -360,12 +360,17 @@ end;
 function TMARSEngine.RateLimitKey(const ARequest: IMARSRequest): string;
 var
   LHeader: string;
+  LAddresses: TArray<string>;
 begin
   Result := '';
   LHeader := Parameters.ByName('RateLimit.ClientIPHeader', '').ToString;
   if LHeader <> '' then
-    // X-Forwarded-For: client, proxy1, proxy2
-    Result := ARequest.GetHeaderParamValue(LHeader).Split([','])[0].Trim;
+  begin
+    // X-Forwarded-For: client, proxy1, proxy2 (a request without the header: no addresses)
+    LAddresses := ARequest.GetHeaderParamValue(LHeader).Split([',']);
+    if Length(LAddresses) > 0 then
+      Result := LAddresses[0].Trim;
+  end;
   if Result = '' then
     Result := ARequest.RemoteIP;
 end;
