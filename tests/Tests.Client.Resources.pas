@@ -20,6 +20,12 @@ type
     XProbe: string;
   end;
 
+  // a record with a date (Tests.JSONDateIsUTC)
+  TDatedRecord = record
+    Name: string;
+    At: TDateTime;
+  end;
+
   TLoginData = record
     username: string;
     password: string;
@@ -60,6 +66,12 @@ type
     function PostForm([FormParam('name')] const AName: string): string;
     [PUT, Path('form'), Consumes(TMediaType.APPLICATION_FORM_URLENCODED_TYPE), Produces(TMediaType.TEXT_PLAIN)]
     function PutForm([FormParam('name')] const AName: string; [FormParam('city')] const ACity: string): string;
+
+    // the same record, its date as UTC or as a local time (#111)
+    [GET, Path('dates/utc'), JSONDateIsUTC, Produces(TMediaType.APPLICATION_JSON)]
+    function GetDateUTC: TDatedRecord;
+    [GET, Path('dates/local'), JSONDateIsUTC(False), Produces(TMediaType.APPLICATION_JSON)]
+    function GetDateLocal: TDatedRecord;
 
     // COM in the thread of the request: 'initialized' when the engine did it (COM.Initialize)
     [GET, Path('com'), Produces(TMediaType.TEXT_PLAIN)]
@@ -141,6 +153,18 @@ end;
 function TTestResource.PutForm(const AName, ACity: string): string;
 begin
   Result := 'put: ' + AName + ', ' + ACity;
+end;
+
+function TTestResource.GetDateUTC: TDatedRecord;
+begin
+  Result.Name := 'utc';
+  Result.At := EncodeDateTime(2026, 7, 15, 9, 30, 0, 0);
+end;
+
+function TTestResource.GetDateLocal: TDatedRecord;
+begin
+  Result.Name := 'local';
+  Result.At := EncodeDateTime(2026, 7, 15, 9, 30, 0, 0);
 end;
 
 function TTestResource.GetCOM: string;

@@ -117,6 +117,16 @@ type
   JSONIncludeEmptyValuesAttribute = class(TCustomAttribute);
   JSONSkipEmptyValuesAttribute = class(TCustomAttribute);
 
+  // DateIsUTC for a resource or a method: [JSONDateIsUTC] dates as UTC ("...Z"),
+  // [JSONDateIsUTC(False)] as local times with their offset; for responses and requests
+  JSONDateIsUTCAttribute = class(TCustomAttribute)
+  private
+    FValue: Boolean;
+  public
+    constructor Create(const AValue: Boolean = True);
+    property Value: Boolean read FValue;
+  end;
+
   {$ENDIF}
 
 
@@ -528,6 +538,24 @@ begin
       Break;
     end;
   end;
+
+  for LAttribute in AAttributes do
+  begin
+    if LAttribute is JSONDateIsUTCAttribute then
+    begin
+      AOptions.DateIsUTC := JSONDateIsUTCAttribute(LAttribute).Value;
+      Result := True;
+      Break;
+    end;
+  end;
+end;
+
+{ JSONDateIsUTCAttribute }
+
+constructor JSONDateIsUTCAttribute.Create(const AValue: Boolean);
+begin
+  inherited Create;
+  FValue := AValue;
 end;
 
 class function TJSONObjectHelper.TValueToJSONValue(

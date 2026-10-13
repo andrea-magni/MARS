@@ -114,8 +114,18 @@ Each request combines the options in this order, the last one winning:
 
 1. the global default, `DefaultMARSJSONSerializationOptions` (set in code);
 2. the `JSON.*` parameters of the application;
-3. the attributes of the resource class (`[JSONIncludeEmptyValues]`, `[JSONSkipEmptyValues]`);
+3. the attributes of the resource class (`[JSONIncludeEmptyValues]`, `[JSONSkipEmptyValues]`,
+   `[JSONDateIsUTC]`);
 4. the attributes of the method.
+
+`[JSONDateIsUTC]` writes and reads the dates of a resource or a method (records, objects,
+datasets) as UTC (`"2026-07-15T09:30:00.000Z"`), `[JSONDateIsUTC(False)]` as local times with
+their offset (`"2026-07-15T09:30:00.000+02:00"`), whatever `JSON.DateIsUTC` says:
+
+```pascal
+[GET, Path('{id}/events'), JSONDateIsUTC]
+function GetEvents: TArray<TEvent>;
+```
 
 They apply to responses (objects, records, arrays, datasets) and to requests: the readers of
 objects and records use the same options, so dates are read with the `DateIsUTC` they are written

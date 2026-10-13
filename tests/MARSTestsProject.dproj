@@ -121,6 +121,7 @@
         <DCCReference Include="Tests.Client.Async.pas"/>
         <DCCReference Include="Tests.RequestTarget.pas"/>
         <DCCReference Include="Tests.Engine.COM.pas"/>
+        <DCCReference Include="Tests.JSONDateIsUTC.pas"/>
         <DCCReference Include="Tests.DCS.pas"/>
         <DCCReference Include="Tests.MARSParameters.pas"/>
         <DCCReference Include="Tests.Activation.pas"/>
