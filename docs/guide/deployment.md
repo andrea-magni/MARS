@@ -173,6 +173,8 @@ These flavors build a library or a FastCGI program that the web server loads; po
   ```
 
   The module name is the one exported by the project (`exports GModuleData name 'myproject_module'`).
+
+  On Linux64 the module leaves the Apache functions (`apr_*`, `ap_*`) to Apache, which provides them when it loads the module: the Linux64 configuration of the projects has `-z undefs` in the linker options (Project Options > Building > Delphi Compiler > Linking > *Options passed to the LD linker*), or Delphi 13 stops with `undefined symbol: apr_table_get`. Add it to Apache module projects created before. ([#282](https://github.com/andrea-magni/MARS/issues/282))
 - **FastCGI**: run `...ServerFCGI` and point nginx (`fastcgi_pass`) or Apache to it.
 
 ## Production checklist
