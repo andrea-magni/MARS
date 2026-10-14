@@ -50,7 +50,6 @@ uses
 , Web.Stencils, IOUtils, Web.HTTPApp
 , System.Bindings.EvalProtocol, System.Bindings.Methods
 , Data.DB
-, CodeSiteLogging
 ;
 
 function ExpandMacros(const AString: string): string;
