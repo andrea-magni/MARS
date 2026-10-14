@@ -2,7 +2,9 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
-## Unreleased {#unreleased}
+## 2.0.1 {#v2-0-1}
+
+<Badge type="tip" text="latest" /> **14 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.1) · [changes since 2.0.0](https://github.com/andrea-magni/MARS/compare/v.2.0.0...v.2.0.1)
 
 **New**
 - Templates and demos: a **Stoplight** button next to **OpenAPI** in the VCL and FMX server forms, opening the Stoplight Elements page of the application (`<application>/docs`, now registered by every demo too). [OpenAPI ▸ Stoplight Elements](/features/openapi#stoplight-elements)
@@ -14,6 +16,9 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 **Upgrade notes**
 
 - **OpenAPI documents** ([#276](https://github.com/andrea-magni/MARS/issues/276)): the documents of servers returning datasets, components or the token change: those schemas described the Delphi objects and were not usable by clients; regenerate the clients made from them. Add `[MetaResult]` to document the rows of a dataset.
+- **Packages** ([#278](https://github.com/andrea-magni/MARS/issues/278)): the MARS.Utils package has a new unit, `MARS.Utils.FloatText`: rebuild the packages (the setup does it).
+- **Floats in JSON** ([#278](https://github.com/andrea-magni/MARS/issues/278)): values that need more than 15 significant digits are written with all of them (`0.1 + 0.2` is `0.30000000000000004`, not `0.3`); tests or clients that compare the JSON text of such values see the exact value now.
+- **Linux64 Apache modules** ([#282](https://github.com/andrea-magni/MARS/issues/282)): projects created from the templates before this version need `-z undefs` in the linker options of their Linux64 configuration (Project Options > Building > Delphi Compiler > Linking > *Options passed to the LD linker*).
 
 **Fixed**
 - Datasets as JSON: the fields with a time zone offset (`ftTimeStampOffset`: SQL Server `datetimeoffset`, `timestamptz` with some providers) were left out of the JSON of records; now they are ISO 8601 strings with their own offset (`"2026-07-15T09:30:15.123+03:00"`), and `JSONArrayToDataSet` reads them back with it. [Writing datasets](/features/data-access#writing-datasets) ([#280](https://github.com/andrea-magni/MARS/issues/280))
@@ -26,7 +31,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## 2.0.0 {#v2-0-0}
 
-<Badge type="tip" text="latest" /> **13 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.0) · [changes since 1.9.2](https://github.com/andrea-magni/MARS/compare/v.1.9.2...v.2.0.0)
+**13 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.0) · [changes since 1.9.2](https://github.com/andrea-magni/MARS/compare/v.1.9.2...v.2.0.0)
 
 **New**
 - MARSgen, a command line tool (`Utils\Source\MARSgen`, `MARSgen.exe`): Delphi types (records, or classes with `--classes`) from OpenAPI 3.0/3.1 documents and JSON samples; MARS servers from OpenAPI documents (`--server`: generated base classes, your subclasses never written again), also as a new project from the MARSCmd templates (`--project`); imports again keeping your changes (`MARSgen update`); the conformance of a running server to its document (`MARSgen compare`); the same commands from a window (`MARSgen_VCL.exe`, [#260](https://github.com/andrea-magni/MARS/issues/260)); typed clients (`--client`: `Client.<Api>`, a class with a method per operation on top of the MARS client, [#265](https://github.com/andrea-magni/MARS/issues/265)); a part of a document (`--tags`, `--operations`, `--schemas`: the types they use only) and a preview of the code in the window ([#267](https://github.com/andrea-magni/MARS/issues/267)); the types as datasets (`--datasets`: `Data.<Api>`, their field definitions as MARS reads and writes the JSON of datasets, [#268](https://github.com/andrea-magni/MARS/issues/268)); servers as routes (`--routes`: `Server.Routes.<Name>`, projects from `MARSTemplateRoutes`, [#271](https://github.com/andrea-magni/MARS/issues/271)); an MCP server for AI agents (`MARSgen mcp`, [#273](https://github.com/andrea-magni/MARS/issues/273)). [From OpenAPI: MARSgen](/guide/marsgen) ([#234](https://github.com/andrea-magni/MARS/issues/234))
