@@ -1,0 +1,4 @@
+# read by Docker (Linux): LF line endings on every platform
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+docker-compose.yml text eol=lf
