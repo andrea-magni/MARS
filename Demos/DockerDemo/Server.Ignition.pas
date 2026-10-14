@@ -1,0 +1,220 @@
+﻿(*
+  Copyright 2025, MARS-Curiosity - REST Library
+
+  Home: https://github.com/andrea-magni/MARS
+*)
+
+unit Server.Ignition;
+
+{$I MARS.inc}
+
+interface
+
+uses
+  System.Classes, System.SysUtils, System.RTTI, System.StrUtils
+{$IFDEF MARS_ZLIB}, System.ZLib {$ENDIF}
+, MARS.Core.Engine.Interfaces
+;
+
+type
+  TServerEngine=class
+  private
+    class var FEngine: IMARSEngine;
+    {$IFDEF MARS_FIREDAC}
+    class var FAvailableConnectionDefs: TArray<string>;
+    {$ENDIF}
+  public
+    class constructor CreateEngine;
+    class destructor DestroyEngine;
+    class property Default: IMARSEngine read FEngine;
+  end;
+
+implementation
+
+uses
+  MARS.Core.Engine, MARS.Core.Activation
+, MARS.Core.Activation.Interfaces, MARS.Core.Application.Interfaces, MARS.Core.RequestAndResponse.Interfaces
+
+, MARS.Core.Utils, MARS.Utils.Parameters.IniFile
+, MARS.Core.URL, MARS.Core.JSON
+
+, MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters, MARS.Data.MessageBodyWriters
+, MARS.Core.MessageBodyReaders
+{$IFDEF MARS_FIREDAC}
+, MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+, MARS.mORMotJWT.Token
+{$ELSE}
+, MARS.JOSEJWT.Token
+{$ENDIF}
+{$IFDEF MARS_YAML}
+, MARS.YAML.ReadersAndWriters
+{$ENDIF}
+, MARS.OpenAPI.v3.InjectionService
+
+, Server.Resources.HelloWorld
+, Server.Resources.Token
+, Server.Resources.OpenAPI
+;
+
+{ TServerEngine }
+
+class constructor TServerEngine.CreateEngine;
+begin
+  FEngine := TMARSEngine.Create;
+
+  // Engine configuration
+  FEngine.Parameters.LoadFromIniFile;
+
+  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.IncludeEmptyOrNullValues;
+//  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.SkipAllEmptyOrNullValues;
+  // dates as UTC ("...Z") or local times with their offset (also JSON.DateIsUTC in Server.ini,
+  // [JSONDateIsUTC] on a resource or a method); zero dates as dates instead of "" (JSON.ZeroDateAsEmpty)
+//  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.DateIsUTC := True;
+//  MARS.Core.JSON.DefaultMARSJSONSerializationOptions.ZeroDateAsEmpty := False;
+
+  // Application configuration
+  FEngine.AddApplication('DefaultApp', '/default', [ 'Server.Resources.*']);
+{$REGION 'OnGetApplication example'}
+(*
+  FEngine.OnGetApplication :=
+    procedure (
+      const AEngine: IMARSEngine;
+      const AURL: TMARSURL;
+      const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      var AApplication: IMARSApplication
+    )
+    begin
+      if AApplication = nil then
+        AApplication := FEngine.ApplicationByName('DefaultApp');
+    end;
+*)
+{$ENDREGION}
+  {$IFDEF MARS_FIREDAC}
+  FAvailableConnectionDefs := TMARSFireDAC.LoadConnectionDefs(FEngine.Parameters, 'FireDAC');
+  {$ENDIF}
+{$REGION 'AfterCreateConnection example'}
+(*
+  TMARSFireDAC.AfterCreateConnection :=
+    procedure (const AConnection: TFDConnection; const AActivation: IMARSActivation)
+    begin
+      AConnection.TxOptions.Isolation := FEngine.Parameters.ByNameTextEnum<TFDTxIsolation>(
+        'FireDAC.' + AConnection.ConnectionDefName + '.TxOptions.Isolation'
+      , TFDTxIsolation.xiUnspecified
+      );
+    end;
+*)
+{$ENDREGION}
+{$REGION 'Rate limiting example'}
+(*
+  // each client (its IP) gets 120 requests per 60 seconds, bursts included; over the limit a
+  // 429 with Retry-After, before any routing. Also as RateLimit.* in Server.ini.
+  // For limits per route or per user: TMARSRateLimiter (MARS.Utils.RateLimiter) in a middleware.
+  FEngine.Parameters.Values['RateLimit.Requests'] := 120;
+  FEngine.Parameters.Values['RateLimit.Window'] := 60;
+  // behind a trusted reverse proxy only: the client is the first address of this header
+//  FEngine.Parameters.Values['RateLimit.ClientIPHeader'] := 'X-Forwarded-For';
+*)
+{$ENDREGION}
+{$REGION 'COM initialization example'}
+(*
+  // Windows: COM initialized for each request, in the thread that serves it, for COM based
+  // components (ADO, OLE DB providers such as UniDAC/SDAC with SQL Server, MSXML).
+  // Also as COM.Initialize in Server.ini.
+  FEngine.Parameters.Values['COM.Initialize'] := True;
+*)
+{$ENDREGION}
+{$REGION 'BeforeHandleRequest example'}
+
+  FEngine.BeforeHandleRequest :=
+    function (
+      const AEngine: IMARSEngine;
+      const AURL: TMARSURL;
+      const ARequest: IMARSRequest; const AResponse: IMARSResponse;
+      var Handled: Boolean
+    ): Boolean
+    begin
+      Result := True;
+
+      // skip favicon requests (browser)
+      if SameText(AURL.Document, 'favicon.ico') then
+      begin
+        Result := False;
+        Handled := True;
+      end;
+
+      if FEngine.IsCORSEnabled then
+      begin
+        // Handle CORS and PreFlight
+        if SameText(ARequest.Method, 'OPTIONS') then
+        begin
+          Handled := True;
+          Result := False;
+        end;
+      end;
+
+    end;
+
+{$ENDREGION}
+{$REGION 'Global BeforeInvoke handler example'}
+(*
+  // to execute something before each activation
+  TMARSActivation.RegisterBeforeInvoke(
+    procedure (const AActivation: IMARSActivation; out AIsAllowed: Boolean)
+    begin
+
+    end
+  );
+*)
+{$ENDREGION}
+{$REGION 'Global AfterInvoke handler example'}
+  // Compression
+  if FEngine.Parameters.ByName('Compression.Enabled').AsBoolean then
+    TMARSActivation.RegisterAfterInvoke(
+      procedure (const AActivation: IMARSActivation)
+      var
+        LOutputStream: TBytesStream;
+      begin
+        if ContainsText(AActivation.Request.GetHeaderParamValue('Accept-Encoding'), 'gzip')
+           and Assigned(AActivation.Response.ContentStream)
+           and (AActivation.Response.ContentStream.Size > 0)
+        then
+        begin
+          LOutputStream := TBytesStream.Create(nil);
+          try
+            AActivation.Response.ContentStream.Position := 0;
+            ZipStream(AActivation.Response.ContentStream, LOutputStream, 15 + 16);
+            AActivation.Response.ContentStream.Free;
+            AActivation.Response.ContentStream := LOutputStream;
+            AActivation.Response.ContentEncoding := 'gzip';
+          except
+            LOutputStream.Free;
+            raise;
+          end;
+        end;
+      end
+    );
+{$ENDREGION}
+{$REGION 'Global InvokeError handler example'}
+(*
+  // to execute something on error
+  TMARSActivation.RegisterInvokeError(
+    procedure (const AActivation: IMARSActivation; const AException: Exception; var AHandled: Boolean)
+    begin
+
+    end
+  );
+*)
+{$ENDREGION}
+end;
+
+class destructor TServerEngine.DestroyEngine;
+begin
+  {$IFDEF MARS_FIREDAC}
+  TMARSFireDAC.CloseConnectionDefs(FAvailableConnectionDefs);
+  {$ENDIF}
+  FEngine := nil;
+end;
+
+end.

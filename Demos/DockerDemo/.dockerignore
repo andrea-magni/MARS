@@ -1,0 +1,5 @@
+# the image needs only the Linux64 daemon and its ini files
+*
+!bin/DockerDemoServerDaemon
+!bin/DockerDemoServerDaemon.ini
+!bin/Server.ini

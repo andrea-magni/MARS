@@ -2,6 +2,11 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
+## Unreleased {#unreleased}
+
+**New**
+- DockerDemo: the template server in a Docker container, its Linux64 daemon in foreground in an Ubuntu 24.04 image, with `Dockerfile`, `docker-compose.yml` and `.dockerignore`. [Demos ▸ DockerDemo](/demos/#dockerdemo) ([#283](https://github.com/andrea-magni/MARS/issues/283))
+
 ## 2.0.1 {#v2-0-1}
 
 <Badge type="tip" text="latest" /> **14 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.1) · [changes since 2.0.0](https://github.com/andrea-magni/MARS/compare/v.2.0.0...v.2.0.1)

@@ -36,7 +36,9 @@ LoadModule marstemplate_module modules/mod_marstemplate.dll   # .so on Linux
 
 ## Linux daemon
 
-`MARSTemplateServerDaemon.dpr` + `MARS.Linux.Daemon.pas` (LINUX only): `TMARSDaemon.Current.Name := '...'; TMARSDaemon.Current.Start;` performs classic daemonization (fork + setsid, stdio to /dev/null), creates the Indy server, handles SIGTERM/SIGHUP, and logs to a `.log` file next to the binary. For systemd, a simple unit file running the binary works (systemd tolerates the forking model, or run the console host with `Type=simple`).
+`MARSTemplateServerDaemon.dpr` + `MARS.Linux.Daemon.pas` (LINUX only): `TMARSDaemon.Current.Name := '...'; TMARSDaemon.Current.Start;` performs classic daemonization (fork + setsid, stdio to /dev/null), creates the Indy server, handles SIGTERM/SIGHUP, and logs to a `.log` file next to the binary. With `--foreground` (or `-f`) it stays in the current process and logs to stdout: use it with systemd (`Type=simple`) and Docker.
+
+**Docker**: `Demos/DockerDemo` (a MARSCmd project from `MARSTemplate`) has a ready `Dockerfile` (`ubuntu:24.04`, `--platform=linux/amd64`, the Linux64 daemon and its ini files in `/app`, a non-root user, `CMD ["./<Name>ServerDaemon", "--foreground"]`), a `docker-compose.yml` and a `.dockerignore`. The Delphi 13 daemon needs only `libc`, `libm`, `libgcc_s`, `libz` (in the base image); add `libssl3` only for HTTPS in the server itself. Keep `JWT.Secret` out of the image: mount a `Server.ini` (`-v ./config/Server.ini:/app/Server.ini:ro`); a Release build without a secret refuses tokens.
 
 ## The WebBroker dispatch bridge
 

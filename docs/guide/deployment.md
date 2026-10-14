@@ -120,6 +120,8 @@ docker logs -f myproject
 
 `docker stop` sends `SIGTERM` and the server stops cleanly. Use a base image close to the Linux SDK you build with (the RAD Studio Linux SDKs are Ubuntu based); `ldd ./MyProjectServerDCSDaemon` lists the libraries the binary needs. Keep secrets such as `JWT.Secret` out of the image: mount the `.ini` file holding them (`-v /etc/myproject/Server.ini:/app/Server.ini:ro`).
 
+The [DockerDemo](/demos/#dockerdemo) is a complete example: a project from the template with its `Dockerfile` (non-root user), `docker-compose.yml` and `.dockerignore`. The daemons of Delphi 13 need only `libc`, `libm`, `libgcc_s` and `libz`, all in the `ubuntu:24.04` base image. On Apple Silicon, Docker Desktop runs the `linux/amd64` image through Rosetta.
+
 ## Behind a reverse proxy
 
 The most common production setup: the MARS server listens on plain HTTP on the local machine (or in the container network) and a reverse proxy terminates HTTPS, with certificates renewed automatically (i.e. Let's Encrypt).

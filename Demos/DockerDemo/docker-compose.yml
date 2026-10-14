@@ -1,0 +1,14 @@
+# DockerDemo: docker compose up -d --build (after building DockerDemoServerDaemon for Linux64)
+services:
+  mars:
+    build: .
+    image: mars-dockerdemo
+    # an x86-64 binary: on Apple Silicon it runs through emulation (Rosetta)
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    # Secrets out of the image: a Server.ini of yours, with DefaultApp.JWT.Secret set
+    # (i.e. openssl rand -hex 32), replaces the one of the image
+    # volumes:
+    #   - ./config/Server.ini:/app/Server.ini:ro

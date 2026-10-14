@@ -1,0 +1,144 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6E23DEFF-F737-42C3-B8AD-2549B8F67C93}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="DockerDemoServerApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoServerFMXApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoServerService.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoServerConsoleApplication.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoServerDaemon.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoServerApacheModule.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoServerFCGI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoServerISAPI.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoClient.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DockerDemoTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DockerDemoServerApplication">
+        <MSBuild Projects="DockerDemoServerApplication.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerApplication:Clean">
+        <MSBuild Projects="DockerDemoServerApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerApplication:Make">
+        <MSBuild Projects="DockerDemoServerApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoServerFMXApplication">
+        <MSBuild Projects="DockerDemoServerFMXApplication.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerFMXApplication:Clean">
+        <MSBuild Projects="DockerDemoServerFMXApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerFMXApplication:Make">
+        <MSBuild Projects="DockerDemoServerFMXApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoServerService">
+        <MSBuild Projects="DockerDemoServerService.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerService:Clean">
+        <MSBuild Projects="DockerDemoServerService.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerService:Make">
+        <MSBuild Projects="DockerDemoServerService.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoServerConsoleApplication">
+        <MSBuild Projects="DockerDemoServerConsoleApplication.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerConsoleApplication:Clean">
+        <MSBuild Projects="DockerDemoServerConsoleApplication.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerConsoleApplication:Make">
+        <MSBuild Projects="DockerDemoServerConsoleApplication.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoServerDaemon">
+        <MSBuild Projects="DockerDemoServerDaemon.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerDaemon:Clean">
+        <MSBuild Projects="DockerDemoServerDaemon.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerDaemon:Make">
+        <MSBuild Projects="DockerDemoServerDaemon.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoServerApacheModule">
+        <MSBuild Projects="DockerDemoServerApacheModule.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerApacheModule:Clean">
+        <MSBuild Projects="DockerDemoServerApacheModule.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerApacheModule:Make">
+        <MSBuild Projects="DockerDemoServerApacheModule.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoServerFCGI">
+        <MSBuild Projects="DockerDemoServerFCGI.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerFCGI:Clean">
+        <MSBuild Projects="DockerDemoServerFCGI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerFCGI:Make">
+        <MSBuild Projects="DockerDemoServerFCGI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoServerISAPI">
+        <MSBuild Projects="DockerDemoServerISAPI.dproj"/>
+    </Target>
+    <Target Name="DockerDemoServerISAPI:Clean">
+        <MSBuild Projects="DockerDemoServerISAPI.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoServerISAPI:Make">
+        <MSBuild Projects="DockerDemoServerISAPI.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoClient">
+        <MSBuild Projects="DockerDemoClient.dproj"/>
+    </Target>
+    <Target Name="DockerDemoClient:Clean">
+        <MSBuild Projects="DockerDemoClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoClient:Make">
+        <MSBuild Projects="DockerDemoClient.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DockerDemoTests">
+        <MSBuild Projects="DockerDemoTests.dproj"/>
+    </Target>
+    <Target Name="DockerDemoTests:Clean">
+        <MSBuild Projects="DockerDemoTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DockerDemoTests:Make">
+        <MSBuild Projects="DockerDemoTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DockerDemoServerApplication;DockerDemoServerFMXApplication;DockerDemoServerService;DockerDemoServerConsoleApplication;DockerDemoServerDaemon;DockerDemoServerApacheModule;DockerDemoServerFCGI;DockerDemoServerISAPI;DockerDemoClient;DockerDemoTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DockerDemoServerApplication:Clean;DockerDemoServerFMXApplication:Clean;DockerDemoServerService:Clean;DockerDemoServerConsoleApplication:Clean;DockerDemoServerDaemon:Clean;DockerDemoServerApacheModule:Clean;DockerDemoServerFCGI:Clean;DockerDemoServerISAPI:Clean;DockerDemoClient:Clean;DockerDemoTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DockerDemoServerApplication:Make;DockerDemoServerFMXApplication:Make;DockerDemoServerService:Make;DockerDemoServerConsoleApplication:Make;DockerDemoServerDaemon:Make;DockerDemoServerApacheModule:Make;DockerDemoServerFCGI:Make;DockerDemoServerISAPI:Make;DockerDemoClient:Make;DockerDemoTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

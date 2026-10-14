@@ -1,0 +1,4 @@
+# Linux build outputs (no extension)
+bin/DockerDemoServerDaemon
+bin/DockerDemoServerConsoleApplication
+config/
