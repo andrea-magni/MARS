@@ -248,6 +248,28 @@ type
     function Raw: string;
   end;
 
+  // request parameters of fields and properties of the resource, headers for the
+  // documentation only ([MetaHeader])
+  [Path('headers'), MetaHeader('X-Api-Key', 'The key of the client', True)]
+  THeadersResource = class
+  private
+    [HeaderParam('X-Tenant'), Required, OAPIDescription('The tenant')]
+    FTenant: string;
+    FLanguage: string;
+  public
+    [QueryParam('lang'), MetaDescription('The language')]
+    property Language: string read FLanguage write FLanguage;
+
+    [GET, Produces(TMediaType.TEXT_PLAIN), MetaHeader('X-Trace', 'A trace id')]
+    function Tenant: string;
+    // a parameter of the method wins over the field with the same name
+    [GET, Path('own'), Produces(TMediaType.TEXT_PLAIN)]
+    function Own([HeaderParam('X-Tenant'), OAPIDescription('Own tenant')] const ATenant: string): string;
+    // a [HeaderParam] wins over a [MetaHeader] with the same name
+    [GET, Path('key'), Produces(TMediaType.TEXT_PLAIN)]
+    function Key([HeaderParam('X-Api-Key')] const AKey: string): string;
+  end;
+
   // the OpenAPI of authorization and of procedures
   [Path('openapicases')]
   TOpenAPICasesResource = class
@@ -519,6 +541,23 @@ begin
   Result := 'body ' + AItem.Description;
 end;
 
+{ THeadersResource }
+
+function THeadersResource.Tenant: string;
+begin
+  Result := FTenant;
+end;
+
+function THeadersResource.Own(const ATenant: string): string;
+begin
+  Result := ATenant;
+end;
+
+function THeadersResource.Key(const AKey: string): string;
+begin
+  Result := AKey;
+end;
+
 { TOpenAPIDataResource }
 
 // the documentation only: never called
@@ -569,6 +608,7 @@ end;
 
 initialization
   MARSRegister([TRequiredResource, TOpenAPICasesResource, TListsResource, TDataSetsResource, TOpenAPIDataResource]);
+  MARSRegister(THeadersResource);
   MARSRegister([THelloWorldResource, TUnicodeJSONResource, TJSONOptionsResource, TOpenAPIBodyResource, TTestTokenResource, TWildcardResource, TItemResource
   , TCatchAllResource, TImagesResource, TStaticResource, TStaticTreeResource, TStaticNoListResource
   , TStaticDotsResource, TStaticDotsFlatResource, TStaticExcludeResource]);

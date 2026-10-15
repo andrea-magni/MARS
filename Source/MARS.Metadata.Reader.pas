@@ -10,6 +10,7 @@ interface
 uses
   Classes, SysUtils, Rtti, TypInfo
 , MARS.Metadata
+, MARS.Utils.Parameters
 , MARS.Core.Engine.Interfaces
 , MARS.Core.Application.Interfaces
 , MARS.Core.Registry.Utils
@@ -22,7 +23,18 @@ type
     FEngine: IMARSEngine;
     FMetadata: TMARSEngineMetadata;
     FDefaultProduces: string;
+    // OpenAPI.Header.<name> of the application being read: request headers of all its operations
+    FApplicationHeaders: TArray<TMARSRouteMetaHeader>;
   protected
+    // the request parameters of fields and properties of the resource ([HeaderParam],
+    // [QueryParam], [CookieParam]): parameters of all its methods
+    procedure ReadMemberParameters(const AResourceMetadata: TMARSResourceMetadata;
+      const AMethodMetadata: TMARSMethodMetadata); virtual;
+    // the headers for the documentation only, the nearest first: [MetaHeader] of the method and
+    // of the resource, MetaHeader of a route and of its groups (AHeaders); OpenAPI.Header.<name>
+    // of the application
+    procedure ReadMetaHeaders(const AMethodMetadata: TMARSMethodMetadata;
+      const AHeaders: TArray<TMARSRouteMetaHeader>); virtual;
     procedure ReadApplication(const AApplication: IMARSApplication); virtual;
     procedure ReadResource(const AApplication: IMARSApplication;
       const AApplicationMetadata: TMARSApplicationMetadata;
@@ -51,10 +63,27 @@ type
 implementation
 
 uses
-  Generics.Collections
+  Generics.Collections, StrUtils
 , MARS.Core.Utils, MARS.Core.URL, MARS.Rtti.Utils, MARS.Core.Attributes
 , MARS.Core.Exceptions, MARS.Metadata.Attributes, MARS.Core.MessageBodyWriter
 ;
+
+// [MetaHeader] attributes as headers
+function MetaHeadersOf(const AAttributes: TArray<TCustomAttribute>): TArray<TMARSRouteMetaHeader>;
+var
+  LAttribute: TCustomAttribute;
+  LHeader: TMARSRouteMetaHeader;
+begin
+  Result := [];
+  for LAttribute in AAttributes do
+    if LAttribute is MetaHeaderAttribute then
+    begin
+      LHeader.Name := MetaHeaderAttribute(LAttribute).Name;
+      LHeader.Description := MetaHeaderAttribute(LAttribute).Description;
+      LHeader.Required := MetaHeaderAttribute(LAttribute).Required;
+      Result := Result + [LHeader];
+    end;
+end;
 
 
 { TMARSMetadataReader }
@@ -89,11 +118,60 @@ begin
 
 end;
 
+// OpenAPI.Header.<name>=[required|optional;]<description> of AParameters into AHeaders (the
+// ones with the same name replaced)
+procedure ReadParameterHeaders(const AParameters: TMARSParameters; var AHeaders: TArray<TMARSRouteMetaHeader>);
+const
+  HEADER_PREFIX = 'OpenAPI.Header.';
+var
+  LParamName, LValue, LFirst: string;
+  LSeparator, LIndex: Integer;
+  LHeader: TMARSRouteMetaHeader;
+begin
+  for LParamName in AParameters.ParamNames do
+    if StartsText(HEADER_PREFIX, LParamName) and (Length(LParamName) > Length(HEADER_PREFIX)) then
+    begin
+      LValue := AParameters.ByNameAsText(LParamName).Trim;
+      LHeader.Name := Copy(LParamName, Length(HEADER_PREFIX) + 1, MaxInt);
+      LHeader.Required := False;
+      LHeader.Description := LValue;
+      LSeparator := Pos(';', LValue);
+      if LSeparator > 0 then
+        LFirst := Copy(LValue, 1, LSeparator - 1).Trim
+      else
+        LFirst := LValue;
+      if SameText(LFirst, 'required') or SameText(LFirst, 'optional') then
+      begin
+        LHeader.Required := SameText(LFirst, 'required');
+        if LSeparator > 0 then
+          LHeader.Description := Copy(LValue, LSeparator + 1, MaxInt).Trim
+        else
+          LHeader.Description := '';
+      end;
+
+      LIndex := High(AHeaders);
+      while (LIndex >= 0) and not SameText(AHeaders[LIndex].Name, LHeader.Name) do
+        Dec(LIndex);
+      if LIndex >= 0 then
+        AHeaders[LIndex] := LHeader
+      else
+        AHeaders := AHeaders + [LHeader];
+    end;
+end;
+
 procedure TMARSMetadataReader.ReadApplication(
   const AApplication: IMARSApplication);
 var
   LApplicationMetadata: TMARSApplicationMetadata;
 begin
+  // OpenAPI.Header.<name>: a request header of every operation, for the documentation only
+  // (i.e. an API key checked by a middleware); of the engine (as OpenAPI.info.*), of the
+  // application (DefaultApp.OpenAPI.Header.<name>), which wins
+  FApplicationHeaders := [];
+  if Assigned(FEngine) then
+    ReadParameterHeaders(FEngine.Parameters, FApplicationHeaders);
+  ReadParameterHeaders(AApplication.Parameters, FApplicationHeaders);
+
   LApplicationMetadata := TMARSApplicationMetadata.Create(FMetadata);
   try
     LApplicationMetadata.Name := AApplication.Name;
@@ -210,6 +288,11 @@ begin
     for LParameter in LParameters do
       ReadParameter(AResourceMetadata, LMethodMetadata, LParameter, AMethod);
 
+    // params of the resource (fields and properties), headers for the documentation
+    ReadMemberParameters(AResourceMetadata, LMethodMetadata);
+    ReadMetaHeaders(LMethodMetadata,
+      MetaHeadersOf(AMethod.GetAttributes + AResourceMetadata.RttiType.GetAttributes));
+
     LPathFullPath := TMARSURL.CombinePath([AResourceMetadata.Path, LMethodMetadata.Path]);
     AResourceMetadata.GetParent.AddPath(LPathFullPath, LMethodMetadata);
   except
@@ -231,6 +314,7 @@ begin
       LRequestParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
       try
         LRequestParamMetadata.RttiParameter := AParameter;
+        LRequestParamMetadata.RttiObject := AParameter;
         LRequestParamMetadata.Summary := '';
         AMethod.HasAttribute<MetaSummaryAttribute>(
           procedure (Attribute: MetaSummaryAttribute)
@@ -358,6 +442,105 @@ begin
   end;
 end;
 
+function HasParameter(const AMethodMetadata: TMARSMethodMetadata; const ASwaggerKind, AName: string): Boolean;
+var
+  LFound: Boolean;
+begin
+  LFound := False;
+  AMethodMetadata.ForEachParameter(
+    procedure (AParam: TMARSRequestParamMetadata)
+    begin
+      if SameText(AParam.SwaggerKind, ASwaggerKind) and SameText(AParam.Name, AName) then
+        LFound := True;
+    end);
+  Result := LFound;
+end;
+
+procedure TMARSMetadataReader.ReadMemberParameters(const AResourceMetadata: TMARSResourceMetadata;
+  const AMethodMetadata: TMARSMethodMetadata);
+
+  procedure AddMember(const AMember: TRttiMember; const AType: TRttiType);
+  var
+    LAttribute: RequestParamAttribute;
+    LParamMetadata: TMARSRequestParamMetadata;
+    LName: string;
+  begin
+    LAttribute := AMember.GetAttribute<RequestParamAttribute>;
+    if not Assigned(LAttribute) or not Assigned(AType)
+      or (IndexText(LAttribute.SwaggerKind, ['header', 'query', 'cookie']) = -1) then
+      Exit;
+    LName := '';
+    if LAttribute is NamedRequestParamAttribute then
+      LName := NamedRequestParamAttribute(LAttribute).Name;
+    if LName = '' then
+      LName := AMember.Name;
+    // a parameter of the method with the same name wins
+    if HasParameter(AMethodMetadata, LAttribute.SwaggerKind, LName) then
+      Exit;
+
+    LParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
+    try
+      LParamMetadata.Kind := LAttribute.Kind;
+      LParamMetadata.SwaggerKind := LAttribute.SwaggerKind;
+      LParamMetadata.Name := LName;
+      LParamMetadata.Description := MetaDescriptionAttribute.RetrieveText(AMember);
+      LParamMetadata.DataType := AType.QualifiedName;
+      LParamMetadata.DataTypeRttiType := AType;
+      LParamMetadata.Required := LAttribute.IsRequired(AMember);
+      LParamMetadata.RttiObject := AMember;
+    except
+      LParamMetadata.Free;
+      raise;
+    end;
+  end;
+
+var
+  LField: TRttiField;
+  LProperty: TRttiProperty;
+begin
+  if not Assigned(AResourceMetadata.RttiType) then
+    Exit;
+  for LField in AResourceMetadata.RttiType.GetFields do
+    AddMember(LField, LField.FieldType);
+  for LProperty in AResourceMetadata.RttiType.GetProperties do
+    AddMember(LProperty, LProperty.PropertyType);
+end;
+
+procedure TMARSMetadataReader.ReadMetaHeaders(const AMethodMetadata: TMARSMethodMetadata;
+  const AHeaders: TArray<TMARSRouteMetaHeader>);
+
+  procedure AddHeader(const AHeader: TMARSRouteMetaHeader);
+  var
+    LParamMetadata: TMARSRequestParamMetadata;
+  begin
+    // a parameter of the method, the route or a nearer [MetaHeader] wins
+    if (AHeader.Name = '') or HasParameter(AMethodMetadata, 'header', AHeader.Name) then
+      Exit;
+    LParamMetadata := TMARSRequestParamMetadata.Create(AMethodMetadata);
+    try
+      LParamMetadata.Kind := 'HeaderParam';
+      LParamMetadata.SwaggerKind := 'header';
+      LParamMetadata.Name := AHeader.Name;
+      LParamMetadata.Description := AHeader.Description;
+      LParamMetadata.DataTypeRttiType := TRttiContext.Create.GetType(TypeInfo(string));
+      LParamMetadata.DataType := LParamMetadata.DataTypeRttiType.QualifiedName;
+      LParamMetadata.Required := AHeader.Required;
+    except
+      LParamMetadata.Free;
+      raise;
+    end;
+  end;
+
+var
+  LHeader: TMARSRouteMetaHeader;
+begin
+  // the nearest first: the method (route), the resource (groups), the application
+  for LHeader in AHeaders do
+    AddHeader(LHeader);
+  for LHeader in FApplicationHeaders do
+    AddHeader(LHeader);
+end;
+
 procedure TMARSMetadataReader.ReadRoute(const AResourceMetadata: TMARSResourceMetadata;
   const ARoute: TMARSRoute);
 
@@ -436,6 +619,9 @@ begin
     // typed body
     if Assigned(ARoute.BodyType) then
       AddParam(LMethodMetadata, 'BodyParam', 'body', 'body', ARoute.BodyType, '', ARoute.IsBodyRequired);
+
+    // headers for the documentation: MetaHeader of the route, of its groups, of the application
+    ReadMetaHeaders(LMethodMetadata, ARoute.MetaHeaders + ARoute.GroupMetaHeaders);
 
     AResourceMetadata.GetParent.AddPath(
       TMARSURL.CombinePath([AResourceMetadata.Path, LMethodMetadata.Path]), LMethodMetadata);

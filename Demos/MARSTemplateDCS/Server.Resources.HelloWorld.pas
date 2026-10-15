@@ -33,6 +33,7 @@ type
   THelloWorldResource = class
   protected
 //    [Context] FD: TMARSFireDAC; // FireDAC (uses MARS.Data.FireDAC): the MAIN_DB definition of Server.ini
+//    [HeaderParam('X-Tenant')] FTenant: string; // a header for every method, in the OpenAPI document too
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function SayHelloWorld: string;
@@ -49,6 +50,13 @@ type
     [GET, Path('orders/{customerId}'), Produces(TMediaType.APPLICATION_JSON)]
     [MetaResult(TypeInfo(TOrderRow), True, 'The orders')]
     function GetOrders([PathParam] customerId: Integer): TFDStoredProc;
+
+    // request headers in the OpenAPI document: a [HeaderParam] parameter reads and documents
+    // one ([Required]: 400 when missing); [MetaHeader] (unit MARS.Metadata.Attributes, also on
+    // the class) documents one the code or a middleware reads by itself, i.e. an API key
+    [GET, Path('whoami'), Produces(TMediaType.TEXT_PLAIN)]
+    [MetaHeader('X-Api-Key', 'The key of the client', True)]
+    function WhoAmI([HeaderParam('X-User'), Required] const AUser: string): string;
 *)
   end;
 
@@ -82,6 +90,11 @@ begin
     begin
       AProc.ParamByName('CUSTOMER_ID').AsInteger := customerId;
     end);
+end;
+
+function THelloWorldResource.WhoAmI(const AUser: string): string;
+begin
+  Result := 'Hello ' + AUser + '!';
 end;
 *)
 

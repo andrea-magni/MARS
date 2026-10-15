@@ -5,6 +5,8 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 ## Unreleased {#unreleased}
 
 **New**
+- OpenAPI: request headers for the documentation only, the ones the code reads by itself or a middleware checks (i.e. an API key): `[MetaHeader('X-Api-Key', 'description', True)]` on a method or a resource, `MetaHeader(...)` on a route or a group of routes, the `OpenAPI.Header.<name>` parameter for every operation (of the engine or of an application). The templates have commented examples. [OpenAPI ▸ Request headers](/features/openapi#request-headers) ([#286](https://github.com/andrea-magni/MARS/issues/286))
+- OpenAPI: `[HeaderParam]`, `[QueryParam]` and `[CookieParam]` on fields and properties of a resource (injected for every method) are parameters of all its operations; a parameter of the method with the same name wins. [OpenAPI ▸ Request headers](/features/openapi#request-headers) ([#285](https://github.com/andrea-magni/MARS/issues/285))
 - DockerDemo: the template server in a Docker container, its Linux64 daemon in foreground in an Ubuntu 24.04 image, with `Dockerfile`, `docker-compose.yml` and `.dockerignore`. [Demos ▸ DockerDemo](/demos/#dockerdemo) ([#283](https://github.com/andrea-magni/MARS/issues/283))
 
 ## 2.0.1 {#v2-0-1}

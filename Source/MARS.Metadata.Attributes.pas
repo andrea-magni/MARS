@@ -57,6 +57,25 @@ type
     property Description: string read FDescription;
   end;
 
+  // A request header for the documentation (OpenAPI) only, on a method or on a resource (all
+  // its methods): one the code reads by itself (Request.GetHeaderParamValue), or that a
+  // middleware or an authentication step checks, i.e. an API key. It is not read nor checked:
+  // a [HeaderParam] parameter does both. Several on the same method or resource; for routes,
+  // MetaHeader of the route or of the group; for a whole application, OpenAPI.Header.<name>.
+  //   [MetaHeader('X-Api-Key', 'The key of the client', True)]
+  MetaHeaderAttribute = class(MetadataAttribute)
+  private
+    FName: string;
+    FDescription: string;
+    FRequired: Boolean;
+  public
+    constructor Create(const AName: string; const ADescription: string = '';
+      const ARequired: Boolean = False);
+    property Name: string read FName;
+    property Description: string read FDescription;
+    property Required: Boolean read FRequired;
+  end;
+
   // Shape of the result of a method, for the documentation (OpenAPI), when the declared type
   // does not tell it: a dataset (TFDQuery...) whose rows are records, a TJSONValue, a TStream, a
   // method that writes the response by itself. It describes the JSON media types of the
@@ -91,6 +110,17 @@ implementation
 uses
   MARS.Core.URL, MARS.Rtti.Utils
 ;
+
+{ MetaHeaderAttribute }
+
+constructor MetaHeaderAttribute.Create(const AName, ADescription: string;
+  const ARequired: Boolean);
+begin
+  inherited Create;
+  FName := AName;
+  FDescription := ADescription;
+  FRequired := ARequired;
+end;
 
 { MetaResultAttribute }
 

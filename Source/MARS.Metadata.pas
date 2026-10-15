@@ -64,6 +64,9 @@ type
     DataTypeRttiType: TRttiType;
     Required: Boolean;
     RttiParameter: TRttiParameter;
+    // where the attributes of the parameter are: the method parameter, the field or the property
+    // of the resource, nil for routes and [MetaHeader]
+    RttiObject: TRttiObject;
 
     constructor Create(const AParent: TMARSMetadata); override;
   end;

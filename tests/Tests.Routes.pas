@@ -204,6 +204,9 @@ type
     // #276: the shape of the result for the documentation, as [MetaResult]
     [Test]
     procedure TestMetaResult;
+    // MetaHeader of a route, of its group, OpenAPI.Header.<name> of the application
+    [Test]
+    procedure TestMetaHeader;
     [Test]
     procedure TestResultIsReference;
     [Test]
@@ -966,6 +969,50 @@ begin
     Assert.AreEqual('array', LSchema.&type);
     Assert.AreEqual('#/components/schemas/TRoutePerson', LSchema.items.ref);
     Assert.AreEqual('The people', LSchema.description);
+  finally
+    LOpenAPI.Free;
+  end;
+end;
+
+procedure TMARSRoutesFixture.TestMetaHeader;
+
+  function HeaderOf(const AOperation: TOperation; const AName: string): TParameter;
+  begin
+    Result := nil;
+    for var LParameter in AOperation.parameters do
+      if (LParameter.&in = 'header') and (LParameter.name = AName) then
+        Exit(LParameter);
+  end;
+
+begin
+  FApplication.Parameters.Values['OpenAPI.Header.X-Client'] := 'required; The client';
+  MARSRoutesOf(FApplication).Group('secure',
+    procedure (const R: TMARSRouter)
+    begin
+      R.MetaHeader('X-Api-Key', 'The key', True);
+      R.Get<string>('ping',
+        function (const C: TMARSRouteContext): string
+        begin
+          Result := 'pong';
+        end
+      ).MetaHeader('X-Trace', 'A trace id')
+       .HeaderParam<string>('X-Api-Key', 'Own key'); // the route parameter wins
+    end);
+
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    var LOperation := OperationById(LOpenAPI, 'get_secure_ping');
+    Assert.IsNotNull(LOperation, 'get_secure_ping');
+    Assert.AreEqual('A trace id', HeaderOf(LOperation, 'X-Trace').description);
+    Assert.IsFalse(HeaderOf(LOperation, 'X-Trace').required);
+    Assert.AreEqual('Own key', HeaderOf(LOperation, 'X-Api-Key').description);
+    Assert.AreEqual('The client', HeaderOf(LOperation, 'X-Client').description);
+    Assert.IsTrue(HeaderOf(LOperation, 'X-Client').required);
+    var LCount := 0;
+    for var LParameter in LOperation.parameters do
+      if LParameter.name = 'X-Api-Key' then
+        Inc(LCount);
+    Assert.AreEqual(1, LCount, 'X-Api-Key once');
   finally
     LOpenAPI.Free;
   end;

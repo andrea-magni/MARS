@@ -24,7 +24,7 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | `[PathParam('name')]` | URL path token (always required). |
 | `[QueryParam('name')]` | Query string. |
 | `[FormParam('name')]` | Form field (urlencoded / multipart). |
-| `[HeaderParam('name')]` | Request header. |
+| `[HeaderParam('name')]` | Request header (also on a field or property of the resource: every method). |
 | `[CookieParam('name')]` | Cookie. |
 | `[BodyParam]` | Entire request body (deserialized). |
 | `[PathParams]` `[QueryParams]` `[Headers]` `[Cookies]` `[FormParams]` | All values of that kind as a collection. |
@@ -67,6 +67,8 @@ A compact cheat-sheet of MARS attributes. See [Server ▸ Attributes](/server/at
 | `[AfterContextCleanup]` | After injected context is freed. |
 
 ## Metadata & OpenAPI (`MARS.Metadata.Attributes`, OpenAPI units)
+
+`[MetaHeader('X-Api-Key', 'description', ARequired)]` on a method or a resource (several allowed): a request header in the OpenAPI document, for the documentation only (the code or a middleware reads it by itself). `[HeaderParam]`, `[QueryParam]` and `[CookieParam]` on fields and properties of a resource are parameters of all its operations. See [OpenAPI ▸ Request headers](/features/openapi#request-headers).
 
 `[MetaResult(TypeInfo(TType), AIsArray, 'description')]` (or by qualified name, `[MetaResult('Unit.TType')]`) on a method: the shape of its result in the JSON media types of the OpenAPI document, i.e. the rows of a dataset. See [OpenAPI ▸ Datasets and the shape of a result](/features/openapi#datasets-and-the-shape-of-a-result).
 

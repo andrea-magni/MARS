@@ -673,8 +673,9 @@ begin
         LParam.schema.SetType(AParam.DataTypeRttiType, Self);
         LParam.required := AParam.Required;
 
-        // path params coming from the resource's [Path] (e.g. '{id}', '{*}') have no method parameter
-        const LParameter = AParam.RttiParameter;
+        // path params coming from the resource's [Path] (e.g. '{id}', '{*}') have no method
+        // parameter; the ones of fields and properties of the resource have their member
+        const LParameter = AParam.RttiObject;
         if Assigned(LParameter) then
         begin
           var LDescriptionAttr := LParameter.GetAttribute<OAPIDescriptionAttribute>;

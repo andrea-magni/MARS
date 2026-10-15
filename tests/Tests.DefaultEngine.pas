@@ -134,6 +134,10 @@ type
     [Test]
     procedure TestRequiredParamsAre400;
 
+    // a [HeaderParam] field of the resource, injected for every method
+    [Test]
+    procedure TestHeaderParamOfAField;
+
     [Test]
     procedure TestObjectListBody;
 
@@ -592,6 +596,23 @@ begin
   LMock := MockRequestAndResponse('POST', ResourcePath('lists'), '42');
   Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
   Assert.AreEqual(400, LMock.Response.StatusCode);
+end;
+
+procedure TMARSDefaultEngineFixture.TestHeaderParamOfAField;
+var
+  LHeader: TMARSHeader;
+begin
+  LHeader.Name := 'X-Tenant';
+  LHeader.Value := 'acme';
+  var LMock := MockRequestAndResponse('GET', ResourcePath('headers'), '', [LHeader]);
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(200, LMock.Response.StatusCode, LMock.Response.Content);
+  Assert.AreEqual('acme', LMock.Response.Content);
+
+  // [Required] on the field
+  LMock := MockRequestAndResponse('GET', ResourcePath('headers'));
+  Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+  Assert.AreEqual(400, LMock.Response.StatusCode, LMock.Response.Content);
 end;
 
 procedure TMARSDefaultEngineFixture.TestRequiredParamsAre400;

@@ -130,6 +130,38 @@ end;
 
 Parameter kinds (`[PathParam]`, `[QueryParam]`, `[HeaderParam]`, `[BodyParam]`) and their Delphi types become the corresponding OpenAPI parameters, request bodies and schemas.
 
+### Request headers
+
+A header the server needs is documented as a parameter `in: header`, with its description and whether it is required:
+
+| Where | How | Read and checked by MARS |
+| --- | --- | --- |
+| a method | a `[HeaderParam('X-User')]` parameter (`[Required]`: 400 when missing; `[OAPIDescription]`, `[OAPIPattern]`... for the schema) | yes |
+| every method of a resource | a `[HeaderParam('X-Tenant')]` field or property of the resource; `[QueryParam]` and `[CookieParam]` members too | yes |
+| a route | `HeaderParam<T>('X-User', 'description', True)` | yes |
+| what the code reads by itself, a middleware or an authentication step checks | `[MetaHeader('X-Api-Key', 'description', True)]` (unit `MARS.Metadata.Attributes`) on a method or a resource; `MetaHeader(...)` on a route or a group of routes | no: documentation only |
+| every operation of the API | the `OpenAPI.Header.<name>` parameter: `[required\|optional;]description` | no: documentation only |
+
+```pascal
+[Path('orders'), MetaHeader('X-Api-Key', 'The key of the client', True)] // checked by a middleware
+TOrdersResource = class
+private
+  [HeaderParam('X-Tenant'), Required, OAPIDescription('The tenant')]
+  FTenant: string; // injected for every method, documented on every operation
+public
+  [GET, MetaHeader('X-Request-Id', 'Echoed in the logs')]
+  function List: TArray<TOrder>;
+end;
+```
+
+```ini
+; Server.ini: every operation of every application (DefaultApp.OpenAPI.Header.<name>: one application)
+OpenAPI.Header.X-Api-Key=required; The key of the client
+OpenAPI.Header.X-Request-Id=optional; Echoed in the logs
+```
+
+The nearest wins on the same name: a parameter of the method (or of the route), a member of the resource, `[MetaHeader]` of the method, of the resource (of the route, of its groups), then `OpenAPI.Header.<name>`, of the application before the one of the engine.
+
 The request body is documented with the media types of `[Consumes]` (on the method or on the resource), for the methods that have one: a `[BodyParam]`, `[FormParam]` parameters, `[MetaRequestBody]`, or a `[Consumes]` of the method itself (a method that reads the body by itself). A `[Consumes]` inherited from the resource alone does not give a request body to the methods without one, i.e. the GET methods of the resource. Without `[Consumes]` the media type depends on the parameters: `application/x-www-form-urlencoded` for `[FormParam]` parameters; for a `[BodyParam]`, `application/octet-stream` for `TStream` and `TBytes`, `multipart/form-data` for `TFormParam` and `TArray<TFormParam>`, `text/plain` for `string`, `application/json` for anything else (records, objects, arrays), whose schema is added to `components/schemas`.
 
 A method that reads the body by itself (`Request.Body`, `Request.GetFormParamValue`, ...) instead of through `[BodyParam]`/`[FormParam]` parameters can describe it with `[MetaRequestBody]` (unit `MARS.Metadata.Attributes`): the qualified name of a record or class with the shape of the body, and an optional description. The built-in token resource uses it for the `username` and `password` form fields read by `GetCredentials`:

@@ -136,15 +136,24 @@ type
     function ShapeKey(const AWithConstraint: Boolean): string;
   end;
 
+  // a request header for the documentation (OpenAPI) only: MetaHeader of a route or a group
+  TMARSRouteMetaHeader = record
+    Name: string;
+    Description: string;
+    Required: Boolean;
+  end;
+
   TMARSRouteItem = class
   private
     FAttributes: TObjectList<TCustomAttribute>;
+    FMetaHeaders: TArray<TMARSRouteMetaHeader>;
     FSummary: string;
     FDescription: string;
     FHidden: Boolean;
     FMiddlewares: TArray<TMARSMiddlewareEntry>;
   protected
     procedure AddAttribute(const AAttribute: TCustomAttribute);
+    procedure AddMetaHeader(const AName, ADescription: string; const ARequired: Boolean);
     procedure AddMiddleware(const AName: string; const AProc: TMARSRouteMiddleware;
       const AMiddlewareClass: TMARSMiddlewareClass);
   public
@@ -156,6 +165,7 @@ type
     property SummaryText: string read FSummary;
     property DescriptionText: string read FDescription;
     property IsHidden: Boolean read FHidden;
+    property MetaHeaders: TArray<TMARSRouteMetaHeader> read FMetaHeaders;
     property Middlewares: TArray<TMARSMiddlewareEntry> read FMiddlewares;
   end;
 
@@ -188,6 +198,7 @@ type
     FRelativePrototypePath: string;
     FParams: TArray<TMARSRouteParam>;
     function GetGroupAttributes: TArray<TCustomAttribute>;
+    function GetGroupMetaHeaders: TArray<TMARSRouteMetaHeader>;
     function GetOperationId: string;
     procedure CheckRequiredParams(const AActivation: IMARSActivation);
   protected
@@ -240,6 +251,9 @@ type
     function SkipMiddleware(const AName: string): TMARSRoute;
     function QueryParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
     function HeaderParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
+    // a request header for the documentation (OpenAPI) only, as [MetaHeader]: one a middleware
+    // or the handler reads by itself (HeaderParam declares and checks a header of the route)
+    function MetaHeader(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
     function CookieParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
     function FormParam<T>(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRoute;
 
@@ -263,6 +277,8 @@ type
     property Attributes: TArray<TCustomAttribute> read GetAttributes;
     // attributes of the enclosing groups, innermost first
     property GroupAttributes: TArray<TCustomAttribute> read GetGroupAttributes;
+    // MetaHeader of the groups of the route, the nearest first
+    property GroupMetaHeaders: TArray<TMARSRouteMetaHeader> read GetGroupMetaHeaders;
   end;
 
   TMARSRouteTable = class;
@@ -323,6 +339,9 @@ type
 
     // documentation (OpenAPI)
     function Summary(const AText: string): TMARSRouter;
+    // a request header of every route of the group, nested groups included, for the
+    // documentation only (as [MetaHeader] on a resource): i.e. the API key a middleware checks
+    function MetaHeader(const AName: string; const ADescription: string = ''; const ARequired: Boolean = False): TMARSRouter;
     function Description(const AText: string): TMARSRouter;
     function Hidden: TMARSRouter;
 
@@ -816,6 +835,16 @@ begin
     FAttributes.Add(AAttribute);
 end;
 
+procedure TMARSRouteItem.AddMetaHeader(const AName, ADescription: string; const ARequired: Boolean);
+var
+  LHeader: TMARSRouteMetaHeader;
+begin
+  LHeader.Name := AName;
+  LHeader.Description := ADescription;
+  LHeader.Required := ARequired;
+  FMetaHeaders := FMetaHeaders + [LHeader];
+end;
+
 constructor TMARSRouteItem.Create;
 begin
   inherited Create;
@@ -1241,6 +1270,25 @@ begin
   Result := Self;
 end;
 
+function TMARSRoute.MetaHeader(const AName, ADescription: string; const ARequired: Boolean): TMARSRoute;
+begin
+  AddMetaHeader(AName, ADescription, ARequired);
+  Result := Self;
+end;
+
+function TMARSRoute.GetGroupMetaHeaders: TArray<TMARSRouteMetaHeader>;
+var
+  LRouter: TMARSRouter;
+begin
+  Result := [];
+  LRouter := FRouter;
+  while Assigned(LRouter) do
+  begin
+    Result := Result + LRouter.MetaHeaders;
+    LRouter := LRouter.Parent;
+  end;
+end;
+
 function TMARSRoute.Consumes(const AMediaType: string): TMARSRoute;
 begin
   Result := Attribute(ConsumesAttribute.Create(AMediaType));
@@ -1475,6 +1523,12 @@ end;
 function TMARSRouter.Attribute(const AAttribute: TCustomAttribute): TMARSRouter;
 begin
   AddAttribute(AAttribute);
+  Result := Self;
+end;
+
+function TMARSRouter.MetaHeader(const AName, ADescription: string; const ARequired: Boolean): TMARSRouter;
+begin
+  AddMetaHeader(AName, ADescription, ARequired);
   Result := Self;
 end;
 

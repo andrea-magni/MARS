@@ -40,6 +40,9 @@ type
     [Test] procedure DataSetsAndFrameworkTypes;
     // #277: no request body for the methods without one, whatever the Consumes of the resource
     [Test] procedure NoBodyWithoutBody;
+    // request parameters of fields and properties of the resource, [MetaHeader],
+    // OpenAPI.Header.<name> of the application
+    [Test] procedure HeadersOfResourcesAndApplication;
 {$IFDEF MARS_YAML}
     [Test] procedure SecurityAsYAML;
     [Test] procedure StringsStayStringsInYAML;
@@ -343,6 +346,88 @@ begin
         LNames := LNames + [LProperty.Key];
       Assert.AreEqual('Token,IsVerified,UserName,Roles,Expiration,IssuedAt,Claims', string.Join(',', LNames));
       Assert.AreEqual('string', LToken.GetProperty('Roles').&type, 'comma separated');
+    finally
+      LOpenAPI.Free;
+    end;
+  finally
+    LEngine.Free;
+  end;
+end;
+
+function FindParameter(const AOperation: TOperation; const AIn, AName: string; out ACount: Integer): TParameter;
+begin
+  Result := nil;
+  ACount := 0;
+  for var LParameter in AOperation.parameters do
+    if (LParameter.&in = AIn) and SameText(LParameter.name, AName) then
+    begin
+      Result := LParameter;
+      Inc(ACount);
+    end;
+end;
+
+procedure TMARSOpenAPI3Test.HeadersOfResourcesAndApplication;
+var
+  LCount: Integer;
+begin
+  var LEngine := TDefaultEngine.Create;
+  try
+    var LApplication := LEngine.Engine.ApplicationByName('DefaultApp');
+    LApplication.Parameters.Values['OpenAPI.Header.X-Client'] := 'required; The client application';
+    LApplication.Parameters.Values['OpenAPI.Header.X-Debug'] := 'Optional debugging';
+    // of the engine, for every application; the application wins on the same name
+    LEngine.Engine.Parameters.Values['OpenAPI.Header.X-Region'] := 'required';
+    LEngine.Engine.Parameters.Values['OpenAPI.Header.X-Client'] := 'optional; Overridden';
+    var LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LApplication);
+    try
+      var LGet := LOpenAPI.paths['/headers'].get;
+      // a field
+      var LParam := FindParameter(LGet, 'header', 'X-Tenant', LCount);
+      Assert.IsNotNull(LParam, 'X-Tenant of the field');
+      Assert.AreEqual('The tenant', LParam.description);
+      Assert.IsTrue(LParam.required, '[Required] field');
+      Assert.AreEqual('string', LParam.schema.&type);
+      // a property
+      LParam := FindParameter(LGet, 'query', 'lang', LCount);
+      Assert.IsNotNull(LParam, 'lang of the property');
+      Assert.AreEqual('The language', LParam.description);
+      Assert.IsFalse(LParam.required);
+      // [MetaHeader] of the method and of the resource
+      LParam := FindParameter(LGet, 'header', 'X-Trace', LCount);
+      Assert.IsNotNull(LParam, 'X-Trace');
+      Assert.AreEqual('A trace id', LParam.description);
+      Assert.IsFalse(LParam.required);
+      LParam := FindParameter(LGet, 'header', 'X-Api-Key', LCount);
+      Assert.IsNotNull(LParam, 'X-Api-Key');
+      Assert.AreEqual('The key of the client', LParam.description);
+      Assert.IsTrue(LParam.required);
+      // OpenAPI.Header.<name>
+      LParam := FindParameter(LGet, 'header', 'X-Client', LCount);
+      Assert.IsNotNull(LParam, 'X-Client');
+      Assert.AreEqual('The client application', LParam.description);
+      Assert.IsTrue(LParam.required);
+      LParam := FindParameter(LGet, 'header', 'X-Debug', LCount);
+      Assert.AreEqual('Optional debugging', LParam.description);
+      Assert.IsFalse(LParam.required);
+      LParam := FindParameter(LGet, 'header', 'X-Region', LCount);
+      Assert.IsNotNull(LParam, 'X-Region of the engine');
+      Assert.IsTrue(LParam.required);
+      Assert.AreEqual('', LParam.description);
+      FindParameter(LGet, 'header', 'X-Client', LCount);
+      Assert.AreEqual(1, LCount, 'X-Client once');
+
+      // the parameter of the method wins, once
+      LParam := FindParameter(LOpenAPI.paths['/headers/own'].get, 'header', 'X-Tenant', LCount);
+      Assert.AreEqual(1, LCount);
+      Assert.AreEqual('Own tenant', LParam.description);
+      Assert.IsFalse(LParam.required);
+      LParam := FindParameter(LOpenAPI.paths['/headers/key'].get, 'header', 'X-Api-Key', LCount);
+      Assert.AreEqual(1, LCount);
+      Assert.AreEqual('', LParam.description);
+
+      // the application headers are on every operation
+      Assert.IsNotNull(FindParameter(LOpenAPI.paths['/item'].get, 'header', 'X-Client', LCount));
+      Assert.IsNull(FindParameter(LOpenAPI.paths['/item'].get, 'header', 'X-Tenant', LCount));
     finally
       LOpenAPI.Free;
     end;

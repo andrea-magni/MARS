@@ -54,6 +54,17 @@ initialization
       ).Summary('Say hello to someone');
 
 (*
+      // request headers in the OpenAPI document: HeaderParam declares (and checks, when required)
+      // a header of the route; MetaHeader documents one a middleware or the handler reads by
+      // itself, on a route or on a group (R.MetaHeader: every route of the group)
+      R.Get<string>('whoami',
+        function (const C: TMARSRouteContext): string
+        begin
+          Result := 'Hello ' + C.Header<string>('X-User') + '!';
+        end
+      ).HeaderParam<string>('X-User', 'The user', True)
+       .MetaHeader('X-Api-Key', 'The key of the client', True);
+
       // more examples: a record as JSON, a typed body, query parameters, a middleware
 
       R.Get<TArray<TCustomer>>('customers',
