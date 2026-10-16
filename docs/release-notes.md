@@ -2,19 +2,22 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
-## Unreleased {#unreleased}
+## 2.0.2 {#v2-0-2}
 
-**Fixed**
-- Setup: the installation failed with RAD Studio 13.0 (`Unit 'System.Net.HttpSse' not found` in the `MARSClient.Core` package): the server-sent events of MARS rely on what RAD Studio 13.1 added (`THTTPEventSource` in the client, `TWebResponseStream.BeginEventsStream` in WebBroker). With 13.0 MARS installs and works, without `TMARSClientResourceSSE`; the server unit of the events stops the build with a message. [Server-Sent Events](/features/sse) ([#288](https://github.com/andrea-magni/MARS/issues/288))
+<Badge type="tip" text="latest" /> **16 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.2) · [changes since 2.0.1](https://github.com/andrea-magni/MARS/compare/v.2.0.1...v.2.0.2)
 
 **New**
 - OpenAPI: request headers for the documentation only, the ones the code reads by itself or a middleware checks (i.e. an API key): `[MetaHeader('X-Api-Key', 'description', True)]` on a method or a resource, `MetaHeader(...)` on a route or a group of routes, the `OpenAPI.Header.<name>` parameter for every operation (of the engine or of an application). The templates have commented examples. [OpenAPI ▸ Request headers](/features/openapi#request-headers) ([#286](https://github.com/andrea-magni/MARS/issues/286))
 - OpenAPI: `[HeaderParam]`, `[QueryParam]` and `[CookieParam]` on fields and properties of a resource (injected for every method) are parameters of all its operations; a parameter of the method with the same name wins. [OpenAPI ▸ Request headers](/features/openapi#request-headers) ([#285](https://github.com/andrea-magni/MARS/issues/285))
 - DockerDemo: the template server in a Docker container, its Linux64 daemon in foreground in an Ubuntu 24.04 image, with `Dockerfile`, `docker-compose.yml` and `.dockerignore`. [Demos ▸ DockerDemo](/demos/#dockerdemo) ([#283](https://github.com/andrea-magni/MARS/issues/283))
 
+**Fixed**
+- Setup: the installation failed with RAD Studio 13.0 (`Unit 'System.Net.HttpSse' not found` in the `MARSClient.Core` package): the server-sent events of MARS rely on what RAD Studio 13.1 added (`THTTPEventSource` in the client, `TWebResponseStream.BeginEventsStream` in WebBroker). With 13.0 MARS installs and works, without `TMARSClientResourceSSE`; the server unit of the events stops the build with a message. [Server-Sent Events](/features/sse) ([#288](https://github.com/andrea-magni/MARS/issues/288))
+- Documentation site: no icon in the browser tab, the favicon link lacked the `/MARS/` base. ([#287](https://github.com/andrea-magni/MARS/issues/287))
+
 ## 2.0.1 {#v2-0-1}
 
-<Badge type="tip" text="latest" /> **14 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.1) · [changes since 2.0.0](https://github.com/andrea-magni/MARS/compare/v.2.0.0...v.2.0.1)
+**14 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.1) · [changes since 2.0.0](https://github.com/andrea-magni/MARS/compare/v.2.0.0...v.2.0.1)
 
 **New**
 - Templates and demos: a **Stoplight** button next to **OpenAPI** in the VCL and FMX server forms, opening the Stoplight Elements page of the application (`<application>/docs`, now registered by every demo too). [OpenAPI ▸ Stoplight Elements](/features/openapi#stoplight-elements)
