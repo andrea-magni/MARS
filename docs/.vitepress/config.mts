@@ -77,7 +77,9 @@ export default defineConfig({
   },
 
   head: [
-    ['link', { rel: 'icon', href: '/logo-256.png' }],
+    // head links do not get the base: the full path, or the browser asks the root of the domain
+    ['link', { rel: 'icon', type: 'image/png', href: '/MARS/logo-256.png' }],
+    ['link', { rel: 'apple-touch-icon', href: '/MARS/logo-256.png' }],
     ['meta', { name: 'theme-color', content: '#e23c2e' }],
     // Google Search Console ownership (also docs/public/googlea4bcf4b25aec7c8a.html)
     ['meta', { name: 'google-site-verification', content: 'wal16o518WBogF_ELurPnRkWrVusyVZ20TgT8SpWmys' }],
