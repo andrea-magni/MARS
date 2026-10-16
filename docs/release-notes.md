@@ -4,6 +4,9 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## Unreleased {#unreleased}
 
+**Fixed**
+- Setup: the installation failed with RAD Studio 13.0 (`Unit 'System.Net.HttpSse' not found` in the `MARSClient.Core` package): the server-sent events of MARS rely on what RAD Studio 13.1 added (`THTTPEventSource` in the client, `TWebResponseStream.BeginEventsStream` in WebBroker). With 13.0 MARS installs and works, without `TMARSClientResourceSSE`; the server unit of the events stops the build with a message. [Server-Sent Events](/features/sse) ([#288](https://github.com/andrea-magni/MARS/issues/288))
+
 **New**
 - OpenAPI: request headers for the documentation only, the ones the code reads by itself or a middleware checks (i.e. an API key): `[MetaHeader('X-Api-Key', 'description', True)]` on a method or a resource, `MetaHeader(...)` on a route or a group of routes, the `OpenAPI.Header.<name>` parameter for every operation (of the engine or of an application). The templates have commented examples. [OpenAPI ▸ Request headers](/features/openapi#request-headers) ([#286](https://github.com/andrea-magni/MARS/issues/286))
 - OpenAPI: `[HeaderParam]`, `[QueryParam]` and `[CookieParam]` on fields and properties of a resource (injected for every method) are parameters of all its operations; a parameter of the method with the same name wins. [OpenAPI ▸ Request headers](/features/openapi#request-headers) ([#285](https://github.com/andrea-magni/MARS/issues/285))

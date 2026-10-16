@@ -1,6 +1,6 @@
 # Server-Sent Events (SSE)
 
-Units: `MARS.Core.ServerSideEvents` (server), `MARS.Core.ServerSideEvents.MessageBodyWriters` (streaming writer, tied to the Indy server), `MARS.Client.Resource.SSE` (client). Media type: `TMediaType.TEXT_EVENT_STREAM` (`text/event-stream`). Requires a modern Delphi (the SSE stream primitives on `TWebResponseStream` live in the Delphi 12 RTL). Working demo: `Demos/SSEDemo`.
+Units: `MARS.Core.ServerSideEvents` (server), `MARS.Core.ServerSideEvents.MessageBodyWriters` (streaming writer, tied to the Indy server), `MARS.Client.Resource.SSE` (client). Media type: `TMediaType.TEXT_EVENT_STREAM` (`text/event-stream`). Requires RAD Studio 13.1 or later: `TWebResponseStream.BeginEventsStream` (server) and `THTTPEventSource` of `System.Net.HttpSse` (client) came with 13.1; with 13.0 `TMARSClientResourceSSE` is not registered (`MARS_HTTP_SSE` in MARS.inc) and the server writer unit stops the build with a message. Working demo: `Demos/SSEDemo`.
 
 ## Server: declare an SSE endpoint
 

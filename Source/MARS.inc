@@ -67,6 +67,12 @@
   {$define Delphi13Florence_UP}
 {$endif}
 
+// Server-sent events, RAD Studio 13.1 on: System.Net.HttpSse (THTTPEventSource) for the client
+// resource, TWebResponseStream.BeginEventsStream of WebBroker for the server (#288)
+{$if Declared(RTLVersion131)}
+  {$define MARS_HTTP_SSE}
+{$endif}
+
 // WebBroker TCookie.HttpOnly and TCookie.SameSite, Indy TIdCookie.SameSite (added to Indy in
 // April 2023): used where verified, Delphi 13 on. With older versions MARS writes those cookie
 // attributes after the cookie path, which WebBroker and Indy copy as they are into Set-Cookie.

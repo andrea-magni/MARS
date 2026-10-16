@@ -8,8 +8,12 @@ unit MARS.Client.Resource.SSE;
 
 {$I MARS.inc}
 
+// THTTPEventSource (System.Net.HttpSse) came with RAD Studio 13.1: with 13.0 the unit is empty
+// and TMARSClientResourceSSE is not registered (#288)
+
 interface
 
+{$IFDEF MARS_HTTP_SSE}
 uses
   SysUtils, Classes, Generics.Collections, System.JSON, System.Diagnostics
 , System.Net.HttpSse, System.Net.HttpClient
@@ -126,7 +130,11 @@ type
     property ErrorCallback: TMARSHTTPErrorCallback read FErrorCallback write SetErrorCallback;
   end;
 
+{$ENDIF}
+
 implementation
+
+{$IFDEF MARS_HTTP_SSE}
 
 uses System.Rtti, System.DateUtils;
 
@@ -461,5 +469,7 @@ begin
   if Assigned(FOnReconnect) then
     FOnReconnect(Self);
 end;
+
+{$ENDIF}
 
 end.

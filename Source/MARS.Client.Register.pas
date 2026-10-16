@@ -150,6 +150,8 @@ begin
     TMARSNetClient
 {$IFDEF Delphi13Florence_UP}
   , TMARSHttpClient
+{$ENDIF}
+{$IFDEF MARS_HTTP_SSE} // RAD Studio 13.1 on (#288)
   , TMARSClientResourceSSE
 {$ENDIF}
   ]);

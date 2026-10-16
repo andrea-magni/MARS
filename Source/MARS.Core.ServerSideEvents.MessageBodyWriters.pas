@@ -5,6 +5,12 @@
 *)
 unit MARS.Core.ServerSideEvents.MessageBodyWriters;
 
+{$I MARS.inc}
+
+{$IFNDEF MARS_HTTP_SSE}
+  {$MESSAGE ERROR 'MARS server-sent events need RAD Studio 13.1 or later (TWebResponseStream.BeginEventsStream)'}
+{$ENDIF}
+
 interface
 
 uses

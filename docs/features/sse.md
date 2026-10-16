@@ -4,6 +4,10 @@
 
 The server units are `MARS.Core.ServerSideEvents.pas` and `MARS.Core.ServerSideEvents.MessageBodyWriters.pas`.
 
+::: info Requires RAD Studio 13.1 or later
+Both ends rely on what RAD Studio 13.1 added: `TWebResponseStream.BeginEventsStream` of WebBroker on the server, `THTTPEventSource` (`System.Net.HttpSse`) in the client. With older versions MARS installs and works without them: `TMARSClientResourceSSE` is not available, and the server unit stops the build with a message.
+:::
+
 ## A streaming endpoint
 
 Declare a method that `[Produces(TMediaType.TEXT_EVENT_STREAM)]` and returns a `TMARSServerSideEvent`. Its constructor takes an anonymous procedure that receives the response stream; loop while `AStream.Connected` and write events:
