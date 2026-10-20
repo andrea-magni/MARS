@@ -5,7 +5,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 ## Unreleased {#unreleased}
 
 **Changed**
-- `TDate` values are written as calendar dates, `"2026-10-19"` (OpenAPI `format: date`), instead of a date and time with the offset (`"2026-10-19T00:00:00.000+02:00"`); they are read from both. A `TDateTime` reads `"2026-10-19"` as midnight of that day (no time zone conversion). The OpenAPI document of the server has `format: date` for `TDate` and `format: date-time` for `TDateTime`, as the MCP tools do. `JSON.TDateAsDate=false` (`TDateAsDate` of the serialization options) writes them as before. [Serialization ▸ Dates](/features/serialization#dates)
+- `TDate` values are written as calendar dates, `"2026-10-19"` (OpenAPI `format: date`), instead of a date and time with the offset (`"2026-10-19T00:00:00.000+02:00"`); they are read from both. A `TDateTime` reads `"2026-10-19"` as midnight of that day (no time zone conversion). The OpenAPI document of the server has `format: date` for `TDate` and `format: date-time` for `TDateTime`, as the MCP tools do. `JSON.TDateAsDate=false` (`TDateAsDate` of the serialization options) writes them as before. [Serialization ▸ Dates](/features/serialization#dates), [OpenAPI](/features/openapi) ([#298](https://github.com/andrea-magni/MARS/pull/298))
 
 **Fixed**
 - Docs: the Grafana Alloy pipeline of the Logging page stored only the message in Loki (`stage.output`), so the JSON fields could not be queried with `| json`; now it keeps the whole line, with a tip on the trade-off. [Logging ▸ Ingesting into Loki](/features/logging#ingesting-into-loki-with-grafana-alloy) ([#292](https://github.com/andrea-magni/MARS/issues/292))
