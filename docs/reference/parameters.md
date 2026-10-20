@@ -195,6 +195,7 @@ into the `.ini` files of every project it creates.
 | `JSON.SkipNullValues` | Boolean | `True` | Omit `null`. |
 | `JSON.DateIsUTC` | Boolean | `True` only on a UTC+0 machine | Write and read `TDateTime` values as UTC. |
 | `JSON.ZeroDateAsEmpty` | Boolean | `True` | Write a zero date (`0`, 1899-12-30) as `""`, "no date". `False` writes it as a date. |
+| `JSON.TDateAsDate` | Boolean | `True` | Write `TDate` values as calendar dates (`"2026-10-19"`, OpenAPI `format: date`). `False` writes them with the time and the offset, as MARS 2.0.2 and earlier. |
 | `JSON.UseDisplayFormatForNumericFields` | Boolean | `False` | Use the display format of dataset numeric fields. |
 
 Defaults are those of `DefaultMARSJSONSerializationOptions`; resource and method attributes win over these parameters. See [Serialization options](/features/serialization#serialization-options).

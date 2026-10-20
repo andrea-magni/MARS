@@ -603,6 +603,7 @@ end;
 procedure TMARSRecordToJSONTest.ZeroDate;
 const
   ZERO_DATE = '1899-12-30T00:00:00.000Z';
+  ZERO_DAY = '1899-12-30'; // TDate: a calendar date
 var
   LOptions: TMARSJSONSerializationOptions;
   LJSONObj: TJSONObject;
@@ -636,7 +637,7 @@ begin
   LOptions.ZeroDateAsEmpty := False;
   LJSONObj := TJSONObject.RecordToJSON<TPersonRecord>(LRecord, LOptions);
   try
-    Assert.AreEqual(ZERO_DATE, LJSONObj.GetValue<string>('DateOfBirth'));
+    Assert.AreEqual(ZERO_DAY, LJSONObj.GetValue<string>('DateOfBirth'));
     // and read back as zero
     var LRead := LJSONObj.ToRecord<TPersonRecord>(LOptions);
     Assert.IsTrue(LRead.DateOfBirth = 0, DateToStr(LRead.DateOfBirth));

@@ -122,6 +122,7 @@
         <DCCReference Include="Tests.RequestTarget.pas"/>
         <DCCReference Include="Tests.Engine.COM.pas"/>
         <DCCReference Include="Tests.JSONDateIsUTC.pas"/>
+        <DCCReference Include="Tests.JSONDateOnly.pas"/>
         <DCCReference Include="Tests.JSONFloat.pas"/>
         <DCCReference Include="Tests.RateLimiter.pas"/>
         <DCCReference Include="Tests.OpenAPIElements.pas"/>

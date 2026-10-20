@@ -93,8 +93,21 @@ implementation
 {$IFDEF MARS_YAML}
 uses
   System.TypInfo, DateUtils, StrUtils, Generics.Collections
-, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
 ;
+
+// TDate as a calendar date ("2026-10-19"), as the JSON of MARS (unless TDateAsDate is False)
+function TDateToYAML(const ADate: TDate): string;
+begin
+{$IFDEF MARS_JSON_LEGACY}
+  Result := MARSDateToISO8601(ADate, False);
+{$ELSE}
+  if DefaultMARSJSONSerializationOptions.TDateAsDate then
+    Result := FormatDateTime('yyyy"-"mm"-"dd', ADate)
+  else
+    Result := MARSDateToISO8601(ADate, False);
+{$ENDIF}
+end;
 
 // a string that YAML would read as another type (a number, a boolean, null)
 function IsAmbiguousString(const AString: string): Boolean;
@@ -643,7 +656,7 @@ begin
       else if LElement.TypeInfo = TypeInfo(TDateTime) then
         LSequence.Add(MARSDateToISO8601(LElement.AsType<TDateTime>, False))
       else if LElement.TypeInfo = TypeInfo(TDate) then
-        LSequence.Add(MARSDateToISO8601(LElement.AsType<TDate>, False))
+        LSequence.Add(TDateToYAML(LElement.AsType<TDate>))
       else if LElement.TypeInfo = TypeInfo(TTime) then
         LSequence.Add(MARSDateToISO8601(LElement.AsType<TTime>, False))
       else if LElement.Kind = tkInt64 then
@@ -693,7 +706,7 @@ begin
   end
   else if AValue.TypeInfo = TypeInfo(TDate) then
   begin
-    ARoot.AddOrSetValue(AKeyName, MARSDateToISO8601(AValue.AsType<TDate>, False));
+    ARoot.AddOrSetValue(AKeyName, TDateToYAML(AValue.AsType<TDate>));
     Result := True;
   end
   else if AValue.TypeInfo = TypeInfo(TTime) then

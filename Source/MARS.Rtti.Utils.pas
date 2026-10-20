@@ -340,6 +340,7 @@ var
   LFloat: Double;
   LBoolean: Boolean;
   LDate: TDateTime;
+  LDateOnly: TDate;
   LOrdinal: Integer;
 begin
   // empty: the default of the type, as StringToTValue
@@ -386,13 +387,22 @@ begin
         Result := TValue.FromOrdinal(ADesiredType.Handle, LOrdinal);
       end;
     tkFloat:
-      if IndexStr(ADesiredType.Name, ['TDate', 'TDateTime', 'TTime']) <> -1 then
+      if ADesiredType.Handle = TypeInfo(TDate) then
+      begin
+        // "2026-10-19" as that day; a date and time (with its offset) as its local day
+        if not TryISO8601ToDateOnly(AString, LDateOnly) then
+        begin
+          if not TryISO8601ToDate(AString, LDate, False) and not TryStrToDateTime(AString, LDate) then
+            Invalid('a date');
+          LDateOnly := DateOf(LDate);
+        end;
+        Result := TValue.From<TDate>(LDateOnly);
+      end
+      else if IndexStr(ADesiredType.Name, ['TDateTime', 'TTime']) <> -1 then
       begin
         if not TryISO8601ToDate(AString, LDate) and not TryStrToDateTime(AString, LDate) then
           Invalid('a date');
-        if ADesiredType.Handle = TypeInfo(TDate) then
-          Result := TValue.From<TDate>(LDate)
-        else if ADesiredType.Handle = TypeInfo(TTime) then
+        if ADesiredType.Handle = TypeInfo(TTime) then
           Result := TValue.From<TTime>(LDate)
         else
           Result := TValue.From<TDateTime>(LDate);

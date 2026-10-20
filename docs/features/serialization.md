@@ -9,7 +9,8 @@ MARS maps Delphi values to and from JSON through the helpers in `MARS.Core.JSON.
 | `string`, `Char` | string |
 | `Integer`, `Int64`, `Double`, `Currency` | number |
 | `Boolean` | `true` / `false` |
-| `TDateTime` / `TDate` / `TTime` | string (ISO-8601 by default) or Unix number |
+| `TDateTime` / `TTime` | string (ISO-8601 by default) or Unix number |
+| `TDate` | string, the calendar date: `"2026-10-19"` (OpenAPI `format: date`; see [Dates](#dates)) |
 | `enum` | string or number |
 | `record` | object (one key per field) |
 | `class` (`TObject`) | object (published/visible properties) |
@@ -98,12 +99,30 @@ The fields you can set:
 | `SkipNullValues` | Omit `null`. |
 | `DateIsUTC` | Treat `TDateTime` as UTC. |
 | `ZeroDateAsEmpty` | Write a zero date (`0`, 1899-12-30) as `""`, "no date" (default `True`; then omitted by `SkipEmptyStrings`). `False` writes it as a date (`1899-12-30T00:00:00.000Z`). |
+| `TDateAsDate` | Write `TDate` values as calendar dates, `"2026-10-19"` (default `True`). `False` writes them as the other dates (`"2026-10-19T00:00:00.000+02:00"`), as MARS 2.0.2 and earlier. |
 | `DateFormat` | Reserved: dates are always written and read as ISO 8601. |
 | `UseDisplayFormatForNumericFields` | Use a field's display format for dataset numbers. |
 
 The default is "skip most empty/null values, ISO-8601 dates". `DateIsUTC` defaults to `True` only
 when the machine runs at UTC+0; set it explicitly (in code or in the configuration file) to get the
 same behavior everywhere.
+
+### Dates
+
+`TDateTime` (and `TTime`) values are a moment: ISO 8601 with the time and the offset
+(`"2026-10-19T09:30:00.000+02:00"`, or `Z` with `DateIsUTC`). `TDate` values are a day of the
+calendar, the same in every time zone: `"2026-10-19"`, the `full-date` of RFC 3339 that OpenAPI calls
+`format: date` (and the OpenAPI document of the server says so). A time in a `TDate` (i.e. `Now`) is
+left out.
+
+Reading, a `TDate` accepts `"2026-10-19"` as that day, and a date with a time (as clients and MARS 2.0.2
+and earlier write it) as its day in local time. A `TDateTime` reads `"2026-10-19"` as midnight of that
+day, without converting it between time zones. Path, query and header parameters of type `TDate` work
+the same way.
+
+`TDateAsDate = False` (`JSON.TDateAsDate=false`) writes `TDate` values with the time and the offset
+again, i.e. while clients built with MARS 2.0.2 or earlier still read `TDate` values of the server
+as `TDateTime` (they would read `"2026-10-19"` as midnight UTC, converted to their local time).
 
 ### From the configuration file
 

@@ -31,6 +31,7 @@ const
   JSON_SKIPNULLVALUES_PARAM = 'JSON.SkipNullValues';
   JSON_DATEISUTC_PARAM = 'JSON.DateIsUTC';
   JSON_ZERODATEASEMPTY_PARAM = 'JSON.ZeroDateAsEmpty';
+  JSON_TDATEASDATE_PARAM = 'JSON.TDateAsDate';
   JSON_USEDISPLAYFORMATFORNUMERICFIELDS_PARAM = 'JSON.UseDisplayFormatForNumericFields';
 
 type
@@ -89,6 +90,9 @@ type
     DateIsUTC: Boolean;
     // a zero date (0, 1899-12-30) is "" (no date; then omitted by SkipEmptyStrings); False: written as a date
     ZeroDateAsEmpty: Boolean;
+    // TDate values as calendar dates, "2026-10-19" (OpenAPI format: date); False: as the other dates
+    // ("2026-10-19T00:00:00.000+02:00"), as MARS 2.0.2 and earlier
+    TDateAsDate: Boolean;
     DateFormat: TMARSJSONDateFormat; // not used yet: dates are always ISO 8601
 //    joDateFormatUnix
 //    joDateFormatISO8601
@@ -366,6 +370,7 @@ type
     SkipNullValues: True;
     DateIsUTC: True; // check the initialization section of this unit!
     ZeroDateAsEmpty: True;
+    TDateAsDate: True;
     DateFormat: ISO8601;
     UseDisplayFormatForNumericFields: False;
   );
@@ -624,7 +629,7 @@ begin
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
     Result := TJSONString.Create( DateToJSON(AValue.AsType<TDateTime>, AOptions) )
   else if AValue.TypeInfo = TypeInfo(TDate) then
-    Result := TJSONString.Create( DateToJSON(AValue.AsType<TDate>, AOptions) )
+    Result := TJSONString.Create( DateOnlyToJSON(AValue.AsType<TDate>, AOptions) )
   else if AValue.TypeInfo = TypeInfo(TTime) then
     Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>, AOptions) )
 
@@ -1797,8 +1802,9 @@ begin
   begin
     if ADesiredType is TRttiEnumerationType then  // enumerated types
       ATValue := TValue.FromOrdinal(ADesiredType.Handle, GetEnumValue(ADesiredType.Handle, TJSONString(AValue).Value))
+    else if ADesiredType.Handle = TypeInfo(TDate) then // calendar dates ("2026-10-19") or dates
+      ATValue := TValue.From<TDate>(JSONToDateOnly(TJSONString(AValue).Value, AOptions))
     else if (ADesiredType.Handle = TypeInfo(TDateTime)) // dates
-      or (ADesiredType.Handle = TypeInfo(TDate))
       or (ADesiredType.Handle = TypeInfo(TTime))
     then
       ATValue := JSONToDate(TJSONString(AValue).Value, AOptions)
@@ -2339,6 +2345,8 @@ begin
     Result.DateIsUTC := LBoolean;
   if TryGetBoolean(JSON_ZERODATEASEMPTY_PARAM, LBoolean) then
     Result.ZeroDateAsEmpty := LBoolean;
+  if TryGetBoolean(JSON_TDATEASDATE_PARAM, LBoolean) then
+    Result.TDateAsDate := LBoolean;
   if TryGetBoolean(JSON_USEDISPLAYFORMATFORNUMERICFIELDS_PARAM, LBoolean) then
     Result.UseDisplayFormatForNumericFields := LBoolean;
 end;
