@@ -151,6 +151,10 @@ For anything beyond trivial markup, use a template engine instead of string conc
 
 Embarcadero's **WebStencils** template engine integrates via `TMARSWebStencils`, injected with `[Context]`. You register variables and datasets, then render a template file:
 
+::: info Requires RAD Studio 12.2 or later
+WebStencils (`Web.Stencils`) came with RAD Studio 12.2, in the editions that include it. The `MARS.WebStencils` unit is not part of the MARS packages: only the projects that use it need it. If a project cannot find `Web.Stencils`, remove the `MARS_WEBSTENCILS` define from `Source\MARS.inc`.
+:::
+
 ```pascal
 [Path('helloworld')]
 THelloWorldResource = class
