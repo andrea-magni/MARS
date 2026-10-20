@@ -32,6 +32,7 @@ uses
   Tests.RequestTarget in 'Tests.RequestTarget.pas',
   Tests.Engine.COM in 'Tests.Engine.COM.pas',
   Tests.JSONDateIsUTC in 'Tests.JSONDateIsUTC.pas',
+  Tests.JSONDateOnly in 'Tests.JSONDateOnly.pas',
   Tests.JSONFloat in 'Tests.JSONFloat.pas',
   Tests.RateLimiter in 'Tests.RateLimiter.pas',
   Tests.OpenAPIElements in 'Tests.OpenAPIElements.pas',

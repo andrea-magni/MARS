@@ -761,7 +761,23 @@ begin
     items.SetType(AOpenAPI.MARSDataTypeToOpenAPIType(LElementType));
   end
   else
+  begin
     SetType(AOpenAPI.MARSDataTypeToOpenAPIType(AType));
+    // dates as MARS writes them (TDate: "2026-10-19", unless TDateAsDate is False)
+    if AType.Handle = TypeInfo(TDateTime) then
+      format := 'date-time'
+    else if AType.Handle = TypeInfo(TDate) then
+    begin
+      {$IFDEF MARS_JSON_LEGACY}
+      format := 'date-time';
+      {$ELSE}
+      if DefaultMARSJSONSerializationOptions.TDateAsDate then
+        format := 'date'
+      else
+        format := 'date-time';
+      {$ENDIF}
+    end;
+  end;
 end;
 
 { TComponents }

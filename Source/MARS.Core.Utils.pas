@@ -107,6 +107,14 @@ type
   function JSONToDate(const ADate: string; const ADefault: TDateTime = 0.0): TDateTime; overload;
   function JSONToDate(const ADate: string; const AOptions: TMARSJSONSerializationOptions; const ADefault: TDateTime = 0.0): TDateTime; overload;
 
+  // TDate values: calendar dates, "2026-10-19" (OpenAPI format: date), no time zone involved;
+  // as DateToJSON when AOptions.TDateAsDate is False
+  function DateOnlyToJSON(const ADate: TDate; const AOptions: TMARSJSONSerializationOptions): string;
+  // "2026-10-19" as that day, or a date and time (as JSONToDate) as its day
+  function JSONToDateOnly(const ADate: string; const AOptions: TMARSJSONSerializationOptions; const ADefault: TDate = 0.0): TDate;
+  // "YYYY-MM-DD" only (RFC 3339 full-date)
+  function TryISO8601ToDateOnly(const ADate: string; out AValue: TDate): Boolean;
+
   function IsMask(const AString: string): Boolean;
   function MatchesMask(const AString, AMask: string): Boolean;
 
@@ -397,7 +405,7 @@ begin
   else if AValue.TypeInfo = TypeInfo(TDateTime) then
     Result := DateToJSON(AValue.AsType<TDateTime>)
   else if AValue.TypeInfo = TypeInfo(TDate) then
-    Result := DateToJSON(AValue.AsType<TDate>)
+    Result := DateOnlyToJSON(AValue.AsType<TDate>, DefaultMARSJSONSerializationOptions)
   else if AValue.TypeInfo = TypeInfo(TTime) then
     Result := DateToJSON(AValue.AsType<TTime>)
 
@@ -513,8 +521,13 @@ begin
 end;
 
 function JSONToDate(const ADate: string; const AOptions: TMARSJSONSerializationOptions; const ADefault: TDateTime = 0.0): TDateTime;
+var
+  LDateOnly: TDate;
 begin
   Result := ADefault;
+  // a calendar date ("2026-10-19", i.e. a TDate) has no time zone: midnight of that day
+  if TryISO8601ToDateOnly(ADate, LDateOnly) then
+    Exit(LDateOnly);
   if ADate<>'' then
 {$IFDEF MARS_JSON_LEGACY}
     Result := ISO8601ToDate(ADate, joDateIsUTC in AOptions);
@@ -522,6 +535,47 @@ begin
     Result := ISO8601ToDate(ADate, AOptions.DateIsUTC);
 {$ENDIF}
 
+end;
+
+function DateOnlyToJSON(const ADate: TDate; const AOptions: TMARSJSONSerializationOptions): string;
+begin
+{$IFDEF MARS_JSON_LEGACY}
+  Result := DateToJSON(ADate, AOptions);
+{$ELSE}
+  if not AOptions.TDateAsDate then
+    Exit(DateToJSON(ADate, AOptions));
+
+  Result := '';
+  if (ADate <> 0) or not AOptions.ZeroDateAsEmpty then
+    Result := FormatDateTime('yyyy"-"mm"-"dd', ADate);
+{$ENDIF}
+end;
+
+function TryISO8601ToDateOnly(const ADate: string; out AValue: TDate): Boolean;
+var
+  LIndex: Integer;
+  LDate: TDateTime;
+begin
+  Result := False;
+  if (ADate.Length <> 10) or (ADate.Chars[4] <> '-') or (ADate.Chars[7] <> '-') then
+    Exit;
+  for LIndex := 0 to 9 do
+    if not (LIndex in [4, 7]) and not CharInSet(ADate.Chars[LIndex], ['0'..'9']) then
+      Exit;
+  Result := TryEncodeDate(ADate.Substring(0, 4).ToInteger, ADate.Substring(5, 2).ToInteger
+    , ADate.Substring(8, 2).ToInteger, LDate);
+  if Result then
+    AValue := LDate;
+end;
+
+function JSONToDateOnly(const ADate: string; const AOptions: TMARSJSONSerializationOptions; const ADefault: TDate = 0.0): TDate;
+begin
+  Result := ADefault;
+  if ADate = '' then
+    Exit;
+  // a calendar date is that day everywhere: no conversion between time zones
+  if not TryISO8601ToDateOnly(ADate, Result) then
+    Result := DateOf(JSONToDate(ADate, AOptions, ADefault));
 end;
 
 

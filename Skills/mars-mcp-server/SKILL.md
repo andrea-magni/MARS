@@ -88,7 +88,7 @@ A complete starting unit is available in `assets/Server.Resources.MCP.pas.templa
 
 Tool results: a `string` becomes a text content block; records (and arrays, numbers...) are serialized with the MARS JSON serializer and records also become `structuredContent`. Exceptions raised inside a tool are reported as tool execution errors (`isError: true`), not protocol errors. `TDataSet` results need `TMCPDataResource` — see `references/database-tools.md`.
 
-Parameter/field types map to JSON Schema automatically: strings → `string`, integers → `integer`, floats → `number`, `Boolean` → `boolean`, enums → `string` + `enum` values, `TDateTime` → `string`/`date-time`, dynamic arrays → `array`, records → nested `object`. Parameters are listed as `required`, except those marked `[MCPDefault('<JSON literal>')]`: they are left out of `required`, the schema advertises the value as `default`, and a missing or `null` argument is bound to it (`[MCPDefault('true')]`, `('7')`, `('"value_date"')`, `('""')`, `('[]')` — the literal is converted like any argument).
+Parameter/field types map to JSON Schema automatically: strings → `string`, integers → `integer`, floats → `number`, `Boolean` → `boolean`, enums → `string` + `enum` values, `TDateTime` → `string`/`date-time`, `TDate` → `string`/`date` (`"2026-10-19"`), dynamic arrays → `array`, records → nested `object`. Parameters are listed as `required`, except those marked `[MCPDefault('<JSON literal>')]`: they are left out of `required`, the schema advertises the value as `default`, and a missing or `null` argument is bound to it (`[MCPDefault('true')]`, `('7')`, `('"value_date"')`, `('""')`, `('[]')` — the literal is converted like any argument).
 
 ## Protocol facts worth knowing
 

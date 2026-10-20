@@ -184,6 +184,7 @@ implementation
 
 uses
   StrUtils, DateUtils, System.NetEncoding
+, MARS.Core.Utils
 ;
 
 { EMCPError }
@@ -769,9 +770,12 @@ begin
 
       tkFloat:
       begin
-        if (LTypeInfo = TypeInfo(TDateTime)) or (LTypeInfo = TypeInfo(TDate))
-           or (LTypeInfo = TypeInfo(TTime))
-        then
+        if LTypeInfo = TypeInfo(TDate) then
+        begin
+          Result.AddPair('type', 'string');
+          Result.AddPair('format', 'date'); // "2026-10-19"
+        end
+        else if (LTypeInfo = TypeInfo(TDateTime)) or (LTypeInfo = TypeInfo(TTime)) then
         begin
           Result.AddPair('type', 'string');
           Result.AddPair('format', 'date-time');
@@ -894,9 +898,9 @@ begin
 
     tkFloat:
     begin
-      if (LTypeInfo = TypeInfo(TDateTime)) or (LTypeInfo = TypeInfo(TDate))
-         or (LTypeInfo = TypeInfo(TTime))
-      then
+      if LTypeInfo = TypeInfo(TDate) then // "2026-10-19" as that day, or a date and time as its day
+        Result := TValue.From<TDate>(JSONToDateOnly(AJSONValue.Value, DefaultMARSJSONSerializationOptions))
+      else if (LTypeInfo = TypeInfo(TDateTime)) or (LTypeInfo = TypeInfo(TTime)) then
         Result := TValue.From<TDateTime>(ISO8601ToDate(AJSONValue.Value, False)).Cast(LTypeInfo)
       else if AJSONValue is TJSONNumber then
         Result := TValue.From<Double>(TJSONNumber(AJSONValue).AsDouble).Cast(LTypeInfo)

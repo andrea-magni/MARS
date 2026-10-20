@@ -4,11 +4,18 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## Unreleased {#unreleased}
 
+**Changed**
+- `TDate` values are written as calendar dates, `"2026-10-19"` (OpenAPI `format: date`), instead of a date and time with the offset (`"2026-10-19T00:00:00.000+02:00"`); they are read from both. A `TDateTime` reads `"2026-10-19"` as midnight of that day (no time zone conversion). The OpenAPI document of the server has `format: date` for `TDate` and `format: date-time` for `TDateTime`, as the MCP tools do. `JSON.TDateAsDate=false` (`TDateAsDate` of the serialization options) writes them as before. [Serialization ▸ Dates](/features/serialization#dates)
+
 **Fixed**
 - Docs: the Grafana Alloy pipeline of the Logging page stored only the message in Loki (`stage.output`), so the JSON fields could not be queried with `| json`; now it keeps the whole line, with a tip on the trade-off. [Logging ▸ Ingesting into Loki](/features/logging#ingesting-into-loki-with-grafana-alloy) ([#292](https://github.com/andrea-magni/MARS/issues/292))
 - Docs: building for Linux64 needs a Linux SDK, not PAServer (needed to add or update the SDK and to deploy from the IDE). [Deployment](/guide/deployment#linux-with-systemd) ([#293](https://github.com/andrea-magni/MARS/issues/293))
 - Docs: WebStencils needs RAD Studio 12.2 or later, now stated on the Templates page. [Templates ▸ WebStencils](/features/templates#webstencils) ([#294](https://github.com/andrea-magni/MARS/issues/294))
 - TailwindcssDemo: the password partial (not used by the pages) posted to `/app/users/{id}/password`, a path that does not exist; now `/users/{id}/password`. ([#295](https://github.com/andrea-magni/MARS/issues/295))
+
+**Upgrade notes**
+
+- **`TDate` in JSON**: servers write `TDate` fields and results as `"2026-10-19"`. Clients built with MARS 2.0.2 or earlier read them as midnight UTC converted to local time (west of Greenwich, the day before): update them, or set `JSON.TDateAsDate=false` on the server until then. Clients that compare the text of dates, and OpenAPI clients generated from the server, see `format: date` now.
 
 ## 2.0.2 {#v2-0-2}
 
