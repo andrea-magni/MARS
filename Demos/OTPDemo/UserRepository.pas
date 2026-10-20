@@ -36,8 +36,8 @@ type
 
 //  const Users: array[0..1] of TUser =
 //    (
-//     ( UserName: 'andrea'; Password: 'andreaPass'; Secret: 'andreaSecret'),
-//     ( UserName: 'marta';  Password: 'martaPass';  Secret: 'martaSecret')
+//     ( UserName: 'andrea'; Password: 'test-only-password'; Secret: 'test-only-otp-secret'),
+//     ( UserName: 'marta';  Password: 'test-only-password'; Secret: 'test-only-otp-secret')
 //    );
 
 implementation

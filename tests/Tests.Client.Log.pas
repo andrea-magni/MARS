@@ -15,7 +15,7 @@ uses
 ;
 
 const
-  LOGIN_BODY = '{"username":"andrea","password":"p4ssw0rd"}';
+  LOGIN_BODY = '{"username":"andrea","password":"test-only-password"}'; // a test fixture
   TOKEN = 'my-client-token';
 
 type

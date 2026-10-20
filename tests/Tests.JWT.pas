@@ -28,8 +28,9 @@ type
     function IssueToken(const AParameters: TMARSParameters): string;
     function IsVerifiedWith(const AToken: string; const AParameters: TMARSParameters): Boolean;
   public
-    const DUMMY_SECRET = '12345678901234567890123456789012';
-    const OTHER_SECRET = 'abcdefghijabcdefghijabcdefghijab';
+    // test fixtures, not real secrets: 32 characters (256 bits), as an HMAC-SHA256 key should be
+    const DUMMY_SECRET = 'test-only-dummy-secret-000000001';
+    const OTHER_SECRET = 'test-only-other-secret-000000002';
 
     [Test] procedure BuildOne;
     [Test] procedure VerifyOne;
@@ -318,7 +319,7 @@ begin
   Result :=
    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'
   +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0'
-  +'.HpiUlC0d-a-oA4rZRFOpQsHxML55B0vXL5BbtEQNnLI';
+  +'.WA573zhyw_TtJx7tI_BptXmtuRLAZbHiHvOBwQn6gj4';
 end;
 
 procedure TMARSJWT<T>.IatType_Built;
@@ -428,7 +429,7 @@ var
   LToken: TMARSToken;
 begin
   const LAnyToken =
-    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCwgZXh0cmEsYWRtaW4iLCJpYXQiOjE1MTA3Mzk4NDgsImV4cCI6ODc5MTA3MzYyNDgsIlVzZXJOYW1lIjoiYW5kcmVhLm1hZ25pIiwiaXNzIjoiTUFSUy1DdXJpb3NpdHkifQ.Kwpqs2LVUVEDki6KK6bdZW_kanoGCbBI11iVQl5XtP8';
+    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCwgZXh0cmEsYWRtaW4iLCJpYXQiOjE1MTA3Mzk4NDgsImV4cCI6ODc5MTA3MzYyNDgsIlVzZXJOYW1lIjoiYW5kcmVhLm1hZ25pIiwiaXNzIjoiTUFSUy1DdXJpb3NpdHkifQ.CxEuwRaw-YNwM5wLU3NsIX9PRgIoINgW-mVqeqVi-NQ';
 
   LToken := T.Create('', nil);
   try
