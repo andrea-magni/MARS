@@ -179,7 +179,6 @@ loki.process "mars" {
   stage.labels {
     values = { level = "", source = "", engine = "", application = "", direction = "" }
   }
-  stage.output { source = "message" }
 }
 
 loki.write "default" {
@@ -187,7 +186,11 @@ loki.write "default" {
 }
 ```
 
-In Grafana Explore (Loki data source) you can then query e.g. `{source="MARS"}`, `{application="DefaultApp"}` or `{direction="error"}`.
+In Grafana Explore (Loki data source) you can then query e.g. `{source="MARS"}`, `{application="DefaultApp"}` or `{direction="error"}`, and filter on the JSON fields of the line: `{application="DefaultApp"} | json | status_code >= 500`.
+
+::: tip Keep the whole JSON line
+The pipeline stores the whole JSON line in Loki, so `| json` can extract any field at query time. Adding `stage.output { source = "message" }` would store only the message text: lighter lines, but the other fields (`status_code`, `execution_ms`, your own ones) would be lost for queries, except the ones promoted to labels.
+:::
 
 ::: warning Endpoint reachability
 `loki.write` must point at a Loki that Alloy can actually reach. If Alloy runs in a VM and Loki lives on the host, use the host address (for example `http://host.parallels:3100`) rather than `localhost`.

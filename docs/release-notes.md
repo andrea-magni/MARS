@@ -2,6 +2,11 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
+## Unreleased {#unreleased}
+
+**Fixed**
+- Docs: the Grafana Alloy pipeline of the Logging page stored only the message in Loki (`stage.output`), so the JSON fields could not be queried with `| json`; now it keeps the whole line, with a tip on the trade-off. [Logging ▸ Ingesting into Loki](/features/logging#ingesting-into-loki-with-grafana-alloy) ([#292](https://github.com/andrea-magni/MARS/issues/292))
+
 ## 2.0.2 {#v2-0-2}
 
 <Badge type="tip" text="latest" /> **16 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.2) · [changes since 2.0.1](https://github.com/andrea-magni/MARS/compare/v.2.0.1...v.2.0.2)
