@@ -60,7 +60,7 @@ MyProjectServerService.exe /uninstall
 
 ## Linux with systemd
 
-Build the `...ServerDaemon` project for the Linux64 platform (RAD Studio with the Linux SDK and PAServer), then copy the binary and the `.ini` files to the server, i.e. to `/opt/myproject`.
+Build the `...ServerDaemon` project for the Linux64 platform (RAD Studio with a Linux SDK; PAServer on a Linux machine is needed to add or update the SDK and to deploy or debug from the IDE, not to build), then copy the binary and the `.ini` files to the server, i.e. to `/opt/myproject`.
 
 The daemon runs in two ways:
 

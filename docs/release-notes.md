@@ -6,6 +6,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 **Fixed**
 - Docs: the Grafana Alloy pipeline of the Logging page stored only the message in Loki (`stage.output`), so the JSON fields could not be queried with `| json`; now it keeps the whole line, with a tip on the trade-off. [Logging ▸ Ingesting into Loki](/features/logging#ingesting-into-loki-with-grafana-alloy) ([#292](https://github.com/andrea-magni/MARS/issues/292))
+- Docs: building for Linux64 needs a Linux SDK, not PAServer (needed to add or update the SDK and to deploy from the IDE). [Deployment](/guide/deployment#linux-with-systemd) ([#293](https://github.com/andrea-magni/MARS/issues/293))
 
 ## 2.0.2 {#v2-0-2}
 
