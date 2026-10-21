@@ -338,6 +338,9 @@ type
     externalDocs: TExternalDocumentation;
     [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] FBearerSecurityConfigured: Boolean;
     [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] FCookieSecurityConfigured: Boolean;
+    // TDate as the application writes it: "2026-10-19" (format: date) or a date and time
+    // (format: date-time). The default options; BuildFrom sets the ones of the application (#299)
+    [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] TDateAsDate: Boolean;
   end;
 
 implementation
@@ -558,6 +561,11 @@ begin
   servers := TObjectList<TServer>.Create(True);
   security := TObjectList<TDictionary<string,TSecurityRequirement>>.Create(True);
   tags := TObjectList<TTag>.Create(True);
+  {$IFDEF MARS_JSON_LEGACY}
+  TDateAsDate := False;
+  {$ELSE}
+  TDateAsDate := DefaultMARSJSONSerializationOptions.TDateAsDate;
+  {$ENDIF}
 end;
 
 destructor TOpenAPI.Destroy;
@@ -768,14 +776,10 @@ begin
       format := 'date-time'
     else if AType.Handle = TypeInfo(TDate) then
     begin
-      {$IFDEF MARS_JSON_LEGACY}
-      format := 'date-time';
-      {$ELSE}
-      if DefaultMARSJSONSerializationOptions.TDateAsDate then
+      if Assigned(AOpenAPI) and AOpenAPI.TDateAsDate then
         format := 'date'
       else
         format := 'date-time';
-      {$ENDIF}
     end;
   end;
 end;

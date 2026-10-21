@@ -36,6 +36,8 @@ type
     [Test] procedure AsBeforeWithTheOption;
     [Test] procedure Parameters;
     [Test] procedure OpenAPIFormats;
+    // #299: the format follows JSON.TDateAsDate of the application
+    [Test] procedure OpenAPIFormatOfTheApplication;
   end;
 
 implementation
@@ -43,7 +45,7 @@ implementation
 uses
   System.DateUtils, System.JSON, System.Rtti, System.Generics.Collections
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils, MARS.Utils.Parameters
-, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
+, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils, MARS.Core.Application.Interfaces, Tests.DefaultEngine.Definition
 ;
 
 function PropertyOf(const ASchema: TSchema; const AName: string): TSchema;
@@ -262,6 +264,37 @@ begin
     Assert.AreEqual('date-time', PropertyOf(LSchema, 'At').format);
   finally
     LOpenAPI.Free;
+  end;
+end;
+
+procedure TMARSJSONDateOnlyTest.OpenAPIFormatOfTheApplication;
+var
+  LOpenAPI: TOpenAPI;
+  LSchema: TSchema;
+begin
+  for var LTDateAsDate in [True, False] do
+  begin
+    var LEngine := TDefaultEngine.Create;
+    try
+      var LApplication := LEngine.Engine.ApplicationByName('DefaultApp');
+      LApplication.Parameters.Values[JSON_TDATEASDATE_PARAM] := LTDateAsDate;
+      LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LApplication);
+      try
+        Assert.AreEqual(LTDateAsDate, LOpenAPI.TDateAsDate);
+        // a type of the document, as the schemas of the results are made
+        Assert.IsTrue(LOpenAPI.EnsureTypeInComponentsSchemas(TRttiContext.Create.GetType(TOpenAPIDates)));
+        LSchema := LOpenAPI.components.schemas['TOpenAPIDates'];
+        if LTDateAsDate then
+          Assert.AreEqual('date', PropertyOf(LSchema, 'Day').format)
+        else
+          Assert.AreEqual('date-time', PropertyOf(LSchema, 'Day').format);
+        Assert.AreEqual('date-time', PropertyOf(LSchema, 'At').format);
+      finally
+        LOpenAPI.Free;
+      end;
+    finally
+      LEngine.Free;
+    end;
   end;
 end;
 

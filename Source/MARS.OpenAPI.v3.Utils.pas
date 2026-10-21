@@ -80,6 +80,10 @@ begin
   try
     // 3.0.2 keeps the bundled Swagger UI happy; raise it to 3.2.0 to document QUERY endpoints
     LOpenAPI.openapi := AEngine.Parameters.ByNameText('OpenAPI.openapi', '3.0.2').AsString;
+    // the dates as this application writes them (its JSON.TDateAsDate) (#299)
+    {$IFNDEF MARS_JSON_LEGACY}
+    LOpenAPI.TDateAsDate := DefaultMARSJSONSerializationOptions.AdjustWith(AApplication.Parameters).TDateAsDate;
+    {$ENDIF}
     LOpenAPI.ReadInfoFromParams(AEngine.Parameters);
 
     LServer := LOpenAPI.AddServerFromEngine(AEngine);

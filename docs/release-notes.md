@@ -12,6 +12,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 - Docs: building for Linux64 needs a Linux SDK, not PAServer (needed to add or update the SDK and to deploy from the IDE). [Deployment](/guide/deployment#linux-with-systemd) ([#293](https://github.com/andrea-magni/MARS/issues/293))
 - Docs: WebStencils needs RAD Studio 12.2 or later, now stated on the Templates page. [Templates ▸ WebStencils](/features/templates#webstencils) ([#294](https://github.com/andrea-magni/MARS/issues/294))
 - TailwindcssDemo: the password partial (not used by the pages) posted to `/app/users/{id}/password`, a path that does not exist; now `/users/{id}/password`. ([#295](https://github.com/andrea-magni/MARS/issues/295))
+- OpenAPI: the format of `TDate` followed only the default serialization options: with `DefaultApp.JSON.TDateAsDate=false` the server wrote dates and times but its document said `format: date`; now the document of an application follows its `JSON.TDateAsDate`. [OpenAPI](/features/openapi) ([#299](https://github.com/andrea-magni/MARS/issues/299))
 
 **Upgrade notes**
 
