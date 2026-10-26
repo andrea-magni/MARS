@@ -46,6 +46,7 @@ uses
   System.DateUtils, System.JSON, System.Rtti, System.Generics.Collections
 , MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils, MARS.Utils.Parameters
 , MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils, MARS.Core.Application.Interfaces, Tests.DefaultEngine.Definition
+{$IFDEF MARS_YAML}, Neslib.Yaml, Neslib.Utf8, MARS.YAML.ReadersAndWriters{$ENDIF}
 ;
 
 function PropertyOf(const ASchema: TSchema; const AName: string): TSchema;
@@ -289,6 +290,13 @@ begin
         else
           Assert.AreEqual('date-time', PropertyOf(LSchema, 'Day').format);
         Assert.AreEqual('date-time', PropertyOf(LSchema, 'At').format);
+{$IFDEF MARS_YAML}
+        // the document in YAML says the same (#304)
+        var LYAML := TMARSYAML.ObjectToYAML(LOpenAPI).ToYaml;
+        var LDay := TYamlDocument.Parse(LYAML).Root.Values['components'].Values['schemas']
+          .Values['TOpenAPIDates'].Values['properties'].Values['Day'];
+        Assert.AreEqual(PropertyOf(LSchema, 'Day').format, LDay.Values['format'].ToString);
+{$ENDIF}
       finally
         LOpenAPI.Free;
       end;

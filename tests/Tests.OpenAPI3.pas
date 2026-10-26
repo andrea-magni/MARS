@@ -24,6 +24,24 @@ type
     [JSONName('')] property Secret: string read FSecret write FSecret;
   end;
 
+{$IFDEF MARS_YAML}
+  TYAMLOptionsNested = record
+    Note: string;
+  end;
+
+  // #304: the YAML of MARS and the JSON.* options
+  TYAMLOptionsCase = record
+    Name: string;
+    Count: Integer;
+    Active: Boolean;
+    Tags: TArray<string>;
+    Nested: TYAMLOptionsNested;
+    Day: TDate;
+    At: TDateTime;
+    Zero: TDateTime;
+  end;
+{$ENDIF}
+
   [TestFixture('OpenAPI3')]
   TMARSOpenAPI3Test = class(TObject)
   private
@@ -46,6 +64,9 @@ type
 {$IFDEF MARS_YAML}
     [Test] procedure SecurityAsYAML;
     [Test] procedure StringsStayStringsInYAML;
+    // #304: dates and empty values as the JSON.* options say
+    [Test] procedure DatesInYAML;
+    [Test] procedure EmptyValuesInYAML;
 {$ENDIF}
   end;
 
@@ -549,6 +570,83 @@ begin
   finally
     LEngine.Free;
   end;
+end;
+
+function YAMLOptionsCase: TYAMLOptionsCase;
+begin
+  Result := Default(TYAMLOptionsCase);
+  Result.Day := EncodeDate(2026, 10, 19);
+  Result.At := EncodeDate(2026, 10, 19) + EncodeTime(9, 30, 0, 0);
+end;
+
+function YAMLOf(const ARecord: TYAMLOptionsCase; const AOptions: TMARSJSONSerializationOptions): string;
+begin
+  Result := TMARSYAML.RecordToYAML(TValue.From<TYAMLOptionsCase>(ARecord), AOptions).ToYaml.Replace(#13, '');
+end;
+
+procedure TMARSOpenAPI3Test.DatesInYAML;
+var
+  LOptions: TMARSJSONSerializationOptions;
+  LYAML: string;
+begin
+  LOptions := DefaultMARSJSONSerializationOptions;
+
+  LOptions.DateIsUTC := True;
+  LYAML := YAMLOf(YAMLOptionsCase, LOptions);
+  Assert.Contains(LYAML, 'At: 2026-10-19T09:30:00.000Z', LYAML);
+  Assert.Contains(LYAML, 'Day: 2026-10-19'#10, LYAML);
+  // a zero date is empty (ZeroDateAsEmpty), then omitted (SkipEmptyStrings)
+  Assert.DoesNotContain(LYAML, 'Zero', LYAML);
+
+  LOptions.DateIsUTC := False;
+  LYAML := YAMLOf(YAMLOptionsCase, LOptions);
+  Assert.Contains(LYAML, 'At: ' + DateToJSON(YAMLOptionsCase.At, LOptions), LYAML);
+
+  LOptions.ZeroDateAsEmpty := False;
+  LYAML := YAMLOf(YAMLOptionsCase, LOptions);
+  Assert.Contains(LYAML, 'Zero: 1899-12-30T', LYAML);
+  LOptions.ZeroDateAsEmpty := True;
+
+  LOptions.TDateAsDate := False;
+  LYAML := YAMLOf(YAMLOptionsCase, LOptions);
+  Assert.Contains(LYAML, 'Day: ' + DateToJSON(YAMLOptionsCase.Day, LOptions), LYAML);
+
+  // elements of sequences keep their position: an empty date is ''
+  LYAML := TMARSYAML.TValueToYAML(TValue.From<TArray<TDateTime>>([0, YAMLOptionsCase.At]), LOptions).ToYaml;
+  Assert.Contains(LYAML, '- '''''#10'- ' + DateToJSON(YAMLOptionsCase.At, LOptions), LYAML.Replace(#13, ''));
+end;
+
+procedure TMARSOpenAPI3Test.EmptyValuesInYAML;
+var
+  LOptions: TMARSJSONSerializationOptions;
+  LYAML: string;
+begin
+  // the defaults: only 0 among the empty values
+  LOptions := DefaultMARSJSONSerializationOptions;
+  LOptions.DateIsUTC := True;
+  Assert.AreEqual('Count: 0'#10'Day: 2026-10-19'#10'At: 2026-10-19T09:30:00.000Z',
+    YAMLOf(YAMLOptionsCase, LOptions).Trim);
+  // the overloads without options: the global default
+  Assert.AreEqual(YAMLOf(YAMLOptionsCase, DefaultMARSJSONSerializationOptions),
+    TMARSYAML.RecordToYAML(TValue.From<TYAMLOptionsCase>(YAMLOptionsCase)).ToYaml.Replace(#13, ''));
+
+  LOptions.IncludeEmptyOrNullValues;
+  LYAML := YAMLOf(YAMLOptionsCase, LOptions);
+  for var LExpected in ['Name: ''''', 'Count: 0', 'Active: false', 'Tags: []', 'Nested:'#10'  Note: '''''] do
+    Assert.Contains(LYAML, LExpected + #10, LYAML);
+  // an object without members
+  LOptions.SkipEmptyStrings := True;
+  LYAML := YAMLOf(YAMLOptionsCase, LOptions);
+  Assert.Contains(LYAML, 'Nested: {}'#10, LYAML);
+
+  LOptions.SkipAllEmptyOrNullValues;
+  LYAML := YAMLOf(YAMLOptionsCase, LOptions);
+  for var LMissing in ['Name', 'Count', 'Active', 'Tags', 'Nested'] do
+    Assert.DoesNotContain(LYAML, LMissing, LYAML);
+
+  // elements of sequences keep their position
+  LYAML := TMARSYAML.TValueToYAML(TValue.From<TArray<Integer>>([1, 0]), LOptions).ToYaml;
+  Assert.AreEqual('- 1'#10'- 0', LYAML.Replace(#13, '').Trim);
 end;
 {$ENDIF}
 

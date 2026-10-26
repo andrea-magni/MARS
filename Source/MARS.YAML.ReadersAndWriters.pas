@@ -10,7 +10,7 @@ interface
 uses
   Classes, SysUtils, Rtti
 , MARS.Core.Attributes, MARS.Core.Declarations, MARS.Core.MediaType
-, MARS.Core.MessageBodyWriter, MARS.Core.Activation.Interfaces
+, MARS.Core.MessageBodyWriter, MARS.Core.Activation.Interfaces, MARS.Core.JSON
 , Neslib.Yaml, Neslib.SysUtils, Neslib.Utf8
 ;
 
@@ -67,16 +67,25 @@ type
     property Name: string read FName;
   end;
 
+  // AOptions: the JSON serialization options (dates, empty values; the writers use the ones of
+  // the activation); without AOptions: DefaultMARSJSONSerializationOptions
   TMARSYAML = class
   private
   public
-    class function DictionaryToYAML(const ARoot: TYamlNode; const AName: string; const ADictionary: TObject): Boolean;
-    class function ListOfPairsToYAML(const ARoot: TYamlNode; const AName: string; const AList: TObject): Boolean;
-    class function ObjectListToYAML(const ARoot: TYamlNode; const AName: string; const AObjectList: TObject): Boolean;
+    class function DictionaryToYAML(const ARoot: TYamlNode; const AName: string; const ADictionary: TObject): Boolean; overload;
+    class function DictionaryToYAML(const ARoot: TYamlNode; const AName: string; const ADictionary: TObject; const AOptions: TMARSJSONSerializationOptions): Boolean; overload;
+    class function ListOfPairsToYAML(const ARoot: TYamlNode; const AName: string; const AList: TObject): Boolean; overload;
+    class function ListOfPairsToYAML(const ARoot: TYamlNode; const AName: string; const AList: TObject; const AOptions: TMARSJSONSerializationOptions): Boolean; overload;
+    class function ObjectListToYAML(const ARoot: TYamlNode; const AName: string; const AObjectList: TObject): Boolean; overload;
+    class function ObjectListToYAML(const ARoot: TYamlNode; const AName: string; const AObjectList: TObject; const AOptions: TMARSJSONSerializationOptions): Boolean; overload;
     class function ObjectToYAML(const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
+    class function ObjectToYAML(const AObject: TObject; const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class function ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject; const AFilterProc: TToYAMLFilterProc = nil): Boolean; overload;
+    class function ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject; const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc = nil): Boolean; overload;
     class function RecordToYAML(const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
+    class function RecordToYAML(const ARecord: TValue; const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc = nil): IYamlDocument; overload;
     class function RecordToYAML(const ARoot: TYamlNode; const AName: string; const ARecord: TValue; const AFilterProc: TToYAMLFilterProc = nil): Boolean; overload;
+    class function RecordToYAML(const ARoot: TYamlNode; const AName: string; const ARecord: TValue; const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc = nil): Boolean; overload;
 
 //    class function YAMLToRecord<T: record>(const AYAML: TYamlNode; const AFilterProc: TToRecordFilterProc = nil): T; overload;
 //    class function YAMLToRecord(const AYAML: TYamlNode; const ARecordType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
@@ -84,7 +93,9 @@ type
 //    class function YAMLToObject(const AYAML: TYamlNode; const AObjectType: TRttiType; const AFilterProc: TToRecordFilterProc = nil): TValue; overload;
 
     class function TValueToYAML(const AValue: TValue): IYamlDocument; overload;
+    class function TValueToYAML(const AValue: TValue; const AOptions: TMARSJSONSerializationOptions): IYamlDocument; overload;
     class function TValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue): Boolean; overload;
+    class function TValueToYaml(const ARoot: TYamlNode; const AKeyName: string; const AValue: TValue; const AOptions: TMARSJSONSerializationOptions): Boolean; overload;
   end;
 {$ENDIF}
 
@@ -93,20 +104,64 @@ implementation
 {$IFDEF MARS_YAML}
 uses
   System.TypInfo, DateUtils, StrUtils, Generics.Collections
-, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.Utils, MARS.Rtti.Utils
 ;
 
-// TDate as a calendar date ("2026-10-19"), as the JSON of MARS (unless TDateAsDate is False)
-function TDateToYAML(const ADate: TDate): string;
+type
+  TYAMLEmptyValue = (EmptyString, EmptyNumber, EmptyBoolean, EmptyArray, EmptyObject);
+
+// the SkipEmpty* option of the JSON for a member with an empty value
+function SkipEmpty(const AOptions: TMARSJSONSerializationOptions; const AEmpty: TYAMLEmptyValue): Boolean;
 begin
 {$IFDEF MARS_JSON_LEGACY}
-  Result := MARSDateToISO8601(ADate, False);
+  // no SkipEmpty* options: only 0 is written
+  Result := AEmpty <> EmptyNumber;
 {$ELSE}
-  if DefaultMARSJSONSerializationOptions.TDateAsDate then
-    Result := FormatDateTime('yyyy"-"mm"-"dd', ADate)
+  case AEmpty of
+    EmptyString: Result := AOptions.SkipEmptyStrings;
+    EmptyNumber: Result := AOptions.SkipEmptyNumbers;
+    EmptyBoolean: Result := AOptions.SkipEmptyBooleans;
+    EmptyArray: Result := AOptions.SkipEmptyArrays;
   else
-    Result := MARSDateToISO8601(ADate, False);
+    Result := AOptions.SkipEmptyObjects;
+  end;
 {$ENDIF}
+end;
+
+// dates as the JSON of MARS (DateIsUTC, ZeroDateAsEmpty, TDateAsDate); False: not a date
+function DateToYAML(const AValue: TValue; const AOptions: TMARSJSONSerializationOptions; out ADate: string): Boolean;
+begin
+  Result := True;
+  if AValue.TypeInfo = TypeInfo(TDateTime) then
+    ADate := DateToJSON(AValue.AsType<TDateTime>, AOptions)
+  else if AValue.TypeInfo = TypeInfo(TDate) then
+    ADate := DateOnlyToJSON(AValue.AsType<TDate>, AOptions)
+  else if AValue.TypeInfo = TypeInfo(TTime) then
+    ADate := DateToJSON(AValue.AsType<TTime>, AOptions)
+  else
+    Result := False;
+end;
+
+// an empty mapping or sequence as a member: {} or [], unless SkipEmptyObjects or SkipEmptyArrays
+function AddEmpty(const ARoot: TYamlNode; const AName: string; const AIsArray: Boolean;
+  const AOptions: TMARSJSONSerializationOptions): Boolean;
+begin
+  Result := False;
+  if (not ARoot.IsMapping) or (AName = '') then
+    Exit;
+
+  if AIsArray then
+  begin
+    Result := not SkipEmpty(AOptions, EmptyArray);
+    if Result then
+      ARoot.AddOrSetSequence(AName).SequenceStyle := TYamlSequenceStyle.Flow;
+  end
+  else
+  begin
+    Result := not SkipEmpty(AOptions, EmptyObject);
+    if Result then
+      ARoot.AddOrSetMapping(AName).MappingStyle := TYamlMappingStyle.Flow;
+  end;
 end;
 
 // a string that YAML would read as another type (a number, a boolean, null)
@@ -160,7 +215,7 @@ procedure TYAMLObjectWriter.WriteTo(const AValue: TValue;
 var
   LYAML: IYamlDocument;
 begin
-  LYAML := TMARSYAML.ObjectToYAML(AValue.AsObject);
+  LYAML := TMARSYAML.ObjectToYAML(AValue.AsObject, JSONSerializationOptionsFor(AActivation));
   try
     TYAMLValueWriter.WriteYAMLValue(LYAML.ToYaml, AMediaType, AOutputStream, AActivation);
   finally
@@ -194,7 +249,7 @@ begin
     LYAMLString := AValue.AsType<string>
   else
   begin
-    LYAML := TMARSYAML.TValueToYAML(AValue);
+    LYAML := TMARSYAML.TValueToYAML(AValue, JSONSerializationOptionsFor(AActivation));
     LYAMLString := LYAML.ToYaml;
   end;
   if LYAMLString = '' then
@@ -215,7 +270,7 @@ begin
   if not AValue.IsArray then
     Exit;
 
-  LYAML := TMARSYAML.TValueToYAML(AValue);
+  LYAML := TMARSYAML.TValueToYAML(AValue, JSONSerializationOptionsFor(AActivation));
   try
     TYAMLValueWriter.WriteYAMLValue(LYAML.ToYaml, AMediaType, AOutputStream, AActivation);
   finally
@@ -231,7 +286,7 @@ procedure TYAMLRecordWriter.WriteTo(const AValue: TValue;
 var
   LYAML: IYamlDocument;
 begin
-  LYAML := TMARSYAML.RecordToYAML(AValue);
+  LYAML := TMARSYAML.RecordToYAML(AValue, JSONSerializationOptionsFor(AActivation));
   try
     TYAMLValueWriter.WriteYAMLValue(LYAML.ToYaml, AMediaType, AOutputStream, AActivation);
   finally
@@ -250,7 +305,7 @@ begin
   if not AValue.IsArray then
     Exit;
 
-  LYAML := TMARSYAML.TValueToYAML(AValue);
+  LYAML := TMARSYAML.TValueToYAML(AValue, JSONSerializationOptionsFor(AActivation));
   try
     TYAMLValueWriter.WriteYAMLValue(LYAML.ToYaml, AMediaType, AOutputStream, AActivation);
   finally
@@ -262,6 +317,12 @@ end;
 
 class function TMARSYAML.ObjectToYAML(const AObject: TObject;
   const AFilterProc: TToYAMLFilterProc): IYamlDocument;
+begin
+  Result := ObjectToYAML(AObject, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TMARSYAML.ObjectToYAML(const AObject: TObject;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc): IYamlDocument;
 var
   LStream: IYamlStream;
   LDocument: IYamlDocument;
@@ -273,7 +334,7 @@ begin
       LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
       LDocument.Root.MappingStyle := TYamlMappingStyle.Block;
 
-      ObjectToYAML(LDocument.Root, '', AObject, AFilterProc);
+      ObjectToYAML(LDocument.Root, '', AObject, AOptions, AFilterProc);
 
       Result := LDocument;
     except
@@ -288,11 +349,19 @@ end;
 
 class function TMARSYAML.DictionaryToYAML(const ARoot: TYamlNode; const AName: string;
   const ADictionary: TObject): Boolean;
+begin
+  Result := DictionaryToYAML(ARoot, AName, ADictionary, DefaultMARSJSONSerializationOptions);
+end;
+
+class function TMARSYAML.DictionaryToYAML(const ARoot: TYamlNode; const AName: string;
+  const ADictionary: TObject; const AOptions: TMARSJSONSerializationOptions): Boolean;
 var
   LResult: Boolean;
   LNode: TYamlNode;
+  LOptions: TMARSJSONSerializationOptions;
 begin
   LResult := False;
+  LOptions := AOptions;
 
   TRttiHelper.EnumerateDictionary(ADictionary
   , procedure (AKey, AValue: TValue)
@@ -313,7 +382,7 @@ begin
       if AValue.IsArray and (AValue.GetArrayLength = 0) then
         LNode.AddOrSetSequence(AKey.ToString).SequenceStyle := TYamlSequenceStyle.Flow
       else
-        TValueToYaml(LNode, AKey.ToString, AValue);
+        TValueToYaml(LNode, AKey.ToString, AValue, LOptions);
       QuoteKey(LNode, AKey.ToString);
     end
   );
@@ -323,11 +392,19 @@ end;
 
 class function TMARSYAML.ListOfPairsToYAML(const ARoot: TYamlNode; const AName: string;
   const AList: TObject): Boolean;
+begin
+  Result := ListOfPairsToYAML(ARoot, AName, AList, DefaultMARSJSONSerializationOptions);
+end;
+
+class function TMARSYAML.ListOfPairsToYAML(const ARoot: TYamlNode; const AName: string;
+  const AList: TObject; const AOptions: TMARSJSONSerializationOptions): Boolean;
 var
   LResult: Boolean;
   LNode: TYamlNode;
+  LOptions: TMARSJSONSerializationOptions;
 begin
   LResult := False;
+  LOptions := AOptions;
 
   // TList<TPair<string, T>>: a mapping, in the order of the list (e.g. the properties of an OpenAPI schema)
   TRttiHelper.EnumerateListOfPairOf(AList
@@ -349,7 +426,7 @@ begin
       if LValue.IsArray and (LValue.GetArrayLength = 0) then
         LNode.AddOrSetSequence(LKey).SequenceStyle := TYamlSequenceStyle.Flow
       else
-        TValueToYaml(LNode, LKey, LValue);
+        TValueToYaml(LNode, LKey, LValue, LOptions);
       QuoteKey(LNode, LKey);
     end
   );
@@ -359,11 +436,19 @@ end;
 
 class function TMARSYAML.ObjectListToYAML(const ARoot: TYamlNode; const AName: string;
   const AObjectList: TObject): Boolean;
+begin
+  Result := ObjectListToYAML(ARoot, AName, AObjectList, DefaultMARSJSONSerializationOptions);
+end;
+
+class function TMARSYAML.ObjectListToYAML(const ARoot: TYamlNode; const AName: string;
+  const AObjectList: TObject; const AOptions: TMARSJSONSerializationOptions): Boolean;
 var
   LNode: TYamlNode;
   LResult: Boolean;
+  LOptions: TMARSJSONSerializationOptions;
 begin
   LResult := False;
+  LOptions := AOptions;
 
   TRttiHelper.EnumerateObjectList(AObjectList
   , procedure (AValue: TValue)
@@ -377,7 +462,7 @@ begin
         LResult := True;
       end;
 
-      TValueToYaml(LNode, '', AValue);
+      TValueToYaml(LNode, '', AValue, LOptions);
     end
   );
 
@@ -386,6 +471,12 @@ end;
 
 class function TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject;
   const AFilterProc: TToYAMLFilterProc = nil): Boolean;
+begin
+  Result := ObjectToYAML(ARoot, AName, AObject, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TMARSYAML.ObjectToYAML(const ARoot: TYamlNode; const AName: string; const AObject: TObject;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc = nil): Boolean;
 
     function GetObjectFilterProc(const AObjectType: TRttiType): TToYAMLFilterProc;
     var
@@ -452,7 +543,7 @@ begin
       Continue;
 
     LValue := LMember.GetValue(AObject);
-    LWritten := TValueToYaml(LNode, LYAMLName, LValue);
+    LWritten := TValueToYaml(LNode, LYAMLName, LValue, AOptions);
     if LWritten then
       Result := True
     else if LNode.IsMapping then
@@ -462,6 +553,12 @@ end;
 
 class function TMARSYAML.RecordToYAML(const ARecord: TValue;
   const AFilterProc: TToYAMLFilterProc): IYamlDocument;
+begin
+  Result := RecordToYAML(ARecord, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TMARSYAML.RecordToYAML(const ARecord: TValue;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc): IYamlDocument;
 var
   LStream: IYamlStream;
   LDocument: IYamlDocument;
@@ -473,7 +570,7 @@ begin
       LDocument.Flags := [TYamlDocumentFlag.ImplicitStart, TYamlDocumentFlag.ImplicitEnd];
       LDocument.Root.MappingStyle := TYamlMappingStyle.Block;
 
-      RecordToYAML(LDocument.Root, '', ARecord, AFilterProc);
+      RecordToYAML(LDocument.Root, '', ARecord, AOptions, AFilterProc);
 
       Result := LDocument;
     except
@@ -488,6 +585,12 @@ end;
 
 class function TMARSYAML.RecordToYAML(const ARoot: TYamlNode; const AName: string; const ARecord: TValue;
   const AFilterProc: TToYAMLFilterProc = nil): Boolean;
+begin
+  Result := RecordToYAML(ARoot, AName, ARecord, DefaultMARSJSONSerializationOptions, AFilterProc);
+end;
+
+class function TMARSYAML.RecordToYAML(const ARoot: TYamlNode; const AName: string; const ARecord: TValue;
+  const AOptions: TMARSJSONSerializationOptions; const AFilterProc: TToYAMLFilterProc = nil): Boolean;
 
     function GetRecordFilterProc(const ARecordType: TRttiType): TToYAMLFilterProc;
     var
@@ -553,7 +656,7 @@ begin
       Continue;
 
     LValue := LMember.GetValue(ARecord.GetReferenceToRawData);
-    LWritten := TValueToYaml(LNode, LYAMLName, LValue);
+    LWritten := TValueToYaml(LNode, LYAMLName, LValue, AOptions);
     if LWritten then
       Result := True
     else if LNode.IsMapping then
@@ -563,9 +666,16 @@ end;
 
 
 class function TMARSYAML.TValueToYAML(const AValue: TValue): IYamlDocument;
+begin
+  Result := TValueToYAML(AValue, DefaultMARSJSONSerializationOptions);
+end;
+
+class function TMARSYAML.TValueToYAML(const AValue: TValue;
+  const AOptions: TMARSJSONSerializationOptions): IYamlDocument;
 var
   LStream: IYamlStream;
   LDocument: IYamlDocument;
+  LDate: string;
 begin
   LStream := TYamlStream.Create;
   try
@@ -574,14 +684,16 @@ begin
       LDocument := LStream.AddSequence;
       LDocument.Root.SequenceStyle := TYamlSequenceStyle.Block;
       if AValue.GetArrayLength > 0 then
-        TValueToYAML(LDocument.Root, '', AValue);
+        TValueToYAML(LDocument.Root, '', AValue, AOptions);
     end
     else if AValue.IsObject or TRttiContext.Create.GetType(AValue.TypeInfo).IsRecord then
     begin
       LDocument := LStream.AddMapping;
       LDocument.Root.MappingStyle := TYamlMappingStyle.Flow;
-      TValueToYAML(LDocument.Root, '', AValue);
+      TValueToYAML(LDocument.Root, '', AValue, AOptions);
     end
+    else if DateToYAML(AValue, AOptions, LDate) then
+      LDocument := LStream.AddScalar(LDate)
     else
     begin
       LDocument := LStream.AddScalar(AValue.ToString);
@@ -599,6 +711,12 @@ end;
 
 class function TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
   const AKeyName: string; const AValue: TValue): Boolean;
+begin
+  Result := TValueToYAML(ARoot, AKeyName, AValue, DefaultMARSJSONSerializationOptions);
+end;
+
+class function TMARSYAML.TValueToYAML(const ARoot: TYamlNode;
+  const AKeyName: string; const AValue: TValue; const AOptions: TMARSJSONSerializationOptions): Boolean;
 var
   LTypeName: string;
   LBool: Boolean;
@@ -612,21 +730,25 @@ begin
 
   // the start of the name: TObjectList<TDictionary<string, ...>> contains the name of a dictionary
   if IsDictionaryOfStringAndT(LTypeName) then
-    Result := DictionaryToYaml(ARoot, AKeyName, AValue.AsObject)
+    Result := DictionaryToYaml(ARoot, AKeyName, AValue.AsObject, AOptions)
+      or ((AValue.AsObject <> nil) and AddEmpty(ARoot, AKeyName, False, AOptions))
 
   else if IsObjectListOfT(LTypeName) then
-    Result := ObjectListToYaml(ARoot, AKeyName, AValue.AsObject)
+    Result := ObjectListToYaml(ARoot, AKeyName, AValue.AsObject, AOptions)
+      or ((AValue.AsObject <> nil) and AddEmpty(ARoot, AKeyName, True, AOptions))
 
   else if IsListOfPairOfStringAndT(LTypeName) then
-    Result := ListOfPairsToYAML(ARoot, AKeyName, AValue.AsObject)
+    Result := ListOfPairsToYAML(ARoot, AKeyName, AValue.AsObject, AOptions)
+      or ((AValue.AsObject <> nil) and AddEmpty(ARoot, AKeyName, False, AOptions))
 
   {$IFDEF Delphi11Alexandria_UP}
   else if AValue.IsObjectInstance then
   {$ELSE}
   else if AValue.IsObject then
   {$ENDIF}
-
-    Result := ObjectToYaml(ARoot, AKeyName, AValue.AsObject)
+    // nil: omitted (no null in YAML)
+    Result := ObjectToYaml(ARoot, AKeyName, AValue.AsObject, AOptions)
+      or ((AValue.AsObject <> nil) and AddEmpty(ARoot, AKeyName, False, AOptions))
 
   else if AValue.IsArray and (AValue.GetArrayLength > 0) then
   begin
@@ -645,20 +767,21 @@ begin
     begin
       LElement := AValue.GetArrayElement(LIndex);
       if LElement.IsObject then
-        ObjectToYAML(LSequence, '', LElement.AsObject)
+        ObjectToYAML(LSequence, '', LElement.AsObject, AOptions)
       else if LElement.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}] then
-        RecordToYAML(LSequence, '', LElement)
+        RecordToYAML(LSequence, '', LElement, AOptions)
       else if LElement.Kind in [tkString, tkShortString, tkWString, tkUString, tkChar, tkWChar, tkLString] then
         LSequence.Add(LElement.AsString).ScalarStyle := StringStyle(LElement.AsString)
       // elements keep their position: False, 0 and empty values are written too
       else if LElement.IsType<Boolean> then
         LSequence.Add(LElement.AsType<Boolean>)
-      else if LElement.TypeInfo = TypeInfo(TDateTime) then
-        LSequence.Add(MARSDateToISO8601(LElement.AsType<TDateTime>, False))
-      else if LElement.TypeInfo = TypeInfo(TDate) then
-        LSequence.Add(TDateToYAML(LElement.AsType<TDate>))
-      else if LElement.TypeInfo = TypeInfo(TTime) then
-        LSequence.Add(MARSDateToISO8601(LElement.AsType<TTime>, False))
+      else if DateToYAML(LElement, AOptions, LString) then
+      begin
+        if LString = '' then
+          LSequence.Add(LString).ScalarStyle := TYamlScalarStyle.SingleQuoted
+        else
+          LSequence.Add(LString);
+      end
       else if LElement.Kind = tkInt64 then
         LSequence.Add(LElement.AsType<Int64>)
       else if LElement.Kind = tkInteger then
@@ -669,20 +792,24 @@ begin
       begin
         LNested := LSequence.AddSequence;
         if LElement.GetArrayLength > 0 then
-          TValueToYaml(LNested, '', LElement);
+          TValueToYaml(LNested, '', LElement, AOptions);
       end
       else
         LSequence.Add(LElement.ToString);
     end;
   end
 
+  else if AValue.IsArray then
+    Result := AddEmpty(ARoot, AKeyName, True, AOptions)
+
   else if (AValue.Kind in [tkRecord{$ifdef Delphi11Alexandria_UP}, tkMRecord{$endif}]) then
-    Result := RecordToYaml(ARoot, AKeyName, AValue)
+    Result := RecordToYaml(ARoot, AKeyName, AValue, AOptions)
+      or AddEmpty(ARoot, AKeyName, False, AOptions)
 
   else if (AValue.Kind in [tkString, tkUString, tkChar, tkWideChar, tkLString, tkWString]) then
   begin
     LString := AValue.AsString;
-    if LString <> '' then
+    if (LString <> '') or not SkipEmpty(AOptions, EmptyString) then
     begin
       ARoot.AddOrSetValue(AKeyName, LString).ScalarStyle := StringStyle(LString);
       Result := True;
@@ -692,50 +819,58 @@ begin
   else if (AValue.IsType<Boolean>) then
   begin
     LBool := AValue.AsType<Boolean>;
-    if LBool <> false then
+    if LBool or not SkipEmpty(AOptions, EmptyBoolean) then
     begin
       ARoot.AddOrSetValue(AKeyName, LBool);
       Result := True;
     end;
   end
 
-  else if AValue.TypeInfo = TypeInfo(TDateTime) then
+  // a zero date can be "" (ZeroDateAsEmpty): an empty string
+  else if DateToYAML(AValue, AOptions, LString) then
   begin
-    ARoot.AddOrSetValue(AKeyName, MARSDateToISO8601(AValue.AsType<TDateTime>, False));
-    Result := True;
-  end
-  else if AValue.TypeInfo = TypeInfo(TDate) then
-  begin
-    ARoot.AddOrSetValue(AKeyName, TDateToYAML(AValue.AsType<TDate>));
-    Result := True;
-  end
-  else if AValue.TypeInfo = TypeInfo(TTime) then
-  begin
-    ARoot.AddOrSetValue(AKeyName, MARSDateToISO8601(AValue.AsType<TTime>, False));
-    Result := True;
+    if LString <> '' then
+    begin
+      ARoot.AddOrSetValue(AKeyName, LString);
+      Result := True;
+    end
+    else if not SkipEmpty(AOptions, EmptyString) then
+    begin
+      ARoot.AddOrSetValue(AKeyName, LString).ScalarStyle := TYamlScalarStyle.SingleQuoted;
+      Result := True;
+    end;
   end
 
   else if (AValue.Kind in [tkInt64]) then
   begin
-    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Int64>);
-    Result := True;
+    if (AValue.AsType<Int64> <> 0) or not SkipEmpty(AOptions, EmptyNumber) then
+    begin
+      ARoot.AddOrSetValue(AKeyName, AValue.AsType<Int64>);
+      Result := True;
+    end;
   end
   else if (AValue.Kind in [tkInteger]) then
   begin
-    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Integer>);
-    Result := True;
+    if (AValue.AsType<Integer> <> 0) or not SkipEmpty(AOptions, EmptyNumber) then
+    begin
+      ARoot.AddOrSetValue(AKeyName, AValue.AsType<Integer>);
+      Result := True;
+    end;
   end
 
   else if (AValue.Kind in [tkFloat]) then
   begin
-    ARoot.AddOrSetValue(AKeyName, AValue.AsType<Double>);
-    Result := True;
+    if (AValue.AsType<Double> <> 0) or not SkipEmpty(AOptions, EmptyNumber) then
+    begin
+      ARoot.AddOrSetValue(AKeyName, AValue.AsType<Double>);
+      Result := True;
+    end;
   end
 
   else
   begin
     LString := AValue.ToString;
-    if LString <> '' then
+    if (LString <> '') or not SkipEmpty(AOptions, EmptyString) then
     begin
       ARoot.AddOrSetValue(AKeyName,  LString);
       Result := True;

@@ -13,10 +13,12 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 - Docs: WebStencils needs RAD Studio 12.2 or later, now stated on the Templates page. [Templates ▸ WebStencils](/features/templates#webstencils) ([#294](https://github.com/andrea-magni/MARS/issues/294))
 - TailwindcssDemo: the password partial (not used by the pages) posted to `/app/users/{id}/password`, a path that does not exist; now `/users/{id}/password`. ([#295](https://github.com/andrea-magni/MARS/issues/295))
 - OpenAPI: the format of `TDate` followed only the default serialization options: with `DefaultApp.JSON.TDateAsDate=false` the server wrote dates and times but its document said `format: date`; now the document of an application follows its `JSON.TDateAsDate`. [OpenAPI](/features/openapi) ([#299](https://github.com/andrea-magni/MARS/issues/299))
+- YAML: the writers ignored the serialization options of the application: dates were always local times with the offset (whatever `JSON.DateIsUTC` said), a zero date was `1899-12-30T...`, `TDate` followed only the global `TDateAsDate` and the `JSON.SkipEmpty*` options had no effect; an empty array member was written as `(empty)`. Now YAML uses the options of the request, as JSON does (no new `YAML.*` parameters). [Serialization ▸ YAML](/features/serialization#yaml) ([#304](https://github.com/andrea-magni/MARS/issues/304))
 
 **Upgrade notes**
 
 - **`TDate` in JSON**: servers write `TDate` fields and results as `"2026-10-19"`. Clients built with MARS 2.0.2 or earlier read them as midnight UTC converted to local time (west of Greenwich, the day before): update them, or set `JSON.TDateAsDate=false` on the server until then. Clients that compare the text of dates, and OpenAPI clients generated from the server, see `format: date` now.
+- **Dates in YAML** ([#304](https://github.com/andrea-magni/MARS/issues/304)): YAML follows `DateIsUTC` as JSON does. Where it is `True` (set in code or with `JSON.DateIsUTC=true`, or by default on machines at UTC+0) dates in YAML are UTC (`...Z`) instead of local times with the offset; set `JSON.DateIsUTC=false` to keep local times. A zero date is now omitted (`ZeroDateAsEmpty`) and empty array members are left out instead of `(empty)`.
 
 ## 2.0.2 {#v2-0-2}
 

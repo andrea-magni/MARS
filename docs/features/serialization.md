@@ -252,3 +252,12 @@ YAML uses libyaml through the bundled Neslib.Yaml, which is available on Windows
 ```
 
 On Linux and 64-bit macOS (OSX64, OSXARM64) the unit compiles empty and registers no writer: a method that produces JSON and YAML answers in JSON (no `Accept`, `*/*` or `application/json`), while a request that accepts only `application/x-yaml` gets `406 Not Acceptable` (see [When no writer matches](/server/content-negotiation#when-no-writer-matches)).
+
+YAML follows the same [serialization options](#serialization-options) as JSON, for the same request:
+the global default, then the `JSON.*` parameters of the application, then the attributes of the
+resource and of the method. Dates are written as in JSON (`DateIsUTC`, `ZeroDateAsEmpty`,
+`TDateAsDate`), and the `SkipEmpty*` options decide which empty members are left out (an empty array
+is `[]`, an empty object `{}`); the elements of a sequence are always written, to keep their position.
+There are no `YAML.*` parameters; `JSON.EscapeNonASCII` and `UseDisplayFormatForNumericFields`
+apply to JSON only. `TMARSYAML` (`ObjectToYAML`, `RecordToYAML`, `TValueToYAML`) takes the options as
+`AOptions`; without them it uses `DefaultMARSJSONSerializationOptions`.

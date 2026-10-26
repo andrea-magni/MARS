@@ -282,6 +282,9 @@ type
 {$IFDEF MARS_YAML}
     [Test]
     procedure TestPrimitiveArraysAsYAML;
+    // #304: the JSON.* options of the application
+    [Test]
+    procedure TestYAMLDatesOfTheApplication;
 {$ENDIF}
   end;
 
@@ -299,7 +302,7 @@ uses
 , Mock.IMARSRequest, Mock.IMARSResponse
 , MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
 , MARS.Metadata.Engine.Resource, MARS.Metadata.ReadersAndWriters, MARS.Metadata.InjectionService
-, Tests.DefaultEngine.Resources
+, Tests.DefaultEngine.Resources, MARS.Core.JSON
 ;
 
 var
@@ -1681,6 +1684,33 @@ begin
 
   LMock := Send('GET', 'yaml-empty', '', AcceptHeader(TMediaType.APPLICATION_YAML));
   Assert.AreEqual(200, LMock.Response.StatusCode);
+end;
+
+procedure TMARSRoutesFixture.TestYAMLDatesOfTheApplication;
+begin
+  FApplication.Parameters.Values[JSON_DATEISUTC_PARAM] := True;
+  FApplication.Parameters.Values[JSON_TDATEASDATE_PARAM] := False;
+  MARSRoutesOf(FApplication).Get<TArray<TDateTime>>('yaml-dates',
+    function (const C: TMARSRouteContext): TArray<TDateTime>
+    begin
+      Result := [EncodeDate(2026, 10, 19) + EncodeTime(9, 30, 0, 0)];
+    end
+  );
+  MARSRoutesOf(FApplication).Get<TArray<TDate>>('yaml-days',
+    function (const C: TMARSRouteContext): TArray<TDate>
+    begin
+      Result := [EncodeDate(2026, 10, 19)];
+    end
+  );
+
+  var LMock := Send('GET', 'yaml-dates', '', AcceptHeader(TMediaType.APPLICATION_YAML));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('- 2026-10-19T09:30:00.000Z', LMock.Response.Content.Replace(#13, '').Trim);
+
+  // as the other dates (TDateAsDate False), in UTC
+  LMock := Send('GET', 'yaml-days', '', AcceptHeader(TMediaType.APPLICATION_YAML));
+  Assert.AreEqual(200, LMock.Response.StatusCode);
+  Assert.AreEqual('- 2026-10-19T00:00:00.000Z', LMock.Response.Content.Replace(#13, '').Trim);
 end;
 {$ENDIF}
 
