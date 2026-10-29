@@ -4,6 +4,9 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## Unreleased {#unreleased}
 
+**New**
+- JSON logger: `JSONLogging.RetentionDays` deletes the rotated log files older than that many days (when a new file is opened; `0`, the default, keeps them all), so the folder read by Grafana Alloy no longer grows forever. Thanks to @bobprog72. [Logging](/features/logging#configuration-parameters) ([#305](https://github.com/andrea-magni/MARS/pull/305))
+
 **Changed**
 - `TDate` values are written as calendar dates, `"2026-10-19"` (OpenAPI `format: date`), instead of a date and time with the offset (`"2026-10-19T00:00:00.000+02:00"`); they are read from both. A `TDateTime` reads `"2026-10-19"` as midnight of that day (no time zone conversion). The OpenAPI document of the server has `format: date` for `TDate` and `format: date-time` for `TDateTime`, as the MCP tools do. `JSON.TDateAsDate=false` (`TDateAsDate` of the serialization options) writes them as before. [Serialization ▸ Dates](/features/serialization#dates), [OpenAPI](/features/openapi) ([#298](https://github.com/andrea-magni/MARS/pull/298))
 
