@@ -40,6 +40,8 @@ JSONLogging.Enabled=True
 ;JSONLogging.Folder=C:\logs\mars
 JSONLogging.FileName=mars-reqresp.log
 JSONLogging.DailyRotation=True
+; delete the rotated files older than 15 days (default 0: keep them all)
+;JSONLogging.RetentionDays=15
 ```
 
 ### Configuration parameters
@@ -51,6 +53,9 @@ JSONLogging.DailyRotation=True
 | `JSONLogging.Folder` | string | `<exe folder>\logs` | Target directory (created if missing). |
 | `JSONLogging.FileName` | string | `mars-reqresp.log` | Base log file name. |
 | `JSONLogging.DailyRotation` | Boolean | `True` | Insert the date (`yyyymmdd`) before the extension, e.g. `mars-reqresp-20260630.log`. |
+| `JSONLogging.RetentionDays` | Integer | `0` | With daily rotation, delete the rotated files whose date is more than this many days ago. `0` keeps every file. |
+
+With `JSONLogging.RetentionDays` set, the cleanup runs when the logger opens a file: at the first line after startup and at every change of day. Only the `<FileName>-yyyymmdd<ext>` files of the configured folder are deleted (the date is read from the name, not from the file time), never the current one. A file that cannot be deleted, e.g. while the log shipper is reading it, is left for the next day. Keep the retention longer than the longest time the shipper may be unable to send the files, so that nothing is deleted before reaching Loki.
 
 ### Line format
 

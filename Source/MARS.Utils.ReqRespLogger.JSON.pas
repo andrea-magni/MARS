@@ -20,9 +20,16 @@ unit MARS.Utils.ReqRespLogger.JSON;
     JSONLogging.Folder         = path         (default: <exe folder>\logs)
     JSONLogging.FileName       = base name    (default: mars-reqresp.log)
     JSONLogging.DailyRotation  = True/False   (default: True)
+    JSONLogging.RetentionDays  = days         (default: 0, keep every file)
 
   With DailyRotation enabled, the date (yyyymmdd) is inserted before the
   extension, e.g. logs\mars-reqresp-20260630.log
+
+  With RetentionDays > 0 (and DailyRotation enabled), every time the logger opens
+  a file (first line, new day) it deletes its own rotated files whose date is more
+  than RetentionDays days ago. Only <name>-yyyymmdd<ext> files of the configured
+  Folder and FileName are deleted, never the current one; a file that cannot be
+  deleted (i.e. still read by the log shipper) is left for the next rotation.
 
   Each line looks like:
     {"ts":"2026-06-30T12:34:56.789Z","detected_level":"INFO","source":"MARS",
@@ -69,6 +76,7 @@ type
     FFolder: string;
     FFileName: string;
     FDailyRotation: Boolean;
+    FRetentionDays: Integer;
     FBuiltInEntries: Boolean;
     FSerializationOptions: TMARSJSONSerializationOptions;
     FConfigured: Boolean;
@@ -76,6 +84,7 @@ type
     FCurrentFile: string;
     class var _Instance: TMARSReqRespLoggerJSON;
     function CurrentFileName: string;
+    procedure DeleteExpiredFiles;
     procedure EnsureWriter;
     procedure WriteLine(const AEntry: TJSONObject);
   public
@@ -110,6 +119,8 @@ type
 
     // JSONLogging.BuiltInEntries: when False the built-in hooks write nothing
     property BuiltInEntries: Boolean read FBuiltInEntries;
+    // JSONLogging.RetentionDays: rotated files older than this are deleted (0: none)
+    property RetentionDays: Integer read FRetentionDays;
     // Used to serialize the data of Log<T>: the MARS defaults adjusted with the JSON.*
     // engine parameters by Configure. Set it at startup, it is not guarded by the lock.
     property SerializationOptions: TMARSJSONSerializationOptions
@@ -141,6 +152,7 @@ const
   FOLDER_PARAM = 'JSONLogging.Folder';
   FILENAME_PARAM = 'JSONLogging.FileName';
   DAILYROTATION_PARAM = 'JSONLogging.DailyRotation';
+  RETENTIONDAYS_PARAM = 'JSONLogging.RetentionDays';
 
 type
   // UTF-8 encoding that emits no BOM, so every NDJSON line is clean JSON.
@@ -312,6 +324,7 @@ begin
   FFolder := DefaultFolder;
   FFileName := DEFAULT_FILENAME;
   FDailyRotation := True;
+  FRetentionDays := 0;
   FBuiltInEntries := True;
   FSerializationOptions := DefaultMARSJSONSerializationOptions;
   FConfigured := False;
@@ -344,6 +357,7 @@ begin
     FFolder := AParameters.ByName(FOLDER_PARAM, DefaultFolder).AsString;
     FFileName := AParameters.ByName(FILENAME_PARAM, DEFAULT_FILENAME).AsString;
     FDailyRotation := AParameters.ByName(DAILYROTATION_PARAM, True).AsBoolean;
+    FRetentionDays := AParameters.ByName(RETENTIONDAYS_PARAM, 0).AsInteger;
     FBuiltInEntries := AParameters.ByName(BUILTINENTRIES_PARAM, True).AsBoolean;
     FSerializationOptions := DefaultMARSJSONSerializationOptions.AdjustWith(AParameters);
 
@@ -363,6 +377,41 @@ begin
     LName := LBase + '-' + FormatDateTime('yyyymmdd', Now) + LExt;
   end;
   Result := TPath.Combine(FFolder, LName);
+end;
+
+procedure TMARSReqRespLoggerJSON.DeleteExpiredFiles;
+begin
+  if (FRetentionDays <= 0) or not FDailyRotation then
+    Exit;
+
+  const LExt = ExtractFileExt(FFileName);
+  const LPrefix = ChangeFileExt(FFileName, '') + '-';
+  const LOldest = IncDay(Date, -FRetentionDays);
+  try
+    for var LFile in TDirectory.GetFiles(FFolder) do
+    begin
+      // only <name>-yyyymmdd<ext>: other files of the folder are not ours
+      const LName = TPath.GetFileName(LFile);
+      if (Length(LName) <> Length(LPrefix) + 8 + Length(LExt))
+        or not StartsText(LPrefix, LName) or not EndsText(LExt, LName) then
+        Continue;
+
+      const LDay = Copy(LName, Length(LPrefix) + 1, 8);
+      var LDate: TDateTime;
+      if not TryEncodeDate(StrToIntDef(Copy(LDay, 1, 4), 0), StrToIntDef(Copy(LDay, 5, 2), 0),
+        StrToIntDef(Copy(LDay, 7, 2), 0), LDate) then
+        Continue;
+
+      if (LDate < LOldest) and not SameText(LFile, FCurrentFile) then
+        try
+          TFile.Delete(LFile);
+        except
+          // still in use (i.e. read by the log shipper): deleted at the next rotation
+        end;
+    end;
+  except
+    // the folder cannot be listed: logging goes on
+  end;
 end;
 
 procedure TMARSReqRespLoggerJSON.EnsureWriter;
@@ -395,6 +444,9 @@ begin
   FWriter.OwnStream;
   FWriter.AutoFlush := True;
   FCurrentFile := LFile;
+
+  // a new file is opened at startup and once a day: the right time to clean up
+  DeleteExpiredFiles;
 end;
 
 procedure TMARSReqRespLoggerJSON.Clear;

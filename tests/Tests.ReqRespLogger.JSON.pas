@@ -3,7 +3,7 @@ unit Tests.ReqRespLogger.JSON;
 interface
 
 uses
-  Classes, SysUtils, IOUtils, JSON, Generics.Collections
+  Classes, SysUtils, IOUtils, DateUtils, JSON, Generics.Collections
 , DUnitX.TestFramework
 , MARS.Core.JSON
 , MARS.Utils.Parameters
@@ -33,6 +33,10 @@ type
     function Logger: TMARSReqRespLoggerJSON;
     // parses the last line written to the log file (the caller frees it)
     function LastEntry: TJSONObject;
+    // an empty folder of its own with 'retention.log' as file name; returns the folder
+    function ConfigureRetention(const ARetentionDays: Integer; const ADailyRotation: Boolean = True): string;
+    // creates <AFolder>\retention-yyyymmdd.log, ADaysAgo days before today; returns its path
+    function CreateRotatedFile(const AFolder: string; const ADaysAgo: Integer): string;
   public
     [Setup]
     procedure Setup;
@@ -43,6 +47,9 @@ type
     [Test] procedure ObjectWithFields;
     [Test] procedure JSONObjectIsCopied;
     [Test] procedure ScalarAndArrayUnderData;
+    [Test] procedure RetentionDeletesExpiredFiles;
+    [Test] procedure RetentionZeroKeepsEveryFile;
+    [Test] procedure RetentionNeedsDailyRotation;
   end;
 
 implementation
@@ -97,9 +104,38 @@ begin
   end;
 end;
 
+function TReqRespLoggerJSONFixture.ConfigureRetention(const ARetentionDays: Integer;
+  const ADailyRotation: Boolean): string;
+var
+  LParameters: TMARSParameters;
+begin
+  Result := TPath.Combine(TPath.GetTempPath, 'MARSTests.ReqRespLogger.JSON.' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(Result);
+
+  LParameters := TMARSParameters.Create('');
+  try
+    LParameters.Values['JSONLogging.Folder'] := Result;
+    LParameters.Values['JSONLogging.FileName'] := 'retention.log';
+    LParameters.Values['JSONLogging.DailyRotation'] := ADailyRotation;
+    LParameters.Values['JSONLogging.RetentionDays'] := ARetentionDays;
+    LParameters.Values['JSONLogging.BuiltInEntries'] := False;
+    Logger.Configure(LParameters);
+  finally
+    LParameters.Free;
+  end;
+end;
+
+function TReqRespLoggerJSONFixture.CreateRotatedFile(const AFolder: string;
+  const ADaysAgo: Integer): string;
+begin
+  Result := TPath.Combine(AFolder, 'retention-' + FormatDateTime('yyyymmdd', IncDay(Date, -ADaysAgo)) + '.log');
+  TFile.WriteAllText(Result, '{}');
+end;
+
 procedure TReqRespLoggerJSONFixture.Configuration;
 begin
   Assert.IsFalse(Logger.BuiltInEntries);
+  Assert.AreEqual(0, Logger.RetentionDays, 'no retention unless configured');
 end;
 
 procedure TReqRespLoggerJSONFixture.FieldsAndPayload;
@@ -212,6 +248,57 @@ begin
   finally
     LEntry.Free;
   end;
+end;
+
+procedure TReqRespLoggerJSONFixture.RetentionDeletesExpiredFiles;
+var
+  LFolder, LExpired, LOnTheLimit, LRecent, LOtherName, LNotADate, LOtherExt: string;
+begin
+  LFolder := ConfigureRetention(3);
+  LExpired := CreateRotatedFile(LFolder, 4);
+  LOnTheLimit := CreateRotatedFile(LFolder, 3);
+  LRecent := CreateRotatedFile(LFolder, 1);
+  LOtherName := TPath.Combine(LFolder, 'other-' + FormatDateTime('yyyymmdd', IncDay(Date, -30)) + '.log');
+  TFile.WriteAllText(LOtherName, '{}');
+  LNotADate := TPath.Combine(LFolder, 'retention-2026xx01.log');
+  TFile.WriteAllText(LNotADate, '{}');
+  LOtherExt := ChangeFileExt(CreateRotatedFile(LFolder, 30), '.bak');
+  TFile.Move(ChangeFileExt(LOtherExt, '.log'), LOtherExt);
+
+  Logger.Log(['detected_level:INFO'], 'opens today''s file');
+
+  Assert.IsFalse(TFile.Exists(LExpired), 'more than 3 days ago: deleted');
+  Assert.IsTrue(TFile.Exists(LOnTheLimit), 'exactly 3 days ago: kept');
+  Assert.IsTrue(TFile.Exists(LRecent), 'recent: kept');
+  Assert.IsTrue(TFile.Exists(LOtherName), 'another file name: kept');
+  Assert.IsTrue(TFile.Exists(LNotADate), 'no date in the name: kept');
+  Assert.IsTrue(TFile.Exists(LOtherExt), 'another extension: kept');
+  Assert.IsTrue(TFile.Exists(TPath.Combine(LFolder, 'retention-' + FormatDateTime('yyyymmdd', Date) + '.log')),
+    'today''s file written');
+end;
+
+procedure TReqRespLoggerJSONFixture.RetentionZeroKeepsEveryFile;
+var
+  LFolder, LOld: string;
+begin
+  LFolder := ConfigureRetention(0);
+  LOld := CreateRotatedFile(LFolder, 400);
+
+  Logger.Log(['detected_level:INFO'], 'opens today''s file');
+
+  Assert.IsTrue(TFile.Exists(LOld));
+end;
+
+procedure TReqRespLoggerJSONFixture.RetentionNeedsDailyRotation;
+var
+  LFolder, LOld: string;
+begin
+  LFolder := ConfigureRetention(3, False);
+  LOld := CreateRotatedFile(LFolder, 30);
+
+  Logger.Log(['detected_level:INFO'], 'opens retention.log');
+
+  Assert.IsTrue(TFile.Exists(LOld), 'without daily rotation nothing is deleted');
 end;
 
 initialization
