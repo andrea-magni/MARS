@@ -686,6 +686,7 @@ procedure TMARSActivation.ReadAuthorizationInfo;
 var
   LProcessAuthorizationAttribute: TProc<AuthorizationAttribute>;
   LAllowedRoles: TStringList;
+  LMethodHasAuthorization: Boolean;
 begin
   FAuthorizationInfo := TMARSAuthorizationInfo.Create(False, False, []);
 
@@ -707,8 +708,16 @@ begin
           LAllowedRoles.AddStrings(RolesAllowedAttribute(AAttribute).Roles);
       end;
 
-    TRttiHelper.ForEachAttribute<AuthorizationAttribute>(FMethodAttributes, LProcessAuthorizationAttribute);
-    TRttiHelper.ForEachAttribute<AuthorizationAttribute>(FResourceAttributes, LProcessAuthorizationAttribute);
+    LMethodHasAuthorization :=
+      TRttiHelper.ForEachAttribute<AuthorizationAttribute>(FMethodAttributes, LProcessAuthorizationAttribute) > 0;
+    // a [PermitAll] of the resource is the default of its methods: it does not waive what a method declares (#307)
+    TRttiHelper.ForEachAttribute<AuthorizationAttribute>(FResourceAttributes,
+      procedure (AAttribute: AuthorizationAttribute)
+      begin
+        if not (LMethodHasAuthorization and (AAttribute is PermitAllAttribute)) then
+          LProcessAuthorizationAttribute(AAttribute);
+      end
+    );
 
     FAuthorizationInfo.AllowedRoles := LAllowedRoles.ToStringArray;
   finally

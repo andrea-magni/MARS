@@ -83,6 +83,18 @@ type
     function AddPet(APet: TRoutePerson): TRoutePerson; override;
   end;
 
+  // a [PermitAll] of the class is the default of the methods: it does not waive their authorization (#307)
+  [Path('permitallclass'), PermitAll, Produces(TMediaType.TEXT_PLAIN)]
+  TPermitAllClassResource = class
+  public
+    [GET]
+    function Open: string;
+    [GET, Path('secret'), RolesAllowed('admin')]
+    function Secret: string;
+    [GET, Path('signed'), Authenticated]
+    function Signed: string;
+  end;
+
   // its own [Path] wins over the inherited one
   [Path('ownpets')]
   TOwnPathResource = class(TInheritedPathResourceBase)
@@ -187,6 +199,9 @@ type
     procedure TestAuthorizationBeforeMiddleware;
     [Test]
     procedure TestAuthenticated;
+    // #307: a [PermitAll] of the class (or group) does not waive the roles of a method (or route)
+    [Test]
+    procedure TestClassPermitAllKeepsMethodRoles;
     [Test]
     procedure TestApplicationMiddleware;
     [Test]
@@ -350,6 +365,23 @@ end;
 function TSkipMiddlewareResource.Get: string;
 begin
   Result := 'skipped';
+end;
+
+{ TPermitAllClassResource }
+
+function TPermitAllClassResource.Open: string;
+begin
+  Result := 'open';
+end;
+
+function TPermitAllClassResource.Secret: string;
+begin
+  Result := 'secret';
+end;
+
+function TPermitAllClassResource.Signed: string;
+begin
+  Result := 'signed';
 end;
 
 { TNegotiationResource }
@@ -806,6 +838,61 @@ begin
   Assert.AreEqual(403, LMock.Response.StatusCode, 'another role');
   LMock := Send('GET', 'signed/admin', '', Bearer(['admin']));
   Assert.AreEqual(200, LMock.Response.StatusCode);
+end;
+
+procedure TMARSRoutesFixture.TestClassPermitAllKeepsMethodRoles;
+
+  function Bearer(const ARoles: TArray<string>): TMARSHeaders;
+  var
+    LHeader: TMARSHeader;
+  begin
+    var LToken: TMARSToken := {$IFDEF MSWINDOWS}TMARSmORMotJWTToken{$ELSE}TMARSJOSEJWTToken{$ENDIF}.Create('', FApplication.Parameters);
+    try
+      LToken.UserName := 'someone';
+      LToken.Roles := ARoles;
+      LToken.Build(FApplication.Parameters);
+      LHeader.Name := 'Authorization';
+      LHeader.Value := 'Bearer ' + LToken.Token;
+    finally
+      LToken.Free;
+    end;
+    Result := [LHeader];
+  end;
+
+begin
+  Assert.IsTrue(FApplication.AddResource('Tests.Routes.TPermitAllClassResource'));
+
+  for var LBase in ['permitallclass', 'permitallgroup'] do
+  begin
+    var LMock := Send('GET', LBase);
+    Assert.AreEqual(200, LMock.Response.StatusCode, LBase + ': the default of the class, public');
+    LMock := Send('GET', LBase + '/secret');
+    Assert.AreEqual(403, LMock.Response.StatusCode, LBase + '/secret: no token');
+    LMock := Send('GET', LBase + '/secret', '', Bearer(['user']));
+    Assert.AreEqual(403, LMock.Response.StatusCode, LBase + '/secret: another role');
+    LMock := Send('GET', LBase + '/secret', '', Bearer(['admin']));
+    Assert.AreEqual(200, LMock.Response.StatusCode, LBase + '/secret: admin');
+    LMock := Send('GET', LBase + '/signed');
+    Assert.AreEqual(403, LMock.Response.StatusCode, LBase + '/signed: no token');
+    LMock := Send('GET', LBase + '/signed', '', Bearer([]));
+    Assert.AreEqual(200, LMock.Response.StatusCode, LBase + '/signed: any token');
+  end;
+
+  // the document says the same
+  var LOpenAPI := TOpenAPI.BuildFrom(FEngine, FApplication);
+  try
+    for var LBase in ['permitallclass', 'permitallgroup'] do
+    begin
+      var LPrefix := '/' + LBase;
+      Assert.AreEqual(0, LOpenAPI.paths[LPrefix].get.security.Count, LBase);
+      var LSecret := LOpenAPI.paths[LPrefix + '/secret'].get;
+      Assert.IsTrue(LSecret.security.Count > 0, LBase + '/secret');
+      Assert.AreEqual('admin', string.Join(',', LSecret.security[0]['JWT_bearer']), LBase + '/secret');
+      Assert.IsTrue(LOpenAPI.paths[LPrefix + '/signed'].get.security.Count > 0, LBase + '/signed');
+    end;
+  finally
+    LOpenAPI.Free;
+  end;
 end;
 
 procedure TMARSRoutesFixture.TestApplicationMiddleware;
@@ -2109,6 +2196,7 @@ initialization
   MARSRegister(TOwnPathResource);
   MARSRegister(TTypedParamsResource);
   MARSRegister(TNegotiationResource);
+  MARSRegister(TPermitAllClassResource);
 
   MARSRoutes('Tests.Routes.Middleware', 'mw',
     procedure (const R: TMARSRouter)
@@ -2260,6 +2348,31 @@ initialization
           Result := 'admin';
         end
       ).Produces(TMediaType.TEXT_PLAIN).Authenticated.RolesAllowed('admin');
+
+      R.Group('permitallgroup',
+        procedure (const G: TMARSRouter)
+        begin
+          G.PermitAll;
+          G.Get<string>('',
+            function (const C: TMARSRouteContext): string
+            begin
+              Result := 'open';
+            end
+          ).Produces(TMediaType.TEXT_PLAIN);
+          G.Get<string>('secret',
+            function (const C: TMARSRouteContext): string
+            begin
+              Result := 'secret';
+            end
+          ).Produces(TMediaType.TEXT_PLAIN).RolesAllowed('admin');
+          G.Get<string>('signed',
+            function (const C: TMARSRouteContext): string
+            begin
+              Result := 'signed';
+            end
+          ).Produces(TMediaType.TEXT_PLAIN).Authenticated;
+        end
+      );
 
       R.Get<string>('ping',
         function (const C: TMARSRouteContext): string

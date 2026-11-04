@@ -423,7 +423,19 @@ function TMARSPathItemMetadata.GetFullAuthorization: string;
 begin
   Result := Authorization;
   if Assigned(Parent) and (Parent is TMARSPathItemMetadata) then
-    Result := SmartConcat([TMARSPathItemMetadata(Parent).FullAuthorization, Result]);
+  begin
+    var LParent := TMARSPathItemMetadata(Parent).FullAuthorization;
+    // as TMARSActivation: a [PermitAll] above does not waive what this item declares (#307)
+    if Authorization <> '' then
+    begin
+      var LItems: TArray<string> := [];
+      for var LItem in LParent.Split([','], TStringSplitOptions.ExcludeEmpty) do
+        if not SameText(LItem.Trim, 'PermitAll') then
+          LItems := LItems + [LItem];
+      LParent := SmartConcat(LItems);
+    end;
+    Result := SmartConcat([LParent, Result]);
+  end;
 end;
 
 function TMARSPathItemMetadata.GetFullPath: string;

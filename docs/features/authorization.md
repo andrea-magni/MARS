@@ -15,7 +15,7 @@ They can be placed on a **resource** (applies to all its methods) and/or on a **
 
 ## Resolution rules
 
-When evaluating an endpoint, MARS **merges** the authorization attributes from the method *and* the resource class into a single set: `DenyAll`/`PermitAll`/`Authenticated` flags plus the **union** of all `[RolesAllowed]` roles from both levels. Two checks then run, in order:
+When evaluating an endpoint, MARS **merges** the authorization attributes from the method *and* the resource class into a single set: `DenyAll`/`PermitAll`/`Authenticated` flags plus the **union** of all `[RolesAllowed]` roles from both levels. One exception: a `[PermitAll]` of the resource is the default of its methods, so it is left out for a method that declares an authorization attribute of its own (see [below](#permitall-on-the-resource)). Two checks then run, in order:
 
 **Authentication first.** If the merged set contains *any* roles — whether they came from the method or from the resource class — or `[Authenticated]`, a valid, verified token is required. A missing, invalid or expired token fails here with `403`, *before* `[PermitAll]` is even considered.
 
@@ -27,6 +27,10 @@ When evaluating an endpoint, MARS **merges** the authorization attributes from t
 4. Otherwise (`[Authenticated]` alone) → allowed: the token was verified above, its roles do not matter.
 5. With **no authorization attribute at all**, the endpoint is open (default allow).
 
+::: warning No attribute means public
+An endpoint without any authorization attribute, on the method or on the resource, is exactly as open as one marked `[PermitAll]`: nothing in the source says so. This includes resources added for diagnostics or administration and never annotated. Review every resource reachable from outside, and mark the public ones `[PermitAll]` explicitly, so that a missing attribute stands out.
+:::
+
 Consequence: a method-level `[PermitAll]` on a resource marked `[RolesAllowed(...)]` does **not** make that endpoint public — any valid token is still required; `[PermitAll]` only bypasses the role check. An endpoint is truly open only when no roles appear at either level. To require a token without any role, say it with `[Authenticated]`:
 
 ```pascal
@@ -37,6 +41,21 @@ TProfileResource = class
   procedure Remove;
 end;
 ```
+
+### `[PermitAll]` on the resource {#permitall-on-the-resource}
+
+A `[PermitAll]` on the resource makes its methods public **unless a method says otherwise**: a method with its own `[RolesAllowed]`, `[Authenticated]` or `[DenyAll]` keeps them.
+
+```pascal
+[Path('demo'), PermitAll]          // default: public
+TDemoResource = class
+  [GET] function Open: string;     // public
+  [GET, Path('secret'), RolesAllowed('admin')]
+  function Secret: string;         // admin only
+end;
+```
+
+The same holds for a group of [routes](/server/routes) (`G.PermitAll`) and its routes. Before this was fixed, the `[PermitAll]` of the resource skipped the role check of every method: `Secret` was allowed to any valid token, whatever its roles ([#307](https://github.com/andrea-magni/MARS/issues/307)). The opposite case is unchanged: a `[PermitAll]` on a *method* of a `[RolesAllowed]` resource still means "any valid token", as in the example below.
 
 The [OpenAPI](/features/openapi) document states it as a security requirement without scopes.
 
