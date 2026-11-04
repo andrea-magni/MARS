@@ -2,7 +2,9 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
-## Unreleased {#unreleased}
+## 2.0.3 {#v2-0-3}
+
+<Badge type="tip" text="latest" /> **4 November 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.3) · [changes since 2.0.2](https://github.com/andrea-magni/MARS/compare/v.2.0.2...v.2.0.3)
 
 **New**
 - JSON logger: `JSONLogging.RetentionDays` deletes the rotated log files older than that many days (when a new file is opened; `0`, the default, keeps them all), so the folder read by Grafana Alloy no longer grows forever. Thanks to @bobprog72. [Logging](/features/logging#configuration-parameters) ([#305](https://github.com/andrea-magni/MARS/pull/305))
@@ -29,7 +31,7 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## 2.0.2 {#v2-0-2}
 
-<Badge type="tip" text="latest" /> **16 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.2) · [changes since 2.0.1](https://github.com/andrea-magni/MARS/compare/v.2.0.1...v.2.0.2)
+**16 October 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.2) · [changes since 2.0.1](https://github.com/andrea-magni/MARS/compare/v.2.0.1...v.2.0.2)
 
 **New**
 - OpenAPI: request headers for the documentation only, the ones the code reads by itself or a middleware checks (i.e. an API key): `[MetaHeader('X-Api-Key', 'description', True)]` on a method or a resource, `MetaHeader(...)` on a route or a group of routes, the `OpenAPI.Header.<name>` parameter for every operation (of the engine or of an application). The templates have commented examples. [OpenAPI ▸ Request headers](/features/openapi#request-headers) ([#286](https://github.com/andrea-magni/MARS/issues/286))
