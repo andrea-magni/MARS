@@ -639,8 +639,11 @@ end;
 
 function TRequestBody.AddContent(const AMediaType: string): TMediaTypeObj;
 begin
-  Result := TMediaTypeObj.Create;
-  content.Add(AMediaType, Result);
+  if not content.TryGetValue(AMediaType, Result) then
+  begin
+    Result := TMediaTypeObj.Create;
+    content.Add(AMediaType, Result);
+  end;
 end;
 
 constructor TRequestBody.Create;

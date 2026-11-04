@@ -61,6 +61,8 @@ type
     // request parameters of fields and properties of the resource, [MetaHeader],
     // OpenAPI.Header.<name> of the application
     [Test] procedure HeadersOfResourcesAndApplication;
+    // #308: a media type added twice to a request body (two methods on one path and verb)
+    [Test] procedure RequestBodyContentAddedTwice;
 {$IFDEF MARS_YAML}
     [Test] procedure SecurityAsYAML;
     [Test] procedure StringsStayStringsInYAML;
@@ -649,6 +651,18 @@ begin
   Assert.AreEqual('- 1'#10'- 0', LYAML.Replace(#13, '').Trim);
 end;
 {$ENDIF}
+
+procedure TMARSOpenAPI3Test.RequestBodyContentAddedTwice;
+begin
+  var LBody := TRequestBody.Create;
+  try
+    var LFirst := LBody.AddContent(TMediaType.APPLICATION_JSON);
+    Assert.AreSame(LFirst, LBody.AddContent(TMediaType.APPLICATION_JSON));
+    Assert.AreEqual(1, LBody.content.Count);
+  finally
+    LBody.Free;
+  end;
+end;
 
 initialization
   TDUnitX.RegisterTestFixture(TMARSOpenAPI3Test);
