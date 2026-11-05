@@ -69,6 +69,19 @@ var
   LJWT: TJWT;
 begin
   Result := False;
+
+  // check the algorithm before verifying: JOSE would pick the provider from the header,
+  // and the RSA/ECDSA one loads OpenSSL 1.0 (libeay32) from the search path
+  LJWT := TJOSE.DeserializeOnly(AToken);
+  if not Assigned(LJWT) then
+    Exit;
+  try
+    if LJWT.Header.Algorithm <> TJOSEAlgorithmId.HS256.AsString then
+      Exit;
+  finally
+    LJWT.Free;
+  end;
+
   LKey := TJWK.Create(ASecret);
   try
     LJWT := TJOSE.Verify(LKey, AToken);

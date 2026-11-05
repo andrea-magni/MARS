@@ -56,6 +56,8 @@ type
     [Test] procedure InvalidKeyIdRefusedOnBuild;
     [Test] procedure PublicDefaultAsPreviousSecret;
     [Test] procedure OnlyHS256Accepted;
+    // #310: a token with another alg is refused before any verification (no RSA provider, no OpenSSL 1.0)
+    [Test] procedure RS256NeverReachesTheRSAProvider;
   end;
 
   [TestFixture('TMARSToken.Secret')]
@@ -100,7 +102,7 @@ implementation
 
 uses
   Math, TimeSpan, NetEncoding
-, JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA
+, JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA, JOSE.Providers, JOSE.Providers.Interfaces
 , MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
 , SynCommons, SynCrypto, Generics.Collections
@@ -762,6 +764,24 @@ begin
     Assert.IsTrue(IsVerifiedWith(IssueToken(LParams), LParams), 'HS256 with the same secret');
     Assert.IsFalse(IsVerifiedWith(TJWTTestUtils.HS512Token(LSecret), LParams),
       'right secret, but the header must not choose the algorithm');
+  finally
+    LParams.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.RS256NeverReachesTheRSAProvider;
+begin
+  // {"alg":"RS256","typ":"JWT"}.{"UserName":"Andrea","exp":87910736248}.not-a-signature
+  const LForged = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyTmFtZSI6IkFuZHJlYSIsImV4cCI6ODc5MTA3MzYyNDh9.bm90LWEtc2lnbmF0dXJl';
+  var LParams := KeyParams(DUMMY_SECRET, '', []);
+  try
+    var LRSA: IJOSESignerRSA := TJOSEProviders.RSA;
+    TJOSEProviders.RSA := nil; // reaching it would raise EJOSEProvidersNotRegistered
+    try
+      Assert.IsFalse(IsVerifiedWith(LForged, LParams));
+    finally
+      TJOSEProviders.RSA := LRSA;
+    end;
   finally
     LParams.Free;
   end;

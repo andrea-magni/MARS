@@ -2,6 +2,11 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
+## Unreleased {#unreleased}
+
+**Fixed**
+- JWT (JOSE backend): a token with `"alg":"RS256"` (or `ES*`) reached the RSA/ECDSA provider of delphi-jose-jwt before being refused, and that provider loads OpenSSL 1.0 (`libeay32.dll`) from the DLL search path: an unauthenticated request could make the server load any `libeay32.dll` found there. Now the algorithm is checked on the header before any verification; HS256 tokens are unchanged and the mORMot backend was not affected. ([#310](https://github.com/andrea-magni/MARS/issues/310))
+
 ## 2.0.3 {#v2-0-3}
 
 <Badge type="tip" text="latest" /> **4 November 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.3) · [changes since 2.0.2](https://github.com/andrea-magni/MARS/compare/v.2.0.2...v.2.0.3)
