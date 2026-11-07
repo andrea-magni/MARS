@@ -174,6 +174,7 @@ Read by the [token resource](/features/authentication) and JWT backends:
 | `JWT.CookiePath` | — | Cookie path. |
 | `JWT.CookieSecure` | `false` | Mark the cookie `Secure` (HTTPS only). |
 | `JWT.CookieSameSite` | `Lax` | `SameSite` attribute of the cookie: `Lax`, `Strict`, `None` (makes the cookie `Secure` too) or `Unspecified` (not written). See [The token cookie](/features/authentication#the-token-cookie). |
+| `JWT.AuthenticationFailedStatus` | `403` | HTTP status of a request whose token is missing, not valid or expired. Set it to `401` to tell it apart from the `403` of a token without the required role. See [How clients see denials](/features/authorization#how-clients-see-denials). |
 
 ::: danger Set `JWT.Secret`
 The default secret ships in the public source and is never used unless you opt in with

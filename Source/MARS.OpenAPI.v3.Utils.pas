@@ -84,6 +84,8 @@ begin
     {$IFNDEF MARS_JSON_LEGACY}
     LOpenAPI.TDateAsDate := DefaultMARSJSONSerializationOptions.AdjustWith(AApplication.Parameters).TDateAsDate;
     {$ENDIF}
+    LOpenAPI.FAuthenticationFailedStatus := AApplication.Parameters.ByName(
+      JWT_AUTHENTICATIONFAILEDSTATUS_PARAM, JWT_AUTHENTICATIONFAILEDSTATUS_PARAM_DEFAULT).AsInteger;
     LOpenAPI.ReadInfoFromParams(AEngine.Parameters);
 
     LServer := LOpenAPI.AddServerFromEngine(AEngine);
@@ -846,7 +848,7 @@ begin
       AOperation.AddSecurityRequirement('JWT_cookie', LScopes);
 
     if FBearerSecurityConfigured or FCookieSecurityConfigured then
-      AOperation.AddResponse('403').description := 'Token missing, not valid or expired';
+      AOperation.AddResponse(FAuthenticationFailedStatus.ToString).description := 'Token missing, not valid or expired';
   end;
 end;
 

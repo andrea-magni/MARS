@@ -193,7 +193,7 @@ implementation
 uses
   TypInfo, StrUtils, Generics.Defaults
 , MARS.Core.Attributes, MARS.Core.Response, MARS.Core.MessageBodyReader
-, MARS.Core.Exceptions, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Rtti.Utils
+, MARS.Core.Exceptions, MARS.Core.Utils, MARS.Utils.Parameters, MARS.Utils.JWT, MARS.Rtti.Utils
 , MARS.Core.Injection, MARS.Core.Activation.InjectionService
 ;
 
@@ -910,7 +910,8 @@ begin
     if ((Token.Token = '') or not Token.IsVerified) then
     begin
       Token.Clear;
-      raise EMARSAuthenticationException.Create('Token missing, not valid or expired', 403);
+      raise EMARSAuthenticationException.Create('Token missing, not valid or expired'
+        , Application.Parameters.ByName(JWT_AUTHENTICATIONFAILEDSTATUS_PARAM, JWT_AUTHENTICATIONFAILEDSTATUS_PARAM_DEFAULT).AsInteger);
     end;
   end;
 end;

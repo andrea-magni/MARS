@@ -136,4 +136,4 @@ See [Request Lifecycle](/server/request-lifecycle#global-hooks).
 
 ## How clients see denials
 
-Both authentication and authorization failures return `403 Forbidden` (`EMARSAuthenticationException` / `EMARSAuthorizationException`). You can re-map these to other status codes or richer bodies in an [invoke-error hook](/server/error-handling#centralized-error-handling).
+Both authentication and authorization failures return `403 Forbidden` (`EMARSAuthenticationException` / `EMARSAuthorizationException`). A client that has to go back to its login needs to tell them apart: set `JWT.AuthenticationFailedStatus=401` and a missing, invalid or expired token answers `401`, while a token without the required role keeps answering `403`. You can also re-map these to other status codes or richer bodies in an [invoke-error hook](/server/error-handling#centralized-error-handling).

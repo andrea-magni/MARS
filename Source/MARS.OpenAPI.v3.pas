@@ -338,6 +338,7 @@ type
     externalDocs: TExternalDocumentation;
     [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] FBearerSecurityConfigured: Boolean;
     [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] FCookieSecurityConfigured: Boolean;
+    [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] FAuthenticationFailedStatus: Integer;
     // TDate as the application writes it: "2026-10-19" (format: date) or a date and time
     // (format: date-time). The default options; BuildFrom sets the ones of the application (#299)
     [JSONName(''){$IFDEF MARS_YAML}, YAMLName(''){$ENDIF}] TDateAsDate: Boolean;
