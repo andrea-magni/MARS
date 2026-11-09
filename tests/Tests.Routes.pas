@@ -838,6 +838,15 @@ begin
   Assert.AreEqual(403, LMock.Response.StatusCode, 'another role');
   LMock := Send('GET', 'signed/admin', '', Bearer(['admin']));
   Assert.AreEqual(200, LMock.Response.StatusCode);
+
+  // JWT.AuthenticationFailedStatus sets a refused token apart from a missing role
+  FApplication.Parameters.Values['JWT.AuthenticationFailedStatus'] := 401;
+  LMock := Send('GET', 'signed');
+  Assert.AreEqual(401, LMock.Response.StatusCode, 'no token, 401 configured');
+  LMock := Send('GET', 'signed', '', [LInvalid]);
+  Assert.AreEqual(401, LMock.Response.StatusCode, 'a token not verified, 401 configured');
+  LMock := Send('GET', 'signed/admin', '', Bearer(['standard']));
+  Assert.AreEqual(403, LMock.Response.StatusCode, 'another role, 401 configured');
 end;
 
 procedure TMARSRoutesFixture.TestClassPermitAllKeepsMethodRoles;
