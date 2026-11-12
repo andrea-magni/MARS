@@ -27,6 +27,9 @@ type
     // Set by whoever registers RSA and ECDSA providers of delphi-jose-jwt other than the default
     // ones: the MARS.JOSEJWT.TaurusTLS unit (OpenSSL 3) does, add it to the uses of the ignition
     class var AsymmetricProviderRegistered: Boolean;
+    // Called before an asymmetric algorithm is used: raises when the providers cannot work
+    // (MARS.JOSEJWT.TaurusTLS: the OpenSSL 3 libraries are not found)
+    class var OnCheckAsymmetricProvider: TProc;
   end;
 
 implementation
@@ -56,6 +59,8 @@ begin
     raise EMARSException.CreateFmt('%s=%s with the JOSE backend needs RSA and ECDSA providers based on OpenSSL 3: '
       + 'add MARS.JOSEJWT.TaurusTLS to the uses of the ignition (it needs the TaurusTLS library), '
       + 'or use the mORMot backend.', [JWT_ALGORITHM_PARAM, Algorithm]);
+  if Assigned(OnCheckAsymmetricProvider) then
+    OnCheckAsymmetricProvider();
 end;
 
 function TMARSJOSEJWTToken.BuildJWTToken(const ASecret: string;

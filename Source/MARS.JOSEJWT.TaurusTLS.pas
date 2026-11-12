@@ -20,13 +20,31 @@ interface
 implementation
 
 uses
-  JOSE.Providers, JOSE.Providers.TaurusTLS
-, MARS.JOSEJWT.Token
+  System.SysUtils
+, TaurusTLS
+, JOSE.Providers, JOSE.Providers.TaurusTLS
+, MARS.JOSEJWT.Token, MARS.Core.Exceptions
 ;
+
+const
+  OPENSSL_LIBRARIES =
+    {$IF Defined(WIN64)}'libcrypto-3-x64.dll and libssl-3-x64.dll'
+    {$ELSEIF Defined(MSWINDOWS)}'libcrypto-3.dll and libssl-3.dll'
+    {$ELSE}'libcrypto and libssl, version 3'
+    {$IFEND};
+
+procedure CheckOpenSSL;
+begin
+  // says which files are missing, where TaurusTLS has only "Unable to load the OpenSSL libraries"
+  if not TaurusTLS.LoadOpenSSLLibrary then
+    raise EMARSException.Create('JWT: OpenSSL 3 cannot be loaded. RS256, PS256 and ES256 with the JOSE backend need '
+      + OPENSSL_LIBRARIES + ' (both of them) in the folder of the executable or in the library search path.');
+end;
 
 initialization
   TJOSEProviders.UnregisterProvider; // the default ones: never OpenSSL 1.0
   TJOSETaurusTLSProviders.Register;
   TMARSJOSEJWTToken.AsymmetricProviderRegistered := True;
+  TMARSJOSEJWTToken.OnCheckAsymmetricProvider := CheckOpenSSL;
 
 end.

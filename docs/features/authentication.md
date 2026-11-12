@@ -228,7 +228,7 @@ Keep the private key out of the repository and readable only by the account of t
 What each [backend](#jwt-backends) needs:
 
 - **mORMot** (Windows): nothing else. RSA and ECDSA are part of the mORMot 2 units shipped with MARS, no DLL.
-- **JOSE**: its default crypto providers rely on OpenSSL 1.0, which MARS never loads. Add the `MARS.JOSEJWT.TaurusTLS` unit to the `uses` of the ignition, after `MARS.JOSEJWT.Token`: it registers the providers based on [TaurusTLS](https://github.com/JPeterMugaas/TaurusTLS) and **OpenSSL 3**. TaurusTLS is not shipped with MARS: put its `Source` folder in the library path (or in the search path of the project), and deploy `libcrypto-3.dll` and `libssl-3.dll` (`libcrypto-3-x64.dll` and `libssl-3-x64.dll` for Win64), both of them, where the executable finds them. Without that unit an asymmetric `JWT.Algorithm` raises an error that says so. HS256 needs none of this.
+- **JOSE**: its default crypto providers rely on OpenSSL 1.0, which MARS never loads. Add the `MARS.JOSEJWT.TaurusTLS` unit to the `uses` of the ignition, after `MARS.JOSEJWT.Token`: it registers the providers based on [TaurusTLS](https://github.com/JPeterMugaas/TaurusTLS) and **OpenSSL 3**. TaurusTLS is not shipped with MARS: put its `Source` folder in the library path (or in the search path of the project), and deploy `libcrypto-3.dll` and `libssl-3.dll` (`libcrypto-3-x64.dll` and `libssl-3-x64.dll` for Win64), both of them, where the executable finds them. Without that unit an asymmetric `JWT.Algorithm` raises an error that says so. When the OpenSSL 3 libraries are not found, the error names the files it needs. HS256 needs none of this.
 
 The two backends read the same keys and verify each other's tokens.
 
