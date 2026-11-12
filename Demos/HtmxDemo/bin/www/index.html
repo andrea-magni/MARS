@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <title>htmx Demo</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"></script>
+  <!-- local copies (offline-friendly): htmx.org@2.0.10, htmx-ext-json-enc@2.0.1, htmx-ext-client-side-templates@2.0.0, mustache@4.2.0 -->
+  <script src="js/htmx.min.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/htmx-ext-json-enc@2.0.1/json-enc.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/htmx-ext-client-side-templates@2.0.0/client-side-templates.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mustache@4.2.0/mustache.min.js"></script>  
+  <script src="js/json-enc.min.js"></script>
+  <script src="js/client-side-templates.js"></script>
+  <script src="js/mustache.min.js"></script>
 
   <style>
     body { 
@@ -48,7 +49,7 @@
 <body hx-ext="client-side-templates">
   
 	<h1>
-		<img width="100" src="https://andrea-magni.github.io/MARS/logo-256.png"> 
+		<img width="100" src="logo.png">
 		<a href="https://github.com/andrea-magni/MARS">MARS-Curiosity</a> + <a href="https://htmx.org/">htmx</a> Demo
 	</h1>
 	

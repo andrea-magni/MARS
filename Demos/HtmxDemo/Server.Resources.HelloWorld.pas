@@ -18,7 +18,7 @@ uses
 ;
 
 type
-  [ Path('web')
+  [ Path('web/{*}')
   , RootFolder('{bin}www', True)
   , OAPIDescription('Serves static content from the www folder.')
   ]
