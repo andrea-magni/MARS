@@ -101,11 +101,12 @@ type
 implementation
 
 uses
-  Math, TimeSpan, NetEncoding
+  mormot.core.base, mormot.core.text, mormot.core.unicode, mormot.core.variants, mormot.core.datetime, mormot.crypt.jwt
+, Math, TimeSpan, NetEncoding
 , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA, JOSE.Providers, JOSE.Providers.Interfaces
 , MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
-, SynCommons, SynCrypto, Generics.Collections
+, Generics.Collections
 ;
 
 { TMARSJWTmORMotTest }
@@ -489,7 +490,7 @@ end;
 
 class function TJWTTestUtils.HS512Token(const ASecret: string): string;
 begin
-  var LJWT := JOSE.Core.JWT.TJWT.Create(JOSE.Core.JWT.TJWTClaims); // SynCrypto has a TJWTClaims too
+  var LJWT := JOSE.Core.JWT.TJWT.Create(JOSE.Core.JWT.TJWTClaims); // mormot.crypt.jwt has a TJwtClaims too
   try
     LJWT.Claims.JSON.AddPair('UserName', 'Andrea');
     LJWT.Claims.JSON.AddPair('exp', TJSONNumber.Create(87910736248)); // year 4755

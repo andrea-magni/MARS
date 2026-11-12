@@ -64,7 +64,9 @@ paths:
   # and are compiled directly into the user's projects, so the sources must be reachable from the library path.
   extra library paths:
     - Source
-    - ThirdParty/mORMot/Source
+    - ThirdParty/mORMot2/src/core
+    - ThirdParty/mORMot2/src/crypt
+    - ThirdParty/mORMot2/src/lib
     - ThirdParty/Neslib.Yaml
     - ThirdParty/Neslib.Yaml/Neslib
 

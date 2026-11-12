@@ -12,7 +12,7 @@ uses
 , MARS.Utils.Parameters, MARS.Utils.Parameters.JSON
 , MARS.Core.Token
 
-, SynCommons, SynCrypto, SynEcc, SynLZ
+, mormot.core.base, mormot.core.text, mormot.core.unicode, mormot.core.data, mormot.core.variants, mormot.crypt.jwt
 ;
 
 type

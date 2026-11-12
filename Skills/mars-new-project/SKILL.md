@@ -65,7 +65,7 @@ Every operation answers `501` until implemented: override its `Do<Operation>` me
 
 ## Project requirements (all options)
 
-- **Library paths**: the project must see the MARS sources. Either the user installed MARS (Library Path already contains them) or add to the project search path: `[MARS]\Source`, `[MARS]\ThirdParty\delphi-jose-jwt\Source\Common`, `[MARS]\ThirdParty\delphi-jose-jwt\Source\JOSE` (a git submodule: clone MARS with `--recurse-submodules`), `[MARS]\ThirdParty\mORMot\Source`, `[MARS]\ThirdParty\Neslib.Yaml`, `[MARS]\ThirdParty\Neslib.Yaml\Neslib`.
+- **Library paths**: the project must see the MARS sources. Either the user installed MARS (Library Path already contains them) or add to the project search path: `[MARS]\Source`, `[MARS]\ThirdParty\delphi-jose-jwt\Source\Common`, `[MARS]\ThirdParty\delphi-jose-jwt\Source\JOSE` (a git submodule: clone MARS with `--recurse-submodules`), `[MARS]\ThirdParty\mORMot2\src\core`, `[MARS]\ThirdParty\mORMot2\src\crypt`, `[MARS]\ThirdParty\mORMot2\src\lib`, `[MARS]\ThirdParty\Neslib.Yaml`, `[MARS]\ThirdParty\Neslib.Yaml\Neslib`.
 - **`{$I MARS.inc}`** must compile — it lives in `[MARS]\Source`, so that path is required even for the .dpr.
 - **JWT backend**: exactly one of `MARS.mORMotJWT.Token` (Windows) or `MARS.JOSEJWT.Token` (all platforms) must be in the ignition uses clause. The template handles this with `{$IFDEF MSWINDOWS}`.
 - **Delphi compatibility**: 10.4 Sydney through 13 Florence; earlier versions are not supported (`MARS.inc` stops the build). Packages per IDE version are in `[MARS]\Packages\`.

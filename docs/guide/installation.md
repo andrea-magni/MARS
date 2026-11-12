@@ -63,7 +63,9 @@ The test projects (the `...Tests` project of an application created with MARSCmd
    - `[MARS Folder]\Source`
    - `[MARS Folder]\ThirdParty\delphi-jose-jwt\Source\Common`
    - `[MARS Folder]\ThirdParty\delphi-jose-jwt\Source\JOSE`
-   - `[MARS Folder]\ThirdParty\mORMot\Source`
+   - `[MARS Folder]\ThirdParty\mORMot2\src\core`
+   - `[MARS Folder]\ThirdParty\mORMot2\src\crypt`
+   - `[MARS Folder]\ThirdParty\mORMot2\src\lib`
    - `[MARS Folder]\ThirdParty\Neslib.Yaml`
    - `[MARS Folder]\ThirdParty\Neslib.Yaml\Neslib`
    - `[MARS Folder]\ThirdParty\Delphi-Mocks\Source` (test projects: `MARS.Tests`, the `...Tests` project of a new application)

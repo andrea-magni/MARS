@@ -1,0 +1,2750 @@
+/// Framework Core {{mustache}} Templates Renderer
+// - this unit is a part of the Open Source Synopse mORMot framework 2,
+// licensed under a MPL/GPL/LGPL three license - see LICENSE.md
+unit mormot.core.mustache;
+
+{
+  *****************************************************************************
+
+   Logic-Less Mustache Templates Rendering
+   - Mustache Execution Data Context Types
+   - TSynMustache Template Processing
+   - TSynMustache Standard Expression Helpers
+
+  *****************************************************************************
+}
+
+interface
+
+{$I ..\mormot.defines.inc}
+
+uses
+  classes,
+  sysutils,
+  variants,
+  mormot.core.base,
+  mormot.core.os,
+  mormot.core.unicode,
+  mormot.core.text,
+  mormot.core.search, // for TSynMustache.Match/Glob helpers
+  mormot.core.buffers,
+  mormot.core.datetime,
+  mormot.core.data,
+  mormot.core.rtti,
+  mormot.core.json,
+  mormot.core.fmt,
+  mormot.core.variants;
+
+
+{ ************ Mustache Execution Data Context Types }
+
+type
+  /// exception raised during process of a {{mustache}} template
+  ESynMustache = class(ESynException);
+
+  /// identify the {{mustache}} tag kind
+  // - sorted by occurence, to optimize RenderContext() process
+  // - mtText for all text that appears outside a symbol
+  // - mtVariable if the tag is a variable - e.g. {{myValue}} - or an Expression
+  // Helper - e.g. {{helperName valueName}}
+  // - mtVariableUnescape, mtVariableUnescapeAmp to unescape the variable HTML -
+  // e.g. {{{myRawValue}}} or {{& name}}
+  // - mtSection and mtInvertedSection for sections beginning - e.g.
+  // {{#person}} or {{^person}}
+  // - mtSectionEnd for sections ending - e.g. {{/person}} - note that
+  // TSynMustache accepts non-standard empty closing tag like {{/}}
+  // - mtComment for comments - e.g. {{! ignore me}}
+  // - mtPartial for partials - e.g. {{> next_more}}
+  // - mtSetPartial for setting an internal partial - e.g.
+  // {{<foo}}This is the foo partial {{myValue}} template{{/foo}}
+  // - mtSetDelimiter for setting custom delimeter symbols - e.g. {{=<% %>=}} -
+  // Warning: current implementation only supports two character delimiters
+  // - mtTranslate for content i18n via a callback - e.g. {{"English text}}
+  TSynMustacheTagKind = (
+    mtText,
+    mtVariable,
+    mtVariableUnescape,
+    mtVariableUnescapeAmp,
+    mtSection,
+    mtInvertedSection,
+    mtSectionEnd,
+    mtComment,
+    mtPartial,
+    mtSetPartial,
+    mtSetDelimiter,
+    mtTranslate);
+
+  /// store a {{mustache}} tag parsed definition
+  TSynMustacheTag = record
+    /// points to the mtText buffer start
+    // - main template's text is not allocated as a separate string during
+    // parsing, but will rather be copied directly from the template memory
+    TextStart: PUtf8Char;
+    /// stores the mtText buffer length
+    TextLen: integer;
+    /// the index in Tags[] of the other end of this section (16-bit)
+    // - either the index of mtSectionEnd for mtSection/mtInvertedSection
+    // - or the index of mtSection/mtInvertedSection for mtSectionEnd
+    SectionOppositeIndex: SmallInt;
+    /// the kind of the tag
+    Kind: TSynMustacheTagKind;
+    /// if the Value has an included ' ' within, i.e. could be an helper
+    // - equals PosExChar(' ', Value)
+    ValueSpace: byte;
+    /// the tag content, excluding trailing {{ }} and corresponding symbol
+    // - is not set for mtText nor mtSetDelimiter
+    Value: RawUtf8;
+  end;
+  /// pointer reference to a {{mustache}} tag parsed definition
+  PSynMustacheTag = ^TSynMustacheTag;
+
+  /// store all {{mustache}} tags of a given template
+  TSynMustacheTagDynArray = array of TSynMustacheTag;
+
+  /// states the section content according to a given value
+  // - msNothing for false values or empty lists
+  // - msSingle for non-false values but not a list
+  // - msSinglePseudo is for *-first *-last *-odd and helper values
+  // - msList for non-empty lists
+  TSynMustacheSectionType = (
+    msNothing,
+    msSingle,
+    msSinglePseudo,
+    msList);
+
+  TSynMustache = class;
+
+  /// callback signature used to process an Expression Helper variable
+  // - i.e. {{helperName value}} tags
+  // - returned value will be used to process as replacement of a single {{tag}}
+  TSynMustacheHelperEvent =
+    procedure(const Value: variant; out Result: variant) of object;
+
+  /// used to store a registered Expression Helper implementation
+  TSynMustacheHelper = record
+    /// the Expression Helper name
+    Name: RawUtf8;
+    /// the corresponding callback to process the tag
+    Event: TSynMustacheHelperEvent;
+  end;
+
+  /// used to store all registered Expression Helpers
+  // - i.e. {{helperName value}} tags
+  // - use TSynMustache.HelperAdd/HelperDelete class methods to manage the list
+  // or retrieve standard helpers via TSynMustache.HelpersGetStandardList
+  TSynMustacheHelpers = array of TSynMustacheHelper;
+
+  TSynMustachePartials = class;
+
+  /// handle {{mustache}} template rendering context, i.e. all values
+  // - this abstract class should not be used directly, but rather any
+  // other overridden class
+  TSynMustacheContext = class
+  protected
+    fReuse: TLightLock; // topmost to ensure aarch64 alignment
+    fContextCount: integer;
+    fEscapeInvert: boolean;
+    fOwnWriter: boolean;
+    fGetVarDataFromContextNeedsFree: boolean;
+    fPathDelim: AnsiChar;
+    fWriter: TJsonWriter;
+    fHelpers: TSynMustacheHelpers;
+    fPartials: TSynMustachePartials;
+    fTempProcessHelper: TVariantDynArray;
+    fOnStringTranslate: TOnStringTranslate;
+    fOnUtf8Translate: TOnUtf8Translate;
+    fOwner: TSynMustache;
+    // some variant support is needed for the helpers
+    function ProcessHelper(const ValueName: RawUtf8; space, helper: PtrInt;
+      var Value: TVarData; OwnValue: PPVarData): TSynMustacheSectionType; virtual;
+    function GetHelperFromContext(ValueSpace: integer; const ValueName: RawUtf8;
+      var Value: TVarData; OwnValue: PPVarData): TSynMustacheSectionType;
+    procedure TranslateBlock(Text: PUtf8Char; TextLen: integer); virtual;
+    function GetVariantFromContext(const ValueName: RawUtf8): variant;
+    procedure PopContext;
+    // inherited class should override those methods used by RenderContext()
+    function GotoNextListItem: boolean;
+      virtual; abstract;
+    function GetVarDataFromContext(ValueSpace: integer; const ValueName: RawUtf8;
+      var Value: TVarData): TSynMustacheSectionType; virtual; abstract;
+    procedure AppendValue(ValueSpace: integer; const ValueName: RawUtf8;
+      UnEscape: boolean); virtual; abstract;
+    function AppendSection(ValueSpace: integer;
+      const ValueName: RawUtf8): TSynMustacheSectionType; virtual; abstract;
+  public
+    /// initialize the rendering context for the given text writer
+    constructor Create(Owner: TSynMustache; WR: TJsonWriter; OwnWR: boolean);
+    /// release this rendering context instance
+    destructor Destroy; override;
+    /// allow to reuse this Mustache template rendering context
+    procedure CancelAll;
+
+    /// the registered Expression Helpers, to handle {{helperName value}} tags
+    // - use TSynMustache.HelperAdd/HelperDelete class methods to manage the list
+    // or retrieve standard helpers via TSynMustache.HelpersGetStandardList
+    property Helpers: TSynMustacheHelpers
+      read fHelpers write fHelpers;
+    /// access to the custom Partials associated with this execution context
+    property Partials: TSynMustachePartials
+      read fPartials write fPartials;
+    /// access to the {{"English text}} translation string callback
+    // - match TLanguageFile.Translate signature in mormot.core.i18n.pas
+    property OnStringTranslate: TOnStringTranslate
+      read fOnStringTranslate write fOnStringTranslate;
+    /// access to the {{"English text}} translation RawUtf8 callback
+    // - match TLanguageFile.TranslateUtf8 signature in mormot.core.i18n.pas
+    property OnUtf8Translate: TOnUtf8Translate
+      read fOnUtf8Translate write fOnUtf8Translate;
+    /// read-only access to the associated text writer instance
+    property Writer: TJsonWriter
+      read fWriter;
+    /// invert the HTML characters escaping process
+    // - by default, {{value}} will escape value chars, and {{{value}} won't
+    // - set this property to true to force {{value}} NOT to escape HTML chars
+    // and {{{value}} escaping chars (may be useful e.g. for code generation)
+    property EscapeInvert: boolean
+      read fEscapeInvert write fEscapeInvert;
+    /// the path delimited for getting a value
+    // - equals '.' by default
+    property PathDelim: AnsiChar
+      read fPathDelim write fPathDelim;
+  end;
+
+  /// handle {{mustache}} template rendering context from a custom variant
+  // - the context is given via a custom variant type implementing
+  // TSynInvokeableVariantType.Lookup, e.g. TDocVariant or TSMVariant
+  TSynMustacheContextVariant = class(TSynMustacheContext)
+  protected
+    fContext: array of record
+      Document: TVarData;
+      DocumentType: TSynInvokeableVariantType;
+      ListCount: integer;
+      ListCurrent: integer;
+      ListCurrentDocument: TVarData;
+      ListCurrentDocumentType: TSynInvokeableVariantType;
+    end;
+    procedure PushContext(const aDoc: TVarData);
+    function GotoNextListItem: boolean; override;
+    function GetVarDataFromContext(ValueSpace: integer; const ValueName: RawUtf8;
+      var Value: TVarData): TSynMustacheSectionType; override;
+    procedure AppendValue(ValueSpace: integer; const ValueName: RawUtf8;
+      UnEscape: boolean); override;
+    function AppendSection(ValueSpace: integer;
+      const ValueName: RawUtf8): TSynMustacheSectionType; override;
+  public
+    /// initialize the context from a custom variant document
+    // - note that the aDocument instance shall be available during all
+    // lifetime of this TSynMustacheContextVariant instance
+    // - you should not use this constructor directly, but the
+    // corresponding TSynMustache.Render*() methods
+    constructor Create(Owner: TSynMustache; WR: TJsonWriter;
+      SectionMaxCount: integer; const aDocument: variant; OwnWriter: boolean);
+    /// render this reusable rendering context
+    // - wrap PushContext + Owner.RenderContext + Writer.SetText + CancelAll
+    function Render(const aDoc: variant): RawUtf8;
+  end;
+
+  TSynMustacheContextData = class;
+
+  /// TSynMustacheContextData.OnGetGlobalData callback signature
+  // - Data and Rtti are filled with the {{.}} current context at call
+  // - implementation should lookup ValueName and set Data/Rtti with result=true
+  // - warning: the returned Data pointer should remain active until the
+  // Mustache rendering task is completed
+  TOnGetGlobalData = function(Sender: TSynMustacheContextData;
+    const ValueName: RawUtf8; var Data: pointer; var Rtti: TRttiCustom): boolean;
+
+  /// handle {{mustache}} template rendering context from RTTI and variables
+  // - the context is given via our RTTI information
+  // - performance is somewhat higher than TSynMustacheContextVariant because
+  // less computation is needed for filling transient TDocVariant instances
+  TSynMustacheContextData = class(TSynMustacheContext)
+  protected
+    fContext: array of record
+      Data: pointer;
+      Info: TRttiCustom;
+      ListCount: integer;
+      ListCurrent: integer;
+      Temp: TSynVarData;
+    end;
+    fOnGetGlobalData: TOnGetGlobalData;
+    procedure PushContext(Value: pointer; Rtti: TRttiCustom);
+    function GotoNextListItem: boolean; override;
+    function GetDataFromContext(const ValueName: RawUtf8;
+      out rc: TRttiCustom; out d: pointer): boolean;
+    function GetVarDataFromContext(ValueSpace: integer; const ValueName: RawUtf8;
+      var Value: TVarData): TSynMustacheSectionType; override;
+    procedure AppendValue(ValueSpace: integer; const ValueName: RawUtf8;
+      UnEscape: boolean); override;
+    function AppendSection(ValueSpace: integer;
+      const ValueName: RawUtf8): TSynMustacheSectionType; override;
+  public
+    /// initialize the context from a document stored in a local variable
+    // - note that the variable instance shall be available during all
+    // lifetime of this TSynMustacheContextData instance
+    // - you should not use this constructor directly, but the
+    // corresponding TSynMustache.RenderData() methods
+    constructor Create(Owner: TSynMustache; WR: TJsonWriter;
+      SectionMaxCount: integer; Value: pointer; ValueRtti: TRttiCustom;
+      OwnWriter: boolean);
+    /// render this reusable rendering context
+    // - wrap PushContext + Owner.RenderContext + Writer.SetText + CancelAll
+    function RenderArray(const arr: TDynArray): RawUtf8;
+    /// render this reusable rendering context
+    // - wrap PushContext + Owner.RenderContext + Writer.SetText + CancelAll
+    function RenderRtti(Value: pointer; Rtti: TRttiCustom): RawUtf8;
+    /// callback to get data at runtime from a global name
+    // - when the Value variable provided to TSynMustache.RenderData is not enough
+    property OnGetGlobalData: TOnGetGlobalData
+      read fOnGetGlobalData write fOnGetGlobalData;
+  end;
+
+  /// maintain a list of {{mustache}} partials
+  // - this list of partials template could be supplied to TSynMustache.Render()
+  // method, to render {{>partials}} as expected
+  // - using a dedicated class allows to share the partials between execution
+  // context, without recurring to non SOLID global variables
+  // - you may also define "internal" partials, e.g. {{<foo}}This is foo{{/foo}}
+  TSynMustachePartials = class
+  protected
+    fList: TRawUtf8List;
+    fOwned: boolean;
+    function GetPartial(const PartialName: RawUtf8): TSynMustache;
+  public
+    /// initialize the template partials storage
+    // - after creation, the partials should be registered via the Add() method
+    // - you shall manage this instance life time with a try..finally Free block
+    constructor Create; overload;
+    /// initialize a template partials storage with the supplied templates
+    // - partials list is expected to be supplied in Name / Template pairs
+    // - this instance can be supplied as parameter to the TSynMustache.Render()
+    // method, which will free the instances as soon as it finishes
+    constructor CreateOwned(
+      const NameTemplatePairs: array of RawUtf8); overload;
+    /// initialize a template partials storage with the supplied templates
+    // - partials list is expected to be supplied as a dvObject TDocVariant,
+    // each member being the name/template string pairs
+    // - if the supplied variant is not a matching TDocVariant, will return nil
+    // - this instance can be supplied as parameter to the TSynMustache.Render()
+    // method, which will free the instances as soon as it finishes
+    class function CreateOwned(
+      const Partials: variant): TSynMustachePartials; overload;
+    /// register a {{>partialName}} template
+    // - returns the parsed template
+    function Add(const aName, aTemplate: RawUtf8): TSynMustache; overload;
+    /// register a {{>partialName}} template
+    // - returns the parsed template
+    function Add(const aName: RawUtf8;
+      aTemplateStart, aTemplateEnd: PUtf8Char): TSynMustache; overload;
+    /// search some text within the {{>partialName}} template text
+    function FoundInTemplate(const aName, aSearchText: RawUtf8): boolean;
+    /// delete the partials
+    destructor Destroy; override;
+    /// low-level access to the internal partials list
+    property List: TRawUtf8List
+      read fList;
+  end;
+
+
+{ ************ TSynMustache Template Processing }
+
+  /// handles one {{mustache}} pre-rendered template
+  // - once parsed, a template will be stored in this class instance, to be
+  // rendered lated via the Render() method
+  // - you can use the Parse() class function to maintain a shared cache of
+  // parsed templates
+  // - implements all official mustache specifications, and some extensions
+  // - handles {{.}} pseudo-variable for the current context object (very
+  // handy when looping through a simple list, for instance)
+  // - handles {{-index}} pseudo-variable for the current context array index
+  // (1-based value) so that e.g.
+  // "My favorite things:\n{{#things}}{{-index}}. {{.}}\n{{/things}}"
+  // over {things:["Peanut butter", "Pen spinning", "Handstands"]} renders as
+  // "My favorite things:\n1. Peanut butter\n2. Pen spinning\n3. Handstands\n"
+  // - you could use {{-index0}} for 0-based index value
+  // - handles -first -last and -odd  pseudo-section keys, e.g.
+  // "{{#things}}{{^-first}}, {{/-first}}{{.}}{{/things}}"
+  // over {things:["one", "two", "three"]} renders as 'one, two, three'
+  // - allows non-standard empty closing tag like {{/}}
+  // - allows inlined partial templates , to be defined e.g. as
+  // {{<foo}}This is the foo partial {{myValue}} template{{/foo}}
+  // - features {{"English text}} translation, via a custom callback
+  // - this implementation is thread-safe and re-entrant (i.e. the same
+  // TSynMustache instance can be used by several threads at once)
+  TSynMustache = class
+  protected
+    fTemplate: RawUtf8;
+    fTags: TSynMustacheTagDynArray;
+    fInternalPartials: TSynMustachePartials;
+    fSectionMaxCount: integer;
+    fCachedContextVariant: TSynMustacheContextVariant;
+    fCachedContextData: TSynMustacheContextData;
+  public
+    /// parse a {{mustache}} template, and returns the corresponding
+    // TSynMustache instance
+    // - an internal cache is maintained by this class function
+    // - don't free the returned instance: it is owned by the cache
+    // - this implementation is thread-safe and re-entrant: i.e. the same
+    // TSynMustache returned instance can be used by several threads at once
+    // - will raise an ESynMustache exception on error
+    class function Parse(const aTemplate: RawUtf8): TSynMustache;
+    /// remove the specified {{mustache}} template from the internal cache
+    // - returns TRUE on success, or FALSE if the template was not cached
+    // by a previous call to Parse() class function
+    class function UnParse(const aTemplate: RawUtf8): boolean;
+    /// parse and render a {{mustache}} template over the supplied JSON
+    // - an internal templates cache is maintained by this class function
+    // - returns TRUE and set aContent the rendered content on success
+    // - returns FALSE if the template is not correct
+    class function TryRenderJson(const aTemplate, aJson: RawUtf8;
+      out aContent: RawUtf8): boolean;
+  public
+    /// initialize and parse a pre-rendered {{mustache}} template
+    // - you should better use the Parse() class function instead, which
+    // features an internal thread-safe cache
+    constructor Create(const aTemplate: RawUtf8); overload;
+    /// initialize and parse a pre-rendered {{mustache}} template
+    // - you should better use the Parse() class function instead, which
+    // features an internal thread-safe cache
+    constructor Create(
+      aTemplate: PUtf8Char; aTemplateLen: integer); overload; virtual;
+    /// finalize internal memory
+    destructor Destroy; override;
+    /// internal factory calling TSynMustacheContextVariant.Create()
+    // - to call e.g. result.Render() several times
+    function NewMustacheContextVariant(
+      aBufSize: integer = 16384): TSynMustacheContextVariant;
+    /// internal factory calling TSynMustacheContextData.Create()
+    // - to call e.g. result.RenderArray() or result.RenderRtti() several times
+    function NewMustacheContextData(
+      aBufSize: integer = 16384): TSynMustacheContextData;
+    /// search some text within the {{mustache}} template text and its partials
+    function FoundInTemplate(const aSearchText: RawUtf8;
+      aPartials: TSynMustachePartials): boolean;
+    /// register one Expression Helper callback for a given list of helpers
+    // - i.e. to let aEvent process {{aName value}} tags
+    // - the supplied name will be checked against the current list, and replace
+    // any existing entry
+    class procedure HelperAdd(var Helpers: TSynMustacheHelpers;
+      const aName: RawUtf8; aEvent: TSynMustacheHelperEvent); overload;
+    /// register several Expression Helper callbacks for a given list of helpers
+    // - the supplied names will be checked against the current list, and replace
+    // any existing entry
+    class procedure HelperAdd(var Helpers: TSynMustacheHelpers;
+      const aNames: array of RawUtf8;
+      const aEvents: array of TSynMustacheHelperEvent); overload;
+    /// register several Expression Helper callbacks for published methods
+    // of a class using RTTI
+    // - all published methods of the class should be TSynMustacheHelperEvent
+    class procedure HelperAddMethods(var Helpers: TSynMustacheHelpers;
+      ReferenceClass: TClass);
+    /// unregister one Expression Helper callback for a given list of helpers
+    class procedure HelperDelete(var Helpers: TSynMustacheHelpers;
+      const aName: RawUtf8);
+    /// search for one Expression Helper event by name
+    class function HelperFind(const Helpers: TSynMustacheHelpers;
+      aName: PUtf8Char; aNameLen: TStrLen): PtrInt;
+    /// returns a list of most used static Expression Helpers
+    // - registered helpers are DateTimeToText, DateToText, DateFmt, TimeLogToText,
+    // BlobToBase64, JsonQuote, JsonQuoteUri, ToJson, EnumTrim, EnumTrimRight,
+    // Lower / Upper (Unicode ready), CamelCase / SnakeCase, PowerOfTwo, Equals
+    // (expecting two parameters), NewGuid, ExtractFileName, HumanBytes (calling
+    // KB function), Sub (as {{Sub AString,12,3}}), MarkdownToHtml, SimpleToHtml
+    // (Markdown with no HTML pass-through), WikiToHtml (calling
+    // TJsonWriter.AddHtmlEscapeWiki), Match / MatchI / Glob / GlobI (as {{Match
+    // AString,startwith*}}), and Values / Keys (over a data object)
+    // - an additional #if helper is also registered, which would allow runtime
+    // view logic, via = < > <= >= <> operators over two values:
+    // $ {{#if .,"=",123}}  {{#if Total,">",1000}}  {{#if info,"<>",""}}
+    // which may be shortened as such:
+    // $ {{#if .=123}}  {{#if Total>1000}}  {{#if info<>""}}
+    class function HelpersGetStandardList: TSynMustacheHelpers; overload;
+    /// returns a list of most used static Expression Helpers, adding some
+    // custom callbacks
+    // - is just a wrapper around HelpersGetStandardList and HelperAdd()
+    class function HelpersGetStandardList(const aNames: array of RawUtf8;
+      const aEvents: array of TSynMustacheHelperEvent): TSynMustacheHelpers; overload;
+
+    /// renders the {{mustache}} template into a destination text buffer
+    // - the context is given via our abstract TSynMustacheContext wrapper
+    // - the rendering extended in fTags[] is supplied as parameters
+    // - you can specify a list of partials via TSynMustachePartials.CreateOwned
+    procedure RenderContext(Context: TSynMustacheContext;
+      TagStart, TagEnd: PtrInt);
+
+    /// renders the {{mustache}} template from a variant defined context
+    // - the context is given via a custom variant type implementing
+    // TSynInvokeableVariantType.Lookup, e.g. TDocVariant or TSMVariant
+    // - you can specify a list of partials via TSynMustachePartials.CreateOwned,
+    // a list of Expression Helpers, or a custom {{"English text}} callback
+    // - can be used e.g. via a TDocVariant:
+    // !var
+    // !  mustache := TSynMustache;
+    // !  doc: variant;
+    // !  html: RawUtf8;
+    // !begin
+    // !  mustache := TSynMustache.Parse(
+    // !    'Hello {{name}}'#13#10'You have just won {{value}} dollars!');
+    // !  TDocVariant.New(doc);
+    // !  doc.name := 'Chris';
+    // !  doc.value := 10000;
+    // !  html := mustache.Render(doc);
+    // !  // here html='Hello Chris'#13#10'You have just won 10000 dollars!'
+    // - you can also retrieve the context from an ORM query:
+    // ! dummy := TSynMustache.Parse(
+    // !   '{{#items}}'#13#10'{{Int}}={{Test}}'#13#10'{{/items}}').Render(
+    // !   aClient.RetrieveDocVariantArray(TOrmTest, 'items', 'Int,Test'));
+    // - set EscapeInvert = true to force {{value}} NOT to escape HTML chars
+    // and {{{value}} escaping chars (may be useful e.g. for code generation)
+    function Render(const Context: variant;
+      Partials: TSynMustachePartials = nil;
+      const Helpers: TSynMustacheHelpers = nil;
+      const OnTranslate: TOnStringTranslate = nil;
+      EscapeInvert: boolean = false): RawUtf8;
+    /// renders the {{mustache}} template from JSON defined context
+    // - the context is given via a JSON object, defined from UTF-8 buffer
+    // - you can specify a list of partials via TSynMustachePartials.CreateOwned,
+    // a list of Expression Helpers, or a custom {{"English text}} callback
+    // - is just a wrapper around Render(_JsonFast())
+    // - you can write e.g. with the extended JSON syntax:
+    // ! html := mustache.RenderJson('{things:["one", "two", "three"]}');
+    // - set EscapeInvert = true to force {{value}} NOT to escape HTML chars
+    // and {{{value}} escaping chars (may be useful e.g. for code generation)
+    function RenderJson(const Json: RawUtf8;
+      Partials: TSynMustachePartials = nil;
+      const Helpers: TSynMustacheHelpers = nil;
+      const OnTranslate: TOnStringTranslate = nil;
+      EscapeInvert: boolean = false): RawUtf8; overload;
+    /// renders the {{mustache}} template from JSON defined context
+    // - the context is given via a JSON object, defined with parameters
+    // - you can specify a list of partials via TSynMustachePartials.CreateOwned,
+    // a list of Expression Helpers, or a custom {{"English text}} callback
+    // - is just a wrapper around Render(_JsonFastFmt())
+    // - you can write e.g. with the extended JSON syntax:
+    // !   html := mustache.RenderJson('{name:?,value:?}',[],['Chris',10000]);
+    // - set EscapeInvert = true to force {{value}} NOT to escape HTML chars
+    // and {{{value}} escaping chars (may be useful e.g. for code generation)
+    function RenderJson(const Json: RawUtf8;
+      const Args, Params: array of const;
+      Partials: TSynMustachePartials = nil;
+      const Helpers: TSynMustacheHelpers = nil;
+      const OnTranslate: TOnStringTranslate = nil;
+      EscapeInvert: boolean = false): RawUtf8; overload;
+
+    /// renders the {{mustache}} template from a variable defined context
+    // - the context is given via a local variable and RTTI, which may be
+    // a record, a class, a variant, or a dynamic array instance
+    // - you can specify a list of partials via TSynMustachePartials.CreateOwned,
+    // a list of Expression Helpers, or a custom {{"English text}} callback
+    // - set EscapeInvert = true to force {{value}} NOT to escape HTML chars
+    // and {{{value}} escaping chars (may be useful e.g. for code generation)
+    // - just redirects to the RenderDataRtti() method
+    function RenderData(const Value; ValueTypeInfo: PRttiInfo;
+      const OnGetData: TOnGetGlobalData = nil;
+      Partials: TSynMustachePartials = nil;
+      const Helpers: TSynMustacheHelpers = nil;
+      const OnTranslate: TOnStringTranslate = nil;
+      EscapeInvert: boolean = false): RawUtf8;
+    /// renders the {{mustache}} template from a dynamic array variable
+    // - the supplied array is available within a {{.}} main section
+    // - you can specify a list of partials via TSynMustachePartials.CreateOwned,
+    // a list of Expression Helpers, or a custom {{"English text}} callback
+    // - set EscapeInvert = true to force {{value}} NOT to escape HTML chars
+    // and {{{value}} escaping chars (may be useful e.g. for code generation)
+    // - just redirects to the RenderDataRtti() method
+    function RenderDataArray(const Value: TDynArray;
+      const OnGetData: TOnGetGlobalData = nil;
+      Partials: TSynMustachePartials = nil;
+      const Helpers: TSynMustacheHelpers = nil;
+      const OnTranslate: TOnStringTranslate = nil;
+      EscapeInvert: boolean = false): RawUtf8;
+    /// renders the {{mustache}} template from a variable and its RTTI
+    // - the context is given via a local variable and RTTI, which may be
+    // a record, a class, a variant, or a dynamic array instance
+    // - you can specify a list of partials via TSynMustachePartials.CreateOwned,
+    // a list of Expression Helpers, or a custom {{"English text}} callback
+    // - set EscapeInvert = true to force {{value}} NOT to escape HTML chars
+    // and {{{value}} escaping chars (may be useful e.g. for code generation)
+    function RenderDataRtti(Value: pointer; ValueRtti: TRttiCustom;
+      const OnGetData: TOnGetGlobalData = nil;
+      Partials: TSynMustachePartials = nil;
+      const Helpers: TSynMustacheHelpers = nil;
+      const OnTranslate: TOnStringTranslate = nil;
+      EscapeInvert: boolean = false): RawUtf8;
+
+    /// read-only access to the raw UTF-8 {{mustache}} template content
+    property Template: RawUtf8
+      read fTemplate;
+    /// read-only access to the internal representation of the template
+    property Tags: TSynMustacheTagDynArray
+      read fTags;
+    /// the maximum possible number of nested contexts
+    // - i.e. the depth of nested {{#....}} {{/....}} sections
+    property SectionMaxCount: integer
+      read fSectionMaxCount;
+  end;
+
+
+const
+  /// Mustache-friendly JSON Serialization Options
+  // - as used e.g. from mormot.core.mvc Data Context from Cookies
+  TEXTWRITEROPTIONS_MUSTACHE =
+     [twoForceJsonExtended,
+      twoEnumSetsAsBooleanInRecord,
+      twoTrimLeftEnumSets];
+
+  /// this constant can be used to define as JSON a tag value
+  NULL_OR_TRUE: array[boolean] of RawUtf8 = (
+    'null', 'true');
+
+  /// this constant can be used to define as JSON a tag value as separator
+  NULL_OR_COMMA: array[boolean] of RawUtf8 = (
+    'null', '","');
+
+
+{ ************ TSynMustache Standard Expression Helpers }
+
+type
+  /// the published properties of this class implement basic expression helpers
+  // via TSynMustache.HelperAddMethods(helpers, TSynMustacheStandardHelpers)
+  // - could be registered individually using TSynMustache.HelperAdd()
+  TSynMustacheStandardHelpers = class(TSynPersistent)
+  published
+    class procedure DateTimeToText(const Value: variant; out Result: variant);
+    class procedure DateToText(const Value: variant; out Result: variant);
+    class procedure DateFmt(const Value: variant; out Result: variant);
+    class procedure TimeLogToText(const Value: variant; out Result: variant);
+    class procedure LocalDateTime(const Value: variant; out Result: variant);
+    class procedure LocalDate(const Value: variant; out Result: variant);
+    class procedure LocalTime(const Value: variant; out Result: variant);
+    class procedure BlobToBase64(const Value: variant; out Result: variant);
+    class procedure ToJson(const Value: variant; out Result: variant);
+    class procedure ToJson2(const Value: variant; out Result: variant);
+    class procedure JsonQuote(const Value: variant; out Result: variant);
+    class procedure JsonQuoteUri(const Value: variant; out Result: variant);
+    class procedure WikiToHtml(const Value: variant; out Result: variant);
+    class procedure MarkdownToHtml(const Value: variant; out Result: variant);
+    class procedure SimpleToHtml(const Value: variant; out Result: variant);
+    class procedure Match(const Value: variant; out Result: variant);
+    class procedure MatchI(const Value: variant; out Result: variant);
+    class procedure Glob(const Value: variant; out Result: variant);
+    class procedure GlobI(const Value: variant; out Result: variant);
+    class procedure Lower(const Value: variant; out Result: variant);
+    class procedure Upper(const Value: variant; out Result: variant);
+    class procedure CamelCase(const Value: variant; out Result: variant);
+    class procedure UnCamelCase(const Value: variant; out Result: variant);
+    class procedure SnakeCase(const Value: variant; out Result: variant);
+    class procedure KebabCase(const Value: variant; out Result: variant);
+    class procedure DotCase(const Value: variant; out Result: variant);
+    class procedure TitleCase(const Value: variant; out Result: variant);
+    class procedure EnumTrim(const Value: variant; out Result: variant);
+    class procedure EnumTrimRight(const Value: variant; out Result: variant);
+    class procedure PowerOfTwo(const Value: variant; out Result: variant);
+    class procedure Equals_(const Value: variant; out Result: variant);
+    class procedure If_(const Value: variant; out Result: variant);
+    class procedure NewGuid(const Value: variant; out Result: variant);
+    class procedure ExtractFileName(const Value: variant; out Result: variant);
+    class procedure HumanBytes(const Value: variant; out Result: variant);
+    class procedure Join(const Value: variant; out Result: variant);
+    class procedure JoinValues(const Value: variant; out Result: variant);
+    class procedure Sub(const Value: variant; out Result: variant);
+    class procedure Values(const Value: variant; out Result: variant);
+    class procedure Keys(const Value: variant; out Result: variant);
+    class procedure Count(const Value: variant; out Result: variant);
+    class procedure Get(const Value: variant; out Result: variant);
+    {$ifdef HASITERATORS}
+    class procedure Product(const Value: variant; out Result: variant);
+    class procedure ProductValue(const Value: variant; out Result: variant);
+    {$endif HASITERATORS}
+  public
+    /// define a helper to GlobalInfoFind() e.g. {{info os:name}}
+    // - not defined with standard helpers for safety
+    class procedure Info(const Value: variant; out Result: variant);
+  end;
+
+
+implementation
+
+{ ************ Mustache Execution Data Context Types }
+
+{ TSynMustacheContext }
+
+constructor TSynMustacheContext.Create(Owner: TSynMustache;
+  WR: TJsonWriter; OwnWR: boolean);
+begin
+  fOwner := Owner;
+  fOwnWriter := OwnWR;
+  fWriter := WR;
+  fPathDelim := '.';
+end;
+
+destructor TSynMustacheContext.Destroy;
+begin
+  inherited Destroy;
+  if fOwnWriter then
+    fWriter.Free;
+end;
+
+procedure TSynMustacheContext.PopContext;
+begin
+  if fContextCount > 1 then
+    dec(fContextCount);
+end;
+
+procedure TSynMustacheContext.TranslateBlock(Text: PUtf8Char; TextLen: integer);
+var
+  p: pointer; // manual RawUtf8/string handling
+begin
+  p := nil;
+  if Assigned(OnUtf8Translate) then
+  begin
+    OnUtf8Translate(Text, TextLen, RawUtf8(p));
+    if p <> nil then
+    begin
+      if fEscapeInvert then // HTML escape translation by default
+        fWriter.AddString(RawUtf8(p))
+      else
+        _AddHtmlEscape(fWriter, p, {len=}0, hfAnyWhere); // faster with len=0
+      FastAssignNew(p);
+      exit;
+    end;
+  end
+  else if Assigned(OnStringTranslate) then
+  begin
+    Utf8DecodeToString(Text, TextLen, string(p));
+    OnStringTranslate(string(p));
+    if fEscapeInvert then // HTML escape translation by default
+      fWriter.AddNoJsonEscapeString(string(p))
+    else
+      fWriter.AddHtmlEscapeString(string(p));
+    FastAssignNew(p);
+    exit;
+  end;
+  if fEscapeInvert then
+    fWriter.AddNoJsonEscape(Text, TextLen)
+  else
+    _AddHtmlEscape(fWriter, Text, TextLen, hfAnyWhere);
+end;
+
+function TSynMustacheContext.GetVariantFromContext(
+  const ValueName: RawUtf8): variant;
+var
+  tmp: TVarData;
+begin
+  if (ValueName = '') or
+     (ValueName[1] in ['-', '0'..'9', '"', '{', '[']) or
+     (ValueName = 'true') or
+     (ValueName = 'false') or
+     (ValueName = 'null') then
+    VariantLoadJson(result, ValueName, @JSON_[mFast])
+  else if fGetVarDataFromContextNeedsFree then
+  begin
+    if TSynVarData(result).VType <> varEmpty then
+      VarClearProc(TVarData(result));
+    GetVarDataFromContext(-1, ValueName, TVarData(result)); // set directly
+  end
+  else
+  begin
+    GetVarDataFromContext(-1, ValueName, tmp);      // get TVarData content
+    SetVariantByValue(variant(tmp), result, false); // assign/copy value
+  end;
+end;
+
+function TSynMustacheContext.ProcessHelper(const ValueName: RawUtf8;
+  space, helper: PtrInt; var Value: TVarData;
+  OwnValue: PPVarData): TSynMustacheSectionType;
+var
+  valnam: RawUtf8;
+  p: PUtf8Char;
+  val: TVarData;
+  valArr: TDocVariantData absolute val;
+  valFree, valFound: boolean;
+  names: TRawUtf8DynArray;
+  j, k, n: PtrInt;
+begin
+  valnam := Copy(ValueName, space + 1, maxInt);
+  TSynVarData(val).VType := varEmpty;
+  valFree := fGetVarDataFromContextNeedsFree;
+  if valnam <> '' then
+  begin
+    if valnam = '.' then
+      GetVarDataFromContext(-1, valnam, val)
+    else if ((valnam <> '') and
+             (valnam[1] in ['1'..'9', '"', '{', '['])) or
+            (valnam = 'true') or
+            (valnam = 'false') or
+            (valnam = 'null') then
+    begin
+      // {{helper 123}} or {{helper "constant"}} or {{helper [1,2,3]}}
+      JsonToVariantInPlace(variant(val), pointer(valnam), JSON_FAST_FLOAT);
+      valFree := true;
+    end
+    else
+    begin
+      valFound := false;
+      for j := 1 to length(valnam) do
+        case valnam[j] of
+          ' ':
+            // allows {{helper1 helper2 value}} recursive calls
+            break;
+          ',':
+            begin
+              // {{helper value,123,"constant"}}
+              p := pointer(valnam);
+              if j = 1 then
+                inc(p); // for {{helper ,"constant1","constant2",123}}
+              CsvToRawUtf8DynArray(p, names, ',', true);
+              // TODO: handle 123,"a,b,c"
+              valArr.InitFast;
+              for k := 0 to High(names) do
+                valArr.AddItem(GetVariantFromContext(names[k]));
+              valFound := true;
+              break;
+            end;
+          '<',
+          '>',
+          '=':
+            begin
+              // {{#if .=123}} -> {{#if .,"=",123}}
+              k := j + 1;
+              if valnam[k] in ['=', '>'] then
+                inc(k);
+              valArr.InitArray([
+                 GetVariantFromContext(Copy(valnam, 1, j - 1)),
+                 Copy(valnam, j, k - j),
+                 GetVariantFromContext(Copy(valnam, k, maxInt))],
+                JSON_FAST_FLOAT);
+              valFound := true;
+              break;
+            end;
+        end;
+      if valFound then
+        valFree := true
+      else
+        GetVarDataFromContext(-1, valnam, val);
+    end;
+  end;
+  // call helper
+  if OwnValue <> nil then
+  begin
+    // result Value is owned by fTempProcessHelper[]
+    n := fContextCount + 4;
+    if length(fTempProcessHelper) < n then
+      SetLength(fTempProcessHelper, n);
+    OwnValue^ := @fTempProcessHelper[fContextCount - 1];
+    Helpers[helper].Event(variant(val), variant(OwnValue^^));
+    Value := OwnValue^^;
+  end
+  else
+    Helpers[helper].Event(variant(val), variant(Value));
+  if valFree then
+    VarClearProc(val);
+  result := msSinglePseudo;
+end;
+
+function TSynMustacheContext.GetHelperFromContext(ValueSpace: integer;
+  const ValueName: RawUtf8; var Value: TVarData;
+  OwnValue: PPVarData): TSynMustacheSectionType;
+var
+  space, len, helper: PtrInt;
+begin
+  space := ValueSpace;
+  if space < 0 then
+    space := PosExChar(' ', ValueName);
+  if space > 1 then
+    len := space - 1
+  else
+  begin
+    space := length(ValueName);
+    len := space;
+  end;
+  helper := TSynMustache.HelperFind(Helpers, pointer(ValueName), len);
+  if helper >= 0 then
+    result := ProcessHelper(ValueName, space, helper, Value, OwnValue)
+  else
+    result := msNothing;
+end;
+
+procedure TSynMustacheContext.CancelAll;
+begin
+  fContextCount := 0;
+  fEscapeInvert := false;
+  fWriter.CancelAllAsNew;
+  if fTempProcessHelper <> nil then
+    VariantClearSeveral(pointer(fTempProcessHelper), length(fTempProcessHelper));
+  fReuse.UnLock;
+end;
+
+
+{ TSynMustacheContextVariant }
+
+constructor TSynMustacheContextVariant.Create(Owner: TSynMustache;
+  WR: TJsonWriter; SectionMaxCount: integer; const aDocument: variant;
+  OwnWriter: boolean);
+begin
+  inherited Create(Owner, WR, OwnWriter);
+  SetLength(fContext, SectionMaxCount + 4);
+  PushContext(TVarData(aDocument)); // weak copy
+end;
+
+function TSynMustacheContextVariant.Render(const aDoc: variant): RawUtf8;
+begin
+  PushContext(TVarData(aDoc));
+  fOwner.RenderContext(self, 0, high(fOwner.fTags));
+  Writer.SetText(result);
+  CancelAll;
+end;
+
+procedure TSynMustacheContextVariant.PushContext(const aDoc: TVarData);
+begin
+  if fContextCount >= length(fContext) then
+    // was roughtly set by SectionMaxCount
+    SetLength(fContext, fContextCount + 32);
+  with fContext[fContextCount] do
+  begin
+    Document := aDoc;
+    DocumentType := DocVariantType.FindSynVariantType(aDoc.VType);
+    ListCount := -1;
+    ListCurrent := -1;
+    if DocumentType <> nil then
+    begin
+      ListCount := DocumentType.IterateCount(aDoc, {GetObjectAsValues=}false);
+      if fContextCount = 0 then
+        ListCurrentDocument := aDoc; // allow {#.}...{/.} at first level
+    end;
+  end;
+  inc(fContextCount);
+end;
+
+function TSynMustacheContextVariant.GotoNextListItem: boolean;
+begin
+  result := false;
+  if fContextCount > 0 then
+    with fContext[fContextCount - 1] do
+    begin
+      ListCurrentDocument.VType := varEmpty;
+      ListCurrentDocumentType := nil;
+      inc(ListCurrent);
+      if ListCurrent >= ListCount then
+        exit;
+      DocumentType.Iterate(ListCurrentDocument, Document, ListCurrent);
+      ListCurrentDocumentType := DocVariantType.FindSynVariantType(
+        ListCurrentDocument.VType);
+      result := true;
+    end;
+end;
+
+const
+  _IND32 = (ord('-') and $df) + ord('I') shl 8 + ord('N') shl 16 + ord('D') shl 24;
+
+function TSynMustacheContextVariant.GetVarDataFromContext(ValueSpace: integer;
+  const ValueName: RawUtf8; var Value: TVarData): TSynMustacheSectionType;
+var
+  i: PtrInt;
+  owned: PVarData;
+begin
+  result := msNothing;
+  if PWord(ValueName)^ = ord('.') then
+    // {{.}} -> context = self
+    with fContext[fContextCount - 1] do
+    begin
+      if ListCount > 0 then
+        Value := ListCurrentDocument
+      else
+        Value := Document;
+      exit;
+    end;
+  // recursive search of {{value}}
+  for i := fContextCount - 1 downto 0 do
+    with fContext[i] do
+      if DocumentType <> nil then
+        if ListCount < 0 then
+        begin
+          // single item context
+          DocumentType.Lookup(Value, Document, pointer(ValueName), fPathDelim);
+          if Value.VType >= varNull then
+            exit;
+        end
+        else if PCardinal(ValueName)^ and $dfdfdfdf = _IND32 then
+        begin
+          // {{-index}}
+          Value.VType := varInteger;
+          if ValueName[7] = '0' then
+            Value.VInteger := ListCurrent
+          else
+            Value.VInteger := ListCurrent + 1;
+          exit;
+        end
+        else if (ListCurrent < ListCount) and
+                (ListCurrentDocumentType <> nil) then
+        begin
+          ListCurrentDocumentType.Lookup(
+            Value, ListCurrentDocument, pointer(ValueName), fPathDelim);
+          if Value.VType >= varNull then
+            exit;
+        end;
+  // try {{helper value}} or {{helper}}
+  result := GetHelperFromContext(ValueSpace, ValueName, Value, @owned);
+end;
+
+procedure TSynMustacheContextVariant.AppendValue(ValueSpace: integer;
+  const ValueName: RawUtf8; UnEscape: boolean);
+var
+  Value: TVarData;
+begin
+  if fEscapeInvert then
+    UnEscape := not UnEscape;
+  GetVarDataFromContext(ValueSpace, ValueName, Value);
+  if Value.VType > varNull then
+    fWriter.AddVarData(@Value, not UnEscape);
+end;
+
+function SectionIsPseudo(const ValueName: RawUtf8; ListCount, ListCurrent: integer): boolean;
+begin
+  result := ((ValueName = '-first') and
+             (ListCurrent = 0)) or
+            ((ValueName = '-last') and
+             (ListCurrent = ListCount - 1)) or
+            ((ValueName = '-odd') and
+             (ListCurrent and 1 = 0));
+end;
+
+function IsFalseySimpleVariant(VType: cardinal; const Value: TVarData): boolean;
+  {$ifdef HASINLINE} inline; {$endif}
+var
+  vt: cardinal;
+begin
+  vt := VType;
+  result := (vt <= varNull) or
+            ((vt = varBoolean) and
+             (not Value.VBoolean)); // empty/null or false are falsey values
+  // note: '' or 0 are NOT falsey - https://github.com/mustache/spec/issues/28
+  // TL&WR: "official" solution is to use an explicit boolean value in the data
+end;
+
+function TSynMustacheContextVariant.AppendSection(ValueSpace: integer;
+  const ValueName: RawUtf8): TSynMustacheSectionType;
+var
+  Value: TVarData;
+  c: cardinal;
+  void: boolean;
+begin
+  result := msNothing;
+  if fContextCount = 0 then
+    exit;
+  if ValueName[1] = '-' then
+    with fContext[fContextCount - 1] do
+      if ListCount >= 0 then
+      begin
+        if SectionIsPseudo(ValueName, ListCount, ListCurrent) then
+          result := msSinglePseudo;
+        exit;
+      end;
+  result := GetVarDataFromContext(ValueSpace, ValueName, Value);
+  c := Value.VType;
+  void := IsFalseySimpleVariant(c, Value); // empty/null or false
+  if (result <> msNothing) and // helper?
+     (c < varFirstCustom) then // simple helper values are not pushed
+  begin
+    if void then
+      result := msNothing;
+    exit;
+  end;
+  PushContext(Value);
+  if void then
+    // null or false value will not display the section
+    result := msNothing
+  else
+    with fContext[fContextCount - 1] do
+      if ListCount < 0 then
+        // single item
+        result := msSingle
+      else if ListCount = 0 then
+        // empty list will not display the section
+        result := msNothing
+      else
+        // non-empty list
+        result := msList;
+end;
+
+
+{ TSynMustacheContextData }
+
+constructor TSynMustacheContextData.Create(Owner: TSynMustache;
+  WR: TJsonWriter; SectionMaxCount: integer; Value: pointer;
+  ValueRtti: TRttiCustom; OwnWriter: boolean);
+begin
+  inherited Create(Owner, WR, OwnWriter);
+  fGetVarDataFromContextNeedsFree := true;
+  SetLength(fContext, SectionMaxCount + 4);
+  PushContext(Value, ValueRtti);
+end;
+
+function TSynMustacheContextData.RenderArray(const arr: TDynArray): RawUtf8;
+var
+  n: PtrInt;
+begin
+  n := arr.Count;
+  if n <> 0 then
+    DynArrayFakeLength(arr.Value^, n); // as required by RenderContext()
+  PushContext(arr.Value, arr.Info);
+  fOwner.RenderContext(self, 0, high(fOwner.fTags));
+  Writer.SetText(result);
+  CancelAll;
+end;
+
+function TSynMustacheContextData.RenderRtti(Value: pointer; Rtti: TRttiCustom): RawUtf8;
+begin
+  PushContext(Value, Rtti);
+  fOwner.RenderContext(self, 0, high(fOwner.fTags));
+  Writer.SetText(result);
+  CancelAll;
+end;
+
+procedure TSynMustacheContextData.PushContext(Value: pointer; Rtti: TRttiCustom);
+var
+  n: PtrInt;
+begin
+  n := fContextCount;
+  if n >= length(fContext) then
+    // was roughtly set by SectionMaxCount
+    SetLength(fContext, n + 32);
+  with fContext[n] do
+  begin
+    Data := Value;
+    Info := Rtti;
+    ListCount := -1;
+    ListCurrent := -1;
+    if Rtti <> nil then
+      ListCount := Rtti.ValueIterateCount(Value);
+  end;
+  inc(fContextCount);
+end;
+
+function TSynMustacheContextData.GotoNextListItem: boolean;
+var
+  n: PtrInt;
+begin
+  result := false;
+  n := fContextCount;
+  if n > 0 then
+    with fContext[n - 1] do
+      if ListCount >= 0 then
+      begin
+        inc(ListCurrent);
+        if ListCurrent >= ListCount then
+          ListCount := -1 // reached last item
+        else
+          result := true;
+      end;
+end;
+
+function TSynMustacheContextData.GetDataFromContext(const ValueName: RawUtf8;
+  out rc: TRttiCustom; out d: pointer): boolean;
+var
+  i: PtrInt;
+  firstdata: pointer; // OnGetGlobalData is filled with self context
+  firstrc: TRttiCustom;
+begin
+  result := true; // mark found on direct exit
+  // recursive search of {{value}}
+  firstdata := nil;
+  firstrc := nil; // makes Delphi compiler happy
+  for i := fContextCount - 1 downto 0 do
+    with fContext[i] do
+    begin
+      d := Data;
+      rc := Info;
+      if PWord(ValueName)^ = ord('.') then
+        // {{.}} -> context = self
+        exit;
+      if (d <> nil) and
+         (ListCount >= 0) then
+        // within a list
+        if PCardinal(ValueName)^ and $dfdfdfdf = _IND32 then
+        begin
+          // {{-index}} pseudo name
+          Temp.VInteger := ListCurrent;
+          if ValueName[7] <> '0' then
+            inc(Temp.VInteger);
+          d := @Temp.VInteger;
+          rc := PT_RTTI[ptInteger];
+          exit;
+        end
+        else // the current context is the current list item
+          d := rc.ValueIterate(d, ListCurrent, Temp.Data, rc);
+          // note: rkClass is de-referenced by ValueIterate
+      if d <> nil then
+      begin
+        // we found a value in this context
+        if firstdata = nil then
+        begin
+          firstdata := d; // for OnGetGlobalData() below
+          firstrc := rc;
+        end;
+        // recursive lookup by {{name1.name2.name3}} against nested variant
+        // fields, record/class properties, or string/set/enum values
+        rc := rc.ValueByPath(d, pointer(ValueName), Temp.Data, fPathDelim);
+        if rc <> nil then
+          exit;
+      end;
+    end;
+  // try to resolve the name at runtime via the OnGetGlobalData callback
+  if Assigned(OnGetGlobalData) then
+  begin
+    d := firstdata; // provide the {{.}} self context to the callback
+    rc := firstrc;
+    result := OnGetGlobalData(self, ValueName, d, rc);
+  end
+  else
+    result := false; // not found
+end;
+
+function TSynMustacheContextData.GetVarDataFromContext(ValueSpace: integer;
+  const ValueName: RawUtf8; var Value: TVarData): TSynMustacheSectionType;
+var
+  d: pointer;
+  rc: TRttiCustom;
+begin
+  // called for Helpers() support: AppendValue() is used for regular values
+  if GetDataFromContext(ValueName, rc, d) then
+  begin
+    // found {{.}} or {{value}} or {{value1.value2.value3}} data
+    result := msNothing;
+    rc.ValueToVariant(d, Value, @JSON_[mFastFloat]);
+  end
+  else
+    // try {{helper value}} or {{helper}}
+    result := GetHelperFromContext(ValueSpace, ValueName, Value, {owned=}nil);
+end;
+
+procedure TSynMustacheContextData.AppendValue(ValueSpace: integer;
+  const ValueName: RawUtf8; UnEscape: boolean);
+var
+  d: pointer;
+  rc: TRttiCustom;
+  tmp: TVarData;
+begin
+  if fEscapeInvert then
+    UnEscape := not UnEscape;
+  if GetDataFromContext(ValueName, rc, d) then
+    // we can directly append the {{###}} found data
+    rc.ValueWriteText(d, fWriter, not UnEscape)
+  else
+  begin
+    // try {{helper value}} or {{helper}}
+    GetHelperFromContext(ValueSpace, ValueName, tmp, {owned=}nil);
+    if tmp.VType <= varNull then
+      exit;
+    fWriter.AddVarData(@tmp, not UnEscape);
+    VarClearProc(tmp);
+  end;
+end;
+
+function IsFalseyRtti(d: pointer; rc: TRttiCustom): boolean;
+begin
+  result := true; // empty/null or false are falsey values
+  if d = nil then
+    exit;
+  case rc.Parser of
+    ptClass,
+    ptInterface,
+    ptPUtf8Char:
+      if PPointer(d)^ = nil then
+        exit; // a nil pointer is null
+    ptVariant:
+      if IsFalseySimpleVariant(PVarData(d)^.VType, PVarData(d)^) then
+        exit; // empty/null or false variants
+    ptBoolean:
+      if PByte(d)^ = 0 then
+        exit; // false value
+  end;
+  result := false; // not void context, in the Mustache terms
+end;
+
+function TSynMustacheContextData.AppendSection(ValueSpace: integer;
+  const ValueName: RawUtf8): TSynMustacheSectionType;
+var
+  d: pointer;
+  rc: TRttiCustom;
+  tmp: TVarData;
+  void: boolean;
+begin
+  result := msNothing;
+  if fContextCount = 0 then
+    exit;
+  if ValueName[1] = '-' then
+    with fContext[fContextCount - 1] do
+      if ListCount >= 0 then
+      begin
+        if SectionIsPseudo(ValueName, ListCount, ListCurrent) then
+          result := msSinglePseudo;
+        exit;
+      end;
+  if not GetDataFromContext(ValueName, rc, d) then
+  begin
+    result := GetHelperFromContext(ValueSpace, ValueName, tmp, {owned=}d);
+    if result = msNothing then
+      d := nil
+    else
+      rc := PT_RTTI[ptVariant]; // use temp variant value from helper
+  end;
+  void := IsFalseyRtti(d, rc);
+  if (result <> msNothing) and // helper?
+     (tmp.VType < varFirstCustom) then // simple helper values are not pushed
+  begin
+    if void then
+      result := msNothing;
+    exit;
+  end;
+  if d = nil then
+    exit;
+  PushContext(d, rc);
+  if void then
+    // null or false value will not display the section
+    result := msNothing
+  else
+    with fContext[fContextCount - 1] do
+      if ListCount < 0 then
+        // single item
+        result := msSingle
+      else if ListCount = 0 then
+        // empty list will not display the section
+        result := msNothing
+      else
+        // non-empty list
+        result := msList;
+end;
+
+
+{ TSynMustachePartials }
+
+constructor TSynMustachePartials.Create;
+begin
+  fList := TRawUtf8List.CreateEx([fNoDuplicate, fCaseSensitive, fThreadSafe]);
+end;
+
+constructor TSynMustachePartials.CreateOwned(
+  const NameTemplatePairs: array of RawUtf8);
+var
+  A: PtrInt;
+begin
+  Create;
+  fOwned := true;
+  for A := 0 to high(NameTemplatePairs) div 2 do
+    Add(NameTemplatePairs[A * 2], NameTemplatePairs[A * 2 + 1]);
+end;
+
+function TSynMustachePartials.Add(const aName, aTemplate: RawUtf8): TSynMustache;
+begin
+  result := TSynMustache.Parse(aTemplate);
+  if (result <> nil) and
+     (fList.AddObject(aName, result) < 0) then
+    ESynMustache.RaiseUtf8('%.Add(%) duplicated name', [self, aName]);
+end;
+
+function TSynMustachePartials.Add(const aName: RawUtf8;
+  aTemplateStart, aTemplateEnd: PUtf8Char): TSynMustache;
+var
+  aTemplate: RawUtf8;
+begin
+  FastSetString(aTemplate, aTemplateStart, aTemplateEnd);
+  result := Add(aName, aTemplate);
+end;
+
+function TSynMustachePartials.FoundInTemplate(
+  const aName, aSearchText: RawUtf8): boolean;
+begin // allow recursive search within nested partials
+  result := GetPartial(aName).FoundInTemplate(aSearchText, self);
+end;
+
+class function TSynMustachePartials.CreateOwned(
+  const Partials: variant): TSynMustachePartials;
+var
+  ndx: PtrInt;
+begin
+  result := nil;
+  with _Safe(Partials)^ do
+    if IsObject and
+       (Count > 0) then
+    begin
+      result := TSynMustachePartials.Create;
+      result.fOwned := true;
+      for ndx := 0 to Count - 1 do
+        result.Add(names[ndx], VariantToUtf8(Values[ndx]));
+    end;
+end;
+
+destructor TSynMustachePartials.Destroy;
+begin
+  FreeAndNil(fList);
+  inherited;
+end;
+
+function TSynMustachePartials.GetPartial(
+  const PartialName: RawUtf8): TSynMustache;
+var
+  i: PtrInt;
+begin
+  if self = nil then
+  begin
+    result := nil;
+    exit;
+  end;
+  i := fList.IndexOf(PartialName); // using O(1) hashing
+  if i < 0 then
+    result := nil
+  else
+    result := TSynMustache(fList.Objects[i]);
+end;
+
+function KindToText(Kind: TSynMustacheTagKind): PShortString;
+begin
+  result := GetEnumName(TypeInfo(TSynMustacheTagKind), ord(Kind));
+end;
+
+
+
+{ ************ TSynMustache Template Processing }
+
+type
+  TSynMustacheParser = class
+  protected
+    fTemplate: TSynMustache;
+    fTagStartChars, fTagStopChars: word;
+    fTagCount: integer;
+    fPos, fPosMin, fPosMax, fPosTagStart: PUtf8Char;
+    fScanStart, fScanEnd: PUtf8Char;
+    function Scan(ExpectedTag: cardinal): boolean;
+    procedure AddTag(aKind: TSynMustacheTagKind;
+      aStart: PUtf8Char = nil; aEnd: PUtf8Char = nil);
+  public
+    constructor Create(Template: TSynMustache;
+      const DelimiterStart, DelimiterStop: RawUtf8);
+    procedure Parse(p, PEnd: PUtf8Char);
+  end;
+
+  TSynMustacheCache = class(TRawUtf8List)
+  public
+    function Parse(const aTemplate: RawUtf8): TSynMustache;
+    function UnParse(const aTemplate: RawUtf8): boolean;
+  end;
+
+var
+  SynMustacheCache: TSynMustacheCache = nil;
+
+
+{ TSynMustacheParser }
+
+procedure TSynMustacheParser.AddTag(aKind: TSynMustacheTagKind;
+  aStart, aEnd: PUtf8Char);
+var
+  P: PUtf8Char;
+  t: PSynMustacheTag;
+begin
+  if (aStart = nil) or
+     (aEnd = nil) then
+  begin
+    aStart := fScanStart;
+    aEnd := fScanEnd;
+    case aKind of
+      mtComment,
+      mtSection,
+      mtSectionEnd,
+      mtInvertedSection,
+      mtSetDelimiter,
+      mtPartial:
+        begin
+          // (indented) standalone lines should be removed from the template
+          if aKind <> mtPartial then
+            while (fPosTagStart > fPosMin) and
+                  (fPosTagStart[-1] in [' ', #9]) do
+              // ignore any indentation chars
+              dec(fPosTagStart);
+          if (fPosTagStart = fPosMin) or
+             (fPosTagStart[-1] = #$0A) then
+            // tag starts on a new line -> check if ends on the same line
+            if (fPos > fPosMax) or
+               (fPos^ = #$0A) or
+               (PWord(fPos)^ = EOLW) then
+            begin
+              if fPos <= fPosMax then
+                if fPos^ = #$0A then
+                  inc(fPos)
+                else if PWord(fPos)^ = EOLW then
+                  inc(fPos, 2);
+              if fTagCount > 0 then
+                // remove any indentation chars from previous text
+                with fTemplate.fTags[fTagCount - 1] do
+                  if Kind = mtText then
+                    while (TextLen > 0) and
+                          (TextStart[TextLen - 1] in [' ', #9]) do
+                      dec(TextLen);
+            end;
+        end;
+      mtVariable,
+      mtVariableUnescape,
+      mtVariableUnescapeAmp:
+        begin
+          // handle JSON object/array with nested }
+          // e.g. as {{helper [{a:{a:1,b:2}}]}}
+          P := PosChar(aStart, ' ');
+          if (P <> nil) and
+             (P < aEnd) then
+          begin
+            P := GotoNextNotSpaceSameLine(P + 1);
+            if P^ in ['{', '['] then
+            begin
+              P := GotoEndJsonItem(P);
+              if P <> nil then
+              begin
+                aEnd := P;
+                fPos := P;
+                if not Scan(fTagStopChars) then
+                  ESynMustache.RaiseUtf8('Unfinished {{%', [aStart]);
+                if (aKind = mtVariableUnescape) and
+                   (fTagStopChars = $7d7d) and
+                   (PWord(fPos - 1)^ = $7d7d) then
+                  // {{{name}}} -> point after }}}
+                  inc(fPos);
+              end;
+            end;
+          end;
+        end;
+    end;
+  end;
+  if aEnd <= aStart then
+    if (aEnd <> aStart) or
+       (aKind <> mtSectionEnd) then // allow {{/}} empty closing tag
+      exit;
+  if fTagCount >= length(fTemplate.fTags) then
+    SetLength(fTemplate.fTags, NextGrow(fTagCount));
+  t := @fTemplate.fTags[fTagCount];
+  inc(fTagCount);
+  t^.Kind := aKind;
+  t^.SectionOppositeIndex := -1;
+  case aKind of
+    mtText,
+    mtComment,
+    mtTranslate:
+      begin
+        t^.TextStart := aStart;
+        t^.TextLen := aEnd - aStart;
+      end;
+  else
+    begin
+      t^.TextStart := fPosTagStart;
+      t^.TextLen := aEnd - fPosTagStart;
+      // superfluous in-tag whitespace should be ignored
+      while (aStart < aEnd) and
+            (aStart^ <= ' ') do
+        inc(aStart);
+      while (aEnd > aStart) and
+            (aEnd[-1] <= ' ') do
+        dec(aEnd);
+      if aEnd <> aStart then
+      begin
+        FastSetString(t^.Value, aStart, aEnd);
+        t^.ValueSpace := PosExChar(' ', t^.Value);
+      end
+      else if aKind <> mtSectionEnd then // allow {{/}}
+        ESynMustache.RaiseUtf8('Void % identifier', [KindToText(aKind)^]);
+    end;
+  end;
+end;
+
+constructor TSynMustacheParser.Create(Template: TSynMustache;
+  const DelimiterStart, DelimiterStop: RawUtf8);
+begin
+  fTemplate := Template;
+  if length(DelimiterStart) <> 2 then
+    ESynMustache.RaiseUtf8('DelimiterStart="%"', [DelimiterStart]);
+  if length(DelimiterStop) <> 2 then
+    ESynMustache.RaiseUtf8('DelimiterStop="%"', [DelimiterStop]);
+  fTagStartChars := PWord(DelimiterStart)^;
+  fTagStopChars := PWord(DelimiterStop)^;
+end;
+
+function GotoNextTag(P, PMax: PUtf8Char; ExpectedTag: Word): PUtf8Char;
+begin
+  if P < PMax then
+    repeat
+      if PWord(P)^ <> ExpectedTag then
+      begin
+        inc(P);
+        if P < PMax then
+          continue;
+        break;
+      end;
+      result := P;
+      exit;
+    until false;
+  result := nil;
+end;
+
+function TSynMustacheParser.Scan(ExpectedTag: cardinal): boolean;
+var
+  P: PUtf8Char;
+begin
+  P := GotoNextTag(fPos, fPosMax, ExpectedTag);
+  if P = nil then
+    result := false
+  else
+  begin
+    fScanEnd := P;
+    fScanStart := fPos;
+    fPos := P + 2;
+    result := true;
+  end;
+end;
+
+function SectionNameMatch(const start, finish: RawUtf8): boolean;
+var
+  i: PtrInt;
+begin
+  if start = finish then
+    result := true
+  else
+  begin
+    i := PosExChar(' ', start);
+    result := (i > 0) and
+              IdemPropNameU(finish, pointer(start), i - 1);
+  end;
+end;
+
+procedure TSynMustacheParser.Parse(P, PEnd: PUtf8Char);
+var
+  k: TSynMustacheTagKind;
+  Symbol: AnsiChar;
+  i, j, secCount, secLevel: PtrInt;
+  ti, tj: PSynMustacheTag;
+begin
+  secCount := 0;
+  if P = nil then
+    exit;
+  fPos := P;
+  fPosMin := P;
+  fPosMax := PEnd - 1;
+  repeat
+    if not Scan(fTagStartChars) then
+      break;
+    fPosTagStart := fScanEnd;
+    AddTag(mtText);
+    if fPos >= fPosMax then
+      break;
+    Symbol := fPos^;
+    case Symbol of
+      '=':
+        k := mtSetDelimiter;
+      '{':
+        k := mtVariableUnescape;
+      '&':
+        k := mtVariableUnescapeAmp;
+      '#':
+        k := mtSection;
+      '^':
+        k := mtInvertedSection;
+      '/':
+        k := mtSectionEnd;
+      '!':
+        k := mtComment;
+      '>':
+        k := mtPartial;
+      '<':
+        k := mtSetPartial;
+      '"':
+        k := mtTranslate;
+    else
+      k := mtVariable;
+    end;
+    if k <> mtVariable then
+      inc(fPos);
+    if not Scan(fTagStopChars) then
+      ESynMustache.RaiseUtf8('Unfinished {{tag [%]', [fPos]);
+    case k of
+      mtSetDelimiter:
+        begin
+          if (fScanEnd - fScanStart <> 6) or
+             (fScanEnd[-1] <> '=') then
+            ESynMustache.RaiseU('mtSetDelimiter syntax is e.g. {{=<% %>=}}');
+          fTagStartChars := PWord(fScanStart)^;
+          fTagStopChars := PWord(fScanStart + 3)^;
+          continue; // do not call AddTag(k=mtSetDelimiter)
+        end;
+      mtVariableUnescape:
+        if (Symbol = '{') and
+           (fTagStopChars = $7d7d) and
+           (PWord(fPos - 1)^ = $7d7d) then
+          // {{{name}}} -> point after }}}
+          inc(fPos);
+    end;
+    AddTag(k);
+  until false;
+  AddTag(mtText, fPos, fPosMax + 1);
+  ti := pointer(fTemplate.fTags);
+  for i := 0 to fTagCount - 1 do
+  begin
+    case ti^.Kind of
+      mtSection,
+      mtInvertedSection,
+      mtSetPartial:
+        begin
+          inc(secCount);
+          if secCount > fTemplate.fSectionMaxCount then
+            fTemplate.fSectionMaxCount := secCount;
+          secLevel := 1;
+          tj := ti;
+          for j := i + 1 to fTagCount - 1 do // search the closing tag
+          begin
+            inc(tj);
+            case tj^.Kind of
+              mtSection,
+              mtInvertedSection,
+              mtSetPartial:
+                inc(secLevel);
+              mtSectionEnd:
+                begin
+                  dec(secLevel);
+                  if secLevel = 0 then // we reached the matching closing tag
+                    if (tj^.Value = '') or
+                       SectionNameMatch(ti^.Value, tj^.Value) then
+                    begin
+                      if (ti^.SectionOppositeIndex >= 0) or
+                         (tj^.SectionOppositeIndex >= 0) then
+                         ESynMustache.RaiseUtf8('Invalid nested {{/%}}', [ti^.Value]);
+                      tj^.SectionOppositeIndex := i;
+                      ti^.SectionOppositeIndex := j;
+                      if ti^.Kind = mtSetPartial then
+                      begin
+                        if fTemplate.fInternalPartials = nil then
+                          fTemplate.fInternalPartials :=
+                            TSynMustachePartials.Create;
+                        fTemplate.fInternalPartials.Add(ti^.Value,
+                          ti^.TextStart + ti^.TextLen + 2, tj^.TextStart);
+                      end;
+                      break;
+                    end
+                    else
+                      ESynMustache.RaiseUtf8('Got {{/%}}, expected {{/%}}',
+                        [ti^.Value, tj^.Value]);
+                end;
+            end;
+          end;
+          if ti^.SectionOppositeIndex < 0 then
+            ESynMustache.RaiseUtf8('Missing section end {{/%}}', [ti^.Value]);
+        end;
+      mtSectionEnd:
+        begin
+          dec(secCount);
+          if ti^.SectionOppositeIndex < 0 then
+            ESynMustache.RaiseUtf8('Unexpected section end {{/%}}', [ti^.Value]);
+        end;
+    end;
+    inc(ti);
+  end;
+  SetLength(fTemplate.fTags, fTagCount);
+end;
+
+
+{ TSynMustacheCache }
+
+function TSynMustacheCache.Parse(const aTemplate: RawUtf8): TSynMustache;
+begin
+  result := GetObjectFrom(aTemplate);
+  if result <> nil then
+    exit;
+  result := TSynMustache.Create(aTemplate);
+  AddObjectUnique(aTemplate, @result);
+end;
+
+function TSynMustacheCache.UnParse(const aTemplate: RawUtf8): boolean;
+begin
+  result := Delete(aTemplate) >= 0;
+end;
+
+
+{ TSynMustache }
+
+class function TSynMustache.Parse(const aTemplate: RawUtf8): TSynMustache;
+begin
+  if SynMustacheCache = nil then
+  begin
+    GlobalLock; // RegisterGlobalShutdownRelease() will use it anyway
+    try
+      if SynMustacheCache = nil then
+        SynMustacheCache := RegisterGlobalShutdownRelease(
+          TSynMustacheCache.CreateEx([
+            fObjectsOwned, fNoDuplicate, fCaseSensitive, fThreadSafe]));
+    finally
+      GlobalUnLock;
+    end;
+  end;
+  result := SynMustacheCache.Parse(aTemplate);
+end;
+
+class function TSynMustache.UnParse(const aTemplate: RawUtf8): boolean;
+begin
+  result := SynMustacheCache.UnParse(aTemplate);
+end;
+
+class function TSynMustache.TryRenderJson(const aTemplate, aJson: RawUtf8;
+  out aContent: RawUtf8): boolean;
+var
+  mus: TSynMustache;
+begin
+  if aTemplate <> '' then
+  try
+    mus := Parse(aTemplate);
+    aContent := mus.RenderJson(aJson);
+    result := true;
+  except
+    result := false;
+  end
+  else
+    result := false;
+end;
+
+constructor TSynMustache.Create(const aTemplate: RawUtf8);
+begin
+  Create(pointer(aTemplate), length(aTemplate));
+end;
+
+constructor TSynMustache.Create(aTemplate: PUtf8Char; aTemplateLen: integer);
+begin
+  inherited Create;
+  fTemplate := aTemplate;
+  with TSynMustacheParser.Create(self, '{{', '}}') do
+  try
+    Parse(aTemplate, aTemplate + aTemplateLen);
+  finally
+    Free;
+  end;
+  fCachedContextVariant := NewMustacheContextVariant;
+  fCachedContextData    := NewMustacheContextData;
+end;
+
+function TSynMustache.NewMustacheContextVariant(
+  aBufSize: integer): TSynMustacheContextVariant;
+begin
+  result := TSynMustacheContextVariant.Create(self,
+    TJsonWriter.CreateOwnedStream(aBufSize),
+    SectionMaxCount + 4, Null, {ownwriter=}true);
+  result.CancelAll; // to be reused from a void context
+end;
+
+function TSynMustache.NewMustacheContextData(
+  aBufSize: integer): TSynMustacheContextData;
+begin
+  result := TSynMustacheContextData.Create(self,
+    TJsonWriter.CreateOwnedStream(aBufSize),
+    SectionMaxCount + 4, nil, nil, {ownwriter=}true);
+  result.CancelAll; // to be reused from a void context
+end;
+
+procedure TSynMustache.RenderContext(Context: TSynMustacheContext;
+  TagStart, TagEnd: PtrInt);
+var
+  partial: TSynMustache;
+  t: PSynMustacheTag;
+begin
+  if TagStart <= TagEnd then
+  repeat
+    t := @fTags[TagStart];
+    case t^.Kind of
+      mtText:
+         // may be 0 e.g. for standalone without previous Line
+         Context.fWriter.AddNoJsonEscape(t^.TextStart, t^.TextLen);
+      mtVariable:
+        Context.AppendValue(t^.ValueSpace, t^.Value, {unescape=}false);
+      mtVariableUnescape,
+      mtVariableUnescapeAmp:
+        Context.AppendValue(t^.ValueSpace, t^.Value, {unescape=}true);
+      mtSection:
+        case Context.AppendSection(t^.ValueSpace, t^.Value) of
+          msNothing:
+            begin
+              // e.g. for no key, false value, or empty list
+              TagStart := t^.SectionOppositeIndex;
+              continue; // ignore whole section
+            end;
+          msList:
+            begin
+              while Context.GotoNextListItem do
+                RenderContext(Context, TagStart + 1, t^.SectionOppositeIndex - 1);
+              TagStart := t^.SectionOppositeIndex;
+              // ignore whole section since we just rendered it as a list
+              continue;
+            end;
+        // msSingle, msSinglePseudo:
+        //   process the section once with current context
+        end;
+      mtInvertedSection:
+        // display section for no key, false value, or empty list
+        if Context.AppendSection(t^.ValueSpace, t^.Value) <> msNothing then
+        begin
+          TagStart := t^.SectionOppositeIndex;
+          continue; // ignore whole section
+        end;
+      mtSectionEnd:
+        if (t^.Value = '') or
+           (t^.Value[1] <> '-') then
+          with fTags[t^.SectionOppositeIndex] do
+            if (Kind in [mtSection, mtInvertedSection]) and
+               (ValueSpace = 0) then
+              Context.PopContext;
+      mtComment:
+        ; // just ignored
+      mtPartial:
+        begin
+          partial := fInternalPartials.GetPartial(t^.Value);
+          if (partial = nil) and
+             (Context.fOwner <> self) then
+            // recursive call
+            partial := Context.fOwner.fInternalPartials.GetPartial(t^.Value);
+          if (partial = nil) and
+             (Context.Partials <> nil) then
+            partial := Context.Partials.GetPartial(t^.Value);
+          if partial <> nil then
+            partial.RenderContext(Context, 0, high(partial.fTags));
+        end;
+      mtSetPartial:
+        // ignore whole internal {{<partial}}
+        TagStart := t^.SectionOppositeIndex;
+      mtTranslate:
+        if t^.TextLen <> 0 then // {{"English text}}
+          Context.TranslateBlock(t^.TextStart, t^.TextLen);
+    end;
+    inc(TagStart);
+  until TagStart > TagEnd;
+end;
+
+function TSynMustache.Render(const Context: variant;
+  Partials: TSynMustachePartials; const Helpers: TSynMustacheHelpers;
+  const OnTranslate: TOnStringTranslate; EscapeInvert: boolean): RawUtf8;
+var
+  ctx: TSynMustacheContextVariant;
+  tmp: TTextWriterStackBuffer; // 8KB work buffer on stack
+begin
+  ctx := fCachedContextVariant; // thread-safe reuse of shared rendering context
+  if ctx.fReuse.TryLock then
+    ctx.PushContext(TVarData(Context)) // weak copy
+  else
+    ctx := TSynMustacheContextVariant.Create(
+      self, TJsonWriter.CreateOwnedStream(tmp), SectionMaxCount, Context, true);
+  try
+    ctx.Helpers := Helpers;
+    ctx.Partials := Partials;
+    ctx.OnStringTranslate := OnTranslate;
+    ctx.EscapeInvert := EscapeInvert;
+    RenderContext(ctx, 0, high(fTags));
+    ctx.Writer.SetText(result);
+  finally
+    if (Partials <> nil) and
+       (Partials.fOwned) then
+      Partials.Free;
+    if ctx = fCachedContextVariant then
+      ctx.CancelAll
+    else
+      ctx.Free;
+  end;
+end;
+
+function TSynMustache.RenderJson(const Json: RawUtf8;
+  Partials: TSynMustachePartials; const Helpers: TSynMustacheHelpers;
+  const OnTranslate: TOnStringTranslate; EscapeInvert: boolean): RawUtf8;
+var
+  context: variant;
+begin
+  _Json(Json, context{%H-}, JSON_FAST_FLOAT);
+  result := Render(context, Partials, Helpers, OnTranslate, EscapeInvert);
+end;
+
+function TSynMustache.RenderJson(const Json: RawUtf8;
+  const Args, Params: array of const; Partials: TSynMustachePartials;
+  const Helpers: TSynMustacheHelpers; const OnTranslate: TOnStringTranslate;
+  EscapeInvert: boolean): RawUtf8;
+var
+  context: variant;
+begin
+  _Json(FormatJson(Json, Args, Params), context{%H-}, JSON_FAST_FLOAT);
+  result := Render(context, Partials, Helpers, OnTranslate, EscapeInvert);
+end;
+
+function TSynMustache.RenderData(const Value; ValueTypeInfo: PRttiInfo;
+  const OnGetData: TOnGetGlobalData; Partials: TSynMustachePartials;
+  const Helpers: TSynMustacheHelpers; const OnTranslate: TOnStringTranslate;
+  EscapeInvert: boolean): RawUtf8;
+begin
+  result := RenderDataRtti(@Value, Rtti.RegisterType(ValueTypeInfo),
+    OnGetData, Partials, Helpers, OnTranslate, EscapeInvert);
+end;
+
+function TSynMustache.RenderDataArray(const Value: TDynArray;
+  const OnGetData: TOnGetGlobalData; Partials: TSynMustachePartials;
+  const Helpers: TSynMustacheHelpers; const OnTranslate: TOnStringTranslate;
+  EscapeInvert: boolean): RawUtf8;
+var
+  n: PtrInt;
+begin
+  n := Value.Count;
+  if n <> 0 then
+    DynArrayFakeLength(Value.Value^, n); // as required by RenderDataRtti()
+  result := RenderDataRtti(Value.Value, Value.Info,
+    OnGetData, Partials, Helpers, OnTranslate, EscapeInvert);
+end;
+
+function TSynMustache.RenderDataRtti(Value: pointer; ValueRtti: TRttiCustom;
+  const OnGetData: TOnGetGlobalData; Partials: TSynMustachePartials;
+  const Helpers: TSynMustacheHelpers; const OnTranslate: TOnStringTranslate;
+  EscapeInvert: boolean): RawUtf8;
+var
+  ctx: TSynMustacheContextData;
+  tmp: TTextWriterStackBuffer; // 8KB work buffer on stack
+begin
+  if ValueRtti = nil then
+    ESynMustache.RaiseUtf8('%.RenderData: invalid TypeInfo', [self]);
+  ctx := fCachedContextData; // thread-safe reuse of shared rendering context
+  if ctx.fReuse.TryLock then
+    ctx.PushContext(Value, ValueRtti)
+  else
+    ctx := TSynMustacheContextData.Create(
+      self, TJsonWriter.CreateOwnedStream(tmp), SectionMaxCount,
+      Value, ValueRtti, {ownwriter=}true);
+  try
+    ctx.Helpers := Helpers;
+    ctx.Partials := Partials;
+    ctx.OnGetGlobalData := OnGetData;
+    ctx.OnStringTranslate := OnTranslate;
+    ctx.EscapeInvert := EscapeInvert;
+    RenderContext(ctx, 0, high(fTags));
+    ctx.Writer.SetText(result);
+  finally
+    if (Partials <> nil) and
+       (Partials.fOwned) then
+      Partials.Free;
+    if ctx = fCachedContextData then
+      ctx.CancelAll
+    else
+      ctx.Free;
+  end;
+end;
+
+destructor TSynMustache.Destroy;
+begin
+  FreeAndNil(fInternalPartials);
+  inherited;
+  fCachedContextVariant.Free;
+  fCachedContextData.Free;
+end;
+
+function TSynMustache.FoundInTemplate(const aSearchText: RawUtf8;
+  aPartials: TSynMustachePartials): boolean;
+var
+  i: integer;
+  t: PSynMustacheTag;
+begin
+  result := false;
+  if (self = nil) or
+     (aSearchText = '') then
+    exit;
+  result := true;
+  if PosEx(aSearchText, fTemplate) > 0 then
+    exit; // found in main template text
+  t := pointer(fTags);
+  if aPartials <> nil then
+    for i := 1 to length(fTags) do
+      if (t^.Kind = mtPartial) and
+         aPartials.FoundInTemplate(t^.Value, aSearchText) then
+        exit // found in (nested) partials
+      else
+        inc(t);
+  result := false;
+end;
+
+class procedure TSynMustache.HelperAdd(var Helpers: TSynMustacheHelpers;
+  const aName: RawUtf8; aEvent: TSynMustacheHelperEvent);
+var
+  n, i: PtrInt;
+begin
+  if aName = '' then
+    exit;
+  n := length(Helpers);
+  for i := 0 to n - 1 do
+    if PropNameEquals(Helpers[i].Name, aName) then
+    begin
+      Helpers[i].Event := aEvent;
+      exit;
+    end;
+  SetLength(Helpers, n + 1);
+  Helpers[n].Name := aName;
+  Helpers[n].Event := aEvent;
+end;
+
+class procedure TSynMustache.HelperAdd(var Helpers: TSynMustacheHelpers;
+  const aNames: array of RawUtf8;
+  const aEvents: array of TSynMustacheHelperEvent);
+var
+  n, i: PtrInt;
+begin
+  n := length(aNames);
+  if n = length(aEvents) then
+    for i := 0 to n - 1 do
+      HelperAdd(Helpers, aNames[i], aEvents[i]);
+end;
+
+class procedure TSynMustache.HelperAddMethods(var Helpers: TSynMustacheHelpers;
+  ReferenceClass: TClass);
+var
+  methods: TPublishedMethodInfoDynArray;
+  i: PtrInt;
+begin
+  for i := 0 to GetPublishedMethods(nil, methods, ReferenceClass) - 1 do
+    with methods[i] do
+    begin
+      if Name[length(Name)] = '_' then
+        SetLength(Name, length(Name) - 1); // e.g. If_() into 'If'
+      HelperAdd(Helpers, Name, TSynMustacheHelperEvent(Method));
+    end;
+end;
+
+class procedure TSynMustache.HelperDelete(var Helpers: TSynMustacheHelpers;
+  const aName: RawUtf8);
+var
+  n, i, j: PtrInt;
+begin
+  n := length(Helpers);
+  for i := 0 to n - 1 do
+    if PropNameEquals(Helpers[i].Name, aName) then
+    begin
+      for j := i to n - 2 do
+        Helpers[j] := Helpers[j + 1];
+      SetLength(Helpers, n - 1);
+      exit;
+    end;
+end;
+
+class function TSynMustache.HelperFind(const Helpers: TSynMustacheHelpers;
+  aName: PUtf8Char; aNameLen: TStrLen): PtrInt;
+var
+  h: ^TSynMustacheHelper;
+  p: PUtf8Char;
+  n: integer;
+begin
+  h := pointer(Helpers);
+  if (h <> nil) and
+     (aNameLen > 0) then
+  begin
+    result := 0;
+    n := PDALen(PAnsiChar(h) - _DALEN)^ + _DAOFF;
+    repeat
+      p := pointer(h^.Name);
+      if (PStrLen(p - _STRLEN)^ = aNameLen) and
+         IdemPropNameUSameLenNotNull(p, aName, aNameLen) then
+        exit;
+      inc(h);
+      inc(result);
+      dec(n);
+    until n = 0;
+  end;
+  result := -1;
+end;
+
+var
+  HelpersStandardList: TSynMustacheHelpers; // global cache
+
+class function TSynMustache.HelpersGetStandardList: TSynMustacheHelpers;
+begin
+  if HelpersStandardList = nil then // use RTTI to ease maintainability
+    HelperAddMethods(HelpersStandardList, TSynMustacheStandardHelpers);
+  // make a copy to not change/affect global HelpersStandardList
+  result := copy(HelpersStandardList);
+end;
+
+class function TSynMustache.HelpersGetStandardList(
+  const aNames: array of RawUtf8;
+  const aEvents: array of TSynMustacheHelperEvent): TSynMustacheHelpers;
+begin
+  result := HelpersGetStandardList;
+  HelperAdd(result, aNames, aEvents);
+end;
+
+
+{ ************ TSynMustache Standard Expression Helpers }
+
+{ TSynMustacheStandardHelpers }
+
+class procedure TSynMustacheStandardHelpers.DateTimeToText(const Value: variant;
+  out Result: variant);
+var
+  Time: TTimeLogBits;
+  dt: TDateTime;
+begin
+  PCardinal(@Result)^ := varNull;
+  if not VariantToDateTime(Value, dt) then
+    exit;
+  Time.From(dt, false);
+  Result := Time.i18nText;
+end;
+
+class procedure TSynMustacheStandardHelpers.DateToText(const Value: variant;
+  out Result: variant);
+var
+  Time: TTimeLogBits;
+  dt: TDateTime;
+begin
+  PCardinal(@Result)^ := varNull;
+  if not VariantToDateTime(Value, dt) then
+    exit;
+  Time.From(dt, true);
+  Result := Time.i18nText;
+end;
+
+class procedure TSynMustacheStandardHelpers.DateFmt(const Value: variant;
+  out Result: variant);
+var
+  dt: TDateTime;
+  dv: PDocVariantData;
+begin
+  // {{DateFmt DateValue,"dd/mm/yyy"}}
+  PCardinal(@Result)^ := varNull;
+  if _SafeArray(Value, 2, dv) and
+       VariantToDateTime(dv^.Values[0], dt) then
+      Result := FormatDateTime(dv^.Values[1], dt);
+end;
+
+class procedure TSynMustacheStandardHelpers.TimeLogToText(const Value: variant;
+  out Result: variant);
+var
+  Time: TTimeLogBits;
+begin
+  PCardinal(@Result)^ := varNull;
+  if not VarIsEmptyOrNull(Value) and
+     VariantToInt64(Value, Time.Value) then
+    Result := Time.i18nText;
+end;
+
+class procedure TSynMustacheStandardHelpers.LocalDateTime(const Value: variant;
+  out Result: variant);
+var
+  dt: TDateTime;
+begin
+  PCardinal(@Result)^ := varNull;
+  if VariantToDateTime(Value, dt) then
+    Result := DateTimeToStr(UtcToLocal(dt));
+end;
+
+class procedure TSynMustacheStandardHelpers.LocalDate(const Value: variant;
+  out Result: variant);
+var
+  dt: TDateTime;
+begin
+  PCardinal(@Result)^ := varNull;
+  if VariantToDateTime(Value, dt) then
+    Result := DateToStr(UtcToLocal(dt));
+end;
+
+class procedure TSynMustacheStandardHelpers.LocalTime(const Value: variant;
+  out Result: variant);
+var
+  dt: TDateTime;
+begin
+  PCardinal(@Result)^ := varNull;
+  if VariantToDateTime(Value, dt) then
+    Result := TimeToStr(UtcToLocal(dt));
+end;
+
+procedure DoJson(const v: variant; var res: variant; fmt: TTextWriterJsonFormat);
+var
+  u, r: RawUtf8;
+  wasstring: boolean;
+begin
+  PCardinal(@res)^ := varNull;
+  if VarIsEmptyOrNull(v) then
+    exit;
+  VariantToUtf8(v, u, wasstring);
+  if wasstring then
+    QuotedStrJson(u, r)
+  else if (u <> '') and
+          (GotoNextNotSpace(pointer(u))^ in ['[', '{']) then
+    r := JsonReformat(u, fmt) // e.g. from TDocVariantData
+  else
+    r := u; // false, true, number
+  RawUtf8ToVariant(r, res);
+end;
+
+class procedure TSynMustacheStandardHelpers.ToJson(const Value: variant;
+  out Result: variant);
+begin
+  DoJson(Value, Result, jsonHumanReadable);
+end;
+
+class procedure TSynMustacheStandardHelpers.ToJson2(const Value: variant;
+  out Result: variant);
+begin
+  DoJson(Value, Result, jsonEscapeUnicode);
+end;
+
+class procedure TSynMustacheStandardHelpers.JsonQuote(const Value: variant;
+  out Result: variant);
+var
+  json: RawUtf8;
+begin
+  if VariantToText(Value, json) then
+    RawUtf8ToVariant(QuotedStrJson(json), Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.JsonQuoteUri(const Value: variant;
+  out Result: variant);
+var
+  json: RawUtf8;
+begin
+  if VariantToText(Value, json) then
+    RawUtf8ToVariant(UrlEncode(QuotedStrJson(json)), Result);
+end;
+
+procedure ToHtml(const Value: variant; var Result: variant;
+  fmt: TTextWriterHtmlEscape; wiki: boolean = false);
+var
+  txt: RawUtf8;
+  d: PDocVariantData;
+begin
+  // {{{SimpleToHtml content,browserhasnoemoji,nohtmlescape}}}
+  d := _Safe(Value);
+  if d^.IsArray and
+     (d^.Count >= 2) and
+     VariantToText(d^.Values[0], txt) then
+  begin
+    if not VarIsVoid(d^.Values[1]) then
+      exclude(fmt, heEmojiToUtf8);
+    if (d^.Count >= 3) and
+       not VarIsVoid(d^.Values[2]) then
+      exclude(fmt, heHtmlEscape);
+  end
+  else if not VariantToText(Value, txt) then
+    // {{{MarkdownToHtml content}}}
+    exit;
+  if txt <> '' then
+    if wiki then
+      txt := HtmlEscapeWiki(txt, fmt)
+    else
+      txt := HtmlEscapeMarkdown(txt, fmt);
+  RawUtf8ToVariant(txt, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.WikiToHtml(const Value: variant;
+  out Result: variant);
+begin
+  ToHtml(Value, Result, [heHtmlEscape, heEmojiToUtf8], {wiki=}true);
+end;
+
+class procedure TSynMustacheStandardHelpers.MarkdownToHtml(const Value: variant;
+  out Result: variant);
+begin
+  // default Markdown is to allow HTML tags
+  ToHtml(Value, Result, [heEmojiToUtf8]);
+end;
+
+class procedure TSynMustacheStandardHelpers.SimpleToHtml(const Value: variant;
+  out Result: variant);
+begin
+  ToHtml(Value, Result, [heHtmlEscape, heEmojiToUtf8]);
+end;
+
+class procedure TSynMustacheStandardHelpers.BlobToBase64(const Value: variant;
+  out Result: variant);
+var
+  u: RawUtf8;
+  wasString: boolean;
+begin
+  VariantToUtf8(Value, u, wasString);
+  if wasString and
+     (pointer(u) <> nil) then
+  begin
+    if PInteger(u)^ and $00ffffff = JSON_BASE64_MAGIC_C then
+      delete(u, 1, 3);
+    RawUtf8ToVariant(u, Result);
+  end
+  else
+    Result := Value;
+end;
+
+class procedure TSynMustacheStandardHelpers.EnumTrim(const Value: variant;
+  out Result: variant);
+var
+  u: RawUtf8;
+  wasString: boolean;
+  short: PUtf8Char;
+begin
+  VariantToUtf8(Value, u, wasString);
+  if not wasString then
+    exit;
+  short := TrimLeftLowerCase(u);
+  RawUtf8ToVariant(short, StrLen(short), Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.EnumTrimRight(const Value: variant;
+  out Result: variant);
+var
+  u: RawUtf8;
+  wasString: boolean;
+  i, L: PtrInt;
+begin
+  VariantToUtf8(Value, u, wasString);
+  if not wasString then
+    exit;
+  L := length(u);
+  for i := 1 to L do
+    if not (u[i] in ['a'..'z']) then
+    begin
+      L := i - 1;
+      break;
+    end;
+  RawUtf8ToVariant(pointer(u), L, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.PowerOfTwo(const Value: variant;
+  out Result: variant);
+var
+  V: Int64;
+begin
+  PCardinal(@Result)^ := varNull;
+  if not VarIsEmptyOrNull(Value) and
+     VariantToInt64(Value, V) then
+    Result := Int64(1) shl V;
+end;
+
+class procedure TSynMustacheStandardHelpers.Equals_(const Value: variant;
+  out Result: variant);
+var
+  dv: PDocVariantData;
+begin
+  // {{#Equals .,12}}
+  PCardinal(@Result)^ := varNull;
+  if _SafeArray(Value, 2, dv) and
+     (FastVarDataComp(@dv^.Values[0], @dv^.Values[1], false) = 0) then
+    TVarData(Result) := TrueVarData;
+end;
+
+class procedure TSynMustacheStandardHelpers.If_(const Value: variant;
+  out Result: variant);
+var
+  oper: TTempUtf8;
+  co: TCompareOperator;
+  dv: PDocVariantData;
+begin
+  // {{#if .<>""}} or {{#if .,"=",123}}
+  PCardinal(@Result)^ := varNull;
+  if not _SafeArray(Value, 3, dv) then
+    exit;
+  VariantToTempUtf8(dv^.Values[1], oper, [vfNoAlloc]);
+  if (ParseOperator(oper.Text, oper.Len, co) or
+      (ParseOperatorText(oper.Text, co) <> nil)) and // [not] same/contains/glob
+     EvaluateVariantExpression(VariantCompare, dv^.Values[0], dv^.Values[2], co) then
+    TVarData(Result) := TrueVarData;
+end;
+
+class procedure TSynMustacheStandardHelpers.NewGuid(const Value: variant;
+  out Result: variant);
+var
+  guid: TGuid;
+begin
+  RandomBytes(@guid, SizeOf(guid)); // no need of mormot.crypt.core RandomGuid()
+  MakeRandomGuid(@guid);
+  RawUtf8ToVariant(GuidToRawUtf8(guid), Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.ExtractFileName(const Value: variant;
+  out Result: variant);
+begin
+  Result := SysUtils.ExtractFileName(Value);
+end;
+
+class procedure TSynMustacheStandardHelpers.HumanBytes(const Value: variant;
+  out Result: variant);
+var
+  u: RawUtf8;
+  i64: Int64;
+begin
+  PCardinal(@Result)^ := varNull;
+  if VarIsEmptyOrNull(Value) or
+     not AnyVariantToInteger(Value, i64) then
+    exit; // Value=null or can't be converted/truncated to an integer
+  KBU(i64, u);
+  RawUtf8ToVariant(u, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.Join(const Value: variant;
+  out Result: variant);
+var
+  a, v: PDocVariantData;
+  sep, r: RawUtf8;
+begin
+  PCardinal(@Result)^ := varNull;
+  if not _Safe(Value, a) or
+     (a^.Count = 0) then
+    exit;
+  if a^.IsArray and
+     (a^.Count = 2) and
+     _Safe(a^.Values[0], v) and
+     VarIsUtf8(a^.Values[1], sep) then
+    a := v           // {{ join objorarr,"," }}
+  else
+    sep := ',';      // {{ join objorarr }}
+  r := a^.ToCsv(sep); // returns CSV of dvArray Values[] or dvObject Names[]
+  if r <> '' then
+    RawUtf8ToVariant(r, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.JoinValues(const Value: variant;
+  out Result: variant);
+var
+  a, v: PDocVariantData;
+  sep, key, r: RawUtf8;
+begin
+  PCardinal(@Result)^ := varNull;
+  if _Safe(Value, a) and
+     (a^.Count in [1 .. 3]) and
+     _Safe(a^.Value[0], v) then
+  begin
+    if a^.Count = 1 then // {{ joinvalues obj }}
+      sep := ','
+    else if not VarIsUtf8(a^.Value[1], sep) then // a^.Count in [2,3]
+      exit;
+    if a^.Count < 3 then // {{ joinvalues obj,"," }}
+      PVariantToCsv(pointer(v^.Values), v^.Count, sep, {rev=}false, r)
+    else if VarIsUtf8(a^.Value[2], key) then
+      r := v^.ReduceAsCsv(key, sep); // {{ joinvalues objorarr,",","keyname" }}
+    if r <> '' then
+      RawUtf8ToVariant(r, Result);
+  end;
+end;
+
+class procedure TSynMustacheStandardHelpers.Sub(const Value: variant;
+  out Result: variant);
+var
+  u: RawUtf8;
+  dv: PDocVariantData;
+  i, n: integer;
+begin
+  // {{sub textvalue,12,3}}
+  PCardinal(@Result)^ := varNull;
+  if _SafeArray(Value, 3, dv) and
+      VariantToText(dv^.Values[0], u) and
+      VariantToInteger(dv^.Values[1], i) and
+      VariantToInteger(dv^.Values[2], n) then
+    RawUtf8ToVariant(copy(u, i, n), Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.Values(const Value: variant;
+  out Result: variant);
+begin
+  TDocVariantData(Result).InitArrayFromObjectValues(Value, JSON_FAST);
+end;
+
+class procedure TSynMustacheStandardHelpers.Keys(const Value: variant;
+  out Result: variant);
+begin
+  TDocVariantData(Result).InitArrayFromObjectNames(Value, JSON_FAST);
+end;
+
+class procedure TSynMustacheStandardHelpers.Count(const Value: variant;
+  out Result: variant);
+var
+  dv: PDocVariantData;
+begin
+  if _Safe(Value, dv) then // {{ count objectorarray }}
+    Result := dv^.Count
+  else
+    PCardinal(@Result)^ := varNull;
+end;
+
+class procedure TSynMustacheStandardHelpers.Get(const Value: variant;
+  out Result: variant);
+var
+  a, o: PDocVariantData;
+  k: TTempUtf8;
+  v: PVariant;
+begin
+  PCardinal(@Result)^ := varNull;
+  if not _SafeArray(Value, 3, a) or // {{ get object,keypath,default }}
+     not _SafeObject(a^.Values[0], o) or
+     not VarIsStr(a^.Values[1]) then
+    exit;
+  VariantToTempUtf8(a^.Values[1], k);
+  v := a^.GetPVariantByPathP(k.Text);
+  TempUtf8Done(k);
+  if v = nil then
+    Result := a^.Values[2] // return default
+  else
+    Result := v^;          // return object[keypath]
+end;
+
+procedure DoMatchGlob(const v: variant; ci, match: boolean; var res: variant);
+var
+  dv: PDocVariantData;
+  m: TMatch;
+  str, pat: TTempUtf8;
+begin
+  // {{Match AString,APattern}} or {{Glob AString,APattern}}
+  PCardinal(@res)^ := varNull;
+  if not _SafeArray(v, 2, dv) then
+    exit;
+  VariantToTempUtf8(dv^.Values[0], str, [vfNullAsVoid]);
+  VariantToTempUtf8(dv^.Values[1], pat, [vfNoComplex, vfNullAsVoid]);
+  if match then
+  begin
+    m.Prepare(pat.Text, pat.Len, ci, {reuse=}false);
+    if m.Match(str.Text, str.Len) then
+      TVarData(res) := TrueVarData;
+  end
+  else if GlobBuffer(pat.Text, str.Text, pat.Len, str.Len, ci) then
+    TVarData(res) := TrueVarData;
+  TempUtf8Done(str);
+  TempUtf8Done(pat);
+end;
+
+class procedure TSynMustacheStandardHelpers.Match(const Value: variant;
+  out Result: variant);
+begin
+  DoMatchGlob(Value, {caseinsens=}false, {match=}true, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.MatchI(const Value: variant;
+  out Result: variant);
+begin
+  DoMatchGlob(Value, {caseinsens=}true, {match=}true, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.Glob(const Value: variant;
+  out Result: variant);
+begin
+  DoMatchGlob(Value, {caseinsens=}false, {match=}false, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.GlobI(const Value: variant;
+  out Result: variant);
+begin
+  DoMatchGlob(Value, {caseinsens=}true, {match=}false, Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.Info(const Value: variant;
+  out Result: variant);
+var
+  u: TTempUtf8;
+  v: PUtf8Char;
+  l: PtrInt; // not integer
+begin
+  PCardinal(@Result)^ := varNull;
+  if not VariantToTempUtf8(Value, u, [vfNoComplex, vfNullAsVoid]) then
+    exit; // should be a string
+  v := GlobalInfoFind(u.Text, u.Len, l);
+  if v <> nil then
+    RawUtf8ToVariant(v, l, Result);
+  TempUtf8Done(u);
+end;
+
+procedure DoCase(const Value: variant; var Result: variant; Kind: TSetCase);
+var
+  u: RawUtf8;
+begin
+  PCardinal(@Result)^ := varNull;
+  if VariantToText(Value, u) then
+    RawUtf8ToVariant(SetCase(u, Kind), Result);
+end;
+
+class procedure TSynMustacheStandardHelpers.Lower(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scLowerCase);
+end;
+
+class procedure TSynMustacheStandardHelpers.Upper(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scUpperCase);
+end;
+
+class procedure TSynMustacheStandardHelpers.CamelCase(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scCamelCase);
+end;
+
+class procedure TSynMustacheStandardHelpers.UnCamelCase(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scUnCamelCase);
+end;
+
+class procedure TSynMustacheStandardHelpers.SnakeCase(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scSnakeCase);
+end;
+
+class procedure TSynMustacheStandardHelpers.KebabCase(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scKebabCase);
+end;
+
+class procedure TSynMustacheStandardHelpers.DotCase(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scDotCase);
+end;
+
+class procedure TSynMustacheStandardHelpers.TitleCase(const Value: variant;
+  out Result: variant);
+begin
+  DoCase(Value, Result, scTitleCase);
+end;
+
+{$ifdef HASITERATORS}
+
+class procedure TSynMustacheStandardHelpers.Product(const Value: variant;
+  out Result: variant);
+var
+  v, dv: PDocVariantData;
+  path: TTempUtf8;
+  enum: TDocVariantProductEnumerator;
+begin
+  // {{Product dataset,"tableHead.fields.field"}}
+  PCardinal(@Result)^ := varNull;
+  if not _SafeArray(Value, 2, dv) or
+     not _Safe(dv^.Values[0], v) or
+     not VariantToTempUtf8(dv^.Values[1], path, [vfNoComplex, vfNullAsVoid]) or
+     (path.Len = 0) then // path should be a non-void string
+    exit;
+  PDocVariantData(@Result)^.InitFast(dvArray);
+  enum.Init(path.Text, path.Len, '.', v);
+  while enum.MoveNext do
+    PDocVariantData(@Result)^.AddItemWeak(pointer(enum.Current));
+  TempUtf8Done(path);
+end;
+
+class procedure TSynMustacheStandardHelpers.ProductValue(const Value: variant;
+  out Result: variant);
+var
+  v, dv: PDocVariantData;
+  path: TTempUtf8;
+  enum: TDocVariantProductValueEnumerator;
+begin
+  // {{ProductValue dataset,"tableHead.fields.field.units"}}
+  PCardinal(@Result)^ := varNull;
+  if not _SafeArray(Value, 2, dv) or
+     not _Safe(dv^.Values[0], v) or
+     not VariantToTempUtf8(dv^.Values[1], path, [vfNoComplex, vfNullAsVoid]) or
+     (path.Len = 0) then
+    exit;
+  PDocVariantData(@Result)^.InitFast(dvArray);
+  enum.Init(path.Text, path.Len, '.', v);
+  while enum.MoveNext do
+    PDocVariantData(@Result)^.AddItemWeak(enum.Current);
+  TempUtf8Done(path);
+end;
+
+{$endif HASITERATORS}
+
+
+end.

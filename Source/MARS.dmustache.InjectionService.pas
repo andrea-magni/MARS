@@ -16,7 +16,7 @@ uses
   , MARS.Core.Injection.Types
   , MARS.Core.Activation.Interfaces
   , MARS.dmustache
-  , SynMustache, SynCommons
+  , mormot.core.base, mormot.core.unicode, mormot.core.mustache
 ;
 
 type

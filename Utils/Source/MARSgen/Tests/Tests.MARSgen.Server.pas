@@ -402,7 +402,7 @@ begin
   end;
   LRoot := TPath.GetDirectoryName(LSources);
   // the mocks of the MARS tests, the token, the YAML of the OpenAPI units
-  LPaths := string.Join(';', [LSources, TPath.Combine(LRoot, 'tests'), TPath.Combine(LRoot, 'ThirdParty\mORMot\Source'),
+  LPaths := string.Join(';', [LSources, TPath.Combine(LRoot, 'tests'), string.Join(';', [TPath.Combine(LRoot, 'ThirdParty\mORMot2\src\core'), TPath.Combine(LRoot, 'ThirdParty\mORMot2\src\crypt'), TPath.Combine(LRoot, 'ThirdParty\mORMot2\src\lib')]),
     TPath.Combine(LRoot, 'ThirdParty\Neslib.Yaml'), TPath.Combine(LRoot, 'ThirdParty\Neslib.Yaml\Neslib')]);
 
   FFolder := TGenTestTools.NewFolder('MARSgenServers');
@@ -560,7 +560,7 @@ begin
 
   ForceDirectories(TPath.Combine(FFolder, 'dcu'));
   var LTests := TPath.Combine(TPath.GetDirectoryName(LSources), 'tests');
-  var LMORMot := TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot\Source');
+  var LMORMot := string.Join(';', [TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot2\src\core'), TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot2\src\crypt'), TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot2\src\lib')]);
   if TGenTestTools.Run(Format('"%s" -B -Q -NSSystem;Winapi;System.Win;Data;REST;Web;Xml -U"%s;%s;%s" -I"%s;%s" -N0dcu ServerProbe.dpr',
     [LCompiler, LSources, LTests, LMORMot, LSources, LMORMot]), FFolder, LOutput) <> 0
   then

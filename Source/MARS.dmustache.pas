@@ -25,7 +25,7 @@ uses
 , MARS.Utils.Parameters
 , MARS.Core.Activation.Interfaces
 
-, SynMustache, SynCommons
+, mormot.core.base, mormot.core.unicode, mormot.core.mustache
 ;
 
 type

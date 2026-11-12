@@ -60,7 +60,7 @@ var
 begin
   // the mocks of the MARS tests, the token, the YAML of the OpenAPI units
   LRoot := TPath.GetDirectoryName(ASources);
-  Result := string.Join(';', [ASources, TPath.Combine(LRoot, 'tests'), TPath.Combine(LRoot, 'ThirdParty\mORMot\Source'),
+  Result := string.Join(';', [ASources, TPath.Combine(LRoot, 'tests'), string.Join(';', [TPath.Combine(LRoot, 'ThirdParty\mORMot2\src\core'), TPath.Combine(LRoot, 'ThirdParty\mORMot2\src\crypt'), TPath.Combine(LRoot, 'ThirdParty\mORMot2\src\lib')]),
     TPath.Combine(LRoot, 'ThirdParty\Neslib.Yaml'), TPath.Combine(LRoot, 'ThirdParty\Neslib.Yaml\Neslib')]);
 end;
 

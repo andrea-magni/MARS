@@ -66,12 +66,28 @@
         <DCCReference Include="MARS.Utils.dcp"/>
         <DCCReference Include="MARS.Core.dcp"/>
         <DCCReference Include="..\..\Source\MARS.mORMotJWT.Token.pas"/>
-        <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynCommons.pas"/>
-        <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynCrypto.pas"/>
-        <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynEcc.pas"/>
-        <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynLZ.pas"/>
         <DCCReference Include="..\..\Source\MARS.mORMotJWT.Token.InjectionService.pas"/>
-        <DCCReference Include="..\..\ThirdParty\mORMot\Source\SynTable.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.base.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.os.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.os.security.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.unicode.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.text.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.datetime.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.rtti.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.buffers.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.data.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.json.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.variants.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.search.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\core\mormot.core.fmt.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\lib\mormot.lib.sspi.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.core.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.secure.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.ecc256r1.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.ecc.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.rsa.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.factory.pas"/>
+        <DCCReference Include="..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.jwt.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

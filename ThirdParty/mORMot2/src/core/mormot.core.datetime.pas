@@ -1,0 +1,4936 @@
+/// Framework Core Low-Level Date and Time Support
+// - this unit is a part of the Open Source Synopse mORMot framework 2,
+// licensed under a MPL/GPL/LGPL three license - see LICENSE.md
+unit mormot.core.datetime;
+
+{
+  *****************************************************************************
+
+   Date and Time definitions and process shared by all framework units
+    - Size and Elapsed Time to Text Conversion
+    - ISO-8601 Compatible Date/Time Text Encoding
+    - TSynDate / TSynDateTime / TSynSystemTime High-Level objects
+    - TUnixTime / TUnixMSTime POSIX Epoch Compatible 64-bit date/time
+    - TTimeLog efficient 64-bit custom date/time encoding
+    - TTextDateWriter supporting date/time ISO-8601 serialization
+    - TValuePUtf8Char text value wrapper record
+
+  *****************************************************************************
+}
+
+interface
+
+{$I ..\mormot.defines.inc}
+
+uses
+  sysutils,
+  classes,
+  mormot.core.base,
+  mormot.core.os,
+  mormot.core.os.security, // for Windows SetSystemTime()
+  mormot.core.unicode,
+  mormot.core.text;
+
+
+{ ************ Size and Elapsed Time to Text Conversion }
+
+/// convert a size to a human readable value
+// - append EB, PB, TB, GB, MB, KB or B symbol with or without preceding space
+// - for EB, PB, TB, GB, MB and KB, add one fractional digit
+function KB(bytes: Int64; nospace: boolean): TShort15; overload;
+  {$ifdef FPC_OR_UNICODE}inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert a string size to a human readable value
+// - append EB, PB, TB, GB, MB, KB or B symbol
+// - for EB, PB, TB, GB, MB and KB, add one fractional digit
+function KB(const buffer: RawByteString): TShort15; overload;
+  {$ifdef FPC_OR_UNICODE}inline;{$endif}
+
+/// convert a size to a human readable value
+// - append EB, PB, TB, GB, MB, KB or B symbol
+// - for EB, PB, TB, GB, MB and KB, add one fractional digit
+procedure KBU(bytes: Int64; var result: RawUtf8);
+
+/// convert a count to a human readable value power-of-two metric value
+// - append E, P, T, G, M, K symbol, with one fractional digit
+procedure KVar(value: Int64; var result: ShortString);
+
+/// convert a count to a human readable value power-of-two metric value
+// - append E, P, T, G, M, K symbol, with one fractional digit
+function K(value: Int64): TShort15; 
+  {$ifdef FPC_OR_UNICODE}inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert a seconds elapsed time into a human readable value
+// - append 's', 'm', 'h' and 'd' symbol for the given value range,
+// with two fractional digits
+function SecToString(S: QWord): TShort15;
+  {$ifdef FPC_OR_UNICODE}inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert a milliseconds elapsed time into a human readable value
+// - append 'ms', 's', 'm', 'h' and 'd' symbol for the given value range,
+// with two fractional digits
+function MilliSecToString(MS: QWord): TShort15;
+  {$ifdef FPC_OR_UNICODE}inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert a micro seconds elapsed time into a human readable value
+// - append 'us', 'ms', 's', 'm', 'h' and 'd' symbol for the given value range,
+// with two fractional digits
+function MicroSecToString(Micro: QWord): TShort15; 
+  {$ifdef FPC_OR_UNICODE}inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// compute elapsed time into a human readable value, from a Start value
+// - will get current QueryPerformanceMicroSeconds() and compute against Start
+// - append 'us', 'ms', 's', 'm', 'h' and 'd' symbol for the given value range,
+// with two fractional digits
+function MicroSecFrom(Start: QWord): TShort15;
+  {$ifdef FPC_OR_UNICODE}inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert a micro seconds elapsed time into a human readable value
+// - append 'us', 'ms', 's', 'm', 'h' and 'd' symbol for the given value range,
+// with two fractional digits
+procedure MicroSecToStringVar(Micro: QWord; var result: ShortString); 
+
+/// convert a micro seconds elapsed time into a human readable value
+// - append 'us', 'ms', 's', 'm', 'h' and 'd' symbol for the given value range,
+// with two fractional digits
+function MicroSecToText(Micro: QWord): RawUtf8;
+
+/// convert a nano seconds elapsed time into a human readable value
+// - append 'ns', 'us', 'ms', 's', 'm', 'h' and 'd' symbol for the given value
+// range, with two fractional digits
+procedure NanoSecToString(Nano: QWord; var result: ShortString);
+
+/// convert "valueunit" values into x or x.xx text with up to 2 digits
+// - supplied value should be the actual unit value * 100
+procedure AppendShortBy100(value: cardinal; const valueunit: ShortString;
+  var result: ShortString);
+
+/// convert an integer value into its textual representation with thousands marked
+// - Sep is the character used to separate thousands in numbers with more than
+// three digits to the left of the decimal separator e.g. '100' '1,000' '10,000'
+function IntToThousandString(Value: PtrInt; const Sep: ShortString = ','): TShort31;
+
+const
+  /// the maxium number of days a Windows TimeSpan could hold in its 64-bit value
+  MAX_TIMESPAN = 10675199;
+
+/// convert a Windows TimeSpan value (i.e. ticks) into millisecond-resolution text
+// - e.g. TimeSpanToText(36611234567) = '01:01:01.123'
+procedure TimeSpanAppendShort(value: Int64; var result: ShortString);
+
+/// convert a Windows TimeSpan value (i.e. ticks) into millisecond-resolution text
+procedure TimeSpanToTextVar(value: Int64; var result: RawUtf8);
+
+/// convert a Windows TimeSpan value (i.e. ticks) into millisecond-resolution text
+function TimeSpanToText(value: Int64): RawUtf8;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// convert a Windows TimeSpan text (e.g. '123.01:01:01.123') as its 64-bit value
+// - returns the position just after the value on success, or nil on parsing error
+function TextToTimeSpanBuffer(Text: PUtf8Char; var TimeSpan: Int64): PUtf8Char;
+
+/// convert a Windows TimeSpan text (e.g. '123.01:01:01.123') as its 64-bit value
+// - by design, our parser will return a value in milliseconds resolution
+function TextToTimeSpan(const Text: RawUtf8; var TimeSpan: Int64): boolean;
+
+
+{ ************ ISO-8601 Compatible Date/Time Text Encoding }
+
+const
+  /// UTF-8 encoded U+FFF0 special codepoint to mark ISO-8601 SQLDATE in JSON
+  // - e.g. '"\uFFF12012-05-04"' pattern
+  // - Unicode special char U+FFF1 is UTF-8 encoded as EF BF B1 bytes
+  // - as generated by DateToSql/DateTimeToSql/TimeLogToSql functions, and
+  // expected by the TExtractInlineParameters decoder
+  JSON_SQLDATE_MAGIC_C = $b1bfef;
+
+  /// '"' + UTF-8 encoded \uFFF1 special code to mark ISO-8601 SQLDATE in JSON
+  JSON_SQLDATE_MAGIC_QUOTE_C = ord('"') + cardinal(JSON_SQLDATE_MAGIC_C) shl 8;
+
+/// Date/Time conversion from ISO-8601 text into a TDateTime value
+// - handle 'YYYYMMDDThhmmss' and 'YYYY-MM-DD hh:mm:ss' format
+// - will also recognize '.sss' milliseconds suffix, if any
+function Iso8601ToDateTime(const S: RawByteString): TDateTime; overload;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Time conversion from ISO-8601 text into a TTime value
+// - handle 'hhmmss' and 'hh:mm:ss' format, with optional '.sss' milliseconds suffix
+function Iso8601ToTime(const S: RawByteString): TTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Date/Time conversion from ISO-8601
+// - handle 'YYYYMMDDThhmmss' and 'YYYY-MM-DD hh:mm:ss' format
+// - could have been written e.g. by DateTimeToIso8601Text()
+// - will also recognize '.sss' milliseconds suffix, if any
+// - if L is left to default 0, it will be computed from StrLen(P)
+function Iso8601ToDateTimePUtf8Char(P: PUtf8Char; L: PtrInt = 0): TDateTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Date/Time conversion from ISO-8601
+// - handle 'YYYYMMDDThhmmss' and 'YYYY-MM-DD hh:mm:ss' format, with potentially
+// shorten versions has handled by the ISO-8601 standard (e.g. 'YYYY')
+// - also recognize '.sss' milliseconds suffix or 'Thhmmss' or 'hh:mm:ss' input
+// - any ending/trailing single quote will be removed
+// - if L is left to default 0, it will be computed from StrLen(P)
+procedure Iso8601ToDateTimePUtf8CharVar(P: PUtf8Char; L: PtrInt;
+  var result: TDateTime);
+
+/// pure Date conversion from ISO-8601 ignoring any 'Thhmmss'/'hh:mm:ss' content
+// - if L is left to default 0, it will be computed from StrLen(P)
+procedure Iso8601ToDatePUtf8CharVar(P: PUtf8Char; L: PtrInt;
+  var result: TDate);
+
+/// Date/Time conversion from strict ISO-8601 content
+// - recognize 'YYYY-MM-DDThh:mm:ss[.sss]' or 'YYYY-MM-DD' or 'Thh:mm:ss[.sss]'
+// patterns, as e.g. generated by TJsonWriter.AddDateTime() or RecordSaveJson()
+// - will also recognize '.sss' milliseconds suffix, if any
+function Iso8601CheckAndDecode(P: PUtf8Char; L: PtrInt;
+  var Value: TDateTime): boolean;
+
+/// test if P^ contains a valid ISO-8601 text encoded value
+// - calls internally Iso8601ToTimeLogPUtf8Char() and returns true if contains
+// at least a valid year (YYYY)
+function IsIso8601(P: PUtf8Char; L: PtrInt): boolean;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Time conversion from ISO-8601 (with no Date part)
+// - handle 'hhmmss' and 'hh:mm:ss' format
+// - will also recognize '.sss' milliseconds suffix, if any
+// - if L is left to default 0, it will be computed from StrLen(P)
+function Iso8601ToTimePUtf8Char(P: PUtf8Char; L: PtrInt = 0): TDateTime; overload;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Time conversion from ISO-8601 (with no Date part)
+// - handle 'hhmmss' and 'hh:mm:ss' format
+// - will also recognize '.sss' milliseconds suffix, if any
+// - if L is left to default 0, it will be computed from StrLen(P)
+procedure Iso8601ToTimePUtf8CharVar(P: PUtf8Char; L: PtrInt;
+  var result: TDateTime);
+
+/// Time conversion from ISO-8601 (with no Date part)
+// - recognize 'hhmmss' and 'hh:mm:ss' format into H,M,S variables
+// - will also recognize '.sss' milliseconds suffix, if any, into MS
+// - if L is left to default 0, it will be computed from StrLen(P)
+function Iso8601ToTimePUtf8Char(P: PUtf8Char; L: PtrInt;
+  var H, M, S, MS: cardinal): boolean; overload;
+
+/// Date conversion from ISO-8601 (with no Time part)
+// - recognize 'YYYY-MM-DD' and 'YYYYMMDD' format into Y,M,D variables
+// - if L is left to default 0, it will be computed from StrLen(P)
+function Iso8601ToDatePUtf8Char(P: PUtf8Char; L: PtrInt;
+  var Y, M, D: cardinal): boolean;
+
+/// Interval date/time conversion from simple text
+// - expected format does not match ISO-8601 Time intervals format, but Oracle
+// interval litteral representation, i.e. '+/-D HH:MM:SS'
+// - e.g. IntervalTextToDateTime('+0 06:03:20') will return 0.25231481481 and
+// IntervalTextToDateTime('-20 06:03:20') -20.252314815
+// - as a consequence, negative intervals will be written as TDateTime values:
+// !DateTimeToIso8601Text(IntervalTextToDateTime('+0 06:03:20'))='T06:03:20'
+// !DateTimeToIso8601Text(IntervalTextToDateTime('+1 06:03:20'))='1899-12-31T06:03:20'
+// !DateTimeToIso8601Text(IntervalTextToDateTime('-2 06:03:20'))='1899-12-28T06:03:20'
+function IntervalTextToDateTime(Text: PUtf8Char): TDateTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Interval date/time conversion from simple text
+// - expected format does not match ISO-8601 Time intervals format, but Oracle
+// interval litteral representation, i.e. '+/-D HH:MM:SS'
+// - e.g. '+1 06:03:20' will return 1.25231481481
+procedure IntervalTextToDateTimeVar(Text: PUtf8Char; var result: TDateTime);
+
+/// basic Date/Time conversion into ISO-8601
+// - use 'YYYYMMDDThhmmss' format if not Expanded
+// - use 'YYYY-MM-DDThh:mm:ss' format if Expanded
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+// - if QuotedChar is not default #0, will (double) quote the resulted text
+// - you may rather use DateTimeToIso8601Text() to handle 0 or date-only values
+function DateTimeToIso8601(D: TDateTime; Expanded: boolean; FirstChar: AnsiChar = 'T';
+  WithMS: boolean = false; QuotedChar: AnsiChar = #0): RawUtf8; overload;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// raw basic Date/Time conversion into ISO-8601 RawUtf8
+procedure DateTimeToIso8601Var(D: TDateTime; Expanded, WithMS: boolean;
+  FirstChar, QuotedChar: AnsiChar; var Result: RawUtf8);
+
+/// raw basic Date/Time conversion into ISO-8601 ShortString
+function DateTimeToIso8601Short(D: TDateTime; Expanded: boolean = true;
+  WithMS: boolean = false; FirstChar: AnsiChar = 'T';
+  QuotedChar: AnsiChar = #0): TShort31;
+
+/// basic Date/Time conversion into ISO-8601
+// - use 'YYYYMMDDThhmmss' format if not Expanded
+// - use 'YYYY-MM-DDThh:mm:ss' format if Expanded
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+// - if QuotedChar is not default #0, will (double) quote the resulted text
+// - you may rather use DateTimeToIso8601Text() to handle 0 or date-only values
+// - returns the number of chars written to P^ buffer
+function DateTimeToIso8601(P: PUtf8Char; D: TDateTime; Expanded: boolean;
+  FirstChar: AnsiChar = 'T'; WithMS: boolean = false;
+  QuotedChar: AnsiChar = #0): PtrInt; overload;
+
+/// basic Date conversion into ISO-8601
+// - use 'YYYYMMDD' format if not Expanded
+// - use 'YYYY-MM-DD' format if Expanded
+function DateToIso8601(Date: TDateTime; Expanded: boolean): RawUtf8; overload;
+
+/// basic Date conversion into ISO-8601
+// - use 'YYYYMMDD' format if not Expanded
+// - use 'YYYY-MM-DD' format if Expanded
+function DateToIso8601(Y, M, D: cardinal; Expanded: boolean): RawUtf8; overload;
+
+/// basic Date period conversion into ISO-8601
+// - will convert an elapsed number of days as ISO-8601 text
+// - use 'YYYYMMDD' format if not Expanded
+// - use 'YYYY-MM-DD' format if Expanded
+function DaysToIso8601(Days: cardinal; Expanded: boolean): RawUtf8;
+
+/// basic Time conversion into ISO-8601
+// - use 'Thhmmss' format if not Expanded
+// - use 'Thh:mm:ss' format if Expanded
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+function TimeToIso8601(Time: TDateTime; Expanded: boolean; FirstChar: AnsiChar = 'T';
+  WithMS: boolean = false): RawUtf8;
+
+/// Write a Date to P^ Ansi buffer
+// - if Expanded is false, 'YYYYMMDD' date format is used
+// - if Expanded is true, 'YYYY-MM-DD' date format is used
+function DateToIso8601PChar(P: PUtf8Char; Expanded: boolean;
+  Y, M, D: PtrUInt): PUtf8Char; overload;
+
+/// convert a date into 'YYYY-MM-DD' date format
+// - resulting text is compatible with all ISO-8601 functions
+function DateToIso8601Text(Date: TDateTime): RawUtf8;
+
+/// Write a Date/Time to P^ Ansi buffer
+function DateToIso8601PChar(Date: TDateTime; P: PUtf8Char;
+  Expanded: boolean): PUtf8Char; overload;
+
+/// Write a TDateTime value, expanded as Iso-8601 encoded text into P^ Ansi buffer
+// - if DT=0, returns ''
+// - if DT contains only a date, returns the date encoded as 'YYYY-MM-DD'
+// - if DT contains only a time, returns the time encoded as 'Thh:mm:ss'
+// - otherwise, returns the ISO-8601 date and time encoded as 'YYYY-MM-DDThh:mm:ss'
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+function DateTimeToIso8601ExpandedPChar(const Value: TDateTime; Dest: PUtf8Char;
+  FirstChar: AnsiChar = 'T'; WithMS: boolean = false): PUtf8Char;
+
+/// write a TDateTime into strict ISO-8601 date and/or time text
+// - if DT=0, returns ''
+// - if DT contains only a date, returns the date encoded as 'YYYY-MM-DD'
+// - if DT contains only a time, returns the time encoded as 'Thh:mm:ss'
+// - otherwise, returns the ISO-8601 date and time encoded as 'YYYY-MM-DDThh:mm:ss'
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+// - used e.g. by TPropInfo.GetValue() and TPropInfo.NormalizeValue() methods
+function DateTimeToIso8601Text(DT: TDateTime; FirstChar: AnsiChar = 'T';
+  WithMS: boolean = false): RawUtf8;
+
+/// write a TDateTime into strict ISO-8601 date and/or time text
+// - if DT=0, returns ''
+// - if DT contains only a date, returns the date encoded as 'YYYY-MM-DD'
+// - if DT contains only a time, returns the time encoded as 'Thh:mm:ss'
+// - otherwise, returns the ISO-8601 date and time encoded as 'YYYY-MM-DDThh:mm:ss'
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+// - used e.g. by TPropInfo.GetValue() and TPropInfo.NormalizeValue() methods
+procedure DateTimeToIso8601TextVar(DT: TDateTime; FirstChar: AnsiChar;
+  var result: RawUtf8; WithMS: boolean = false);
+
+/// write a TDateTime into strict ISO-8601 date and/or time text
+// - if DT=0, returns ''
+// - if DT contains only a date, returns the date encoded as 'YYYY-MM-DD'
+// - if DT contains only a time, returns the time encoded as 'Thh:mm:ss'
+// - otherwise, returns the ISO-8601 date and time encoded as 'YYYY-MM-DDThh:mm:ss'
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+// - used e.g. by TPropInfo.GetValue() and TPropInfo.NormalizeValue() methods
+procedure DateTimeToIso8601StringVar(DT: TDateTime; FirstChar: AnsiChar;
+  var result: string; WithMS: boolean = false);
+
+/// write a TDateTime into strict ISO-8601 date and/or time text as TTempUtf8
+procedure DateTimeToIso8601TempUtf8(DT: TDateTime; FirstChar: AnsiChar;
+  var Dest: TTempUtf8; WithMS: boolean);
+
+/// Write a Time to P^ Ansi buffer
+// - if Expanded is false, 'Thhmmss' time format is used
+// - if Expanded is true, 'Thh:mm:ss' time format is used
+// - you can custom the first char in from of the resulting text time
+// - if WithMS is TRUE, will append MS as '.sss' for milliseconds resolution
+function TimeToIso8601PChar(P: PUtf8Char; Expanded: boolean; H, M, S, MS: PtrUInt;
+  FirstChar: AnsiChar = 'T'; WithMS: boolean = false): PUtf8Char; overload;
+
+/// Write a Time to P^ Ansi buffer
+// - if Expanded is false, 'Thhmmss' time format is used
+// - if Expanded is true, 'Thh:mm:ss' time format is used
+// - you can custom the first char in from of the resulting text time
+// - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+function TimeToIso8601PChar(Time: TDateTime; P: PUtf8Char; Expanded: boolean;
+  FirstChar: AnsiChar = 'T'; WithMS: boolean = false): PUtf8Char; overload;
+
+/// convert any date/time Variant into a TDateTime value
+// - would handle varDate kind of variant, or use a string conversion and
+// ISO-8601 parsing if possible
+function VariantToDateTime(const V: Variant; var Value: TDateTime): boolean;
+
+/// decode most used HTML TimeZone text values (CEST, GMT, +0200, -0800...)
+// - on match, returns true and the time zone minutes offset in respect to UTC
+// - if P is not a time zone, returns false and leave Zone to its supplied value
+// - will recognize only the most used text values using a fixed table (RFC 822
+// with some extensions like -0000 as current system timezone) - using numerical
+// zones is the preferred way in recent RFC anyway - accept xxxx xx:xx xx values
+function ParseTimeZone(var P: PUtf8Char; var Zone: integer): boolean; overload;
+
+/// decode most used HTML TimeZone text values (CEST, GMT, +0200, -0800...)
+// - just a wrapper around overloaded ParseTimeZone(PUtf8Char)
+function ParseTimeZone(const s: RawUtf8; var Zone: integer): boolean; overload;
+
+const
+  /// three-chars abbreviation of all week days, starting at Sunday = index 1
+  HTML_WEEK_DAYS: array[1..7] of TShort3 = (
+    'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat');
+
+  /// three-chars abbreviation of all month names, starting at January = index 1
+  HTML_MONTH_NAMES: array[1..12] of TShort3 = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
+
+  /// all month names full text, starting at January = index 1
+  MONTH_NAMES: array[1..12] of RawUtF8 = (
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December');
+
+/// decode a month from its RFC 822 text value (Jan, Feb...)
+function ParseMonth(var P: PUtF8Char; var Month: word): boolean; overload;
+
+/// decode a month from its RFC 822 text value (Jan, Feb...)
+function ParseMonth(const s: RawUtf8; var Month: word): boolean; overload;
+
+const
+  /// Rotate local log file if reached this size (1MB by default)
+  // - .log file will be save as .log.bak file
+  // - a new .log file is created
+  // - used by AppendToTextFile() and LogToTextFile() functions (not TSynLog)
+  MAXLOGSIZE = 1024*1024;
+
+/// log a message with the current timestamp to a local text file
+// - the text file is located in the executable directory, and its name is
+// simply the executable file name with the '.log' extension instead of '.exe'
+// - format contains the current date and time, then the Msg on one line
+// - date and time format used is 'YYYYMMDD hh:mm:ss (i.e. ISO-8601)'
+procedure LogToTextFile(Msg: RawUtf8);
+
+/// log a message with the current timestamp to a local text file
+// - this version expects the filename to be specified
+// - format contains the current date and time, then the Msg on one line
+// - date and time format used is 'YYYYMMDD hh:mm:ss'
+function AppendToTextFile(const aLine: RawUtf8; const aFileName: TFileName;
+  aMaxSize: Int64 = MAXLOGSIZE; aUtcTimeStamp: boolean = false): boolean;
+
+var
+  /// custom TTimeLog date to ready to be displayed text function
+  // - you can override this pointer in order to display the text according
+  // to your expected i18n settings e.g. as set by the mORMoti18n.pas unit
+  // - used e.g. by TTimeLogBits.i18nText and by TOrmTable.ExpandAsString()
+  // methods, i.e. TOrmTableToGrid.DrawCell()
+  // - rendering-only: no time zone or local conversion of the supplied TTimeLog
+  i18nDateText: function(const Iso: TTimeLog): string = nil;
+
+  /// custom date to ready to be displayed text function
+  // - you can override this pointer in order to display the text according
+  // to your expected i18n settings e.g. as set by the mORMoti18n.pas unit
+  // - this callback will therefore be set by the mORMoti18n.pas unit
+  // - used e.g. by TOrmTable.ExpandAsString() method,
+  // i.e. TOrmTableToGrid.DrawCell()
+  // - rendering-only: no time zone or local conversion of the supplied TDateTime
+  i18nDateTimeText: function(const DateTime: TDateTime): string = nil;
+
+
+
+{ ************ TSynDate / TSynDateTime / TSynSystemTime High-Level objects }
+
+type
+  {$A-}
+
+  /// a simple way to store a date as Year/Month/Day
+  // - with no intermediate computation needed as with TDate/TUnixTime values
+  // - consider using TSynSystemTime if you need to handle both Date and Time
+  // - match the first 4 fields of TSynSystemTime - so PSynDate(@aSynSystemTime)^
+  // is safe to be used
+  // - some Delphi revisions have trouble with "object" as own method parameters
+  // (e.g. IsEqual or Compare) so we force to use "record" type if possible
+  {$ifdef USERECORDWITHMETHODS}
+  TSynDate = record
+  {$else}
+  TSynDate = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    /// the Year value of this Date
+    Year: word;
+    /// the Month value of this Date (1..12)
+    Month: word;
+    /// which day of week this Date happened
+    // - sunday is DayOfWeek 1, saturday is 7
+    // - DayOfWeek field is not handled by its methods by default, but could be
+    // filled on demand via ComputeDayOfWeek - making this record 64-bit long
+    DayOfWeek: word;
+    /// the Day value of this Date (1..31)
+    Day: word;
+    /// set all fields to 0
+    procedure Clear;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// set internal date to 9999-12-31
+    procedure SetMax;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// returns true if all fields are zero
+    function IsZero: boolean;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// try to parse a YYYY-MM-DD or YYYYMMDD ISO-8601 date from the supplied buffer
+    // - on success, move P^ just after the date, and return TRUE
+    function ParseFromText(var P: PUtf8Char): boolean;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// fill fields with the current UTC/local date, using a 16ms thread-safe cache
+    procedure FromNow(localtime: boolean = false);
+    /// fill fields with the supplied date
+    procedure FromDate(date: TDate);
+    /// returns true if all fields do match - ignoring DayOfWeek field value
+    function IsEqual(const another: TSynDate): boolean;
+    /// compare the stored value to a supplied value
+    // - returns <0 if the stored value is smaller than the supplied value,
+    // 0 if both are equals, and >0 if the stored value is bigger
+    // - DayOfWeek field value is not compared
+    function Compare(const another: TSynDate): integer;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// fill the DayOfWeek field from the stored Year/Month/Day
+    // - by default, most methods will just store 0 in the DayOfWeek field
+    // - sunday is DayOfWeek 1, saturday is 7
+    procedure ComputeDayOfWeek;
+    /// convert the stored date into a TDate floating-point value
+    function ToDate: TDate;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// encode the stored date as ISO-8601 text
+    // - returns '' if the stored date is 0 (i.e. after Clear)
+    function ToText(Expanded: boolean = true): RawUtf8;
+  end;
+
+  /// store several dates as Year/Month/Day
+  TSynDateDynArray = array of TSynDate;
+
+  /// a pointer to a TSynDate instance
+  PSynDate = ^TSynDate;
+
+  /// a cross-platform and cross-compiler TSystemTime 128-bit structure
+  // - on POSIX TSystemTime definition for Delphi or FPC do NOT match Windows'
+  // - also used to store a Date/Time in TSynTimeZone internal structures, or
+  // for fast conversion from TDateTime to its ready-to-display members
+  // - DayOfWeek field is not handled by most methods by default, but could be
+  // filled on demand via ComputeDayOfWeek
+  // - some Delphi revisions have trouble with "object" as own method parameters
+  // (e.g. IsEqual) so we force to use "record" type if possible
+  {$ifdef USERECORDWITHMETHODS}
+  TSynSystemTime = record
+  {$else}
+  TSynSystemTime = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    /// the Year value of this timestamp
+    Year: word;
+    /// the Month value of this timstamp, in range 1..12
+    Month: word;
+    /// which day of week this Date happened
+    // - Sunday is DayOfWeek 1, Saturday is 7
+    // - DayOfWeek field is not handled by its methods by default, but could be
+    // filled on demand via ComputeDayOfWeek
+    DayOfWeek: word;
+    /// the Day value of this timestamp, in range 1..31
+    Day: word;
+    /// the Hour value of this timestamp, in range 0..59
+    Hour: word;
+    /// the Minute value of this timestamp, in range 0..59
+    Minute: word;
+    /// the Second value of this timestamp, in range 0..59
+    Second: word;
+    /// the MilliSecond value of this timestamp, in range 0..999
+    MilliSecond: word;
+    /// set all fields to 0
+    procedure Clear;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// returns true if all fields are zero
+    function IsZero: boolean;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// returns true if all fields do match
+    function IsEqual(const another: TSynSystemTime): boolean;
+    /// returns true if date fields do match (ignoring DayOfWeek and time fields)
+    function IsDateEqual(const date: TSynDate): boolean;
+    /// internal method used by TSynTimeZone
+    function EncodeForTimeChange(const aYear: word): TDateTime;
+    /// fill fields with the current UTC time, using a 16ms thread-safe cache
+    procedure FromNowUtc;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// fill fields with the current Local time, using a 16ms thread-safe cache
+    procedure FromNowLocal;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// fill fields with the current UTC or local time, using a 16ms thread-safe cache
+    procedure FromNow(localtime: boolean);
+      {$ifdef HASINLINE}inline;{$endif}
+    /// fill fields from the given value - but not DayOfWeek
+    procedure FromDateTime(const dt: TDateTime);
+    /// fill Year/Month/Day fields from the given value
+    // - but do not compute DayOfWeek, nor touch the time fields
+    // - faster than the RTL DecodeDate() function
+    procedure FromDate(const dt: TDateTime);
+    /// fill fields from the given value - but not DayOfWeek
+    procedure FromUnixTime(ut: TUnixTime);
+    /// fill fields from the given value - but not DayOfWeek
+    procedure FromUnixMsTime(ut: TUnixMsTime);
+    /// fill Year/Month/Day fields from the given Julian Day Number
+    procedure FromJulianDay(t: cardinal);
+    /// fill Hour/Minute/Second/Millisecond fields from the given number of milliseconds
+    // - faster than the RTL DecodeTime() function
+    procedure FromMS(ms: PtrUInt);
+    /// fill Hour/Minute/Second/Millisecond fields from the given number of seconds
+    // - faster than the RTL DecodeTime() function
+    procedure FromSec(s: PtrUInt);
+    /// fill Hour/Minute/Second/Millisecond fields from the given TDateTime value
+    // - faster than the RTL DecodeTime() function
+    procedure FromTime(const dt: TDateTime);
+    /// fill Year/Month/Day and Hour/Minute/Second fields from the given ISO-8601 text
+    // - returns true on success
+    function FromText(const iso: RawUtf8): boolean;
+    /// fill Hour/Minute/Second/MilliSecond fields from the given ISO-8601 text
+    function FromTimeBuffer(P: PUtf8Char; L: PtrInt): boolean;
+    /// fill Year/Month/Day and Hour/Minute/Second fields from HTTP-date format
+    // - defined e.g. by https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.1
+    // $ Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate
+    // $ Sunday, 06-Nov-94 08:49:37 GMT   ; obsolete RFC 850 format
+    // $ Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
+    function FromHttpDate(const httpdate: RawUtf8; tolocaltime: boolean = false): boolean;
+    /// fill Year/Month/Day and Hour/Minute/Second fields from HTTP-date PUtf8Char
+    function FromHttpDateBuffer(P: PUtf8Char; tolocaltime: boolean = false): boolean;
+    /// fill Hour/Minute/Second/MilliSecond fields from Microsoft TimeSpan 100 ns ticks
+    // - and returns the number of days
+    function FromTimeSpan(ticks: Int64): PtrUInt; overload;
+    /// fill Hour/Minute/Second/MilliSecond fields from '123.06:18:55.999' format
+    // - and set the (signed) number of days as output variables
+    // - return the ending #0 space , ; ' " valid delimiter, or nil on decoding error
+    function FromTimeSpan(p: PUtf8Char; var days, neg: PtrInt): PUtf8Char; overload;
+    /// encode the stored date/time as ISO-8601 text with Milliseconds
+    function ToText(Expanded: boolean = true; FirstTimeChar: AnsiChar = 'T';
+      const TZD: RawUtf8 = ''): RawUtf8;
+    /// append a value, expanded as Iso-8601 encoded date text
+    // - use 'YYYY-MM-DD' format
+    procedure AddIsoDate(WR: TTextWriter);
+    /// append a value, expanded as Iso-8601 encoded text
+    // - use 'YYYY-MM-DDThh:mm:ss' format with '.sss' optional milliseconds
+    procedure AddIsoDateTime(WR: TTextWriter; WithMS: boolean;
+      FirstTimeChar: AnsiChar = 'T'; const TZD: RawUtf8 = '');
+    /// append the stored date and time, in a log-friendly format
+    // - e.g. append '20110325 19241502' - with no trailing space nor tab, and
+    // the last 2 digits rounded in 0..62 fake sub-second range (1000 ms / 16)
+    // - as called by TJsonWriter.AddCurrentLogTime()
+    procedure AddLogTime(WR: TTextWriter);
+    /// append the stored date and time, in a log-friendly format, to a memory buffer
+    // - e.g. '20110325 19241502' 17 bytes - with no trailing space nor tab, and
+    // the last 2 digits rounded in 0..62 fake sub-second range (1000 ms / 16)
+    procedure ToLogTime(Dest: PUtf8Char);
+    /// append the stored date and time, in apache-like format, to a TJsonWriter
+    // - e.g. append '19/Feb/2019:06:18:55 ' - including a trailing space
+    procedure AddNcsaText(WR: TTextWriter; const TZD: RawUtf8 = '');
+    /// append the stored date and time, in HTTP-like format, to a TJsonWriter
+    // - e.g. append '19/Feb/2019:06:18:55 ' - including a trailing space
+    procedure AddHttpDate(WR: TTextWriter; const TZD: RawUtf8 = 'GMT');
+    /// append the stored time, in '06:18:55.123' format, into a ShortString
+    procedure AppendTime(var result: ShortString; WithMS: boolean = false);
+    /// append the stored time, in '123.06:18:55.999' format, into a ShortString
+    // - with the supplied days count and Hour/Minute/Second/MilliSecond values
+    procedure AppendInterval(days: PtrUInt; var result: ShortString);
+    /// append the stored date and time, in apache-like format, to a memory buffer
+    // - e.g. "Tue, 15 Nov 1994 12:45:26 GMT" to be used as a value of
+    // - e.g. append '19/Feb/2019:06:18:55 ' - including a trailing space
+    // - returns the number of chars added to P, i.e. always 21
+    function ToNcsaText(P: PUtf8Char): PtrInt;
+    /// convert the stored date and time to its text in apache-like format
+    procedure ToNcsaShort(var text: TShort23; const tz: RawUtf8 = 'GMT');
+    /// convert the stored date and time to its text in HTTP-like format
+    // - i.e. "Tue, 15 Nov 1994 12:45:26 GMT" to be used as a value of
+    // "Date", "Expires" or "Last-Modified" HTTP header
+    // - handle UTC/GMT time zone by default, and allow a 'Date: ' prefix
+    procedure ToHttpDate(out text: RawUtf8; const tz: RawUtf8 = 'GMT';
+      const prefix: RawUtf8 = '');
+    /// convert the stored date and time to its text in HTTP-like format
+    // - e.g. "Tue, 15 Nov 1994 12:45:26 GMT"
+    procedure ToHttpDateShort(var text: ShortString; const tz: RawUtf8 = 'GMT';
+      const prefix: RawUtf8 = '');
+    /// convert the stored date into its '19 Sep 2023' English-readable date text
+    procedure ToTextDateShort(var text: TShort15);
+    /// convert the stored date and time into its Iso-8601 text, with no Milliseconds
+    procedure ToIsoDateTimeShort(var text: ShortString; FirstTimeChar: AnsiChar = 'T');
+    /// convert the stored date and time into its Iso-8601 text, with no Milliseconds
+    procedure ToIsoDateTime(out text: RawUtf8; FirstTimeChar: AnsiChar = 'T');
+    /// convert the stored date into its Iso-8601 text with no time part
+    procedure ToIsoDate(out text: RawUtf8);
+    /// convert the stored time into its Iso-8601 text with no date part nor Milliseconds
+    procedure ToIsoTime(out text: RawUtf8; FirstTimeChar: RawUtf8 = 'T');
+    /// convert the stored date and time into Iso-8601 text
+    procedure ToTempUtf8(var Dest: TTempUtf8; Expanded: boolean = true;
+      FirstTimeChar: AnsiChar = 'T'; WithMS: boolean = false);
+    /// convert the stored time into a TDateTime
+    function ToDateTime: TDateTime;
+    /// convert the stored time into a TUnixTime in seconds since UNIX Epoch
+    function ToUnixTime: TUnixTime;
+    /// convert the stored time into a TUnixMSTime in milliseconds since UNIX Epoch
+    function ToUnixMsTime: TUnixMsTime;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// copy Year/Month/DayOfWeek/Day fields to a TSynDate
+    procedure ToSynDate(out date: TSynDate);
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the stored date and time into a timestamped local file name
+    // - use 'YYMMDDHHMMSS' format so year is truncated to last 2 digits,
+    // expecting a date > 1999 (a current date would be fine)
+    procedure ToFileShort(var result: ShortString);
+    /// convert the stored date and time into e.g. '19 Mar 2025, 13:56:52'
+    procedure ToHuman(var Text: RawUtf8);
+    /// fill the DayOfWeek field from the stored Year/Month/Day
+    // - by default, most methods will just store 0 in the DayOfWeek field
+    // - sunday is DayOfWeek 1, saturday is 7
+    procedure ComputeDayOfWeek;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// compute how many days there are in the current month
+    function DaysInMonth: cardinal;
+    /// add some 1..999 milliseconds to the stored time
+    // - not to be used for computation, but e.g. for fast AddLogTime generation
+    procedure IncrementMS(ms: integer);
+    /// compute all fields so that they are in their natural range
+    // - set e.g. Second := 60 to force the next minute, or Hour := 24 so that
+    // it will be normalized to the next day
+    // - use a naive simple O(n) implementation: not very fast, but correct and
+    // fast enough in its typical THttpAnalyzer.ComputeConsolidateTime usage
+    procedure Normalize;
+    /// change the system date/time with the value stored in this instance
+    // - i.e. call SetSystemTime/fpsettimeofday API with the stored date/time
+    // - will also flush the FromNowLocal/FromNowUtc cached timestamps
+    function ChangeOperatingSystemTime: boolean;
+  end;
+
+  /// pointer to our cross-platform and cross-compiler TSystemTime 128-bit structure
+  PSynSystemTime = ^TSynSystemTime;
+
+  {$A+}
+
+/// internal low-level function to retrieve the cached current decoded date/time
+procedure FromGlobalTime(out NewTime: TSynSystemTime; LocalTime: boolean;
+  tix64: Int64 = 0);
+
+/// low-level retrieve the current decoded date/time from OS with no cache
+procedure RawGlobalTime(out Time: TSynSystemTime; LocalTime: boolean);
+
+/// low-level fast Julian/Gregorian calendar calculation
+function EncodeGregorian(Year, Month, Day: cardinal; var Greg: cardinal): boolean;
+
+/// our own faster version of the corresponding RTL function
+function TryEncodeDate(Year, Month, Day: cardinal; var Date: TDateTime): boolean;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// our own faster version of "if not TryEncodeDate(Y, M, D, V) then V := 0"
+function EncodeDateOrZero(Year, Month, Day: PtrUInt): TDate;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// our own faster version of the corresponding RTL function
+function TryEncodeTime(Hour, Min, Sec, MSec: cardinal; var Time: TDateTime): boolean;
+  {$ifdef HASINLINE} inline; {$endif}
+
+  /// our own faster version of "if not TryEncodeTime(H, M, S, MS, V) then V := 0"
+function EncodeTimeOrZero(Hour, Min, Sec, MSec: PtrUInt): TTime;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// our own faster version of the corresponding RTL function
+// - returns 0 if TryEncodeDate() failed but just ignore TryEncodeTime() failure
+function EncodeDateTime(Year, Month, Day, Hour, Min, Sec, MSec: cardinal): TDateTime;
+
+/// our own faster version of the corresponding RTL function
+function IsLeapYear(Year: cardinal): boolean;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// compute how many days there are in a given month
+function DaysInMonth(Year, Month: cardinal): cardinal; overload;
+
+/// compute how many days there are in the month of a given date
+function DaysInMonth(Date: TDateTime): cardinal; overload;
+
+/// retrieve the current local Date, in the ISO 8601 layout, but expanded and
+// ready to be displayed
+function NowToString(Expanded: boolean = true; FirstTimeChar: AnsiChar = ' ';
+  UtcDate: boolean = false): RawUtf8;
+
+/// retrieve the current local Date, e.g. as '19 Mar 2025, 13:56:52'
+function NowToHuman(UtcDate: boolean = false; WithMS: boolean = false): RawUtf8;
+
+/// retrieve the current UTC Date, in the ISO 8601 layout, but expanded and
+// ready to be displayed
+function NowUtcToString(Expanded: boolean = true; FirstTimeChar: AnsiChar = ' '): RawUtf8;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// retrieve the current local date into '19 Sep 2023' English-readable text
+function NowTextDateShort(UtcDate: boolean = false): TShort15;
+
+/// convert a TUnixTime date into '19 Sep 2023' English-readable text
+function UnixTimeToTextDateShort(Date: TUnixTime): TShort15;
+
+/// convert a TUnixTime timestamp into '19 Sep 2023 13:56:52' ISO 8601 text
+function UnixTimeToShort(Epoch: TUnixTime; FirstTimeChar: AnsiChar = ' '): TShort31;
+
+/// convert a TDateTime date into '19 Sep 2023' English-readable text
+function DateToTextDateShort(Date: TDateTime): TShort15;
+
+/// convert some date/time to the ISO 8601 text layout, including milliseconds
+// - i.e. 'YYYY-MM-DD hh:mm:ss.sssZ' or 'YYYYMMDD hhmmss.sssZ' format
+// - TZD is the ending time zone designator ('', 'Z' or '+hh:mm' or '-hh:mm')
+// - see also TJsonWriter.AddDateTimeMS method
+function DateTimeMSToString(DateTime: TDateTime; Expanded: boolean = true;
+  FirstTimeChar: AnsiChar = ' '; const TZD: RawUtf8 = 'Z'): RawUtf8; overload;
+
+/// convert some date/time to the ISO 8601 text layout, including milliseconds
+// - i.e. 'YYYY-MM-DD hh:mm:ss.sssZ' or 'YYYYMMDD hhmmss.sssZ' format
+// - TZD is the ending time zone designator ('', 'Z' or '+hh:mm' or '-hh:mm')
+// - see also TJsonWriter.AddDateTimeMS method
+function DateTimeMSToString(HH, MM, SS, MS, Y, M, D: cardinal; Expanded: boolean;
+  FirstTimeChar: AnsiChar = ' '; const TZD: RawUtf8 = 'Z'): RawUtf8; overload;
+
+/// convert some date/time to the "HTTP-date" format as defined by RFC 7231
+// - i.e. "Tue, 15 Nov 1994 12:45:26 GMT" to be used as a value of
+// "Date", "Expires" or "Last-Modified" HTTP header
+// - if you care about timezones, dt value must be converted to UTC first
+// using TSynTimeZone.LocalToUtc, or tz should be properly set
+function DateTimeToHttpDate(dt: TDateTime; const tz: RawUtf8 = 'GMT'): RawUtf8; overload;
+
+/// convert some date/time to the "HTTP-date" format as defined by RFC 7231
+function DateTimeToHttpDateShort(dt: TDateTime; const tz: RawUtf8 = 'UTC'): TShort31;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// convert some "HTTP-date" format as defined by RFC 7231 into date/time
+// - wrapper around TSynSystemTime.FromHttpDate() conversion algorithm
+function HttpDateToDateTime(const httpdate: RawUtf8; var datetime: TDateTime;
+  tolocaltime: boolean = false): boolean; overload;
+
+/// convert some "HTTP-date" format as defined by RFC 7231 into date/time
+function HttpDateToDateTime(const httpdate: RawUtf8;
+  tolocaltime: boolean = false): TDateTime; overload;
+
+/// convert some "HTTP-date" format as defined by RFC 7231 into date/time
+// - wrapper around TSynSystemTime.FromHttpDate() conversion algorithm
+function HttpDateToDateTimeBuffer(httpdate: PUtf8Char; var datetime: TDateTime;
+  tolocaltime: boolean = false): boolean;
+
+/// convert some "HTTP-date" format as defined by RFC 7231 into UTC date/time
+function HttpDateToUnixTime(const httpdate: RawUtf8): TUnixTime;
+
+/// convert some "HTTP-date" format as defined by RFC 7231 into UTC date/time
+function HttpDateToUnixTimeBuffer(httpdate: PUtf8Char): TUnixTime;
+  {$ifdef HASINLINE} inline; {$endif}
+
+type
+  // HttpDateNowUtc consumes 37 chars, aligned to 40 bytes
+  THttpDateNowUtc = TShort39;
+
+/// returns the current UTC timestamp as the full 'Date' HTTP header line
+// - e.g. as 'Date: Tue, 15 Nov 1994 12:45:26 GMT'#13#10
+// - returns as a 40-bytes ShortString to avoid a memory allocation by caller
+// - use an internal cache for every second refresh
+function HttpDateNowUtc(Tix64: Int64 = 0): THttpDateNowUtc;
+
+/// returns the a specified UTC timestamp in HTTP-like format
+// - e.g. as 'Tue, 15 Nov 1994 12:45:26 GMT'
+procedure UnixMSTimeUtcToHttpDate(UnixMSTime: TUnixMSTime; var Text: TShort31);
+
+/// convert some TDateTime to a small text layout, perfect e.g. for naming a local file
+// - use 'YYMMDDHHMMSS' format so year is truncated to last 2 digits, expecting
+// a date > 1999 (a current date would be fine)
+function DateTimeToFileShort(const DateTime: TDateTime): TShort15;
+  {$ifdef FPC_OR_UNICODE} inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert some TDateTime to a small text layout, perfect e.g. for naming a local file
+// - use 'YYMMDDHHMMSS' format so year is truncated to last 2 digits, expecting
+// a date > 1999 (a current date would be fine)
+procedure DateTimeToFileShortVar(const DateTime: TDateTime; var result: ShortString);
+
+/// get the current time a small text layout, perfect e.g. for naming a file
+// - use 'YYMMDDHHMMSS' format so year is truncated to last 2 digits
+function NowToFileShort(localtime: boolean = false): TShort15;
+
+/// get the current year/month a small text layout
+// - use 'YYYYMM' format, perfect e.g. for naming a per-month metrics file
+function NowToFileMonthShort(localtime: boolean = false): TShort7;
+
+/// retrieve the current Time (whithout Date), in the ISO 8601 layout
+// - useful for direct on screen logging e.g.
+function TimeToString: RawUtf8;
+
+const
+  // Date Translation constants - see http://en.wikipedia.org/wiki/Julian_day
+  D0    = 1461;
+  D1    = 146097;
+  D2    = 153;
+  CGREG = 1721119; // algorithm's Gregorian base
+  C1899 = 2415019; // JDN of 1899-12-30 = TDateTime 0
+  C1970 = 2440588; // JDN of 1900-01-01 = Unix Epoch
+  D1899 = C1899 - CGREG; // = 693900
+  D1970 = C1970 - CGREG; // = 719469
+
+  /// used e.g. by DateTimeMSToString and TJsonWriter.AddDateTimeMS
+  DTMS_FMT: array[boolean] of RawUtf8 = (
+    '%%%%%%%%%',
+    '%-%-%%%:%:%.%%');
+
+/// compute an Etag: xxxx value from 64-bit of information, as '"##hexa##"' text
+procedure Int64ToHttpEtag(Value: Int64; out Etag: TShort23);
+
+/// handle HTTP_NOTMODIFIED (304) process against raw file information
+// - decode both 'if-none-match' and 'if-modified-since' input headers
+// - returns true if 304 status code is to be returned
+function FileHttp304NotModified(Size: Int64; Time: TUnixMSTime;
+  InHeaders: PUtf8Char; var OutHeaders: RawUtf8): boolean;
+
+/// handle HTTP_NOTMODIFIED (304) process against raw body content
+// - decode 'if-none-match' input header against the supplied Content
+// - returns true if 304 status code is to be returned
+function ContentHttp304NotModified(const Content: RawUtf8; InHeaders: PUtf8Char;
+  var OutHeaders: RawUtf8): boolean;
+
+
+
+{ ************ TUnixTime / TUnixMSTime POSIX Epoch Compatible 64-bit date/time }
+
+const
+  /// a contemporary, but elapsed, TUnixTime second-based value
+  // - corresponds to Thu, 08 Dec 2016 08:50:20 GMT
+  // - may be used to check for a valid just-generated Unix timestamp value
+  // - or to store a timestamp without any 32-bit "Year 2038" overflow issue,
+  // valid until year 2152 as cardinal (whereas POSIX Epoch up to 2106)
+  UNIXTIME_MINIMAL = 1481187020;
+  /// a contemporary, but elapsed, TUnixTimeMS millisecond-based value
+  UNIXTIMEMS_MINIMAL = QWord(UNIXTIME_MINIMAL) * MilliSecsPerSec;
+
+/// returns UnixTimeUtc - UNIXTIME_MINIMAL so has no "Year 2038" overflow issue
+function UnixTimeMinimalUtc: TUnixTimeMinimal;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// compare one TUnixTime (seconds) value against one TUnixMSTime (milliseconds) value
+function UnixTimeEqualsMS(const secs: TUnixTime; const millisecs: TUnixMSTime;
+  const deltamillisecs: Int64 = 1000): boolean;
+  {$ifdef CPU64}inline;{$endif}
+
+/// convert a second-based c-encoded time as TDateTime
+//  - i.e. number of seconds elapsed since Unix epoch 1/1/1970 into TDateTime
+function UnixTimeToDateTime(const UnixTime: TUnixTime): TDateTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// convert a TDateTime into a second-based c-encoded time
+//  - i.e. TDateTime into number of seconds elapsed since Unix epoch 1/1/1970
+function DateTimeToUnixTime(const AValue: TDateTime): TUnixTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// convert some second-based c-encoded time (from Unix epoch 1/1/1970) to
+// the ISO 8601 text layout
+// - use 'YYYYMMDDThhmmss' format if not Expanded
+// - use 'YYYY-MM-DDThh:mm:ss' format if Expanded
+function UnixTimeToString(const UnixTime: TUnixTime; Expanded: boolean = true;
+  FirstTimeChar: AnsiChar = 'T'): RawUtf8;
+
+/// convert some second-based c-encoded time (from Unix epoch 1/1/1970) to
+// a small text layout, perfect e.g. for naming a local file
+// - use 'YYMMDDHHMMSS' format so year is truncated to last 2 digits, expecting
+// a date > 1999 (a current date would be fine)
+procedure UnixTimeToFileShortVar(const UnixTime: TUnixTime; var result: ShortString);
+
+/// convert some second-based c-encoded time (from Unix epoch 1/1/1970) to
+// a small text layout, perfect e.g. for naming a local file
+// - use 'YYMMDDHHMMSS' format so year is truncated to last 2 digits, expecting
+// a date > 1999 (a current date would be fine)
+function UnixTimeToFileShort(const UnixTime: TUnixTime): TShort15; 
+  {$ifdef FPC_OR_UNICODE} inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert some second-based c-encoded time to the ISO 8601 text layout, either
+// as time or date elapsed period
+// - this function won't add the Unix epoch 1/1/1970 offset to the timestamp
+// - returns 'Thh:mm:ss' or 'YYYY-MM-DD' format, depending on the supplied value
+function UnixTimePeriodToString(const UnixTime: TUnixTime;
+  FirstTimeChar: AnsiChar = 'T'): RawUtf8;
+
+/// convert a millisecond-based c-encoded time (from Unix epoch 1/1/1970) as TDateTime
+function UnixMSTimeToDateTime(const UnixMSTime: TUnixMSTime): TDateTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// convert a millisecond-based c-encoded time (from Unix epoch 1/1/1970) as TDateTime
+// - in respect to plain  UnixMSTimeToDateTime(), will return 0 when input is also 0
+function UnixMSTimeToDateTimeZ(const UnixMSTime: TUnixMSTime): TDateTime;
+
+/// convert a TDateTime into a millisecond-based c-encoded time (from Unix epoch 1/1/1970)
+// - if AValue is 0, will return 0 (since is likely to be an error constant)
+function DateTimeToUnixMSTime(const AValue: TDateTime): TUnixMSTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// convert some millisecond-based c-encoded time (from Unix epoch 1/1/1970) to
+// the ISO 8601 text layout, including milliseconds
+// - i.e. 'YYYY-MM-DDThh:mm:ss.sssZ' or 'YYYYMMDDThhmmss.sssZ' format
+// - TZD is the ending time zone designator ('', 'Z' or '+hh:mm' or '-hh:mm')
+function UnixMSTimeToString(const UnixMSTime: TUnixMSTime; Expanded: boolean = true;
+  FirstTimeChar: AnsiChar = 'T'; const TZD: RawUtf8 = ''): RawUtf8;
+
+/// convert some milllisecond-based c-encoded time (from Unix epoch 1/1/1970) to
+// a small text layout, trimming to the second resolution, perfect e.g. for
+// naming a local file
+// - use 'YYMMDDHHMMSS' format so year is truncated to last 2 digits, expecting
+// a date > 1999 (a current date would be fine)
+function UnixMSTimeToFileShort(const UnixMSTime: TUnixMSTime): TShort15;
+  {$ifdef FPC_OR_UNICODE} inline;{$endif} // Delphi 2007 is buggy as hell
+
+/// convert some millisecond-based c-encoded time to the ISO 8601 text layout,
+// as time or date elapsed period
+// - this function won't add the Unix epoch 1/1/1970 offset to the timestamp
+// - returns 'Thh:mm:ss' or 'YYYY-MM-DD' format, depending on the supplied value
+function UnixMSTimePeriodToString(const UnixMSTime: TUnixMSTime;
+  FirstTimeChar: AnsiChar = 'T'): RawUtf8;
+
+/// convert some text encoded as TUnixTime/TUnixMSTime 64-bit integer value or
+// double/COM floating point value into a TDateTime
+// - a used e.g. by _JL_DateTime from mormot.core.json to unserialize TDateTime
+// - P = nil or 'null' would be recognized as V = 0
+procedure UnixTimeOrDoubleToDateTime(P: PUtf8Char; Len: PtrInt; var V: TDateTime);
+
+/// convert some text encoded as a number into a TDateTime
+// - will recognize double/COM flots or TUnixTime/TUnixMSTime 64-bit integers
+function UnixTimeAnyToDateTime(const Text: RawUtf8): TDateTime;
+  {$ifdef FPC} inline; {$endif}
+
+
+{ ************ TTimeLog efficient 64-bit custom date/time encoding }
+
+type
+  /// pointer to a memory structure for direct access to a TTimeLog type value
+  PTimeLogBits = ^TTimeLogBits;
+
+  /// internal memory structure for direct access to a 64-bit TTimeLog type value
+  // - most of the time, you should not use this object, but higher level
+  // TimeLogFromDateTime/TimeLogToDateTime/TimeLogNow/Iso8601ToTimeLog functions
+  // - since TTimeLogBits.Value is bit-oriented, you can't just add or substract
+  // two TTimeLog values when doing date/time computation: use a TDateTime
+  // temporary conversion in such case
+  // - TTimeLogBits.Value needs up to 40-bit precision, so features exact
+  // representation as JavaScript numbers (stored in a 52-bit mantissa)
+  {$ifdef USERECORDWITHMETHODS}
+  TTimeLogBits = record
+  {$else}
+  TTimeLogBits = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    /// the bit-encoded value itself, which follows an abstract "year" of 16
+    // months of 32 days of 32 hours of 64 minutes of 64 seconds
+    // - bits 0..5   = Seconds (0..59)
+    // - bits 6..11  = Minutes (0..59)
+    // - bits 12..16 = Hours   (0..23)
+    // - bits 17..21 = Day-1   (0..31)
+    // - bits 22..25 = Month-1 (0..11)
+    // - bits 26..40 = Year    (0..9999)
+    Value: Int64;
+    /// extract the date and time content in Value into individual values
+    procedure Expand(out Date: TSynSystemTime);
+    /// convert to Iso-8601 encoded text, truncated to date/time only if needed
+    function Text(Expanded: boolean; FirstTimeChar: AnsiChar = 'T'): RawUtf8;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert to Iso-8601 encoded text, truncated to date/time only if needed
+    procedure SetText(var Dest: RawUtf8; Expanded: boolean; FirstTimeChar: AnsiChar = 'T');
+    /// convert to Iso-8601 encoded text, truncated to date/time only if needed
+    function FillText(Dest: PUtf8Char; Expanded: boolean;
+      FirstTimeChar: AnsiChar = 'T'; QuoteChar: AnsiChar = #0): PUtf8Char;
+    /// convert to Iso-8601 encoded text with date and time part
+    // - never truncate to date/time nor return '' as Text() does
+    function FullText(Expanded: boolean; FirstTimeChar: AnsiChar = 'T';
+      QuotedChar: AnsiChar = #0): RawUtf8; overload;
+      {$ifdef FPC}inline;{$endif} //  URW1111 on Delphi 2010 and URW1136 on XE
+    /// convert to Iso-8601 encoded text with date and time part
+    // - never truncate to date/time or return '' as Text() does
+    function FullText(Dest: PUtf8Char; Expanded: boolean;
+      FirstTimeChar: AnsiChar = 'T'; QuotedChar: AnsiChar = #0): PUtf8Char; overload;
+    /// convert to ready-to-be displayed text
+    // - using i18nDateText global event, if set (e.g. by mORMoti18n.pas)
+    function i18nText: string;
+    /// extract the Time value of this date/time as floating-point TTime
+    function ToTime: TTime;
+    /// extract the Date value of this date/time as floating-point TDate
+    // - will return 0 if the stored value is not a valid date
+    function ToDate: TDate;
+    /// convert to a floating-point TDateTime
+    // - will return 0 if the stored value is not a valid date
+    function ToDateTime: TDateTime;
+    /// convert to a second-based c-encoded time (from Unix epoch 1/1/1970)
+    function ToUnixTime: TUnixTime;
+    /// convert to a millisecond-based c-encoded time (from Unix epoch 1/1/1970)
+    // - of course, milliseconds will be 0 due to TTimeLog second resolution
+    function ToUnixMSTime: TUnixMSTime;
+    /// fill Value from specified Date and Time
+    procedure From(Y, M, D, HH, MM, SS: cardinal); overload;
+     /// fill Value from specified TDateTime
+    procedure From(DateTime: TDateTime; DateOnly: boolean = false); overload;
+    /// fill Value from specified low-level system-specific FileAge() integer
+    // - i.e. 32-bit Windows bitmask local time, or 64-bit Unix UTC time
+    procedure FromFileDate(const FileDate: TFileAge);
+    /// fill Value from Iso-8601 encoded text
+    procedure From(P: PUtf8Char; L: PtrInt); overload;
+    /// fill Value from Iso-8601 encoded text
+    procedure From(const S: RawUtf8); overload;
+    /// fill Value from specified Date/Time individual fields
+    procedure From(Time: PSynSystemTime); overload;
+    /// fill Value from second-based c-encoded time (from Unix epoch 1/1/1970)
+    procedure FromUnixTime(const UnixTime: TUnixTime);
+    /// fill Value from millisecond-based c-encoded time (from Unix epoch 1/1/1970)
+    // - of course, millisecond resolution will be lost during conversion
+    procedure FromUnixMSTime(const UnixMSTime: TUnixMSTime);
+    /// fill Value from current local system Date and Time
+    procedure FromNow;
+    /// fill Value from current UTC system Date and Time
+    // - FromNow uses local time: this function retrieves the system time
+    // expressed in Coordinated Universal Time (UTC)
+    procedure FromUtcTime;
+    /// get the year (e.g. 2015) of the TTimeLog value
+    function Year: integer;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// get the month (1..12) of the TTimeLog value
+    function Month: integer;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// get the day (1..31) of the TTimeLog value
+    function Day: integer;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// get the hour (0..23) of the TTimeLog value
+    function Hour: integer;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// get the minute (0..59) of the TTimeLog value
+    function Minute: integer;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// get the second (0..59) of the TTimeLog value
+    function Second: integer;
+      {$ifdef HASINLINE}inline;{$endif}
+  end;
+
+/// get TTimeLog value from current local system date and time
+// - handle TTimeLog bit-encoded Int64 format
+function TimeLogNow: TTimeLog;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// get TTimeLog value from current UTC system Date and Time
+// - handle TTimeLog bit-encoded Int64 format
+function TimeLogNowUtc: TTimeLog;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// get TTimeLog value from a file date and time
+// - handle TTimeLog bit-encoded Int64 format
+function TimeLogFromFile(const FileName: TFileName): TTimeLog;
+
+/// get TTimeLog value from a given floating-point TDateTime
+// - handle TTimeLog bit-encoded Int64 format
+// - just a wrapper around PTimeLogBits(@aTime)^.From()
+// - we defined such a function since TTimeLogBits(aTimeLog).From() won't change
+// the aTimeLog variable content
+function TimeLogFromDateTime(const DateTime: TDateTime): TTimeLog;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// get TTimeLog value from a given Unix seconds since epoch timestamp
+// - handle TTimeLog bit-encoded Int64 format
+// - just a wrapper around PTimeLogBits(@aTime)^.FromUnixTime()
+function TimeLogFromUnixTime(const UnixTime: TUnixTime): TTimeLog;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Date/Time conversion from a TTimeLog value
+// - handle TTimeLog bit-encoded Int64 format
+// - just a wrapper around PTimeLogBits(@Timestamp)^.ToDateTime
+// - we defined such a function since TTimeLogBits(aTimeLog).ToDateTime gives an
+// internall compiler error on some Delphi IDE versions (e.g. Delphi 6)
+function TimeLogToDateTime(const Timestamp: TTimeLog): TDateTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// Unix seconds since epoch timestamp conversion from a TTimeLog value
+// - handle TTimeLog bit-encoded Int64 format
+// - just a wrapper around PTimeLogBits(@Timestamp)^.ToUnixTime
+function TimeLogToUnixTime(const Timestamp: TTimeLog): TUnixTime;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// convert a Iso8601 encoded string into a TTimeLog value
+// - handle TTimeLog bit-encoded Int64 format
+// - use this function only for fast comparison between two Iso8601 date/time
+// - conversion is faster than Iso8601ToDateTime: use only binary integer math
+// - ContainsNoTime optional pointer can be set to a boolean, which will be
+// set according to the layout in P (e.g. TRUE for '2012-05-26')
+// - returns 0 in case of invalid input string
+function Iso8601ToTimeLogPUtf8Char(P: PUtf8Char; L: PtrInt;
+  ContainsNoTime: PBoolean = nil): TTimeLog;
+
+/// convert a Iso8601 encoded string into a TTimeLog value
+// - handle TTimeLog bit-encoded Int64 format
+// - use this function only for fast comparison between two Iso8601 date/time
+// - conversion is faster than Iso8601ToDateTime: use only binary integer math
+function Iso8601ToTimeLog(const S: RawByteString): TTimeLog;
+  {$ifdef HASINLINE}inline;{$endif}
+
+const
+  { some constants for efficient TTimeLog / TTimeLogBits.Value process
+       bits 0..5   = Seconds (0..59)   BTS_S   AND_S
+       bits 6..11  = Minutes (0..59)   BTS_M   AND_M   SHR_M
+       bits 12..16 = Hours   (0..23)   BTS_H   AND_H   SHR_H
+       bits 17..21 = Day-1   (0..31)   BTS_DD  AND_DD  SHR_DD
+       bits 22..25 = Month-1 (0..11)   BTS_MM  AND_MM  SHR_MM
+       bits 26..40 = Year    (0..9999) BTS_YY  AND_YY  SHR_YY   }
+  BTS_S  = 6;
+  BTS_M  = 6;
+  BTS_H  = 5;
+  BTS_DD = 5;
+  BTS_MM = 4;
+  BTS_YY = 12;
+  AND_S  = (1 shl BTS_S)  - 1;
+  AND_M  = (1 shl BTS_M)  - 1;
+  AND_H  = (1 shl BTS_H)  - 1;
+  AND_DD = (1 shl BTS_DD) - 1;
+  AND_MM = (1 shl BTS_MM) - 1;
+  SHR_M  = BTS_S;
+  SHR_H  = SHR_M  + BTS_M;
+  SHR_DD = SHR_H  + BTS_H;
+  SHR_MM = SHR_DD + BTS_DD;
+  SHR_YY = SHR_MM + BTS_MM;
+
+
+{ ******************* TTextDateWriter supporting date/time ISO-8601 serialization }
+
+type
+  /// enhanced TTextWriter inherited class
+  // - in addition to TTextWriter, will handle date/time ISO-8601 serialization
+  TTextDateWriter = class(TTextWriter)
+  public
+    /// append some number with left-filled spaces up to Width characters count
+    // - if the value too big to fit in Width, will append K(Value) abbreviation
+    procedure AddSpaced(Value: QWord; Width: PtrInt;
+      SepChar: AnsiChar = #0); overload;
+    /// append a TTimeLog value, expanded as Iso-8601 encoded text
+    procedure AddTimeLog(Value: PInt64; QuoteChar: AnsiChar = #0);
+    /// append a TUnixTime value, expanded as Iso-8601 encoded text
+    procedure AddUnixTime(Value: PInt64; QuoteChar: AnsiChar = #0);
+    /// append a TUnixMSTime value, expanded as Iso-8601 encoded text
+    procedure AddUnixMSTime(Value: PInt64; WithMS: boolean = false;
+      QuoteChar: AnsiChar = #0);
+    /// append a TDateTime value, expanded as Iso-8601 encoded text
+    // - use 'YYYY-MM-DDThh:mm:ss' format (with FirstChar='T')
+    // - if twoDateTimeWithZ CustomOption is set, will append an ending 'Z'
+    // - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+    // - if QuoteChar is not #0, it will be written before and after the date
+    procedure AddDateTime(Value: PDateTime; FirstChar: AnsiChar = 'T';
+      QuoteChar: AnsiChar = #0; WithMS: boolean = false;
+      AlwaysDateAndTime: boolean = false); overload;
+    /// append a TDateTime value, expanded as Iso-8601 encoded text
+    // - use 'YYYY-MM-DDThh:mm:ss' format
+    // - if twoDateTimeWithZ CustomOption is set, will append an ending 'Z'
+    // - append nothing if Value=0
+    // - if WithMS is TRUE, will append '.sss' for milliseconds resolution
+    procedure AddDateTime(const Value: TDateTime; WithMS: boolean = false); overload;
+      {$ifdef HASINLINE} inline; {$endif}
+    /// append a TDateTime value, expanded as Iso-8601 text with milliseconds
+    // and a specified Time Zone designator
+    // - i.e. 'YYYY-MM-DDThh:mm:ss.sssZ' format
+    // - twoDateTimeWithZ CustomOption is ignored in favor of TZD parameter
+    // - TZD is the ending time zone designator ('', 'Z' or '+hh:mm' or '-hh:mm')
+    procedure AddDateTimeMS(const Value: TDateTime; Expanded: boolean = true;
+      FirstTimeChar: AnsiChar = 'T'; const TZD: RawUtf8 = 'Z');
+    /// append the current UTC date and time, expanded as Iso-8601 encoded text
+    // - use 'YYYY-MM-DDThh:mm:ss' format with '.sss' optional milliseconds
+    // - you may set LocalTime=TRUE to write the local date and time instead
+    // - this method will add the supplied TZD and ignore twoDateTimeWithZ flag
+    procedure AddCurrentIsoDateTime(LocalTime, WithMS: boolean;
+      FirstTimeChar: AnsiChar = 'T'; const TZD: RawUtf8 = '');
+    /// append the current UTC date and time, in apache-like format
+     // - e.g. append '19/Feb/2019:06:18:55 +0000' - with a space before the TZD
+    // - you may set LocalTime=TRUE to write the local date and time instead
+    procedure AddCurrentNcsaLogTime(LocalTime: boolean; const TZD: RawUtf8 = '+0000');
+    /// append the current UTC date and time, in our HTTP format
+    // - e.g. append '19/Feb/2019:06:18:55 GMT' - with a space before the TZD
+    // - you may set LocalTime=TRUE to write the local date and time instead
+    procedure AddCurrentHttpTime(LocalTime: boolean; const TZD: RawUtf8 = 'GMT');
+    /// append the current UTC date and time, in our TSynLog human-friendly format
+    // - e.g. append '20110325 19241502' - with no trailing space nor TZD
+    // - you may set LocalTime=TRUE to write the local date and time instead
+    procedure AddCurrentLogTime(LocalTime: boolean);
+    /// append a time period, specified in micro seconds, in 00.000.000 TSynLog format
+    procedure AddMicroSec(MicroSec: cardinal);
+    /// append a time period as "seconds.milliseconds" content
+    procedure AddSeconds(MilliSeconds: QWord; Quote: AnsiChar = #0);
+  end;
+
+  /// a fake TTextWriter/TTextDateWriter instance allocated on stack
+  {$ifdef USERECORDWITHMETHODS}
+  TLocalWriter = record
+  {$else}
+  TLocalWriter = object
+  {$endif USERECORDWITHMETHODS}
+  private
+    VMT: TClass; // fake inlined TTextDateWriter instance
+    Fields: array[1 .. 7 * SizeOf(pointer) + 10 * SizeOf(integer)] of byte;
+    Temp: ShortString;
+  public
+    /// initialize a fake TDateTimeWriter instance to write into a ShortString
+    // - don't forget to call Done - aka FlushFinal - to actually fill aDest
+    // - warning: but NEVER call Free on the returned fake instance
+    function Init(var Dest: ShortString): TTextDateWriter;
+    /// just return @self fake TDateTimeWriter instance
+    function Writer: TTextDateWriter;
+      {$ifdef HASINLINE} inline; {$endif}
+    /// inlined faster FlushFinal to actually fill the Dest ShortString
+    procedure Done;
+      {$ifdef HASINLINE} inline; {$endif}
+  end;
+
+/// low-level parsing of '00.020.006' as generated by TTextDateWriter.AddTimeLog
+function DecodeMicroSec(P: PByteArray): PtrInt;
+
+
+{ ******************* TValuePUtf8Char text value wrapper record }
+
+type
+  /// points to one value as raw memory buffer pointer and length
+  // - since the data is typeless, no method has been associated
+  {$ifdef USERECORDWITHMETHODS}
+  TValuePointer = record
+  {$else}
+  TValuePointer = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    /// a pointer to the actual UTF-8 or binary content
+    Buffer: pointer;
+    /// how many bytes are stored in Buffer
+    Len: PtrInt;
+  end;
+
+  /// points to one value of raw UTF-8 content, decoded from e.g. a JSON/XML buffer
+  // - used e.g. by JsonDecode() overloaded function to returns names/values
+  // - supply some methods for direct high-level types conversion or comparison
+  {$ifdef USERECORDWITHMETHODS}
+  TValuePUtf8Char = record
+  {$else}
+  TValuePUtf8Char = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    /// a pointer to the actual UTF-8 text
+    Text: PUtf8Char;
+    /// how many UTF-8 bytes are stored in Value
+    Len: PtrInt;
+    /// convert the value into a UTF-8 string
+    procedure ToUtf8(var Value: RawUtf8); overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the value into a UTF-8 string
+    function ToUtf8: RawUtf8; overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the value into a RTL string
+    function ToString: string;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the value into a signed integer
+    function ToInteger: PtrInt;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the value into an unsigned integer
+    function ToCardinal: PtrUInt; overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the value into an unsigned integer
+    function ToCardinal(Def: PtrUInt): PtrUInt; overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the value into a 64-bit signed integer
+    function ToInt64: Int64;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// returns true if Value is either '1' or 'true'
+    function ToBoolean: boolean;
+    /// convert the value into a floating point number
+    function ToDouble: double;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// convert the ISO-8601 text value as TDateTime
+    // - could have been written e.g. by DateTimeToIso8601Text()
+    function Iso8601ToDateTime: TDateTime;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// will call IdemPropNameU() over the stored text Value
+    function Idem(const Value: RawUtf8): boolean;
+      {$ifdef HASSAFEINLINE}inline;{$endif}
+    /// case-sensitive comparison with the stored text Value
+    function Equal(const Value: RawUtf8): boolean; overload;
+      {$ifdef HASSAFEINLINE}inline;{$endif}
+    /// case-sensitive comparison with the stored text Value
+    function Equal(Value: PUtf8Char; ValueLen: PtrInt): boolean; overload;
+      {$ifdef HASSAFEINLINE}inline;{$endif}
+    /// CSV case-sensitive matching index with the stored text Value
+    // - returns -1 if Value/Len was not found, or the 0-based index in csv
+    // - e.g. Equal('two') means Match('one,two')=1
+    function Match(Csv: PUtf8Char; Sep: AnsiChar = ','): integer;
+  end;
+  PValuePUtf8Char = ^TValuePUtf8Char;
+  /// used e.g. by JsonDecode() overloaded function to returns values
+  TValuePUtf8CharArray =
+    array[0 .. maxInt div SizeOf(TValuePUtf8Char) - 1] of TValuePUtf8Char;
+  PValuePUtf8CharArray = ^TValuePUtf8CharArray;
+  TValuePUtf8CharDynArray = array of TValuePUtf8Char;
+
+
+implementation
+
+
+{ ************ Size and Elapsed Time to Text Conversion }
+
+function KB(bytes: Int64; nospace: boolean): TShort15;
+begin
+  result[0] := #0;
+  AppendKb(bytes, result, not nospace);
+end;
+
+function KB(const buffer: RawByteString): TShort15;
+begin
+  result[0] := #0;
+  AppendKb(length(buffer), result, {withspace=}true);
+end;
+
+procedure KBU(bytes: Int64; var result: RawUtf8);
+var
+  tmp: TShort15;
+begin
+  tmp[0] := #0;
+  AppendKb(bytes, tmp, {withspace=}true);
+  FastSetString(result, @tmp[1], ord(tmp[0]));
+end;
+
+procedure KVar(value: Int64; var result: ShortString);
+begin
+  result[0] := #0;
+  AppendKb(value, result, {withspace=}false);
+  if (result[0] <> #0) and
+     (result[ord(result[0])] = 'B') then
+    dec(result[0]); // just trim last 'B' ;)
+end;
+
+function K(value: Int64): TShort15;
+begin
+  KVar(Value, result);
+end;
+
+function IntToThousandString(Value: PtrInt; const Sep: ShortString): TShort31;
+var
+  i, L, Len: cardinal;
+begin
+  ToShortU(abs(Value), @result);
+  L := ord(result[0]);
+  if L >= 4 then
+  begin
+    Len := L + 1;
+    for i := 1 to (L - 1) div 3 do
+      insert(Sep, result, Len - i * 3);
+  end;
+  if value < 0 then
+    insert('-', result, 1); // seldom called
+end;
+
+function SecToString(S: QWord): TShort15;
+begin
+  MicroSecToStringVar(S * MicroSecsPerSec, result);
+end;
+
+function MilliSecToString(MS: QWord): TShort15;
+begin
+  MicroSecToStringVar(MS * MicroSecsPerMilliSec, result);
+end;
+
+function MicroSecToString(Micro: QWord): TShort15;
+begin
+  MicroSecToStringVar(Micro, result);
+end;
+
+function MicroSecFrom(Start: QWord): TShort15;
+var
+  stop: Int64;
+begin
+  QueryPerformanceMicroSeconds(stop);
+  MicroSecToStringVar(stop - Int64(Start), result);
+end;
+
+procedure AppendShortBy100(value: cardinal; const valueunit: ShortString;
+  var result: ShortString);
+var
+  d100: TDiv100Rec;
+begin
+  if value < 100 then
+  begin
+    if ord(result[0]) + 4 > high(result) then
+      exit;
+    PCardinal(PAnsiChar(@result) + ord(result[0]) + 1)^ :=
+      ord('0') + ord('.') shl 8 + cardinal(TwoDigitLookupW[value]) shl 16;
+    inc(result[0], 4);
+  end
+  else
+  begin
+    Div100(value, d100{%H-});
+    AppendShortCardinal(d100.d, result);
+    if d100.m <> 0 then
+    begin
+      AppendShortCharSafe('.', result);
+      AppendShortTwoCharsSafe(TwoDigitLookupW[d100.m], result);
+    end;
+  end;
+  AppendShort(valueunit, result)
+end;
+
+procedure AppendShortTime(value: cardinal; const u: ShortString;
+  var result: ShortString);
+var
+  d: cardinal;
+begin
+  d := value div 60;
+  AppendShortCardinal(d, result);
+  AppendShort(u, result);
+  AppendShortTwoCharsSafe(TwoDigitLookupW[value - (d * 60)], result);
+end;
+
+procedure MicroSecToStringVar(Micro: QWord; var result: ShortString);
+begin
+  result[0] := #0;
+  if Int64(Micro) <= 0 then // warning: QWord=Int64 on pre-Unicode Delphi
+    PCardinal(@result)^ := 3 + ord('0') shl 8 + ord('u') shl 16 + ord('s') shl 24
+  else if Int64(Micro) < 1000 then
+  begin
+    AppendShortCardinal(Micro, result);
+    AppendShortTwoCharsSafe(ord('u') + ord('s') shl 8, result);
+  end
+  else if Micro < MicroSecsPerSec then
+    AppendShortBy100(
+      {$ifdef CPU32} PCardinal(@Micro)^ {$else} Micro {$endif} div 10, 'ms', result)
+  else if Micro < 60000000 then
+    AppendShortBy100(
+      {$ifdef CPU32} PCardinal(@Micro)^ {$else} Micro {$endif} div 10000, 's', result)
+  else if Micro < QWord(3600000000) then
+    AppendShortTime(
+      {$ifdef CPU32} PCardinal(@Micro)^ {$else} Micro {$endif} div 1000000, 'm', result)
+  else if Micro < QWord(MicroSecsPerDay * 2) then
+    AppendShortTime(Micro div 60000000, 'h', result)
+  else
+  begin
+    AppendShortCardinal(Micro div MicroSecsPerDay, result);
+    AppendShortCharSafe('d', result);
+  end;
+end;
+
+function MicroSecToText(Micro: QWord): RawUtf8;
+var
+  tmp: TShort15;
+begin
+  MicroSecToStringVar(Micro, tmp);
+  FastSetString(result, @tmp[1], ord(tmp[0]));
+end;
+
+procedure NanoSecToString(Nano: QWord; var result: ShortString);
+begin
+  result[0] := #0;
+  if Int64(Nano) <= 0 then // warning: QWord=Int64 on pre-Unicode Delphi
+    PCardinal(@result)^ := 3 + ord('0') shl 8 + ord('n') shl 16 + ord('s') shl 24
+  else if Nano < 1000 then
+  begin
+    AppendShortCardinal(Nano, result);
+    AppendShortTwoCharsSafe(ord('n') + ord('s') shl 8, result);
+  end
+  else if Nano < 1000000 then
+    AppendShortBy100(
+      {$ifdef CPU32} PCardinal(@Nano)^ {$else} Nano {$endif} div 10, 'us', result)
+  else
+    MicroSecToStringVar(Nano div NanoSecsPerMicroSec, result);
+end;
+
+procedure TimeSpanAppendShort(value: Int64; var result: ShortString);
+var
+  st: TSynSystemTime;
+begin
+  if value < 0 then
+    AppendShortCharSafe('-', result);
+  st.AppendInterval(st.FromTimeSpan(value), result);
+end;
+
+procedure TimeSpanToTextVar(value: Int64; var result: RawUtf8);
+var
+  tmp: TShort31;
+begin
+  tmp[0] := #0;
+  TimeSpanAppendShort(value, tmp);
+  ShortStringToAnsi7String(tmp, result);
+end;
+
+function TimeSpanToText(value: Int64): RawUtf8;
+begin
+  TimeSpanToTextVar(value, result);
+end;
+
+function TextToTimeSpanBuffer(Text: PUtf8Char; var TimeSpan: Int64): PUtf8Char;
+var
+  st: TSynSystemTime;
+  neg, days: PtrInt;
+begin
+  result := st.FromTimeSpan(Text, days, neg);
+  if result <> nil then // parsing error or reached 64-bit overflow
+    TimeSpan := (Int64(days) * MilliSecsPerDay +
+                 st.Hour     * MilliSecsPerHour +
+                 st.Minute   * MilliSecsPerMin +
+                 st.Second   * MilliSecsPerSec +
+                 st.MilliSecond) * TicksPerMillisecond * neg;
+end;
+
+function TextToTimeSpan(const Text: RawUtf8; var TimeSpan: Int64): boolean;
+begin
+  result := TextToTimeSpanBuffer(pointer(Text), TimeSpan) <> nil;
+end;
+
+
+{ ************ ISO-8601 Compatible Date/Time Text Encoding }
+
+const
+  // tables for Gregorian date translation algorithms (faster than SysUtils)
+  DaysPerMonth: array[{leapYear=}boolean, 0 .. 15] of byte = (
+   (0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 0, 0, 0),
+   (0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 0, 0, 0));
+  DaysFromMarch: array[0 .. 11] of word = ( // pre-computed (Month * D2 + 2) div 5
+    0, 31, 61, 92, 122, 153, 184, 214, 245, 275, 306, 337);
+
+function EncodeGregorian(Year, Month, Day: cardinal; var Greg: cardinal): boolean;
+var
+  m, d: cardinal; // code will use fast reciprocal: no TDiv100Rec()
+begin
+  result := false;
+  if (cardinal(Month - 1) >= 12) or     // 1..12
+     (Day = 0) or             // 1..xx
+     (cardinal(Year - 1) >= 9999) then  // 1..9999 as FPC RTL itself
+    exit;
+  {$ifdef CPU64}
+  d := (QWord(Year) * DIV100_INV) shr 37; // we can avoid div on Delphi Win64
+  {$else}
+  d := Year div 100; // use fast reciprocal on FPC, plain div on Delphi Win32
+  {$endif CPU64}
+  m := Year - (d * 100);
+  if Day > DaysPerMonth[(Year and 3 = 0) and // inlined IsLeapYear()
+            ((m <> 0) or ((d and 3) = 0))][Month] then
+    exit;
+  if Month > 2 then
+    dec(Month, 3)
+  else
+  begin
+    inc(Month, 9);
+    if m = 0 then // Div100(Year - 1, y100)
+    begin
+      dec(d);
+      m := 99;
+    end
+    else
+      dec(m);
+  end;
+  d := d * D1; // in specific steps for better FPC codegen
+  m := m * D0;
+  d := d shr 2;
+  inc(d, m shr 2);
+  inc(d, DaysFromMarch[Month]);
+  inc(d, Day);
+  Greg := d;
+  // Greg := (d * D1) shr 2 + (m * D0) shr 2 + (Month * D2 + 2) div 5 + Day;
+  result := true;
+end;
+
+function TryEncodeDate(Year, Month, Day: cardinal; var Date: TDateTime): boolean;
+var
+  g: cardinal;
+begin
+  if EncodeGregorian(Year, Month, Day, g) then
+  begin
+    unaligned(Date) := g - D1899; // separated to avoid sign issue
+    result := true;
+  end
+  else
+    result := false;
+end;
+
+function EncodeDateOrZero(Year, Month, Day: PtrUInt): TDate;
+var
+  g: cardinal;
+begin
+  if not EncodeGregorian(Year, Month, Day, g) then
+    g := D1899;
+  result := g - D1899; // separated to avoid sign issue
+end;
+
+function TryEncodeTime(Hour, Min, Sec, MSec: cardinal; var Time: TDateTime): boolean;
+var
+  d: cardinal;
+begin
+  result := false;
+  if (Hour > 23) or
+     (Min > 59) or
+     (Sec > 59) or
+     (MSec > 999) then
+    exit;
+  d := Hour * MilliSecsPerHour + Min * MilliSecsPerMin + Sec * MilliSecsPerSec + MSec;
+  unaligned(Time) := d * MilliSecsPerDate;
+  result := true;
+end;
+
+function EncodeTimeOrZero(Hour, Min, Sec, MSec: PtrUInt): TTime;
+var
+  d: cardinal;
+begin
+  if (Hour > 23) or
+     (Min > 59) or
+     (Sec > 59) or
+     (MSec > 999) then
+  begin
+    result := 0;
+    exit;
+  end;
+  d := Hour * MilliSecsPerHour + Min * MilliSecsPerMin + Sec * MilliSecsPerSec + MSec;
+  result := d * MilliSecsPerDate;
+end;
+
+function EncodeDateTime(Year, Month, Day, Hour, Min, Sec, MSec: cardinal): TDateTime;
+begin
+  result := EncodeDateOrZero(Year, Month, Day) + EncodeTimeOrZero(Hour, Min, Sec, MSec);
+end;
+
+function IsLeapYear(Year: cardinal): boolean;
+begin
+  if Year and 3 <> 0 then
+    result := false
+  else if Year and 15 <> 0 then // need to check (Year mod 25) <> 0
+    result := cardinal(Year * $c28f5c29) > $0a3d70a3 // 25*$C28F5C29 = 1(mod2^32)
+  else
+    result := true;
+end;
+
+function DaysInMonth(Year, Month: cardinal): cardinal;
+begin
+  result := DaysPerMonth[mormot.core.datetime.IsLeapYear(Year)][Month];
+end;
+
+function DaysInMonth(Date: TDateTime): cardinal;
+var
+  dt: TSynSystemTime;
+begin
+  dt.FromDate(Date); // faster than RTL DecodeDate()
+  result := dt.DaysInMonth;
+end;
+
+function Iso8601ToDateTimePUtf8Char(P: PUtf8Char; L: PtrInt): TDateTime;
+var
+  tmp: TDateTime; // circumvent FPC limitation
+begin
+  Iso8601ToDateTimePUtf8CharVar(P, L, tmp);
+  result := tmp;
+end;
+
+function Iso8601ToDateTime(const S: RawByteString): TDateTime;
+var
+  tmp: TDateTime; // circumvent FPC limitation
+begin
+  Iso8601ToDateTimePUtf8CharVar(pointer(S), length(S), tmp);
+  result := tmp;
+end;
+
+function Iso8601ToTime(const S: RawByteString): TTime;
+var
+  tmp: TDateTime; // circumvent FPC limitation
+begin
+  Iso8601ToTimePUtf8CharVar(pointer(S), length(S), tmp);
+  result := tmp;
+end;
+
+function Iso8601FractionToMS(P: PUtf8Char; L: PtrInt): cardinal;
+  {$ifdef HASINLINE} inline; {$endif}
+var
+  c: cardinal;
+begin
+  result := 0;
+  if L <= 0 then
+    exit;
+  c := ord(P[0]) - 48;
+  if c > 9 then
+    exit;
+  result := c * 100;
+  if L < 2 then
+    exit;
+  c := ord(P[1]) - 48;
+  if c > 9 then
+    exit;
+  inc(result, c * 10);
+  if L < 3 then
+    exit;
+  c := ord(P[2]) - 48;
+  if c <= 9 then
+    inc(result, c);
+end;
+
+procedure Iso8601ToDateTimePUtf8CharVar(P: PUtf8Char; L: PtrInt;
+  var result: TDateTime);
+var
+  b, y, m, d, h, mi, ss, ms: cardinal;
+  time: TDateTime;
+  {$ifdef FPC}
+  y100: cardinal;
+  {$else}
+  d100: TDiv100Rec;
+  {$endif FPC}
+  {$ifdef CPUX86NOTPIC}
+  tab: TNormTableByte absolute ConvertHexToBin;
+  {$else}
+  tab: PByteArray; // faster on PIC, ARM and x86_64
+  {$endif CPUX86NOTPIC}
+// expect 'YYYYMMDDThhmmss[.sss]' format but handle also
+// 'YYYY-MM-DDThh:mm:ss[.sss]' or plain '[T]hh:mm:ss[.sss]'
+begin
+  PInt64(@result)^ := 0;
+  if P = nil then
+    exit;
+  if L = 0 then
+    while P[L] <> #0 do // no need to call external StrLen() for a few chars
+      inc(L);
+  if L < 4 then
+    exit; // we need 'YYYY' at least
+  if (P[0] = '''') and
+     (P[L - 1] = '''') then
+  begin
+    // in-place unquote of input - typical from SQL values
+    inc(P);
+    dec(L, 2);
+    if L < 4 then
+      exit;
+  end;
+  if P[0] = 'T' then // 'Thhmmss[.sss]'
+  begin
+    dec(P, 8); // hhmmss at P[9..] position
+    inc(L, 8);
+  end
+  else if P[2] = ':' then // 'hh:mm:ss[.sss]'
+  begin
+    dec(P, 9); // hh:mm:ss at P[9..] position
+    inc(L, 9);
+  end
+  else
+  begin
+    {$ifndef CPUX86NOTPIC}
+    tab := @ConvertHexToBin;
+    {$endif CPUX86NOTPIC}
+    b := tab[ord(P[0])]; // first YYYY digit
+    if b > 9 then
+      exit
+    else
+      y := b; // fast check '0'..'9'
+    b := tab[ord(P[1])];
+    if b > 9 then
+      exit
+    else
+      y := y * 10 + b;
+    b := tab[ord(P[2])];
+    if b > 9 then
+      exit
+    else
+      y := y * 10 + b;
+    b := tab[ord(P[3])];
+    if b > 9 then
+      exit
+    else
+      y := y * 10 + b;
+    if P[4] in ['-', '/'] then
+    begin
+      inc(P);
+      dec(L);
+    end; // allow YYYY-MM-DD and YYYY/MM/DD
+    d := 1;
+    if L >= 6 then
+    begin
+      // YYYYMM
+      m := ord(P[4]) * 10 + ord(P[5]) - (48 + 480);
+      if (m = 0) or
+         (m > 12) then
+        exit;
+      if P[6] in ['-', '/'] then
+      begin
+        inc(P);
+        dec(L);
+      end; // allow YYYY-MM-DD and YYYY/MM/DD
+      if L >= 8 then
+      begin
+        // YYYYMMDD
+        if (L > 8) and
+           not (P[8] in [#0, ' ', 'T']) then
+          exit; // invalid date format
+        d := ord(P[6]) * 10 + ord(P[7]) - (48 + 480);
+        if (d = 0) or
+           (d > DaysPerMonth[true][m]) then
+          exit; // worse day number to allow is for leapyear=true
+      end;
+    end
+    else
+      m := 1;
+    if m > 2 then // inlined EncodeDate(y,m,d)
+      dec(m, 3)
+    else if m > 0 then
+    begin
+      inc(m, 9);
+      dec(y);
+    end;
+    if y > 9999 then
+      exit; // avoid integer overflow e.g. if '0000' is an invalid date
+    {$ifdef FPC}
+    y100 := y div 100; // FPC will use fast reciprocal
+    unaligned(result) := cardinal(cardinal(D1 * y100) shr 2) +
+                         cardinal(cardinal(D0 * (y - y100 * 100)) shr 2) +
+                         cardinal(cardinal(D2 * m + 2) div 5) + d;
+    {$else}
+    Div100(y, d100{%H-});
+    result := cardinal(cardinal(D1 * d100.d) shr 2) +
+              cardinal(cardinal(D0 * d100.m) shr 2) +
+              cardinal(cardinal(D2 * m + 2) div 5) + d;
+    {$endif FPC}
+    unaligned(result) := unaligned(result) - D1899; // avoid sign issue
+    if L < 15 then
+      exit; // not enough space to retrieve the time
+  end;
+  h := ord(P[9]) * 10 + ord(P[10]) - (48 + 480);
+  if P[11] = ':' then
+  begin
+    inc(P);
+    dec(L);
+  end; // allow hh:mm:ss
+  mi := ord(P[11]) * 10 + ord(P[12]) - (48 + 480);
+  if P[13] = ':' then
+  begin
+    inc(P);
+    dec(L);
+  end; // allow hh:mm:ss
+  ss := ord(P[13]) * 10 + ord(P[14]) - (48 + 480);
+  if (L > 16) and
+     (P[15] = '.') then
+    // one or more digits representing a decimal fraction of a second
+    ms := Iso8601FractionToMS(@P[16], L - 16)
+  else
+    ms := 0;
+  if (h >= 24) or
+     (mi >= 60) or
+     (ss >= 60) then
+    exit;
+  // inlined EncodeTime()
+  time := integer(cardinal(h * MilliSecsPerHour) +
+                  cardinal(mi * MilliSecsPerMin) +
+                  cardinal(ss * MilliSecsPerSec) + ms) * MilliSecsPerDate;
+  if result < 0 then
+    unaligned(result) := unaligned(result) - time
+  else
+    unaligned(result) := unaligned(result) + time;
+end;
+
+procedure Iso8601ToDatePUtf8CharVar(P: PUtf8Char; L: PtrInt;
+  var result: TDate);
+var
+  y, m, d: cardinal;
+begin
+  if (P <> nil) and
+     Iso8601ToDatePUtf8Char(P, L, y, m, d) then
+    result := EncodeDateOrZero(y, m, d)
+  else
+    PInt64(@result)^ := 0;
+end;
+
+function Iso8601CheckAndDecode(P: PUtf8Char; L: PtrInt;
+  var Value: TDateTime): boolean;
+// handle 'YYYY-MM-DDThh:mm:ss[.sss]' or 'YYYY-MM-DD' or 'Thh:mm:ss[.sss]'
+begin
+  if P = nil then
+    result := false
+  else if (((L = 9) or (L = 13)) and
+            (P[0] = 'T') and (P[3] = ':')) or // 'Thh:mm:ss[.sss]'
+          ((L = 10) and
+           (P[4] = '-') and (P[7] = '-')) or // 'YYYY-MM-DD'
+          (((L = 19) or (L = 23)) and
+           (P[4] = '-') and (P[10] = 'T')) then
+  begin
+    Iso8601ToDateTimePUtf8CharVar(P, L, Value);
+    result := PInt64(@Value)^ <> 0;
+  end
+  else
+    result := false;
+end;
+
+function IsIso8601(P: PUtf8Char; L: PtrInt): boolean;
+begin
+  result := Iso8601ToTimeLogPUtf8Char(P, L) <> 0;
+end;
+
+function Iso8601ToTimePUtf8Char(P: PUtf8Char; L: PtrInt): TDateTime;
+var
+  tmp: TDateTime; // for FPC
+begin
+  Iso8601ToTimePUtf8CharVar(P, L, tmp);
+  result := tmp;
+end;
+
+procedure Iso8601ToTimePUtf8CharVar(P: PUtf8Char; L: PtrInt;
+  var result: TDateTime);
+var
+  H, MI, SS, MS: cardinal;
+begin
+  if Iso8601ToTimePUtf8Char(P, L, H, MI, SS, MS) then
+    unaligned(result) := integer(cardinal(H * MilliSecsPerHour) +
+                         cardinal(MI * MilliSecsPerMin) +
+                         cardinal(SS * MilliSecsPerSec + MS)) * MilliSecsPerDate
+  else
+    PInt64(@result)^ := 0;
+end;
+
+function Iso8601ToTimePUtf8Char(P: PUtf8Char; L: PtrInt;
+  var H, M, S, MS: cardinal): boolean;
+begin
+  result := false; // error
+  if P = nil then
+    exit;
+  if L = 0 then
+    while P[L] <> #0 do // no need to call external StrLen() for a few chars
+      inc(L);
+  if L < 6 then
+    exit; // we need 'hhmmss' at least
+  if P[0] = 'T' then
+  begin
+    inc(P); // 'Thhmmss' -> 'hhmmss'
+    dec(L);
+  end;
+  H := ord(P[0]) * 10 + ord(P[1]) - (48 + 480);
+  if P[2] = ':' then
+  begin
+    inc(P);
+    dec(L);
+  end; // allow hh:mm:ss
+  M := ord(P[2]) * 10 + ord(P[3]) - (48 + 480);
+  if P[4] = ':' then
+  begin
+    inc(P);
+    dec(L);
+  end; // allow hh:mm:ss
+  S := ord(P[4]) * 10 + ord(P[5]) - (48 + 480);
+  if (L > 6) and
+     (P[6] = '.') then
+    // one or more digits representing a decimal fraction of a second
+    if (L > 7) and
+       (P[7] in ['0'..'9']) then
+      MS := Iso8601FractionToMS(@P[7], L - 7)
+    else
+      exit
+  else
+    MS := 0;
+  if (H < 24) and
+     (M < 60) and
+     (S < 60) and
+     (MS < MilliSecsPerSec) then
+    result := true;
+end;
+
+function Iso8601ToDatePUtf8Char(P: PUtf8Char; L: PtrInt;
+  var Y, M, D: cardinal): boolean;
+begin
+  result := false; // error
+  if P = nil then
+    exit;
+  if L = 0 then
+    while P[L] <> #0 do // no need to call external StrLen() for a few chars
+      inc(L);
+  if (L < 8) or
+     not (P[0] in ['0'..'9']) or
+     not (P[1] in ['0'..'9']) or
+     not (P[2] in ['0'..'9']) or
+     not (P[3] in ['0'..'9']) then
+    exit; // we need 'YYYY' at least
+  Y := ord(P[0]) * 1000 + ord(P[1]) * 100 + ord(P[2]) * 10 +
+       ord(P[3]) - (48 + 480 + 4800 + 48000);
+  if (Y < 1000) or
+     (Y > 2999) then
+    exit;
+  if P[4] in ['-', '/'] then
+    inc(P); // allow 'YYYY-MM-DD', 'YYYY/MM/DD' or 'YYYYMMDD'
+  M := ord(P[4]) * 10 + ord(P[5]) - (48 + 480);
+  if (M = 0) or
+     (M > 12) then
+    exit;
+  if P[6] in ['-', '/'] then
+    inc(P);
+  D := ord(P[6]) * 10 + ord(P[7]) - (48 + 480);
+  if (D <> 0) and
+     (D <= DaysPerMonth[true][M]) then
+    // worse day number to allow is for leapyear=true
+    result := true;
+end;
+
+function IntervalTextToDateTime(Text: PUtf8Char): TDateTime;
+var
+  tmp: TDateTime; // for FPC
+begin
+  IntervalTextToDateTimeVar(Text, tmp);
+  result := tmp;
+end;
+
+procedure IntervalTextToDateTimeVar(Text: PUtf8Char;
+  var result: TDateTime);
+var
+  negative: boolean;
+  date, time: TDateTime;
+begin
+  // e.g. IntervalTextToDateTime('+0 06:03:20')
+  PInt64(@result)^ := 0;
+  if Text = nil then
+    exit;
+  if Text^ in ['+', '-'] then
+  begin
+    negative := (Text^ = '-');
+    date := GetNextItemDouble(Text, ' ');
+  end
+  else
+  begin
+    negative := false;
+    date := 0;
+  end;
+  Iso8601ToTimePUtf8CharVar(Text, 0, time);
+  if negative then
+    unaligned(result) := date - time
+  else
+    unaligned(result) := date + Time;
+end;
+
+procedure YearToPCharTab(tab: PWordArray; Y: PtrUInt; P: PUtf8Char);
+  {$ifdef HASINLINE} inline; {$endif}
+var
+  d100: PtrUInt;
+begin
+  {$ifdef CPU64}
+  d100 := (Y * DIV100_INV) shr 37; // we can avoid div on Delphi Win64
+  {$else}
+  d100 := Y div 100; // FPC use fast reciprocal (and x86 has YearToPChar asm)
+  {$endif CPU64}
+  PCardinal(P)^ := tab[d100];
+  PCardinal(P + 2)^ := tab[Y - (d100 * 100)];
+end;
+
+function DateToIso8601PChar(P: PUtf8Char; Expanded: boolean;
+  Y, M, D: PtrUInt): PUtf8Char;
+// use 'YYYYMMDD' format if not Expanded, 'YYYY-MM-DD' format if Expanded
+var
+  {$ifdef CPUX86NOTPIC}
+  tab: TWordArray absolute TwoDigitLookupW;
+  {$else}
+  tab: PWordArray;
+  {$endif CPUX86NOTPIC}
+begin
+  {$ifdef CPUX86NOTPIC}
+  YearToPChar(Y, P);
+  {$else}
+  tab := @TwoDigitLookupW;
+  YearToPCharTab(tab, Y, P);
+  {$endif CPUX86NOTPIC}
+  inc(P, 4);
+  if Expanded then
+  begin
+    P^ := '-';
+    inc(P);
+  end;
+  PCardinal(P)^ := tab[M];
+  inc(P, 2);
+  if Expanded then
+  begin
+    P^ := '-';
+    inc(P);
+  end;
+  PCardinal(P)^ := tab[D];
+  result := P + 2;
+end;
+
+function TimeToIso8601PChar(P: PUtf8Char; Expanded: boolean;
+  H, M, S, MS: PtrUInt; FirstChar: AnsiChar; WithMS: boolean): PUtf8Char;
+var
+  {$ifdef CPUX86NOTPIC}
+  tab: TWordArray absolute TwoDigitLookupW;
+  {$else}
+  tab: PWordArray;
+  {$endif CPUX86NOTPIC}
+begin
+  // use Thhmmss[.sss] format
+  if FirstChar <> #0 then
+  begin
+    P^ := FirstChar;
+    inc(P);
+  end;
+  {$ifndef CPUX86NOTPIC}
+  tab := @TwoDigitLookupW;
+  {$endif CPUX86NOTPIC}
+  PCardinal(P)^ := tab[H];
+  inc(P, 2);
+  if Expanded then
+  begin
+    P^ := ':';
+    inc(P);
+  end;
+  PCardinal(P)^ := tab[M];
+  inc(P, 2);
+  if Expanded then
+  begin
+    P^ := ':';
+    inc(P);
+  end;
+  PCardinal(P)^ := tab[S];
+  inc(P, 2);
+  if WithMS then
+  begin
+    {$ifdef CPUX86NOTPIC}
+    YearToPChar(MS, P);
+    {$else}
+    YearToPCharTab(tab, MS, P);
+    {$endif CPUX86NOTPIC}
+    P^ := '.'; // override first digit
+    inc(P, 4);
+  end;
+  result := P;
+end;
+
+function DateToIso8601PChar(Date: TDateTime; P: PUtf8Char;
+  Expanded: boolean): PUtf8Char;
+var
+  T: TSynSystemTime;
+begin
+  // use YYYYMMDD / YYYY-MM-DD date format
+  T.FromDate(Date);
+  result := DateToIso8601PChar(P, Expanded, T.Year, T.Month, T.Day);
+end;
+
+function DateToIso8601Text(Date: TDateTime): RawUtf8;
+begin
+  // into 'YYYY-MM-DD' date format
+  if Date = 0 then
+    FastAssignNew(result)
+  else
+    DateToIso8601PChar(Date, FastSetString(result, 10), true);
+end;
+
+function TimeToIso8601PChar(Time: TDateTime; P: PUtf8Char; Expanded: boolean;
+  FirstChar: AnsiChar; WithMS: boolean): PUtf8Char;
+var
+  T: TSynSystemTime;
+begin
+  T.FromTime(Time);
+  result := TimeToIso8601PChar(P, Expanded, T.Hour, T.Minute, T.Second,
+    T.MilliSecond, FirstChar, WithMS);
+end;
+
+function DateTimeToIso8601(P: PUtf8Char; D: TDateTime; Expanded: boolean;
+  FirstChar: AnsiChar; WithMS: boolean; QuotedChar: AnsiChar): PtrInt;
+var
+  beg: PUtf8Char;
+begin
+  beg := P;
+  if QuotedChar <> #0 then
+  begin
+    P^ := QuotedChar;
+    inc(P);
+  end;
+  P := DateToIso8601PChar(D, P, Expanded);
+  P := TimeToIso8601PChar(D, P, Expanded, FirstChar, WithMS);
+  if QuotedChar <> #0 then
+  begin
+    P^ := QuotedChar;
+    inc(P);
+  end;
+  result := P - beg;
+end;
+
+function DateTimeToIso8601(D: TDateTime; Expanded: boolean;
+  FirstChar: AnsiChar; WithMS: boolean; QuotedChar: AnsiChar): RawUtf8;
+begin
+  DateTimeToIso8601Var(D, Expanded, WithMS, FirstChar, QuotedChar, result);
+end;
+
+procedure DateTimeToIso8601Var(D: TDateTime; Expanded, WithMS: boolean;
+  FirstChar, QuotedChar: AnsiChar; var Result: RawUtf8);
+var
+  tmp: TTemp32;
+begin
+  // D=0 is handled in DateTimeToIso8601Text()
+  FastSetString(result, @tmp,
+    DateTimeToIso8601(@tmp, D, Expanded, FirstChar, WithMS, QuotedChar));
+end;
+
+function DateTimeToIso8601Short(D: TDateTime; Expanded, WithMS: boolean;
+  FirstChar, QuotedChar: AnsiChar): TShort31;
+begin
+  if D = 0 then
+    result[0] := #0
+  else
+    result[0] := AnsiChar(DateTimeToIso8601(
+                @result[1], D, Expanded, FirstChar, WithMS, QuotedChar));
+end;
+
+function DateToIso8601(Date: TDateTime; Expanded: boolean): RawUtf8;
+begin // 'YYYYMMDD' format if not Expanded, 'YYYY-MM-DD' format if Expanded
+  DateToIso8601PChar(Date,
+    FastSetString(result, 8 + 2 * integer(Expanded)), Expanded);
+end;
+
+function DateToIso8601(Y, M, D: cardinal; Expanded: boolean): RawUtf8;
+begin // 'YYYYMMDD' format if not Expanded, 'YYYY-MM-DD' format if Expanded
+  DateToIso8601PChar(
+    FastSetString(result, 8 + 2 * integer(Expanded)), Expanded, Y, M, D);
+end;
+
+function TimeToIso8601(Time: TDateTime; Expanded: boolean;
+  FirstChar: AnsiChar; WithMS: boolean): RawUtf8;
+begin // "Thhmmss[.sss]' / 'Thh:mm:ss[.sss]' format
+  FastSetString(result, 7 + 2 * integer(Expanded) + 4 * integer(WithMS));
+  TimeToIso8601PChar(Time, pointer(result), Expanded, FirstChar, WithMS);
+end;
+
+function DaysToIso8601(Days: cardinal; Expanded: boolean): RawUtf8;
+var
+  y, m, d: cardinal;
+begin
+  y := 0;
+  if Days >= 365 then
+  begin
+    y := Days div 365;
+    dec(Days, y * 365);
+  end;
+  m := 0;
+  if Days > 31 then
+    repeat
+      d := DaysPerMonth[false][m + 1];
+      if Days <= d then
+        break;
+      dec(Days, d);
+      inc(m); // years as increment, not absolute: always 365 days with no leap
+    until false;
+  result := DateToIso8601(y, m, Days, Expanded);
+end;
+
+function DateTimeToIso8601Text(DT: TDateTime; FirstChar: AnsiChar;
+  WithMS: boolean): RawUtf8;
+begin
+  DateTimeToIso8601TextVar(DT, FirstChar, result, WithMS);
+end;
+
+procedure DateTimeToIso8601TextVar(DT: TDateTime; FirstChar: AnsiChar;
+  var result: RawUtf8; WithMS: boolean);
+begin
+  if DT = 0 then
+    FastAssignNew(result)
+  else if frac(DT) = 0 then
+    result := DateToIso8601(DT, true)
+  else if trunc(DT) = 0 then
+    result := TimeToIso8601(DT, true, FirstChar, WithMS)
+  else
+    result := DateTimeToIso8601(DT, true, FirstChar, WithMS);
+end;
+
+procedure DateTimeToIso8601StringVar(DT: TDateTime; FirstChar: AnsiChar;
+  var result: string; WithMS: boolean);
+var
+  tmp: RawUtf8;
+begin
+  DateTimeToIso8601TextVar(DT, FirstChar, tmp, WithMS);
+  Ansi7ToString(pointer(tmp), length(tmp), result);
+end;
+
+function DateTimeToIso8601ExpandedPChar(const Value: TDateTime; Dest: PUtf8Char;
+  FirstChar: AnsiChar; WithMS: boolean): PUtf8Char;
+begin
+  if Value <> 0 then
+  begin
+    if trunc(Value) <> 0 then
+      Dest := DateToIso8601PChar(Value, Dest, true);
+    if frac(Value) <> 0 then
+      Dest := TimeToIso8601PChar(Value, Dest, true, FirstChar, WithMS);
+  end;
+  Dest^ := #0;
+  result := Dest;
+end;
+
+procedure DateTimeToIso8601TempUtf8(DT: TDateTime; FirstChar: AnsiChar;
+  var Dest: TTempUtf8; WithMS: boolean);
+var
+  T: TSynSystemTime;
+begin
+  T.FromDateTime(DT);
+  T.ToTempUtf8(Dest, {expanded=}true, FirstChar, WithMS);
+end;
+
+function VariantToDateTime(const V: Variant; var Value: TDateTime): boolean;
+var
+  vd: TVarData;
+  vt: cardinal;
+  tmp: TTempUtf8;
+begin
+  vt := TVarData(V).VType;
+  if vt = varVariantByRef then
+    result := VariantToDateTime(PVariant(TVarData(V).VPointer)^, Value)
+  else
+  begin
+    result := true;
+    case vt of
+      varEmpty,
+      varNull:
+        Value := 0;
+      varDouble,
+      varDate:
+        Value := TVarData(V).VDouble;
+      varSingle:
+        Value := TVarData(V).VSingle;
+      varCurrency:
+        Value := TVarData(V).VCurrency;
+      varOleFileTime: // may appear on POSIX e.g. for mormot.lib.win7zip
+        Value := FileTimeToDateTime(PFileTime(@TVarData(V).VInt64)^);
+      varString:
+        begin
+          Iso8601ToDateTimePUtf8CharVar(TVarData(V).VString,
+            length(RawUtf8(TVarData(V).VString)), Value);
+          result := Value <> 0;
+        end;
+    else
+      if SetVariantUnRefSimpleValue(V, vd{%H-}) then
+        result := VariantToDateTime(variant(vd), Value)
+      else
+      begin
+        VariantToTempUtf8(V, tmp, [vfNoAlloc]);
+        Iso8601ToDateTimePUtf8CharVar(tmp.Text, tmp.Len, Value);
+        result := Value <> 0;
+      end;
+    end;
+  end;
+end;
+
+const
+  _TZs: PAnsiChar = // fast brute force search in L1 cache
+    #3'GMT'#4'NZDT'#1'M'#4'IDLE'#4'NZST'#3'NZT'#4'EADT'#3'GST'#3'JST'#3'CCT' +
+    #4'WADT'#4'WAST'#3'ZP6'#3'ZP5'#3'ZP4'#2'BT'#3'EET'#4'MEST'#4'MESZ'#3'SST'  +
+    #3'FST'#4'CEST'#3'CET'#3'FWT'#3'MET'#4'MEWT'#3'SWT'#2'UT'#3'UTC'#1'Z'  +
+    #3'WET'#1'A'#3'WAT'#3'BST'#2'AT'#3'ADT'#3'AST'#3'EDT'#3'EST'  +
+    #3'CDT'#3'CST'#3'MDT'#3'MST'#3'PDT'#3'PST'#3'YDT'#3'YST'#3'HDT'  +
+    #4'AHST'#3'CAT'#3'HST'#4'EAST'#2'NT'#4'IDLW'#1'Y';
+
+  _TZv: array[0..54] of ShortInt = (
+    0, 13, 12, 12, 12, 12, 11, 10, 9, 8,
+    8, 7, 6, 5, 4, 3, 2, 2, 2, 2,
+    2, 2, 1, 1, 1, 1, 1, 0, 0, 0,
+    0, -1, -1, -1, -2, -3, -4, -4, -5,
+    -5, -6, -6, -7, -7, -8, -8, -9, -9,
+    -10, -10, -10, -10, -11, -12, -12);
+
+  HTML_MONTH_NAMES_32: array[0..11] of TTemp4 = (
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC');
+
+function ParseTimeZone(var P: PUtf8Char; var Zone: integer): boolean;
+var
+  z, sign: integer;
+  i, l: PtrInt;
+  s: PUtf8Char;
+begin
+  result := false;
+  if P = nil then
+    exit;
+  P := GotoNextNotSpace(P);
+  s := P;
+  if (s^ = 'Z') or // Zulu is de-facto default in most public APIs
+     (PCardinal(s)^ and $ffffff =
+       ord('G') + ord('M') shl 8 + ord('T') shl 16) then // HTTP default
+  begin
+    if s^ <> 'Z' then
+      inc(s, 2);
+    P := IgnoreAndGotoNextNotSpace(s);
+    Zone := 0;
+    result := true;
+  end
+  else if (s^ = '+') or
+          (s^ = '-') then
+  begin
+    sign := 1;
+    if s^ = '-' then
+      sign := -1;
+    // +xxxx -xxxx +xx:xx -xx:xx +xx -xx numbers
+    if not (s[1] in ['0'..'9']) or
+       not (s[2] in ['0'..'9']) then
+      exit;
+    z := PtrInt(ord(s[1]) * 10 + ord(s[2]) - (48 + 480)) * 60;
+    if s[3] in ['0'..'9', ':'] then
+    begin
+      if s[3] = ':' then
+      begin
+        inc(s);
+        inc(P);
+      end;
+      if not (s[3] in ['0'..'9']) or
+         not (s[4] in ['0'..'9']) then
+        exit;
+      inc(z, (ord(s[3]) * 10 + ord(s[4]) - (48 + 480)));
+      inc(P, 5);
+    end
+    else
+      inc(P, 3);
+    if (z = 0) and
+       (sign < 0) then          // '-0000' for current local
+      Zone := TimeZoneLocalBias // retrieved once at startup
+    else
+      Zone := z * sign;
+    P := GotoNextNotSpace(P);
+    result := true;
+  end
+  else
+  begin
+    // TODO: enhance TSynTimeZone from mormot.core.search to parse timezones?
+    while (s^ in ['a'..'z', 'A'..'Z']) do
+      inc(s);
+    l := s - P;
+    if (l < 1) or
+       (l > 4) then
+      exit;
+    i := FindShortStringListNoTrim(@_TZs[0], high(_TZv), P, l);
+    if i < 0 then
+      exit;
+    Zone := integer(_TZv[i]) * 60;
+    P := GotoNextNotSpace(s);
+    result := true
+  end;
+end;
+
+function ParseTimeZone(const s: RawUtf8; var Zone: integer): boolean;
+var
+  p: PUtf8Char;
+begin
+  p := pointer(s);
+  result := ParseTimeZone(p, Zone) and
+            (GotoNextNotSpace(p)^ = #0);
+end;
+
+function ParseMonth(var P: PUtf8Char; var Month: word): boolean;
+var
+  m: integer;
+begin
+  result := false;
+  if P = nil then
+    exit;
+  P := GotoNextNotSpace(P);
+  m := PCardinal(P)^ and $dfdfdf;
+  if m and $00404040 <> $00404040 then // quick alphabetical guess
+    exit;
+  m := IntegerScanIndex(@HTML_MONTH_NAMES_32, 12, m);
+  if m < 0 then
+    exit;
+  Month := m + 1;
+  inc(P, 3);
+  if P^ = '-' then
+    inc(P) // e.g. '06-Nov-94'
+  else
+    P := GotoNextNotSpace(P);
+  result := true;
+end;
+
+function ParseMonth(const s: RawUtf8; var Month: word): boolean;
+var
+  p: PUtf8Char;
+begin
+  p := pointer(s);
+  result := ParseMonth(p, Month) and
+            (GotoNextNotSpace(p)^ = #0);
+end;
+
+var
+  AppendToTextFileSafe: TLightLock; // to make AppendToTextFile() thread-safe
+  LogToTextFileName: TFileName;
+
+function AppendToTextFile(const aLine: RawUtf8; const aFileName: TFileName;
+  aMaxSize: Int64; aUtcTimeStamp: boolean): boolean;
+var
+  line: RawUtf8;
+begin
+  result := false;
+  if (aFileName = '') or
+     (aLine = '') then
+    exit;
+  Join([
+    NowToString(true, ' ', aUtcTimeStamp), ' ', TrimControlChars(aLine)], line);
+  AppendToTextFileSafe.Lock;
+  try
+    result := AppendToFile(line, aFileName, aMaxSize);
+  finally
+    AppendToTextFileSafe.UnLock;
+  end;
+end;
+
+procedure LogToTextFile(Msg: RawUtf8);
+begin
+  if Msg = '' then
+  begin
+    Msg := GetErrorText;
+    if Msg = '' then
+      exit;
+  end;
+  if LogToTextFileName = '' then
+  begin
+    AppendToTextFileSafe.Lock;
+    try
+      LogToTextFileName := ChangeFileExt(Executable.ProgramFileName, '.log');
+      if not IsDirectoryWritable(Executable.ProgramFilePath, [idwExcludeWinSys]) then
+        LogToTextFileName := GetSystemPath(spLog) + ExtractFileName(LogToTextFileName);
+    finally
+      AppendToTextFileSafe.UnLock;
+    end;
+  end;
+  AppendToTextFile(Msg, LogToTextFileName);
+end;
+
+
+{ ************ TSynDate / TSynDateTime / TSynSystemTime High-Level objects }
+
+procedure RawGlobalTime(out Time: TSynSystemTime; LocalTime: boolean);
+var
+  sys: TSystemTime absolute Time;
+  {$ifdef OSPOSIX}
+  tmp: cardinal;
+  {$endif OSPOSIX}
+begin
+  // cross-platform OS API call
+  if LocalTime then
+    GetLocalTime(sys)
+  else
+    GetSystemTime(sys);
+  {$ifdef OSPOSIX}
+  // two TSystemTime fields are inverted in FPC datih.inc :(
+  tmp := sys.DayOfWeek;
+  Time.Day := sys.Day;
+  Time.DayOfWeek := tmp;
+  {$endif OSPOSIX}
+end;
+
+var
+  // GlobalTime[LocalTime] thread-safe cache of decoded TSynSystemTime
+  // - not "packed" for Delphi aarch which makes an alignment of 1
+  GlobalTime: array[boolean] of record
+    safe: TRWLightLock;
+    clock: cardinal;      // avoid slower API call with 16ms loss of precision
+    time: TSynSystemTime;
+    _pad: array[1 .. 64 - // to fill exactly at least one L1 cache line
+      (SizeOf(TRWLightLock) + SizeOf(cardinal) + SizeOf(TSynSystemTime))] of byte;
+  end;
+
+procedure FromGlobalTime(out NewTime: TSynSystemTime; LocalTime: boolean;
+  tix64: Int64);
+var
+  tix, c: cardinal;
+begin
+  if tix64 = 0 then
+    tix64 := GetTickCount64;
+  tix := tix64 shr 4;
+  with GlobalTime[LocalTime] do
+  begin
+    c := clock; // atomic CAS
+    if (c <> tix) and
+       LockedExc32(clock, tix, c) then // recompute once every 16 ms
+    begin
+      RawGlobalTime(NewTime, LocalTime);
+      safe.WriteLock;
+      time := NewTime; // thread-safe persist in cache
+      safe.WriteUnLock;
+    end
+    else
+    begin
+      safe.ReadLock;   // allow concurrent access
+      NewTime := time; // fast copy last decoded value from cache
+      safe.ReadUnLock;
+    end;
+  end;
+end;
+
+
+{ TSynDate }
+
+procedure TSynDate.Clear;
+begin
+  PInt64(@self)^ := 0;
+end;
+
+procedure TSynDate.SetMax;
+begin
+  PInt64(@self)^ := $001F0000000C270F; // 9999 + 12 shl 16 + 31 shl 48
+end;
+
+function TSynDate.IsZero: boolean;
+begin
+  result := PInt64(@self)^ = 0;
+end;
+
+function TSynDate.ParseFromText(var P: PUtf8Char): boolean;
+var
+  len: PtrInt;
+  y, m, d: cardinal;
+begin
+  result := false;
+  if P = nil then
+    exit;
+  while P^ in [#9, ' '] do
+    inc(P);
+  len := 0;
+  while P[len] in ['0'..'9', '-', '/'] do
+    inc(len);
+  if not Iso8601ToDatePUtf8Char(P, len, y, m, d) then
+    exit;
+  Year := y;
+  Month := m;
+  DayOfWeek := 0;
+  Day := d;
+  inc(P, len); // move P^ just after the date
+  result := true;
+end;
+
+procedure TSynDate.FromNow(localtime: boolean);
+var
+  dt: TSynSystemTime;
+begin
+  FromGlobalTime(dt, localtime);
+  self := PSynDate(@dt)^; // 4 first fields of TSynSystemTime do match
+end;
+
+procedure TSynDate.FromDate(date: TDate);
+var
+  dt: TSynSystemTime;
+begin
+  dt.FromDate(date); // faster than RTL DecodeDate()
+  self := PSynDate(@dt)^;
+end;
+
+function TSynDate.IsEqual(const another: TSynDate): boolean;
+begin
+  result := (PCardinal(@Year)^ = PCardinal(@TSynDate(another).Year)^) and
+            (Day = TSynDate(another).Day);
+end;
+
+function TSynDate.Compare(const another: TSynDate): integer;
+begin
+  result := Year - TSynDate(another).Year;
+  if result = 0 then
+  begin
+    result := Month - TSynDate(another).Month;
+    if result = 0 then
+      result := Day - TSynDate(another).Day;
+  end;
+end;
+
+procedure TSynDate.ComputeDayOfWeek;
+var
+  d: TDateTime;
+  i: PtrInt;
+begin
+  if not mormot.core.datetime.TryEncodeDate(Year, Month, Day, d) then
+  begin
+    DayOfWeek := 0;
+    exit;
+  end;
+  i := ((trunc(d) - 1) mod 7) + 1; // sunday is day 1
+  if i <= 0 then
+    DayOfWeek := i + 7
+  else
+    DayOfWeek := i;
+end;
+
+function TSynDate.ToDate: TDate;
+begin
+  result := EncodeDateOrZero(Year, Month, Day);
+end;
+
+function TSynDate.ToText(Expanded: boolean): RawUtf8;
+begin
+  if PInt64(@self)^ = 0 then
+    FastAssignNew(result)
+  else
+    result := DateToIso8601(Year, Month, Day, Expanded);
+end;
+
+
+{ TSynSystemTime }
+
+function TSynSystemTime.DaysInMonth: cardinal;
+begin
+  result := DaysPerMonth[mormot.core.datetime.IsLeapYear(Year)][Month];
+end;
+
+function TryEncodeDayOfWeekInMonth(y, m, nthdow, dow: integer;
+  out v: TDateTime): boolean;
+var
+  startmonth, day: integer;
+begin
+  // adapted from DateUtils
+  result := mormot.core.datetime.TryEncodeDate(y, m, 1, v);
+  if not result then
+    exit;
+  startmonth := (DateTimeToTimestamp(v).date - 1) mod 7 + 1;
+  if startmonth <= dow then
+    dec(nthdow);
+  day := (dow - startmonth + 1) + 7 * nthdow;
+  result := mormot.core.datetime.TryEncodeDate(y, m, day, v);
+end;
+
+function TSynSystemTime.EncodeForTimeChange(const aYear: word): TDateTime;
+var
+  dow, d: word;
+begin
+  if DayOfWeek = 0 then
+    dow := 7 // Delphi/FPC Sunday = 7
+  else
+    dow := DayOfWeek;
+  // Encoding the day of change
+  d := Day;
+  while not TryEncodeDayOfWeekInMonth(aYear, Month, d, dow, result) do
+  begin
+    // if Day = 5 then try it and if needed decrement to find the last
+    // Occurrence of the day in this month
+    if d = 0 then
+    begin
+      TryEncodeDayOfWeekInMonth(aYear, Month, 1, 7, result);
+      break;
+    end;
+    dec(d);
+  end;
+  // finally add the time when change is due
+  result := result + EncodeTimeOrZero(Hour, Minute, Second, MilliSecond);
+end;
+
+procedure TSynSystemTime.Clear;
+begin
+  PInt64Array(@self)[0] := 0;
+  PInt64Array(@self)[1] := 0;
+end;
+
+function TSynSystemTime.IsZero: boolean;
+begin
+  result := (PInt64Array(@self)[0] = 0) and
+            (PInt64Array(@self)[1] = 0);
+end;
+
+function TSynSystemTime.IsEqual(const another: TSynSystemTime): boolean;
+begin
+  result := (PInt64Array(@self)[0] = PInt64Array(@another)[0]) and
+            (PInt64Array(@self)[1] = PInt64Array(@another)[1]);
+end;
+
+function TSynSystemTime.IsDateEqual(const date: TSynDate): boolean;
+begin
+  result := (PCardinal(@Year)^ = PCardinal(@TSynDate(date).Year)^) and // +Month
+            (Day = TSynDate(date).Day); // just ignore DayOfWeek
+end;
+
+procedure TSynSystemTime.FromNowUtc;
+begin
+  FromGlobalTime(self, {local=}false);
+end;
+
+procedure TSynSystemTime.FromNowLocal;
+begin
+  FromGlobalTime(self, {local=}true);
+end;
+
+procedure TSynSystemTime.FromNow(localtime: boolean);
+begin
+  FromGlobalTime(self, localtime);
+end;
+
+procedure TSynSystemTime.FromDateTime(const dt: TDateTime);
+begin
+  FromDate(dt);
+  FromTime(dt);
+end;
+
+procedure TSynSystemTime.FromJulianDay(t: cardinal);
+var
+  t2, t3: cardinal;
+begin
+  t2 := CGREG;
+  PInt64(@Year)^ := 0; // quickly reset all Date fields
+  if t <= t2 then
+    exit;
+  dec(t, t2);
+  t := t * 4 - 1;
+  t3 := t div D1;
+  t2 := (t - t3 * D1) and not 3;
+  t := (t2 + 3) div D0;
+  Year := t3 * 100 + t;
+  t3 := t * D0;
+  inc(t2, 7);
+  dec(t2, t3);
+  t2 := t2 shr 2;
+  t3 := t2 * 535;
+  dec(t3, 202);
+  t3 := t3 shr 14;  // exact (t2 * 5 - 3) div D2 for t2 in 1..366
+  Day := t2 - DaysFromMarch[t3]; // pre-computed (Month * D2 + 2) div 5
+  if t3 < 10 then
+    Month := t3 + 3
+  else
+  begin
+    Month := t3 - 9;
+    inc(Year);
+  end;
+end;
+
+procedure TSynSystemTime.FromDate(const dt: TDateTime);
+begin
+  FromJulianDay(Trunc(dt) + C1899);
+end;
+
+procedure TSynSystemTime.FromTime(const dt: TDateTime);
+begin
+  FromMS(QWord(round(abs(dt) * MilliSecsPerDay)) mod MilliSecsPerDay);
+end;
+
+procedure TSynSystemTime.FromUnixTime(ut: TUnixTime);
+var
+  d, s: PtrInt; // no transient TDateTime needed
+begin
+  d := ut div SecsPerDay;
+  s := ut - Int64(d) * SecsPerDay;
+  if s < 0 then
+  begin
+    dec(d);
+    inc(s, SecsPerDay);
+  end;
+  FromJulianDay(d + C1970);
+  FromSec(s);
+end;
+
+procedure TSynSystemTime.FromUnixMsTime(ut: TUnixMsTime);
+var
+  d, ms: PtrInt; // no transient TDateTime needed
+begin
+  d := ut div MilliSecsPerDay;
+  ms := ut - Int64(d) * MilliSecsPerDay;
+  if ms < 0 then
+  begin
+    dec(d);
+    inc(ms, MilliSecsPerDay);
+  end;
+  FromJulianDay(d + C1970);
+  FromMS(ms);
+end;
+
+procedure TSynSystemTime.FromMS(ms: PtrUInt);
+var
+  t: PtrUInt;
+begin
+  t := ms div MilliSecsPerHour;
+  Hour := t;
+  dec(ms, t * MilliSecsPerHour);
+  t := ms div MilliSecsPerMin;
+  Minute := t;
+  dec(ms, t * MilliSecsPerMin);
+  t := ms div MilliSecsPerSec;
+  Second := t;
+  dec(ms, t * MilliSecsPerSec);
+  MilliSecond := ms;
+end;
+
+procedure TSynSystemTime.FromSec(s: PtrUInt);
+var
+  t: PtrUInt;
+begin
+  t := s div SecsPerHour;
+  Hour := t;
+  dec(s, t * SecsPerHour);
+  t := s div SecsPerMin;
+  Minute := t;
+  dec(s, t * SecsPerMin);
+  Second := s;
+  MilliSecond := 0;
+end;
+
+function TSynSystemTime.FromText(const iso: RawUtf8): boolean;
+var
+  t: TTimeLogBits;
+begin
+  t.From(iso);
+  if t.Value = 0 then
+    result := false
+  else
+  begin
+    t.Expand(self); // TTimeLogBits is faster than FromDateTime()
+    result := true;
+  end;
+end;
+
+function TSynSystemTime.FromTimeBuffer(P: PUtf8Char; L: PtrInt): boolean;
+var
+  h, mi, ss, ms: cardinal;
+begin
+  if Iso8601ToTimePUtf8Char(P, L, h, mi, ss, ms) then
+  begin
+    Hour := h;
+    Minute := mi;
+    Second := ss;
+    MilliSecond := ms;
+    result := true;
+  end
+  else
+    result := false;
+end;
+
+function TSynSystemTime.FromHttpDateBuffer(P: PUtf8Char; tolocaltime: boolean): boolean;
+var
+  pnt: byte;
+  hasday: boolean;
+  beg: PUtf8Char;
+  zone: integer;
+  v: cardinal;
+  dt, t: TDateTime;
+begin
+  // Sun, 06 Nov 1994 08:49:37 GMT    ; RFC 822, updated by RFC 1123
+  // Sunday, 06-Nov-94 08:49:37 GMT   ; RFC 850, obsoleted by RFC 1036
+  // Sun Nov  6 08:49:37 1994         ; ANSI C'beg asctime() Format
+  Clear;
+  hasday := false;
+  zone := maxInt; // invalid
+  result := false;
+  if P = nil then
+    exit;
+  repeat
+    P := GotoNextNotSpace(P);
+    case P^ of
+      'A'..'Z',
+      'a'..'z':
+        if (not hasday) or
+           (not ParseMonth(P, Month)) then
+        begin
+          hasday := true; // first alphabetic word is always the week day text
+          P := GotoNextSpace(P); // also ignore trailing '-' or ','
+        end;
+      '0'..'9':
+        begin
+          // e.g. '1994' '08:49:37 GMT' or '6'
+          pnt := 0;
+          beg := P;
+          repeat
+            inc(P);
+            case P^ of
+              '0'..'9':
+                ;
+              ':':
+                begin
+                  inc(pnt);
+                  if pnt = 0 then
+                    exit;
+                end;
+              '.':
+                if pnt < 2 then
+                  break;
+            else
+              break;
+            end;
+          until false;
+          case pnt of
+            0:
+              // e.g. '6', '94' or '2014'
+              begin
+                v := GetCardinal(beg);
+                if v <> 0 then
+                begin
+                  if (v < 32) and
+                     (Day = 0) then
+                    Day := v
+                  else if (Year = 0) and
+                          (v <= 9999) and
+                          ((v > 12) or
+                           (Month > 0)) then
+                  begin
+                    if v < 32 then
+                      inc(v, 2000)
+                    else if v < 1000 then
+                      inc(v, 1900);
+                    Year := v;
+                  end;
+                end;
+              end;
+            2:
+              // e.g. '08:49:37 GMT'
+              if FromTimeBuffer(beg, P - beg) then
+              begin
+                zone := 0; // GMT by default
+                ParseTimeZone(P, zone);
+              end;
+          end;
+          if P^ = '-' then
+            inc(P); // e.g. '06-Nov-94'
+        end;
+    else
+      P := GotoNextSpace(P);
+    end;
+  until P^ in [#0, #10, #13]; // end of string or end of line (e.g. HTTP header)
+  if (Year = 0) or
+     (zone = maxInt) or
+     (Month = 0) then
+    exit;
+  if Day = 0 then
+    Day := 1 // assume first of the month if none supplied
+  else
+  begin
+    v := DaysInMonth;
+    if Day > v then
+      Day := v; // assume last of the month if too big supplied
+  end;
+  if tolocaltime or
+     (zone <> 0) then
+  begin
+    // need to apply some time zone shift
+    dt := ToDateTime;
+    if zone <> 0 then
+      dt := dt - zone div MinsPerDay;
+    if tolocaltime then
+      dt := UtcToLocal(dt);
+    v := abs(zone mod MinsPerDay);
+    if not TryEncodeTime(v div 60, v mod 60, 0, 0, t) then
+      exit;
+    if zone < 0 then
+      dt := dt + t
+    else
+      dt := dt - t;
+    FromDateTime(dt); // local TDateTime to compute time shift
+  end;
+  result := true;
+end;
+
+function TSynSystemTime.FromHttpDate(const httpdate: RawUtf8;
+  tolocaltime: boolean): boolean;
+begin
+  result := (length(httpdate) >= 12) and
+            FromHttpDateBuffer(pointer(httpdate), tolocaltime);
+end;
+
+function TSynSystemTime.FromTimeSpan(ticks: Int64): PtrUInt;
+var
+  ms: QWord;
+begin
+  ms := QWord(abs(ticks)) div TicksPerMillisecond;
+  result := ms div MilliSecsPerDay; // returns the days count
+  FromMS(ms - (QWord(result) * MilliSecsPerDay));
+end;
+
+function NextValue(p: PUtf8Char; var v: PtrUInt): PUtf8Char;
+var
+  c: PtrUInt;
+begin
+  result := nil;
+  c := PtrUInt(p^) - ord('0');
+  if c > 9 then
+    exit;
+  v := c;
+  repeat
+    inc(p);
+    c := PtrUInt(p^) - ord('0');
+    if c > 9 then
+      break;
+    v := v * 10 + c;
+  until false;
+  result := p;
+end;
+
+function TSynSystemTime.FromTimeSpan(p: PUtf8Char; var days, neg: PtrInt): PUtf8Char;
+var
+  v: PtrUInt;
+begin // parse '123.06:18:55.999' '123' '123.06:18:55' '06:18:55' '06:18:55.999'
+  Clear;
+  days := 0;
+  neg := 1;
+  result := nil; // error
+  if p = nil then
+    exit;
+  p := GotoNextNotSpace(p);
+  if p^ = '-' then
+  begin
+    neg := -neg;
+    inc(p);
+  end;
+  p := NextValue(p, v);
+  if p = nil then
+    exit;
+  case p^ of
+    #0 .. ' ', ',', ';', '''', '"': // #0 space , ; ' " are valid delimiters
+      begin
+        if v <= MAX_TIMESPAN then // '123'
+        begin
+          days := v;
+          result := p; // success
+        end;
+        exit;
+      end;
+    ':':
+      Hour := v;
+    '.':
+      begin
+        if v > MAX_TIMESPAN then
+          exit;
+        days := v;
+        p := NextValue(p + 1, v);
+        if (p = nil) or
+           (p^ <> ':') then
+          exit;
+        Hour := v;
+      end;
+  else
+    exit;
+  end;
+  if v > 23 then
+    exit;
+  p := NextValue(p + 1, v);
+  if (p = nil) or
+     (p^ <> ':') or
+     (v > 59) then
+    exit;
+  Minute := v;
+  p := NextValue(p + 1, v);
+  if (p = nil) or
+     (v > 59) then
+    exit;
+  Second := v;
+  case p^ of
+    #0 .. ' ', ',', ';', '''', '"':
+      result := p;
+    '.':
+      if (p[1] in ['0' .. '9']) and
+         (p[2] in ['0' .. '9']) and
+         (p[3] in ['0' .. '9']) and
+         (p[4] in [#0 .. ' ', ',', ';', '''', '"', '0' .. '9']) then
+      begin
+        v := ord(p[1]) * 100 + ord(p[2]) * 10 + ord(p[3]) - (48 + 480 + 4800);
+        MilliSecond := v;
+        inc(p, 4);
+        while p^ in ['0' ..'9'] do
+          inc(p); // skip any trailing ticks digits
+        result := p;
+      end;
+  end;
+end;
+
+function TSynSystemTime.ToText(Expanded: boolean; FirstTimeChar: AnsiChar;
+  const TZD: RawUtf8): RawUtf8;
+begin
+  result := DateTimeMSToString(Hour, Minute, Second, MilliSecond,
+    Year, Month, Day, Expanded, FirstTimeChar, TZD);
+end;
+
+procedure TSynSystemTime.AddIsoDate(WR: TTextWriter);
+var
+  p: PUtf8Char;
+begin
+  if WR.BEnd - WR.B <= 24 then
+    WR.FlushToStream;
+  p := WR.B + 1;
+  inc(WR.B, DateToIso8601PChar(p, {expanded=}true, Year, Month, Day) - p);
+end;
+
+procedure TSynSystemTime.AddIsoDateTime(WR: TTextWriter;
+  WithMS: boolean; FirstTimeChar: AnsiChar; const TZD: RawUtf8);
+var
+  p: PUtf8Char;
+begin
+  if WR.BEnd - WR.B <= 24 then
+    WR.FlushToStream;
+  p := WR.B + 1;
+  inc(WR.B, TimeToIso8601PChar(DateToIso8601PChar(p, true, Year, Month, Day),
+    true, Hour, Minute, Second, MilliSecond, FirstTimeChar, WithMS) - p);
+  if TZD <> '' then
+    WR.AddString(TZD);
+end;
+
+procedure TSynSystemTime.ToLogTime(Dest: PUtf8Char);
+var
+  {$ifdef CPUX86NOTPIC}
+  tab: TWordArray absolute TwoDigitLookupW;
+  {$else}
+  tab: PWordArray;
+  {$endif CPUX86NOTPIC}
+begin
+  {$ifdef CPUX86NOTPIC}
+  YearToPChar(Year, Dest);
+  {$else}
+  tab := @TwoDigitLookupW;
+  YearToPCharTab(tab, Year, Dest);
+  {$endif CPUX86NOTPIC}
+  PCardinal(Dest + 4)^ := tab[PtrUInt(Month)];
+  PCardinal(Dest + 6)^ := tab[PtrUInt(Day)];
+  Dest[8] := ' ';
+  PCardinal(Dest + 9)^  := tab[PtrUInt(Hour)];
+  PCardinal(Dest + 11)^ := tab[PtrUInt(Minute)];
+  PCardinal(Dest + 13)^ := tab[PtrUInt(Second)];
+  PCardinal(Dest + 15)^ := tab[PtrUInt(Millisecond) shr 4]; // rounded in 0..62 range
+end;
+
+procedure TSynSystemTime.AddLogTime(WR: TTextWriter);
+begin
+  if WR.BEnd - WR.B <= 18 then
+    WR.FlushToStream;
+  ToLogTime(WR.B + 1);
+  inc(WR.B, 17);
+end;
+
+procedure TSynSystemTime.AddNcsaText(WR: TTextWriter; const TZD: RawUtf8);
+begin
+  if WR.BEnd - WR.B <= 21 then
+    WR.FlushToStream;
+  inc(WR.B, ToNcsaText(WR.B + 1));
+  if TZD <> '' then
+    WR.AddString(TZD);
+end;
+
+procedure TSynSystemTime.AddHttpDate(WR: TTextWriter; const TZD: RawUtf8);
+var
+  tmp: ShortString;
+begin
+  ToHttpDateShort(tmp, TZD);
+  WR.AddShort(tmp);
+end;
+
+procedure TSynSystemTime.AppendTime(var result: ShortString; WithMS: boolean);
+var
+  p: PAnsiChar;
+begin
+  p := @result;
+  if ord(p^) + 12 <= high(result) then // append all or nothing
+    result[0] := AnsiChar(TimeToIso8601PChar(@p[ord(p[0]) + 1],
+      {exp=}true, Hour, Minute, Second, MilliSecond, #0, WithMS) - (p + 1));
+end;
+
+procedure TSynSystemTime.AppendInterval(days: PtrUInt; var result: ShortString);
+begin
+  if days <> 0 then
+  begin
+    AppendShortCardinal(days, result);
+    if PInt64(@Hour)^ = 0 then // Hour=Minute=Second=MilliSecond=0
+      exit;
+    AppendShortCharSafe('.', result);
+  end;
+  AppendTime(result, MilliSecond <> 0); // 'dd.hh:mm:ss' or 'dd.hh:mm:ss.xxx'
+end;
+
+function TSynSystemTime.ToNcsaText(P: PUtf8Char): PtrInt;
+var
+  y, d100: PtrUInt;
+  {$ifdef CPUX86NOTPIC}
+  tab: TWordArray absolute TwoDigitLookupW;
+  {$else}
+  tab: PWordArray;
+  {$endif CPUX86NOTPIC}
+begin
+  {$ifndef CPUX86NOTPIC}
+  tab := @TwoDigitLookupW;
+  {$endif CPUX86NOTPIC}
+  PCardinal(P)^ := tab[Day];
+  PCardinal(P + 2)^ := PCardinal(@HTML_MONTH_NAMES[Month])^;
+  P[2] := '/'; // overwrite HTML_MONTH_NAMES[][0]
+  P[6] := '/';
+  y := Year;
+  d100 := y div 100;
+  PCardinal(P + 7)^  := tab[d100];
+  PCardinal(P + 9)^  := tab[y - (d100 * 100)];
+  P[11] := ':';
+  PCardinal(P + 12)^ := tab[Hour];
+  P[14] := ':';
+  PCardinal(P + 15)^ := tab[Minute];
+  P[17] := ':';
+  PCardinal(P + 18)^ := tab[Second];
+  P[20] := ' ';
+  result := 21;
+end;
+
+procedure TSynSystemTime.ToNcsaShort(var text: TShort23; const tz: RawUtf8);
+begin
+  text[0] := AnsiChar(ToNcsaText(@text[1]));
+  AppendShortAnsi7String(tz, text);
+end;
+
+procedure TSynSystemTime.ToHttpDate(out text: RawUtf8; const tz, prefix: RawUtf8);
+var
+  tmp: ShortString;
+begin
+  ToHttpDateShort(tmp, tz, prefix);
+  FastSetString(text, @tmp[1], ord(tmp[0]));
+end;
+
+procedure TSynSystemTime.ToHttpDateShort(
+  var text: ShortString; const tz, prefix: RawUtf8);
+begin
+  if DayOfWeek = 0 then
+    PSynDate(@self)^.ComputeDayOfWeek; // first 4 fields do match
+  FormatShort('%%, % % % %:%:% %', [
+    prefix,
+    HTML_WEEK_DAYS[DayOfWeek],
+    UInt2DigitsToShortFast(Day),
+    HTML_MONTH_NAMES[Month],
+    UInt4DigitsToShort(Year),
+    UInt2DigitsToShortFast(Hour),
+    UInt2DigitsToShortFast(Minute),
+    UInt2DigitsToShortFast(Second),
+    tz], text);
+end;
+
+procedure TSynSystemTime.ToTextDateShort(var text: TShort15);
+begin
+  FormatShort('% % %', [SmallUInt32Utf8[Day],
+                        HTML_MONTH_NAMES[Month],
+                        UInt4DigitsToShort(Year)], text);
+end;
+
+procedure TSynSystemTime.ToIsoDateTime(out text: RawUtf8; FirstTimeChar: AnsiChar);
+var
+  tmp: ShortString;
+begin
+  ToIsoDateTimeShort(tmp, FirstTimeChar);
+  ShortStringToAnsi7String(tmp, text);
+end;
+
+procedure TSynSystemTime.ToIsoDateTimeShort(var text: ShortString;
+  FirstTimeChar: AnsiChar);
+begin
+  FormatShort('%-%-%%%:%:%', [
+    UInt4DigitsToShort(Year),
+    UInt2DigitsToShortFast(Month),
+    UInt2DigitsToShortFast(Day),
+    FirstTimeChar,
+    UInt2DigitsToShortFast(Hour),
+    UInt2DigitsToShortFast(Minute),
+    UInt2DigitsToShortFast(Second)], text);
+end;
+
+procedure TSynSystemTime.ToIsoDate(out text: RawUtf8);
+begin
+  FormatUtf8('%-%-%', [
+    UInt4DigitsToShort(Year),
+    UInt2DigitsToShortFast(Month),
+    UInt2DigitsToShortFast(Day)], text);
+end;
+
+procedure TSynSystemTime.ToIsoTime(out text: RawUtf8; FirstTimeChar: RawUtf8);
+begin
+  FormatUtf8('%%:%:%', [
+    FirstTimeChar,
+    UInt2DigitsToShortFast(Hour),
+    UInt2DigitsToShortFast(Minute),
+    UInt2DigitsToShortFast(Second)], text);
+end;
+
+procedure TSynSystemTime.ToTempUtf8(var Dest: TTempUtf8; Expanded: boolean;
+  FirstTimeChar: AnsiChar; WithMS: boolean);
+var
+  p: PUtf8Char;
+begin
+  Dest.TempRawUtf8 := nil;
+  Dest.Text := @Dest.Temp;
+  p := DateToIso8601PChar(@Dest.Temp, Expanded, Year, Month, Day);
+  p := TimeToIso8601PChar(p, Expanded, Hour, Minute, Second, MilliSecond, FirstTimeChar, WithMS);
+  p^ := #0; // make ASCIIZ - Expanded+WithMS+#0 is just enough for [0..23]
+  Dest.Len := p - Dest.Text;
+end;
+
+function TSynSystemTime.ToDateTime: TDateTime;
+begin
+  result := EncodeDateOrZero(Year, Month, Day) +
+            EncodeTimeOrZero(Hour, Minute, Second, MilliSecond);
+end;
+
+function TSynSystemTime.ToUnixTime: TUnixTime;
+var
+  g: cardinal;
+begin
+  if EncodeGregorian(Year, Month, Day, g) then
+    result := ((Int64(g) - D1970) * SecsPerDay) +
+              Second + (Minute * SecsPerMin) + (Hour * SecsPerHour)
+  else
+    result := 0;
+end;
+
+function TSynSystemTime.ToUnixMsTime: TUnixMsTime;
+begin
+  result := ToUnixTime * MilliSecsPerSec + MilliSecond;
+end;
+
+procedure TSynSystemTime.ToSynDate(out date: TSynDate);
+begin
+  date := PSynDate(@self)^; // first 4 fields do match
+end;
+
+procedure TSynSystemTime.ToFileShort(var result: ShortString);
+var
+  {$ifdef CPUX86NOTPIC}
+  tab: TWordArray absolute TwoDigitLookupW;
+  {$else}
+  tab: PWordArray;
+  {$endif CPUX86NOTPIC}
+  P: PUtf8Char;
+begin
+  if IsZero or
+     (high(result) < 12) then
+  begin
+    PWord(@result[0])^ := 1 + ord('0') shl 8;
+    exit;
+  end;
+  if Year > 1999 then
+    if Year < 2100 then
+      dec(Year, 2000)
+    else
+      Year := 99
+  else
+    Year := 0;
+  {$ifndef CPUX86NOTPIC}
+  tab := @TwoDigitLookupW;
+  {$endif CPUX86NOTPIC}
+  p := @result;
+  p[0] := #12;
+  PCardinal(p + 1)^  := tab[Year];
+  PCardinal(p + 3)^  := tab[Month];
+  PCardinal(p + 5)^  := tab[Day];
+  PCardinal(p + 7)^  := tab[Hour];
+  PCardinal(p + 9)^  := tab[Minute];
+  PCardinal(p + 11)^ := tab[Second];
+end;
+
+procedure TSynSystemTime.ToHuman(var Text: RawUtf8);
+begin
+  FormatUtf8('% % %, %:%:%', [
+    SmallUInt32Utf8[Day], HTML_MONTH_NAMES[Month], UInt4DigitsToShort(Year),
+    UInt2DigitsToShortFast(Hour), UInt2DigitsToShortFast(Minute),
+    UInt2DigitsToShortFast(Second)], Text);
+end;
+
+procedure TSynSystemTime.ComputeDayOfWeek;
+begin
+  PSynDate(@self)^.ComputeDayOfWeek; // first 4 fields do match
+end;
+
+procedure TSynSystemTime.IncrementMS(ms: integer);
+begin
+  inc(MilliSecond, ms);
+  Normalize;
+end;
+
+procedure TSynSystemTime.Normalize;
+var
+  thismonth: cardinal;
+begin
+  DayOfWeek := 0;
+  while MilliSecond >= MilliSecsPerSec do
+  begin
+    dec(MilliSecond, MilliSecsPerSec);
+    inc(Second);
+  end;
+  while Second >= 60 do
+  begin
+    dec(Second, 60);
+    inc(Minute);
+  end;
+  while Minute >= 60 do
+  begin
+    dec(Minute, 60);
+    inc(Hour);
+  end;
+  while Hour >= 24 do
+  begin
+    dec(Hour, 24);
+    inc(Day);
+  end;
+  while Month > 12 do
+  begin
+    dec(Month, 12);
+    inc(Year);
+  end;
+  repeat
+    thismonth := DaysInMonth;
+    if Day <= thismonth then
+      break;
+    dec(Day, thismonth);
+    inc(Month);
+    if Month > 12 then
+    begin
+      dec(Month, 12);
+      inc(Year);
+    end;
+  until false;
+end;
+
+function TSynSystemTime.ChangeOperatingSystemTime: boolean;
+begin
+  {$ifdef OSPOSIX}
+  result := SetSystemTime(ToUnixTime); // fpsettimeofday
+  {$else}
+  result := SetSystemTime(PSystemTime(@self)^); // set privilege + API + notify
+  {$endif OSPOSIX}
+  FillCharFast(GlobalTime, SizeOf(GlobalTime), 0); // reset cache
+end;
+
+
+function NowToString(Expanded: boolean; FirstTimeChar: AnsiChar;
+  UtcDate: boolean): RawUtf8;
+var
+  bits: TTimeLogBits;
+begin
+  if UtcDate then
+    bits.FromUtcTime
+  else
+    bits.FromNow;
+  result := bits.Text(Expanded, FirstTimeChar);
+end;
+
+function NowToHuman(UtcDate, WithMS: boolean): RawUtf8;
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(not UtcDate);
+  T.ToHuman(result);
+end;
+
+function NowUtcToString(Expanded: boolean; FirstTimeChar: AnsiChar): RawUtf8;
+begin
+  result := NowToString(Expanded, FirstTimeChar, {UTC=}true);
+end;
+
+function NowTextDateShort(UtcDate: boolean): TShort15;
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(not UtcDate);
+  T.ToTextDateShort(result);
+end;
+
+function UnixTimeToTextDateShort(Date: TUnixTime): TShort15;
+var
+  T: TSynSystemTime;
+begin
+  T.FromUnixTime(Date);
+  T.ToTextDateShort(result);
+end;
+
+function UnixTimeToShort(Epoch: TUnixTime; FirstTimeChar: AnsiChar): TShort31;
+var
+  T: TSynSystemTime;
+begin
+  T.FromUnixTime(Epoch);
+  T.ToIsoDateTimeShort(result, FirstTimeChar);
+end;
+
+function DateToTextDateShort(Date: TDateTime): TShort15;
+var
+  T: TSynSystemTime;
+begin
+  T.FromDate(Date);
+  T.ToTextDateShort(result);
+end;
+
+function DateTimeMSToString(DateTime: TDateTime; Expanded: boolean;
+  FirstTimeChar: AnsiChar; const TZD: RawUtf8): RawUtf8;
+var
+  T: TSynSystemTime;
+begin
+  //  'YYYY-MM-DD hh:mm:ss.sssZ' or 'YYYYMMDD hhmmss.sssZ' format
+  if DateTime = 0 then
+    FastAssignNew(result)
+  else
+  begin
+    T.FromDateTime(DateTime);
+    result := DateTimeMSToString(T.Hour, T.Minute, T.Second, T.MilliSecond,
+      T.Year, T.Month, T.Day, Expanded, FirstTimeChar, TZD);
+  end;
+end;
+
+function DateTimeMSToString(HH, MM, SS, MS, Y, M, D: cardinal; Expanded: boolean;
+  FirstTimeChar: AnsiChar; const TZD: RawUtf8): RawUtf8;
+begin
+  //  'YYYY-MM-DD hh:mm:ss.sssZ' or 'YYYYMMDD hhmmss.sssZ' format
+  FormatUtf8(DTMS_FMT[Expanded], [
+    UInt4DigitsToShort(Y),
+    UInt2DigitsToShortFast(M),
+    UInt2DigitsToShortFast(D),
+    FirstTimeChar,
+    UInt2DigitsToShortFast(HH),
+    UInt2DigitsToShortFast(MM),
+    UInt2DigitsToShortFast(SS),
+    UInt3DigitsToShort(MS),
+    TZD], result);
+end;
+
+function DateTimeToHttpDate(dt: TDateTime; const tz: RawUtf8): RawUtf8;
+var
+  T: TSynSystemTime;
+begin
+  if dt = 0 then
+    FastAssignNew(result)
+  else
+  begin
+    T.FromDateTime(dt);
+    T.ToHttpDate(result, tz);
+  end;
+end;
+
+function DateTimeToHttpDateShort(dt: TDateTime; const tz: RawUtf8): TShort31;
+var
+  T: TSynSystemTime;
+begin
+  if dt = 0 then
+    result[0] := #0
+  else
+  begin
+    T.FromDateTime(dt);
+    T.ToHttpDateShort(result, tz);
+  end;
+end;
+
+function HttpDateToDateTime(const httpdate: RawUtf8; var datetime: TDateTime;
+  tolocaltime: boolean): boolean;
+var
+  T: TSynSystemTime;
+begin
+  PInt64(@datetime)^ := 0;
+  result := (httpdate <> '') and
+            T.FromHttpDate(httpdate, tolocaltime);
+  if result then
+    datetime := T.ToDateTime;
+end;
+
+function HttpDateToDateTime(const httpdate: RawUtf8;
+  tolocaltime: boolean): TDateTime;
+begin
+  if not HttpDateToDateTime(httpdate, result, tolocaltime) then
+    result := 0;
+end;
+
+function HttpDateToDateTimeBuffer(httpdate: PUtf8Char; var datetime: TDateTime;
+  tolocaltime: boolean): boolean;
+var
+  T: TSynSystemTime;
+begin
+  PInt64(@datetime)^ := 0;
+  result := (httpdate <> nil) and
+            T.FromHttpDateBuffer(httpdate, tolocaltime);
+  if result then
+    datetime := T.ToDateTime;
+end;
+
+function HttpDateToUnixTime(const httpdate: RawUtf8): TUnixTime;
+begin
+  result := HttpDateToUnixTimeBuffer(pointer(httpdate));
+end;
+
+function HttpDateToUnixTimeBuffer(httpdate: PUtf8Char): TUnixTime;
+var
+  T: TSynSystemTime;
+begin
+  if (httpdate <> nil) and
+     T.FromHttpDateBuffer(httpdate) then
+    result := T.ToUnixTime
+  else
+    result := 0;
+end;
+
+var
+  _HttpDateNowUtc: record
+    Safe: TLightLock;
+    Tix: cardinal; // = GetTickSec
+    Value: THttpDateNowUtc;
+  end;
+
+procedure SetLocalHttpDate(var Value: THttpDateNowUtc; Tix64: Int64);
+var
+  T: TSynSystemTime;
+begin
+  FromGlobalTime(T, {local=}false, Tix64);
+  T.ToHttpDateShort(Value, 'GMT'#13#10, 'Date: ');
+end;
+
+function HttpDateNowUtc(Tix64: Int64): THttpDateNowUtc;
+var
+  tix32: cardinal;
+  now: THttpDateNowUtc;
+begin
+  if Tix64 = 0 then
+    tix32 := GetTickSec
+  else
+    tix32 := Tix64 div MilliSecsPerSec;
+  with _HttpDateNowUtc do
+  begin
+    Safe.Lock;
+    if Value[0] = #0 then // initialize once at startup under the lock
+    begin
+      SetLocalHttpDate(Value, Tix64);
+      Tix := tix32;
+    end
+    else if tix32 > Tix then
+    begin
+      Tix := tix32;       // call OS outside of the lock on a single thread
+      Safe.UnLock;
+      SetLocalHttpDate(now, Tix64);
+      Safe.Lock;
+      if Tix = tix32 then // discard any obsolete computation
+        Value := now;
+    end;
+    MoveFast(Value[0], result[0], ord(Value[0]) + 1);
+    Safe.UnLock;
+  end;
+end;
+
+procedure UnixMSTimeUtcToHttpDate(UnixMSTime: TUnixMSTime; var Text: TShort31);
+var
+  T: TSynSystemTime;
+begin
+  if UnixMSTime <= 0 then
+    Text[0] := #0
+  else
+  begin
+    T.FromUnixMsTime(UnixMSTime);
+    T.ToHttpDateShort(Text);
+  end;
+end;
+
+function TimeToString: RawUtf8;
+var
+  bits: TTimeLogBits;
+begin
+  bits.FromNow;
+  bits.Value := bits.Value and (1 shl SHR_DD - 1); // keep only time
+  result := bits.Text(true, ' ');
+end;
+
+function DateTimeToFileShort(const DateTime: TDateTime): TShort15;
+begin
+  DateTimeToFileShortVar(DateTime, result);
+end;
+
+procedure DateTimeToFileShortVar(const DateTime: TDateTime; var result: ShortString);
+var
+  T: TSynSystemTime;
+begin
+  // use 'YYMMDDHHMMSS' format
+  if DateTime <= 0 then
+    PWord(@result[0])^ := 1 + ord('0') shl 8
+  else
+  begin
+    T.FromDate(DateTime);
+    T.FromTime(DateTime);
+    T.ToFileShort(result);
+  end;
+end;
+
+function NowToFileShort(localtime: boolean): TShort15;
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(localtime);
+  T.ToFileShort(result);
+end;
+
+function NowToFileMonthShort(localtime: boolean): TShort7;
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(localtime);
+  result := UInt4DigitsToShort(T.Year);
+  AppendShort(UInt2DigitsToShortFast(T.Month), result);
+end;
+
+procedure Int64ToHttpEtag(Value: Int64; out Etag: TShort23);
+begin
+  Etag[1] := '"';
+  BinToHexLower(@Value, @Etag[2], SizeOf(Value));
+  Etag[0] := AnsiChar(TrimMinDisplayHex(@Etag[1], 17) + 1);
+  Etag[ord(Etag[0])] := '"';
+end;
+
+function FileHttp304NotModified(Size: Int64; Time: TUnixMSTime;
+  InHeaders: PUtf8Char; var OutHeaders: RawUtf8): boolean;
+var
+  etag: TShort23; // should be separated from date
+  date: TShort31;
+  h: PUtf8Char;
+  l: PtrInt;
+begin
+  Int64ToHttpEtag((Size shl 16) xor (Time shr 9), etag); // 512ms resolution
+  if InHeaders <> nil then
+  begin
+    result := true; // return true as HTTP_NOTMODIFIED (304) status code
+    h := FindNameValuePointer(InHeaders, 'IF-NONE-MATCH: ', l);
+    if (h <> nil) and
+       CsvContains(@etag[1], h, ord(etag[0]), l, ',', true, true) then
+      exit;
+    h := FindNameValuePointer(InHeaders, 'IF-MODIFIED-SINCE: ', l);
+    if h <> nil then
+    begin
+      UnixMSTimeUtcToHttpDate(Time, date);
+      if IdemPropName(date, h, l) then
+        exit;
+    end;
+  end;
+  AppendLine(OutHeaders, ['Etag: ', etag]);
+  result := false;
+end;
+
+function ContentHttp304NotModified(const Content: RawUtf8; InHeaders: PUtf8Char;
+  var OutHeaders: RawUtf8): boolean;
+var
+  etag: TShort23;
+  h: PUtf8Char;
+  l: PtrInt;
+begin
+  Int64ToHttpEtag(Int64(crc32c(0, pointer(Content), length(Content))) shl 8
+                    xor length(Content), etag);
+  if InHeaders <> nil then
+  begin
+    result := true; // return true as HTTP_NOTMODIFIED (304) status code
+    h := FindNameValuePointer(InHeaders, 'IF-NONE-MATCH: ', l);
+    if (h <> nil) and
+       CsvContains(@etag[1], h, ord(etag[0]), l, ',', true, true) then
+      exit;
+  end;
+  AppendLine(OutHeaders, ['Etag: ', etag]);
+  result := false;
+end;
+
+
+{ ************ TUnixTime / TUnixMSTime POSIX Epoch Compatible 64-bit date/time }
+
+function UnixTimeMinimalUtc: TUnixTimeMinimal;
+begin
+  result := UnixTimeUtc - UNIXTIME_MINIMAL;
+end;
+
+function UnixTimeEqualsMS(const secs: TUnixTime; const millisecs: TUnixMSTime;
+  const deltamillisecs: Int64): boolean;
+begin // allow ] -1 .. +1 [ second rounding difference
+  result := abs(secs * MilliSecsPerSec - millisecs) < deltamillisecs;
+end;
+
+function UnixTimeToDateTime(const UnixTime: TUnixTime): TDateTime;
+begin
+  result := UnixTime * SecsPerDate + UnixDateDelta;
+end;
+
+function DateTimeToUnixTime(const AValue: TDateTime): TUnixTime;
+begin
+  result := round((AValue - UnixDateDelta) * SecsPerDay);
+end;
+
+function UnixTimeToString(const UnixTime: TUnixTime; Expanded: boolean;
+  FirstTimeChar: AnsiChar): RawUtf8;
+begin
+  // inlined UnixTimeToDateTime() + DateTimeToIso8601()
+  DateTimeToIso8601Var(UnixTime * SecsPerDate + UnixDateDelta,
+    Expanded, false, FirstTimeChar, #0, result);
+end;
+
+procedure UnixTimeToFileShortVar(const UnixTime: TUnixTime; var result: ShortString);
+begin
+  // use 'YYMMDDHHMMSS' format
+  if UnixTime <= 0 then
+    PWord(@result[0])^ := 1 + ord('0') shl 8
+  else
+    DateTimeToFileShortVar(UnixTime * SecsPerDate + UnixDateDelta, result);
+end;
+
+function UnixTimeToFileShort(const UnixTime: TUnixTime): TShort15;
+begin
+  UnixTimeToFileShortVar(UnixTime, result);
+end;
+
+function UnixMSTimeToFileShort(const UnixMSTime: TUnixMSTime): TShort15;
+begin
+  UnixTimeToFileShortVar(UnixMSTime div MilliSecsPerSec, result);
+end;
+
+function UnixTimePeriodToString(const UnixTime: TUnixTime;
+  FirstTimeChar: AnsiChar): RawUtf8;
+begin
+  if UnixTime < SecsPerDay then
+    result := TimeToIso8601(UnixTime * SecsPerDate, true, FirstTimeChar)
+  else
+    result := DaysToIso8601(UnixTime div SecsPerDay, true);
+end;
+
+function UnixMSTimeToDateTime(const UnixMSTime: TUnixMSTime): TDateTime;
+begin
+  result := UnixMSTime * MilliSecsPerDate + UnixDateDelta;
+end;
+
+function UnixMSTimeToDateTimeZ(const UnixMSTime: TUnixMSTime): TDateTime;
+begin
+  if UnixMSTime = 0 then
+    result := 0
+  else
+    result := UnixMSTimeToDateTime(UnixMSTime);
+end;
+
+function UnixMSTimePeriodToString(const UnixMSTime: TUnixMSTime;
+  FirstTimeChar: AnsiChar): RawUtf8;
+begin
+  if UnixMSTime < MilliSecsPerDay then
+    result := TimeToIso8601(UnixMSTime * MilliSecsPerDate, true,
+                            FirstTimeChar, UnixMSTime < MilliSecsPerSec)
+  else
+    result := DaysToIso8601(UnixMSTime div MilliSecsPerDay, true);
+end;
+
+function DateTimeToUnixMSTime(const AValue: TDateTime): TUnixMSTime;
+begin
+  if AValue = 0 then
+    result := 0
+  else
+    result := round((AValue - UnixDateDelta) * MilliSecsPerDay);
+end;
+
+function UnixMSTimeToString(const UnixMSTime: TUnixMSTime; Expanded: boolean;
+  FirstTimeChar: AnsiChar; const TZD: RawUtf8): RawUtf8;
+begin
+  // inlined UnixMSTimeToDateTime()
+  if UnixMSTime <= 0 then
+    FastAssignNew(result)
+  else
+    result := DateTimeMSToString(UnixMSTime * MilliSecsPerDate + UnixDateDelta,
+                                 Expanded, FirstTimeChar, TZD);
+end;
+
+procedure UnixTimeOrDoubleToDateTime(P: PUtf8Char; Len: PtrInt; var V: TDateTime);
+var
+  u64: QWord;
+begin
+  if (P = nil) or // null may also be WasString=false and P=nil
+     (Len <= 0) or
+     (PCardinal(P)^ = NULL_LOW) then
+    PInt64(@V)^ := 0 // void TDateTime
+  else if ByteScanIndex(pointer(P), Len, ord('.')) >= 0 then
+    V := GetExtended(P) // obviously a floating point / COM double value
+  else
+  begin
+    SetQWord(P, u64);
+    if u64 > UNIXTIMEMS_MINIMAL then
+      V := UnixMSTimeToDateTime(u64) // likely to have millisecond resolution
+    else if u64 > UNIXTIME_MINIMAL then
+      V := UnixTimeToDateTime(u64)   // likely to have second resolution
+    else
+      V := u64; // likely to have day resolution, i.e. TDate
+  end;
+end;
+
+function UnixTimeAnyToDateTime(const Text: RawUtf8): TDateTime;
+var
+  tmp: TDateTime;
+begin
+  UnixTimeOrDoubleToDateTime(pointer(Text), length(Text), tmp);
+  result := tmp;
+end;
+
+
+{ ************ TTimeLog efficient 64-bit custom date/time encoding }
+
+// bits: S=0..5 M=6..11 H=12..16 DD=17..21 MM=22..25 YY=26..40
+// size: S=6 M=6  H=5  DD=5  MM=4  YY=12
+// i.e. S<64 M<64 H<32 DD<32 MM<16 YY<=9999: power of 2 -> use fast shl/shr
+
+{ TTimeLogBits }
+
+procedure TTimeLogBits.From(Y, M, D, HH, MM, SS: cardinal);
+begin
+  inc(HH, D shl BTS_H + M shl (BTS_H + BTS_DD) + Y shl 14 - (1 shl 5 + 1 shl 10));
+  Value := SS + MM shl SHR_M + Int64(HH) shl SHR_H;
+end;
+
+procedure TTimeLogBits.From(P: PUtf8Char; L: PtrInt);
+begin
+  Value := Iso8601ToTimeLogPUtf8Char(P, L);
+end;
+
+procedure TTimeLogBits.Expand(out Date: TSynSystemTime);
+var
+  v: PtrUInt;
+begin
+  v := PPtrUint(@Value)^;
+  Date.Year := {$ifdef CPU32} Value {$else} v {$endif} shr SHR_YY;
+  Date.Month := 1 + (v shr SHR_MM) and AND_MM;
+  Date.DayOfWeek := 0;
+  Date.Day := 1 + (v shr SHR_DD) and AND_DD;
+  Date.Hour := (v shr SHR_H) and AND_H;
+  Date.Minute := (v shr SHR_M) and AND_M;
+  Date.Second := v and AND_S;
+  Date.MilliSecond := 0;
+end;
+
+procedure TTimeLogBits.From(const S: RawUtf8);
+begin
+  Value := Iso8601ToTimeLogPUtf8Char(pointer(S), length(S));
+end;
+
+procedure TTimeLogBits.FromFileDate(const FileDate: TFileAge);
+begin
+  {$ifdef OSWINDOWS} // already local time
+  with PLongRec(@FileDate)^ do
+    From(Hi shr 9 + 1980, Hi shr 5 and 15, Hi and 31, Lo shr 11,
+      Lo shr 5 and 63, Lo and 31 shl 1);
+  {$else}
+  From(mormot.core.os.FileDateToDateTime(FileDate)); // convert UTC to local
+  {$endif OSWINDOWS}
+end;
+
+procedure TTimeLogBits.From(DateTime: TDateTime; DateOnly: boolean);
+var
+  T: TSynSystemTime;
+  v: PtrInt;
+begin
+  T.FromDate(DateTime);
+  if DateOnly then
+    T.Hour := 0
+  else
+    T.FromTime(DateTime);
+  v := T.Day shl BTS_H + T.Month shl 10 + T.Year shl 14 - (1 shl 5 + 1 shl 10);
+  Value := v; // circumvent C1093 error on oldest Delphi
+  Value := Value shl BTS_YY;
+  if not DateOnly then
+  begin
+    v := T.Second + T.Minute shl SHR_M + T.Hour shl SHR_H;
+    Value := Value + v;
+  end;
+end;
+
+procedure TTimeLogBits.From(Time: PSynSystemTime);
+var
+  v: PtrInt;
+begin
+  v := PtrInt(Time^.Hour) + PtrInt(Time^.Day) shl 5 + PtrInt(Time^.Month) shl 10 +
+       PtrInt(Time^.Year) shl 14 - (1 shl 5 + 1 shl 10);
+  Value := (Int64(v) shl BTS_YY) + (PtrInt(Time^.Second) + PtrInt(Time^.Minute) shl SHR_M);
+end;
+
+procedure TTimeLogBits.FromUnixTime(const UnixTime: TUnixTime);
+var
+  T: TSynSystemTime;
+begin
+  T.FromUnixTime(UnixTime);
+  From(@T);
+end;
+
+procedure TTimeLogBits.FromUnixMSTime(const UnixMSTime: TUnixMSTime);
+begin
+  FromUnixTime(UnixMSTime div MilliSecsPerSec); // trim milliseconds
+end;
+
+procedure TTimeLogBits.FromUtcTime;
+var
+  now: TSynSystemTime;
+begin
+  FromGlobalTime(now, {local=}false);
+  From(@now);
+end;
+
+procedure TTimeLogBits.FromNow;
+var
+  now: TSynSystemTime;
+begin
+  FromGlobalTime(now, {local=}true);
+  From(@now);
+end;
+
+function TTimeLogBits.ToTime: TTime;
+var
+  lo: PtrUInt;
+begin
+  {$ifdef CPU64}
+  lo := Value;
+  {$else}
+  lo := PCardinal(@Value)^;
+  {$endif CPU64}
+  if (lo and (1 shl SHR_DD - 1)) <> 0 then
+    result := EncodeTimeOrZero((lo shr SHR_H) and AND_H,
+      (lo shr SHR_M) and AND_M, lo and AND_S, 0)
+  else
+    result := 0;
+end;
+
+function TTimeLogBits.ToDate: TDate;
+var
+  y, lo: PtrUInt;
+begin
+  {$ifdef CPU64}
+  lo := Value;
+  y := lo shr SHR_YY;
+  {$else}
+  y := Value shr SHR_YY;
+  lo := PCardinal(@Value)^;
+  {$endif CPU64}
+  result := EncodeDateOrZero(y, 1 + (lo shr SHR_MM) and AND_MM,
+    1 + (lo shr SHR_DD) and AND_DD);
+end;
+
+function TTimeLogBits.ToDateTime: TDateTime;
+var
+  y, lo: PtrUInt;
+begin
+  {$ifdef CPU64}
+  lo := Value;
+  y := lo shr SHR_YY;
+  {$else}
+  y := Value shr SHR_YY;
+  lo := PCardinal(@Value)^;
+  {$endif CPU64}
+  result := EncodeDateOrZero(y, 1 + (lo shr SHR_MM) and AND_MM,
+    1 + (lo shr SHR_DD) and AND_DD);
+  if lo and (1 shl SHR_DD - 1) <> 0 then
+    result := result + EncodeTimeOrZero((lo shr SHR_H) and AND_H,
+      (lo shr SHR_M) and AND_M, lo and AND_S, 0);
+end;
+
+function TTimeLogBits.Year: integer;
+begin
+  result := Value shr SHR_YY;
+end;
+
+function TTimeLogBits.Month: integer;
+begin
+  result := 1 + (PCardinal(@Value)^ shr SHR_MM) and AND_MM;
+end;
+
+function TTimeLogBits.Day: integer;
+begin
+  result := 1 + (PCardinal(@Value)^ shr SHR_DD) and AND_DD;
+end;
+
+function TTimeLogBits.Hour: integer;
+begin
+  result := (PCardinal(@Value)^ shr SHR_H) and AND_H;
+end;
+
+function TTimeLogBits.Minute: integer;
+begin
+  result := (PCardinal(@Value)^ shr SHR_M) and AND_M;
+end;
+
+function TTimeLogBits.Second: integer;
+begin
+  result := PCardinal(@Value)^ and AND_S;
+end;
+
+function TTimeLogBits.ToUnixTime: TUnixTime;
+var
+  g: cardinal;
+begin
+  if EncodeGregorian(Year, Month, Day, g) then
+    result := ((Int64(g) - D1970) * SecsPerDay) +
+              Second + (Minute * SecsPerMin) + (Hour * SecsPerHour)
+  else
+    result := 0;
+end;
+
+function TTimeLogBits.ToUnixMSTime: TUnixMSTime;
+begin
+  result := ToUnixTime * MilliSecsPerSec;
+end;
+
+function TTimeLogBits.FillText(Dest: PUtf8Char; Expanded: boolean;
+  FirstTimeChar, QuoteChar: AnsiChar): PUtf8Char;
+var
+  lo: PtrUInt;
+begin
+  if QuoteChar <> #0 then
+  begin
+    Dest^ := QuoteChar;
+    inc(Dest);
+  end;
+  if Value <> 0 then
+  begin
+    {$ifdef CPU64}
+    lo := Value;
+    {$else}
+    lo := PCardinal(@Value)^;
+    {$endif CPU64}
+    if lo and (1 shl SHR_DD - 1) = 0 then
+      // no Time: just convert date
+      Dest := DateToIso8601PChar(Dest, Expanded,
+        {$ifdef CPU64} lo {$else} Value {$endif} shr SHR_YY,
+        1 + (lo shr SHR_MM) and AND_MM,
+        1 + (lo shr SHR_DD) and AND_DD)
+    else
+    {$ifdef CPU64}
+    if lo shr SHR_DD = 0 then
+    {$else}
+    if Value shr SHR_DD = 0 then
+    {$endif CPU64}
+      // no Date: just convert time
+      Dest := TimeToIso8601PChar(Dest, Expanded,
+        (lo shr SHR_H) and AND_H,
+        (lo shr SHR_M) and AND_M,
+        lo and AND_S, 0, FirstTimeChar)
+    else
+    begin
+      // convert time and date
+      Dest := DateToIso8601PChar(Dest, Expanded,
+        {$ifdef CPU64} lo {$else} Value {$endif} shr SHR_YY,
+        1 + (lo shr SHR_MM) and AND_MM,
+        1 + (lo shr SHR_DD) and AND_DD);
+      Dest := TimeToIso8601PChar(Dest, Expanded,
+                (lo shr SHR_H) and AND_H,
+                (lo shr SHR_M) and AND_M,
+                lo and AND_S, 0, FirstTimeChar);
+    end;
+  end;
+  if QuoteChar <> #0 then
+  begin
+    Dest^ := QuoteChar;
+    inc(Dest);
+  end;
+  result := Dest;
+end;
+
+function TTimeLogBits.Text(Expanded: boolean; FirstTimeChar: AnsiChar): RawUtf8;
+begin
+  SetText(result, Expanded, FirstTimeChar);
+end;
+
+procedure TTimeLogBits.SetText(var Dest: RawUtf8; Expanded: boolean; FirstTimeChar: AnsiChar);
+var
+  tmp: TTemp32;
+begin
+  if Value = 0 then
+    FastAssignNew(Dest)
+  else
+    FastSetString(Dest, @tmp, FillText(@tmp, Expanded, FirstTimeChar));
+end;
+
+function TTimeLogBits.FullText(Dest: PUtf8Char; Expanded: boolean;
+  FirstTimeChar, QuotedChar: AnsiChar): PUtf8Char;
+var
+  lo: PtrUInt;
+begin
+  // convert full time and date
+  if QuotedChar <> #0 then
+  begin
+    Dest^ := QuotedChar;
+    inc(Dest);
+  end;
+  lo := {$ifdef CPU64}Value{$else}PCardinal(@Value)^{$endif};
+  Dest := DateToIso8601PChar(Dest, Expanded,
+    {$ifdef CPU64}lo{$else}Value{$endif} shr SHR_YY,
+    1 + (lo shr SHR_MM) and AND_MM,
+    1 + (lo shr SHR_DD) and AND_DD);
+  Dest := TimeToIso8601PChar(Dest, Expanded,
+    (lo shr SHR_H) and AND_H,
+    (lo shr SHR_M) and AND_M,
+    lo and AND_S, 0, FirstTimeChar);
+  if QuotedChar <> #0 then
+  begin
+    Dest^ := QuotedChar;
+    inc(Dest);
+  end;
+  result := Dest;
+end;
+
+function TTimeLogBits.FullText(Expanded: boolean;
+  FirstTimeChar, QuotedChar: AnsiChar): RawUtf8;
+var
+  tmp: TTemp32;
+begin
+  FastSetString(result, @tmp, FullText(tmp{%H-}, Expanded, FirstTimeChar, QuotedChar));
+end;
+
+function TTimeLogBits.i18nText: string;
+begin
+  if Assigned(i18nDateText) then
+    result := i18nDateText(Value)
+  else
+    result := {$ifdef UNICODE}Ansi7ToString{$endif}(Text(true, ' '));
+end;
+
+function TimeLogNow: TTimeLog;
+var
+  b: TTimeLogBits; // safer with an explicit variable
+begin
+  b.FromNow;
+  result := b.Value;
+end;
+
+function TimeLogNowUtc: TTimeLog;
+var
+  b: TTimeLogBits; // safer with an explicit variable
+begin
+  b.FromUtcTime;
+  result := b.Value;
+end;
+
+function TimeLogFromFile(const FileName: TFileName): TTimeLog;
+var
+  dt: TDateTime;
+  b: TTimeLogBits; // safer with a transient variable
+begin
+  dt := FileAgeToDateTime(FileName);
+  if dt = 0 then
+    b.Value := 0
+  else
+    b.From(dt);
+  result := b.Value;
+end;
+
+function TimeLogFromDateTime(const DateTime: TDateTime): TTimeLog;
+var
+  b: TTimeLogBits; // safer with a transient variable
+begin
+  b.From(DateTime);
+  result := b.Value;
+end;
+
+function TimeLogFromUnixTime(const UnixTime: TUnixTime): TTimeLog;
+var
+  b: TTimeLogBits; // safer with a transient variable
+begin
+  b.FromUnixTime(UnixTime);
+  result := b.Value;
+end;
+
+function TimeLogToDateTime(const Timestamp: TTimeLog): TDateTime;
+begin
+  result := PTimeLogBits(@Timestamp)^.ToDateTime;
+end;
+
+function TimeLogToUnixTime(const Timestamp: TTimeLog): TUnixTime;
+begin
+  result := PTimeLogBits(@Timestamp)^.ToUnixTime;
+end;
+
+function Iso8601ToTimeLogPUtf8Char(P: PUtf8Char; L: PtrInt;
+  ContainsNoTime: PBoolean): TTimeLog;
+// bits: S=0..5 M=6..11 H=12..16 D=17..21 M=22..25 Y=26..40
+// i.e. S<64 M<64 H<32 D<32 M<16 Y<9999: power of 2 -> use fast shl/shr
+var
+  v, b: PtrUInt;
+  {$ifdef CPUX86NOTPIC}
+  tab: TNormTableByte absolute ConvertHexToBin;
+  {$else}
+  tab: PByteArray; // faster on PIC/x86_64/ARM
+  {$endif CPUX86NOTPIC}
+begin
+  result := 0;
+  if P = nil then
+    exit;
+  if L = 0 then
+    while P[L] <> #0 do // no need to call external StrLen() for a few chars
+      inc(L);
+  if L < 4 then
+    exit; // we need 'YYYY' at least
+  if P[0] = 'T' then
+    dec(P, 8)
+  else
+  begin
+    // 'YYYY' -> year decode
+    {$ifndef CPUX86NOTPIC}
+    tab := @ConvertHexToBin;
+    {$endif CPUX86NOTPIC}
+    v := tab[ord(P[0])];
+    if v > 9 then
+      exit;
+    b := tab[ord(P[1])];
+    if b > 9 then
+      exit
+    else
+      v := v * 10 + b;
+    b := tab[ord(P[2])];
+    if b > 9 then
+      exit
+    else
+      v := v * 10 + b;
+    b := tab[ord(P[3])];
+    if b > 9 then
+      exit
+    else
+      v := v * 10 + b;
+    result := Int64(v) shl 26;  // store YYYY
+    if P[4] in ['-', '/'] then
+    begin
+      inc(P);
+      dec(L);
+    end; // allow YYYY-MM-DD
+    if L >= 6 then
+    begin
+      // YYYYMM
+      v := ord(P[4]) * 10 + ord(P[5]) - (48 + 480 + 1); // Month 1..12 -> 0..11
+      if v <= 11 then
+        inc(result, v shl 22)
+      else
+      begin
+        result := 0;
+        exit;
+      end;
+      if P[6] in ['-', '/'] then
+      begin
+        inc(P);
+        dec(L);
+      end; // allow YYYY-MM-DD
+      if L >= 8 then
+      begin
+        // YYYYMMDD
+        v := ord(P[6]) * 10 + ord(P[7]) - (48 + 480 + 1); // Day 1..31 -> 0..30
+        if (v <= 30) and
+           ((L = 8) or
+            (L = 14) or
+            (P[8] in [#0, ' ', 'T'])) then
+          inc(result, v shl 17)
+        else
+        begin
+          result := 0;
+          exit;
+        end;
+      end;
+    end;
+    if L = 14 then
+      dec(P) // no 'T' or ' ' separator for YYYYMMDDhhmmss
+    else if L < 14 then
+    begin
+      // not enough place to retrieve a time
+      if ContainsNoTime <> nil then
+        ContainsNoTime^ := true;
+      exit;
+    end;
+  end;
+  if ContainsNoTime <> nil then
+    ContainsNoTime^ := false;
+  b := ord(P[9]) * 10 + ord(P[10]) - (48 + 480);
+  if b <= 23 then
+    v := b shl 12
+  else
+    exit;
+  if P[11] = ':' then
+    inc(P); // allow hh:mm:ss
+  b := ord(P[11]) * 10 + ord(P[12]) - (48 + 480);
+  if b <= 59 then
+    inc(v, b shl 6)
+  else
+    exit;
+  if P[13] = ':' then
+    inc(P); // allow hh:mm:ss
+  b := ord(P[13]) * 10 + ord(P[14]) - (48 + 480);
+  if b <= 59 then
+    inc(result, PtrUInt(v + b));
+end;
+
+function Iso8601ToTimeLog(const S: RawByteString): TTimeLog;
+begin
+  result := Iso8601ToTimeLogPUtf8Char(pointer(S), length(S));
+end;
+
+
+{ ******************* TTextDateWriter supporting date/time ISO-8601 serialization }
+
+
+{ TTextDateWriter }
+
+procedure TTextDateWriter.AddSpaced(Value: QWord; Width: PtrInt; SepChar: AnsiChar);
+var
+  tmp: TTemp24;
+  alt: TShort15;
+  p: PAnsiChar;
+  len: PtrInt;
+begin
+  p := StrUInt64(@tmp[23], Value);
+  len := @tmp[23] - p;
+  if len > Width then
+  begin
+    KVar(Value, alt); // truncate to xxxK or xxxM
+    p := @alt[1];
+    len := ord(alt[0]);
+  end;
+  AddSpaced(p, len);
+  if SepChar <> #0 then
+    Add(SepChar);
+end;
+
+procedure TTextDateWriter.AddTimeLog(Value: PInt64; QuoteChar: AnsiChar);
+begin
+  if BEnd - B <= 31 then
+    FlushToStream;
+  B := PTimeLogBits(Value)^.FillText(B + 1, true, 'T', QuoteChar) - 1;
+end;
+
+procedure TTextDateWriter.AddUnixTime(Value: PInt64; QuoteChar: AnsiChar);
+var
+  dt: TDateTime;
+begin
+  // inlined UnixTimeToDateTime()
+  dt := Value^ * SecsPerDate + UnixDateDelta;
+  AddDateTime(@dt, 'T', QuoteChar, {withms=}false, {dateandtime=}true);
+end;
+
+procedure TTextDateWriter.AddUnixMSTime(Value: PInt64; WithMS: boolean;
+  QuoteChar: AnsiChar);
+var
+  dt: TDateTime;
+begin
+  // inlined UnixMSTimeToDateTime()
+  dt := Value^ * MilliSecsPerDate + UnixDateDelta;
+  AddDateTime(@dt, 'T', QuoteChar, WithMS, {dateandtime=}true);
+end;
+
+const
+  TIME_00: array[0 .. 9] of AnsiChar = 'T00:00:00Z';
+
+procedure TTextDateWriter.AddDateTime(Value: PDateTime; FirstChar: AnsiChar;
+  QuoteChar: AnsiChar; WithMS: boolean; AlwaysDateAndTime: boolean);
+var
+  T: TSynSystemTime;
+  d: double; // avoid EBusError on arm32
+begin
+  if (PInt64(Value)^ = 0) and
+     (QuoteChar = #0) then
+    exit;
+  if BEnd - B <= 32 then
+    FlushToStream;
+  if QuoteChar <> #0 then
+    AddDirect(QuoteChar);
+  if PInt64(Value)^ <> 0 then
+  begin
+    inc(B);
+    d := unaligned(Value^);
+    if AlwaysDateAndTime or
+       (trunc(d) <> 0) then
+    begin
+      T.FromDate(d);
+      B := DateToIso8601PChar(B, {exp=}true, T.Year, T.Month, T.Day);
+    end;
+    if AlwaysDateAndTime or
+       (frac(d) <> 0) then
+    begin
+      T.FromTime(d);
+      B := TimeToIso8601PChar(B, {exp=}true, T.Hour, T.Minute, T.Second,
+        T.MilliSecond, FirstChar, WithMS);
+      if twoDateTimeWithZ in fCustomOptions then
+        B^ := 'Z'
+      else
+        dec(B);
+    end
+    else if twoDateTimeWithZ in fCustomOptions then
+    begin
+      MoveFast(TIME_00, B^, 10);
+      inc(B, 9); // FireFox e.g. requires always some time part
+    end
+    else
+      dec(B);
+  end;
+  if QuoteChar <> #0 then
+    AddDirect(QuoteChar);
+end;
+
+procedure TTextDateWriter.AddDateTime(const Value: TDateTime; WithMS: boolean);
+begin
+  AddDateTime(@Value, 'T', {quotechar=}#0, WithMS, {always=}false);
+end;
+
+procedure TTextDateWriter.AddDateTimeMS(const Value: TDateTime; Expanded: boolean;
+  FirstTimeChar: AnsiChar; const TZD: RawUtf8);
+var
+  T: TSynSystemTime;
+begin
+  if Value = 0 then
+    exit;
+  T.FromDateTime(Value);
+  Add(DTMS_FMT[Expanded], [UInt4DigitsToShort(T.Year),
+    UInt2DigitsToShortFast(T.Month), UInt2DigitsToShortFast(T.Day),
+    FirstTimeChar, UInt2DigitsToShortFast(T.Hour),
+    UInt2DigitsToShortFast(T.Minute), UInt2DigitsToShortFast(T.Second),
+    UInt3DigitsToShort(T.MilliSecond), TZD]);
+end;
+
+procedure TTextDateWriter.AddCurrentIsoDateTime(
+  LocalTime, WithMS: boolean; FirstTimeChar: AnsiChar; const TZD: RawUtf8);
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(LocalTime);
+  T.AddIsoDateTime(self, WithMS, FirstTimeChar, TZD);
+end;
+
+procedure TTextDateWriter.AddCurrentLogTime(LocalTime: boolean);
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(LocalTime);
+  T.AddLogTime(self);
+end;
+
+function Value3Digits(V: PtrUInt; P: PUtf8Char; W: PWordArray): PtrUInt;
+  {$ifdef HASINLINE}inline;{$endif}
+begin
+  {$ifdef CPU64}
+  result := (V * DIV100_INV) shr 37;    // we can avoid div on Delphi Win64
+  PWord(P + 1)^ := W[V - result * 100]; // not PCardinal()
+  V := result;
+  result := (result * DIV10_INV) shr 35;
+  {$else}
+  result := V div 100; // fast reciprocal on FPC, plain div on Delphi Win32
+  PWord(P + 1)^ := W[V - result * 100]; // not PCardinal()
+  V := result;
+  result := result div 10;
+  {$endif CPU64}
+  P^ := AnsiChar(V - result * 10 + 48);
+end;
+
+procedure TTextDateWriter.AddMicroSec(MicroSec: cardinal);
+var
+  W: PWordArray;
+  P: PUtf8Char;
+begin // append in 00.000.000 TSynLog format
+  if B >= BEnd then
+    FlushToStream;
+  P := B + 1;
+  W := @TwoDigitLookupW;
+  MicroSec := Value3Digits(MicroSec, P + 7, W);
+  if MicroSec = 0 then // most common case < 1ms
+  begin
+    PCardinal(P)^     := ord('0') + ord('0') shl 8 + ord('.') shl 16;
+    PCardinal(P + 3)^ := ord('0') + ord('0') shl 8 + ord('0') shl 16 + ord('.') shl 24;
+  end
+  else
+  begin
+    MicroSec := Value3Digits(MicroSec, P + 3, W);
+    if MicroSec = 0 then
+      MicroSec := $3030
+    else if MicroSec > 99 then
+      MicroSec := $3939
+    else
+      MicroSec := W[MicroSec];
+    PWord(P)^ := MicroSec;
+    P[2] := '.';
+    P[6] := '.';
+  end;
+  B := P + 9;
+end;
+
+procedure TTextDateWriter.AddCurrentNcsaLogTime(
+  LocalTime: boolean; const TZD: RawUtf8);
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(LocalTime);
+  T.AddNcsaText(self, TZD);
+end;
+
+procedure TTextDateWriter.AddCurrentHttpTime(LocalTime: boolean;
+  const TZD: RawUtf8);
+var
+  T: TSynSystemTime;
+begin
+  T.FromNow(LocalTime);
+  T.AddHttpDate(self, TZD);
+end;
+
+procedure TTextDateWriter.AddSeconds(MilliSeconds: QWord; Quote: AnsiChar);
+begin
+  if Quote <> #0 then
+    Add(Quote);
+  MilliSeconds := MilliSeconds * 10; // convert a.bcd to a.bcd0 currency/Curr64
+  AddCurr64(@MilliSeconds); // fast output
+  if Quote <> #0 then
+    AddDirect(Quote);
+end;
+
+
+function TLocalWriter.Init(var Dest: ShortString): TTextDateWriter;
+begin // inlined TTextDateWriter.CreateOwnedShort logic with no heap allocation
+  VMT := TTextDateWriter; // for the virtual methods to work
+  FillCharFast(Fields, SizeOf(Fields), 0);
+  result := @VMT;
+  result.fFlags := [twfBufferIsOnStack, twfDestIsShortString, twfFlushNoAutoResize];
+  result.InternalSetBuffer(@Temp, SizeOf(Temp));
+  Dest[0] := #0;
+  result.fDest := @Dest; // not a true TStream
+  result.fShortStringMax := high(Dest);
+end;
+
+function TLocalWriter.Writer: TTextDateWriter;
+begin
+  result := @VMT;
+end;
+
+procedure TLocalWriter.Done;
+var
+  len: PtrInt;
+  W: TTextDateWriter;
+begin // inlined FlushFinal + WriteToStream
+  W := @VMT;
+  if W.fDest = nil then
+    exit; // Dest is already full
+  len := W.B - W.fTempBuf + 1;
+  if len > 0 then
+    AppendShortBuffer(pointer(W.fTempBuf), len, W.fShortStringMax, W.fDest);
+end;
+
+function DecodeMicroSec(P: PByteArray): PtrInt;
+var
+  B: PtrInt;
+  tab: PByteArray;
+label
+  err;
+begin
+  // fast decode 00.020.006 at the end of the line
+  tab := @ConvertHexToBin;
+  B := tab[P[0]];   // 00 seconds
+  if B > 9 then
+    goto err;
+  result := B;
+  B := tab[P[1]];
+  if B > 9 then
+    goto err;
+  result := result * 10 + B;
+  B := tab[P[3]]; // 020 milliseconds
+  if B > 9 then
+    goto err;
+  result := result * 10 + B;
+  B := tab[P[4]];
+  if B > 9 then
+    goto err;
+  result := result * 10 + B;
+  B := tab[P[5]];
+  if B > 9 then
+    goto err;
+  result := result * 10 + B;
+  B := tab[P[7]]; // 006 microseconds
+  if B > 9 then
+    goto err;
+  result := result * 10 + B;
+  B := tab[P[8]];
+  if B > 9 then
+    goto err;
+  result := result * 10 + B;
+  B := tab[P[9]];
+  if B > 9 then
+    goto err;
+  result := result * 10 + B;
+  exit;
+err: result := -1;
+end;
+
+
+{ ******************* TValuePUtf8Char text value wrapper record }
+
+{ TValuePUtf8Char }
+
+procedure TValuePUtf8Char.ToUtf8(var Value: RawUtf8);
+begin
+  FastSetString(Value, Text, Len);
+end;
+
+function TValuePUtf8Char.ToUtf8: RawUtf8;
+begin
+  FastSetString(result, Text, Len);
+end;
+
+function TValuePUtf8Char.ToString: string;
+begin
+  Utf8DecodeToString(Text, Len, result);
+end;
+
+function TValuePUtf8Char.ToInteger: PtrInt;
+begin
+  result := GetInteger(Text);
+end;
+
+function TValuePUtf8Char.ToCardinal: PtrUInt;
+begin
+  result := GetCardinal(Text);
+end;
+
+function TValuePUtf8Char.ToCardinal(Def: PtrUInt): PtrUInt;
+begin
+  result := GetCardinalDef(Text, Def);
+end;
+
+function TValuePUtf8Char.ToInt64: Int64;
+begin
+  SetInt64(Text, result{%H-});
+end;
+
+function TValuePUtf8Char.ToBoolean: boolean;
+begin
+  result := (Text <> nil) and
+            ((PWord(Text)^ = ord('1')) or
+             (GetTrue(Text) = 1));
+end;
+
+function TValuePUtf8Char.ToDouble: double;
+begin
+  result := GetExtended(Text);
+end;
+
+function TValuePUtf8Char.Iso8601ToDateTime: TDateTime;
+begin
+  result := Iso8601ToDateTimePUtf8Char(Text, Len);
+end;
+
+function TValuePUtf8Char.Idem(const Value: RawUtf8): boolean;
+begin
+  result := (length(Value) = Len) and
+            ((Len = 0) or
+             IdemPropNameUSameLenNotNull(pointer(Value), Text, Len));
+end;
+
+function TValuePUtf8Char.Equal(const Value: RawUtf8): boolean;
+begin
+  result := (length(Value) = Len) and
+            ((Len = 0) or
+             CompareMemSmall(pointer(Value), Text, Len)); // inlined
+end;
+
+function TValuePUtf8Char.Equal(Value: PUtf8Char; ValueLen: PtrInt): boolean;
+begin
+  result := (ValueLen = Len) and
+            ((Len = 0) or
+             CompareMemSmall(Value, Text, Len)); // inlined
+end;
+
+function TValuePUtf8Char.Match(Csv: PUtf8Char; Sep: AnsiChar): integer;
+var
+  l: PtrInt;
+begin
+  result := 0;
+  if Csv <> nil then
+    repeat
+      l := PosChar0(Csv, Sep) - Csv; // use fast SSE2 asm on x86_64
+      if (l = Len) and
+         ((l = 0) or
+          CompareMemSmall(Csv, Text, l)) then
+        exit;
+      inc(Csv, l);
+      if Csv^ = #0 then
+        break;
+      inc(Csv);    // skip Sep
+      inc(result); // 0,1,2..
+    until false;
+  result := -1;
+end;
+
+
+procedure InitializeUnit;
+begin
+  // as expected by ParseMonth() to call FindShortStringListNoTrim()
+  assert(PtrUInt(@HTML_MONTH_NAMES[3]) - PtrUInt(@HTML_MONTH_NAMES[1]) = 8);
+  assert(SizeOf(GlobalTime) >= 128);
+  assert(TTextDateWriter.InstanceSize <= SizeOf(TLocalWriter) - 256);
+  // some mormot.core.text wrappers are implemented by this unit
+  _VariantToUtf8DateTimeIso8601     := DateTimeToIso8601TextVar;
+  _VariantToTempUtf8DateTimeIso8601 := DateTimeToIso8601TempUtf8;
+  _Iso8601ToDateTime                := Iso8601ToDateTime;
+end;
+
+
+procedure FinalizeUnit;
+begin
+end;
+
+initialization
+  InitializeUnit;
+
+finalization
+  FinalizeUnit;
+
+end.
+

@@ -1,0 +1,8141 @@
+/// Framework Core Text, Binary and Time Search Engines
+// - this unit is a part of the Open Source Synopse mORMot framework 2,
+// licensed under a MPL/GPL/LGPL three license - see LICENSE.md
+unit mormot.core.search;
+
+{
+  *****************************************************************************
+
+   Several Indexing and Search Engines, as used by other parts of the framework
+    - SAX-oriented JSON buffers access
+    - JSON-aware TSynNameValue TSynCache TObjectStoreJson
+    - Files Search in Folders
+    - ScanUtf8, GLOB and SOUNDEX Text Search
+    - Efficient CSV Parsing using RTTI
+    - Versatile Expression Search Engine
+    - Bloom Filter Probabilistic Index
+    - Binary Buffers Delta Compression
+    - TDynArray Low-Level Binary Search and Iteration
+    - TSynFilter and TSynValidate Processing Classes
+    - Cross-Platform TSynTimeZone Time Zones
+
+  *****************************************************************************
+}
+
+interface
+
+{$I ..\mormot.defines.inc}
+
+uses
+  classes,
+  sysutils,
+  mormot.core.base,
+  mormot.core.os,
+  mormot.core.os.security, // for TTimeZoneInformation on Windows
+  mormot.core.rtti,
+  mormot.core.unicode,
+  mormot.core.text,
+  mormot.core.buffers,
+  mormot.core.datetime,
+  mormot.core.data,
+  mormot.core.json,
+  mormot.core.fmt,
+  mormot.core.variants;
+
+
+{ ************ SAX-oriented JSON buffers access }
+
+{ those functions are used e.g. to implement our SQLite3 JSON SQL functions }
+
+/// go to the #nth item of a JSON array
+// - implemented via a fast SAX-like approach: the input buffer is not changed,
+// nor no memory buffer allocated neither content copied
+// - returns nil if the supplied index is out of range
+// - returns a pointer to the index-nth item in the JSON array (first index=0)
+// - this will handle any kind of arrays, including those with nested
+// JSON objects or arrays
+// - incoming P^ should point to the first initial '[' char
+function JsonArrayItem(P: PUtf8Char; Index: integer): PUtf8Char;
+
+/// retrieve the positions of all elements of a JSON array
+// - this will handle any kind of arrays, including those with nested
+// JSON objects or arrays
+// - warning: incoming P^ should point to the first char AFTER the initial '['
+// (which may be a closing ']') - calling e.g. NextNotSpaceCharIs()
+// - returns false if the supplied input is invalid
+// - returns true on success, with Values[] pointing to each unescaped value,
+// may be a JSON string, object, array of constant
+function JsonArrayDecode(P: PUtf8Char;
+  out Values: TPUtf8CharDynArray): boolean;
+
+/// go to a named property of a JSON object
+// - implemented via a fast SAX-like approach: the input buffer is not changed,
+// nor no memory buffer allocated neither content copied
+// - PropName is search case-insensitively  as 'propertyname' or 'property*'
+// - returns nil if the supplied property name does not exist
+// - returns a pointer to the matching item value in the JSON object
+// - this will handle any kind of objects, including those with nested
+// JSON objects or arrays
+// - incoming P^ should point to the first initial '{' char
+function JsonObjectItem(P: PUtf8Char; const PropName: RawUtf8;
+  PropNameFound: PRawUtf8 = nil): PUtf8Char; overload;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// go to a buffer-named property of a JSON object
+// - as called by overloaded JsonObjectItem()
+function JsonObjectItem(P, PropName: PUtf8Char; PropNameLen: PtrInt;
+  PropNameFound: PRawUtf8): PUtf8Char; overload;
+
+/// go to a property of a JSON object, by its full path, e.g. 'parent.child'
+// - implemented via a fast SAX-like approach: the input buffer is not changed,
+// nor no memory buffer allocated neither content copied
+// - PropPath is search case-insensitively as 'parent.child' or 'parent.ch*'
+// - returns nil if the supplied property path does not exist
+// - returns a pointer to the matching item value in the JSON object
+// - this will handle any kind of objects, including those with nested
+// JSON objects or arrays
+// - incoming P^ should point to the first initial '{' char
+function JsonObjectByPath(JsonObject, PropPath: PUtf8Char): PUtf8Char;
+
+/// return all matching properties of a JSON object
+// - here the PropPath could be a comma-separated list of case-insensitive full
+// paths, e.g. 'Prop1,Prop2' or 'Obj1.Obj2.Prop*,Obj1.Prop1'
+// - returns '' if no property did match
+// - returns a JSON object of all matching properties
+// - this will handle any kind of objects, including those with nested
+// JSON objects or arrays
+// - incoming P^ should point to the first initial '{' char
+function JsonObjectsByPath(JsonObject, PropPath: PUtf8Char): RawUtf8;
+
+
+{ ************ JSON-aware TSynNameValue TSynCache TObjectStoreJson }
+
+type
+  /// store one Name/Value pair, as used by TSynNameValue class
+  TSynNameValueItem = record
+    /// the name of the Name/Value pair
+    // - this property is hashed by TSynNameValue for fast retrieval
+    Name: RawUtf8;
+    /// the value of the Name/Value pair
+    Value: RawUtf8;
+    /// any associated pointer or numerical value
+    Tag: PtrInt;
+  end;
+  PSynNameValueItem = ^TSynNameValueItem;
+
+  /// Name/Value pairs storage, as used by TSynNameValue class
+  TSynNameValueItemDynArray = array of TSynNameValueItem;
+
+  /// event handler used to convert on the fly some UTF-8 text content
+  TOnSynNameValueConvertRawUtf8 = function(
+    const text: RawUtf8): RawUtf8 of object;
+
+  /// callback event used by TSynNameValue
+  TOnSynNameValueNotify = procedure(
+    const Item: TSynNameValueItem; Index: PtrInt) of object;
+
+  /// pseudo-class used to store Name/Value RawUtf8 pairs
+  // - use internally a TDynArrayHashed instance for fast retrieval
+  // - is therefore faster than TRawUtf8List
+  // - is defined as an object, not as a class: you can use this in any
+  // class, without the need to destroy the content
+  // - Delphi "object" is buggy on stack -> also defined as record with methods
+  {$ifdef USERECORDWITHMETHODS}
+  TSynNameValue = record
+  private
+  {$else}
+  TSynNameValue = object
+  protected
+  {$endif USERECORDWITHMETHODS}
+    fOnAdd: TOnSynNameValueNotify;
+    function GetBlobData: RawByteString;
+    procedure SetBlobData(const aValue: RawByteString);
+    function GetStr(const aName: RawUtf8): RawUtf8;
+      {$ifdef HASINLINE}inline;{$endif}
+    function GetInt(const aName: RawUtf8): Int64;
+      {$ifdef HASINLINE}inline;{$endif}
+  public
+    /// the internal Name/Value storage
+    List: TSynNameValueItemDynArray;
+    /// the number of Name/Value pairs
+    Count: integer;
+    /// low-level access to the internal storage hasher
+    DynArray: TDynArrayHashed;
+    /// initialize the storage
+    // - will also reset the internal List[] and the internal hash array
+    procedure Init(aCaseSensitive: boolean);
+    /// add an element to the array
+    // - if aName already exists, its associated Value will be updated
+    procedure Add(const aName, aValue: RawUtf8; aTag: PtrInt = 0);
+    /// add an element from Join(aValue) to the array
+    // - if aName already exists, its associated Value will be updated
+    procedure AddJoined(const aName: RawUtf8;
+      const aValue: array of RawByteString; aTag: PtrInt = 0);
+    /// reset content, then add all name=value pairs from a supplied .ini file
+    // section content
+    // - will first call Init(false) to initialize the internal array
+    // - Section can be retrieved e.g. via FindSectionFirstLine()
+    procedure InitFromIniSection(Section: PUtf8Char;
+      const OnTheFlyConvert: TOnSynNameValueConvertRawUtf8 = nil;
+      const OnAdd: TOnSynNameValueNotify = nil);
+    /// reset content, then add all name=value; CSV pairs
+    // - will first call Init(false) to initialize the internal array
+    // - if ItemSep=#10, then any kind of line feed (CRLF or LF) will be handled
+    procedure InitFromCsv(Csv: PUtf8Char; NameValueSep: AnsiChar = '=';
+      ItemSep: AnsiChar = #10);
+    /// reset content, then add all fields from an JSON object
+    // - will first call Init() to initialize the internal array
+    // - then parse the incoming JSON object, storing all its field values
+    // as RawUtf8, and returning TRUE if the supplied content is correct
+    function InitFromJson(const Json: RawUtf8; aCaseSensitive: boolean = false): boolean;
+    /// reset content, then add all fields from an JSON object
+    // - warning: the supplied JSON buffer will be decoded and modified in-place
+    function InitFromJsonBuffer(Json: PUtf8Char; aCaseSensitive: boolean): boolean;
+    /// reset content, then add all name, value pairs
+    // - will first call Init(false) to initialize the internal array
+    procedure InitFromNamesValues(const Names, Values: array of RawUtf8);
+    /// search for a Name, return the index in List[]
+    // - using fast O(1) hash algoritm
+    function Find(const aName: RawUtf8): PtrInt;
+    /// search for a Name, return the raw PSynNameValueItem in List[]
+    function FindItem(const aName: RawUtf8): PSynNameValueItem;
+    /// search for the first chars of a Name, return the index in List
+    // - using O(n) calls of IdemPChar() function
+    // - here aUpperName should be already uppercase, as expected by IdemPChar()
+    function FindStart(const aUpperName: RawUtf8): PtrInt;
+    /// search for a Value, return the index in List
+    // - using O(n) brute force algoritm with case-sensitive aValue search
+    function FindByValue(const aValue: RawUtf8): PtrInt;
+    /// search for a Name, and delete its entry in the List if it exists
+    function Delete(const aName: RawUtf8): boolean;
+    /// search for a Value, and delete its entry in the List if it exists
+    // - returns the number of deleted entries
+    // - you may search for more than one match, by setting a >1 Limit value
+    function DeleteByValue(const aValue: RawUtf8; Limit: integer = 1): integer;
+    /// search for a Name, return the associated Value as a UTF-8 string
+    function Value(const aName: RawUtf8; const aDefaultValue: RawUtf8 = ''): RawUtf8;
+    /// search for a Name, return the associated Value as integer
+    function ValueInt(const aName: RawUtf8; aDefaultValue: Int64 = 0): Int64;
+    /// search for a Name, return the associated Value as boolean
+    // - returns true only if the value is exactly '1' / 'true'
+    function ValueBool(const aName: RawUtf8): boolean;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// search for a Name, return the associated Value as an enumerate
+    // - returns true and set aEnum if aName was found, and associated value
+    // matched an aEnumTypeInfo item
+    // - returns false if no match was found
+    function ValueEnum(const aName: RawUtf8; aEnumTypeInfo: PRttiInfo;
+      out aEnum; aEnumDefault: PtrUInt = 0): boolean; overload;
+    /// returns all values, as CSV or INI content
+    function AsCsv(const KeySeparator: RawUtf8 = '=';
+      const ValueSeparator: RawUtf8 = EOL; const IgnoreKey: RawUtf8 = ''): RawUtf8;
+    /// returns all values as a JSON object of string fields
+    function AsJson: RawUtf8;
+    /// fill the supplied two arrays of RawUtf8 with the stored values
+    procedure AsNameValues(out Names, Values: TRawUtf8DynArray);
+    /// search for a Name, return the associated Value as variant
+    // - returns null if the name was not found
+    function ValueVariantOrNull(const aName: RawUtf8): variant;
+    /// compute a TDocVariant document from the stored values
+    // - output variant will be reset and filled as a TDocVariant instance,
+    // ready to be serialized as a JSON object
+    // - if there is no value stored (i.e. Count=0), set null
+    procedure AsDocVariant(out DocVariant: variant;
+      ExtendedJson: boolean = false; ValueAsString: boolean = true;
+      AllowVarDouble: boolean = false); overload;
+    /// compute a TDocVariant document from the stored values
+    function AsDocVariant(ExtendedJson: boolean = false;
+      ValueAsString: boolean = true): variant; overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// merge the stored values into a TDocVariant document
+    // - existing properties would be updated, then new values will be added to
+    // the supplied TDocVariant instance, ready to be serialized as a JSON object
+    // - if ValueAsString is TRUE, values would be stored as string
+    // - if ValueAsString is FALSE, constants and numerical values would be
+    // identified by some heuristic and stored as such in this TDocVariant
+    // - if you let ChangedProps point to a TDocVariantData, it would contain
+    // an object with the stored values, just like AsDocVariant
+    // - returns the number of updated values in the TDocVariant, 0 if
+    // no value was changed
+    function MergeDocVariant(var DocVariant: variant; ValueAsString: boolean;
+      ChangedProps: PVariant = nil; ExtendedJson: boolean = false;
+      AllowVarDouble: boolean = false): integer;
+    /// returns true if the Init() method has been called
+    function Initialized: boolean;
+    /// can be used to set all data from one BLOB memory buffer
+    procedure SetBlobDataPtr(aValue, aValueMax: pointer);
+    /// can be used to set or retrieve all stored data as one BLOB content
+    property BlobData: RawByteString
+      read GetBlobData write SetBlobData;
+    /// event triggerred after an item has just been added to the list
+    property OnAfterAdd: TOnSynNameValueNotify
+      read fOnAdd write fOnAdd;
+    /// search for a Name, return the associated Value as a UTF-8 string
+    // - returns '' if aName is not found in the stored keys
+    property Str[const aName: RawUtf8]: RawUtf8
+      read GetStr; default;
+    /// search for a Name, return the associated Value as integer
+    // - returns 0 if aName is not found, or not a valid Int64 in the stored keys
+    property Int[const aName: RawUtf8]: Int64
+      read GetInt;
+    /// search for a Name, return the associated Value as boolean
+    // - returns true if aName stores '1' / 'true' as associated value
+    property Bool[const aName: RawUtf8]: boolean
+      read ValueBool;
+  end;
+
+  /// a reference pointer to a Name/Value RawUtf8 pairs storage
+  PSynNameValue = ^TSynNameValue;
+
+  /// implement a cache of some key/value pairs, e.g. to improve reading speed
+  // - used e.g. by TSqlDataBase for caching the SELECT statements results in an
+  // internal JSON format (which is faster than a query to the SQLite3 engine)
+  // - internally make use of an efficient hashing algorithm for fast response
+  // (i.e. TSynNameValue will use the TDynArrayHashed wrapper mechanism)
+  TSynCache = class(TObjectRWLock)
+  protected
+    fNameValue: TSynNameValue;
+    fRamUsed: cardinal;
+    fMaxRamUsed: cardinal;
+    fTimeoutSeconds: cardinal;
+    fTimeoutTix: cardinal;
+    procedure ResetIfNeeded; // call Reset after TimeoutSeconds
+  public
+    /// initialize the internal storage
+    // - aMaxCacheRamUsed can set the maximum RAM to be used for values, in bytes
+    // (default is 16 MB), after which the cache is flushed
+    // - by default, key search is done case-insensitively, but you can specify
+    // another option here
+    // - by default, there is no timeout period, but you may specify a number of
+    // seconds of inactivity (i.e. no Add call) after which the cache is flushed
+    constructor Create(aMaxCacheRamUsed: cardinal = 16 shl 20;
+      aCaseSensitive: boolean = false; aTimeoutSeconds: cardinal = 0); reintroduce;
+    /// find a Key in the cache entries
+    // - return '' if nothing found: you may call Add() just after to insert
+    // the expected value in the cache
+    // - return the associated Value otherwise, and the associated integer tag
+    // if aResultTag address is supplied
+    // - this method is thread-safe, using the Safe R/W locker of this instance
+    function Find(const aKey: RawUtf8; aResultTag: PPtrInt = nil): RawUtf8;
+    /// add a Key/Value pair in the cache entries
+    // - returns true if aKey was not existing yet, and aValue has been stored
+    // - returns false if aKey did already exist in the internal cache, and
+    // its entry has been updated with the supplied aValue/aTag
+    // - this method is thread-safe, using the Safe R/W locker of this instance
+    function AddOrUpdate(const aKey, aValue: RawUtf8; aTag: PtrInt): boolean;
+    /// called after a write access to the database to flush the cache
+    // - set Count to 0
+    // - release all cache memory
+    // - returns TRUE if was flushed, i.e. if there was something in cache
+    // - this method is thread-safe, using the Safe R/W locker of this instance
+    function Reset: boolean;
+  published
+    /// number of entries in the cache
+    property Count: integer
+      read fNameValue.Count;
+    /// the current global size of Values in RAM cache, in bytes
+    property RamUsed: cardinal
+      read fRamUsed;
+    /// the maximum RAM to be used for values, in bytes
+    // - the cache is flushed when ValueSize reaches this limit
+    // - default is 16 MB (16 shl 20)
+    property MaxRamUsed: cardinal
+      read fMaxRamUsed;
+    /// after how many seconds betwen Add() calls the cache should be flushed
+    // - equals 0 by default, meaning no time out
+    property TimeoutSeconds: cardinal
+      read fTimeoutSeconds;
+  end;
+
+
+type
+  /// implement binary persistence and JSON serialization (not deserialization)
+  TObjectStoreJson = class(TObjectStore)
+  protected
+    // append "name" -> inherited should add properties to the JSON object
+    procedure AddJson(W: TJsonWriter); virtual;
+  public
+    /// serialize this instance as a JSON object
+    function SaveToJson(reformat: TTextWriterJsonFormat = jsonCompact): RawUtf8;
+  end;
+
+  {$ifndef PUREMORMOT2}
+  TSynPersistentStoreJson = TObjectStoreJson;
+  {$endif PUREMORMOT2}
+
+
+{ ****************** Files Search in Folders }
+
+type
+  {$A-}
+  /// define one file found result item, as returned by FindFiles()
+  // - Delphi "object" is buggy on stack -> also defined as record with methods
+  {$ifdef USERECORDWITHMETHODS}
+  TFindFiles = record
+  {$else}
+  TFindFiles = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    /// the matching file name
+    // - including its folder name unless ffoExcludesDir is set
+    Name: TFileName;
+    /// the matching file attributes
+    Attr: integer;
+    /// the matching file size, -1 for a folder if ffoIncludeFolder option is set
+    Size: Int64;
+    /// the matching file local date/time
+    Timestamp: TDateTime;
+    /// fill the item properties from a FindFirst/FindNext's TSearchRec
+    procedure FromSearchRec(const Directory: TFileName; const F: TSearchRec);
+    /// returns some ready-to-be-loggued text
+    function ToText: ShortString;
+  end;
+  {$A+}
+  PFindFiles = ^TFindFiles;
+
+  /// result list, as returned by FindFiles()
+  TFindFilesDynArray = array of TFindFiles;
+
+  /// each optional feature of FindFiles()
+  // - ffoSortByName will sort the result files by extension then name
+  // - ffoSortByFullName will sort the result files by name but not extension
+  // - ffoSortByDate will sort the result files by increasing timestamp
+  // - ffoExcludesDir won't include the path in TFindFiles.Name
+  // - ffoSubFolder will recursively search within nested folders
+  // - ffoIncludeFolder will add the nested folder names with Size=-1
+  // - ffoIncludeHiddenFiles will add also hidden file to the results
+  TFindFilesOption = (
+    ffoSortByName,
+    ffoSortByFullName,
+    ffoSortByDate,
+    ffoExcludesDir,
+    ffoSubFolder,
+    ffoIncludeFolder,
+    ffoIncludeHiddenFiles);
+  /// the optional features of FindFiles()
+  TFindFilesOptions = set of TFindFilesOption;
+
+/// search for matching files by names
+// - on Windows, will just call FindFirst/FindNext, i.e. FindFilesRtl()
+// - on POSIX, calls PosixFileNames() than fpStat() and avoid slower TSearchRec
+// - you may specify several masks in Mask, e.g. as '*.jpg;*.jpeg'
+function FindFiles(const Directory: TFileName;
+  const Mask: TFileName = FILES_ALL; const IgnoreFileName: TFileName = '';
+  Options: TFindFilesOptions = []): TFindFilesDynArray;
+
+/// internal function using TSearchRec - published for regression tests only
+procedure FindFilesRtl(const Directory, Mask, IgnoreFileName: TFileName;
+  Options: TFindFilesOptions; out Files: TFindFilesDynArray);
+
+/// search for matching file names
+// - on Windows, just a wrapper around FindFilesDynArrayToFileNames(FindFiles())
+// - on POSIX, calls PosixFileNames() if possible, with fast TMatch mask lookup
+// - by design, will ignore ffoSortByDate option (because not POSIX compatible)
+function FileNames(const Directory: TFileName;
+  const Mask: TFileName = FILES_ALL; Options: TFindFilesOptions = [];
+  const IgnoreFileName: TFileName = ''): TFileNameDynArray; overload;
+
+/// search for matching file names from path-delimited content
+// - just wrap FindFileNames(MakePath(Path))
+function FileNames(const Path: array of const; const Mask: TFileName = FILES_ALL;
+  Options: TFindFilesOptions = []): TFileNameDynArray; overload;
+
+/// convert a result list, as returned by FindFiles(), into an array of Files[].Name
+function FindFilesDynArrayToFileNames(const Files: TFindFilesDynArray): TFileNameDynArray;
+
+/// sort a FindFiles() result list by increasing TFindFiles[].Timestamp field
+// - could be done if not already via ffoSortByDate
+procedure FindFilesSortByTimestamp(var Files: TFindFilesDynArray);
+
+/// compute the sum of all Files[].Size file sizes in bytes
+function FindFilesSize(const Files: TFindFilesDynArray): Int64;
+
+/// compare two TFindFilesDynArray elements by file extension then name
+// - folders will be put in front of all files, as with ffoSortByName
+function SortFindFileName(const A, B): integer;
+
+/// compare two TFindFilesDynArray elements by full name
+// - folders won't be put in front of all files, as with ffoSortByFullName
+function SortFindFileFullName(const A, B): integer;
+
+/// compare two TFindFilesDynArray elements by date
+// - folders will be put in front of all files, as with ffoSortByDate
+function SortFindFileTimestamp(const A, B): integer;
+
+/// compute the HTML index page corresponding to a local folder
+procedure FolderHtmlIndex(const Folder: TFileName; const Path, Name: RawUtf8;
+  out Html: RawUtf8; NoSubFolder: boolean = false);
+
+
+type
+  /// one optional feature of SynchFolders() and CopyFolder()
+  // - process recursively nested folders if sfoSubFolder is included
+  // - use file content instead of file date check if sfoByContent is included
+  // - display synched file name on console if sfoWriteFileNameToConsole is included
+  // - sfoIncludeHiddenFiles will synchronize also hidden files (on Windows)
+  TSynchFoldersOption = (
+    sfoSubFolder,
+    sfoByContent,
+    sfoWriteFileNameToConsole,
+    sfoIncludeHiddenFiles);
+  /// the optional features of SynchFolders() and CopyFolder()
+  TSynchFoldersOptions = set of TSynchFoldersOption;
+
+/// ensure all files in Dest folder(s) do match the one in Reference
+// - won't copy all files from Reference folders, but will update files already
+// existing in Dest, which did change since last synchronization
+// - file copy will use in-memory loading, so won't work well with huge files
+// - returns the number of files copied during the process
+function SynchFolders(const Reference, Dest: TFileName;
+  Options: TSynchFoldersOptions = []): integer;
+
+/// copy all files from a source folder to a destination folder
+// - will copy only new or changed files, keeping existing identical files
+// - file copy will use stream loading, so would cope with huge files
+// - returns the number of fields copied during the process, -1 on error
+function CopyFolder(const Source, Dest: TFileName;
+  Options: TSynchFoldersOptions = []): integer;
+
+
+{ ****************** ScanUtf8, GLOB and SOUNDEX Text Search }
+
+/// read and store text into values[] according to fmt specifiers
+// - %d as PInteger, %D as PInt64, %u as PCardinal, %U as PQWord, %f as PDouble,
+// %F as PCurrency, %x as 8 hexa chars to PInteger, %X as 16 hexa chars to PInt64,
+// %s as PShortString (UTF-8 encoded), %S as PRawUtf8, %L as PRawUtf8 (getting
+// all text until the end of the line)
+// - optionally, specifiers and any whitespace separated identifiers may be
+// extracted and stored into the ident[] array, e.g. '%dFirstInt %s %DOneInt64'
+// will store ['dFirstInt','s','DOneInt64'] into ident[] dynamic array
+function ScanUtf8(const text, fmt: RawUtf8; const values: array of pointer;
+  ident: PRawUtf8DynArray = nil): integer; overload;
+
+/// read text from P/PLen and store it into values[] according to fmt specifiers
+function ScanUtf8(P: PUtf8Char; PLen: PtrInt; const fmt: RawUtf8;
+  const values: array of pointer; ident: PRawUtf8DynArray): integer; overload;
+
+
+type
+  PMatch = ^TMatch;
+
+  // used when inlining TMatch.Match
+  TMatchSearchFunction = function(aMatch: PMatch;
+    aText: PUtf8Char; aTextLen: PtrInt): boolean;
+
+  /// low-level structure used by IsMatch() for actual GLOB search
+  // - you can use this object to prepare a given pattern, e.g. in a loop
+  // - implemented as a fast brute-force state-machine without any heap allocation
+  // - some common patterns ('exactmatch', 'startwith*', '*endwith', '*contained*')
+  // are handled with dedicated code, optionally with case-insensitive search
+  // - PrepareContains() is the most efficient method for '*contained*' search
+  // - consider using TMatchs (or SetMatchs/TMatchDynArray) if you expect to
+  // search for several patterns, or even TExprParserMatch for expression search
+  {$ifdef USERECORDWITHMETHODS}
+  TMatch = record
+  {$else}
+  TMatch = object
+  {$endif USERECORDWITHMETHODS}
+  private
+    Pattern, Text: PUtf8Char;
+    P, T, PMax, TMax: PtrInt;
+    Upper: PNormTable;
+    State: (sNONE, sABORT, sEND, sLITERAL, sPATTERN, sRANGE, sVALID);
+    procedure MatchAfterStar;
+    procedure MatchMain;
+  public
+    /// published for proper inlining
+    Search: TMatchSearchFunction;
+    /// initialize the internal fields for a given glob search pattern
+    // - note that the aPattern instance should remain in memory, since it will
+    // be pointed to by the PatternText private field of this object
+    procedure Prepare(const aPattern: RawUtf8;
+      aCaseInsensitive, aReuse: boolean); overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// initialize the internal fields for a given glob search pattern
+    // - note that the aPattern buffer should remain in memory, since it will
+    // be pointed to by the PatternText private field of this object
+    procedure Prepare(aPattern: PUtf8Char; aPatternLen: integer;
+      aCaseInsensitive, aReuse: boolean); overload;
+    /// initialize low-level internal fields for'*aPattern*' search
+    // - this method is faster than a regular Prepare('*' + aPattern + '*'),
+    // since it may use the SBNDMQ2 algorithm for patterns of length 2..31
+    // - warning: the supplied aPattern variable may be modified in-place to be
+    // filled with some lookup buffer, when SBNDMQ2 is triggered
+    procedure PrepareContains(var aPattern: RawUtf8;
+      aCaseInsensitive: boolean); overload;
+    /// initialize low-level internal fields for a custom search algorithm
+    procedure PrepareRaw(aPattern: PUtf8Char; aPatternLen: integer;
+      aSearch: TMatchSearchFunction);
+    /// returns TRUE if the supplied content matches the prepared glob pattern
+    // - this method is not thread-safe
+    function Match(const aText: RawUtf8): boolean; overload;
+      {$ifdef FPC} inline;{$endif}
+    /// returns TRUE if the supplied content matches the prepared glob pattern
+    // - this method is not thread-safe
+    function Match(aText: PUtf8Char; aTextLen: PtrInt): boolean; overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// returns TRUE if the supplied content matches the prepared glob pattern
+    // - this method IS thread-safe, and won't lock
+    function MatchThreadSafe(const aText: RawUtf8): boolean;
+    /// returns TRUE if the supplied VCL/LCL content matches the prepared glob pattern
+    // - this method IS thread-safe, will use on-stack UTF-8 temporary conversion
+    // if possible, and won't lock
+    function MatchString(const aText: string): boolean;
+    /// returns TRUE if this search pattern matches another
+    function Equals(const aAnother: TMatch): boolean;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// access to the pattern length as stored in PMax + 1
+    function PatternLength: integer;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// access to the pattern text as stored in Pattern
+    function PatternText: PUtf8Char;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// check if the pattern search was defined as case-insensitive
+    function CaseInsensitive: boolean;
+      {$ifdef HASINLINE}inline;{$endif}
+  end;
+
+  /// stores an array of GLOB search engines
+  // - use SetMatchs() to initialize such an array from a CSV pattern text
+  TMatchDynArray = array of TMatch;
+
+  /// TMatch descendant owning a copy of the Pattern string to avoid GPF issues
+  TMatchStore = record
+    /// access to the research criteria
+    // - defined as a nested record (and not an object) to circumvent Delphi bug
+    Pattern: TMatch;
+    /// Pattern.Pattern PUtf8Char will point to this instance
+    PatternInstance: RawUtf8;
+  end;
+
+  TMatchStoreDynArray = array of TMatchStore;
+
+  /// stores several TMatch instances, from a set of glob patterns
+  TMatchs = class(TSynPersistent)
+  protected
+    fMatch: TMatchStoreDynArray;
+    fMatchCount: integer;
+  public
+    /// add once some glob patterns to the internal TMach list
+    // - aPatterns[] follows the IsMatch() syntax
+    constructor Create(const aPatterns: TRawUtf8DynArray;
+      CaseInsensitive: boolean); reintroduce; overload;
+    /// add once some glob patterns to the internal TMach list
+    // - aPatterns[] follows the IsMatch() syntax
+    procedure Subscribe(const aPatterns: TRawUtf8DynArray;
+      CaseInsensitive: boolean); overload; virtual;
+    /// add once some glob patterns to the internal TMach list
+    // - each CSV item in aPatterns follows the IsMatch() syntax
+    procedure Subscribe(const aPatternsCsv: RawUtf8;
+      CaseInsensitive: boolean); overload;
+    /// search patterns in the supplied UTF-8 text
+    // - returns -1 if no filter has been subscribed
+    // - returns -2 if there is no match on any previous pattern subscription
+    // - returns fMatch[] index, i.e. >= 0 number on first matching pattern
+    // - this method is thread-safe
+    function Match(const aText: RawUtf8): integer; overload;
+      {$ifdef HASINLINE}inline;{$endif}
+    /// search patterns in the supplied UTF-8 text buffer
+    function Match(aText: PUtf8Char; aLen: integer): integer; overload;
+    /// search patterns in the supplied RTL string text
+    // - could be used on a TFileName for instance
+    // - will avoid any memory allocation if aText is small enough
+    function MatchString(const aText: string): integer;
+  end;
+
+  /// store a decoded URI as full path and file/resource name for TUriMatch
+  {$ifdef USERECORDWITHMETHODS}
+  TUriMatchName = record
+  {$else}
+  TUriMatchName = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    /// the full URI path
+    // - e.g. 'folder/*.bak' or '*.bak'
+    Path: TValuePUtf8Char;
+    /// its resource name, as decoded by ParsePath from the Path value
+    // - e.g. '*.bak' for both Path = 'folder/*.bak' and '*.bak'
+    Name: TValuePUtf8Char;
+    /// to be called once Path has been populated to compute the resource Name
+    procedure ParsePath;
+  end;
+
+  /// efficient GLOB path or resource name lockup for an URI
+  // - using mORMot fast TMatch engine
+  {$ifdef USERECORDWITHMETHODS}
+  TUriMatch = record
+  {$else}
+  TUriMatch = object
+  {$endif USERECORDWITHMETHODS}
+  private
+    Init: TLightLock;
+  public
+    Names, Paths: TMatchDynArray;
+    /// low-level method, to be called once to initialize the search
+    // - see proper Check() usage as:
+    // ! if Init.TryLock then DoInit(...);
+    procedure DoInit(csv: PUtf8Char; caseinsensitive: boolean);
+    /// main entry point of the GLOB resource/path URI pattern matching
+    // - will thread-safe initialize the internal TMatch instances if necessary
+    function Check(const csv: RawUtf8; const uri: TUriMatchName;
+      caseinsensitive: boolean): boolean;
+  end;
+
+
+
+/// fill the Match[] dynamic array with all glob patterns supplied as CSV
+// - returns how many patterns have been set in Match[|]
+// - note that the CsvPattern instance should remain in memory, since it will
+// be pointed to by the Match[].Pattern private field
+function SetMatchs(const CsvPattern: RawUtf8; CaseInsensitive: boolean;
+  out Match: TMatchDynArray; CsvSep: AnsiChar = ','): integer; overload;
+
+/// fill the Match[0..MatchMax] static array with all glob patterns supplied as CSV
+// - note that the CsvPattern instance should remain in memory, since it will
+// be pointed to by the Match[].Pattern private field
+function SetMatchs(CsvPattern: PUtf8Char; CaseInsensitive: boolean;
+  Match: PMatch; MatchMax: integer; CsvSep: AnsiChar = ','): integer; overload;
+
+/// fill a TMatch instance with the next glob pattern supplied as CSV
+function SetNextMatch(P: PUtf8Char; var Dest: TMatch;
+  CaseInsensitive, Reuse: boolean; CsvSep: AnsiChar): PUtf8Char;
+
+/// search if one TMach is already registered in the Several[] dynamic array
+function MatchExists(const One: TMatch; const Several: TMatchDynArray): boolean;
+
+/// add one TMach if not already registered in the Several[] dynamic array
+function MatchAdd(const One: TMatch; var Several: TMatchDynArray): boolean;
+
+/// allocate one TMach in the Several[] dynamic array
+function MatchNew(var Several: TMatchDynArray): PMatch;
+
+/// returns TRUE if Match=nil or if any Match[].Match(Text) is TRUE
+function MatchAny(const Match: TMatchDynArray; const Text: RawUtf8): boolean;
+  {$ifdef HASINLINE} inline; {$endif}
+
+/// returns TRUE if Match=nil or if any Match[].Match(Text, TextLen) is TRUE
+// - same signature as the TOnPosixFileName callback
+function MatchAnyP(Match: PMatch; Text: PUtf8Char; TextLen: PtrInt): boolean;
+
+/// apply the CSV-supplied glob patterns to an array of RawUtf8
+// - any text not matching the pattern will be deleted from the array
+// - the patterns are specified as CSV, separated by ','
+procedure FilterMatchs(const CsvPattern: RawUtf8; CaseInsensitive: boolean;
+  var Values: TRawUtf8DynArray; CsvSep: AnsiChar = ','); overload;
+
+/// apply the CSV-supplied glob patterns to an array of string
+// - any text not matching the pattern will be deleted from the array
+// - the patterns are specified as CSV, separated by ','
+procedure FilterMatchs(const CsvPattern: RawUtf8; CaseInsensitive: boolean;
+  var Values: TStringDynArray; CsvSep: AnsiChar = ','); overload;
+
+/// return TRUE if the supplied content matches a glob pattern
+// - ?  Matches any single character
+// - *	Matches any contiguous characters
+// - [abc]  Matches a or b or c at that position
+// - [^abc]	Matches anything but a or b or c at that position
+// - [!abc]	Matches anything but a or b or c at that position
+// - [a-e]  Matches a through e at that position
+// - [abcx-z]  Matches a or b or c or x or y or or z, as does [a-cx-z]
+// - 'ma?ch.*'	would match match.exe, mavch.dat, march.on, etc..
+// - 'this [e-n]s a [!zy]est' would match 'this is a test', but would not
+// match 'this as a test' nor 'this is a zest'
+// - consider using TMatch or TMatchs if you expect to reuse the pattern
+// - consider using Glob() if the pattern expects no [range] but only ? and *
+function IsMatch(const Pattern, Text: RawUtf8;
+  CaseInsensitive: boolean = false): boolean;
+
+/// return TRUE if the supplied content matches a glob pattern, using RTL strings
+// - is a wrapper around IsMatch() with fast UTF-8 conversion
+function IsMatchString(const Pattern, Text: string;
+  CaseInsensitive: boolean = false): boolean;
+
+/// return TRUE if the supplied content matches one or several glob patterns
+// - the patterns are specified as CSV, separated by ','
+function IsMatchs(const CsvPattern, Text: RawUtf8;
+  CaseInsensitive: boolean = false; CsvSep: AnsiChar = ','): boolean; overload;
+
+/// return TRUE if the supplied content matches one or several glob patterns
+// - the patterns are specified as CSV, separated by ','
+function IsMatchs(CsvPattern, Text: PUtf8Char; TextLen: PtrInt;
+  CaseInsensitive: boolean = false; CsvSep: AnsiChar = ','): boolean; overload;
+
+type
+  /// available pronunciations for our fast Soundex implementation
+  TSynSoundExPronunciation = (
+    sndxEnglish,
+    sndxFrench,
+    sndxSpanish,
+    sndxNone);
+
+  TSoundExValues = array[0..ord('Z') - ord('B')] of byte;
+
+  PSoundExValues = ^TSoundExValues;
+  PSynSoundEx = ^TSynSoundEx;
+
+  /// fast search of a text value, using the Soundex approximation mechanism
+  // - Soundex is a phonetic algorithm for indexing names by sound,
+  //  as pronounced in a given language. The goal is for homophones to be
+  //  encoded to the same representation so that they can be matched despite
+  //  minor differences in spelling
+  // - this implementation is very fast and can be used e.g. to parse and search
+  //  in a huge text buffer
+  // - this version also handles french and spanish pronunciations on request,
+  //  which differs from default Soundex, i.e. English
+  {$ifdef USERECORDWITHMETHODS}
+  TSynSoundEx = record
+  {$else}
+  TSynSoundEx = object
+  {$endif USERECORDWITHMETHODS}
+  private
+    Search, FirstChar: cardinal;
+    fValues: PSoundExValues;
+  public
+    /// prepare for a Soundex search
+    // - you can specify another language pronunciation than default english
+    function Prepare(UpperValue: PAnsiChar;
+      Lang: TSynSoundExPronunciation = sndxEnglish): boolean; overload;
+    /// prepare for a custom Soundex search
+    // - you can specify any language pronunciation from raw TSoundExValues array
+    function Prepare(UpperValue: PAnsiChar; Lang: PSoundExValues): boolean; overload;
+    /// return true if prepared value is contained in a text buffer
+    // (UTF-8 encoded), by using the SoundEx comparison algorithm
+    // - search prepared value at every word beginning in U^
+    function Utf8(U: PUtf8Char): boolean;
+    /// return true if prepared value is contained in a ANSI text buffer
+    // by using the SoundEx comparison algorithm
+    // - search prepared value at every word beginning in A^
+    function Ansi(A: PAnsiChar): boolean;
+  end;
+
+
+/// Retrieve the Soundex value of a text word, from Ansi buffer
+// - Return the soundex value as an easy to use cardinal value, 0 if the
+// incoming string contains no valid word
+// - if next is defined, its value is set to the end of the encoded word
+// (so that you can call again this function to encode a full sentence)
+function SoundExAnsi(A: PAnsiChar; next: PPAnsiChar = nil;
+  Lang: TSynSoundExPronunciation = sndxEnglish): cardinal; overload;
+
+/// Retrieve the Soundex value of a text word, from Ansi buffer
+// - Return the soundex value as an easy to use cardinal value, 0 if the
+// incoming string contains no valid word
+// - if next is defined, its value is set to the end of the encoded word
+// (so that you can call again this function to encode a full sentence)
+function SoundExAnsi(A: PAnsiChar; next: PPAnsiChar;
+  Lang: PSoundExValues): cardinal; overload;
+
+/// Retrieve the Soundex value of a text word, from UTF-8 buffer
+// - Return the soundex value as an easy to use cardinal value, 0 if the
+// incoming string contains no valid word
+// - if next is defined, its value is set to the end of the encoded word
+// (so that you can call again this function to encode a full sentence)
+// - very fast: all UTF-8 decoding is handled on the fly
+function SoundExUtf8(U: PUtf8Char; next: PPUtf8Char = nil;
+  Lang: TSynSoundExPronunciation = sndxEnglish): cardinal;
+
+const
+  /// number of bits to use for each interesting soundex char
+  // - default is to use 8-bit, i.e. 4 soundex chars, which is the
+  // standard approach
+  // - for a more detailed soundex, use 4 bits resolution, which will
+  // compute up to 7 soundex chars in a cardinal (that's our choice)
+  SOUNDEX_BITS = 4;
+
+
+{ ******************  Efficient CSV Parsing using RTTI }
+
+/// parse a CSV buffer into a TDynArray of records using its RTTI fields
+// - TypeInfo should have proper fields description, e.g. from Delphi 2010
+// extended RTTI or mormot.core.rtti.pas' Rtti.RegisterFromText()
+// - first CSV line is expected to be an header, matching of the record field names
+// (case-insensitive), not necessary in the same exact order than in the record;
+// any unknown header name within the RTTI fields will just be ignored
+// - following CSV lines will be read and parsed into the dynamic array records
+// - you can optionally intern all RawUtf8 values to reduce memory consumption,
+// or change the value separator from comma to another character - e.g. ';'
+function TDynArrayLoadCsv(var Value: TDynArray; Csv: PUtf8Char;
+  Intern: TRawUtf8Interning = nil; CommaSep: AnsiChar = ','): boolean;
+
+/// parse a CSV UTF-8 string into a dynamic array of records using its RTTI fields
+// - just a wrapper around DynArrayLoadCsv() with a temporary TDynArray
+function DynArrayLoadCsv(var Value; const Csv: RawUtf8; TypeInfo: PRttiInfo;
+  Intern: TRawUtf8Interning = nil; CommaSep: AnsiChar = ','): boolean;
+
+
+{ ****************** Versatile Expression Search Engine }
+
+type
+  /// exception type used by TExprParser
+  EExprParser = class(ESynException);
+
+  /// identify an expression search engine node type, as used by TExprParser
+  TExprNodeType = (
+    entWord,
+    entNot,
+    entOr,
+    entAnd);
+
+  /// results returned by TExprParserAbstract.Parse method
+  TExprParserResult = (
+    eprSuccess,
+    eprNoExpression,
+    eprMissingParenthesis,
+    eprTooManyParenthesis,
+    eprMissingFinalWord,
+    eprInvalidExpression,
+    eprUnknownVariable,
+    eprUnsupportedOperator,
+    eprInvalidConstantOrVariable);
+
+  TParserAbstract = class;
+
+  /// stores an expression search engine node, as used by TExprParser
+  TExprNode = class(TSynPersistent)
+  protected
+    fNext: TExprNode;
+    fNodeType: TExprNodeType;
+    function Append(node: TExprNode): boolean;
+  public
+    /// initialize a node for the search engine
+    constructor Create(nodeType: TExprNodeType); reintroduce;
+    /// recursively destroys the linked list of nodes (i.e. Next)
+    destructor Destroy; override;
+    /// browse all nodes until Next = nil
+    function Last: TExprNode;
+    /// points to the next node in the parsed tree
+    property Next: TExprNode
+      read fNext;
+    /// what is actually stored in this node
+    property NodeType: TExprNodeType
+      read fNodeType;
+  end;
+
+  /// abstract class to handle word search, as used by TExprParser
+  TExprNodeWordAbstract = class(TExprNode)
+  protected
+    fOwner: TParserAbstract;
+    fWord: RawUtf8;
+    /// should be set from actual data before TExprParser.Found is called
+    fFound: boolean;
+    function ParseWord: TExprParserResult; virtual; abstract;
+  public
+    /// you should override this virtual constructor for proper initialization
+    constructor Create(aOwner: TParserAbstract; const aWord: RawUtf8); reintroduce; virtual;
+  end;
+
+  /// class-reference type (metaclass) for a TExprNode
+  // - allow to customize the actual searching process for entWord
+  TExprNodeWordClass = class of TExprNodeWordAbstract;
+
+  /// parent class of TExprParserAbstract
+  TParserAbstract = class(TSynPersistent)
+  protected
+    fExpression, fCurrentWord, fAndWord, fOrWord, fNotWord: RawUtf8;
+    fCurrent: PUtf8Char;
+    fCurrentError: TExprParserResult;
+    fFirstNode: TExprNode;
+    fWordClass: TExprNodeWordClass;
+    fWords: array of TExprNodeWordAbstract;
+    fWordCount: integer;
+    fNoWordIsAnd: boolean;
+    fFoundStack: TByteToAnsiChar; // simple stack-based virtual machine
+    procedure ParseNextCurrentWord; virtual; abstract;
+    function ParseExpr: TExprNode;
+    function ParseFactor: TExprNode;
+    function ParseTerm: TExprNode;
+    procedure Clear; virtual;
+    // override this method to initialize fWordClass and fAnd/Or/NotWord
+    procedure Initialize; virtual; abstract;
+    /// perform the expression search over TExprNodeWord.fFound flags
+    // - warning: caller should check that fFirstNode<>nil (e.g. WordCount>0)
+    function Execute: boolean;
+      {$ifdef HASINLINE}inline;{$endif}
+  public
+    /// initialize an expression parser
+    constructor Create; override;
+    /// finalize the expression parser
+    destructor Destroy; override;
+    /// initialize the parser from a given text expression
+    function Parse(const aExpression: RawUtf8): TExprParserResult;
+    /// try this parser class on a given text expression
+    // - returns '' on success, or an explicit error message (e.g.
+    // 'Missing parenthesis')
+    class function ParseError(const aExpression: RawUtf8): RawUtf8;
+    /// the associated text expression used to define the search
+    property Expression: RawUtf8
+      read fExpression;
+    /// how many words did appear in the search expression
+    property WordCount: integer
+      read fWordCount;
+  end;
+
+  /// abstract class to parse a text expression into nodes
+  // - you should inherit this class to provide actual text search
+  // - searched expressions can use parenthesis and &=AND -=WITHOUT +=OR operators,
+  // e.g. '((w1 & w2) - w3) + w4' means ((w1 and w2) without w3) or w4
+  // - no operator is handled like a AND, e.g. 'w1 w2' = 'w1 & w2'
+  TExprParserAbstract = class(TParserAbstract)
+  protected
+    procedure ParseNextCurrentWord; override;
+    // may be overridden to provide custom words escaping (e.g. handle quotes)
+    procedure ParseNextWord; virtual;
+    procedure Initialize; override;
+  end;
+
+  /// search expression engine using TMatch for the actual word searches
+  TExprParserMatch = class(TExprParserAbstract)
+  protected
+    fCaseSensitive: boolean;
+    fMatchedLastSet: integer;
+    procedure Initialize; override;
+  public
+    /// initialize the search engine
+    constructor Create(aCaseSensitive: boolean = true); reintroduce;
+    /// returns TRUE if the expression is within the text buffer
+    function Search(aText: PUtf8Char; aTextLen: PtrInt): boolean; overload;
+    /// returns TRUE if the expression is within the text buffer
+    function Search(const aText: RawUtf8): boolean; overload;
+      {$ifdef HASINLINE}inline;{$endif}
+  end;
+
+
+const
+  /// may be used when overriding TExprParserAbstract.ParseNextWord method
+  PARSER_STOPCHAR = ['&', '+', '-', '(', ')'];
+
+function ToText(r: TExprParserResult): PShortString; overload;
+function ToUtf8(r: TExprParserResult): RawUtf8; overload;
+
+
+
+{ ****************** Bloom Filter Probabilistic Index }
+
+type
+  /// implements a thread-safe Bloom Filter storage
+  // - a "Bloom Filter" is a space-efficient probabilistic data structure,
+  // that is used to test whether an element is a member of a set. False positive
+  // matches are possible, but false negatives are not. Elements can be added to
+  // the set, but not removed. Typical use cases are to avoid unnecessary
+  // slow disk or network access if possible, when a lot of items are involved.
+  // - memory use is very low, when compared to storage of all values: fewer
+  // than 10 bits per element are required for a 1% false positive probability,
+  // independent of the size or number of elements in the set - for instance,
+  // storing 10,000,000 items presence with 1% of false positive ratio
+  // would consume only 11.5 MB of memory, using 7 hash functions
+  // - use Insert() methods to add an item to the internal bits array, and
+  // Reset() to clear all bits array, if needed
+  // - MayExist() function would check if the supplied item was probably set
+  // - SaveTo() and LoadFrom() methods allow transmission of the bits array,
+  // for a disk/database storage or transmission over a network
+  // - internally, several (hardware-accelerated) crc32c hash functions will be
+  // used, with some random seed values, to simulate several hashing functions;
+  // you can customize the hash function if needed
+  // - all methods are thread-safe, and MayExist can be concurrent (via a TRWLock)
+  TSynBloomFilter = class(TObjectRWLock)
+  private
+    fHasher: THasher;
+    fSize: cardinal;
+    fBits: cardinal;
+    fHashFunctions: cardinal;
+    fInserted: cardinal;
+    fFalsePositivePercent: double;
+    fStore: RawByteString;
+  public
+    /// don't call this raw constructor, but its overloads
+    constructor Create; overload; override;
+    /// initialize the internal bits storage for a given number of items
+    // - by default, internal bits array size will be guess from a 1 % false
+    // positive rate - but you may specify another value, to reduce memory use
+    // - this constructor would compute and initialize Bits and HashFunctions
+    // corresponding to the expected false positive ratio
+    // - you can specify a custom hash function if you find that the default
+    // crc32c() has too many collisions: but SaveTo/LoadFrom will be tied to it;
+    // see e.g. CryptCrc32(caMd5/caSha1/caSha256) from mormot.crypt.secure
+    constructor Create(aSize: integer; aFalsePositivePercent: double = 1;
+      aHasher: THasher = nil); reintroduce; overload;
+    /// initialize the internal bits storage from a SaveTo() binary buffer
+    // - this constructor will initialize the internal bits array calling LoadFrom()
+    // - you can specify a custom hash function to match with the one used before
+    constructor Create(const aSaved: RawByteString; aMagic: cardinal = $B1003F11;
+      aHasher: THasher = nil); reintroduce; overload;
+    /// add an item in the internal bits array storage
+    // - this method is thread-safe
+    procedure Insert(const aValue: RawByteString); overload;
+    /// add an item in the internal bits array storage
+    // - this method is thread-safe
+    procedure Insert(aValue: pointer; aValueLen: integer); overload; virtual;
+    /// clear the internal bits array storage
+    // - you may call this method after some time, if some items may have
+    // been removed, to reduce false positives
+    // - this method is thread-safe
+    procedure Reset; virtual;
+    /// returns TRUE if the supplied items was probably set via Insert()
+    // - some false positive may occur, but not much than FalsePositivePercent
+    // - this method is thread-safe, and allow concurrent calls (via a TRWLock)
+    function MayExist(const aValue: RawByteString): boolean; overload;
+      {$ifdef HASINLINE} inline; {$endif}
+    /// returns TRUE if the supplied items was probably set via Insert()
+    // - some false positive may occur, but not much than FalsePositivePercent
+    // - this method is thread-safe, and allow concurrent calls (via a TRWLock)
+    function MayExist(aValue: pointer; aValueLen: integer): boolean; overload;
+    /// store the internal bits array into a binary buffer
+    // - may be used to transmit or store the state of a dataset, avoiding
+    // to recompute all Insert() at program startup, or to synchronize
+    // networks nodes information and reduce the number of remote requests
+    // - this method is thread-safe, and won't block MayExist (via a TRWLock)
+    function SaveTo(aMagic: cardinal = $B1003F11): RawByteString; overload;
+    /// store the internal bits array into a binary buffer
+    // - may be used to transmit or store the state of a dataset, avoiding
+    // to recompute all Insert() at program startup, or to synchronize
+    // networks nodes information and reduce the number of remote requests
+    // - this method is thread-safe, and won't block MayExist (via a TRWLock)
+    procedure SaveTo(aDest: TBufferWriter;
+      aMagic: cardinal = $B1003F11); overload;
+    /// read the internal bits array from a binary buffer
+    // - as previously serialized by the SaveTo method
+    // - may be used to transmit or store the state of a dataset
+    function LoadFrom(const aSaved: RawByteString;
+      aMagic: cardinal = $B1003F11): boolean; overload;
+    /// read the internal bits array from a binary buffer
+    // - as previously serialized by the SaveTo method
+    // - may be used to transmit or store the state of a dataset
+    function LoadFrom(P: PByte; PLen: integer;
+      aMagic: cardinal = $B1003F11): boolean; overload; virtual;
+  published
+    /// maximum number of items which are expected to be inserted
+    property Size: cardinal
+      read fSize;
+    /// expected percentage (1..100) of false positive results for MayExists()
+    property FalsePositivePercent: double
+      read fFalsePositivePercent;
+    /// number of bits stored in the internal bits array
+    property Bits: cardinal
+      read fBits;
+    /// how many hash functions would be applied for each Insert()
+    property HashFunctions: cardinal
+      read fHashFunctions;
+    /// how many times the Insert() method has been called
+    property Inserted: cardinal
+      read fInserted;
+  end;
+
+  /// implements a thread-safe differential Bloom Filter storage
+  // - this inherited class is able to compute incremental serialization of
+  // its internal bits array, to reduce network use
+  // - an obfuscated revision counter is used to identify storage history
+  TSynBloomFilterDiff = class(TSynBloomFilter)
+  protected
+    fRevision: Int64;
+    fSnapShotAfterMinutes: cardinal;
+    fSnapshotAfterInsertCount: cardinal;
+    fSnapshotTimestamp: cardinal; // GetTickSec
+    fSnapshotInsertCount: cardinal;
+    fKnownRevision: Int64;
+    fKnownStore: RawByteString;
+  public
+    /// add an item in the internal bits array storage
+    // - this overloaded thread-safe method would compute fRevision
+    procedure Insert(aValue: pointer; aValueLen: integer); override;
+    /// clear the internal bits array storage
+    // - this overloaded thread-safe method would reset fRevision
+    procedure Reset; override;
+    /// store the internal bits array into an incremental binary buffer
+    // - here the difference from a previous SaveToDiff revision will be computed
+    // - if aKnownRevision is outdated (e.g. if equals 0), the whole bits array
+    // would be returned, and around 10 bits per item would be transmitted
+    // (for 1% false positive ratio)
+    // - incremental retrieval would then return around 10 bytes per newly added
+    // item since the last snapshot reference state (with 1% ratio, i.e. 7 hash
+    // functions)
+    function SaveToDiff(const aKnownRevision: Int64): RawByteString;
+    /// use the current internal bits array state as known revision
+    // - is done the first time SaveToDiff() is called, then after 1/32th of
+    // the filter size has been inserted (see SnapshotAfterInsertCount property),
+    // or after SnapShotAfterMinutes property timeout period
+    procedure DiffSnapshot;
+    /// retrieve the revision number from an incremental binary buffer
+    // - returns 0 if the supplied binary buffer does not match this bloom filter
+    function DiffKnownRevision(const aDiff: RawByteString): Int64;
+    /// read the internal bits array from an incremental binary buffer
+    // - as previously serialized by the SaveToDiff() method
+    // - may be used to transmit or store the state of a dataset
+    // - returns false if the supplied content is incorrect, e.g. if the known
+    // revision is deprecated
+    function LoadFromDiff(const aDiff: RawByteString): boolean;
+    /// the opaque revision number of this internal storage
+    // - is in fact the Unix timestamp shifted by 31 bits, and an incremental
+    // counter: this pattern will allow consistent IDs over several ServPanels
+    property Revision: Int64
+      read fRevision;
+    /// after how many Insert() the internal bits array storage should be
+    // promoted as known revision
+    // - equals Size div 32 by default
+    property SnapshotAfterInsertCount: cardinal
+      read fSnapshotAfterInsertCount write fSnapshotAfterInsertCount;
+    /// after how many time the internal bits array storage should be
+    // promoted as known revision
+    // - equals 30 minutes by default
+    property SnapShotAfterMinutes: cardinal
+      read fSnapShotAfterMinutes write fSnapShotAfterMinutes;
+  end;
+
+
+/// RLE compression of a memory buffer containing mostly zeros
+// - will store the number of consecutive zeros instead of plain zero bytes
+// - used for spare bit sets, e.g. TSynBloomFilter serialization
+// - will also compute the crc32c of the supplied content
+// - use ZeroDecompress() to expand the compressed result
+// - resulting content would be at most 14 bytes bigger than the input
+// - you may use this function before SynLZ compression
+procedure ZeroCompress(P: PAnsiChar; Len: integer; Dest: TBufferWriter);
+
+/// RLE uncompression of a memory buffer containing mostly zeros
+// - returns Dest='' if P^ is not a valid ZeroCompress() function result
+// - used for spare bit sets, e.g. TSynBloomFilter serialization
+// - will also check the crc32c of the supplied content
+procedure ZeroDecompress(P: PByte; Len: integer; var Dest: RawByteString);
+
+/// RLE compression of XORed memory buffers resulting in mostly zeros
+// - will perform ZeroCompress(Dest^ := New^ xor Old^) without any temporary
+// memory allocation
+// - is used  e.g. by TSynBloomFilterDiff.SaveToDiff() in incremental mode
+// - will also compute the crc32c of the supplied content
+procedure ZeroCompressXor(New, Old: PAnsiChar; Len: cardinal;
+  Dest: TBufferWriter);
+
+/// RLE uncompression and ORing of a memory buffer containing mostly zeros
+// - will perform Dest^ := Dest^ or ZeroDecompress(P^) without any temporary
+// memory allocation
+// - is used  e.g. by TSynBloomFilterDiff.LoadFromDiff() in incremental mode
+// - returns false if P^ is not a valid ZeroCompress/ZeroCompressXor() result
+// - will also check the crc32c of the supplied content
+function ZeroDecompressOr(P, Dest: PAnsiChar; Len, DestLen: integer): boolean;
+
+
+{ ****************** Binary Buffers Delta Compression }
+
+const
+  /// fastest pattern search depth for DeltaCompress()
+  // - gives good results on most content
+  DELTA_LEVEL_FAST = 100;
+  /// normal pattern search depth for DeltaCompress()
+  DELTA_LEVEL_MEDIUM = 200;
+  /// brutal pattern search depth for DeltaCompress()
+  // - may become very slow, with minor benefit, on huge content
+  DELTA_LEVEL_BEST = 500;
+  /// how many bits are used for DeltaCompress() internal hash table
+  DELTA_HASH_BITS = 18;
+  /// maximum in-memory compression chunk for DeltaCompress() - should be < 16MB
+  DELTA_MAX_CHUNK = 8 shl 20;
+
+/// compute difference of two binary buffers
+// - returns '=' for equal buffers, or an optimized binary delta
+// - DeltaExtract() could be used later on to compute New from Old + Delta
+function DeltaCompress(const New, Old: RawByteString;
+  Level: PtrInt = DELTA_LEVEL_FAST): RawByteString; overload;
+
+/// compute difference of two binary buffers
+// - returns '=' for equal buffers, or an optimized binary delta
+// - DeltaExtract() could be used later on to compute New from Old
+function DeltaCompress(New, Old: PAnsiChar; NewSize, OldSize: PtrInt;
+  Level: PtrInt = DELTA_LEVEL_FAST): RawByteString; overload;
+
+/// compute difference of two binary buffers and append it into a TBufferWriter
+// - append '=' for equal buffers, or an optimized binary delta
+// - DeltaExtract() could be used later on to compute New from Old + Delta
+procedure DeltaCompressToWriter(New, Old: PAnsiChar; NewSize, OldSize: PtrInt;
+  Delta: TBufferWriter; Level: PtrInt = DELTA_LEVEL_FAST);
+
+type
+  /// result of function DeltaExtract()
+  // - dsCrc* wrong crc32c checksum at some state, dsFlag/dsLen invalid input
+  TDeltaError = (
+    dsSuccess,
+    dsCrcCopy,
+    dsCrcComp,
+    dsCrcBegin,
+    dsCrcEnd,
+    dsCrcExtract,
+    dsFlag,
+    dsLen);
+
+/// returns how many bytes a DeltaCompress() result will expand to
+function DeltaExtractSize(const Delta: RawByteString): integer; overload;
+
+/// returns how many bytes a DeltaCompress() result will expand to
+function DeltaExtractSize(Delta: PAnsiChar): integer; overload;
+
+/// apply the delta binary as computed by DeltaCompress()
+// - decompression don't use any RAM, will perform crc32c check, and is very fast
+// - return dsSuccess if was uncompressed to aOutUpd as expected
+function DeltaExtract(const Delta, Old: RawByteString;
+  out New: RawByteString): TDeltaError; overload;
+
+/// low-level apply the delta binary as computed by DeltaCompress()
+// - New should already be allocated with DeltaExtractSize(Delta) bytes
+// - as such, expect Delta, Old and New to be <> nil, and Delta <> '='
+// - return dsSuccess if was uncompressed to aOutUpd as expected
+function DeltaExtract(Delta, Old, New: PAnsiChar): TDeltaError; overload;
+
+function ToText(err: TDeltaError): PShortString; overload;
+
+
+{ ****************** TDynArray Low-Level Binary Search and Iteration }
+
+/// wrap a simple dynamic array BLOB content as stored by TDynArray.SaveTo
+// - a "simple" dynamic array contains data with no reference count, e.g. byte,
+// word, integer, cardinal, Int64, double or Currency
+// - same as TDynArray.LoadFrom() with no memory allocation nor memory copy: so
+// is much faster than creating a temporary dynamic array to load the data
+// - will return nil if no or invalid data, or a pointer to the data
+// array otherwise, with the items number stored in Count and the individual
+// element size in ElemSize (e.g. 2 for a TWordDynArray)
+// - note: mORMot 1.18 Hash32 is not stored any more
+function SimpleDynArrayLoadFrom(Source: PAnsiChar; aTypeInfo: PRttiInfo;
+  out Count, ElemSize: PtrInt): pointer;
+
+/// wrap an integer dynamic array BLOB content as stored by TDynArray.SaveTo
+// - same as TDynArray.LoadFrom() with no memory allocation nor memory copy: so
+// is much faster than creating a temporary dynamic array to load the data
+// - will return nil if no or invalid data, or a pointer to the integer
+// array otherwise, with the items number stored in Count
+// - slightly faster than SimpleDynArrayLoadFrom(Source,TypeInfo(TIntegerDynArray),Count)
+function IntegerDynArrayLoadFrom(Source: PAnsiChar; var Count: integer): PIntegerArray;
+
+/// search in a RawUtf8 dynamic array BLOB content as stored by TDynArray.SaveTo
+// - same as search within TDynArray.LoadFrom() with no memory allocation nor
+// memory copy: so is much faster
+// - will return -1 if no match or invalid data, or the matched entry index
+function RawUtf8DynArrayLoadFromContains(Source: PAnsiChar;
+  Value: PUtf8Char; ValueLen: PtrInt; CaseSensitive: boolean): PtrInt;
+
+type
+  /// allows to iterate over a TDynArray.SaveTo binary buffer
+  // - may be used as alternative to TDynArray.LoadFrom, if you don't want
+  // to allocate all items at once, but retrieve items one by one
+  {$ifdef USERECORDWITHMETHODS}
+  TDynArrayLoadFrom = record
+  {$else}
+  TDynArrayLoadFrom = object
+  {$endif USERECORDWITHMETHODS}
+  private
+    ArrayLoad: TRttiBinaryLoad;
+  public
+    /// how many items were saved in the TDynArray.SaveTo binary buffer
+    // - equals -1 if Init() failed to deserialize its header
+    Count: integer;
+    /// the zero-based index of the current item pointed by next Step() call
+    // - is in range 0..Count-1 until Step() returns false
+    Current: integer;
+    /// current read position in the TDynArray.SaveTo binary buffer
+    // - after Step() returned false, points just after the binary buffer,
+    // like a regular TDynArray.LoadFrom
+    Reader: TFastReader;
+    /// RTTI information of the deserialized dynamic array
+    ArrayRtti: TRttiCustom;
+    /// initialize iteration over a TDynArray.SaveTo binary buffer
+    // - returns true on success, with Count and Position being set
+    // - returns false if the supplied binary buffer is not correct
+    // - you should specify SourceMaxLen to avoid any buffer overflow
+    function Init(ArrayTypeInfo: PRttiInfo; Source: PAnsiChar;
+      SourceMaxLen: PtrInt): boolean; overload;
+    /// initialize iteration over a TDynArray.SaveTo binary buffer
+    // - returns true on success, with Count and Position being set
+    // - returns false if the supplied binary buffer is not correct
+    function Init(ArrayTypeInfo: PRttiInfo;
+      const Source: RawByteString): boolean; overload;
+    /// iterate over the current stored item
+    // - Item should point to a variable of the exact item type stored in this
+    // dynamic array
+    // - returns true if Item was filled with one value, or false if all
+    // items were read, and Position contains the end of the binary buffer
+    function Step(Item: pointer): boolean;
+    /// extract the first field value of the current stored item
+    // - this function won't increase the internal Current pointer
+    // - returns true if Field was filled with one value, or false if all
+    // items were read, and Position contains the end of the binary buffer
+    // - Field is expected to be of ArrayRtti.ArrayFirstField type
+    // - could be called before Step(), to pre-allocate a new item instance,
+    // or update an existing instance
+    function FirstField(Field: pointer): boolean;
+  end;
+
+
+{ ****************** TSynFilter and TSynValidate Processing Classes }
+
+type
+  TSynFilterOrValidate = class;
+
+  TSynFilterOrValidateObjArray = array of TSynFilterOrValidate;
+  TSynFilterOrValidateObjArrayArray = array of TSynFilterOrValidateObjArray;
+
+  /// will define a filter (transformation) or a validation process to be
+  // applied to a database Record content (typically a TOrm)
+  // - the optional associated parameters are to be supplied JSON-encoded
+  TSynFilterOrValidate = class
+  protected
+    fParameters: RawUtf8;
+    /// children must override this method in order to parse the JSON-encoded
+    // parameters, and store it in protected field values
+    procedure SetParameters(const Value: RawUtf8); virtual;
+    function DoApply(Data: pointer; Prop: PRttiCustomProp;
+      ErrMsg: PString): boolean; virtual; abstract;
+  public
+    /// add the filter or validation process to a list, checking if not present
+    // - if an instance with the same class type and parameters is already
+    // registered, will call aInstance.Free and return the exising instance
+    // - if there is no similar instance, will add it to the list and return it
+    function AddOnce(var aObjArray: TSynFilterOrValidateObjArray;
+      aFreeIfAlreadyThere: boolean = true): TSynFilterOrValidate;
+  public
+    /// initialize the filter (transformation) or validation instance
+    // - most of the time, optional parameters may be specified as JSON,
+    // possibly with the extended MongoDB syntax
+    constructor Create(const aParameters: RawUtf8 = ''); overload; virtual;
+    /// initialize the filter or validation instance
+    /// - this overloaded constructor will allow to easily set the parameters
+    constructor CreateUtf8(const Format: RawUtf8;
+      const Args, Params: array of const); overload;
+    /// the optional associated parameters, supplied as JSON-encoded
+    property Parameters: RawUtf8
+      read fParameters write SetParameters;
+  end;
+
+  /// will define a validation to be applied to a Record (typically a TOrm)
+  // field content
+  // - a typical usage is e.g. to validate an email or IP address
+  // - the optional associated parameters are to be supplied JSON-encoded
+  TSynValidate = class(TSynFilterOrValidate)
+  protected
+    function DoApply(Data: pointer; Prop: PRttiCustomProp;
+      ErrMsg: PString): boolean; override;
+  public
+    /// perform the validation action to the specified value
+    // - the value is expected by be UTF-8 text, as generated by
+    // TPropInfo.GetValue e.g.
+    // - if the validation failed, must return FALSE and put some message in
+    // ErrorMsg (translated into the current language: you could e.g. use
+    // a resourcestring and a SysUtils.Format() call for automatic translation
+    // via the mORMoti18n unit - you can leave ErrorMsg='' to trigger a
+    // generic error message from clas name ('"Validate email" rule failed'
+    // for TSynValidateEmail class e.g.)
+    // - if the validation passed, will return TRUE
+    function Process(aFieldIndex: integer; const Value: RawUtf8;
+      var ErrorMsg: string): boolean; virtual; abstract;
+    /// instantiate a TSynValidate instance of this class, and apply it to the value
+    // - returns '' if aValue does match the requirements, or an error message
+    class function Execute(const aParameters, aValue: RawUtf8): string;
+  end;
+
+  /// points to a TSynValidate variable
+  // - used e.g. as optional parameter to TOrm.Validate/FilterAndValidate
+  PSynValidate = ^TSynValidate;
+
+  /// IP v4 address validation to be applied to a Record field content
+  // (typically a TOrm)
+  // - this versions expect no parameter
+  TSynValidateIPAddress = class(TSynValidate)
+  public
+    /// perform the IP Address validation action to the specified value
+    function Process(aFieldIndex: integer; const Value: RawUtf8;
+      var ErrorMsg: string): boolean; override;
+  end;
+
+  /// IP address validation to be applied to a Record field content
+  // (typically a TOrm)
+  // - optional JSON encoded parameters are "AllowedTLD" or "ForbiddenTLD",
+  // expecting a CSV lis of Top-Level-Domain (TLD) names, e.g.
+  // $ '{"AllowedTLD":"com,org,net","ForbiddenTLD":"fr"}'
+  // $ '{AnyTLD:true,ForbiddenDomains:"mailinator.com,yopmail.com"}'
+  // - this will process a validation according to RFC 822 (calling the
+  // IsValidEmail() function) then will check for the TLD to be in one of
+  // the Top-Level domains ('.com' and such) or a two-char country, and
+  // then will check the TLD according to AllowedTLD and ForbiddenTLD
+  TSynValidateEmail = class(TSynValidate)
+  private
+    fAllowedTLD: RawUtf8;
+    fForbiddenTLD: RawUtf8;
+    fForbiddenDomains: RawUtf8;
+    fAnyTLD: boolean;
+  protected
+    /// decode all published properties from their JSON representation
+    procedure SetParameters(const Value: RawUtf8); override;
+  public
+    /// perform the Email Address validation action to the specified value
+    // - call IsValidEmail() function and check for the supplied TLD
+    function Process(aFieldIndex: integer; const Value: RawUtf8;
+      var ErrorMsg: string): boolean; override;
+    /// allow any TLD to be allowed, even if not a generic TLD (.com,.net ...)
+    // - this may be mandatory since already over 1,300 new gTLD names or
+    // "strings" could become available in the next few years: there is a
+    // growing list of new gTLDs available at
+    // @http://newgtlds.icann.org/en/program-status/delegated-strings
+    // - the only restriction is that it should be ascii characters
+    property AnyTLD: boolean
+      read fAnyTLD write fAnyTLD;
+    /// a CSV list of allowed TLD
+    // - if accessed directly, should be set as lower case values
+    // - e.g. 'com,org,net'
+    property AllowedTLD: RawUtf8
+      read fAllowedTLD write fAllowedTLD;
+    /// a CSV list of forbidden TLD
+    // - if accessed directly, should be set as lower case values
+    // - e.g. 'fr'
+    property ForbiddenTLD: RawUtf8
+      read fForbiddenTLD write fForbiddenTLD;
+    /// a CSV list of forbidden domain names
+    // - if accessed directly, should be set as lower case values
+    // - not only the TLD, but whole domains like 'cracks.ru,hotmail.com' or such
+    property ForbiddenDomains: RawUtf8
+      read fForbiddenDomains write fForbiddenDomains;
+  end;
+
+  /// glob case-sensitive pattern validation of a Record field content
+  // - parameter is NOT JSON encoded, but is some basic TMatch glob pattern
+  // - ?	   	Matches any single character
+  // - *	   	Matches any contiguous characters
+  // - [abc]  Matches a or b or c at that position
+  // - [^abc]	Matches anything but a or b or c at that position
+  // - [!abc]	Matches anything but a or b or c at that position
+  // - [a-e]  Matches a through e at that position
+  // - [abcx-z] Matches a or b or c or x or y or or z, as does [a-cx-z]
+  // - 'ma?ch.*'	would match match.exe, mavch.dat, march.on, etc..
+  // - 'this [e-n]s a [!zy]est' would match 'this is a test', but would not
+  //   match 'this as a test' nor 'this is a zest'
+  // - pattern check IS case sensitive (TSynValidatePatternI is not)
+  // - this class is not as complete as PCRE regex for example,
+  // but code overhead is very small, and speed good enough in practice
+  TSynValidatePattern = class(TSynValidate)
+  protected
+    fMatch: TMatch;
+    procedure SetParameters(const Value: RawUtf8); override;
+  public
+    /// perform the pattern validation to the specified value
+    // - pattern can be e.g. '[0-9][0-9]:[0-9][0-9]:[0-9][0-9]'
+    // - this method will implement both TSynValidatePattern and
+    // TSynValidatePatternI, checking the current class
+    function Process(aFieldIndex: integer; const Value: RawUtf8;
+      var ErrorMsg: string): boolean; override;
+  end;
+
+  /// glob case-insensitive pattern validation of a text field content
+  // (typically a TOrm)
+  // - parameter is NOT JSON encoded, but is some basic TMatch glob pattern
+  // - same as TSynValidatePattern, but is NOT case sensitive
+  TSynValidatePatternI = class(TSynValidatePattern);
+
+  /// text validation to ensure that to any text field would not be ''
+  TSynValidateNonVoidText = class(TSynValidate)
+  public
+    /// perform the non void text validation action to the specified value
+    function Process(aFieldIndex: integer; const Value: RawUtf8;
+      var ErrorMsg: string): boolean; override;
+  end;
+
+  TSynValidateTextProps = array[0..15] of cardinal;
+
+{$M+} // to have existing RTTI for published properties
+  /// text validation to be applied to any Record field content
+  // - default MinLength value is 1, MaxLength is maxInt: so a blank
+  // TSynValidateText.Create('') is the same as TSynValidateNonVoidText
+  // - MinAlphaCount, MinDigitCount, MinPunctCount, MinLowerCount and
+  // MinUpperCount allow you to specify the minimal count of respectively
+  // alphabetical [a-zA-Z], digit [0-9], punctuation [_!;.,/:?%$="#@(){}+-*],
+  // lower case or upper case characters
+  // - expects optional JSON parameters of the allowed text length range as
+  // $ '{"MinLength":5,"MaxLength":10,"MinAlphaCount":1,"MinDigitCount":1,
+  // $ "MinPunctCount":1,"MinLowerCount":1,"MinUpperCount":1}
+  TSynValidateText = class(TSynValidate)
+  private
+    /// used to store all associated validation properties by index
+    fProps: TSynValidateTextProps;
+    fUtf8Length: boolean;
+  protected
+    /// use sInvalidTextChar resourcestring to create a translated error message
+    procedure SetErrorMsg(fPropsIndex, InvalidTextIndex, MainIndex: integer;
+      var result: string);
+    /// decode "MinLength", "MaxLength", and other parameters into fProps[]
+    procedure SetParameters(const Value: RawUtf8); override;
+  public
+    /// perform the text length validation action to the specified value
+    function Process(aFieldIndex: integer; const Value: RawUtf8;
+      var ErrorMsg: string): boolean; override;
+  published
+    /// Minimal length value allowed for the text content
+    // - the length is calculated with UTF-16 Unicode codepoints, unless
+    // Utf8Length has been set to TRUE so that the UTF-8 byte count is checked
+    // - default is 1, i.e. a void text will not pass the validation
+    property MinLength: cardinal
+      read fProps[0] write fProps[0];
+    /// Maximal length value allowed for the text content
+    // - the length is calculated with UTF-16 Unicode codepoints, unless
+    // Utf8Length has been set to TRUE so that the UTF-8 byte count is checked
+    // - default is maxInt, i.e. no maximum length is set
+    property MaxLength: cardinal
+      read fProps[1] write fProps[1];
+    /// Minimal alphabetical character [a-zA-Z] count
+    // - default is 0, i.e. no minimum set
+    property MinAlphaCount: cardinal
+      read fProps[2] write fProps[2];
+    /// Maximal alphabetical character [a-zA-Z] count
+    // - default is maxInt, i.e. no Maximum set
+    property MaxAlphaCount: cardinal
+      read fProps[10] write fProps[10];
+    /// Minimal digit character [0-9] count
+    // - default is 0, i.e. no minimum set
+    property MinDigitCount: cardinal
+      read fProps[3] write fProps[3];
+    /// Maximal digit character [0-9] count
+    // - default is maxInt, i.e. no Maximum set
+    property MaxDigitCount: cardinal
+      read fProps[11] write fProps[11];
+    /// Minimal punctuation sign [_!;.,/:?%$="#@(){}+-*] count
+    // - default is 0, i.e. no minimum set
+    property MinPunctCount: cardinal
+      read fProps[4] write fProps[4];
+    /// Maximal punctuation sign [_!;.,/:?%$="#@(){}+-*] count
+    // - default is maxInt, i.e. no Maximum set
+    property MaxPunctCount: cardinal
+      read fProps[12] write fProps[12];
+    /// Minimal alphabetical lower case character [a-z] count
+    // - default is 0, i.e. no minimum set
+    property MinLowerCount: cardinal
+      read fProps[5] write fProps[5];
+    /// Maximal alphabetical lower case character [a-z] count
+    // - default is maxInt, i.e. no Maximum set
+    property MaxLowerCount: cardinal
+      read fProps[13] write fProps[13];
+    /// Minimal alphabetical upper case character [A-Z] count
+    // - default is 0, i.e. no minimum set
+    property MinUpperCount: cardinal
+      read fProps[6] write fProps[6];
+    /// Maximal alphabetical upper case character [A-Z] count
+    // - default is maxInt, i.e. no Maximum set
+    property MaxUpperCount: cardinal
+      read fProps[14] write fProps[14];
+    /// Minimal space count inside the value text
+    // - default is 0, i.e. any space number allowed
+    property MinSpaceCount: cardinal
+      read fProps[7] write fProps[7];
+    /// Maximal space count inside the value text
+    // - default is maxInt, i.e. any space number allowed
+    property MaxSpaceCount: cardinal
+      read fProps[15] write fProps[15];
+    /// Maximal space count allowed on the Left side
+    // - default is maxInt, i.e. any Left space allowed
+    property MaxLeftTrimCount: cardinal
+      read fProps[8] write fProps[8];
+    /// Maximal space count allowed on the Right side
+    // - default is maxInt, i.e. any Right space allowed
+    property MaxRightTrimCount: cardinal
+      read fProps[9] write fProps[9];
+    /// defines if lengths parameters expects UTF-8 or UTF-16 codepoints number
+    // - with default FALSE, the length is calculated with UTF-16 Unicode
+    // codepoints - MaxLength may not match the UCS-4 CodePoint, in case of
+    // UTF-16 surrogates
+    // - you can set this property to TRUE so that the UTF-8 byte count would
+    // be used for truncation against the MaxLength parameter
+    property Utf8Length: boolean
+      read fUtf8Length write fUtf8Length;
+  end;
+{$M-}
+
+  /// strong password validation for a Record field content (typically a TOrm)
+  // - the following parameters are set by default to
+  // $ '{"MinLength":5,"MaxLength":20,"MinAlphaCount":1,"MinDigitCount":1,
+  // $ "MinPunctCount":1,"MinLowerCount":1,"MinUpperCount":1,"MaxSpaceCount":0}'
+  // - you can specify some JSON encoded parameters to change this default
+  // values, which will validate the text field only if it contains from 5 to 10
+  // characters, with at least one digit, one upper case letter, one lower case
+  // letter, and one punctuation sign, with no space allowed inside
+  TSynValidatePassWord = class(TSynValidateText)
+  protected
+    /// set password specific parameters
+    procedure SetParameters(const Value: RawUtf8); override;
+  end;
+
+  { C++Builder doesn't support array elements as properties (RSP-12595).
+    For now, simply exclude the relevant classes from C++Builder. }
+  {$NODEFINE TSynValidateTextProps}
+  {$NODEFINE TSynValidateText }
+  {$NODEFINE TSynValidatePassWord }
+
+  /// will define a transformation to be applied to a Record field content
+  // (typically a TOrm)
+  // - here "filter" means that content would be transformed according to a
+  // set of defined rules
+  // - a typical usage is to convert to lower or upper case, or
+  // trim any time or date value in a TDateTime field
+  // - the optional associated parameters are to be supplied JSON-encoded
+  TSynFilter = class(TSynFilterOrValidate)
+  protected
+    function DoApply(Data: pointer; Prop: PRttiCustomProp;
+      ErrMsg: PString): boolean; override;
+  public
+    /// perform the transformation to the specified value
+    // - the value is converted into UTF-8 text, as expected by
+    // TPropInfo.GetValue / TPropInfo.SetValue e.g.
+    procedure Process(aFieldIndex: integer; var Value: RawUtf8); virtual; abstract;
+    /// instantiate a TSynValidate instance of this class, and apply it to the value
+    class procedure Execute(const aParameters: RawUtf8; var aValue: RawUtf8);
+  end;
+
+  /// class-reference type (metaclass) for a TSynFilter or a TSynValidate
+  TSynFilterOrValidateClass = class of TSynFilterOrValidate;
+
+  /// class-reference type (metaclass) of a record filter (transformation)
+  TSynFilterClass = class of TSynFilter;
+
+  /// convert the value into ASCII Upper Case characters
+  // - UpperCase conversion is made for ASCII-7 only, i.e. 'a'..'z' characters
+  // - this version expects no parameter
+  TSynFilterUpperCase = class(TSynFilter)
+  public
+    /// perform the case conversion to the specified value
+    procedure Process(aFieldIndex: integer; var Value: RawUtf8); override;
+  end;
+
+  /// convert the value into WinAnsi Upper Case characters
+  // - UpperCase conversion is made for all latin characters in the WinAnsi
+  // code page only, e.g. 'e' acute will be converted to 'E'
+  // - this version expects no parameter
+  TSynFilterUpperCaseU = class(TSynFilter)
+  public
+    /// perform the case conversion to the specified value
+    procedure Process(aFieldIndex: integer; var Value: RawUtf8); override;
+  end;
+
+  /// convert the value into ASCII Lower Case characters
+  // - LowerCase conversion is made for ASCII-7 only, i.e. 'A'..'Z' characters
+  // - this version expects no parameter
+  TSynFilterLowerCase = class(TSynFilter)
+  public
+    /// perform the case conversion to the specified value
+    procedure Process(aFieldIndex: integer; var Value: RawUtf8); override;
+  end;
+
+  /// convert the value into WinAnsi Lower Case characters
+  // - LowerCase conversion is made for all latin characters in the WinAnsi
+  // code page only, e.g. 'E' acute will be converted to 'e'
+  // - this version expects no parameter
+  TSynFilterLowerCaseU = class(TSynFilter)
+  public
+    /// perform the case conversion to the specified value
+    procedure Process(aFieldIndex: integer; var Value: RawUtf8); override;
+  end;
+
+  /// trim any space character left or right to the value
+  // - this versions expect no parameter
+  TSynFilterTrim = class(TSynFilter)
+  public
+    /// perform the space trimming conversion to the specified value
+    procedure Process(aFieldIndex: integer; var Value: RawUtf8); override;
+  end;
+
+  /// truncate a text above a given maximum length
+  // - expects optional JSON parameters of the allowed text length range as
+  // $ '{MaxLength":10}
+  TSynFilterTruncate = class(TSynFilter)
+  protected
+    fMaxLength: cardinal;
+    fUtf8Length: boolean;
+    /// decode the MaxLength: and Utf8Length: parameters
+    procedure SetParameters(const Value: RawUtf8); override;
+  public
+    /// perform the length truncation of the specified value
+    procedure Process(aFieldIndex: integer; var Value: RawUtf8); override;
+    /// Maximal length value allowed for the text content
+    // - the length is calculated with UTF-16 Unicode codepoints, unless
+    // Utf8Length has been set to TRUE so that the UTF-8 byte count is checked
+    // - default is 0, i.e. no maximum length is forced
+    property MaxLength: cardinal
+      read fMaxLength write fMaxLength;
+    /// defines if MaxLength is stored as UTF-8 or UTF-16 codepoints number
+    // - with default FALSE, the length is calculated with UTF-16 Unicode
+    // codepoints - MaxLength may not match the UCS-4 CodePoint numbers, in case
+    // of UTF-16 surrogates
+    // - you can set this property to TRUE so that the UTF-8 byte count would
+    // be used for truncation against the MaxLength parameter
+    property Utf8Length: boolean
+      read fUtf8Length write fUtf8Length;
+  end;
+
+{$ifdef ISDELPHI}
+resourcestring
+{$else}
+const
+{$endif ISDELPHI}
+  sInvalidIPAddress = '"%s" is an invalid IP v4 address';
+  sInvalidEmailAddress = '"%s" is an invalid email address';
+  sInvalidPattern = '"%s" does not match the expected pattern';
+  sCharacter01n = 'character,character,characters';
+  sInvalidTextLengthMin = 'Expect at least %d %s';
+  sInvalidTextLengthMax = 'Expect up to %d %s';
+  sInvalidTextChar = 'Expect at least %d %s %s,Expect up to %d %s %s,'+
+    'alphabetical,digital,punctuation,lowercase,uppercase,space,'+
+    'Too much spaces on the left,Too much spaces on the right';
+  sValidationFailed = '"%s" rule failed';
+  sValidationFieldVoid = 'An unique key field must not be void';
+  sValidationFieldDuplicate = 'Value already used for this unique key field';
+
+type
+  /// exception class raised by TRttiFilter
+  ERttiFilter = class(ESynException);
+
+  /// register and apply TSynFilter and TSynValidate to a class or record
+  // - could be used in conjuction with TRttiMap for client-side DTO validation
+  TRttiFilter = class(TSynPersistent)
+  protected
+    fRtti: TRttiCustom;
+    fRules: TSynFilterOrValidateObjArrayArray; // follows fRtti.Props.List[]
+    fCount: integer;
+    procedure DoApply(aData: pointer; aClass: TSynFilterOrValidateClass;
+      aErrMsg: PString);
+  public
+    /// initialize a list of TSynFilter and TSynValidate to apply to a class
+    constructor Create(aClass: TClass); reintroduce; overload;
+    /// initialize a list of TSynFilter and TSynValidate to apply to a record
+    constructor Create(aRtti: PRttiInfo); reintroduce; overload;
+    /// finalize this instance and all its stored rules
+    destructor Destroy; override;
+    /// delete all stored rules
+    procedure Clear;
+    /// register some rules instances to this list
+    // - raise ERttiFilter if aFieldName does not match the main Rtti class/record
+    procedure Add(const aFieldName: RawUtf8;
+      const aRules: array of TSynFilterOrValidate);
+    /// register some class rules to this list
+    // - will call aRules[].Create then Add() - and own - the instances
+    // - raise ERttiFilter if aFieldName does not match the main Rtti class/record
+    procedure AddClass(const aFieldName: RawUtf8;
+      const aRules: array of TSynFilterOrValidateClass);
+    /// apply all registered TSynFilter rules to a class instance or record pointer
+    procedure Filter(aData: pointer);
+    /// apply all registered TSynValidate rules to a class instance or record pointer
+    // - returns '' on success, or an error message on validation failure
+    function Validate(aData: pointer): string;
+    /// apply all registered TSynFilter or TSynValidate rules to a class instance
+    // or record pointer
+    // - can optionally specify which parent class are to be executed
+    // - returns '' on success, or an error message on validation failure
+    function Apply(aData: pointer; aClass: TSynFilterOrValidateClass = nil): string;
+    /// apply all registered TSynFilter or TSynValidate rules to a class instance
+    // or record pointer and raise ERttiFilter on broken TSynValidate
+    procedure ApplyOrRaise(aData: pointer);
+    /// retrieve the registered TSynFilter or TSynValidate rules of a given field
+    function GetRules(const aFieldName: RawUtf8): TSynFilterOrValidateObjArray;
+  published
+    /// low-level access to the associated RTTI information of this class/record
+    property Rtti: TRttiCustom
+      read fRtti;
+    /// low-level access to the associated TSynFilter / TSynValidate rules
+    property Rules: TSynFilterOrValidateObjArrayArray
+      read fRules;
+    /// total number of rules stored in this instance
+    property Count: integer
+      read fCount;
+  end;
+
+
+/// return TRUE if the supplied content is a valid IP v4 address
+function IsValidIP4Address(P: PUtf8Char): boolean;
+
+/// return TRUE if the supplied content is a valid email address
+// - follows RFC 822, to validate local-part@domain email format
+function IsValidEmail(P: PUtf8Char): boolean; overload;
+
+/// return TRUE if the supplied content is a valid email address
+// - follows RFC 822, to validate local-part@domain email format
+function IsValidEmail(const email: RawUtf8): boolean; overload;
+  {$ifdef HASINLINE} inline; {$endif}
+
+
+{ ***************** Cross-Platform TSynTimeZone Time Zones }
+
+type
+  /// used to store Time Zone bias in TSynTimeZone
+  // - map low-level information as stored in the Windows Registry 'TZI' entry
+  TTimeZoneInfo = packed record
+    Bias: integer;
+    bias_std: integer;
+    bias_dlt: integer;
+    change_time_std: TSynSystemTime;
+    change_time_dlt: TSynSystemTime;
+  end;
+  PTimeZoneInfo = ^TTimeZoneInfo;
+
+  /// text identifier of a Time Zone, following Microsoft Windows naming
+  TTimeZoneID = type RawUtf8;
+
+  {$A-} { make object packed for cross-platform binary serialization }
+
+  /// used to store Time Zone information for a single area in TSynTimeZone
+  // - Delphi "object" is buggy on stack -> also defined as record with methods
+  {$ifdef USERECORDWITHMETHODS}
+  TTimeZoneData = record
+  {$else}
+  TTimeZoneData = object
+  {$endif USERECORDWITHMETHODS}
+  public
+    id: TTimeZoneID;
+    display: RawUtf8;
+    tzi: TTimeZoneInfo;
+    dyn: array of packed record
+      year: integer;
+      tzi: TTimeZoneInfo;
+    end;
+    /// search for the TTimeZoneInfo of a given year
+    function GetTziFor(year: integer): PTimeZoneInfo;
+    /// erase all fields of this structure
+    procedure Clear;
+  end;
+
+  /// used to store the Time Zone information of a TSynTimeZone class
+  TTimeZoneDataDynArray = array of TTimeZoneData;
+
+  {$A+}
+
+  /// handle cross-platform time conversions, following Microsoft zones naming
+  // - is able to retrieve accurate information from the Windows registry,
+  // or from a binary compressed file on other platforms (which should have been
+  // saved from a Windows system first) using uniform and user-friendly naming
+  // of time zones, as defined by Microsoft for Windows
+  // - consider mormot.core.os.pas LocalToUtc/UtcToLocal() functions for regular
+  // conversions within the current Operating System time zone - this class is
+  // more likely to be used on Web/REST server side, or to bypass the system
+  // regional settings for an end-user application
+  // - the information stored in this class seems more complete and accurate
+  // than the one used by FPC TZInfo for instance (e.g. no per-year definition)
+  // - for Linux/POSIX our mORMot 2 repository supplies a ready-to-use
+  // ! {$R mormot.tz.res}
+  // - note that could have several instances, which are thread-safe by design,
+  // but you are likely to need to call only TSynTimeZone.Default in practice
+  TSynTimeZone = class(TObjectRWLightLock)
+  protected
+    fZone: TTimeZoneDataDynArray;
+    fZones: TDynArrayHashed;
+    fLastZone: TTimeZoneID;
+    fLastIndex: integer;
+    fLastZoneSafe: TLightLock; // protect fLastZone/fLastIndex
+    fCurrentIndex, fUtcIndex: integer;
+    fZoneCount: integer;
+    fIds: TStringList;
+    fDisplays: TStringList;
+    procedure SetIDs;
+    procedure SetDisplays;
+    procedure LockedAfterLoad;
+    function LockedSearch(const TzId: TTimeZoneID): PtrInt;
+    class function LoadDefault: TSynTimeZone;
+  public
+    /// initialize the internal storage
+    // - but no data is available, until Load* methods are called
+    constructor Create; override;
+    /// finalize the instance
+    destructor Destroy; override;
+    /// will retrieve the default shared TSynTimeZone instance
+    // - on Windows, will call LoadFromRegistry
+    // - under Linux, try first with LoadFromResource, then LoadFromFile with
+    // a local ExecutableName.tz file
+    // - see also the NowToLocal/LocalToUtc/UtcToLocal global functions
+    class function Default: TSynTimeZone;
+      {$ifdef HASINLINE} static; inline; {$endif}
+    {$ifdef OSWINDOWS}
+    /// read time zone information from the Windows registry
+    procedure LoadFromRegistry;
+    /// the current OS time zone as Zones[] Ids[] Displays[] index
+    // - as retrieved by LoadFromRegistry
+    // - equals -1 if was not retrieved
+    property CurrentIndex: integer
+      read fCurrentIndex;
+    /// change the current OS time zone from its Zones[] Ids[] Displays[] index
+    // - currently only available on Windows
+    // - this method is not thread-safe, because it uses an index
+    procedure ChangeOperatingSystemTimeZone(Index: PtrInt); overload;
+    /// change the current Operating System time zone to a given TzId
+    // - currently only available on Windows
+    // - could be used e.g. as
+    // ! TSynTimeZone.Default.ChangeOperatingSystemTimeZone('UTC');
+    // ! TSynTimeZone.Default.ChangeOperatingSystemTimeZone('Romance Standard Time');
+    procedure ChangeOperatingSystemTimeZone(const TzId: TTimeZoneID); overload;
+    {$endif OSWINDOWS}
+    /// read time zone information from a compressed file
+    // - if no file name is supplied, a ExecutableName.tz file would be used
+    procedure LoadFromFile(const FileName: TFileName = '');
+    /// read time zone information from a compressed memory buffer
+    procedure LoadFromBuffer(const Buffer: RawByteString);
+    /// read time zone information from a 'TSynTimeZone' resource
+    // - the resource should contain the SaveToBuffer compressed binary content
+    // - is no resource matching the TSynTimeZone class name and ResType=10
+    // do exist, nothing would be loaded
+    // - the resource could be created as such, from a Windows system:
+    // ! TSynTimeZone.Default.SaveToFile('TSynTimeZone.data');
+    // then compile the resource as expected, with a brcc32 .rc entry:
+    // ! TSynTimeZone 10 "TSynTimeZone.data"
+    // - you can specify a library (dll) resource instance handle, if needed
+    // - for Linux/POSIX our mORMot 2 repository supplies a ready-to-use
+    // ! {$R mormot.tz.res}
+    procedure LoadFromResource(Instance: TLibHandle = 0);
+    /// write then time zone information into a compressed file
+    // - if no file name is supplied, a ExecutableName.tz file would be created
+    procedure SaveToFile(const FileName: TFileName);
+    /// write then time zone information into a compressed memory buffer
+    function SaveToBuffer: RawByteString;
+    /// retrieve the time bias (in minutes) for a given date/time on a TzId
+    // - this is the main search function of this class
+    function GetBiasForDateTime(const Value: TDateTime; const TzId: TTimeZoneID;
+      out Bias: integer; out HaveDaylight: boolean; ValueIsUtc: boolean = false): boolean;
+    /// compute the UTC date/time corrected for a given TzId
+    function UtcToLocal(const UtcDateTime: TDateTime; const TzId: TTimeZoneID): TDateTime;
+    /// compute the current date/time corrected for a given TzId
+    function NowToLocal(const TzId: TTimeZoneID): TDateTime;
+    /// compute the UTC date/time for a given local TzId value
+    // - by definition, a local time may correspond to two UTC times, during the
+    // time bias period, so the returned value is informative only, and any
+    // stored value should be following UTC
+    function LocalToUtc(const LocalDateTime: TDateTime; const TzID: TTimeZoneID): TDateTime;
+    /// retrieve the display text corresponding to a TzId
+    // - returns '' if the supplied TzId is not recognized
+    function GetDisplay(const TzId: TTimeZoneID): RawUtf8;
+    /// low-level thread-unsafe function return the index of a TzID from Ids[]
+    function GetIndex(const TzId: TTimeZoneID): PtrInt;
+    /// direct access to the low-level time zone information
+    property Zone: TTimeZoneDataDynArray
+      read fZone;
+    /// direct access to the wrapper over the time zone information array
+    property Zones: TDynArrayHashed
+      read fZones;
+    /// the number of items in Zone[] Ids[] and Displays[]
+    property Count: integer
+      read fZoneCount;
+    /// returns a TStringList of all TzID values
+    // - could be used to fill any UI component to select the time zone
+    // - order in Ids[] array follows the Zone[].id information
+    function Ids: TStrings;
+      {$ifdef HASINLINE} inline; {$endif}
+    /// returns a TStringList of all Display text values
+    // - could be used to fill any UI component to select the time zone
+    // - order in Displays[] array follows the Zone[].display information
+    function Displays: TStrings;
+      {$ifdef HASINLINE} inline; {$endif}
+  end;
+
+var
+  /// global variable used when inlining TSynTimeZone.Default method
+  SharedSynTimeZone: TSynTimeZone;
+
+/// retrieve the time bias (in minutes) for a given date/time on a TzId
+// - will use a global shared thread-safe TSynTimeZone instance for the request
+function GetBiasForDateTime(const Value: TDateTime; const TzId: TTimeZoneID;
+  out Bias: integer; out HaveDaylight: boolean; ValueIsUtc: boolean = false): boolean;
+
+/// retrieve the display text corresponding to a TzId
+// - returns '' if the supplied TzId is not recognized
+// - will use a global shared thread-safe TSynTimeZone instance for the request
+function GetDisplay(const TzId: TTimeZoneID): RawUtf8;
+
+/// compute the UTC date/time corrected for a given TzId
+// - will use a global shared thread-safe TSynTimeZone instance for the request
+function UtcToLocal(const Utc: TDateTime; const TzId: TTimeZoneID): TDateTime; overload;
+
+/// compute the current date/time corrected for a given TzId
+// - will use a global shared thread-safe TSynTimeZone instance for the request
+function NowToLocal(const TzId: TTimeZoneID): TDateTime;
+
+/// compute the UTC date/time for a given local TzId value
+// - by definition, a local time may correspond to two UTC times, during the
+// time bias period, so the returned value is informative only, and any
+// stored value should be following UTC
+// - will use a global shared thread-safe TSynTimeZone instance for the request
+function LocalToUtc(const Local: TDateTime; const TzID: TTimeZoneID): TDateTime; overload;
+
+
+implementation
+
+
+{ ************ SAX-oriented JSON buffers access }
+
+function JsonArrayDecode(P: PUtf8Char; out Values: TPUtf8CharDynArray): boolean;
+var
+  n, max: PtrInt;
+  parser: TJsonParser;
+begin
+  result := false;
+  max := 0;
+  n := 0;
+  {%H-}parser.Init({strict=}false, nil);
+  P := GotoNextNotSpace(P);
+  if P^ <> ']' then
+    repeat
+      if max = n then
+      begin
+        max := NextGrow(max);
+        SetLength(Values, max);
+      end;
+      Values[n] := P;
+      inc(n);
+      P := parser.GotoEnd(P);
+      if P = nil then
+        exit; // invalid content, or #0 reached
+      if P^ <> ',' then
+        break;
+      inc(P);
+    until false;
+  if P^ = ']' then
+  begin
+    if n <> 0 then
+      DynArrayFakeLength(Values{%H-}, n);
+    result := true;
+  end
+  else
+    Values := nil;
+end;
+
+function JsonArrayItem(P: PUtf8Char; Index: integer): PUtf8Char;
+var
+  parser: TJsonParser;
+begin
+  if P <> nil then
+  begin
+    P := GotoNextNotSpace(P);
+    if P^ = '[' then
+    begin
+      {%H-}parser.Init({strict=}false, nil);
+      repeat
+        inc(P);
+      until not (P^ in [#1 .. ' ']);
+      if P^ <> ']' then
+        repeat
+          if Index <= 0 then
+          begin
+            result := P;
+            exit;
+          end;
+          P := parser.GotoEnd(P);
+          if (P = nil) or
+             (P^ <> ',') then
+            break; // invalid content or #0 reached
+          inc(P);
+          dec(Index);
+        until false;
+    end;
+  end;
+  result := nil;
+end;
+
+function JsonObjectItem(P: PUtf8Char; const PropName: RawUtf8;
+  PropNameFound: PRawUtf8): PUtf8Char;
+begin
+  result := JsonObjectItem(P, pointer(PropName), length(PropName), PropNameFound);
+end;
+
+function JsonObjectItem(P, PropName: PUtf8Char; PropNameLen: PtrInt;
+  PropNameFound: PRawUtf8): PUtf8Char;
+var
+  name: PUtf8Char;
+  namelen: integer; // not PtrInt
+  bystart: boolean; // mark 'PropName*' search
+  parser: TJsonParser;
+begin
+  result := nil;
+  if (P = nil) or
+     (PropNameLen = 0) then
+    exit;
+  P := GotoNextNotSpace(P);
+  bystart := false;
+  if PropName[PropNameLen - 1] = '*' then
+  begin
+    dec(PropNameLen);
+    bystart := true;
+  end;
+  if P^ = '{' then
+    repeat
+      inc(P);
+    until not (P^ in [#1 .. ' ']);
+  if P^ = '}' then
+    exit;
+  repeat
+    name := GetJsonPropName(P, @namelen, {NoJsonUnescapeNorEnding0=}true);
+    if name = nil then
+      exit;
+    while P^ in [#1 .. ' '] do
+      inc(P);
+    if (namelen >= PropNameLen) and
+       (bystart or
+        (namelen = PropNameLen)) then
+      if IdemPropName(name, PropName, PropNameLen, PropNameLen) then
+      begin
+        if bystart and
+           (PropNameFound <> nil) then
+          FastSetString(PropNameFound^, name, namelen);
+        result := P;
+        exit;
+      end;
+    {%H-}parser.Init({strict=}false, nil);
+    P := parser.GotoEnd(P);
+    if (P = nil) or
+       (P^ <> ',') then
+      break; // invalid content, or #0 reached
+    inc(P);
+  until false;
+end;
+
+function JsonObjectByPath(JsonObject, PropPath: PUtf8Char): PUtf8Char;
+var
+  n: PUtf8Char;
+  l: PtrInt;
+begin
+  result := nil;
+  if (JsonObject = nil) or
+     (PropPath = nil) then
+    exit;
+  repeat
+    l := GetNextItemTrimedBuffer(PropPath, '.', n);
+    if l = 0 then
+      exit;
+    JsonObject := JsonObjectItem(JsonObject, n, l, nil);
+    if JsonObject = nil then
+      exit;
+  until PropPath = nil; // found full name scope
+  result := JsonObject;
+end;
+
+function JsonObjectsByPath(JsonObject, PropPath: PUtf8Char): RawUtf8;
+var
+  itemName, objName, propNameFound, objPath: RawUtf8;
+  start, ending, obj: PUtf8Char;
+  WR: TTextWriter;
+  temp: TTextWriterStackBuffer; // 8KB work buffer on stack
+
+  procedure AddFromStart(const name: RawUtf8);
+  begin
+    start := GotoNextNotSpace(start);
+    ending := GotoEndJsonItem(start);
+    if ending = nil then
+      exit;
+    if WR = nil then
+    begin
+      WR := TTextWriter.CreateOwnedStream(temp);
+      WR.AddDirect('{');
+    end
+    else
+      WR.AddComma;
+    WR.AddFieldName(name);
+    while (ending > start) and
+          (ending[-1] <= ' ') do
+      dec(ending); // trim right
+    WR.AddNoJsonEscapeBig(start, ending - start);
+  end;
+
+begin
+  FastAssignNew(result);
+  if (JsonObject = nil) or
+     (PropPath = nil) then
+    exit;
+  WR := nil;
+  try
+    repeat
+      GetNextItem(PropPath, ',', itemName);
+      if itemName = '' then
+        break;
+      if itemName[length(itemName)] <> '*' then // single property lookup
+      begin
+        start := JsonObjectByPath(JsonObject, pointer(itemName));
+        if start <> nil then
+          AddFromStart(itemName);
+      end
+      else // 'propname*' may append several properties
+      begin
+        objPath := '';
+        obj := pointer(itemName);
+        repeat
+          GetNextItem(obj, '.', objName);
+          if objName = '' then
+            exit;
+          propNameFound := '';
+          JsonObject := JsonObjectItem(JsonObject, objName, @propNameFound);
+          if JsonObject = nil then
+            exit;
+          if obj = nil then
+          begin
+            // found full name scope
+            start := JsonObject;
+            repeat
+              AddFromStart(objPath + propNameFound);
+              ending := GotoNextNotSpace(ending);
+              if ending^ <> ',' then
+                break;
+              propNameFound := '';
+              start := JsonObjectItem(
+                GotoNextNotSpace(ending + 1), objName, @propNameFound);
+            until start = nil;
+            break;
+          end
+          else
+            Append(objPath, objName, '.');
+        until false;
+      end;
+    until PropPath = nil;
+    if WR <> nil then
+    begin
+      WR.AddDirect('}');
+      WR.SetText(result);
+    end;
+  finally
+    WR.Free;
+  end;
+end;
+
+
+{ ************ JSON-aware TSynNameValue TSynCache TObjectStoreJson }
+
+{ TSynNameValue }
+
+procedure TSynNameValue.Init(aCaseSensitive: boolean);
+begin
+  // release dynamic arrays memory before FillCharFast()
+  List := nil;
+  Finalize(PDynArrayHasher(@DynArray.Hasher)^); // fHashTableStore := nil
+  // initialize hashed storage
+  FillCharFast(self, SizeOf(self), 0);
+  DynArray.InitSpecific(TypeInfo(TSynNameValueItemDynArray), List,
+    ptRawUtf8, @Count, not aCaseSensitive);
+end;
+
+procedure TSynNameValue.InitFromIniSection(Section: PUtf8Char;
+  const OnTheFlyConvert: TOnSynNameValueConvertRawUtf8;
+  const OnAdd: TOnSynNameValueNotify);
+var
+  s: RawUtf8;
+  i: PtrInt;
+begin
+  Init(false);
+  fOnAdd := OnAdd;
+  while (Section <> nil) and
+        (Section^ <> '[') do
+  begin
+    s := GetNextLine(Section, Section);
+    i := PosExChar('=', s);
+    if (i > 1) and
+       not (s[1] in [';', '[']) then
+      if Assigned(OnTheFlyConvert) then
+        Add(copy(s, 1, i - 1), OnTheFlyConvert(copy(s, i + 1, 1000)))
+      else
+        Add(copy(s, 1, i - 1), copy(s, i + 1, 1000));
+  end;
+end;
+
+procedure TSynNameValue.InitFromCsv(Csv: PUtf8Char; NameValueSep, ItemSep: AnsiChar);
+var
+  n, v: RawUtf8;
+begin
+  Init(false);
+  while Csv <> nil do
+  begin
+    GetNextItem(Csv, NameValueSep, n);
+    if ItemSep = #10 then
+      GetNextItemTrimedCRLF(Csv, v)
+    else
+      GetNextItem(Csv, ItemSep, v);
+    if n = '' then
+      break;
+    Add(n, v);
+  end;
+end;
+
+procedure TSynNameValue.InitFromNamesValues(const Names, Values: array of RawUtf8);
+var
+  i: PtrInt;
+begin
+  Init(false);
+  if high(Names) <> high(Values) then
+    exit;
+  DynArray.Capacity := length(Names);
+  for i := 0 to high(Names) do
+    Add(Names[i], Values[i]);
+end;
+
+function TSynNameValue.InitFromJsonBuffer(Json: PUtf8Char; aCaseSensitive: boolean): boolean;
+var
+  N: PUtf8Char;
+  nam, val: RawUtf8;
+  Nlen, c: integer;
+  info: TGetJsonField;
+begin
+  result := false;
+  Init(aCaseSensitive);
+  if Json = nil then
+    exit;
+  while Json^ in [#1 .. ' '] do
+    inc(Json);
+  if Json^ <> '{' then
+    exit;
+  repeat
+    inc(Json)
+  until not (Json^ in [#1, ' ']);
+  info.Json := Json;
+  c := JsonObjectPropCount(Json); // fast GB/s parsing
+  if c <= 0 then
+    exit;
+  DynArray.Capacity := c;
+  repeat
+    N := GetJsonPropName(info.Json, @Nlen);
+    if N = nil then
+      exit;
+    info.GetJsonFieldOrObjectOrArray;
+    if info.Json = nil then
+      exit;
+    FastSetString(nam, N, Nlen);
+    FastSetString(val, info.Value, info.Valuelen);
+    Add(nam, val);
+  until info.EndOfObject = '}';
+  result := true;
+end;
+
+function TSynNameValue.InitFromJson(const Json: RawUtf8; aCaseSensitive: boolean): boolean;
+var
+  tmp: TSynTempBuffer; // local copy for in-place process
+begin
+  result := InitFromJsonBuffer(tmp.Init(json), aCaseSensitive);
+  tmp.Done;
+end;
+
+function TSynNameValue.Find(const aName: RawUtf8): PtrInt;
+begin
+  result := DynArray.FindHashed(aName);
+end;
+
+procedure TSynNameValue.Add(const aName, aValue: RawUtf8; aTag: PtrInt);
+var
+  added: boolean;
+  ndx: PtrInt;
+  p: PSynNameValueItem;
+begin
+  ndx := DynArray.FindHashedForAdding(aName, added);
+  p := @List[ndx];
+  if added then
+    p^.Name := aName;
+  p^.Value := aValue;
+  p^.Tag := aTag;
+  if Assigned(fOnAdd) then
+    fOnAdd(p^, ndx);
+end;
+
+procedure TSynNameValue.AddJoined(const aName: RawUtf8;
+  const aValue: array of RawByteString; aTag: PtrInt);
+begin
+  Add(aName, Join(aValue));
+end;
+
+function TSynNameValue.FindItem(const aName: RawUtf8): PSynNameValueItem;
+var
+  ndx: PtrInt;
+begin
+  ndx := DynArray.FindHashed(aName);
+  if ndx >= 0 then
+    result := @List[ndx]
+  else
+    result := nil;
+end;
+
+function TSynNameValue.FindStart(const aUpperName: RawUtf8): PtrInt;
+var
+  p: PSynNameValueItem;
+begin
+  p := pointer(List);
+  for result := 0 to Count - 1 do
+    if IdemPChar(pointer(p^.Name), pointer(aUpperName)) then
+      exit
+    else
+      inc(p);
+  result := -1;
+end;
+
+function TSynNameValue.FindByValue(const aValue: RawUtf8): PtrInt;
+var
+  p: PSynNameValueItem;
+begin
+  p := pointer(List);
+  for result := 0 to Count - 1 do
+    if p^.Value = aValue then
+      exit
+    else
+      inc(p);
+  result := -1;
+end;
+
+function TSynNameValue.Delete(const aName: RawUtf8): boolean;
+begin
+  result := DynArray.FindHashedAndDelete(aName) >= 0;
+end;
+
+function CompByValue(const Item, aValue): integer;
+begin // called as CompByValue(List[], aValue) to return 0 if List[].Value=aValue
+  result := ord(TSynNameValueItem(Item).Value <> RawUtf8(aValue));
+end;
+
+function TSynNameValue.DeleteByValue(const aValue: RawUtf8; Limit: integer): integer;
+begin
+  result := PDynArray(@DynArray)^.FindAndDeleteAll(aValue, CompByValue, Limit);
+  if result > 0 then
+    DynArray.ForceReHash; // required after direct DynArray.Delete()
+end;
+
+function TSynNameValue.Value(const aName: RawUtf8; const aDefaultValue: RawUtf8): RawUtf8;
+var
+  ndx: PtrInt;
+begin
+  if @self = nil then
+    ndx := -1
+  else
+    ndx := DynArray.FindHashed(aName);
+  if ndx < 0 then
+    result := aDefaultValue
+  else
+    result := List[ndx].Value;
+end;
+
+function TSynNameValue.ValueInt(const aName: RawUtf8; aDefaultValue: Int64): Int64;
+var
+  ndx: PtrInt;
+  err: integer;
+begin
+  ndx := DynArray.FindHashed(aName);
+  if ndx < 0 then
+    result := aDefaultValue
+  else
+  begin
+    result := GetInt64(pointer(List[ndx].Value), err);
+    if err <> 0 then
+      result := aDefaultValue;
+  end;
+end;
+
+function TSynNameValue.ValueBool(const aName: RawUtf8): boolean;
+begin
+  result := GetBoolean(pointer(Value(aName)));
+end;
+
+function TSynNameValue.ValueEnum(const aName: RawUtf8; aEnumTypeInfo: PRttiInfo;
+  out aEnum; aEnumDefault: PtrUInt): boolean;
+var
+  rtti: PRttiEnumType;
+  v: RawUtf8;
+  err: integer;
+  i: PtrInt;
+begin
+  result := false;
+  rtti := aEnumTypeInfo.EnumBaseType;
+  if rtti = nil then
+    exit;
+  RTTI_TO_ORD[rtti.RttiOrd](@aEnum, aEnumDefault); // always set default value
+  v := Value(aName, '');
+  TrimSelf(v);
+  if v = '' then
+    exit;
+  i := GetInteger(pointer(v), err);
+  if (err <> 0) or
+     (PtrUInt(i) > PtrUInt(rtti.MaxValue)) then
+    i := rtti.GetEnumNameValue(pointer(v), length(v), {alsotrimleft=}true);
+  if i >= 0 then
+  begin
+    RTTI_TO_ORD[rtti.RttiOrd](@aEnum, i); // we found a proper value
+    result := true;
+  end;
+end;
+
+function TSynNameValue.Initialized: boolean;
+begin
+  result := DynArray.Value = @List;
+end;
+
+function TSynNameValue.GetBlobData: RawByteString;
+begin
+  result := DynArray.SaveTo;
+end;
+
+procedure TSynNameValue.SetBlobDataPtr(aValue, aValueMax: pointer);
+begin
+  DynArray.LoadFrom(aValue, aValueMax);
+  DynArray.ForceReHash;
+end;
+
+procedure TSynNameValue.SetBlobData(const aValue: RawByteString);
+begin
+  DynArray.LoadFromBinary(aValue);
+  DynArray.ForceReHash;
+end;
+
+function TSynNameValue.GetStr(const aName: RawUtf8): RawUtf8;
+begin
+  result := Value(aName, '');
+end;
+
+function TSynNameValue.GetInt(const aName: RawUtf8): Int64;
+begin
+  result := ValueInt(aName, 0);
+end;
+
+function TSynNameValue.AsCsv(const KeySeparator, ValueSeparator, IgnoreKey: RawUtf8): RawUtf8;
+var
+  i: PtrInt;
+  p: PSynNameValueItem;
+  temp: TTextWriterStackBuffer; // 8KB work buffer on stack
+begin
+  with TTextWriter.CreateOwnedStream(temp) do
+  try
+    p := pointer(List);
+    for i := 1 to Count do
+    begin
+      if (IgnoreKey = '') or
+         (p^.Name <> IgnoreKey) then
+      begin
+        AddString(p^.Name);
+        AddString(KeySeparator);
+        AddString(p^.Value);
+        AddString(ValueSeparator);
+      end;
+      inc(p);
+    end;
+    SetText(result);
+  finally
+    Free;
+  end;
+end;
+
+function TSynNameValue.AsJson: RawUtf8;
+var
+  i: PtrInt;
+  p: PSynNameValueItem;
+  temp: TTextWriterStackBuffer;
+begin
+  with TJsonWriter.CreateOwnedStream(temp) do
+  try
+    AddDirect('{');
+    p := pointer(List);
+    for i := 1 to Count do
+    begin
+      AddProp(pointer(p^.Name), length(p^.Name));
+      AddDirect('"');
+      AddJsonEscape(pointer(p^.Value));
+      AddDirect('"', ',');
+      inc(p);
+    end;
+    ReplaceLastComma('}');
+    SetText(result);
+  finally
+    Free;
+  end;
+end;
+
+procedure TSynNameValue.AsNameValues(out Names, Values: TRawUtf8DynArray);
+var
+  i: PtrInt;
+  p: PSynNameValueItem;
+begin
+  SetLength(Names,  Count);
+  SetLength(Values, Count);
+  p := pointer(List);
+  for i := 0 to Count - 1 do
+  begin
+    Names[i]  := p^.Name;
+    Values[i] := p^.Value;
+    inc(p);
+  end;
+end;
+
+function TSynNameValue.ValueVariantOrNull(const aName: RawUtf8): variant;
+var
+  ndx: PtrInt;
+begin
+  ndx := Find(aName);
+  if ndx < 0 then
+    SetVariantNull(result{%H-})
+  else
+    RawUtf8ToVariant(List[ndx].Value, result);
+end;
+
+procedure TSynNameValue.AsDocVariant(out DocVariant: variant;
+  ExtendedJson, ValueAsString, AllowVarDouble: boolean);
+var
+  ndx: PtrInt;
+  p: PSynNameValueItem;
+  dv: TDocVariantData absolute DocVariant;
+begin
+  if Count > 0 then
+    begin
+      dv.Init(JSON_NAMEVALUE[ExtendedJson], dvObject);
+      dv.SetCount(Count);
+      dv.Capacity := Count;
+      p := pointer(List);
+      for ndx := 0 to Count - 1 do
+      begin
+        dv.Names[ndx] := p^.Name;
+        if ValueAsString or
+           not GetVariantFromNotStringJson(pointer(p^.Value),
+              TVarData(dv.Values[ndx]), AllowVarDouble) then
+          RawUtf8ToVariant(p^.Value, dv.Values[ndx]);
+      end;
+    end
+  else
+    TVarData(DocVariant).VType := varNull;
+end;
+
+function TSynNameValue.AsDocVariant(ExtendedJson, ValueAsString: boolean): variant;
+begin
+  AsDocVariant(result, ExtendedJson, ValueAsString);
+end;
+
+function TSynNameValue.MergeDocVariant(var DocVariant: variant;
+  ValueAsString: boolean; ChangedProps: PVariant; ExtendedJson,
+  AllowVarDouble: boolean): integer;
+var
+  dv: TDocVariantData absolute DocVariant;
+  i, ndx: PtrInt;
+  v: variant;
+  p: PSynNameValueItem;
+  intvalues: TRawUtf8Interning;
+  forcenoutf8: boolean;
+begin
+  if dv.VarType <> DocVariantVType then
+    TDocVariant.New(DocVariant, JSON_NAMEVALUE[ExtendedJson]);
+  if ChangedProps <> nil then
+    TDocVariant.New(ChangedProps^, dv.Options);
+  if dvoInternValues in dv.Options then
+    intvalues := DocVariantType.InternValues
+  else
+    intvalues := nil;
+  forcenoutf8 := dvoValueDoNotNormalizeAsRawUtf8 in dv.Options;
+  result := 0; // returns number of changed values
+  p := pointer(List);
+  for i := 1 to Count do
+  begin
+    if p^.Name <> '' then
+    begin
+      VarClear(v{%H-});
+      if ValueAsString or
+         not GetVariantFromNotStringJson(
+            pointer(p^.Value), TVarData(v), AllowVarDouble) then
+        RawUtf8ToVariant(p^.Value, v);
+      ndx := dv.GetValueIndex(p^.Name);
+      if ndx < 0 then
+        ndx := dv.InternalAdd(p^.Name)
+      else if FastVarDataComp(@v, @dv.Values[ndx], false) = 0 then
+        continue; // value not changed -> skip
+      if ChangedProps <> nil then
+        PDocVariantData(ChangedProps)^.AddValue(p^.Name, v);
+      SetVariantByValue(v, dv.Values[ndx], forcenoutf8);
+      if intvalues <> nil then
+        intvalues.UniqueVariant(dv.Values[ndx]);
+      inc(result);
+    end;
+    inc(p);
+  end;
+end;
+
+
+{ TObjectStoreJson }
+
+procedure TObjectStoreJson.AddJson(W: TJsonWriter);
+begin
+  W.AddPropJsonString('name', fName);
+end;
+
+function TObjectStoreJson.SaveToJson(reformat: TTextWriterJsonFormat): RawUtf8;
+var
+  W: TJsonWriter;
+begin
+  W := TJsonWriter.CreateOwnedStream(65536);
+  try
+    W.AddDirect('{');
+    AddJson(W);
+    W.ReplaceLastComma('}');
+    W.SetText(result, reformat);
+  finally
+    W.Free;
+  end;
+end;
+
+
+{ TSynCache }
+
+constructor TSynCache.Create(aMaxCacheRamUsed: cardinal;
+  aCaseSensitive: boolean; aTimeoutSeconds: cardinal);
+begin
+  inherited Create; // may have been overriden
+  fNameValue.Init(aCaseSensitive);
+  fMaxRamUsed := aMaxCacheRamUsed;
+  fTimeoutSeconds := aTimeoutSeconds;
+end;
+
+procedure TSynCache.ResetIfNeeded;
+var
+  tix: cardinal;
+begin
+  if fRamUsed > fMaxRamUsed then
+    Reset;
+  if fTimeoutSeconds = 0 then
+    exit;
+  tix := GetTickSec;
+  if (fTimeoutTix <> 0) and
+     (tix >= fTimeoutTix) then
+    Reset;
+  fTimeoutTix := tix + fTimeoutSeconds;
+end;
+
+function TSynCache.Find(const aKey: RawUtf8; aResultTag: PPtrInt): RawUtf8;
+var
+  p: PSynNameValueItem;
+begin
+  FastAssignNew(result);
+  if (self = nil) or
+     (aKey = '') then
+    exit;
+  fSafe.ReadOnlyLock;
+  {$ifdef HASFASTTRYFINALLY}
+  try
+  {$else}
+  begin
+  {$endif HASFASTTRYFINALLY}
+    p := fNameValue.FindItem(aKey);
+    if p <> nil then
+    begin
+      result := p^.Value;
+      if aResultTag <> nil then
+        aResultTag^ := p^.Tag;
+    end;
+  {$ifdef HASFASTTRYFINALLY}
+  finally
+  {$endif HASFASTTRYFINALLY}
+    fSafe.ReadOnlyUnLock;
+  end;
+end;
+
+function TSynCache.AddOrUpdate(const aKey, aValue: RawUtf8; aTag: PtrInt): boolean;
+var
+  ndx: PtrInt;
+  p: PSynNameValueItem;
+begin
+  result := false;
+  if self = nil then
+    exit; // avoid GPF
+  fSafe.WriteLock;
+  try
+    ResetIfNeeded;
+    ndx := fNameValue.DynArray.FindHashedForAdding(aKey, result);
+    p := @fNameValue.List[ndx];
+    p^.Name := aKey;
+    dec(fRamUsed, length(p^.Value));
+    p^.Value := aValue;
+    inc(fRamUsed, length(p^.Value));
+    p^.Tag := aTag;
+  finally
+    fSafe.WriteUnlock;
+  end;
+end;
+
+function TSynCache.Reset: boolean;
+begin
+  result := false;
+  if (self = nil) or
+     (fNameValue.Count = 0) then
+    exit; // avoid GPF or a lock for nothing
+  fSafe.WriteLock;
+  try
+    if fNameValue.Count <> 0 then
+    begin
+      fNameValue.DynArray.Clear;
+      fNameValue.DynArray.ForceReHash;
+      result := true; // mark something was flushed
+    end;
+    fRamUsed := 0;
+    fTimeoutTix := 0;
+  finally
+    fSafe.WriteUnlock;
+  end;
+end;
+
+
+{ ****************** Files Search in Folders }
+
+procedure TFindFiles.FromSearchRec(const Directory: TFileName; const F: TSearchRec);
+begin
+  Name := TFileName(F.Name);
+  if Directory <> '' then
+    insert(Directory, Name, 1);
+  Attr := F.Attr;
+  {$ifdef POSIXDELPHI}
+  // Delphi's POSIX FindFirst() (InternalPosixFileGetAttr) does not set faArchive,
+  // unlike FPC's LinuxToWinAttr() and our StatFileAttr() which set it on the base
+  // result for every entry (files AND directories) - so normalize it here, to
+  // keep FindFilesRtl() consistent with FindFiles() on Delphi POSIX
+  Attr := Attr or faArchive;
+  {$endif POSIXDELPHI}
+  if Attr and faDirectory <> 0 then // may happen with ffoIncludeFolder option
+    Size := -1
+  else
+  begin
+    {$ifdef OSWINDOWS}
+    {$ifdef HASINLINE} // FPC or Delphi 2006+
+    Size := F.Size;
+    {$else} // F.Size was limited to 32-bit on older Delphi
+    PInt64Rec(@Size)^.Lo := F.FindData.nFileSizeLow;
+    PInt64Rec(@Size)^.Hi := F.FindData.nFileSizeHigh;
+    {$endif HASINLINE}
+    {$else}
+    Size := F.Size;
+    {$endif OSWINDOWS}
+  end;
+  Timestamp := SearchRecToDateTime(F);
+end;
+
+function TFindFiles.ToText: ShortString;
+begin
+  FormatShort('% % %', [Name, KB(Size), DateTimeToFileShort(Timestamp)], result);
+end;
+
+function SortFindFileName(const A, B): integer;
+var
+  fa: TFindFiles absolute A;
+  fb: TFindFiles absolute B;
+begin
+  result := 0;
+  if @A = @B then
+    exit;
+  if fa.Size < 0 then
+    if fb.Size < 0 then
+      result := 0 // both are folders
+    else
+      dec(result) // folders first
+  else if fb.Size < 0 then
+    inc(result)   // files last
+  else
+    result := 0;  // both are files
+  if result = 0 then
+    result := SortDynArrayFileName(fa.Name, fb.Name)
+end;
+
+function SortFindFileFullName(const A, B): integer;
+var
+  fa: TFindFiles absolute A;
+  fb: TFindFiles absolute B;
+begin
+  if @A = @B then
+    result := 0
+  else
+    {$ifdef OSPOSIX}
+    result := SortDynArrayString(fa.Name, fb.Name);
+    {$else}
+    result := SortDynArrayStringI(fa.Name, fb.Name);
+    {$endif}
+end;
+
+function SortFindFileTimestamp(const A, B): integer;
+var
+  fa: TFindFiles absolute A;
+  fb: TFindFiles absolute B;
+begin
+  result := 0;
+  if @A = @B then
+    exit;
+  if fa.Size < 0 then
+    if fb.Size < 0 then
+      result := CompareFloat(fa.Timestamp, fb.Timestamp) // both are folders
+    else
+      dec(result) // folders first
+  else if fb.Size < 0 then
+    inc(result)   // files last
+  else
+    result := CompareFloat(fa.Timestamp, fb.Timestamp); // both are files
+  if result = 0 then
+    result := SortDynArrayFileName(fa.Name, fb.Name); // for consistency
+end;
+
+procedure FindFilesSort(var da: TDynArray; Options: TFindFilesOptions);
+begin
+  if da.count > 1 then
+    if ffoSortByName in Options then
+      da.Sort(SortFindFileName) // use RTL and "natural" order
+    else if ffoSortByFullName in Options then
+      da.Sort(SortFindFileFullName)
+    else if ffoSortByDate in Options then
+      da.Sort(SortFindFileTimestamp);
+end;
+
+procedure FindFilesRtl(const Directory, Mask, IgnoreFileName: TFileName;
+  Options: TFindFilesOptions; out Files: TFindFilesDynArray);
+var
+  count: integer; // not PtrInt
+  m: PChar;
+  dir, onemask: TFileName;
+  da: TDynArray;
+  masked: TFindFilesDynArray;
+
+  procedure SearchFolder(const folder: TFileName);
+  var
+    F: TSearchRec;
+    ff: TFindFiles;
+    fold, name: TFileName; // FPC requires these implicit local variables :(
+  begin
+    fold := dir + folder;
+    name := fold + Mask;
+    if FindFirst(name, faAnyfile, F) = 0 then
+    begin
+      repeat
+        if (SearchRecValidFile(F, ffoIncludeHiddenFiles in Options) and
+            ((IgnoreFileName = '') or
+             (AnsiCompareFileName(F.Name, IgnoreFileName) <> 0))) or
+           ((ffoIncludeFolder in Options) and
+            SearchRecValidFolder(F, ffoIncludeHiddenFiles in Options)) then
+        begin
+          if ffoExcludesDir in Options then
+            ff.FromSearchRec(folder, F)
+          else
+            ff.FromSearchRec(fold, F);
+          da.Add(ff);
+        end;
+      until FindNext(F) <> 0;
+      FindClose(F);
+    end;
+    if (ffoSubFolder in Options) and
+       (FindFirstDirectory(fold + '*', ffoIncludeHiddenFiles in Options, F) = 0) then
+    begin
+      // recursive SearchFolder() call for nested directories
+      repeat
+        if SearchRecValidFolder(F, ffoIncludeHiddenFiles in Options) and
+           ((IgnoreFileName = '') or
+            (AnsiCompareFileName(F.Name, IgnoreFileName) <> 0)) then
+          SearchFolder(MakePath([folder, F.Name], true));
+      until FindNext(F) <> 0;
+      FindClose(F);
+    end;
+  end;
+
+begin
+  da.Init(TypeInfo(TFindFilesDynArray), Files, @count);
+  if Directory <> '' then
+    dir := IncludeTrailingPathDelimiter(Directory);
+  if Pos(';', Mask) = 0 then
+    // single mask search
+    SearchFolder('')
+  else
+  begin
+    m := pointer(Mask); // e.g. '*.txt;*.json'
+    repeat
+      onemask := GetNextItemString(m, ';');
+      if onemask = '' then
+        break;
+      FindFilesRtl(dir, onemask, IgnoreFileName, Options, masked);
+      da.AddArray(masked);
+    until false;
+  end;
+  if count = 0 then
+    exit;
+  FindFilesSort(da, Options);
+  DynArrayFakeLength(Files, count);
+end;
+
+{$ifdef OSPOSIX}
+
+procedure FileNamesU(const Directory, Mask: TFileName; Options: TFindFilesOptions;
+  const IgnoreFileName: TFileName; var Files: TRawUtf8DynArray);
+var
+  m: TMatchDynArray;
+  cb: TOnPosixFileName;
+begin
+  // use much faster PosixFileNames() low-level function over TMatchDynArray
+  cb := nil;
+  if Mask <> FILES_ALL then
+  begin
+    cb := @MatchAnyP; // exact same signature than TOnPosixFileName callback
+    SetMatchs(RawUtf8(Mask), {caseinsens=}false, m, ';');
+  end;
+  Files := PosixFileNames(Directory, ffoSubFolder in Options, cb, pointer(m),
+    ffoExcludesDir in Options, ffoIncludeHiddenFiles in Options,
+    ffoIncludeFolder in Options);
+  if Files = nil then
+    exit;
+  if IgnoreFileName <> '' then
+    DeleteRawUtf8(Files, FindRawUtf8(Files, RawUtf8(IgnoreFileName)));
+  if ffoSortByName in Options then
+    QuickSortRawUtf8(Files, length(Files), nil, StrCompPosixFileName)
+  else if ffoSortByFullName in Options then
+    QuickSortRawUtf8(Files, length(Files));
+end;
+
+function FindFiles(const Directory, Mask, IgnoreFileName: TFileName;
+  Options: TFindFilesOptions): TFindFilesDynArray;
+var
+  dir: TFileName;
+  names: TRawUtf8DynArray;
+  n, r, i: PtrInt;
+  d: PFindFiles;
+  ts: TUnixMSTime;
+  da: TDynArray;
+begin
+  result := nil;
+  dir := IncludeTrailingPathDelimiter(Directory);
+  if not DirectoryExists(dir) then
+    exit;
+  // call PosixFileNames() i.e. efficient getdents/getdents64 syscall
+  FileNamesU(dir, Mask, Options, IgnoreFileName, names);
+  n := length(names);
+  if n = 0 then
+    exit;
+  // compute TFindFilesDynArray from names[]
+  if not (ffoExcludesDir in Options) then
+    dir := '';
+  SetLength(result, n);
+  r := 0;
+  d := pointer(result);
+  for i := 0 to n - 1 do
+  begin
+    {$ifdef UNICODE}
+    Utf8ToStringVar(names[i], string(d^.Name));
+    {$else}
+    d^.Name := names[i];
+    {$endif UNICODE}
+    if FileInfoByName(dir + d^.Name, d^.Size, ts, @d^.Attr) then // = fpStat()
+    begin
+      d^.Timestamp := UnixTimeToLocal(ts div MilliSecsPerSec);
+      inc(d); // will leave d^.Attr = 0
+      inc(r);
+    end;
+  end;
+  if r <> n then
+    DynArrayFakeLength(result, r);
+  if not (ffoSortByDate in Options) then
+    exit;
+  da.Init(TypeInfo(TFindFilesDynArray), result);
+  FindFilesSort(da, Options);
+end;
+
+function FileNames(const Directory, Mask: TFileName; Options: TFindFilesOptions;
+  const IgnoreFileName: TFileName): TFileNameDynArray;
+{$ifdef UNICODE}
+var
+  i: PtrInt;
+  u: TRawUtf8DynArray;
+begin
+  FileNamesU(Directory, Mask, Options, IgnoreFileName, u);
+  SetLength(result, length(u));
+  for i := 0 to length(u) - 1 do
+    Utf8ToFileName(u[i], result[i]);
+end;
+{$else}
+begin
+  FileNamesU(Directory, Mask, Options, IgnoreFileName, result);
+end;
+{$endif UNICODE}
+
+{$else} // Windows can just call FindFiles() and RTL FindFirst/FindNext
+
+function FindFiles(const Directory, Mask, IgnoreFileName: TFileName;
+  Options: TFindFilesOptions): TFindFilesDynArray;
+begin
+  FindFilesRtl(Directory, Mask, IgnoreFileName, Options, result);
+end;
+
+function FileNames(const Directory, Mask: TFileName; Options: TFindFilesOptions;
+  const IgnoreFileName: TFileName): TFileNameDynArray;
+var
+  files: TFindFilesDynArray;
+begin
+  FindFilesRtl(Directory, Mask, IgnoreFileName, Options, files);
+  result := FindFilesDynArrayToFileNames(files);
+end;
+
+{$endif OSPOSIX}
+
+function FileNames(const Path: array of const; const Mask: TFileName;
+  Options: TFindFilesOptions): TFileNameDynArray;
+var
+  dir: TFileName;
+begin
+  MakePath(Path, dir, {endwithdelim=}true);
+  result := FileNames(dir, Mask, Options);
+end;
+
+function FindFilesDynArrayToFileNames(const Files: TFindFilesDynArray): TFileNameDynArray;
+var
+  n: integer;
+  r: PFileName;
+  f: PFindFiles;
+begin
+  Finalize(result);
+  if Files = nil then
+    exit;
+  n := length(Files);
+  SetLength(result, n);
+  f := pointer(Files);
+  r := pointer(result);
+  repeat
+    r^ := f^.Name;
+    inc(f);
+    inc(r);
+    dec(n);
+  until n = 0;
+end;
+
+procedure FindFilesSortByTimestamp(var Files: TFindFilesDynArray);
+begin
+  DynArray(TypeInfo(TFindFilesDynArray), Files).Sort(SortFindFileTimestamp);
+end;
+
+function FindFilesSize(const Files: TFindFilesDynArray): Int64;
+var
+  n: integer;
+  f: PFindFiles;
+begin
+  result := 0;
+  f := pointer(Files);
+  if f = nil then
+    exit;
+  n := PDALen(PAnsiChar(f) - _DALEN)^ + _DAOFF;
+  repeat
+    if f^.Size > 0 then // folder f^.Size = -1
+      inc(result, f^.Size);
+    dec(n);
+    if n = 0 then
+      break;
+    inc(f);
+  until false;
+end;
+
+function SynchFolders(const Reference, Dest: TFileName;
+  Options: TSynchFoldersOptions): integer;
+var
+  ref, dst, reffn, dstfn: TFileName;
+  fdst: TSearchRec;
+  refsize: Int64;
+  reftime: TUnixMSTime;
+  s: RawByteString;
+begin
+  result := 0;
+  ref := IncludeTrailingPathDelimiter(Reference);
+  dst := IncludeTrailingPathDelimiter(Dest);
+  if DirectoryExists(ref) and
+     (FindFirst(dst + FILES_ALL, faAnyFile, fdst) = 0) then
+  begin
+    repeat
+      if SearchRecValidFile(fdst, sfoIncludeHiddenFiles in Options) then
+      begin
+        reffn := ref + fdst.Name;
+        if not FileInfoByName(reffn, refsize, reftime) then
+          continue; // only update existing files
+        if not (sfoByContent in Options) then
+          if (refsize = fdst.Size) and
+             (reftime = SearchRecToUnixTimeUtc(fdst)) then
+            continue;
+        dstfn := dst + fdst.Name;
+        s := StringFromFile(reffn);
+        if (s = '') or
+           ((sfoByContent in Options) and
+            (length(s) = fdst.Size) and
+            (DefaultHasher(0, pointer(s), fdst.Size) = HashFile(dstfn))) then
+          continue;
+        FileFromString(s, dstfn);
+        FileSetDateFromUnixUtc(dstfn, reftime div MilliSecsPerSec);
+        inc(result);
+        if sfoWriteFileNameToConsole in Options then
+          ConsoleWriteRaw(['synched ', dstfn]);
+      end
+      else if (sfoSubFolder in Options) and
+              SearchRecValidFolder(fdst, sfoIncludeHiddenFiles in Options) then
+        inc(result, SynchFolders(ref + fdst.Name, dst + fdst.Name, Options));
+    until FindNext(fdst) <> 0;
+    FindClose(fdst);
+  end;
+end;
+
+function CopyFolder(const Source, Dest: TFileName;
+  Options: TSynchFoldersOptions): integer;
+var
+  src, dst, reffn, dstfn: TFileName;
+  sr: TSearchRec;
+  dsize: Int64;
+  dtime: TUnixMSTime;
+  nested: integer;
+begin
+  result := 0;
+  src := IncludeTrailingPathDelimiter(Source);
+  if not DirectoryExists(src) then
+    exit;
+  dst := EnsureDirectoryExists(Dest);
+  if (dst = '') or
+     (FindFirst(src + FILES_ALL, faAnyFile, sr) <> 0) then
+    exit;
+  repeat
+    reffn := src + sr.Name;
+    dstfn := dst + sr.Name;
+    if SearchRecValidFile(sr, sfoIncludeHiddenFiles in Options) then
+    begin
+      if FileInfoByName(dstfn, dsize, dtime) and // fast single syscall
+         (sr.Size = dsize) then
+        if sfoByContent in Options then
+        begin
+          if SameFileContent(reffn, dstfn) then
+            continue;
+        end
+        else if abs(SearchRecToUnixTimeUtc(sr) * 1000 - dtime) < 1000 then
+          continue; // allow error of 1 second timestamp resolution
+      if not CopyFile(reffn, dstfn, {failsifexists=}false) then
+        result := -1;
+    end
+    else if not SearchRecValidFolder(sr, sfoIncludeHiddenFiles in Options) then
+      continue
+    else if sfoSubFolder in Options then
+    begin
+      nested := CopyFolder(reffn, dstfn, Options);
+      if nested < 0 then
+        result := nested // propagate error
+      else
+        inc(result, nested);
+    end;
+    if result < 0 then
+      break;
+    inc(result);
+    if sfoWriteFileNameToConsole in Options then
+      ConsoleWriteRaw(['copied ', reffn]);
+  until (FindNext(sr) <> 0);
+  FindClose(sr);
+end;
+
+procedure FolderHtmlIndex(const Folder: TFileName; const Path, Name: RawUtf8;
+  out Html: RawUtf8; NoSubFolder: boolean);
+const
+  _DIR: array[boolean] of TShort7 = ('[dir]', '&nbsp;');
+var
+  w: TTextDateWriter;
+  tmp: TTextWriterStackBuffer; // 8KB work buffer on stack
+  files: TFindFilesDynArray;
+  f: PFindFiles;
+  i: PtrInt;
+  isfile: boolean;
+  n: RawUtf8;
+begin
+  w := TTextDateWriter.CreateOwnedStream(tmp);
+  try
+    w.AddShort('<!DOCTYPE html>'#13#10'<html>'#13#10'<head>'#13#10'<title>Index of /');
+    AddHtmlEscapeUtf8(w, Name); // paranoid
+    w.AddShort('</title>'#13#10'</head>'#13#10 +
+      '<body style="font-family:verdana">'#13#10'<h1>Index of /');
+    AddHtmlEscapeUtf8(w, Name);
+    w.AddShort('</h1>'#13#10'<table>'#13#10 +
+      '<tr><th></th><th>Name</th><th>Last modified</th><th>Size</th></tr>'#13#10 +
+      '<tr><th colspan="4"><hr></th></tr>'#13#10);
+    if Name <> '' then
+      W.Add('<tr><td>%</td><td><a href="..">../</a></td><td></td><td ' +
+        'align="right">-</td><tr>'#13#10, [_DIR[false]]);
+    files := FindFiles(Folder, FILES_ALL, '',
+      [ffoExcludesDir, ffoSortByName, ffoIncludeFolder]);
+    f := pointer(files);
+    for i := 1 to length(files) do
+    begin
+      isfile := f^.Size >= 0; // size = -1 for folders
+      if isfile or
+         not NoSubFolder then
+      begin
+        StringToUtf8(f^.Name, n);
+        w.AddShorter('<tr><td>');
+        w.AddShorter(_DIR[isfile]);
+        w.AddShort('</td><td><a href="');
+        if Path <> '' then
+        begin
+          AddHtmlEscapeUtf8(w, Path);
+          if Path[length(Path)] <> '/' then
+            w.AddDirect('/');
+        end;
+        UrlEncodeName(w, n);
+        if not isFile then
+          w.AddDirect('/');
+        w.AddDirect('"', '>');
+        AddHtmlEscapeUtf8(w, n);
+        if not isFile then
+          w.AddDirect('/');
+        w.AddShort('</a></td><td>');
+        w.AddDateTime(@f^.Timestamp, ' ', #0, false, true);
+        w.AddShort('&nbsp;</td><td align="right">');
+        if isFile then
+          w.AddShort(KB(f^.Size))
+        else
+          w.AddDirect('-');
+        w.AddShort('</td><tr>'#13#10);
+      end;
+      inc(f);
+    end;
+    w.AddShort('</table>'#13#10'</body>'#13#10'</html>');
+    w.SetText(Html);
+  finally
+    w.Free;
+  end;
+end;
+
+
+
+{ ****************** ScanUtf8, GLOB and SOUNDEX Text Search }
+
+function ScanUtf8(P: PUtf8Char; PLen: PtrInt; const fmt: RawUtf8;
+  const values:  array of pointer; ident: PRawUtf8DynArray): integer;
+var
+  v, w: PtrInt;
+  F, FEnd, PEnd: PUtf8Char;
+  tab: PTextCharSet;
+label
+  next;
+begin
+  result := 0;
+  if (fmt = '') or
+     (P = nil) or
+     (PLen <= 0) or
+     (high(values) < 0) then
+    exit;
+  if ident <> nil then
+    SetLength(ident^, length(values));
+  F := pointer(fmt);
+  FEnd := F + length(fmt);
+  PEnd := P + PLen;
+  for v := 0 to high(values) do
+    repeat
+      if P^ in [#1 .. ' '] then
+        // ignore any whitespace char in text
+        repeat
+          inc(P);
+          if P = PEnd then
+            exit;
+        until not (P^ in [#1 .. ' ']);
+      while F^ in [#1 .. ' '] do
+      begin
+        // ignore any whitespace char in fmt
+        inc(F);
+        if F = FEnd then
+          exit;
+      end;
+      if F^ = '%' then
+      begin
+        // handle format specifier
+        inc(F);
+        if F = FEnd then
+          exit;
+        case F^ of
+          'd':
+            PInteger(values[v])^ := GetNextItemInteger(P, #0);
+          'D':
+            PInt64(values[v])^ := GetNextItemInt64(P, #0);
+          'u':
+            PCardinal(values[v])^ := GetNextItemCardinal(P, #0);
+          'U':
+            PQWord(values[v])^ := GetNextItemQword(P, #0);
+          'f':
+            unaligned(PDouble(values[v])^) := GetNextItemDouble(P, #0);
+          'F':
+            GetNextItemCurrency(P, PCurrency(values[v])^, #0);
+          'x':
+            if not GetNextItemHexDisplayToBin(P, values[v], 4, #0) then
+              exit;
+          'X':
+            if not GetNextItemHexDisplayToBin(P, values[v], 8, #0) then
+              exit;
+          's', 'S':
+            begin
+              w := 0;
+              while (P[w] > ' ') and
+                    (P + w <= PEnd) do
+                inc(w);
+              if F^ = 's' then
+                SetString(PShortString(values[v])^, PAnsiChar(P), w)
+              else
+                FastSetString(PRawUtf8(values[v])^, P, w);
+              inc(P, w);
+              while (P^ in [#1 .. ' ']) and
+                    (P <= PEnd) do
+                inc(P);
+            end;
+          'L':
+            begin
+              w := 0;
+              tab := @TEXT_CHARS;
+              while (tcNot01013 in tab[P[w]]) and
+                    (P + w <= PEnd) do
+                inc(w);
+              FastSetString(PRawUtf8(values[v])^, P, w);
+              inc(P, w);
+            end;
+          '%':
+            goto next;
+        else
+          ESynException.RaiseUtf8(
+            'ScanUtf8: unknown ''%'' specifier [%]', [F^, fmt]);
+        end;
+        inc(result);
+        tab := @TEXT_CHARS;
+        if (tcIdentifier in tab[F[1]]) or
+           (ident <> nil) then
+        begin
+          w := 0;
+          repeat
+            inc(w)
+          until not (tcIdentifier in tab[F[w]]) or
+                (F + w = FEnd);
+          if ident <> nil then
+            FastSetString(ident^[v], F, w);
+          inc(F, w);
+        end
+        else
+          inc(F);
+        if (F >= FEnd) or
+           (P >= PEnd) then
+          exit;
+        break;
+      end
+      else
+      begin
+next:   while (P^ <> F^) and
+              (P <= PEnd) do
+          inc(P);
+        inc(F);
+        inc(P);
+        if (F >= FEnd) or
+           (P >= PEnd) then
+          exit;
+      end;
+    until false;
+end;
+
+function ScanUtf8(const text, fmt: RawUtf8; const values: array of pointer;
+  ident: PRawUtf8DynArray): integer;
+begin
+  result := ScanUtf8(pointer(text), length(text), fmt, values, ident);
+end;
+
+
+// inspired by ZMatchPattern.pas - http://www.zeoslib.sourceforge.net
+procedure TMatch.MatchMain;
+var
+  RangeStart, RangeEnd: PtrInt;
+  c: AnsiChar;
+  flags: set of (Invert, MemberMatch);
+begin
+  while ((State = sNONE) and
+        (P <= PMax)) do
+  begin
+    c := Upper[Pattern[P]];
+    if T > TMax then
+    begin
+      if (c = '*') and
+         (P + 1 > PMax) then
+        State := sVALID
+      else
+        State := sABORT;
+      exit;
+    end
+    else
+      case c of
+        '?':
+          ;
+        '*':
+          MatchAfterStar;
+        '[':
+          begin
+            inc(P);
+            byte(flags) := 0;
+            if Pattern[P] in ['!', '^'] then
+            begin
+              include(flags, Invert);
+              inc(P);
+            end;
+            if Pattern[P] = ']' then
+            begin
+              State := sPATTERN;
+              exit;
+            end;
+            c := Upper[Text[T]];
+            while Pattern[P] <> ']' do
+            begin
+              RangeStart := P;
+              RangeEnd := P;
+              inc(P);
+              if P > PMax then
+              begin
+                State := sPATTERN;
+                exit;
+              end;
+              if Pattern[P] = '-' then
+              begin
+                inc(P);
+                RangeEnd := P;
+                if (P > PMax) or
+                   (Pattern[RangeEnd] = ']') then
+                begin
+                  State := sPATTERN;
+                  exit;
+                end;
+                inc(P);
+              end;
+              if P > PMax then
+              begin
+                State := sPATTERN;
+                exit;
+              end;
+              if RangeStart < RangeEnd then
+              begin
+                if (c >= Upper[Pattern[RangeStart]]) and
+                   (c <= Upper[Pattern[RangeEnd]]) then
+                begin
+                  include(flags, MemberMatch);
+                  break;
+                end;
+              end
+              else if (c >= Upper[Pattern[RangeEnd]]) and
+                      (c <= Upper[Pattern[RangeStart]]) then
+              begin
+                include(flags, MemberMatch);
+                break;
+              end;
+            end;
+            if ((Invert in flags) and
+                (MemberMatch in flags)) or
+               not ((Invert in flags) or
+                    (MemberMatch in flags)) then
+            begin
+              State := sRANGE;
+              exit;
+            end;
+            if MemberMatch in flags then
+              while (P <= PMax) and
+                    (Pattern[P] <> ']') do
+                inc(P);
+            if P > PMax then
+            begin
+              State := sPATTERN;
+              exit;
+            end;
+          end;
+      else
+        if c <> Upper[Text[T]] then
+          State := sLITERAL;
+      end;
+    inc(P);
+    inc(T);
+  end;
+  if State = sNONE then
+    if T <= TMax then
+      State := sEND
+    else
+      State := sVALID;
+end;
+
+procedure TMatch.MatchAfterStar;
+var
+  retryT, retryP: PtrInt;
+begin
+  if (TMax = 1) or
+     (P = PMax) then
+  begin
+    State := sVALID;
+    exit;
+  end
+  else if (PMax = 0) or
+          (TMax = 0) then
+  begin
+    State := sABORT;
+    exit;
+  end;
+  while (T <= TMax) and
+        (P < PMax) and
+        (Pattern[P] in ['?', '*']) do
+  begin
+    if Pattern[P] = '?' then
+      inc(T);
+    inc(P);
+  end;
+  if T >= TMax then
+  begin
+    State := sABORT;
+    exit;
+  end
+  else if P >= PMax then
+  begin
+    State := sVALID;
+    exit;
+  end;
+  repeat
+    if (Upper[Pattern[P]] = Upper[Text[T]]) or
+       (Pattern[P] = '[') then
+    begin
+      retryT := T;
+      retryP := P;
+      MatchMain;
+      if State = sVALID then
+        break;
+      State := sNONE; // retry until end of Text, (check below) or State valid
+      T := retryT;
+      P := retryP;
+    end;
+    inc(T);
+    if (T > TMax) or
+       (P > PMax) then
+    begin
+      State := sABORT;
+      exit;
+    end;
+  until State <> sNONE;
+end;
+
+function SearchAny(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  aMatch.State := sNONE;
+  aMatch.P := 0;
+  aMatch.T := 0;
+  aMatch.Text := aText;
+  aMatch.TMax := aTextLen - 1;
+  aMatch.MatchMain;
+  result := aMatch.State = sVALID;
+end;
+
+// faster alternative (without recursion) for only * ? (but not [...])
+
+{$ifdef CPU32} // less registers on i386 - also circumvent ARM32 problems (Alf)
+
+function SearchNoRange(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+var
+  c: AnsiChar;
+  pat, txt: PtrInt; // use local registers
+begin
+  aMatch.T := 0; // aMatch.P/T are used for retry positions after *
+  aMatch.Text := aText;
+  aMatch.TMax := aTextLen - 1;
+  pat := 0;
+  txt := 0;
+  repeat
+    if pat <= aMatch.PMax then
+    begin
+      c := aMatch.Pattern[pat];
+      case c of
+        '?':
+          if txt <= aMatch.TMax then
+          begin
+            inc(pat);
+            inc(txt);
+            continue;
+          end;
+        '*':
+          begin
+            aMatch.P := pat;
+            aMatch.T := txt + 1;
+            inc(pat);
+            continue;
+          end;
+      else
+        if (txt <= aMatch.TMax) and
+           (c = aMatch.Text[txt]) then
+        begin
+          inc(pat);
+          inc(txt);
+          continue;
+        end;
+      end;
+    end
+    else if txt > aMatch.TMax then
+      break;
+    txt := aMatch.T;
+    if (txt > 0) and
+       (txt <= aMatch.TMax + 1) then
+    begin
+      inc(aMatch.T);
+      pat := aMatch.P + 1;
+      continue;
+    end;
+    result := false;
+    exit;
+  until false;
+  result := true;
+end;
+
+{$else} // optimized for x86_64/ARM with more registers
+
+function SearchNoRange(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+  {$ifdef FPC} inline; {$endif}
+var
+  c: AnsiChar;
+  pat, patend, txtend, txtretry, patretry: PUtf8Char;
+label
+  fin;
+begin
+  pat := pointer(aMatch.Pattern);
+  if pat = nil then
+    goto fin;
+  patend := pat + aMatch.PMax;
+  patretry := nil;
+  txtend := aText + aTextLen - 1;
+  txtretry := nil;
+  repeat
+    if pat <= patend then
+    begin
+      c := pat^;
+      if c <> '*' then
+        if c <> '?' then
+        begin
+          if (aText <= txtend) and
+             (c = aText^) then
+          begin
+            inc(pat);
+            inc(aText);
+            continue;
+          end;
+        end
+        else
+        begin
+          // '?'
+          if aText <= txtend then
+          begin
+            inc(pat);
+            inc(aText);
+            continue;
+          end;
+        end
+      else
+      begin
+        // '*'
+        inc(pat);
+        txtretry := aText + 1;
+        patretry := pat;
+        continue;
+      end;
+    end
+    else if aText > txtend then
+      break;
+    if (PtrInt(PtrUInt(txtretry)) > 0) and
+       (txtretry <= txtend + 1) then
+    begin
+      aText := txtretry;
+      inc(txtretry);
+      pat := patretry;
+      continue;
+    end;
+fin:result := false;
+    exit;
+  until false;
+  result := true;
+end;
+
+{$endif CPU32}
+
+function SearchNoRangeU(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+  {$ifdef FPC_64} inline; {$endif}
+var
+  c: PtrUInt;
+  pat, txt: PtrInt;
+begin
+  aMatch.T := 0;
+  aMatch.Text := aText;
+  aMatch.TMax := aTextLen - 1;
+  pat := 0;
+  txt := 0;
+  repeat
+    if pat <= aMatch.PMax then
+    begin
+      c := byte(aMatch.Pattern[pat]);
+      if c <> ord('*') then
+        if c <> ord('?') then
+        begin
+          if (txt <= aMatch.TMax) and
+             (PAnsiChar(aMatch.Upper)[c] = aMatch.Upper[aMatch.Text[txt]]) then
+          begin
+            inc(pat);
+            inc(txt);
+            continue;
+          end;
+        end
+        else
+        begin
+          // '?'
+          if txt <= aMatch.TMax then
+          begin
+            inc(pat);
+            inc(txt);
+            continue;
+          end;
+        end
+        else
+        begin
+          // '*'
+          aMatch.P := pat;
+          aMatch.T := txt + 1;
+          inc(pat);
+          continue;
+        end;
+    end
+    else if txt > aMatch.TMax then
+      break;
+    txt := aMatch.T;
+    if (txt > 0) and
+       (txt <= aMatch.TMax + 1) then
+    begin
+      inc(aMatch.T);
+      pat := aMatch.P + 1;
+      continue;
+    end;
+    result := false;
+    exit;
+  until false;
+  result := true;
+end;
+
+function SimpleContainsU(t, tend, p: PUtf8Char; pmax: PtrInt; up: PNormTable): boolean;
+  {$ifdef FPC}inline;{$endif} // Delphi has troubles inlining goto/label
+// brute force case-insensitive search p[0..pmax] in t..tend-1
+var
+  first: AnsiChar;
+  i: PtrInt;
+label
+  next;
+begin
+  first := up[p^];
+  repeat
+    if up[t^] <> first then
+    begin
+next: inc(t);
+      if t < tend then
+        continue
+      else
+        break;
+    end;
+    for i := 1 to pmax do
+      if up[t[i]] <> up[p[i]] then
+        goto next;
+    result := true;
+    exit;
+  until false;
+  result := false;
+end;
+
+{$ifdef CPU64} // naive but very efficient code generation on FPC x86-64
+
+function SimpleContains8(t, tend, p: PUtf8Char; pmax: PtrInt): boolean;
+  {$ifdef FPC}inline;{$endif} // Delphi has troubles inlining goto/label
+label
+  next;
+var
+  i, first: PtrInt;
+begin
+  first := PPtrInt(p)^;
+  repeat
+    if PPtrInt(t)^ <> first then
+    begin
+next: inc(t);
+      if t < tend then
+        continue
+      else
+        break;
+    end;
+    for i := 8 to pmax do
+      if t[i] <> p[i] then
+        goto next;
+    result := true;
+    exit;
+  until false;
+  result := false;
+end;
+
+{$endif CPU64}
+
+
+{$ifdef CPUX86}
+
+function SimpleContains1(t, tend, p: PUtf8Char; pmax: PtrInt): boolean;
+  {$ifdef FPC}inline;{$endif} // Delphi has troubles inlining goto/label
+label
+  next;
+var
+  i: PtrInt;
+begin
+  repeat
+    if t^ <> p^ then
+    begin
+next: inc(t);
+      if t < tend then
+        continue
+      else
+        break;
+    end;
+    for i := 1 to pmax do
+      if t[i] <> p[i] then
+        goto next;
+    result := true;
+    exit;
+  until false;
+  result := false;
+end;
+
+function SimpleContains4(t, tend, p: PUtf8Char; pmax: PtrInt): boolean;
+  {$ifdef FPC}inline;{$endif} // Delphi has troubles inlining goto/label
+label
+  next;
+var
+  i: PtrInt;
+begin
+  repeat
+    if PCardinal(t)^ <> PCardinal(p)^ then
+    begin
+next: inc(t);
+      if t < tend then
+        continue
+      else
+        break;
+    end;
+    for i := 1 to pmax do
+      if t[i] <> p[i] then
+        goto next;
+    result := true;
+    exit;
+  until false;
+  result := false;
+end;
+
+{$else}
+
+function SimpleContains1(t, tend, p: PUtf8Char; pmax: PtrInt): boolean;
+  {$ifdef FPC}inline;{$endif} // Delphi has troubles inlining goto/label
+label
+  next;
+var
+  i: PtrInt;
+  first: AnsiChar;
+begin
+  first := p^;
+  repeat
+    if t^ <> first then
+    begin
+next: inc(t);
+      if t < tend then
+        continue
+      else
+        break;
+    end;
+    for i := 1 to pmax do
+      if t[i] <> p[i] then
+        goto next;
+    result := true;
+    exit;
+  until false;
+  result := false;
+end;
+
+function SimpleContains4(t, tend, p: PUtf8Char; pmax: PtrInt): boolean;
+  {$ifdef FPC}inline;{$endif} // Delphi has troubles inlining goto/label
+label
+  next;
+var
+  i: PtrInt;
+  first: cardinal;
+begin
+  first := PCardinal(p)^;
+  repeat
+    if PCardinal(t)^ <> first then
+    begin
+next: inc(t);
+      if t < tend then
+        continue
+      else
+        break;
+    end;
+    for i := 1 to pmax do
+      if t[i] <> p[i] then
+        goto next;
+    result := true;
+    exit;
+  until false;
+  result := false;
+end;
+
+{$endif CPUX86}
+
+function CompareMemU(P1, P2: PUtf8Char; len: PtrInt; U: PNormTable): boolean;
+  {$ifdef FPC} inline;{$endif}
+begin
+  // here we know that len>0
+  result := false;
+  repeat
+    dec(len);
+    if U[P1[len]] <> U[P2[len]] then
+      exit;
+  until len = 0;
+  result := true;
+end;
+
+function SearchVoid(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  result := aTextLen = 0;
+end;
+
+function SearchNoPattern(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  result := (aMatch.PMax + 1 = aTextLen) and
+            mormot.core.base.CompareMem(aText, aMatch.Pattern, aTextLen);
+end;
+
+function SearchNoPatternU(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  result := (aMatch.PMax + 1 = aTextLen) and
+            CompareMemU(aText, aMatch.Pattern, aTextLen, aMatch.Upper);
+end;
+
+function SearchContainsValid(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  result := true;
+end;
+
+function SearchContainsU(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  dec(aTextLen, aMatch.PMax);
+  if aTextLen > 0 then
+    result := SimpleContainsU(aText, aText + aTextLen,
+      aMatch.Pattern, aMatch.PMax, aMatch.Upper)
+  else
+    result := false;
+end;
+
+function SearchContains1(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  dec(aTextLen, aMatch.PMax);
+  if aTextLen > 0 then
+    result := SimpleContains1(aText, aText + aTextLen, aMatch.Pattern, aMatch.PMax)
+  else
+    result := false;
+end;
+
+function SearchContains4(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  dec(aTextLen, aMatch.PMax);
+  if aTextLen > 0 then
+    result := SimpleContains4(aText, aText + aTextLen, aMatch.Pattern, aMatch.PMax)
+  else
+    result := false;
+end;
+
+{$ifdef CPU64}
+function SearchContains8(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  // optimized e.g. to search an IP address as '*12.34.56.78*' in logs
+  dec(aTextLen, aMatch.PMax);
+  if aTextLen > 0 then
+    result := SimpleContains8(aText, aText + aTextLen, aMatch.Pattern, aMatch.PMax)
+  else
+    result := false;
+end;
+{$endif CPU64}
+
+function SearchStartWith(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  result := (aMatch.PMax < aTextLen) and
+    mormot.core.base.CompareMem(aText, aMatch.Pattern, aMatch.PMax + 1);
+end;
+
+function SearchStartWithU(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  result := (aMatch.PMax < aTextLen) and
+            CompareMemU(aText, aMatch.Pattern, aMatch.PMax + 1, aMatch.Upper);
+end;
+
+function SearchEndWith(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  dec(aTextLen, aMatch.PMax);
+  result := (aTextLen >= 0) and
+    mormot.core.base.CompareMem(aText + aTextLen, aMatch.Pattern, aMatch.PMax);
+end;
+
+function SearchEndWithU(aMatch: PMatch; aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  dec(aTextLen, aMatch.PMax);
+  result := (aTextLen >= 0) and
+            CompareMemU(aText + aTextLen, aMatch.Pattern, aMatch.PMax, aMatch.Upper);
+end;
+
+procedure TMatch.Prepare(const aPattern: RawUtf8;
+  aCaseInsensitive, aReuse: boolean);
+begin
+  Prepare(pointer(aPattern), length(aPattern), aCaseInsensitive, aReuse);
+end;
+
+procedure TMatch.Prepare(aPattern: PUtf8Char; aPatternLen: integer;
+  aCaseInsensitive, aReuse: boolean);
+const
+  SPECIALS: PUtf8Char = '*?[';
+begin
+  Pattern := aPattern;
+  pmax := aPatternLen - 1; // search in Pattern[0..PMax]
+  if Pattern = nil then
+  begin
+    Search := SearchVoid;
+    exit;
+  end;
+  if aCaseInsensitive and
+     not IsCaseSensitive(aPattern, aPatternLen) then
+    aCaseInsensitive := false; // don't slow down e.g. number or IP search
+  if aCaseInsensitive then
+    Upper := @NormToUpperAnsi7
+  else
+    Upper := @NormToNorm;
+  Search := nil;
+  if aReuse then
+    if strcspn(Pattern, SPECIALS) > pmax then
+      if aCaseInsensitive then
+        Search := SearchNoPatternU
+      else
+        Search := SearchNoPattern
+    else if pmax > 0 then
+    begin
+      if Pattern[pmax] = '*' then
+      begin
+        if strcspn(Pattern + 1, SPECIALS) = pmax - 1 then
+          case Pattern[0] of
+            '*':
+              begin
+                // *something*
+                inc(Pattern);
+                dec(pmax, 2); // trim trailing and ending *
+                if pmax < 0 then
+                  Search := SearchContainsValid
+                else if aCaseInsensitive then
+                  Search := SearchContainsU
+              {$ifdef CPU64}
+                else if pmax >= 7 then
+                  Search := SearchContains8
+              {$endif CPU64}
+                else if pmax >= 3 then
+                  Search := SearchContains4
+                else
+                  Search := SearchContains1;
+              end;
+            '?':
+              // ?something*
+              if aCaseInsensitive then
+                Search := SearchNoRangeU
+              else
+                Search := SearchNoRange;
+            '[':
+              Search := SearchAny;
+          else
+            begin
+              dec(pmax); // trim trailing *
+              if aCaseInsensitive then
+                Search := SearchStartWithU
+              else
+                Search := SearchStartWith;
+            end;
+          end;
+      end
+      else if (Pattern[0] = '*') and
+              (strcspn(Pattern + 1, SPECIALS) >= pmax) then
+      begin
+        inc(Pattern); // jump leading *
+        if aCaseInsensitive then
+          Search := SearchEndWithU
+        else
+          Search := SearchEndWith;
+      end;
+    end
+    else if Pattern[0] in ['*', '?'] then
+      Search := SearchContainsValid;
+  if not Assigned(Search) then
+  begin
+    aPattern := PosChar(Pattern, '[');
+    if (aPattern = nil) or
+       (aPattern - Pattern > pmax) then
+      if aCaseInsensitive then
+        Search := SearchNoRangeU
+      else
+        Search := SearchNoRange
+    else
+      Search := SearchAny;
+  end;
+end;
+
+type
+  // Holub and Durian (2005) SBNDM2 algorithm
+  // see http://www.cri.haifa.ac.il/events/2005/string/presentations/Holub.pdf
+  TSBNDMQ2Mask = array[AnsiChar] of cardinal;
+  PSBNDMQ2Mask = ^TSBNDMQ2Mask;
+
+function SearchSBNDMQ2ComputeMask(const Pattern: RawUtf8;
+  u: PNormTable): RawByteString;
+var
+  i: PtrInt;
+  p: PAnsiChar absolute Pattern;
+  m: PSBNDMQ2Mask;
+  c: PCardinal;
+begin
+  m := FastNewRawByteString(result, SizeOf(m^));
+  FillCharFast(m^, SizeOf(m^), 0);
+  for i := 0 to length(Pattern) - 1 do
+  begin
+    c := @m^[u[p[i]]]; // for FPC code generation
+    c^ := c^ or cardinal(1 shl i);
+  end;
+end;
+
+function SearchSBNDMQ2(aMatch: PMatch;
+  aText: PUtf8Char; aTextLen: PtrInt): boolean;
+var
+  mask: PSBNDMQ2Mask;
+  max, i, j: PtrInt;
+  state: cardinal;
+begin
+  mask := pointer(aMatch^.Pattern); // was filled by SearchSBNDMQ2ComputeMask()
+  max := aMatch^.pmax;
+  i := max - 1;
+  dec(aTextLen);
+  if i < aTextLen then
+  begin
+    repeat
+      state := mask[aText[i + 1]] shr 1; // in two steps for better FPC codegen
+      state := state and mask[aText[i]];
+      if state = 0 then
+      begin
+        inc(i, max); // fast skip
+        if i >= aTextLen then
+          break;
+        continue;
+      end;
+      j := i - max;
+      repeat
+        dec(i);
+        if i < 0 then
+          break;
+        state := (state shr 1) and mask[aText[i]];
+      until state = 0;
+      if i = j then
+      begin
+        result := true;
+        exit;
+      end;
+      inc(i, max);
+      if i >= aTextLen then
+        break;
+    until false;
+  end;
+  result := false;
+end;
+
+function SearchSBNDMQ2U(aMatch: PMatch;
+  aText: PUtf8Char; aTextLen: PtrInt): boolean;
+var
+  u: PNormTable;
+  mask: PSBNDMQ2Mask;
+  max, i, j: PtrInt;
+  state: cardinal;
+begin
+  mask := pointer(aMatch^.Pattern);
+  max := aMatch^.pmax;
+  u := aMatch^.Upper;
+  i := max - 1;
+  dec(aTextLen);
+  if i < aTextLen then
+  begin
+    repeat
+      state := mask[u[aText[i + 1]]] shr 1;
+      state := state and mask[u[aText[i]]];
+      if state = 0 then
+      begin
+        inc(i, max);
+        if i >= aTextLen then
+          break;
+        continue;
+      end;
+      j := i - max;
+      repeat
+        dec(i);
+        if i < 0 then
+          break;
+        state := (state shr 1) and mask[u[aText[i]]];
+      until state = 0;
+      if i = j then
+      begin
+        result := true;
+        exit;
+      end;
+      inc(i, max);
+      if i >= aTextLen then
+        break;
+    until false;
+  end;
+  result := false;
+end;
+
+procedure TMatch.PrepareContains(var aPattern: RawUtf8;
+  aCaseInsensitive: boolean);
+begin
+  pmax := length(aPattern) - 1;
+  if aCaseInsensitive and
+     not IsCaseSensitive(pointer(aPattern), pmax + 1) then
+    aCaseInsensitive := false;
+  if aCaseInsensitive then
+    Upper := @NormToUpperAnsi7
+  else
+    Upper := @NormToNorm;
+  if pmax < 0 then
+    Search := SearchContainsValid
+  else if pmax > 30 then
+    if aCaseInsensitive then
+      Search := SearchContainsU
+    else
+      {$ifdef CPU64}
+      Search := SearchContains8
+      {$else}
+      Search := SearchContains4
+      {$endif CPU64}
+  else if pmax >= 1 then
+  begin
+    // PMax=[1..30] -> len=[2..31] -> aPattern becomes a SBNDMQ2 lookup table
+    aPattern := SearchSBNDMQ2ComputeMask(aPattern, Upper);
+    if aCaseInsensitive then
+      Search := SearchSBNDMQ2U
+    else
+      Search := SearchSBNDMQ2;
+  end
+  else if aCaseInsensitive then
+    Search := SearchContainsU
+  else
+    Search := SearchContains1; // todo: use ByteScanIndex() asm?
+  Pattern := pointer(aPattern);
+end;
+
+procedure TMatch.PrepareRaw(aPattern: PUtf8Char; aPatternLen: integer;
+  aSearch: TMatchSearchFunction);
+begin
+  Pattern := aPattern;
+  pmax := aPatternLen - 1; // search in Pattern[0..PMax]
+  Search := aSearch;
+end;
+
+function TMatch.Match(const aText: RawUtf8): boolean;
+begin
+  if pointer(aText) <> nil then
+    result := Search(@self,
+                pointer(aText), PStrLen(PAnsiChar(pointer(aText)) - _STRLEN)^)
+  else
+    result := pmax < 0;
+end;
+
+function TMatch.Match(aText: PUtf8Char; aTextLen: PtrInt): boolean;
+begin
+  if (aText <> nil) and
+     (aTextLen > 0) then
+    result := Search(@self, aText, aTextLen)
+  else
+    result := pmax < 0;
+end;
+
+function TMatch.MatchThreadSafe(const aText: RawUtf8): boolean;
+var
+  local: TMatch; // thread-safe with no lock!
+begin
+  local := self;
+  if aText <> '' then
+    result := local.Search(@local, pointer(aText), length(aText))
+  else
+    result := local.PMax < 0;
+end;
+
+function TMatch.MatchString(const aText: string): boolean;
+var
+  local: TMatch; // thread-safe with no lock!
+  len: PtrInt;
+  temp: TSynTempBuffer;
+begin
+  if aText = '' then
+  begin
+    result := pmax < 0;
+    exit;
+  end;
+  len := length(aText);
+  temp.Init(len * 3);
+  {$ifdef UNICODE}
+  len := RawUnicodeToUtf8(temp.buf, temp.len + 1, pointer(aText), len, [ccfNoTrailingZero]);
+  {$else}
+  len := CurrentAnsiConvert.AnsiBufferToUtf8(temp.buf, pointer(aText), len) - temp.buf;
+  {$endif UNICODE}
+  local := self;
+  result := local.Search(@local, temp.buf, len);
+  temp.Done;
+end;
+
+function TMatch.Equals(const aAnother: TMatch): boolean;
+begin
+  result := (pmax = TMatch(aAnother).pmax) and
+            (Upper = TMatch(aAnother).Upper) and
+    mormot.core.base.CompareMem(Pattern, TMatch(aAnother).Pattern, pmax + 1);
+end;
+
+function TMatch.PatternLength: integer;
+begin
+  result := pmax + 1;
+end;
+
+function TMatch.PatternText: PUtf8Char;
+begin
+  result := Pattern;
+end;
+
+function TMatch.CaseInsensitive: boolean;
+begin
+  result := Upper = @NormToUpperAnsi7;
+end;
+
+
+{ TUriMatchName }
+
+procedure TUriMatchName.ParsePath;
+var
+  i: PtrInt;
+begin
+  Name := Path;
+  i := Name.Len;
+  while i > 0 do // retrieve last path part, i.e. the resource name itself
+  begin
+    dec(i);
+    if Name.Text[i] <> '/' then
+      continue;
+    inc(i);
+    inc(Name.Text, i);
+    dec(Name.Len, i);
+    break;
+  end;
+end;
+
+
+{ TUriMatch }
+
+procedure TUriMatch.DoInit(csv: PUtf8Char; caseinsensitive: boolean);
+var
+  s: PUtf8Char;
+  m: ^TMatchDynArray;
+begin
+  if csv <> nil then
+    repeat
+      m := @Names; // default 'file.ext' pattern
+      csv := GotoNextNotSpace(csv);
+      s := csv;
+      repeat
+        case csv^ of
+          #0,
+          ',':
+            break;
+          '/':
+            m := @Paths; // is a 'path/to/file.ext' pattern
+        end;
+        inc(csv);
+      until false;
+      if csv <> s then
+        MatchNew(m^)^.Prepare(s, csv - s, caseinsensitive, true);
+      if csv^ = #0 then
+        break;
+      inc(csv);
+    until false;
+end;
+
+function TUriMatch.Check(const csv: RawUtf8;
+  const uri: TUriMatchName; caseinsensitive: boolean): boolean;
+begin
+  if Init.TryLock then // thread-safe init once from supplied csv
+    DoInit(pointer(csv), caseinsensitive);
+  result := ((Names <> nil) and // check 'file.ext' pattern
+             MatchAnyP(pointer(Names), uri.Name.Text, uri.Name.Len)) or
+            ((Paths <> nil) and // check 'path/to/file.ext' pattern
+             MatchAnyP(pointer(Paths), uri.Path.Text, uri.Path.Len));
+end;
+
+function _Glob(Pattern, Text: PUtf8Char; PatternLen, TextLen: PtrInt;
+  CaseInsensitive: boolean): boolean;
+var
+  match: TMatch;
+begin // GLOB has no [range] -> dedicated inlined Prepare() + Match()
+  if Pattern <> nil then
+    if TextLen <> 0 then
+    begin
+      match.Pattern := Pattern;
+      match.PMax := PatternLen - 1;
+      if CaseInsensitive then
+      begin
+        match.Upper := @NormToUpperAnsi7;
+        result := SearchNoRangeU(@match, Text, TextLen); // inlined on FPC
+      end
+      else
+        result := SearchNoRange(@match, Text, TextLen);  // inlined on FPC
+    end
+    else
+      result := false      // TextLen=0: as in match.Match()
+  else
+    result := TextLen = 0; // Pattern = nil: most simple case for sure
+end;
+
+function IsMatch(const Pattern, Text: RawUtf8; CaseInsensitive: boolean): boolean;
+var
+  match: TMatch;
+begin
+  match.Prepare(pointer(Pattern), length(Pattern), CaseInsensitive, {reuse=}false);
+  result := match.Match(Text);
+end;
+
+function IsMatchString(const Pattern, Text: string;
+  CaseInsensitive: boolean): boolean;
+var
+  match: TMatch;
+  pat, txt: RawUtf8;
+begin
+  StringToUtf8(Pattern, pat); // local variable is mandatory for FPC
+  StringToUtf8(Text, txt);
+  match.Prepare(pat, CaseInsensitive, {reuse=}false);
+  result := match.Match(txt);
+end;
+
+function SetNextMatch(P: PUtf8Char; var Dest: TMatch;
+  CaseInsensitive, Reuse: boolean; CsvSep: AnsiChar): PUtf8Char;
+begin
+  result := P;
+  repeat
+    while not (result^ in [#0, CsvSep]) do
+      inc(result);
+    if result <> P then
+    begin
+      Dest.Prepare(P, result - P, CaseInsensitive, Reuse);
+      if result^ = CsvSep then
+        inc(result); // go to next CSV
+      exit;
+    end;
+  until result^ = #0;
+  result := nil; // indicates Dest.Prepare() was not called
+end;
+
+function IsMatchs(CsvPattern, Text: PUtf8Char; TextLen: PtrInt;
+  CaseInsensitive: boolean; CsvSep: AnsiChar): boolean;
+var
+  match: TMatch;
+begin
+  result := (CsvPattern <> nil) and (TextLen > 0);
+  if not result then
+    exit;
+  repeat
+    CsvPattern := SetNextMatch(
+      CsvPattern, match, CaseInsensitive, {reuse=}false, CsvSep);
+    if CsvPattern = nil then
+      break;
+    if match.Search(@match, Text, TextLen) then
+      exit;
+  until CsvPattern^ = #0;
+  result := false;
+end;
+
+function IsMatchs(const CsvPattern, Text: RawUtf8; CaseInsensitive: boolean;
+  CsvSep: AnsiChar): boolean;
+begin
+  result := IsMatchs(pointer(CsvPattern), pointer(Text), length(Text),
+    CaseInsensitive, CsvSep);
+end;
+
+function SetMatchs(const CsvPattern: RawUtf8; CaseInsensitive: boolean;
+  out Match: TMatchDynArray; CsvSep: AnsiChar): integer;
+var
+  P, S: PUtf8Char;
+begin
+  P := pointer(CsvPattern);
+  if P <> nil then
+    repeat
+      S := P;
+      while not (P^ in [#0, CsvSep]) do
+        inc(P);
+      if P <> S then
+        MatchNew(Match)^.Prepare(S, P - S, CaseInsensitive, {reuse=}true);
+      if P^ = #0 then
+        break;
+      inc(P);
+    until false;
+  result := length(Match);
+end;
+
+function SetMatchs(CsvPattern: PUtf8Char; CaseInsensitive: boolean;
+  Match: PMatch; MatchMax: integer; CsvSep: AnsiChar): integer;
+var
+  S: PUtf8Char;
+begin
+  result := 0;
+  if (CsvPattern <> nil) and
+     (MatchMax >= 0) then
+    repeat
+      S := CsvPattern;
+      while not (CsvPattern^ in [#0, CsvSep]) do
+        inc(CsvPattern);
+      if CsvPattern <> S then
+      begin
+        Match^.Prepare(S, CsvPattern - S, CaseInsensitive, {reuse=}true);
+        inc(result);
+        if result > MatchMax then
+          break;
+        inc(Match);
+      end;
+      if CsvPattern^ = #0 then
+        break;
+      inc(CsvPattern);
+    until false;
+end;
+
+function MatchExists(const One: TMatch; const Several: TMatchDynArray): boolean;
+var
+  i: PtrInt;
+begin
+  result := true;
+  for i := 0 to length(Several) - 1 do
+    if Several[i].Equals(One) then
+      exit;
+  result := false;
+end;
+
+function MatchAdd(const One: TMatch; var Several: TMatchDynArray): boolean;
+begin
+  result := not MatchExists(One, Several);
+  if result then
+    MatchNew(Several)^ := One;
+end;
+
+function MatchNew(var Several: TMatchDynArray): PMatch;
+var
+  n: PtrInt;
+begin
+  n := length(Several);
+  SetLength(Several, n + 1);
+  result := @Several[n];
+end;
+
+function MatchAny(const Match: TMatchDynArray; const Text: RawUtf8): boolean;
+begin
+  result := MatchAnyP(pointer(Match), pointer(Text), length(Text));
+end;
+
+function MatchAnyP(Match: PMatch; Text: PUtf8Char; TextLen: PtrInt): boolean;
+var
+  n: integer;
+begin
+  result := true;
+  if Match = nil then
+    exit;
+  if TextLen <= 0 then
+    Text := nil;
+  n := PDALen(PAnsiChar(pointer(Match)) - _DALEN)^ + _DAOFF;
+  repeat
+    // inlined Match^.Match() to avoid internal error on Delphi
+    if Text <> nil then
+    begin
+      if Match^.Search(Match, Text, TextLen) then
+        exit;
+    end
+    else if Match^.pmax < 0 then
+      exit;
+    inc(Match);
+    dec(n);
+  until n = 0;
+  result := false;
+end;
+
+procedure FilterMatchs(const CsvPattern: RawUtf8; CaseInsensitive: boolean;
+  var Values: TRawUtf8DynArray; CsvSep: AnsiChar);
+var
+  match: TMatchDynArray;
+  n, i: PtrInt;
+begin
+  if SetMatchs(CsvPattern, CaseInsensitive, match, CsvSep) = 0 then
+    exit;
+  n := 0;
+  for i := 0 to high(Values) do
+    if MatchAnyP(pointer(match), pointer(Values[i]), length(Values[i])) then
+    begin
+      if i <> n then
+        Values[n] := Values[i];
+      inc(n);
+    end;
+  if n <> length(Values) then
+    SetLength(Values, n);
+end;
+
+procedure FilterMatchs(const CsvPattern: RawUtf8; CaseInsensitive: boolean;
+  var Values: TStringDynArray; CsvSep: AnsiChar);
+var
+  match: TMatchDynArray;
+  m, n, i: PtrInt;
+begin
+  if SetMatchs(CsvPattern, CaseInsensitive, match, CsvSep) = 0 then
+    exit;
+  n := 0;
+  for i := 0 to high(Values) do
+    for m := 0 to high(match) do
+      if match[m].MatchString(Values[i]) then
+      begin
+        if i <> n then
+          Values[n] := Values[i];
+        inc(n);
+        break;
+      end;
+  if n <> length(Values) then
+    SetLength(Values, n);
+end;
+
+
+{ TMatchs }
+
+constructor TMatchs.Create(const aPatterns: TRawUtf8DynArray; CaseInsensitive: boolean);
+begin
+  inherited Create; // may have been overriden
+  Subscribe(aPatterns, CaseInsensitive);
+end;
+
+function TMatchs.Match(const aText: RawUtf8): integer;
+begin
+  result := Match(pointer(aText), length(aText));
+end;
+
+function TMatchs.Match(aText: PUtf8Char; aLen: integer): integer;
+var
+  one: ^TMatchStore;
+  local: TMatch; // thread-safe with no lock!
+begin
+  if (self = nil) or
+     (fMatch = nil) then
+    result := -1 // no filter by name -> allow e.g. to process everything
+  else
+  begin
+    one := pointer(fMatch);
+    if aLen <> 0 then
+    begin
+      for result := 0 to fMatchCount - 1 do
+      begin
+        local := one^.Pattern;
+        if local.Search(@local, aText, aLen) then
+          exit;
+        inc(one);
+      end;
+    end
+    else
+      for result := 0 to fMatchCount - 1 do
+        if one^.Pattern.PMax < 0 then
+          exit
+        else
+          inc(one);
+    result := -2;
+  end;
+end;
+
+function TMatchs.MatchString(const aText: string): integer;
+var
+  temp: TSynTempBuffer;
+begin
+  result := Match(StringToUtf8Temp(aText, temp), temp.len);
+  temp.Done;
+end;
+
+procedure TMatchs.Subscribe(const aPatternsCsv: RawUtf8; CaseInsensitive: boolean);
+var
+  patterns: TRawUtf8DynArray;
+begin
+  CsvToRawUtf8DynArray(pointer(aPatternsCsv), patterns);
+  Subscribe(patterns, CaseInsensitive);
+end;
+
+procedure TMatchs.Subscribe(const aPatterns: TRawUtf8DynArray; CaseInsensitive: boolean);
+var
+  i, j, m, n: integer;
+  found: ^TMatchStore;
+  pat: PRawUtf8;
+begin
+  m := length(aPatterns);
+  if m = 0 then
+    exit;
+  n := fMatchCount;
+  SetLength(fMatch, n + m);
+  pat := pointer(aPatterns);
+  for i := 1 to m do
+  begin
+    found := pointer(fMatch);
+    for j := 1 to n do
+      if StrComp(pointer(found^.PatternInstance), pointer(pat^)) = 0 then
+      begin
+        found := nil;
+        break;
+      end
+      else
+        inc(found);
+    if found <> nil then
+      with fMatch[n] do
+      begin
+        PatternInstance := pat^; // avoid GPF if aPatterns[] is released
+        Pattern.Prepare(PatternInstance, CaseInsensitive, {reuse=}true);
+        inc(n);
+      end;
+    inc(pat);
+  end;
+  fMatchCount := n;
+  if n <> length(fMatch) then
+    SetLength(fMatch, n);
+end;
+
+
+
+procedure SoundExComputeAnsi(var p: PAnsiChar; var result: cardinal;
+  Values: PSoundExValues);
+var
+  n, v, old: PtrUInt;
+begin
+  n := 0;
+  old := 0;
+  if Values <> nil then
+    repeat
+      v := NormToUpperByte[ord(p^)]; // also handle 8-bit WinAnsi (1252 accents)
+      if not (tcWord in TEXT_BYTES[v]) then
+        break;
+      inc(p);
+      dec(v, ord('B'));
+      if v > high(TSoundExValues) then
+        continue;
+      v := Values[v]; // get soundex value
+      if (v = 0) or
+         (v = old) then
+        continue; // invalid or dopple value
+      old := v;
+      result := result shl SOUNDEX_BITS;
+      inc(result, v);
+      inc(n);
+      if n = ((32 - 8) div SOUNDEX_BITS) then // first char use up to 8-bit
+        break; // result up to a cardinal size
+    until false;
+end;
+
+function SoundExComputeFirstCharAnsi(var p: PAnsiChar): cardinal;
+label
+  err;
+begin
+  if p = nil then
+  begin
+err:result := 0;
+    exit;
+  end;
+  repeat
+    result := NormToUpperByte[ord(p^)]; // also handle 8-bit WinAnsi (CP 1252)
+    if result = 0 then
+      goto err; // end of input text, without a word
+    inc(p);
+    // trim initial spaces or 'H'
+  until AnsiChar(result) in ['A'..'G', 'I'..'Z'];
+end;
+
+procedure SoundExComputeUtf8(var U: PUtf8Char; var result: cardinal; Values: PSoundExValues);
+var
+  n, v, old: cardinal;
+begin
+  n := 0;
+  old := 0;
+  if Values <> nil then
+    repeat
+      v := GetNextUtf8Upper(U);
+      if not (tcWord in TEXT_BYTES[v]) then
+        break;
+      dec(v, ord('B'));
+      if v > high(TSoundExValues) then
+        continue;
+      v := Values[v]; // get soundex value
+      if (v = 0) or
+         (v = old) then
+        continue; // invalid or dopple value
+      old := v;
+      result := result shl SOUNDEX_BITS;
+      inc(result, v);
+      inc(n);
+      if n = ((32 - 8) div SOUNDEX_BITS) then // first char use up to 8-bit
+        break; // result up to a cardinal size
+    until false;
+end;
+
+function SoundExComputeFirstCharUtf8(var U: PUtf8Char): cardinal;
+label
+  err;
+begin
+  if U = nil then
+  begin
+err:result := 0;
+    exit;
+  end;
+  repeat
+    result := GetNextUtf8Upper(U);
+    if result = 0 then
+      goto err; // end of input text, without a word
+    // trim initial spaces or 'H'
+  until AnsiChar(result) in ['A'..'G', 'I'..'Z'];
+end;
+
+
+{ TSynSoundEx }
+
+const
+  /// english Soundex pronunciation scores
+  // - defines the default values used for the SoundEx() function below
+  // (used if Values parameter is nil)
+  ValueEnglish: TSoundExValues =
+  // B  C  D  E  F  G  H  I  J  K  L  M  N  O  P  Q  R  S  T  U  V  W  X  Y  Z
+    (1, 2, 3, 0, 1, 2, 0, 0, 2, 2, 4, 5, 5, 0, 1, 2, 6, 2, 3, 0, 1, 0, 2, 0, 2);
+
+  /// french Soundex pronunciation scores
+  // - can be used to override default values used for the SoundEx()
+  // function below
+  ValueFrench: TSoundExValues =
+  // B  C  D  E  F  G  H  I  J  K  L  M  N  O  P  Q  R  S  T  U  V  W  X  Y  Z
+    (1, 2, 3, 0, 9, 7, 0, 0, 7, 2, 4, 5, 5, 0, 1, 2, 6, 8, 3, 0, 9, 0, 8, 0, 8);
+
+  /// spanish Soundex pronunciation scores
+  // - can be used to override default values used for the SoundEx()
+  // function below
+  ValueSpanish: TSoundExValues =
+  // B  C  D  E  F  G  H  I  J  K  L  M  N  O  P  Q  R  S  T  U  V  W  X  Y  Z
+    (1, 2, 3, 0, 1, 2, 0, 0, 0, 2, 0, 5, 5, 0, 1, 2, 6, 2, 3, 0, 1, 0, 2, 0, 2);
+
+  SOUNDEXVALUES: array[TSynSoundExPronunciation] of PSoundExValues = (
+    @ValueEnglish,
+    @ValueFrench,
+    @ValueSpanish,
+    @ValueEnglish);
+
+
+function TSynSoundEx.Ansi(A: PAnsiChar): boolean;
+var
+  Value, c: cardinal;
+begin
+  result := false;
+  if A = nil then
+    exit;
+  repeat
+    // test beginning of word
+    c := SoundExComputeFirstCharAnsi(A);
+    if c = 0 then
+      exit
+    else if c = FirstChar then
+    begin
+      // here we had the first char match -> check if word match UpperValue
+      Value := c - (ord('A') - 1);
+      SoundExComputeAnsi(A, Value, fValues);
+      if Value = search then
+      begin
+        result := true; // UpperValue found!
+        exit;
+      end;
+    end
+    else
+      repeat
+        if A^ = #0 then
+          exit
+        else if not (tcWord in TEXT_CHARS[NormToUpper[A^]]) then
+          break
+        else
+          inc(A);
+      until false;
+    // find beginning of next word
+    repeat
+      if A^ = #0 then
+        exit
+      else if tcWord in TEXT_CHARS[NormToUpper[A^]] then
+        break
+      else
+        inc(A);
+    until false;
+  until false;
+end;
+
+function TSynSoundEx.Utf8(U: PUtf8Char): boolean;
+var
+  Value, c: cardinal;
+  V: PUtf8Char;
+begin
+  result := false;
+  if U = nil then
+    exit;
+  repeat
+    // find beginning of word
+    c := SoundExComputeFirstCharUtf8(U);
+    if c = 0 then
+      exit
+    else if c = FirstChar then
+    begin
+      // here we had the first char match -> check if word match UpperValue
+      Value := c - (ord('A') - 1);
+      SoundExComputeUtf8(U, Value, fValues);
+      if Value = search then
+      begin
+        result := true; // UpperValue found!
+        exit;
+      end;
+    end
+    else
+      repeat
+        c := GetNextUtf8Upper(U);
+        if c = 0 then
+          exit;
+      until not (tcWord in TEXT_BYTES[c]);
+    // find beginning of next word
+    repeat
+      if U = nil then
+        exit;
+      V := U;
+      c := GetNextUtf8Upper(U);
+      if c = 0 then
+        exit;
+    until tcWord in TEXT_BYTES[c];
+    U := V;
+  until U = nil;
+end;
+
+function TSynSoundEx.Prepare(UpperValue: PAnsiChar; Lang: PSoundExValues): boolean;
+begin
+  fValues := Lang;
+  Search := SoundExAnsi(UpperValue, nil, Lang);
+  if Search = 0 then
+    result := false
+  else
+  begin
+    FirstChar := SoundExComputeFirstCharAnsi(UpperValue);
+    result := true;
+  end;
+end;
+
+function TSynSoundEx.Prepare(UpperValue: PAnsiChar;
+  Lang: TSynSoundExPronunciation): boolean;
+begin
+  result := Prepare(UpperValue, SOUNDEXVALUES[Lang]);
+end;
+
+function SoundExAnsi(A: PAnsiChar; next: PPAnsiChar; Lang: PSoundExValues): cardinal;
+begin
+  result := SoundExComputeFirstCharAnsi(A);
+  if result <> 0 then
+  begin
+    dec(result, ord('A') - 1);   // first Soundex char is first char
+    SoundExComputeAnsi(A, result, Lang);
+  end;
+  if next <> nil then
+  begin
+    while tcWord in TEXT_CHARS[NormToUpper[A^]] do
+      inc(A); // go to end of word
+    next^ := A;
+  end;
+end;
+
+function SoundExAnsi(A: PAnsiChar; next: PPAnsiChar;
+  Lang: TSynSoundExPronunciation): cardinal;
+begin
+  result := SoundExAnsi(A, next, SOUNDEXVALUES[Lang]);
+end;
+
+function SoundExUtf8(U: PUtf8Char; next: PPUtf8Char;
+  Lang: TSynSoundExPronunciation): cardinal;
+begin
+  result := SoundExComputeFirstCharUtf8(U);
+  if result <> 0 then
+  begin
+    dec(result, ord('A') - 1);   // first Soundex char is first char
+    SoundExComputeUtf8(U, result, SOUNDEXVALUES[Lang]);
+  end;
+  if next <> nil then
+    next^ := FindNextUtf8WordBegin(U);
+end;
+
+
+{ ******************  Efficient CSV Parsing using RTTI }
+
+function TDynArrayLoadCsv(var Value: TDynArray; Csv: PUtf8Char;
+  Intern: TRawUtf8Interning; CommaSep: AnsiChar): boolean;
+var
+  rt: TRttiCustom;
+  pr: PRttiCustomProp;
+  p, v: PUtf8Char;
+  s: RawUtf8;
+  mapcount, mapped: PtrInt;
+  rec: PAnsiChar;
+  map: PRttiCustomPropDynArray;
+  m: ^PRttiCustomProp;
+  extcount, mcount: integer;
+  ext: PInteger;
+begin
+  result := false;
+  rt := Value.Info.ArrayRtti;
+  if (rt = nil) or
+     (rt.Parser <> ptRecord) or
+     (rt.Props.Count = 0) then
+    exit;
+  // parse the CSV headers
+  mapped := 0;
+  mapcount := 0;
+  SetLength(map, 32);
+  p := pointer(GetNextLine(Csv, Csv));
+  if Csv = nil then
+    exit; // no data
+  while p <> nil do
+  begin
+    GetNextItem(p, CommaSep, '"', s);
+    if s = '' then
+      exit; // we don't support void headers
+    if mapcount = length(map) then
+      SetLength(map, NextGrow(mapcount));
+    pr := rt.Props.Find(s);
+    if pr <> nil then
+    begin
+      map[mapcount] := pr; // found a matching field
+      inc(mapped);
+    end;
+    inc(mapcount);
+  end;
+  if mapped = 0 then
+    exit; // no field matching any header
+  // parse the value rows
+  extcount := 0;
+  ext := Value.CountExternal;
+  if ext = nil then
+    Value.UseExternalCount(@extcount); // faster Value.NewPtr
+  v := Csv;
+  while v^ in [#10, #13] do
+    inc(v);
+  while v^ <> #0 do
+  begin
+    rec := Value.NewPtr;
+    m := pointer(map);
+    mcount := mapcount;
+    repeat
+      // parse next value
+      Csv := v;
+      if v^ = '"' then
+        v := GotoEndOfQuotedString(v); // special handling of double quotes
+      while (v^ <> CommaSep) and
+            (v^ > #13) do
+        inc(v);
+      if mcount <> 0 then
+      begin
+        if m^ <> nil then // not matching fields are just ignored
+        begin
+          if Csv^ = '"' then
+          begin
+            UnQuoteSqlStringVar(Csv, s);
+            if Intern <> nil then
+              Intern.UniqueText(s);
+          end
+          else
+            Intern.Unique(s, Csv, v - Csv);
+          m^.Value.ValueSetText(rec + m^.OffsetSet, s);
+        end;
+        inc(m);
+        dec(mcount);
+      end;
+      if v^ <> CommaSep then
+        break;
+      inc(v);
+    until v^ in [#0, #10, #13];
+    // go to next row
+    while v^ in [#10, #13] do
+      inc(v);
+  end;
+  if Value.Count = 0 then
+    Value.Capacity := 0
+  else
+    DynArrayFakeLength(Value.Value^, Value.Count);
+  Value.UseExternalCount(ext); // restore fCountP if local n count was used
+  result := true;
+end;
+
+function DynArrayLoadCsv(var Value; const Csv: RawUtf8; TypeInfo: PRttiInfo;
+  Intern: TRawUtf8Interning; CommaSep: AnsiChar): boolean;
+var
+  da: TDynArray;
+begin
+  da.Init(TypeInfo, Value);
+  result := TDynArrayLoadCsv(da, pointer(CSV), Intern, CommaSep);
+end;
+
+
+{ ****************** Versatile Expression Search Engine }
+
+
+function ToText(r: TExprParserResult): PShortString;
+begin
+  result := GetEnumName(TypeInfo(TExprParserResult), ord(r));
+end;
+
+function ToUtf8(r: TExprParserResult): RawUtf8;
+begin
+  TrimLeftLowerUncamelCaseShort(ToText(r), result);
+end;
+
+
+{ TExprNode }
+
+function TExprNode.Append(node: TExprNode): boolean;
+begin
+  result := node <> nil;
+  if result then
+    Last.fNext := node;
+end;
+
+constructor TExprNode.Create(nodeType: TExprNodeType);
+begin
+  inherited Create; // may have been overriden
+  fNodeType := nodeType;
+end;
+
+destructor TExprNode.Destroy;
+begin
+  fNext.Free;
+  inherited Destroy;
+end;
+
+function TExprNode.Last: TExprNode;
+begin
+  result := self;
+  while result.Next <> nil do
+    result := result.Next;
+end;
+
+
+{ TParserAbstract }
+
+constructor TParserAbstract.Create;
+begin
+  inherited Create; // may have been overriden
+  Initialize;
+end;
+
+destructor TParserAbstract.Destroy;
+begin
+  Clear;
+  inherited Destroy;
+end;
+
+procedure TParserAbstract.Clear;
+begin
+  fWordCount := 0;
+  fWords := nil;
+  fExpression := '';
+  FreeAndNil(fFirstNode);
+end;
+
+function TParserAbstract.ParseExpr: TExprNode;
+begin
+  result := ParseFactor;
+  ParseNextCurrentWord;
+  if (fCurrentWord = '') or
+     (fCurrentWord = ')') then
+    exit;
+  if PropNameEquals(fCurrentWord, fAndWord) then
+  begin
+    // w1 & w2 = w1 AND w2
+    ParseNextCurrentWord;
+    if result.Append(ParseExpr) then
+      result.Append(TExprNode.Create(entAnd));
+    exit;
+  end
+  else if PropNameEquals(fCurrentWord, fOrWord) then
+  begin
+    // w1 + w2 = w1 OR w2
+    ParseNextCurrentWord;
+    if result.Append(ParseExpr) then
+      result.Append(TExprNode.Create(entOr));
+    exit;
+  end
+  else if fNoWordIsAnd and
+          result.Append(ParseExpr) then
+    // 'w1 w2' = 'w1 & w2'
+    result.Append(TExprNode.Create(entAnd));
+end;
+
+function TParserAbstract.ParseFactor: TExprNode;
+begin
+  if fCurrentError <> eprSuccess then
+    result := nil
+  else if PropNameEquals(fCurrentWord, fNotWord) then
+  begin
+    ParseNextCurrentWord;
+    result := ParseFactor;
+    if fCurrentError <> eprSuccess then
+      exit;
+    result.Append(TExprNode.Create(entNot));
+  end
+  else
+    result := ParseTerm;
+end;
+
+function TParserAbstract.ParseTerm: TExprNode;
+begin
+  result := nil;
+  if fCurrentError <> eprSuccess then
+    exit;
+  if fCurrentWord = '(' then
+  begin
+    ParseNextCurrentWord;
+    result := ParseExpr;
+    if fCurrentError <> eprSuccess then
+      exit;
+    if fCurrentWord <> ')' then
+    begin
+      FreeAndNil(result);
+      fCurrentError := eprMissingParenthesis;
+    end;
+  end
+  else if fCurrentWord = '' then
+  begin
+    result := nil;
+    fCurrentError := eprMissingFinalWord;
+  end
+  else
+  try // calls meta-class overriden constructor
+    result := fWordClass.Create(self, fCurrentWord);
+    fCurrentError := TExprNodeWordAbstract(result).ParseWord;
+    if fCurrentError <> eprSuccess then
+    begin
+      FreeAndNil(result);
+      exit;
+    end;
+    SetLength(fWords, fWordCount + 1);
+    fWords[fWordCount] := TExprNodeWordAbstract(result);
+    inc(fWordCount);
+  except
+    FreeAndNil(result);
+    fCurrentError := eprInvalidExpression;
+  end;
+end;
+
+function TParserAbstract.Parse(const aExpression: RawUtf8): TExprParserResult;
+var
+  depth: integer;
+  n: TExprNode;
+begin
+  Clear;
+  fCurrentError := eprSuccess;
+  fCurrent := pointer(aExpression);
+  ParseNextCurrentWord;
+  if fCurrentWord = '' then
+  begin
+    result := eprNoExpression;
+    exit;
+  end;
+  fFirstNode := ParseExpr;
+  result := fCurrentError;
+  if result = eprSuccess then
+  begin
+    depth := 0;
+    n := fFirstNode;
+    while n <> nil do
+    begin
+      case n.NodeType of
+        entWord:
+          begin
+            inc(depth);
+            if depth > high(fFoundStack) then
+            begin
+              result := eprTooManyParenthesis;
+              break;
+            end;
+          end;
+        entOr,
+        entAnd:
+          dec(depth);
+      end;
+      n := n.Next;
+    end;
+  end;
+  if result = eprSuccess then
+    fExpression := aExpression
+  else
+    Clear;
+  fCurrent := nil;
+end;
+
+class function TParserAbstract.ParseError(const aExpression: RawUtf8): RawUtf8;
+var
+  parser: TParserAbstract;
+  res: TExprParserResult;
+begin
+  parser := Create;
+  try
+    res := parser.Parse(aExpression);
+    if res = eprSuccess then
+      FastAssignNew(result)
+    else
+      result := ToUtf8(res);
+  finally
+    parser.Free;
+  end;
+end;
+
+function TParserAbstract.Execute: boolean;
+var
+  n: TExprNode;
+  st: PAnsiChar;
+begin
+  // code below compiles very efficiently on FPC/x86-64
+  st := @fFoundStack;
+  n := fFirstNode;
+  repeat
+    case n.NodeType of
+      entWord:
+        begin
+          st[0] := AnsiChar(TExprNodeWordAbstract(n).fFound);
+          inc(st); // see eprTooManyParenthesis above to avoid buffer overflow
+        end;
+      entNot:
+        st[-1] := AnsiChar(ord(st[-1]) xor 1);
+      entOr:
+        begin
+          dec(st);
+          st[-1] := AnsiChar(ord(st[0]) or ord(st[-1]));
+        end;
+      entAnd:
+        begin
+          dec(st);
+          st[-1] := AnsiChar(ord(st[0]) and ord(st[-1]));
+        end;
+    end;
+    n := n.Next;
+  until n = nil;
+  result := boolean(st[-1]);
+end;
+
+
+{ TExprParserAbstract }
+
+procedure TExprParserAbstract.Initialize;
+begin
+  fAndWord := '&';
+  fOrWord := '+';
+  fNotWord := '-';
+  fNoWordIsAnd := true;
+end;
+
+procedure TExprParserAbstract.ParseNextCurrentWord;
+var
+  P: PUtf8Char;
+begin
+  fCurrentWord := '';
+  P := fCurrent;
+  if P = nil then
+    exit;
+  while P^ in [#1 .. ' '] do
+    inc(P);
+  if P^ = #0 then
+    exit;
+  if P^ in PARSER_STOPCHAR then
+  begin
+    FastSetString(fCurrentWord, P, 1);
+    fCurrent := P + 1;
+  end
+  else
+  begin
+    fCurrent := P;
+    ParseNextWord;
+  end;
+end;
+
+procedure TExprParserAbstract.ParseNextWord;
+const
+  STOPCHAR = PARSER_STOPCHAR + [#0, ' '];
+var
+  P: PUtf8Char;
+begin
+  P := fCurrent;
+  while not (P^ in STOPCHAR) do
+    inc(P);
+  FastSetString(fCurrentWord, fCurrent, P);
+  fCurrent := P;
+end;
+
+
+{ TExprNodeWordAbstract }
+
+constructor TExprNodeWordAbstract.Create(aOwner: TParserAbstract;
+  const aWord: RawUtf8);
+begin
+  inherited Create(entWord);
+  fWord := aWord;
+  fOwner := aOwner;
+end;
+
+
+{ TExprParserMatchNode }
+
+type
+  TExprParserMatchNode = class(TExprNodeWordAbstract)
+  protected
+    fMatch: TMatch;
+    function ParseWord: TExprParserResult; override;
+  end;
+
+function TExprParserMatchNode.ParseWord: TExprParserResult;
+begin
+  fMatch.Prepare(fWord, (fOwner as TExprParserMatch).fCaseSensitive, {reuse=}true);
+  result := eprSuccess;
+end;
+
+
+{ TExprParserMatch }
+
+var
+  // equals 1 for ['0'..'9', 'A'..'Z', 'a'..'z', #$80..#$ff]
+  ROUGH_UTF8: TAnsiCharToByte;
+
+constructor TExprParserMatch.Create(aCaseSensitive: boolean);
+var
+  c: AnsiChar;
+begin
+  inherited Create;
+  if ROUGH_UTF8['0'] = 0 then // ensure is initialized for Search()
+    for c := low(c) to high(c) do
+      if c in ['0'..'9', 'A'..'Z', 'a'..'z', #$80..#$ff] then
+        ROUGH_UTF8[c] := 1;
+  fCaseSensitive := aCaseSensitive;
+end;
+
+procedure TExprParserMatch.Initialize;
+begin
+  inherited Initialize;
+  fWordClass := TExprParserMatchNode;
+end;
+
+function TExprParserMatch.Search(const aText: RawUtf8): boolean;
+begin
+  result := Search(pointer(aText), length(aText));
+end;
+
+function TExprParserMatch.Search(aText: PUtf8Char; aTextLen: PtrInt): boolean;
+var
+  P, PEnd: PUtf8Char;
+  n: PtrInt;
+  tab: PAnsiCharToByte;
+begin
+  P := aText;
+  if (P = nil) or
+     (fWords = nil) then
+  begin
+    result := false;
+    exit;
+  end;
+  // reset any previous resultset
+  if fMatchedLastSet > 0 then
+  begin
+    n := fWordCount;
+    repeat
+      dec(n);
+      fWords[n].fFound := false;
+    until n = 0;
+    fMatchedLastSet := 0;
+  end;
+  PEnd := P + aTextLen;
+  while (P < PEnd) and
+        (fMatchedLastSet < fWordCount) do
+  begin
+    // recognize next word boudaries
+    tab := @ROUGH_UTF8;
+    while tab[P^] = 0 do
+    begin
+      inc(P);
+      if P = PEnd then
+        break;
+    end;
+    if P = PEnd then
+      break;
+    aText := P;
+    repeat
+      inc(P);
+    until (P = PEnd) or
+          (tab[P^] = 0);
+    // apply the expression nodes to this word
+    aTextLen := P - aText; // now aText/aTextLen point to a word
+    n := fWordCount;
+    repeat
+      dec(n);
+      with TExprParserMatchNode(fWords[n]) do
+        if not fFound and
+           fMatch.Match(aText, aTextLen) then
+        begin
+          fFound := true;
+          inc(fMatchedLastSet);
+        end;
+    until n = 0;
+  end;
+  result := Execute;
+end;
+
+
+
+{ ****************** Bloom Filter Probabilistic Index }
+
+{ TSynBloomFilter }
+
+const
+  BLOOM_VERSION = 0;
+  BLOOM_MAXHASH = 32; // only 7 is needed for 1% false positive ratio
+
+constructor TSynBloomFilter.Create;
+begin
+  fHasher := @crc32c; // default/standard/mORMot1 hash function
+end;
+
+constructor TSynBloomFilter.Create(aSize: integer;
+  aFalsePositivePercent: double; aHasher: THasher);
+const
+  LN2 = 0.69314718056;
+begin
+  Create; // set fHasher := crc32c + may have been overriden
+  if aSize < 0 then
+    fSize := 1000
+  else
+    fSize := aSize;
+  if aFalsePositivePercent <= 0 then
+    fFalsePositivePercent := 1
+  else if aFalsePositivePercent > 100 then
+    fFalsePositivePercent := 100
+  else
+    fFalsePositivePercent := aFalsePositivePercent;
+  if @aHasher <> nil then
+    fHasher := aHasher;
+  // see http://stackoverflow.com/a/22467497
+  fBits := Round(-ln(fFalsePositivePercent / 100) * aSize / (LN2 * LN2));
+  fHashFunctions := Round(fBits / fSize * LN2);
+  if fHashFunctions = 0 then
+    fHashFunctions := 1
+  else if fHashFunctions > BLOOM_MAXHASH then
+    fHashFunctions := BLOOM_MAXHASH;
+  Reset;
+end;
+
+constructor TSynBloomFilter.Create(const aSaved: RawByteString;
+  aMagic: cardinal; aHasher: THasher);
+begin
+  Create; // set fHasher := crc32c + may have been overriden
+  if @aHasher <> nil then
+    fHasher := aHasher;
+  if not LoadFrom(aSaved, aMagic) then // will load fSize+fBits+fHashFunctions
+    ESynException.RaiseUtf8('%.Create with invalid aSaved content', [self]);
+end;
+
+procedure TSynBloomFilter.Insert(const aValue: RawByteString);
+begin
+  Insert(pointer(aValue), length(aValue));
+end;
+
+procedure TSynBloomFilter.Insert(aValue: pointer; aValueLen: integer);
+var
+  h: integer;
+  h1, h2: cardinal;
+begin // https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf
+  if (self = nil) or
+     (aValueLen <= 0) or
+     (fBits = 0) then
+    exit;
+  h1 := fHasher(0, aValue, aValueLen);
+  if fHashFunctions = 1 then
+    h2 := 0
+  else
+    h2 := fHasher(h1, aValue, aValueLen);
+  fSafe.WriteLock;
+  try
+    for h := 1 to fHashFunctions do
+    begin
+      // set all hash bits of this value
+      SetBitPtr(pointer(fStore), h1 mod fBits);
+      inc(h1, h2);
+    end;
+    inc(fInserted);
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+function TSynBloomFilter.MayExist(const aValue: RawByteString): boolean;
+begin
+  result := MayExist(pointer(aValue), length(aValue));
+end;
+
+function TSynBloomFilter.MayExist(aValue: pointer; aValueLen: integer): boolean;
+var
+  h: integer;
+  h1, h2: cardinal; // adding h2 is enough and safe - see pdf above
+begin
+  result := false;
+  if (self = nil) or
+     (aValueLen <= 0) or
+     (fBits = 0) then
+    exit;
+  h1 := fHasher(0, aValue, aValueLen);
+  if fHashFunctions = 1 then
+    h2 := 0
+  else
+    h2 := fHasher(h1, aValue, aValueLen);
+  fSafe.ReadOnlyLock; // allow concurrent reads
+  try
+    for h := 1 to fHashFunctions do
+      if GetBitPtr(pointer(fStore), h1 mod fBits) then
+        // next hash: all bits should be 1
+        inc(h1, h2)
+      else
+        // if any of the bits is 0, the value is definitely not in the set
+        exit;
+  finally
+    fSafe.ReadOnlyUnLock;
+  end;
+  // if all are 1, then either the value is in the set, or it is a false positive
+  result := true;
+end;
+
+procedure TSynBloomFilter.Reset;
+begin
+  fSafe.WriteLock;
+  try
+    if fStore = '' then
+      SetLength(fStore, (fBits shr 3) + 1);
+    FillcharFast(pointer(fStore)^, length(fStore), 0);
+    fInserted := 0;
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+function TSynBloomFilter.SaveTo(aMagic: cardinal): RawByteString;
+var
+  W: TBufferWriter;
+  BufLen: integer;
+  temp: TBuffer64K;
+begin
+  BufLen := length(fStore) + 100;
+  if BufLen <= SizeOf(temp) then
+    W := TBufferWriter.Create(TRawByteStringStream, @temp, SizeOf(temp))
+  else
+    W := TBufferWriter.Create(TRawByteStringStream, BufLen);
+  try
+    SaveTo(W, aMagic);
+    result := W.FlushTo;
+  finally
+    W.Free;
+  end;
+end;
+
+procedure TSynBloomFilter.SaveTo(aDest: TBufferWriter; aMagic: cardinal);
+begin
+  aDest.Write4(aMagic);
+  aDest.Write1(BLOOM_VERSION);
+  fSafe.ReadOnlyLock;
+  try
+    aDest.Write8(@fFalsePositivePercent);
+    aDest.Write4(fSize);
+    aDest.Write4(fBits);
+    aDest.Write1(fHashFunctions);
+    aDest.Write4(fInserted);
+    // warning: fHasher is NOT persisted yet
+    ZeroCompress(pointer(fStore), Length(fStore), aDest);
+  finally
+    fSafe.ReadOnlyUnLock;
+  end;
+end;
+
+function TSynBloomFilter.LoadFrom(const aSaved: RawByteString; aMagic: cardinal): boolean;
+begin
+  result := LoadFrom(pointer(aSaved), length(aSaved));
+end;
+
+function TSynBloomFilter.LoadFrom(P: PByte; PLen: integer; aMagic: cardinal): boolean;
+var
+  start: PByte;
+  version: integer;
+begin
+  result := false;
+  start := P;
+  if (P = nil) or
+     (PLen < 32) or
+     (PCardinal(P)^ <> aMagic) then
+    exit;
+  inc(P, 4);
+  version := P^;
+  inc(P);
+  if version > BLOOM_VERSION then
+    exit;
+  fSafe.WriteLock;
+  try
+    fFalsePositivePercent := unaligned(PDouble(P)^);
+    inc(P, 8);
+    if (fFalsePositivePercent <= 0) or
+       (fFalsePositivePercent > 100) then
+      exit;
+    fSize := PCardinal(P)^;
+    inc(P, 4);
+    fBits := PCardinal(P)^;
+    inc(P, 4);
+    if fBits < fSize then
+      exit;
+    fHashFunctions := P^;
+    inc(P);
+    if fHashFunctions - 1 >= BLOOM_MAXHASH then
+      exit;
+    Reset;
+    fInserted := PCardinal(P)^;
+    inc(P, 4);
+    ZeroDecompress(P, PLen - (PAnsiChar(P) - PAnsiChar(start)), fStore);
+    result := length(fStore) = integer(fBits shr 3) + 1;
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+
+{ TSynBloomFilterDiff }
+
+type
+  TBloomDiffHeaderKind = (bdDiff, bdFull, bdUpToDate);
+  TBloomDiffHeader = packed record
+    kind: TBloomDiffHeaderKind;
+    size: cardinal;
+    inserted: cardinal;
+    revision: Int64;
+    crc: cardinal;
+  end;
+
+procedure TSynBloomFilterDiff.Insert(aValue: pointer; aValueLen: integer);
+begin
+  fSafe.WriteLock;
+  try
+    inherited Insert(aValue, aValueLen);
+    inc(fRevision);
+    inc(fSnapshotInsertCount);
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+procedure TSynBloomFilterDiff.Reset;
+begin
+  fSafe.WriteLock;
+  try
+    inherited Reset;
+    fSnapshotAfterInsertCount := fSize shr 5;
+    fSnapShotAfterMinutes := 30;
+    fSnapshotTimestamp := 0;
+    fSnapshotInsertCount := 0;
+    fRevision := UnixTimeUtc shl 31;
+    fKnownRevision := 0;
+    fKnownStore := '';
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+procedure TSynBloomFilterDiff.DiffSnapshot;
+begin
+  fSafe.WriteLock;
+  try
+    fKnownRevision := fRevision;
+    fSnapshotInsertCount := 0;
+    FastSetRawByteString(fKnownStore, pointer(fStore), length(fStore));
+    if fSnapShotAfterMinutes = 0 then
+      fSnapshotTimestamp := 0
+    else
+      fSnapshotTimestamp := GetTickSec + fSnapShotAfterMinutes * SecsPerMin;
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+function TSynBloomFilterDiff.SaveToDiff(const aKnownRevision: Int64): RawByteString;
+var
+  head: TBloomDiffHeader;
+  W: TBufferWriter;
+  temp: TBuffer64K;
+begin
+  fSafe.ReadWriteLock; // DiffSnapshot makes a WriteLock
+  try
+    if aKnownRevision = fRevision then
+      head.kind := bdUpToDate
+    else if (fKnownRevision = 0) or
+            (fSnapshotInsertCount > fSnapshotAfterInsertCount) or
+            ((fSnapshotInsertCount > 0) and
+             (fSnapshotTimestamp <> 0) and
+             (GetTickSec > fSnapshotTimestamp)) then
+    begin
+      DiffSnapshot;
+      head.kind := bdFull;
+    end
+    else if (aKnownRevision < fKnownRevision) or
+            (aKnownRevision > fRevision) then
+      head.kind := bdFull
+    else
+      head.kind := bdDiff;
+    head.size := length(fStore);
+    head.inserted := fInserted;
+    head.revision := fRevision;
+    head.crc := fHasher(0, @head, SizeOf(head) - SizeOf(head.crc));
+    if head.kind = bdUpToDate then
+    begin
+      FastSetRawByteString(result, @head, SizeOf(head));
+      exit;
+    end;
+    if head.size + 100 <= SizeOf(temp) then
+      W := TBufferWriter.Create(TRawByteStringStream, @temp, SizeOf(temp))
+    else
+      W := TBufferWriter.Create(TRawByteStringStream, head.size + 100);
+    try
+      W.Write(@head, SizeOf(head));
+      case head.kind of
+        bdFull:
+          SaveTo(W);
+        bdDiff:
+          ZeroCompressXor(pointer(fStore), pointer(fKnownStore), head.size, W);
+      end;
+      result := W.FlushTo;
+    finally
+      W.Free;
+    end;
+  finally
+    fSafe.ReadWriteUnLock;
+  end;
+end;
+
+function TSynBloomFilterDiff.DiffKnownRevision(const aDiff: RawByteString): Int64;
+var
+  head: ^TBloomDiffHeader absolute aDiff;
+begin
+  if (length(aDiff) < SizeOf(head^)) or
+     (head.kind > high(TBloomDiffHeaderKind)) or
+     (head.size <> cardinal(length(fStore))) or
+     (head.crc <> fHasher(0, pointer(head), SizeOf(head^) - SizeOf(head.crc))) then
+    result := 0
+  else
+    result := head.Revision;
+end;
+
+function TSynBloomFilterDiff.LoadFromDiff(const aDiff: RawByteString): boolean;
+var
+  head: ^TBloomDiffHeader absolute aDiff;
+  P: PByte;
+  PLen: integer;
+begin
+  result := false;
+  P := pointer(aDiff);
+  PLen := length(aDiff);
+  if (PLen < SizeOf(head^)) or
+     (head.kind > high(head.kind)) or
+     (head.crc <> fHasher(0, pointer(head), SizeOf(head^) - SizeOf(head.crc))) then
+    exit;
+  if (fStore <> '') and
+     (head.size <> cardinal(length(fStore))) then
+    exit;
+  inc(P, SizeOf(head^));
+  dec(PLen, SizeOf(head^));
+  fSafe.WriteLock;
+  try
+    case head.kind of
+      bdFull:
+        result := LoadFrom(P, PLen);
+      bdDiff:
+        if fStore <> '' then
+          result := ZeroDecompressOr(pointer(P), pointer(fStore), PLen, head.size);
+      bdUpToDate:
+        result := true;
+    end;
+    if result then
+    begin
+      fRevision := head.revision;
+      fInserted := head.inserted;
+    end;
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+
+procedure ZeroCompress(P: PAnsiChar; Len: integer; Dest: TBufferWriter);
+var
+  PEnd, beg, zero: PAnsiChar;
+  crc: cardinal;
+begin
+  Dest.WriteVarUInt32(Len);
+  PEnd := P + Len;
+  beg := P;
+  crc := 0;
+  while P < PEnd do
+  begin
+    while (P^ <> #0) and
+          (P < PEnd) do
+      inc(P);
+    zero := P;
+    while (P^ = #0) and
+          (P < PEnd) do
+      inc(P);
+    if P - zero > 3 then
+    begin
+      Len := zero - beg;
+      crc := crc32c(crc, beg, Len);
+      Dest.WriteVarUInt32(Len);
+      Dest.Write(beg, Len);
+      Len := P - zero;
+      crc := crc32c(crc, @Len, SizeOf(Len));
+      Dest.WriteVarUInt32(Len - 3);
+      beg := P;
+    end;
+  end;
+  Len := P - beg;
+  if Len > 0 then
+  begin
+    crc := crc32c(crc, beg, Len);
+    Dest.WriteVarUInt32(Len);
+    Dest.Write(beg, Len);
+  end;
+  Dest.Write4(crc);
+end;
+
+procedure ZeroCompressXor(New, Old: PAnsiChar; Len: cardinal; Dest: TBufferWriter);
+var
+  beg, same, index, crc, L: cardinal;
+begin
+  Dest.WriteVarUInt32(Len);
+  beg := 0;
+  index := 0;
+  crc := 0;
+  while index < Len do
+  begin
+    while (New[index] <> Old[index]) and
+          (index < Len) do
+      inc(index);
+    same := index;
+    while (New[index] = Old[index]) and
+          (index < Len) do
+      inc(index);
+    L := index - same;
+    if L > 3 then
+    begin
+      Dest.WriteVarUInt32(same - beg);
+      Dest.WriteXor(New + beg, Old + beg, same - beg, @crc);
+      crc := crc32c(crc, @L, SizeOf(L));
+      Dest.WriteVarUInt32(L - 3);
+      beg := index;
+    end;
+  end;
+  L := index - beg;
+  if L > 0 then
+  begin
+    Dest.WriteVarUInt32(L);
+    Dest.WriteXor(New + beg, Old + beg, L, @crc);
+  end;
+  Dest.Write4(crc);
+end;
+
+procedure ZeroDecompress(P: PByte; Len: integer; var Dest: RawByteString);
+var
+  PEnd, D, DEnd: PAnsiChar;
+  DestLen, crc: cardinal;
+begin
+  PEnd := PAnsiChar(P) + Len - 4;
+  DestLen := FromVarUInt32(P);
+  D := FastNewRawByteString(Dest, DestLen);
+  DEnd := D + DestLen;
+  crc := 0;
+  while PAnsiChar(P) < PEnd do
+  begin
+    Len := FromVarUInt32(P);
+    if D + Len > DEnd then
+      break;
+    MoveFast(P^, D^, Len);
+    crc := crc32c(crc, D, Len);
+    inc(P, Len);
+    inc(D, Len);
+    if PAnsiChar(P) >= PEnd then
+      break;
+    Len := FromVarUInt32(P) + 3;
+    if D + Len > DEnd then
+      break;
+    FillCharFast(D^, Len, 0);
+    crc := crc32c(crc, @Len, SizeOf(Len));
+    inc(D, Len);
+  end;
+  if crc <> PCardinal(P)^ then
+    Dest := '';
+end;
+
+function ZeroDecompressOr(P, Dest: PAnsiChar; Len, DestLen: integer): boolean;
+var
+  PEnd, DEnd: PAnsiChar;
+  crc: cardinal;
+begin
+  PEnd := P + Len - 4;
+  if cardinal(DestLen) <> FromVarUInt32(PByte(P)) then
+  begin
+    result := false;
+    exit;
+  end;
+  DEnd := Dest + DestLen;
+  crc := 0;
+  while (P < PEnd) and
+        (Dest < DEnd) do
+  begin
+    Len := FromVarUInt32(PByte(P));
+    if Dest + Len > DEnd then
+      break;
+    crc := crc32c(crc, P, Len);
+    OrMemory(pointer(Dest), pointer(P), Len);
+    inc(P, Len);
+    inc(Dest, Len);
+    if P >= PEnd then
+      break;
+    Len := FromVarUInt32(PByte(P)) + 3;
+    crc := crc32c(crc, @Len, SizeOf(Len));
+    inc(Dest, Len);
+  end;
+  result := crc = PCardinal(P)^;
+end;
+
+
+{ ****************** Binary Buffers Delta Compression }
+
+{$ifdef HASINLINE}
+function DeltaComp(a, b: PAnsiChar; len: PtrInt): PtrInt; inline;
+var
+  lenptr: PtrInt;
+begin
+  result := 0;
+  lenptr := len - SizeOf(PtrInt);
+  if lenptr >= 0 then
+    repeat
+      if PPtrInt(a + result)^ <> PPtrInt(b + result)^ then
+        break;
+      inc(result, SizeOf(PtrInt));
+    until result > lenptr;
+  if result < len then
+    repeat
+      if a[result] <> b[result] then
+        exit;
+      inc(result);
+    until result = len;
+end;
+{$else} // eax = a, edx = b, ecx = len
+function DeltaComp(a, b: PAnsiChar; len: PtrInt): PtrInt;
+asm // the 'rep cmpsb' version is slower on Intel Core CPU (not AMD)
+        or      ecx, ecx
+        push    ebx
+        push    ecx
+        jz      @ok
+@1:     mov     bx, [eax]
+        lea     eax, [eax + 2]
+        cmp     bl, [edx]
+        jne     @ok
+        dec     ecx
+        jz      @ok
+        cmp     bh, [edx + 1]
+        lea     edx, [edx + 2]
+        jne     @ok
+        dec     ecx
+        jnz     @1
+@ok:    pop     eax
+        sub     eax, ecx
+        pop     ebx
+end;
+{$endif HASINLINE}
+
+function DeltaCompReverse(a, b: pointer; len: PtrInt): PtrInt;
+begin
+  result := 0;
+  if len > 0 then
+    repeat
+      if PByteArray(a)[-result] <> PByteArray(b)[-result] then
+        exit;
+      inc(result);
+    until result = len;
+end;
+
+procedure DeltaWrite(ofs, len1, ofssize, len2: PtrInt; var dest: TSynTempAdder);
+  {$ifdef HASINLINE} inline; {$endif}
+var
+  p: PByte;
+begin
+  p := AddVarUInt32(dest, len1); // and prepare for 64 bytes
+  PInteger(p)^ := ofs;
+  inc(p, ofssize); // 2 or 3 bytes
+  inc(ofssize, PAnsiChar(ToVarUInt32(len2, p)) - PAnsiChar(p));
+  inc(dest.Store.Added, ofssize);
+end;
+
+const
+  HTabMask = (1 shl DELTA_HASH_BITS) - 1; // DELTA_HASH_BITS=18
+  U24Mask = $00ffffff;                    // 24-bit THTab=($ff,$ff,$ff)
+
+function DeltaHash(p: PQWordRec): PtrUInt; // reduces from 64-bit into 18-bit
+  {$ifdef HASINLINE} inline; {$endif}
+var
+  c: PtrUInt;
+begin
+  // hash 64-bit of input since we work with PHash128Rec patterns later
+  // Knuth multiplication improves bucket distribution in practice by a few %
+  // we tried crc32 asm opcode * KNUTH_HASH64_MUL for similmar distribution
+  {$ifdef CPU32}
+  c := p^.L * KNUTH_HASH32_MUL;
+  result := c xor (c shr 15);
+  c := p^.H * KNUTH_HASH32_MUL;
+  result := (result xor (c xor (c shr 15))) and HTabMask;
+  {$else}
+  c := p^.V * KNUTH_HASH64_MUL;
+  result := (c xor (c shr 15) xor (c shr 31) xor (c shr 47)) and HTabMask;
+  {$endif CPU64}
+end;
+
+type
+  THPos = array[0 .. 2] of byte; // store positions as 24-bit
+  THTab = packed array[0 .. HTabMask] of THPos;
+  PHTab = ^THTab; // SizeOf(THTab)=768KB would fit in CPU L2 cache
+
+  TDeltaCompute = record // some reusable context
+    MaxLevel: PtrInt;
+    HList, HTab: PHTab;
+    Data, Cmd: TSynTempAdder;
+  end;
+
+procedure DeltaPrefill(old, list: PAnsiChar; max: cardinal; tab: PHTab);
+var
+  h: PCardinal; // point to the corresponding 24-bit HTab[old^]
+  pos: cardinal;
+begin
+  pos := 0;
+  repeat
+    h := @tab^[DeltaHash(pointer(old))];
+    inc(old);
+    inc(pos);
+    PCardinal(list)^ := h^; // preserve previous 24-bit HTab[] value in list
+    h^ := pos or (h^ and (not U24Mask)); // store pos+1 as 24-bit in HTab[]
+    inc(list, 3);
+  until pos = max;
+end;
+
+procedure DeltaCompute(var Info: TDeltaCompute; New, Old: PAnsiChar;
+  NewSize, OldSize: PtrInt);
+var
+  ofs, curofs, curlen, curlevel, match, curofssize: PtrInt;
+  p: PAnsiChar;
+  q: PHash128Rec;
+begin
+  // 1. fill HTab[] and HList[] with hashes and positions for all old data
+  FillCharFast(Info.HTab^, SizeOf(THTab), 0); // HTab[]=0 by default
+  DeltaPrefill(Old, pointer(Info.HList), OldSize - 7, Info.HTab);
+  // 2. compression init
+  curofssize := 2;
+  if OldSize > $ffff then
+    curofssize := 3;   // WriteCurOfs() append offsets as 2/3 bytes
+  Info.Data.Size := 7; // append raw data just after header (written below)
+  Info.Cmd.Size := 0;  // reset command list temporary buffer
+  curlen := -1;
+  curofs := 0;
+  // 3. handle identical leading bytes
+  match := DeltaComp(Old, New, MinPtrInt(OldSize, NewSize));
+  if match > 7 then
+  begin
+    DeltaWrite(0, match, curofssize, 0, Info.Cmd);
+    inc(New, match);
+    dec(NewSize, match);
+  end;
+  p := New;
+  // 4. main loop: identify longest sequences using hash, and store reference
+  if NewSize > 8 then // >=8 may overflow
+    repeat
+      // hash 8 next bytes from New, and find longest match in Old
+      ofs := PCardinal(@Info.HTab^[DeltaHash(pointer(New))])^ and U24Mask;
+      if ofs <> 0 then
+      begin
+        // brute force search loop of best hash match
+        curlevel := Info.MaxLevel;
+        repeat
+          dec(ofs);
+          q := PHash128Rec(Old + ofs);
+          // always test 8 bytes at once
+          {$ifdef CPU64}
+          if PHash128Rec(New)^.Lo = q^.Lo then
+          {$else}
+          if (PHash128Rec(New)^.c0 = q^.c0) and // likely to match
+             (PHash128Rec(New)^.c1 = q^.c1) then
+          {$endif CPU64}
+          begin
+            // test remaining bytes
+            match := DeltaComp(@PHash128Rec(New)^.c2, @q^.c2,
+                       MinPtrInt(NewSize, OldSize - ofs) - 8);
+            if curlen < match then
+            begin
+              // found a longer sequence
+              curlen := match;
+              curofs := ofs;
+              //consolewrite([' ',curlevel,'/',MaxLevel,' len=',match]);
+            end;
+          end;
+          dec(curlevel);
+          if curlevel = 0 then
+            break;                                     // end of depth
+          ofs := PCardinal(@Info.HList^[ofs])^ and U24Mask; // try next match
+        until ofs = 0;                                 // end of list
+      end;
+      // curlen = longest sequence length after initial o^.Lo 8 bytes
+      if curlen < 0 then
+      begin
+       // no sequence found -> copy one byte
+        dec(NewSize);
+        Info.Data.Add(New^);
+        inc(New);
+        if NewSize <= 8 then
+          break;
+        continue;
+      end;
+      // sequence found -> copy curofs/curlen pair
+      inc(curlen, 8);
+      DeltaWrite(curofs, curlen, curofssize, New - p, Info.Cmd);
+      inc(New, curlen); // continue to search after the sequence
+      dec(NewSize, curlen);
+      curlen := -1;
+      p := New;
+      if NewSize <= 8 then
+        break;
+    until false;
+  // 5. write remaining bytes
+  if NewSize > 0 then
+  begin
+    Info.Data.Add(New, NewSize);
+    inc(New, NewSize);
+  end;
+  Info.Cmd.AddDirect(#0);
+  AddVarUInt32(Info.Cmd, New - p);
+  // 6. write header to Data
+  p := Info.Data.Buffer;
+  PInteger(p)^ := Info.Data.Size - 7;
+  PInteger(p + 3)^ := Info.Cmd.Size;
+  p[6] := AnsiChar(curofssize);
+  // 7. caller should append Data + Cmd content
+end;
+
+function ExtractBuf(crc: cardinal; p, old: PAnsiChar;
+  var vUpd, vDelta: PAnsiChar): TDeltaError;
+var
+  pend, buf, upd, src: PAnsiChar;
+  bufsize, datasize, leading, srclen: PtrUInt;
+  curofssize: byte;
+begin
+  // 1. decompression init
+  upd := vUpd;
+  bufsize := PCardinal(p)^ and U24Mask;
+  inc(p, 3);
+  datasize := PCardinal(p)^ and U24Mask;
+  inc(p, 3);
+  curofssize := ord(p^);
+  inc(p);
+  buf := p;
+  inc(p, bufsize);
+  pend := p + datasize;
+  src := nil;
+  // 2. main loop
+  while p < pend do
+  begin
+    // src/srclen = sequence to be copied
+    srclen := FromVarUInt32(PByte(p));
+    if srclen > 0 then
+      if curofssize = 2 then
+      begin
+        src := old + PWord(p)^;
+        inc(p, 2);
+      end
+      else
+      begin
+        src := old + PCardinal(p)^ and U24Mask;
+        inc(p, 3);
+      end;
+    // copy leading bytes
+    leading := FromVarUInt32(PByte(p));
+    if leading <> 0 then
+    begin
+      MoveFast(buf^, upd^, leading);
+      inc(buf, leading);
+      inc(upd, leading);
+    end;
+    // copy sequence
+    if srclen <> 0 then
+    begin
+      if PtrUInt(upd - src) < srclen then
+        MoveByOne(src, upd, srclen) // overlapping single-byte expansion
+      else
+        MoveFast(src^, upd^, srclen);
+      inc(upd, srclen);
+    end;
+  end;
+  // 3. result check
+  vDelta := p;
+  if (p = pend) and
+     (crc32c(0, vUpd, upd - vUpd) = crc) then
+    // whole CRC is faster than incremental
+    result := dsSuccess
+  else
+    result := dsCrcExtract;
+  vUpd := upd;
+end;
+
+const
+  FLAG_COPIED   = 0;
+  FLAG_COMPRESS = 1;
+  FLAG_BEGIN    = 2;
+  FLAG_END      = 3;
+
+procedure DeltaCompressToWriter(New, Old: PAnsiChar; NewSize, OldSize: PtrInt;
+  Delta: TBufferWriter; Level: PtrInt);
+var
+  chunk, nb, ob, trail, match, newsizeorig: PtrInt;
+  neworig: PAnsiChar;
+  nfo: TDeltaCompute;
+
+  procedure CreateCopied;
+  begin
+    Delta.WriteVarUInt32(newsizeorig);
+    Delta.Write1(0);
+    Delta.Write1(FLAG_COPIED); // block copied flag
+    Delta.WriteVarUInt32(newsizeorig);
+    Delta.Write4(crc32c(0, neworig, newsizeorig));
+    Delta.Write(neworig, newsizeorig);
+  end;
+
+begin
+  // 1. special cases
+  if (NewSize = OldSize) and
+     mormot.core.base.CompareMem(Old, New, NewSize) then
+  begin
+    Delta.Write1(ord('='));
+    exit;
+  end;
+  neworig := New;
+  newsizeorig := NewSize;
+  if OldSize = 0 then // initial DeltaCompress() from nothing
+  begin
+    CreateCopied; // direct copy of whole block
+    exit;
+  end;
+  // 2. compression init
+  chunk := MinPtrInt(DELTA_MAX_CHUNK, // 8MB < max 16MB chunk encoded as 24-bit
+                     MaxPtrInt(OldSize, NewSize));
+  Delta.WriteVarUInt32(NewSize); // Destination Size
+  trail := 0;
+  // 3. handle leading and trail identical bytes (for biggest files)
+  if OldSize > chunk then
+  begin
+    // huge content will be chunked: test initial chars up to the chunk size
+    match := DeltaComp(New, Old, MinPtrInt(NewSize, OldSize - chunk));
+    if match > 9 then
+    begin
+      // it happens very often: modification is usually in the middle/end
+      Delta.WriteVarUInt32(match);
+      Delta.Write1(FLAG_BEGIN);
+      Delta.Write4(crc32c(0, New, match));
+      inc(New, match);
+      dec(NewSize, match);
+      inc(Old, match);
+      dec(OldSize, match);
+    end;
+    if OldSize > chunk then
+    begin
+      // skip same ending chars to reduce if possible to the chunk size
+      match := DeltaCompReverse(New + NewSize - 1, Old + OldSize - 1,
+                                MinPtrInt(NewSize, OldSize - chunk));
+      if match > 9 then
+      begin
+        if NewSize = match then
+          dec(match); // avoid block overflow
+        dec(OldSize, match);
+        dec(NewSize, match);
+        trail := match;
+      end;
+    end;
+  end;
+  // 4. main loop
+  nfo.Data.Init; // temp buffers to store new data and commands
+  nfo.Cmd.Init;
+  nfo.MaxLevel := Level;
+  GetMem(nfo.HList, MinPtrInt(chunk, OldSize) * SizeOf(THPos));
+  GetMem(nfo.HTab, SizeOf(THTab));
+  try
+    repeat
+      nb := MinPtrInt(chunk, NewSize);
+      if (nb = 0) and
+         (trail > 0) then
+      begin
+        Delta.WriteVarUInt32(trail);
+        Delta.Write1(FLAG_END); // block idem end flag
+        Delta.Write4(crc32c(0, New, trail));
+        break;
+      end;
+      dec(NewSize, nb);
+      ob := MinPtrInt(chunk, OldSize);
+      dec(OldSize, ob);
+      Delta.WriteVarUInt32(ob);
+      if (nb < 16) or
+         (ob < 16) then
+      begin
+        Delta.Write1(FLAG_COPIED); // block copied - mostly ending with nb=0
+        Delta.WriteVarUInt32(nb);
+        if nb = 0 then
+          break;
+        Delta.Write4(crc32c(0, New, nb));
+        Delta.Write(New, nb);
+        inc(New, nb);
+      end
+      else
+      begin
+        Delta.Write1(FLAG_COMPRESS); // block compressed flag
+        Delta.Write4(crc32c(0, New, nb));
+        Delta.Write4(crc32c(0, Old, ob));
+        DeltaCompute(nfo, New, Old, nb, ob);
+        Delta.Write(nfo.Data.Buffer, nfo.Data.Size);
+        Delta.Write(nfo.Cmd.Buffer,  nfo.Cmd.Size);
+        inc(New, nb);
+        inc(Old, ob);
+      end;
+    until false;
+  // 5. release temp memory
+  finally
+    FreeMem(nfo.HTab);
+    FreeMem(nfo.HList);
+    nfo.Cmd.Store.Done;
+    nfo.Data.Store.Done;
+  end;
+  if Delta.TotalWritten >= newsizeorig then
+  begin
+    // Delta didn't compress well -> store it
+    Delta.CancelAll;
+    CreateCopied;
+  end;
+end;
+
+function DeltaCompress(const New, Old: RawByteString; Level: PtrInt): RawByteString;
+begin
+  result := DeltaCompress(
+    pointer(New), pointer(Old), length(New), length(Old), Level);
+end;
+
+function DeltaCompress(New, Old: PAnsiChar; NewSize, OldSize, Level: PtrInt): RawByteString;
+var
+  Delta: TBufferWriter;
+  tmp: TTextWriterStackBuffer;
+begin
+  Delta := TBufferWriter.Create(tmp);
+  try
+    DeltaCompressToWriter(New, Old, NewSize, OldSize, Delta, Level);
+    result := Delta.FlushTo;
+  finally
+    Delta.Free;
+  end;
+end;
+
+function DeltaExtract(Delta, Old, New: PAnsiChar): TDeltaError;
+var
+  crc: cardinal;
+  code: byte;
+  len, copied, read: PtrInt;
+  upd: PAnsiChar;
+  db: PByte absolute Delta;
+begin
+  result := dsSuccess;
+  len := FromVarUInt32(db);
+  upd := New;
+  repeat
+    read := FromVarUInt32(db);
+    code := db^;
+    inc(db);
+    case code of
+      FLAG_COPIED:
+        begin
+          // block copied flag - copy new from Delta
+          copied := FromVarUInt32(db);
+          if copied = 0 then
+            break; // is likely to be the final block
+          if crc32c(0, Delta + 4, copied) <> PCardinal(Delta)^ then
+          begin
+            result := dsCrcCopy;
+            exit;
+          end;
+          inc(Delta, 4);
+          MoveFast(Delta^, New^, copied);
+          if copied >= len then
+            exit; // if Old=nil -> only copy new
+          inc(Delta, copied);
+          inc(New, copied);
+        end;
+      FLAG_COMPRESS:
+        begin
+          // block compressed flag - extract Delta from Old
+          crc := PCardinal(Delta)^;
+          inc(Delta, 4);
+          if crc32c(0, Old, read) <> PCardinal(Delta)^ then
+          begin
+            result := dsCrcComp;
+            exit;
+          end;
+          inc(Delta, 4);
+          result := ExtractBuf(crc, Delta, Old, New, Delta);
+          if result <> dsSuccess then
+            exit;
+        end;
+      FLAG_BEGIN:
+        begin
+          // block idem begin flag
+          if crc32c(0, Old, read) <> PCardinal(Delta)^ then
+          begin
+            result := dsCrcBegin;
+            exit;
+          end;
+          inc(Delta, 4);
+          MoveFast(Old^, New^, read);
+          inc(New, read);
+        end;
+      FLAG_END:
+        begin
+          // block idem end flag
+          if crc32c(0, Old, read) <> PCardinal(Delta)^ then
+            result := dsCrcEnd;
+          MoveFast(Old^, New^, read);
+          inc(New, read);
+          break;
+        end;
+    else
+      begin
+        result := dsFlag;
+        exit;
+      end;
+    end; // Case code of
+    inc(Old, read);
+  until false;
+  if New - upd <> len then
+    result := dsLen;
+end;
+
+function DeltaExtract(const Delta, Old: RawByteString;
+  out New: RawByteString): TDeltaError;
+begin
+  if (Delta = '') or
+     (Delta = '=') then
+  begin
+    New := Old;
+    result := dsSuccess;
+  end
+  else
+  begin
+    SetLength(New, DeltaExtractSize(pointer(Delta)));
+    result := DeltaExtract(pointer(Delta), pointer(Old), pointer(New));
+  end;
+end;
+
+function DeltaExtractSize(const Delta: RawByteString): integer;
+begin
+  result := DeltaExtractSize(pointer(Delta));
+end;
+
+function DeltaExtractSize(Delta: PAnsiChar): integer;
+begin
+  if Delta = nil then
+    result := 0
+  else
+    result := FromVarUInt32(PByte(Delta));
+end;
+
+function ToText(err: TDeltaError): PShortString;
+begin
+  result := GetEnumName(TypeInfo(TDeltaError), ord(err));
+end;
+
+
+{ ****************** TDynArray Low-Level Binary Search }
+
+function SimpleDynArrayLoadFrom(Source: PAnsiChar; aTypeInfo: PRttiInfo;
+  out Count, ElemSize: PtrInt): pointer;
+var
+  Hash: PCardinalArray absolute Source;
+  iteminfo: PRttiInfo;
+begin
+  result := nil;
+  if (aTypeInfo = nil) or
+     (aTypeInfo^.Kind <> rkDynArray) then
+    exit;
+  iteminfo := aTypeInfo^.DynArrayItemType(ElemSize);
+  if (iteminfo <> nil) or // managed elem type is not simple
+     (Source = nil) or
+     // (Source[0] <> AnsiChar(ElemSize)) or mORMot 2 stores elemsize=0
+     (Source[1] <> #0) then
+    exit; // invalid type information or Source content
+  inc(Source,2);
+  Count := FromVarUInt32(PByte(Source)); // dynamic array count
+  if Count <> 0 then
+    result := @Hash[1]; // returns valid Source content
+end;
+
+function IntegerDynArrayLoadFrom(Source: PAnsiChar;
+  var Count: integer): PIntegerArray;
+var
+  Hash: PCardinalArray absolute Source;
+begin
+  result := nil;
+  if (Source = nil) or
+     // (Source[0] <> #4) or mORMot 2 stores elemsize=0
+     (Source[1] <> #0) then
+    exit; // invalid Source content
+  inc(Source, 2);
+  Count := FromVarUInt32(PByte(Source)); // dynamic array count
+  if Count <> 0 then
+    result := @Hash[1]; // returns valid Source content
+end;
+
+function RawUtf8DynArrayLoadFromContains(Source: PAnsiChar;
+  Value: PUtf8Char; ValueLen: PtrInt; CaseSensitive: boolean): PtrInt;
+var
+  Count, Len: PtrInt;
+begin
+  if (Value = nil) or
+     (ValueLen = 0) or
+     (Source = nil) then
+     // (Source[0] <> AnsiChar(SizeOf(PtrInt))) mORMot 2 stores elemsize=0
+     // {$ifdef ISDELPHI} or (Source[1] <> AnsiChar(rkLString)){$endif}
+  begin
+    result := -1;
+    exit; // invalid Source or Value content
+  end;
+  inc(Source, 2);
+  Count := FromVarUInt32(PByte(Source)); // dynamic array count
+  inc(Source, SizeOf(cardinal)); // ignore Hash32 security checksum
+  for result := 0 to Count - 1 do
+  begin
+    Len := FromVarUInt32(PByte(Source));
+    if CaseSensitive then
+    begin
+      if (Len = ValueLen) and
+         CompareMemFixed(Value, Source, Len) then
+        exit;
+    end
+    else if Utf8ILComp(Value, pointer(Source), ValueLen, Len) = 0 then
+      exit;
+   inc(Source, Len);
+  end;
+  result := -1;
+end;
+
+
+{ TDynArrayLoadFrom }
+
+function TDynArrayLoadFrom.Init(ArrayTypeInfo: PRttiInfo; Source: PAnsiChar;
+  SourceMaxLen: PtrInt): boolean;
+begin
+  result := false;
+  Count := 0;
+  Current := 0;
+  Reader.Init(Source, SourceMaxLen);
+  ArrayRtti := Rtti.RegisterType(ArrayTypeInfo);
+  if (ArrayRtti.Parser <> ptDynArray) or
+     Reader.EOF then
+    exit;
+  if ArrayRtti.Cache.ItemInfoManaged = nil then
+    ArrayLoad := nil
+  else
+    ArrayLoad := RTTI_BINARYLOAD[ArrayRtti.Cache.ItemInfoManaged^.Kind];
+  Count := DynArrayLoadHeader(Reader, ArrayRtti.Info, ArrayRtti.Cache.ItemInfoManaged);
+  result := true;
+end;
+
+function TDynArrayLoadFrom.Init(ArrayTypeInfo: PRttiInfo;
+  const Source: RawByteString): boolean;
+begin
+  result := Init(ArrayTypeInfo, pointer(Source), length(Source));
+end;
+
+function TDynArrayLoadFrom.Step(Item: pointer): boolean;
+begin
+  if (Current < Count) and
+     not Reader.EOF then
+  begin
+    if Assigned(ArrayLoad) then
+      ArrayLoad(Item, Reader, ArrayRtti.Cache.ItemInfoManaged)
+    else
+      Reader.Copy(Item, ArrayRtti.Cache.ItemSize);
+    inc(Current);
+    result := true;
+  end
+  else
+    result := false;
+end;
+
+function TDynArrayLoadFrom.FirstField(Field: pointer): boolean;
+var
+  load: TRttiBinaryLoad;
+  info: PRttiInfo;
+  noiteration: TFastReader;
+begin
+  if (Current < Count) and
+     not Reader.EOF then
+  begin
+    info := PT_INFO[ArrayRtti.ArrayFirstField];
+    if info <> nil then
+    begin
+      load := RTTI_BINARYLOAD[info^.Kind];
+      if Assigned(load) then
+      begin
+        noiteration := Reader;
+        load(Field, noiteration, info);
+        result := true;
+        exit;
+      end;
+    end;
+  end;
+  result := false;
+end;
+
+
+
+{ ****************** TSynFilter and TSynValidate Processing Classes }
+
+function IsValidIP4Address(P: PUtf8Char): boolean;
+var
+  ndot: PtrInt;
+  V: PtrUInt;
+begin
+  result := false;
+  if (P = nil) or
+     not (P^ in ['0'..'9']) then
+    exit;
+  V := 0;
+  ndot := 0;
+  repeat
+    case P^ of
+      #0:
+        break;
+      '.':
+        if (P[-1] = '.') or
+           (V > 255) then
+          exit
+        else
+        begin
+          inc(ndot);
+          V := 0;
+        end;
+      '0'..'9':
+        V := (V * 10) + ord(P^) - 48;
+    else
+      exit;
+    end;
+    inc(P);
+  until false;
+  if (ndot = 3) and
+     (V <= 255) and
+     (P[-1] <> '.') then
+    result := true;
+end;
+
+function IsValidEmail(const email: RawUtf8): boolean;
+begin
+  result := IsValidEmail(pointer(email));
+end;
+
+function IsValidEmail(P: PUtf8Char): boolean;
+// Initial Author: Ernesto D'Spirito - UTF-8 version by AB
+// http://www.howtodothings.com/computers/a1169-validating-email-addresses-in-delphi.html
+const
+  atom: TSynAnsicharSet = [#33..#255] -
+    ['(', ')', '<', '>', '@', ',', ';', ':', '\', '/', '"', '.', '[', ']', #127];
+  subdomain = ['0'..'9', 'A'..'Z', 'a'..'z'];
+var
+  subdomains: integer;
+  c: AnsiChar;
+  s: (sBegin, sAtom, sQText, sQChar, sQuote,
+      sLocalPeriod, sExpectSubdomain, sSubDomain, sHyphen);
+  ch: PtrInt;
+begin
+  s := sBegin;
+  subdomains := 1;
+  if P <> nil then
+    repeat
+      c := P^;
+      if c = #0 then
+        break
+      else if c > #$7f then
+      begin
+        ch := UTF8_TABLE.GetHighUtf8Ucs4(P);
+        if (ch <= 255) and
+           (WinAnsiConvert.AnsiToWide[ch] <= 255) then
+          // convert into WinAnsi char
+          c := AnsiChar(ch)
+        else
+          // invalid char
+          c := #127;
+      end
+      else
+        inc(P);
+      case s of
+        sBegin:
+          if c in atom then
+            s := sAtom
+          else if c = '"' then
+            s := sQText
+          else
+            break;
+        sAtom:
+          if c = '@' then
+            s := sExpectSubdomain
+          else if c = '.' then
+            s := sLocalPeriod
+          else if not (c in atom) then
+            break;
+        sQText:
+          case c of
+            '\':
+              s := sQChar;
+            '"':
+              s := sQuote;
+            #13:
+             break;
+          end;
+        sQChar:
+          s := sQText;
+        sQuote:
+          if c = '@' then
+            s := sExpectSubdomain
+          else if c = '.' then
+            s := sLocalPeriod
+          else
+            break;
+        sLocalPeriod:
+          if c in atom then
+            s := sAtom
+          else if c = '"' then
+            s := sQText
+          else
+            break;
+        sExpectSubdomain:
+          if c in subdomain then
+            s := sSubDomain
+          else
+            break;
+        sSubDomain:
+          if c = '.' then
+          begin
+            inc(subdomains);
+            s := sExpectSubdomain
+          end
+          else if c = '-' then
+            s := sHyphen
+          else if not (c in subdomain) then
+            break;
+        sHyphen:
+          if c in subdomain then
+            s := sSubDomain
+          else if c <> '-' then
+            break;
+      end;
+    until false;
+  result := (s = sSubDomain) and
+            (subdomains >= 2);
+end;
+
+
+{ TSynFilterOrValidate }
+
+constructor TSynFilterOrValidate.Create(const aParameters: RawUtf8);
+begin
+  inherited Create;
+  SetParameters(aParameters); // should parse the JSON-encoded parameters
+end;
+
+constructor TSynFilterOrValidate.CreateUtf8(const Format: RawUtf8;
+  const Args, Params: array of const);
+begin
+  Create(FormatJson(Format, Args, Params));
+end;
+
+procedure TSynFilterOrValidate.SetParameters(const value: RawUtf8);
+begin
+  fParameters := value;
+end;
+
+function TSynFilterOrValidate.AddOnce(var aObjArray: TSynFilterOrValidateObjArray;
+  aFreeIfAlreadyThere: boolean): TSynFilterOrValidate;
+var
+  i: integer;
+begin
+  if self <> nil then
+  begin
+    for i := 0 to length(aObjArray) - 1 do
+      if (PPointer(aObjArray[i])^ = PPointer(self)^) and
+         (aObjArray[i].fParameters = fParameters) then
+      begin
+        if aFreeIfAlreadyThere then
+          Free;
+        result := aObjArray[i];
+        exit;
+      end;
+    PtrArrayAdd(aObjArray, self);
+  end;
+  result := self;
+end;
+
+{ TSynValidate }
+
+function TSynValidate.DoApply(Data: pointer; Prop: PRttiCustomProp;
+  ErrMsg: PString): boolean;
+var
+  err: string;
+begin
+  result := Process(-1, Prop^.GetValueText(Data), err);
+  if not result then
+    err := FormatString('%: %', [Prop^.Name, err]);
+  if ErrMsg <> nil then
+    ErrMsg^ := err
+  else if not result then
+    ERttiFilter.RaiseUtf8('% failed on %', [self, err]);
+end;
+
+class function TSynValidate.Execute(const aParameters, aValue: RawUtf8): string;
+var
+  v: TSynValidate;
+begin
+  result := '';
+  v := Create(aParameters);        // instantiate
+  try
+    v.Process(-1, aValue, result); // apply validation rules
+  finally
+    v.Free;
+  end;
+end;
+
+
+{ TSynFilter }
+
+function TSynFilter.DoApply(Data: pointer; Prop: PRttiCustomProp;
+  ErrMsg: PString): boolean;
+var
+  v, vref: RawUtf8;
+begin
+  v := Prop^.GetValueText(Data); // works for both classes or records
+  vref := v;
+  Process(-1, v);
+  if v <> vref then
+    Prop^.SetValueText(Data, v);
+  result := true; // a filter always return true to continue the process
+end;
+
+class procedure TSynFilter.Execute(const aParameters: RawUtf8; var aValue: RawUtf8);
+var
+  v: TSynFilter;
+begin
+  v := Create(aParameters); // instantiate
+  try
+    v.Process(-1, aValue);  // apply filtering rules
+  finally
+    v.Free;
+  end;
+end;
+
+
+{ TSynFilterUpperCase }
+
+procedure TSynFilterUpperCase.Process(aFieldIndex: integer; var value: RawUtf8);
+begin
+  value := mormot.core.unicode.UpperCase(value);
+end;
+
+
+{ TSynFilterUpperCaseU }
+
+procedure TSynFilterUpperCaseU.Process(aFieldIndex: integer; var value: RawUtf8);
+begin
+  value := UpperCaseU(value);
+end;
+
+
+{ TSynFilterLowerCase }
+
+procedure TSynFilterLowerCase.Process(aFieldIndex: integer; var value: RawUtf8);
+begin
+  value := LowerCase(value);
+end;
+
+
+{ TSynFilterLowerCaseU }
+
+procedure TSynFilterLowerCaseU.Process(aFieldIndex: integer; var value: RawUtf8);
+begin
+  value := LowerCaseU(value);
+end;
+
+
+{ TSynFilterTrim }
+
+procedure TSynFilterTrim.Process(aFieldIndex: integer; var value: RawUtf8);
+begin
+  TrimSelf(value);
+end;
+
+
+{ TSynFilterTruncate}
+
+procedure TSynFilterTruncate.SetParameters(const value: RawUtf8);
+var
+  V: array[0..1] of TValuePUtf8Char;
+  tmp: TSynTempBuffer;
+begin
+  tmp.Init(value);
+  JsonDecode(tmp.buf, [
+    'MaxLength', // 0
+    'Utf8Length' // 1
+    ], @V);
+  fMaxLength := V[0].ToCardinal(0);
+  fUtf8Length := V[1].ToBoolean;
+  tmp.Done;
+end;
+
+procedure TSynFilterTruncate.Process(aFieldIndex: integer; var value: RawUtf8);
+begin
+  if fMaxLength - 1 < cardinal(maxInt) then
+    if fUtf8Length then
+      Utf8TruncateToLength(value, fMaxLength)
+    else
+      Utf8TruncateToUnicodeLength(value, fMaxLength);
+end;
+
+
+{ TSynValidateIPAddress }
+
+function TSynValidateIPAddress.Process(aFieldIndex: integer;
+  const value: RawUtf8; var ErrorMsg: string): boolean;
+begin
+  result := IsValidIP4Address(pointer(value));
+  if not result then
+    ErrorMsg := Format(sInvalidIPAddress, [Utf8ToString(value)]);
+end;
+
+
+{ TSynValidateEmail }
+
+function TSynValidateEmail.Process(aFieldIndex: integer; const value: RawUtf8;
+  var ErrorMsg: string): boolean;
+var
+  tld, dom: RawUtf8;
+  i: integer;
+const
+  TopLevelTLD: array[0..20] of PUtf8Char = (
+    // see http://en.wikipedia.org/wiki/List_of_Internet_top-level_domains
+    'aero', 'asia', 'biz', 'cat', 'com', 'coop', 'edu', 'gov', 'info', 'int',
+    'jobs', 'mil', 'mobi', 'museum', 'name', 'net', 'org', 'pro', 'site', 'tel',
+    'travel'); // no xxx !
+begin
+  if IsValidEmail(pointer(value)) then
+    repeat
+      dom := lowercase(copy(value, PosExChar('@', value) + 1, 100));
+      if length(dom) > 63 then
+        break; // exceeded 63-character limit of a DNS name
+      if (ForbiddenDomains <> '') and
+         CsvContains(ForbiddenDomains, dom) then
+        break;
+      i := length(value);
+      while (i > 0) and
+            (value[i] <> '.') do
+        dec(i);
+      tld := lowercase(copy(value, i + 1, 100));
+      if (AllowedTLD <> '') and
+         not CsvContains(AllowedTLD, tld) then
+        break;
+      if (ForbiddenTLD <> '') and
+         CsvContains(ForbiddenTLD, tld) then
+        break;
+      if not fAnyTLD then
+        if FastFindPUtf8CharSorted(@TopLevelTLD, high(TopLevelTLD), pointer(tld)) < 0 then
+          if length(tld) <> 2 then
+            break; // assume a two chars string is a ISO 3166-1 alpha-2 code
+      result := true;
+      exit;
+    until true;
+  ErrorMsg := Format(sInvalidEmailAddress, [Utf8ToString(value)]);
+  result := false;
+end;
+
+procedure TSynValidateEmail.SetParameters(const value: RawUtf8);
+var
+  V: array[0..3] of TValuePUtf8Char;
+  tmp: TSynTempBuffer;
+begin
+  inherited;
+  tmp.Init(value);
+  JsonDecode(tmp.buf, [
+    'AllowedTLD',        // 0
+    'ForbiddenTLD',      // 1
+    'ForbiddenDomains',  // 2
+    'AnyTLD'             // 3
+    ], @V);
+  LowerCaseCopy(V[0].Text, V[0].Len, fAllowedTLD);
+  LowerCaseCopy(V[1].Text, V[1].Len, fForbiddenTLD);
+  LowerCaseCopy(V[2].Text, V[2].Len, fForbiddenDomains);
+  AnyTLD := V[3].ToBoolean;
+  tmp.Done;
+end;
+
+
+{ TSynValidatePattern }
+
+procedure TSynValidatePattern.SetParameters(const Value: RawUtf8);
+begin
+  inherited SetParameters(Value);
+  fMatch.Prepare(Value, PClass(self)^ = TSynValidatePatternI, {reuse=}true);
+end;
+
+function TSynValidatePattern.Process(aFieldIndex: integer; const value: RawUtf8;
+  var ErrorMsg: string): boolean;
+
+  procedure SetErrorMsg;
+  begin
+    ErrorMsg := Format(sInvalidPattern, [Utf8ToString(value)]);
+  end;
+
+begin
+  result := fMatch.Match(value);
+  if not result then
+    SetErrorMsg;
+end;
+
+
+{ TSynValidateNonVoidText }
+
+function Character01n(n: integer): string;
+begin
+  if n < 0 then
+    n := 0
+  else if n > 1 then
+    n := 2;
+  result := GetCsvItemString(pointer(string(sCharacter01n)), n);
+end;
+
+procedure InvalidTextLengthMin(min: integer; var result: string);
+begin
+  result := Format(sInvalidTextLengthMin, [min, Character01n(min)]);
+end;
+
+function TSynValidateNonVoidText.Process(aFieldIndex: integer;
+  const value: RawUtf8; var ErrorMsg: string): boolean;
+begin
+  if value = '' then
+  begin
+    InvalidTextLengthMin(1, ErrorMsg);
+    result := false;
+  end
+  else
+    result := true;
+end;
+
+
+{ TSynValidateText }
+
+procedure TSynValidateText.SetErrorMsg(fPropsIndex, InvalidTextIndex, MainIndex:
+  integer; var result: string);
+var
+  P: PChar;
+begin
+  P := pointer(string(sInvalidTextChar));
+  result := GetCsvItemString(P, MainIndex);
+  if fPropsIndex > 0 then
+    result := Format(result, [fProps[fPropsIndex],
+      GetCsvItemString(P, InvalidTextIndex), Character01n(fProps[fPropsIndex])]);
+end;
+
+function TSynValidateText.Process(aFieldIndex: integer; const value: RawUtf8;
+  var ErrorMsg: string): boolean;
+var
+  i, L: cardinal;
+  Min: array[2..7] of cardinal;
+begin
+  result := false;
+  if fUtf8Length then
+    L := length(value)
+  else
+    L := Utf8ToUnicodeLength(pointer(value));
+  if L < MinLength then
+    InvalidTextLengthMin(MinLength, ErrorMsg)
+  else if L > MaxLength then
+    ErrorMsg := Format(sInvalidTextLengthMax, [MaxLength, Character01n(MaxLength)])
+  else
+  begin
+    FillCharFast(Min, SizeOf(Min), 0);
+    L := length(value);
+    for i := 1 to L do
+      case value[i] of
+        ' ':
+          inc(Min[7]);
+        'a'..'z':
+          begin
+            inc(Min[2]);
+            inc(Min[5]);
+          end;
+        'A'..'Z':
+          begin
+            inc(Min[2]);
+            inc(Min[6]);
+          end;
+        '0'..'9':
+          inc(Min[3]);
+        '_', '!', ';', '.', ',', '/', ':', '?', '%', '$', '=', '"', '#', '@',
+        '(', ')', '{', '}', '+', '''', '-', '*':
+          inc(Min[4]);
+      end;
+    for i := 2 to 7 do
+      if Min[i] < fProps[i] then
+      begin
+        SetErrorMsg(i, i, 0, ErrorMsg);
+        exit;
+      end
+      else if Min[i] > fProps[i + 8] then
+      begin
+        SetErrorMsg(i + 8, i, 1, ErrorMsg);
+        exit;
+      end;
+    if value <> '' then
+    begin
+      if MaxLeftTrimCount < cardinal(maxInt) then
+      begin
+        // if MaxLeftTrimCount is set, check against Value
+        i := 0;
+        while (i < L) and
+              (value[i + 1] = ' ') do
+          inc(i);
+        if i > MaxLeftTrimCount then
+        begin
+          SetErrorMsg(0, 0, 8, ErrorMsg);
+          exit;
+        end;
+      end;
+      if MaxRightTrimCount < cardinal(maxInt) then
+      begin
+        // if MaxRightTrimCount is set, check against Value
+        i := 0;
+        while (i < L) and
+              (value[L - i] = ' ') do
+          dec(i);
+        if i > MaxRightTrimCount then
+        begin
+          SetErrorMsg(0, 0, 9, ErrorMsg);
+          exit;
+        end;
+      end;
+    end;
+    result := true;
+  end;
+end;
+
+procedure TSynValidateText.SetParameters(const value: RawUtf8);
+var
+  V: array[0..high(TSynValidateTextProps) + {Utf8Length} 1] of TValuePUtf8Char;
+  i: PtrInt;
+  tmp: TSynTempBuffer;
+const
+  DEFAULT: TSynValidateTextProps = (
+    1,       //  MinLength
+    maxInt,  //  MaxLength
+    0,       //  MinAlphaCount
+    0,       //  MinDigitCount
+    0,       //  MinPunctCount
+    0,       //  MinLowerCount
+    0,       //  MinUpperCount
+    0,       //  MinSpaceCount
+    maxInt,  //  MaxLeftTrimCount
+    maxInt,  //  MaxRightTrimCount
+    maxInt,  //  MaxAlphaCount
+    maxInt,  //  MaxDigitCount
+    maxInt,  //  MaxPunctCount
+    maxInt,  //  MaxLowerCount
+    maxInt,  //  MaxUpperCount
+    maxInt); //  MaxSpaceCount
+begin
+  if (MinLength = 0) and
+     (MaxLength = 0) then  // if not previously set e.g. by TSynValidatePassWord
+    fProps := DEFAULT;
+  inherited SetParameters(value);
+  if value = '' then
+    exit;
+  tmp.Init(value);
+  try
+    JsonDecode(tmp.buf, [
+      'MinLength',
+      'MaxLength',
+      'MinAlphaCount',
+      'MinDigitCount',
+      'MinPunctCount',
+      'MinLowerCount',
+      'MinUpperCount',
+      'MinSpaceCount',
+      'MaxLeftTrimCount',
+      'MaxRightTrimCount',
+      'MaxAlphaCount',
+      'MaxDigitCount',
+      'MaxPunctCount',
+      'MaxLowerCount',
+      'MaxUpperCount',
+      'MaxSpaceCount',
+      'Utf8Length'], @V);
+    for i := 0 to high(fProps) do
+      if V[i].Len <> 0 then // override default if supplied
+        fProps[i] := V[i].ToCardinal;
+    if V[high(V)].Len <> 0 then
+      fUtf8Length := V[high(V)].ToBoolean;
+  finally
+    tmp.Done;
+  end;
+end;
+
+
+{ TSynValidatePassWord }
+
+procedure TSynValidatePassWord.SetParameters(const value: RawUtf8);
+const
+  DEFAULT: TSynValidateTextProps = (
+    5,        //  MinLength
+    20,       //  MaxLength
+    1,        //  MinAlphaCount
+    1,        //  MinDigitCount
+    1,        //  MinPunctCount
+    1,        //  MinLowerCount
+    1,        //  MinUpperCount
+    0,        //  MinSpaceCount
+    maxInt,   //  MaxLeftTrimCount
+    maxInt,   //  MaxRightTrimCount
+    maxInt,   //  MaxAlphaCount
+    maxInt,   //  MaxDigitCount
+    maxInt,   //  MaxPunctCount
+    maxInt,   //  MaxLowerCount
+    maxInt,   //  MaxUpperCount
+    0);       //  MaxSpaceCount
+begin
+  // set default values for validating a strong password
+  fProps := DEFAULT;
+  fUtf8Length := false;
+  // read custom parameters
+  inherited SetParameters(value);
+end;
+
+
+{ TRttiFilter }
+
+constructor TRttiFilter.Create(aClass: TClass);
+begin
+  fRtti := mormot.core.rtti.Rtti.RegisterClass(aClass);
+  if fRtti = nil then
+    ERttiFilter.RaiseUtf8('Unexpected %.Create(aClass=%)', [self, aClass]);
+  SetLength(fRules, fRtti.Props.Count);
+end;
+
+constructor TRttiFilter.Create(aRtti: PRttiInfo);
+begin
+  fRtti := mormot.core.rtti.Rtti.RegisterType(aRtti);
+  if fRtti = nil then
+    ERttiFilter.RaiseUtf8('Unexpected %.Create(aRtti=%)', [self, aRtti]);
+  SetLength(fRules, fRtti.Props.Count);
+end;
+
+destructor TRttiFilter.Destroy;
+begin
+  inherited Destroy;
+  ObjArrayObjArrayClear(fRules);
+end;
+
+procedure TRttiFilter.Clear;
+begin
+  ObjArrayObjArrayClear(fRules);
+  SetLength(fRules, fRtti.Props.Count);
+  fCount := 0;
+end;
+
+function TRttiFilter.GetRules(const aFieldName: RawUtf8): TSynFilterOrValidateObjArray;
+var
+  i: PtrInt;
+begin
+  result := nil;
+  if self = nil then
+    exit;
+  i := fRtti.Props.FindIndex(aFieldName);
+  if i >= 0 then
+    result := fRules[i];
+end;
+
+procedure TRttiFilter.Add(const aFieldName: RawUtf8;
+  const aRules: array of TSynFilterOrValidate);
+var
+  i, r: PtrInt;
+begin
+  i := fRtti.Props.FindIndex(aFieldName);
+  if i < 0 then
+    ERttiFilter.RaiseUtf8('Invalid %.Add(%)', [self, aFieldName]);
+  for r := 0 to high(aRules) do
+    if aRules[r] <> nil then
+    begin
+      PtrArrayAdd(fRules[i], aRules[r]);
+      inc(fCount);
+    end;
+end;
+
+procedure TRttiFilter.AddClass(const aFieldName: RawUtf8;
+  const aRules: array of TSynFilterOrValidateClass);
+var
+  i, r: PtrInt;
+begin
+  i := fRtti.Props.FindIndex(aFieldName);
+  if i < 0 then
+    ERttiFilter.RaiseUtf8('Invalid %.Add(%)', [self, aFieldName]);
+  for r := 0 to high(aRules) do
+    if aRules[r] <> nil then
+    begin
+      PtrArrayAdd(fRules[i], aRules[r].Create); // new with default params
+      inc(fCount);
+    end;
+end;
+
+procedure TRttiFilter.DoApply(aData: pointer; aClass: TSynFilterOrValidateClass;
+  aErrMsg: PString);
+var
+  f, r, n: PtrInt;
+  o: ^TSynFilterOrValidateObjArray;
+  p: PRttiCustomProp;
+begin
+  if (self = nil) or
+     (aData = nil) or
+     (fCount = 0) then
+    exit;
+  n := fCount;
+  o := pointer(fRules);
+  p := pointer(fRtti.Props.List); // fRules[] follows fRtti.Props.List[]
+  for r := 1 to length(fRules) do
+  begin
+    for f := 0 to length(o^) - 1 do
+    begin
+      if (aClass = nil) or
+         o^[f].InheritsFrom(aClass) then
+        if not o^[f].DoApply(aData, p, aErrMsg) then
+          exit; // stop at first failing TSynValidate rule
+      dec(n);
+      if n = 0 then
+        exit; // no more rules to process
+    end;
+    inc(o);
+    inc(p);
+  end;
+end;
+
+procedure TRttiFilter.Filter(aData: pointer);
+begin
+  DoApply(aData, TSynFilter, nil);
+end;
+
+function TRttiFilter.Validate(aData: pointer): string;
+begin
+  result := Apply(aData, TSynValidate);
+end;
+
+function TRttiFilter.Apply(aData: pointer; aClass: TSynFilterOrValidateClass): string;
+begin
+  result := '';
+  DoApply(aData, aClass, @result);
+end;
+
+procedure TRttiFilter.ApplyOrRaise(aData: pointer);
+begin
+  DoApply(aData, nil, nil); // ErrMsg=nil will trigger ERttiFilter on error
+end;
+
+
+{ ***************** Cross-Platform TSynTimeZone Time Zones }
+
+{ TTimeZoneData }
+
+function TTimeZoneData.GetTziFor(year: integer): PTimeZoneInfo;
+var
+  i, last: PtrInt;
+begin
+  if dyn = nil then
+    result := @tzi
+  else if year <= dyn[0].year then
+    result := @dyn[0].tzi
+  else
+  begin
+    last := high(dyn);
+    if year >= dyn[last].year then
+      result := @dyn[last].tzi
+    else
+    begin
+      for i := 1 to last do
+        if year < dyn[i].year then
+        begin
+          result := @dyn[i - 1].tzi;
+          exit;
+        end;
+      result := @tzi; // should never happen, but makes compiler happy
+    end;
+  end;
+end;
+
+procedure TTimeZoneData.Clear;
+begin
+  Finalize(self);
+  FillcharFast(tzi, SizeOf(tzi), 0);
+end;
+
+
+{ TSynTimeZone }
+
+// a somewhat-official per-country list between IANA and Microsoft names online:
+// https://github.com/unicode-org/cldr/blob/main/common/supplemental/windowsZones.xml
+
+constructor TSynTimeZone.Create;
+begin
+  fCurrentIndex := -1;
+  fUtcIndex := -1;
+  fZones.InitSpecific(TypeInfo(TTimeZoneDataDynArray),
+    fZone, ptRawUtf8, @fZoneCount);
+end;
+
+destructor TSynTimeZone.Destroy;
+begin
+  inherited Destroy;
+  fIds.Free;
+  fDisplays.Free;
+end;
+
+class function TSynTimeZone.LoadDefault: TSynTimeZone;
+begin
+  GlobalLock; // RegisterGlobalShutdownRelease() will use it anyway
+  try
+    result := SharedSynTimeZone;
+    if result <> nil then
+      exit;
+    result := TSynTimeZone.Create;
+    {$ifdef OSWINDOWS}
+    result.LoadFromRegistry; // use official Windows registry as reference
+    {$else}
+    result.LoadFromResource; // first try if bound to the executable
+    if result.fZoneCount = 0 then
+      result.LoadFromFile;   // fallback search for a local .tz file
+    {$endif OSWINDOWS}
+    SharedSynTimeZone := RegisterGlobalShutdownRelease(result);
+  finally
+    GlobalUnLock;
+  end;
+end;
+
+class function TSynTimeZone.Default: TSynTimeZone;
+begin
+  result := SharedSynTimeZone; // efficiently inlined
+  if result = nil then
+    result := LoadDefault;
+end;
+
+function TSynTimeZone.SaveToBuffer: RawByteString;
+begin
+  fSafe.ReadLock;
+  try
+    result := AlgoSynLZ.Compress(fZones.SaveTo);
+  finally
+    fSafe.ReadUnLock;
+  end;
+end;
+
+procedure TSynTimeZone.SaveToFile(const FileName: TFileName);
+var
+  FN: TFileName;
+begin
+  if FileName = '' then
+    FN := ChangeFileExt(Executable.ProgramFileName, '.tz')
+  else
+    FN := FileName;
+  FileFromString(SaveToBuffer, FN);
+end;
+
+function TSynTimeZone.LockedSearch(const TzId: TTimeZoneID): PtrInt;
+begin
+  result := -1;
+  if TzId = '' then
+    exit;
+  fLastZoneSafe.Lock; // protect fLastZone/fLastIndex within concurrent ReadLock
+  if TzId = fLastZone then
+    result := fLastIndex;
+  fLastZoneSafe.UnLock;
+  if result >= 0 then
+    exit;
+  result := fZones.FindHashed(TzId);
+  fLastZoneSafe.Lock;
+  fLastZone := TzId;
+  flastIndex := result;
+  fLastZoneSafe.UnLock;
+end;
+
+procedure TSynTimeZone.LockedAfterLoad;
+begin
+  fLastZone := '';
+  FreeAndNil(fIds);
+  FreeAndNil(fDisplays);
+  fZones.ForceReHash;
+  fUtcIndex := LockedSearch('UTC');
+  if fUtcIndex < 0 then
+    fUtcIndex := LockedSearch('GMT Standard Time'); // e.g. for XP
+end;
+
+function IsNotVoidUtc(const TzId: TTimeZoneID): boolean;
+  {$ifdef HASINLINE} inline; {$endif}
+begin
+  result := PCardinal(TzId)^ = ord('U') + ord('T') shl 8 + ord('C') shl 16;
+end;
+
+function TSynTimeZone.GetIndex(const TzId: TTimeZoneID): PtrInt;
+begin
+  if TzId = '' then
+    result := -1
+  else if (fUtcIndex >= 0) and
+          IsNotVoidUtc(TzId) then
+    result := fUtcIndex
+  else
+    result := LockedSearch(TzId);
+end;
+
+procedure TSynTimeZone.LoadFromBuffer(const Buffer: RawByteString);
+begin
+  if Buffer = '' then
+    exit;
+  fSafe.WriteLock;
+  try
+    fCurrentIndex := -1;
+    fZones.LoadFromBinary(AlgoSynLZ.Decompress(Buffer));
+    LockedAfterLoad;
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+procedure TSynTimeZone.LoadFromFile(const FileName: TFileName);
+var
+  FN: TFileName;
+begin
+  if FileName = '' then
+    FN := ChangeFileExt(Executable.ProgramFileName, '.tz')
+  else
+    FN := FileName;
+  LoadFromBuffer(StringFromFile(FN));
+end;
+
+procedure TSynTimeZone.LoadFromResource(Instance: TLibHandle);
+var
+  buf: RawByteString;
+begin
+  ResourceToRawByteString(ClassName, PChar(10), buf, Instance);
+  if buf <> '' then
+    LoadFromBuffer(buf);
+end;
+
+{$ifdef OSWINDOWS}
+
+const
+  REGKEY = 'Software\Microsoft\Windows NT\CurrentVersion\Time Zones\';
+
+procedure TSynTimeZone.LoadFromRegistry;
+var
+  info: TTimeZoneInformation;
+  current: RawUtf8;
+  reg: TWinRegistry;
+  keys: TRawUtf8DynArray;
+  i, first, last, year, n: integer;
+  z: TTimeZoneData;
+begin
+  // retrieve current selected system time zone
+  FillCharFast(info, SizeOf(info), 0);
+  GetTimeZoneInformation(info);
+  if info.StandardName[0] <> #0 then
+    current := UnicodeBufferToUtf8(info.StandardName);
+  // read all time zones information from registry
+  fSafe.WriteLock;
+  try
+    fCurrentIndex := -1;
+    fZones.Clear;
+    if reg.ReadOpen(wrLocalMachine, REGKEY) then
+      keys := reg.ReadEnumEntries
+    else
+      keys := nil; // make Delphi 6 happy
+    n := length(keys);
+    fZones.Capacity := n;
+    for i := 0 to n - 1 do
+      if reg.ReadReOpen(wrLocalMachine, [REGKEY, keys[i]]) then
+      begin
+        z.Clear;
+        z.id := keys[i]; // registry keys are genuine by definition
+        z.display := reg.ReadString('Display');
+        reg.ReadBuffer('TZI', @z.tzi, SizeOf(z.tzi));
+        if (fCurrentIndex < 0) and
+           (current <> '') and
+           (reg.ReadString('Std') = current) then
+          fCurrentIndex := fZoneCount;
+        if reg.ReadReOpen(wrLocalMachine, [REGKEY, keys[i], '\Dynamic DST']) then
+        begin
+          // warning: never defined on XP/2003, and not for all entries
+          first := reg.ReadDword('FirstEntry');
+          last  := reg.ReadDword('LastEntry');
+          if (first > 0) and
+             (last >= first) then
+          begin
+            n := 0;
+            SetLength(z.dyn, last - first + 1);
+            for year := first to last do
+              if reg.ReadBufferU(
+                   UInt32ToUtf8(year), @z.dyn[n].tzi, SizeOf(TTimeZoneInfo)) then
+              begin
+                z.dyn[n].year := year;
+                inc(n);
+              end;
+            SetLength(z.dyn, n);
+          end;
+        end;
+        fZones.Add(z);
+      end;
+    SetLength(fZone, fZoneCount);
+    reg.Close;
+    LockedAfterLoad;
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+procedure TSynTimeZone.ChangeOperatingSystemTimeZone(const TzId: TTimeZoneID);
+var
+  i: PtrInt;
+begin
+  fSafe.WriteLock;
+  try
+    i := GetIndex(TzId);
+    if i < 0 then
+      ESynException.RaiseUtf8(
+        'Unknown %.ChangeOperatingSystemTimeZone(%)', [self, TzId]);
+    ChangeOperatingSystemTimeZone(i); // may raise exception
+  finally
+    fSafe.WriteUnLock;
+  end;
+end;
+
+procedure TSynTimeZone.ChangeOperatingSystemTimeZone(Index: PtrInt);
+var
+  info: TDynamicTimeZoneInformation;
+  z: ^TTimeZoneData;
+  reg: TWinRegistry;
+begin
+  if PtrUInt(Index) >= PtrUInt(fZoneCount) then
+    ESynException.RaiseUtf8(
+      'Unexpected %.ChangeOperatingSystemTimeZone(%)', [self, Index]);
+  // use the existing information for this zone
+  z := @fZone[Index];
+  FillCharFast(info, SizeOf(info), 0);
+  info.TimeZone.Bias := z^.tzi.Bias;
+  info.TimeZone.StandardDate := TSystemTime(z^.tzi.change_time_std);
+  info.TimeZone.DaylightDate := TSystemTime(z^.tzi.change_time_dlt);
+  info.TimeZone.StandardBias := z^.tzi.bias_std;
+  info.TimeZone.DaylightBias := z^.tzi.bias_dlt;
+  Utf8ToWideChar(@info.TimeZoneKeyName, pointer(z^.id), 128, length(z^.id), true);
+  // retrieve additional information from the registry
+  if not reg.ReadReOpen(wrLocalMachine, [REGKEY, z^.id], {reopen=}false) then
+    ESynException.RaiseUtf8('%.ChangeOperatingSystemTimeZone: missing % key',
+      [self, z^.id]); // paranoid
+  try // direct copy of the UTF-16 buffer from registry
+    reg.ReadMax('Std', @info.TimeZone.StandardName, 32 * 2);
+    reg.ReadMax('Dlt', @info.TimeZone.DaylightName, 32 * 2);
+  finally
+    reg.Close;
+  end;
+  // actually change the system time zone - may raise EOSException
+  SetSystemTimeZone(info);
+  fCurrentIndex := Index;
+end;
+
+{$endif OSWINDOWS}
+
+function TSynTimeZone.GetDisplay(const TzId: TTimeZoneID): RawUtf8;
+var
+  ndx: PtrInt;
+begin
+  fSafe.ReadLock;
+  ndx := GetIndex(TzId);
+  if ndx < 0 then
+    FastAssignNew(result)
+  else
+    result := fZone[ndx].display;
+  fSafe.ReadUnLock;
+end;
+
+function TSynTimeZone.GetBiasForDateTime(const Value: TDateTime;
+  const TzId: TTimeZoneID; out Bias: integer; out HaveDaylight: boolean;
+  ValueIsUtc: boolean): boolean;
+var
+  ndx: PtrInt;
+  d: TSynSystemTime;
+  tzi: PTimeZoneInfo;
+  std, dlt: TDateTime;
+begin
+  // handle most obvious cases
+  Bias := 0;
+  HaveDaylight := false;
+  result := false;
+  if TzId = '' then
+    exit;
+  result := IsNotVoidUtc(TzId); // 'UTC' could directly return Bias=0
+  if result then
+    exit;
+  // use the internal hash table
+  fSafe.ReadLock;
+  try
+    ndx := LockedSearch(TzId);
+    if ndx < 0 then
+      exit;
+    d.FromDate(Value); // faster than DecodeDate
+    tzi := fZone[ndx].GetTziFor(d.Year);
+    if tzi.change_time_std.IsZero then
+    begin
+      HaveDaylight := false;
+      Bias := tzi.Bias + tzi.bias_std;
+    end
+    else
+    begin
+      HaveDaylight := true;
+      std := tzi.change_time_std.EncodeForTimeChange(d.Year);
+      dlt := tzi.change_time_dlt.EncodeForTimeChange(d.Year);
+      if ValueIsUtc then
+      begin
+        // STD shifts by the DLT bias to convert to UTC
+        std := ((std * MinsPerDay) + tzi.Bias + tzi.bias_dlt) / MinsPerDay;
+        // DLT shifts by the STD bias
+        dlt := ((dlt * MinsPerDay) + tzi.Bias + tzi.bias_std) / MinsPerDay;
+      end;
+      if std < dlt then
+        if (std <= Value) and
+           (Value < dlt) then
+          Bias := tzi.Bias + tzi.bias_std
+        else
+          Bias := tzi.Bias + tzi.bias_dlt
+      else if (dlt <= Value) and
+              (Value < std) then
+        Bias := tzi.Bias + tzi.bias_dlt
+      else
+        Bias := tzi.Bias + tzi.bias_std;
+    end;
+  finally
+    fSafe.ReadUnLock;
+  end;
+  result := true;
+end;
+
+function TSynTimeZone.UtcToLocal(const UtcDateTime: TDateTime;
+  const TzId: TTimeZoneID): TDateTime;
+var
+  Bias: integer;
+  HaveDaylight: boolean;
+begin
+  if (self = nil) or
+     (TzId = '') or
+     IsNotVoidUtc(TzId) then
+    result := UtcDateTime
+  else
+  begin
+    GetBiasForDateTime(UtcDateTime, TzId, Bias, HaveDaylight, {fromutc=}true);
+    result := ((UtcDateTime * MinsPerDay) - Bias) / MinsPerDay;
+  end;
+end;
+
+function TSynTimeZone.NowToLocal(const TzId: TTimeZoneID): TDateTime;
+begin
+  result := UtcToLocal(NowUtc, TzId);
+end;
+
+function TSynTimeZone.LocalToUtc(const LocalDateTime: TDateTime;
+  const TzID: TTimeZoneID): TDateTime;
+var
+  Bias: integer;
+  HaveDaylight: boolean;
+begin
+  if (self = nil) or
+     (TzId = '') or
+     IsNotVoidUtc(TzId) then
+    result := LocalDateTime
+  else
+  begin
+    GetBiasForDateTime(LocalDateTime, TzID, Bias, HaveDaylight, {fromutc=}false);
+    result := ((LocalDateTime * MinsPerDay) + Bias) / MinsPerDay;
+  end;
+end;
+
+procedure TSynTimeZone.SetIDs;
+var
+  i: PtrInt;
+begin
+  fSafe.WriteLock;
+  if fIDs = nil then
+  begin
+    fIDs := TStringList.Create;
+    for i := 0 to length(fZone) - 1 do
+      fIDs.Add(Utf8ToString(RawUtf8(fZone[i].id)));
+  end;
+  fSafe.WriteUnLock;
+end;
+
+procedure TSynTimeZone.SetDisplays;
+var
+  i: PtrInt;
+begin
+  fSafe.WriteLock;
+  if fDisplays = nil then
+  begin
+    fDisplays := TStringList.Create;
+    for i := 0 to length(fZone) - 1 do
+      fDisplays.Add(Utf8ToString(fZone[i].display));
+  end;
+  fSafe.WriteUnLock;
+end;
+
+function TSynTimeZone.Ids: TStrings;
+begin
+  if fIDs = nil then
+    SetIDs;
+  result := fIDs;
+end;
+
+function TSynTimeZone.Displays: TStrings;
+begin
+  if fDisplays = nil then
+    SetDisplays;
+  result := fDisplays;
+end;
+
+
+function GetBiasForDateTime(const Value: TDateTime; const TzId: TTimeZoneID;
+  out Bias: integer; out HaveDaylight: boolean; ValueIsUtc: boolean): boolean;
+begin
+  result := TSynTimeZone.Default.
+    GetBiasForDateTime(Value, TzId, Bias, HaveDaylight, ValueIsUtc);
+end;
+
+function GetDisplay(const TzId: TTimeZoneID): RawUtf8;
+begin
+  result := TSynTimeZone.Default.GetDisplay(TzId);
+end;
+
+function UtcToLocal(const Utc: TDateTime; const TzId: TTimeZoneID): TDateTime;
+begin
+  result := TSynTimeZone.Default.UtcToLocal(Utc, TzId);
+end;
+
+function NowToLocal(const TzId: TTimeZoneID): TDateTime;
+begin
+  result := TSynTimeZone.Default.NowToLocal(TzId);
+end;
+
+function LocalToUtc(const Local: TDateTime; const TzID: TTimeZoneID): TDateTime;
+begin
+  result := TSynTimeZone.Default.LocalToUtc(Local, TzId);
+end;
+
+
+initialization
+  // setup proper GLOB function redirection
+  GlobBuffer := @_Glob;
+
+end.

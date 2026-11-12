@@ -479,7 +479,7 @@ begin
   end;
 
   ForceDirectories(TPath.Combine(FFolder, 'dcu'));
-  var LMORMot := TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot\Source');
+  var LMORMot := string.Join(';', [TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot2\src\core'), TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot2\src\crypt'), TPath.Combine(TPath.GetDirectoryName(LSources), 'ThirdParty\mORMot2\src\lib')]);
   if TGenTestTools.Run(Format('"%s" -B -Q -NSSystem;Winapi;System.Win;Data;REST;Web;Xml -U"%s;%s" -I"%s;%s" -N0dcu ClientProbe.dpr',
     [LCompiler, LSources, LMORMot, LSources, LMORMot]), FFolder, LOutput) <> 0
   then

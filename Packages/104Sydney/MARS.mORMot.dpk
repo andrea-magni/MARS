@@ -41,11 +41,27 @@ requires
 
 contains
   MARS.mORMotJWT.Token in '..\..\Source\MARS.mORMotJWT.Token.pas',
-  SynCommons in '..\..\ThirdParty\mORMot\Source\SynCommons.pas',
-  SynCrypto in '..\..\ThirdParty\mORMot\Source\SynCrypto.pas',
-  SynEcc in '..\..\ThirdParty\mORMot\Source\SynEcc.pas',
-  SynLZ in '..\..\ThirdParty\mORMot\Source\SynLZ.pas',
   MARS.mORMotJWT.Token.InjectionService in '..\..\Source\MARS.mORMotJWT.Token.InjectionService.pas',
-  SynTable in '..\..\ThirdParty\mORMot\Source\SynTable.pas';
+  mormot.core.base in '..\..\ThirdParty\mORMot2\src\core\mormot.core.base.pas',
+  mormot.core.os in '..\..\ThirdParty\mORMot2\src\core\mormot.core.os.pas',
+  mormot.core.os.security in '..\..\ThirdParty\mORMot2\src\core\mormot.core.os.security.pas',
+  mormot.core.unicode in '..\..\ThirdParty\mORMot2\src\core\mormot.core.unicode.pas',
+  mormot.core.text in '..\..\ThirdParty\mORMot2\src\core\mormot.core.text.pas',
+  mormot.core.datetime in '..\..\ThirdParty\mORMot2\src\core\mormot.core.datetime.pas',
+  mormot.core.rtti in '..\..\ThirdParty\mORMot2\src\core\mormot.core.rtti.pas',
+  mormot.core.buffers in '..\..\ThirdParty\mORMot2\src\core\mormot.core.buffers.pas',
+  mormot.core.data in '..\..\ThirdParty\mORMot2\src\core\mormot.core.data.pas',
+  mormot.core.json in '..\..\ThirdParty\mORMot2\src\core\mormot.core.json.pas',
+  mormot.core.variants in '..\..\ThirdParty\mORMot2\src\core\mormot.core.variants.pas',
+  mormot.core.search in '..\..\ThirdParty\mORMot2\src\core\mormot.core.search.pas',
+  mormot.core.fmt in '..\..\ThirdParty\mORMot2\src\core\mormot.core.fmt.pas',
+  mormot.lib.sspi in '..\..\ThirdParty\mORMot2\src\lib\mormot.lib.sspi.pas',
+  mormot.crypt.core in '..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.core.pas',
+  mormot.crypt.secure in '..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.secure.pas',
+  mormot.crypt.ecc256r1 in '..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.ecc256r1.pas',
+  mormot.crypt.ecc in '..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.ecc.pas',
+  mormot.crypt.rsa in '..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.rsa.pas',
+  mormot.crypt.factory in '..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.factory.pas',
+  mormot.crypt.jwt in '..\..\ThirdParty\mORMot2\src\crypt\mormot.crypt.jwt.pas';
 
 end.
