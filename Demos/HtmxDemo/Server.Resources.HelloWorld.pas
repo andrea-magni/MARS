@@ -19,7 +19,7 @@ uses
 
 type
   [ Path('web')
-  , RootFolder('.\www', True)
+  , RootFolder('{bin}www', True)
   , OAPIDescription('Serves static content from the www folder.')
   ]
   TStaticContentResource = class(TFileSystemResource)
