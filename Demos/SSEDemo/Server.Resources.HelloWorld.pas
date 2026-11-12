@@ -19,7 +19,8 @@ uses
 ;
 
 type
-  [Path('www'), RootFolder('.\www', True)]
+  // 'web' (not 'www'): Server.Resources.OpenAPI serves Swagger UI on www/{*}
+  [Path('web'), RootFolder('{bin}www', True)]
   TStaticContentResource = class(TFileSystemResource)
   end;
 
