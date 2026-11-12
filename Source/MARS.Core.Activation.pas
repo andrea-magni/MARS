@@ -903,9 +903,10 @@ begin
 
   if FAuthorizationInfo.NeedsAuthentication then
   begin
-    // a protected resource needs a usable JWT.Secret: raises when it is not configured
+    // a protected resource needs a usable JWT.Secret (or JWT.PublicKey, with an asymmetric
+    // JWT.Algorithm): raises when it is not configured
     // (public resources never get here, so applications not using JWT need no JWT setup)
-    TMARSToken.SecretFromParameters(Application.Parameters);
+    TMARSToken.CheckVerificationKey(Application.Parameters);
 
     if ((Token.Token = '') or not Token.IsVerified) then
     begin

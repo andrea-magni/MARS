@@ -164,6 +164,10 @@ Read by the [token resource](/features/authentication) and JWT backends:
 | `JWT.KeyId` | — | Id of `JWT.Secret`, written as `kid` in the header of new tokens. See [Key rotation](/features/authentication#key-rotation). |
 | `JWT.PreviousSecret.<kid>` | — | A retired key, accepted only to verify tokens whose `kid` is `<kid>`. |
 | `JWT.PreviousSecret` | — | A retired key for tokens without `kid` (issued before `JWT.KeyId` was set). |
+| `JWT.Algorithm` | `HS256` | Signature algorithm: `HS256` (a shared secret), or `RS256`, `PS256`, `ES256` (a key pair). See [Asymmetric algorithms](/features/authentication#asymmetric-algorithms). |
+| `JWT.PrivateKey` | — | With an asymmetric algorithm, the key that signs new tokens: a PEM file (relative to the folder of the executable) or a PEM text in one line (`\n` for the line breaks). |
+| `JWT.PublicKey` | — | With an asymmetric algorithm, the key that verifies tokens (same forms). |
+| `JWT.PreviousPublicKey.<kid>`, `JWT.PreviousPublicKey` | — | Retired public keys, as `JWT.PreviousSecret`. |
 | `JWT.Issuer` | `MARS-Curiosity` | `iss` claim. |
 | `JWT.Duration` | `1` | Token lifetime in **days**. |
 | `JWT.Duration.InMinutes` | — | Lifetime in minutes (alternative). |

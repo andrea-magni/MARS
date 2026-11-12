@@ -3,7 +3,7 @@ unit Tests.JWT;
 interface
 
 uses
-  Classes, SysUtils, Rtti, Types, TypInfo
+  Classes, SysUtils, Rtti, Types, TypInfo, Generics.Collections
 , DUnitX.TestFramework
 , MARS.Core.Token
 , MARS.mORMotJWT.Token, MARS.JOSEJWT.Token
@@ -16,6 +16,13 @@ type
     class function Base64UrlEncode(const AValue: string): string;
     // a valid token for user Andrea, signed HS512 (not HS256) with ASecret
     class function HS512Token(const ASecret: string): string;
+    // a key pair in PEM for AAlgorithm (RS256, PS256: RSA 2048; ES256: P-256), generated once
+    // for each AIndex: no private key in the repository
+    class procedure KeyPair(const AAlgorithm: string; const AIndex: Integer;
+      out APrivateKey, APublicKey: string);
+    class destructor Destroy;
+  private
+    class var FKeyPairs: TDictionary<string, TArray<string>>;
   end;
 
   TMARSJWT<T: TMARSToken> = class(TObject)
@@ -27,6 +34,11 @@ type
       const APrevious: array of string): TMARSParameters;
     function IssueToken(const AParameters: TMARSParameters): string;
     function IsVerifiedWith(const AToken: string; const AParameters: TMARSParameters): Boolean;
+    // JWT.Algorithm with the key pair AIndex: APrivate and APublic say which keys are configured
+    function AsymmetricParams(const AAlgorithm: string; const AIndex: Integer;
+      const APrivate, APublic: Boolean; const AKeyId: string = ''): TMARSParameters;
+    // False (and the test passes) where the backend has no providers for the asymmetric algorithms
+    function AsymmetricAvailable: Boolean;
   public
     // test fixtures, not real secrets: 32 characters (256 bits), as an HMAC-SHA256 key should be
     const DUMMY_SECRET = 'test-only-dummy-secret-000000001';
@@ -58,6 +70,19 @@ type
     [Test] procedure OnlyHS256Accepted;
     // #310: a token with another alg is refused before any verification (no RSA provider, no OpenSSL 1.0)
     [Test] procedure RS256NeverReachesTheRSAProvider;
+
+    // asymmetric algorithms: JWT.Algorithm, JWT.PrivateKey, JWT.PublicKey
+    [TestCase('RS256', 'RS256')]
+    [TestCase('PS256', 'PS256')]
+    [TestCase('ES256', 'ES256')]
+    procedure AsymmetricRoundTrip(const AAlgorithm: string);
+    [TestCase('RS256', 'RS256')]
+    [TestCase('PS256', 'PS256')]
+    [TestCase('ES256', 'ES256')]
+    procedure AsymmetricRefusals(const AAlgorithm: string);
+    [Test] procedure AsymmetricKeyRotation;
+    [Test] procedure AsymmetricKeysFromFiles;
+    [Test] procedure AsymmetricConfigurationErrors;
   end;
 
   [TestFixture('TMARSToken.Secret')]
@@ -86,6 +111,8 @@ type
     [Test] procedure KeyIdFromMalformedTokens;
     [Test] procedure ValidKeyIds;
     [Test] procedure CustomKeyProvider;
+    // a token of a backend verifies with the other one (where JOSE has the asymmetric providers)
+    [Test] procedure AsymmetricTokensAcrossBackends;
   end;
 
 
@@ -101,12 +128,15 @@ type
 implementation
 
 uses
-  mormot.core.base, mormot.core.text, mormot.core.unicode, mormot.core.variants, mormot.core.datetime, mormot.crypt.jwt
+  System.IOUtils, mormot.core.base, mormot.core.text, mormot.core.unicode, mormot.core.variants, mormot.core.datetime
+, mormot.crypt.secure, mormot.crypt.factory, mormot.crypt.jwt
 , Math, TimeSpan, NetEncoding
 , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA, JOSE.Providers, JOSE.Providers.Interfaces
 , MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
-, Generics.Collections
+// the asymmetric algorithms of the JOSE backend: define it where TaurusTLS and OpenSSL 3 are available
+{$IFDEF MARS_JOSE_TAURUSTLS}, MARS.JOSEJWT.TaurusTLS{$ENDIF}
+
 ;
 
 { TMARSJWTmORMotTest }
@@ -508,6 +538,284 @@ begin
     end;
   finally
     LJWT.Free;
+  end;
+end;
+
+class destructor TJWTTestUtils.Destroy;
+begin
+  FKeyPairs.Free;
+end;
+
+class procedure TJWTTestUtils.KeyPair(const AAlgorithm: string; const AIndex: Integer;
+  out APrivateKey, APublicKey: string);
+var
+  LPair: TArray<string>;
+begin
+  // RS256 and PS256 use the same kind of key
+  var LAlgo := caaRS256;
+  var LName := 'RSA';
+  if AAlgorithm = JWT_ALGORITHM_ES256 then
+  begin
+    LAlgo := caaES256;
+    LName := 'EC';
+  end;
+  LName := LName + AIndex.ToString;
+
+  if not Assigned(FKeyPairs) then
+    FKeyPairs := TDictionary<string, TArray<string>>.Create;
+  if not FKeyPairs.TryGetValue(LName, LPair) then
+  begin
+    var LJWT := TJwtCrypt.Create(LAlgo, '', [], []); // no key: generates a pair
+    try
+      // standard PEM, as OpenSSL writes them: PKCS#8 or PKCS#1 private key and SubjectPublicKeyInfo.
+      // mORMot gives the bare public key (the P-256 point, the PKCS#1 RSAPublicKey of a 2048 bit
+      // key): the fixed SubjectPublicKeyInfo header of each goes in front of it
+      const EC_SPKI: RawByteString = #$30#$59#$30#$13#$06#$07#$2A#$86#$48#$CE#$3D#$02#$01#$06#$08#$2A#$86#$48#$CE#$3D#$03#$01#$07#$03#$42#$00;
+      const RSA_SPKI: RawByteString = #$30#$82#$01#$22#$30#$0D#$06#$09#$2A#$86#$48#$86#$F7#$0D#$01#$01#$01#$05#$00#$03#$82#$01#$0F#$00;
+      var LPublic: RawByteString := LJWT.PrivateKey.ToSubjectPublicKey;
+      var LPrivate: RawUtf8 := LJWT.PrivateKey.Save(True, '');
+      if LAlgo = caaES256 then
+      begin
+        Assert.AreEqual(65, Length(LPublic), 'P-256 point');
+        LPublic := EC_SPKI + LPublic;
+        // a PKCS#8 key, labeled EC PRIVATE KEY by mORMot
+        LPrivate := DerToPem(PemToDer(LPrivate), pemPrivateKey);
+      end
+      else
+      begin
+        Assert.AreEqual(270, Length(LPublic), 'RSAPublicKey of 2048 bits');
+        LPublic := RSA_SPKI + LPublic;
+      end;
+      LPair := [UTF8ToString(LPrivate), UTF8ToString(DerToPem(LPublic, pemPublicKey))];
+    finally
+      LJWT.Free;
+    end;
+    FKeyPairs.Add(LName, LPair);
+  end;
+  APrivateKey := LPair[0];
+  APublicKey := LPair[1];
+end;
+
+{ TMARSJWT<T>: asymmetric algorithms }
+
+function TMARSJWT<T>.AsymmetricAvailable: Boolean;
+begin
+  Result := not T.InheritsFrom(TMARSJOSEJWTToken) or TMARSJOSEJWTToken.AsymmetricProviderRegistered;
+end;
+
+function TMARSJWT<T>.AsymmetricParams(const AAlgorithm: string; const AIndex: Integer;
+  const APrivate, APublic: Boolean; const AKeyId: string): TMARSParameters;
+var
+  LPrivateKey, LPublicKey: string;
+begin
+  TJWTTestUtils.KeyPair(AAlgorithm, AIndex, LPrivateKey, LPublicKey);
+  Result := TMARSParameters.Create('');
+  Result.Values[JWT_ALGORITHM_PARAM] := AAlgorithm;
+  if APrivate then
+    Result.Values[JWT_PRIVATEKEY_PARAM] := LPrivateKey;
+  if APublic then
+    Result.Values[JWT_PUBLICKEY_PARAM] := LPublicKey;
+  if AKeyId <> '' then
+    Result.Values[JWT_KEYID_PARAM] := AKeyId;
+end;
+
+procedure TMARSJWT<T>.AsymmetricRoundTrip(const AAlgorithm: string);
+begin
+  var LIssuer := AsymmetricParams(AAlgorithm, 1, True, True);
+  var LVerifier := AsymmetricParams(AAlgorithm, 1, False, True); // a server with the public key only
+  try
+    if not AsymmetricAvailable then
+    begin
+      // never the default providers of JOSE (OpenSSL 1.0): a clear error instead
+      Assert.WillRaise(procedure begin IssueToken(LIssuer); end, EMARSException);
+      Exit;
+    end;
+
+    var LToken := IssueToken(LIssuer);
+    Assert.AreEqual(AAlgorithm, TMARSToken.AlgorithmFromToken(LToken));
+    Assert.IsTrue(IsVerifiedWith(LToken, LIssuer), 'issuer');
+    Assert.IsTrue(IsVerifiedWith(LToken, LVerifier), 'public key only');
+
+    var LLoaded := T.Create(LToken, LVerifier);
+    try
+      Assert.AreEqual(AAlgorithm, LLoaded.Algorithm);
+      Assert.IsFalse(LLoaded.IsExpired);
+    finally
+      LLoaded.Free;
+    end;
+
+    // the public key does not sign
+    Assert.WillRaise(procedure begin IssueToken(LVerifier); end, EMARSException, 'no private key');
+  finally
+    LIssuer.Free;
+    LVerifier.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.AsymmetricRefusals(const AAlgorithm: string);
+var
+  LPrivateKey, LPublicKey: string;
+begin
+  if not AsymmetricAvailable then
+  begin
+    Assert.Pass('no providers for the asymmetric algorithms');
+    Exit;
+  end;
+
+  var LParams := AsymmetricParams(AAlgorithm, 1, True, True);
+  var LOther := AsymmetricParams(AAlgorithm, 2, True, True);
+  var LHS256 := KeyParams(DUMMY_SECRET, '', []);
+  try
+    var LToken := IssueToken(LParams);
+    Assert.IsFalse(IsVerifiedWith(LToken, LOther), 'another key pair');
+    Assert.IsFalse(IsVerifiedWith(LToken, LHS256), 'an application with a secret');
+    Assert.IsFalse(IsVerifiedWith(IssueToken(LHS256), LParams), 'a HS256 token');
+
+    // tampered payload
+    var LParts := LToken.Split(['.']);
+    var LTampered := LParts[0] + '.' + TJWTTestUtils.Base64UrlEncode('{"UserName":"Andrea","Roles":"admin","exp":87910736248}')
+      + '.' + LParts[2];
+    Assert.IsFalse(IsVerifiedWith(LTampered, LParams), 'tampered');
+
+    // algorithm confusion: HS256 with the public key as the secret
+    TJWTTestUtils.KeyPair(AAlgorithm, 1, LPrivateKey, LPublicKey);
+    // (signed by the mORMot backend: JOSE refuses a PEM as a HMAC secret)
+    var LConfusion := KeyParams(LPublicKey, '', []);
+    var LForger := TMARSmORMotJWTToken.Create('', LConfusion);
+    try
+      LForger.UserName := 'Andrea';
+      LForger.Build(LConfusion);
+      Assert.AreEqual(JWT_ALGORITHM_HS256, TMARSToken.AlgorithmFromToken(LForger.Token));
+      Assert.IsFalse(IsVerifiedWith(LForger.Token, LParams), 'HS256 signed with the public key');
+    finally
+      LForger.Free;
+      LConfusion.Free;
+    end;
+
+    // the other asymmetric algorithms, same kind of key or not
+    for var LAlgorithm in [JWT_ALGORITHM_RS256, JWT_ALGORITHM_PS256, JWT_ALGORITHM_ES256] do
+      if LAlgorithm <> AAlgorithm then
+      begin
+        var LOtherAlgorithm := AsymmetricParams(LAlgorithm, 1, True, True);
+        try
+          Assert.IsFalse(IsVerifiedWith(IssueToken(LOtherAlgorithm), LParams), LAlgorithm + ' token');
+        finally
+          LOtherAlgorithm.Free;
+        end;
+      end;
+  finally
+    LParams.Free;
+    LOther.Free;
+    LHS256.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.AsymmetricKeyRotation;
+var
+  LPrivateKey, LOldPublicKey: string;
+begin
+  if not AsymmetricAvailable then
+  begin
+    Assert.Pass('no providers for the asymmetric algorithms');
+    Exit;
+  end;
+
+  var LOld := AsymmetricParams(JWT_ALGORITHM_ES256, 1, True, True, 'k1');
+  var LNew := AsymmetricParams(JWT_ALGORITHM_ES256, 2, True, True, 'k2');
+  try
+    var LOldToken := IssueToken(LOld);
+    Assert.AreEqual('k1', TMARSToken.KeyIdFromToken(LOldToken));
+    Assert.IsFalse(IsVerifiedWith(LOldToken, LNew), 'retired key not configured');
+
+    TJWTTestUtils.KeyPair(JWT_ALGORITHM_ES256, 1, LPrivateKey, LOldPublicKey);
+    LNew.Values[JWT_PREVIOUSPUBLICKEY_PARAM + '.k1'] := LOldPublicKey;
+    Assert.IsTrue(IsVerifiedWith(LOldToken, LNew), 'retired key');
+    Assert.IsTrue(IsVerifiedWith(IssueToken(LNew), LNew), 'active key');
+    Assert.IsFalse(IsVerifiedWith(IssueToken(LNew), LOld), 'unknown kid');
+  finally
+    LOld.Free;
+    LNew.Free;
+  end;
+end;
+
+procedure TMARSJWT<T>.AsymmetricKeysFromFiles;
+var
+  LPrivateKey, LPublicKey: string;
+begin
+  if not AsymmetricAvailable then
+  begin
+    Assert.Pass('no providers for the asymmetric algorithms');
+    Exit;
+  end;
+
+  TJWTTestUtils.KeyPair(JWT_ALGORITHM_ES256, 1, LPrivateKey, LPublicKey);
+  var LFolder := TPath.Combine(TPath.GetTempPath, 'MARSTests_' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(LFolder);
+  var LParams := TMARSParameters.Create('');
+  try
+    TFile.WriteAllText(TPath.Combine(LFolder, 'private.pem'), LPrivateKey);
+    TFile.WriteAllText(TPath.Combine(LFolder, 'public.pem'), LPublicKey);
+    LParams.Values[JWT_ALGORITHM_PARAM] := 'es256'; // case does not matter
+    LParams.Values[JWT_PRIVATEKEY_PARAM] := TPath.Combine(LFolder, 'private.pem');
+    LParams.Values[JWT_PUBLICKEY_PARAM] := TPath.Combine(LFolder, 'public.pem');
+    Assert.IsTrue(IsVerifiedWith(IssueToken(LParams), LParams), 'keys from files');
+
+    // a PEM text in one line, as in an .ini file
+    LParams.Values[JWT_PUBLICKEY_PARAM] := LPublicKey.Trim.Replace(#13#10, '\n').Replace(#10, '\n');
+    Assert.IsTrue(IsVerifiedWith(IssueToken(LParams), LParams), 'PEM in one line');
+
+    LParams.Values[JWT_PUBLICKEY_PARAM] := TPath.Combine(LFolder, 'missing.pem');
+    Assert.WillRaise(procedure begin IsVerifiedWith('a.b.c', LParams); end, EMARSException, 'missing file');
+  finally
+    LParams.Free;
+    TDirectory.Delete(LFolder, True);
+  end;
+end;
+
+procedure TMARSJWT<T>.AsymmetricConfigurationErrors;
+begin
+  var LParams := TMARSParameters.Create('');
+  try
+    for var LAlgorithm in ['none', 'HS512', 'RS512', 'whatever'] do
+    begin
+      LParams.Values[JWT_ALGORITHM_PARAM] := LAlgorithm;
+      Assert.WillRaise(procedure begin TMARSToken.AlgorithmFromParameters(LParams); end, EMARSException, LAlgorithm);
+    end;
+
+    // no keys: nothing to issue or verify with, and a protected resource says so
+    LParams.Values[JWT_ALGORITHM_PARAM] := JWT_ALGORITHM_RS256;
+    Assert.WillRaise(procedure begin TMARSToken.SigningKeyFromParameters(LParams); end, EMARSException, 'no private key');
+    Assert.WillRaise(procedure begin TMARSToken.CheckVerificationKey(LParams); end, EMARSException, 'no public key');
+    // JWT.Secret is not a key of RS256
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    Assert.WillRaise(procedure begin TMARSToken.CheckVerificationKey(LParams); end, EMARSException, 'a secret only');
+    var LToken := T.Create('a.b.c', LParams);
+    try
+      Assert.IsFalse(LToken.IsVerified);
+    finally
+      LToken.Free;
+    end;
+
+    if AsymmetricAvailable then
+    begin
+      // not a key
+      LParams.Values[JWT_PUBLICKEY_PARAM] := '-----BEGIN PUBLIC KEY-----\nnot a key\n-----END PUBLIC KEY-----';
+      var LValid := AsymmetricParams(JWT_ALGORITHM_RS256, 1, True, True);
+      try
+        var LRS256 := IssueToken(LValid);
+        // refused, or an error that says so (mORMot)
+        try
+          Assert.IsFalse(IsVerifiedWith(LRS256, LParams), 'not a key');
+        except
+          on E: EMARSException do
+            Assert.Contains(E.Message, 'not a valid RS256 key');
+        end;
+      finally
+        LValid.Free;
+      end;
+    end;
+  finally
+    LParams.Free;
   end;
 end;
 
@@ -1131,6 +1439,58 @@ begin
   Assert.AreEqual(64, Length(LOne));
   Assert.AreNotEqual(LOne, LTwo);
   Assert.AreEqual(16, Length(GenerateRandomSecret(8)));
+end;
+
+type
+  TMARSTokenClass = class of TMARSToken;
+
+procedure TMARSTokenTests.AsymmetricTokensAcrossBackends;
+
+  function Issue(const AClass: TMARSTokenClass; const AParameters: TMARSParameters): string;
+  begin
+    var LToken := AClass.Create('', AParameters);
+    try
+      LToken.UserName := 'Andrea';
+      LToken.Build(AParameters);
+      Result := LToken.Token;
+    finally
+      LToken.Free;
+    end;
+  end;
+
+  function Verifies(const AClass: TMARSTokenClass; const AToken: string; const AParameters: TMARSParameters): Boolean;
+  begin
+    var LToken := AClass.Create(AToken, AParameters);
+    try
+      Result := LToken.IsVerified and (LToken.UserName = 'Andrea');
+    finally
+      LToken.Free;
+    end;
+  end;
+
+var
+  LPrivateKey, LPublicKey: string;
+begin
+  if not TMARSJOSEJWTToken.AsymmetricProviderRegistered then
+  begin
+    Assert.Pass('JOSE has no providers for the asymmetric algorithms');
+    Exit;
+  end;
+
+  for var LAlgorithm in [JWT_ALGORITHM_RS256, JWT_ALGORITHM_PS256, JWT_ALGORITHM_ES256] do
+  begin
+    TJWTTestUtils.KeyPair(LAlgorithm, 1, LPrivateKey, LPublicKey);
+    var LParams := TMARSParameters.Create('');
+    try
+      LParams.Values[JWT_ALGORITHM_PARAM] := LAlgorithm;
+      LParams.Values[JWT_PRIVATEKEY_PARAM] := LPrivateKey;
+      LParams.Values[JWT_PUBLICKEY_PARAM] := LPublicKey;
+      Assert.IsTrue(Verifies(TMARSJOSEJWTToken, Issue(TMARSmORMotJWTToken, LParams), LParams), LAlgorithm + ': mORMot to JOSE');
+      Assert.IsTrue(Verifies(TMARSmORMotJWTToken, Issue(TMARSJOSEJWTToken, LParams), LParams), LAlgorithm + ': JOSE to mORMot');
+    finally
+      LParams.Free;
+    end;
+  end;
 end;
 
 initialization

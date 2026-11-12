@@ -33,11 +33,14 @@ type
   TMARSDefaultSecretPolicy = (Generate, Refuse);
 
   // A signing key: the HMAC secret and its id, written as "kid" in the header of the tokens it
-  // signs (empty KeyId: no "kid", as before key rotation was supported)
+  // signs (empty KeyId: no "kid", as before key rotation was supported).
+  // With an asymmetric Algorithm (RS256, PS256, ES256) Secret is the key in PEM: the private
+  // key to sign, the public key to verify. An empty Algorithm is HS256.
   TMARSTokenKey = record
     KeyId: string;
     Secret: string;
-    constructor Create(const AKeyId, ASecret: string);
+    Algorithm: string;
+    constructor Create(const AKeyId, ASecret: string; const AAlgorithm: string = '');
   end;
 
   // Where TMARSToken gets its keys from (TMARSToken.KeyProvider). The default implementation
@@ -59,8 +62,16 @@ type
   //   JWT.PreviousSecret          a retired key for tokens without "kid"
   // A token without "kid" is checked against JWT.Secret, then JWT.PreviousSecret.
   // A token with a "kid" only against the key with that id.
+  // With JWT.Algorithm = RS256, PS256 or ES256 the keys are PEM keys instead of secrets:
+  //   JWT.PrivateKey + JWT.KeyId        signs new tokens (not needed by a server that only verifies)
+  //   JWT.PublicKey                     verifies the tokens of the active key
+  //   JWT.PreviousPublicKey[.<kid>]     a retired key, as JWT.PreviousSecret
+  // each one a PEM text or the name of a PEM file (relative to the folder of the executable).
   TMARSParametersTokenKeyProvider = class(TInterfacedObject, IMARSTokenKeyProvider)
   protected
+    // The PEM key of AParamName: its value when it is a PEM text ("\n" for the line breaks),
+    // otherwise the content of the file it names (read once). '' when not configured.
+    function ReadKey(const AParameters: TMARSParameters; const AParamName: string): string; virtual;
     function IsUsableSecret(const AParameters: TMARSParameters; const ASecret: string): Boolean; virtual;
     function TryGetPreviousSecret(const AParameters: TMARSParameters; const AKeyId: string;
       out ASecret: string): Boolean; virtual;
@@ -87,6 +98,7 @@ type
     FDuration: TDateTime;
     FIssuer: string;
     FKeyId: string;
+    FAlgorithm: string;
     function GetUserName: string;
     procedure SetUserName(const AValue: string);
     function GetExpiration: TDateTime;
@@ -95,6 +107,8 @@ type
     procedure SetRoles(const AValue: TArray<string>);
     function GetDurationMins: Int64;
     function GetDurationSecs: Int64;
+    class function HeaderValueFromToken(const AToken, AName: string): string;
+    class function AlgorithmOfKey(const AKey: TMARSTokenKey): string;
   protected
     function GetTokenFromBearer(const ARequest: IMARSRequest): string; virtual;
     function GetTokenFromCookie(const ARequest: IMARSRequest): string; virtual;
@@ -102,7 +116,9 @@ type
     function GetIsExpired: Boolean; virtual;
     function GetDurationFromParameters(const AParameters: TMARSParameters): TDateTime; virtual;
 
-    // BuildJWTToken writes KeyId as "kid" in the token header (when not empty)
+    // BuildJWTToken writes KeyId as "kid" in the token header (when not empty).
+    // Both sign and verify with Algorithm, never with the "alg" of the token: ASecret is the
+    // HMAC secret (HS256) or the PEM key (private to build, public to load).
     function BuildJWTToken(const ASecret: string; const AClaims: TMARSParameters): string; virtual;
     function LoadJWTToken(const AToken: string; const ASecret: string; var AClaims: TMARSParameters): Boolean; virtual;
 
@@ -145,6 +161,15 @@ type
     // The key to sign new tokens for AParameters: raises when no usable secret is configured
     // (same rules as SecretFromParameters)
     class function SigningKeyFromParameters(const AParameters: TMARSParameters): TMARSTokenKey;
+    // JWT.Algorithm of AParameters (HS256 when not set), raises when it is not supported
+    class function AlgorithmFromParameters(const AParameters: TMARSParameters): string;
+    // RS256, PS256, ES256: a key pair instead of a shared secret
+    class function IsAsymmetricAlgorithm(const AAlgorithm: string): Boolean;
+    // Raises when the keys to verify tokens for AParameters are not configured: JWT.Secret
+    // (same rules as SecretFromParameters) or, with an asymmetric algorithm, JWT.PublicKey
+    class procedure CheckVerificationKey(const AParameters: TMARSParameters);
+    // The "alg" in the header of AToken, '' when missing or unreadable (signature not checked)
+    class function AlgorithmFromToken(const AToken: string): string;
     // The "kid" in the header of AToken, '' when missing or unreadable (signature not checked)
     class function KeyIdFromToken(const AToken: string): string;
     // 1 to 64 characters among A-Z a-z 0-9 . _ -
@@ -167,6 +192,8 @@ type
     property Issuer: string read FIssuer;
     // id of the key that signed the token ("kid" in its header), '' when it has none
     property KeyId: string read FKeyId;
+    // algorithm of the key the token was signed or verified with (HS256, RS256, PS256, ES256)
+    property Algorithm: string read FAlgorithm;
     property IssuedAt: TDateTime read GetIssuedAt;
     property Duration: TDateTime read FDuration;
     property DurationMins: Int64 read GetDurationMins;
@@ -188,6 +215,7 @@ uses
   , System.NetEncoding
 
   , System.JSON
+  , System.IOUtils, System.Generics.Collections
   , MARS.Core.Utils, MARS.Utils.Parameters.JSON, MARS.Utils.JWT, MARS.Core.Exceptions
 {$IFDEF MSWINDOWS}, Winapi.Windows{$ENDIF}
 ;
@@ -196,19 +224,23 @@ var
   // per-process secret for the Generate policy, created once at start-up (no lazy init:
   // two threads must never see two different secrets)
   _ProcessSecret: string;
+  // PEM key files already read (TMARSParametersTokenKeyProvider.ReadKey), by full file name
+  _KeyFiles: TDictionary<string, string>;
 
 const
   SECRET_NOT_CONFIGURED_MESSAGE = 'JWT.Secret is not configured (or is still the public default). '
     + 'Set a strong, unique ' + JWT_SECRET_PARAM + ' for the application, or set '
     + JWT_ALLOWDEFAULTSECRET_PARAM + '=true to knowingly use the public default.';
   KEY_ID_MAX_LENGTH = 64;
+  PEM_BEGIN = '-----BEGIN';
 
 { TMARSTokenKey }
 
-constructor TMARSTokenKey.Create(const AKeyId, ASecret: string);
+constructor TMARSTokenKey.Create(const AKeyId, ASecret: string; const AAlgorithm: string);
 begin
   KeyId := AKeyId;
   Secret := ASecret;
+  Algorithm := AAlgorithm;
 end;
 
 { TMARSParametersTokenKeyProvider }
@@ -240,12 +272,52 @@ begin
     ASecret := '';
 end;
 
+function TMARSParametersTokenKeyProvider.ReadKey(const AParameters: TMARSParameters;
+  const AParamName: string): string;
+var
+  LFileName: string;
+begin
+  Result := '';
+  if not Assigned(AParameters) then
+    Exit;
+  Result := AParameters.ByName(AParamName, '').AsString.Trim;
+  if Result = '' then
+    Exit;
+  if Result.Contains(PEM_BEGIN) then
+    Exit(Result.Replace('\n', sLineBreak));
+
+  LFileName := Result;
+  if TPath.IsRelativePath(LFileName) then
+    LFileName := TPath.Combine(ExtractFilePath(ParamStr(0)), LFileName);
+  TMonitor.Enter(_KeyFiles);
+  try
+    if not _KeyFiles.TryGetValue(LFileName, Result) then
+    begin
+      if not TFile.Exists(LFileName) then
+        raise EMARSException.CreateFmt('%s: file "%s" not found', [AParamName, LFileName]);
+      Result := TFile.ReadAllText(LFileName).Trim;
+      _KeyFiles.Add(LFileName, Result);
+    end;
+  finally
+    TMonitor.Exit(_KeyFiles);
+  end;
+end;
+
 function TMARSParametersTokenKeyProvider.TryGetSigningKey(const AParameters: TMARSParameters;
   out AKey: TMARSTokenKey): Boolean;
 var
   LSecret: string;
+  LAlgorithm: string;
 begin
   AKey := TMARSTokenKey.Create('', '');
+  LAlgorithm := TMARSToken.AlgorithmFromParameters(AParameters);
+  if TMARSToken.IsAsymmetricAlgorithm(LAlgorithm) then
+  begin
+    AKey := TMARSTokenKey.Create(AParameters.ByName(JWT_KEYID_PARAM, '').AsString
+      , ReadKey(AParameters, JWT_PRIVATEKEY_PARAM), LAlgorithm);
+    Exit(AKey.Secret <> '');
+  end;
+
   Result := TMARSToken.TrySecretFromParameters(AParameters, LSecret);
   if Result then
   begin
@@ -260,26 +332,57 @@ function TMARSParametersTokenKeyProvider.GetVerificationKeys(const AParameters: 
 var
   LActive: TMARSTokenKey;
   LHasActive: Boolean;
-  LPreviousSecret: string;
+  LAlgorithm: string;
+  LAsymmetric: Boolean;
+
+  function TryGetPrevious(const APreviousKeyId: string; out AKey: TMARSTokenKey): Boolean;
+  var
+    LPrevious: string;
+  begin
+    if not LAsymmetric then
+      Result := TryGetPreviousSecret(AParameters, APreviousKeyId, LPrevious)
+    else
+    begin
+      if APreviousKeyId = '' then
+        LPrevious := ReadKey(AParameters, JWT_PREVIOUSPUBLICKEY_PARAM)
+      else
+        LPrevious := ReadKey(AParameters, JWT_PREVIOUSPUBLICKEY_PARAM + '.' + APreviousKeyId);
+      Result := LPrevious <> '';
+    end;
+    AKey := TMARSTokenKey.Create(APreviousKeyId, LPrevious, LAlgorithm);
+  end;
+
+var
+  LPreviousKey: TMARSTokenKey;
 begin
   Result := [];
-  LHasActive := TryGetSigningKey(AParameters, LActive);
+  LAlgorithm := TMARSToken.AlgorithmFromParameters(AParameters);
+  LAsymmetric := TMARSToken.IsAsymmetricAlgorithm(LAlgorithm);
+  if LAsymmetric then
+  begin
+    // the public key verifies: a server that only verifies has no private key
+    LActive := TMARSTokenKey.Create(AParameters.ByName(JWT_KEYID_PARAM, '').AsString
+      , ReadKey(AParameters, JWT_PUBLICKEY_PARAM), LAlgorithm);
+    LHasActive := LActive.Secret <> '';
+  end
+  else
+    LHasActive := TryGetSigningKey(AParameters, LActive);
 
   if AKeyId = '' then
   begin
     // no "kid": issued before key ids were configured, or by an application not using them
     if LHasActive then
       Result := Result + [LActive];
-    if TryGetPreviousSecret(AParameters, '', LPreviousSecret) then
-      Result := Result + [TMARSTokenKey.Create('', LPreviousSecret)];
+    if TryGetPrevious('', LPreviousKey) then
+      Result := Result + [LPreviousKey];
   end
   else if TMARSToken.IsValidKeyId(AKeyId) then
   begin
     // a "kid" selects exactly one key: the active one or a retired one
     if LHasActive and (LActive.KeyId = AKeyId) then
       Result := [LActive]
-    else if TryGetPreviousSecret(AParameters, AKeyId, LPreviousSecret) then
-      Result := [TMARSTokenKey.Create(AKeyId, LPreviousSecret)];
+    else if TryGetPrevious(AKeyId, LPreviousKey) then
+      Result := [LPreviousKey];
   end;
 end;
 
@@ -296,7 +399,42 @@ begin
         Exit(False);
 end;
 
+class function TMARSToken.AlgorithmFromParameters(const AParameters: TMARSParameters): string;
+begin
+  Result := JWT_ALGORITHM_PARAM_DEFAULT;
+  if Assigned(AParameters) then
+    Result := AParameters.ByName(JWT_ALGORITHM_PARAM, JWT_ALGORITHM_PARAM_DEFAULT).AsString.Trim.ToUpper;
+  if (Result <> JWT_ALGORITHM_HS256) and not IsAsymmetricAlgorithm(Result) then
+    raise EMARSException.CreateFmt('%s=%s is not supported: use %s, %s, %s or %s', [JWT_ALGORITHM_PARAM, Result
+      , JWT_ALGORITHM_HS256, JWT_ALGORITHM_RS256, JWT_ALGORITHM_PS256, JWT_ALGORITHM_ES256]);
+end;
+
+class function TMARSToken.IsAsymmetricAlgorithm(const AAlgorithm: string): Boolean;
+begin
+  Result := (AAlgorithm = JWT_ALGORITHM_RS256) or (AAlgorithm = JWT_ALGORITHM_PS256)
+    or (AAlgorithm = JWT_ALGORITHM_ES256);
+end;
+
+class procedure TMARSToken.CheckVerificationKey(const AParameters: TMARSParameters);
+begin
+  if not IsAsymmetricAlgorithm(AlgorithmFromParameters(AParameters)) then
+    SecretFromParameters(AParameters)
+  else if Length(KeyProvider.GetVerificationKeys(AParameters, '')) = 0 then
+    raise EMARSException.CreateFmt('%s is not configured: %s=%s needs the public key (a PEM text or file) to verify tokens.'
+      , [JWT_PUBLICKEY_PARAM, JWT_ALGORITHM_PARAM, AlgorithmFromParameters(AParameters)]);
+end;
+
+class function TMARSToken.AlgorithmFromToken(const AToken: string): string;
+begin
+  Result := HeaderValueFromToken(AToken, JWT_ALGORITHM_HEADER);
+end;
+
 class function TMARSToken.KeyIdFromToken(const AToken: string): string;
+begin
+  Result := HeaderValueFromToken(AToken, JWT_KEYID_HEADER);
+end;
+
+class function TMARSToken.HeaderValueFromToken(const AToken, AName: string): string;
 var
   LDotPos: Integer;
   LHeader: TJSONValue;
@@ -310,12 +448,12 @@ begin
   try
     LHeader := TJSONObject.ParseJSONValue(Base64UrlDecodeToString(Copy(AToken, 1, LDotPos - 1)));
   except
-    Exit; // not base64url or not UTF-8: no readable header, no "kid"
+    Exit; // not base64url or not UTF-8: no readable header
   end;
   try
     if LHeader is TJSONObject then
     begin
-      LKeyId := TJSONObject(LHeader).GetValue(JWT_KEYID_HEADER);
+      LKeyId := TJSONObject(LHeader).GetValue(AName);
       if LKeyId is TJSONString then
         Result := TJSONString(LKeyId).Value;
     end;
@@ -327,7 +465,11 @@ end;
 class function TMARSToken.SigningKeyFromParameters(const AParameters: TMARSParameters): TMARSTokenKey;
 begin
   if not KeyProvider.TryGetSigningKey(AParameters, Result) then
-    raise EMARSException.Create(SECRET_NOT_CONFIGURED_MESSAGE);
+    if IsAsymmetricAlgorithm(AlgorithmFromParameters(AParameters)) then
+      raise EMARSException.CreateFmt('%s is not configured: %s=%s needs the private key (a PEM text or file) to issue tokens.'
+        , [JWT_PRIVATEKEY_PARAM, JWT_ALGORITHM_PARAM, AlgorithmFromParameters(AParameters)])
+    else
+      raise EMARSException.Create(SECRET_NOT_CONFIGURED_MESSAGE);
 end;
 
 class function TMARSToken.TrySecretFromParameters(const AParameters: TMARSParameters;
@@ -431,6 +573,7 @@ begin
     Result.FCookieSameSite := CookieSameSite;
     Result.FIssuer := Issuer;
     Result.FKeyId := KeyId;
+    Result.FAlgorithm := Algorithm;
     Result.FDuration := Duration;
     Result.FToken := Token;
     Result.FIsVerified := IsVerified;
@@ -625,6 +768,7 @@ begin
     raise EMARSException.CreateFmt('Invalid JWT key id "%s" (%s): use 1 to %d characters among A-Z a-z 0-9 . _ -'
       , [AKey.KeyId, JWT_KEYID_PARAM, KEY_ID_MAX_LENGTH]);
   FKeyId := AKey.KeyId;
+  FAlgorithm := AlgorithmOfKey(AKey);
   LIssuedAt := Now;
 
   FClaims[JWT_ISSUED_AT_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt, False));
@@ -637,13 +781,24 @@ begin
   UpdateCookie;
 end;
 
+class function TMARSToken.AlgorithmOfKey(const AKey: TMARSTokenKey): string;
+begin
+  Result := AKey.Algorithm.Trim.ToUpper;
+  if Result = '' then
+    Result := JWT_ALGORITHM_HS256
+  else if (Result <> JWT_ALGORITHM_HS256) and not IsAsymmetricAlgorithm(Result) then
+    raise EMARSException.CreateFmt('JWT algorithm %s is not supported', [Result]);
+end;
+
 procedure TMARSToken.Load(const AToken, ASecret: string);
 begin
   FIsVerified := False;
   FToken := AToken;
   FKeyId := KeyIdFromToken(AToken);
+  FAlgorithm := JWT_ALGORITHM_HS256;
 
-  if AToken <> '' then
+  // the key decides the algorithm, never the header of the token
+  if (AToken <> '') and (AlgorithmFromToken(AToken) = FAlgorithm) then
     FIsVerified := LoadJWTToken(AToken, ASecret, FClaims);
 end;
 
@@ -658,6 +813,10 @@ begin
   if AToken <> '' then
     for LKey in KeyProvider.GetVerificationKeys(AParameters, FKeyId) do
     begin
+      FAlgorithm := AlgorithmOfKey(LKey);
+      // the key decides the algorithm, never the header of the token
+      if AlgorithmFromToken(AToken) <> FAlgorithm then
+        Continue;
       FIsVerified := LoadJWTToken(AToken, LKey.Secret, FClaims);
       if FIsVerified then
         Break;
@@ -721,5 +880,9 @@ initialization
   _ProcessSecret := GenerateRandomSecret;
   TMARSToken.DefaultSecretPolicy := {$IFDEF DEBUG}TMARSDefaultSecretPolicy.Generate{$ELSE}TMARSDefaultSecretPolicy.Refuse{$ENDIF};
   TMARSToken.KeyProvider := TMARSParametersTokenKeyProvider.Create;
+  _KeyFiles := TDictionary<string, string>.Create;
+
+finalization
+  _KeyFiles.Free;
 
 end.

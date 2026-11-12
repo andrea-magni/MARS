@@ -17,6 +17,20 @@ interface
     const JWT_KEYID_PARAM = 'JWT.KeyId';
     const JWT_PREVIOUSSECRET_PARAM = 'JWT.PreviousSecret';
     const JWT_KEYID_HEADER = 'kid';
+    // signature algorithm: HS256 (default, JWT.Secret) or an asymmetric one, RS256, PS256 or
+    // ES256: JWT.PrivateKey signs, JWT.PublicKey verifies (a PEM text or the name of a PEM file,
+    // relative to the folder of the executable), JWT.PreviousPublicKey[.<kid>] as JWT.PreviousSecret.
+    // The algorithm comes from here only, never from the header of a token.
+    const JWT_ALGORITHM_PARAM = 'JWT.Algorithm';
+    const JWT_ALGORITHM_HS256 = 'HS256';
+    const JWT_ALGORITHM_RS256 = 'RS256';
+    const JWT_ALGORITHM_PS256 = 'PS256';
+    const JWT_ALGORITHM_ES256 = 'ES256';
+    const JWT_ALGORITHM_PARAM_DEFAULT = JWT_ALGORITHM_HS256;
+    const JWT_ALGORITHM_HEADER = 'alg';
+    const JWT_PRIVATEKEY_PARAM = 'JWT.PrivateKey';
+    const JWT_PUBLICKEY_PARAM = 'JWT.PublicKey';
+    const JWT_PREVIOUSPUBLICKEY_PARAM = 'JWT.PreviousPublicKey';
     const JWT_COOKIEENABLED_PARAM = 'JWT.CookieEnabled';
     const JWT_COOKIEENABLED_PARAM_DEFAULT = true;
     const JWT_COOKIENAME_PARAM = 'JWT.CookieName';

@@ -4,6 +4,9 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 ## Unreleased {#unreleased}
 
+**New**
+- JWT: asymmetric signature algorithms, `JWT.Algorithm=RS256`, `PS256` or `ES256`: `JWT.PrivateKey` signs and `JWT.PublicKey` verifies (PEM files or texts), so the servers that only verify tokens cannot issue them; `JWT.PreviousPublicKey[.<kid>]` for key rotation. The algorithm comes from the configuration, never from the header of a token. The mORMot backend needs nothing else (RSA and ECDSA of mORMot 2, no DLL); the JOSE backend needs the new `MARS.JOSEJWT.TaurusTLS` unit, with the TaurusTLS library and OpenSSL 3 (not shipped with MARS). HS256 stays the default. The templates have commented examples. [Authentication ▸ Asymmetric algorithms](/features/authentication#asymmetric-algorithms) ([#313](https://github.com/andrea-magni/MARS/issues/313))
+
 **Changed**
 - The mORMot JWT backend (`MARS.mORMotJWT.Token`, the default on Windows) and `MARS.dmustache` are built on [mORMot 2](https://github.com/synopse/mORMot2) instead of mORMot 1.18: same behavior and same tokens (HS256). `ThirdParty\mORMot2` replaces `ThirdParty\mORMot`, and the `MARS.mORMot` package contains the mORMot 2 units. [Authentication ▸ JWT backends](/features/authentication#jwt-backends) ([#312](https://github.com/andrea-magni/MARS/issues/312))
 

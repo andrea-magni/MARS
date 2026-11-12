@@ -193,6 +193,45 @@ Keys are read through `TMARSToken.KeyProvider` (`IMARSTokenKeyProvider`); the de
 startup to keep keys elsewhere, for example in a database or a secrets vault, or to rotate them
 automatically.
 
+## Asymmetric algorithms
+
+By default tokens are signed with **HS256**: one shared secret (`JWT.Secret`) both signs and verifies, so every server that verifies tokens could also issue them. With an asymmetric algorithm a **private key** signs and a **public key** verifies: the servers that only check tokens hold the public key, and cannot forge one.
+
+```ini
+DefaultApp.JWT.Algorithm=ES256
+DefaultApp.JWT.PrivateKey=keys\jwt-private.pem
+DefaultApp.JWT.PublicKey=keys\jwt-public.pem
+```
+
+| Parameter | Meaning |
+| --- | --- |
+| `JWT.Algorithm` | `HS256` (default), `RS256`, `PS256` (RSA, 2048 bits or more) or `ES256` (ECDSA, P-256 curve). |
+| `JWT.PrivateKey` | The key that signs new tokens. Only the server that issues tokens needs it. |
+| `JWT.PublicKey` | The key that verifies tokens. Every server that accepts them needs it. |
+| `JWT.PreviousPublicKey.<kid>`, `JWT.PreviousPublicKey` | Retired public keys, as `JWT.PreviousSecret` in [Key rotation](#key-rotation) (`JWT.KeyId` names the active key). |
+
+Each key is the name of a **PEM file** (relative to the folder of the executable; read once, restart the server to change it) or the PEM text itself, in one line with `\n` for the line breaks. The standard formats are read: PKCS#8 (`BEGIN PRIVATE KEY`), PKCS#1 and SEC1 private keys, `BEGIN PUBLIC KEY` public keys. With OpenSSL:
+
+```bash
+# ES256
+openssl ecparam -name prime256v1 -genkey -noout -out jwt-private.pem
+openssl ec -in jwt-private.pem -pubout -out jwt-public.pem
+# RS256 or PS256
+openssl genrsa -out jwt-private.pem 2048
+openssl rsa -in jwt-private.pem -pubout -out jwt-public.pem
+```
+
+The algorithm comes from the configuration only: a token whose header declares another one is refused, whatever its signature (an HS256 token signed with the public key as the secret, for example). `JWT.Secret` is not used with an asymmetric algorithm. A server without `JWT.PrivateKey` verifies tokens and raises when asked to issue one; a protected resource of an application without `JWT.PublicKey` raises a configuration error.
+
+Keep the private key out of the repository and readable only by the account of the server.
+
+What each [backend](#jwt-backends) needs:
+
+- **mORMot** (Windows): nothing else. RSA and ECDSA are part of the mORMot 2 units shipped with MARS, no DLL.
+- **JOSE**: its default crypto providers rely on OpenSSL 1.0, which MARS never loads. Add the `MARS.JOSEJWT.TaurusTLS` unit to the `uses` of the ignition, after `MARS.JOSEJWT.Token`: it registers the providers based on [TaurusTLS](https://github.com/JPeterMugaas/TaurusTLS) and **OpenSSL 3**. TaurusTLS is not shipped with MARS: put its `Source` folder in the library path (or in the search path of the project), and deploy `libcrypto-3.dll` and `libssl-3.dll` (`libcrypto-3-x64.dll` and `libssl-3-x64.dll` for Win64), both of them, where the executable finds them. Without that unit an asymmetric `JWT.Algorithm` raises an error that says so. HS256 needs none of this.
+
+The two backends read the same keys and verify each other's tokens.
+
 ## Reading the identity in a resource
 
 Inject `TMARSToken` with `[Context]` to read the authenticated user and claims:
@@ -254,7 +293,7 @@ Two interchangeable signing backends are provided; pick one by adding the corres
 {$ENDIF}
 ```
 
-Both produce standard HS256 tokens and accept only HS256 tokens (the `alg` in the token header never selects the algorithm); they differ only in the underlying library.
+Both produce standard tokens, HS256 by default or with an [asymmetric algorithm](#asymmetric-algorithms), and accept only tokens of the configured algorithm (the `alg` in the token header never selects it); they differ in the underlying library.
 
 The [mORMot 2](https://github.com/synopse/mORMot2) units the backend needs ship with MARS (`ThirdParty\mORMot2`). The JOSE backend relies on the [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) library: a git submodule of the MARS repository (`ThirdParty\delphi-jose-jwt`) and, with [TMS Smart Setup](/guide/installation#tms-smart-setup), the `paolo-rossi.delphi-jose-jwt` product. The `MARS.JOSE` package requires its `JOSE` package.
 
