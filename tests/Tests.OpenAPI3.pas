@@ -271,6 +271,17 @@ begin
     finally
       LOpenAPI.Free;
     end;
+
+    // the status documented for a refused token is the configured one
+    LApp.Parameters.Values['JWT.AuthenticationFailedStatus'] := 401;
+    LOpenAPI := TOpenAPI.BuildFrom(LEngine.Engine, LApp);
+    try
+      var LOperation := LOpenAPI.paths['/openapicases/signed'].get;
+      Assert.IsTrue(LOperation.responses.ContainsKey('401'));
+      Assert.IsFalse(LOperation.responses.ContainsKey('403'));
+    finally
+      LOpenAPI.Free;
+    end;
   finally
     LEngine.Free;
   end;

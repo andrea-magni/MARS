@@ -31,6 +31,10 @@ interface
     const JWT_COOKIESECURE_PARAM_DEFAULT = false;
     const JWT_COOKIESAMESITE_PARAM = 'JWT.CookieSameSite';
     const JWT_COOKIESAMESITE_PARAM_DEFAULT = 'Lax';
+    // HTTP status of a request whose token is missing, not valid or expired: 401 tells it
+    // apart from the 403 of a token without the required role
+    const JWT_AUTHENTICATIONFAILEDSTATUS_PARAM = 'JWT.AuthenticationFailedStatus';
+    const JWT_AUTHENTICATIONFAILEDSTATUS_PARAM_DEFAULT = 403;
 
     const JWT_AUDIENCE_CLAIM   = 'aud';
     const JWT_EXPIRATION_CLAIM = 'exp';
