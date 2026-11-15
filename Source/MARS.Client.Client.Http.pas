@@ -238,6 +238,10 @@ procedure TMARSHttpClient.AssignTo(Dest: TPersistent);
 //  LDestClient: TMARSHttpClient;
 begin
   inherited;
+  // asynchronous calls run on a clone of the client (CloneSetup): without this
+  // they neither ask for compressed responses nor unpack them
+  if Dest is TMARSHttpClient then
+    TMARSHttpClient(Dest).AutomaticDecompression := AutomaticDecompression;
 //  if Dest is TMARSHttpClient then
 //  begin
 //    LDestClient := Dest as TMARSHttpClient;

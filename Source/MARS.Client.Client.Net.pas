@@ -132,6 +132,8 @@ begin
     LDestClient.AuthEndorsement := AuthEndorsement;
 //    LDestClient.HttpClient.IOHandler := HttpClient.IOHandler;
     LDestClient.HttpClient.AllowCookies := HttpClient.AllowCookies;
+    // as above for the clone of an asynchronous call: compressed responses
+    LDestClient.HttpClient.AutomaticDecompression := HttpClient.AutomaticDecompression;
     CloneCookies(LDestClient.HttpClient, HttpClient);
 //    LDestClient.HttpClient.ProxyParams.BasicAuthentication := HttpClient.ProxyParams.BasicAuthentication;
 //    LDestClient.HttpClient.ProxyParams.ProxyPort := HttpClient.ProxyParams.ProxyPort;
