@@ -232,6 +232,24 @@ var
   LCandidateQualityFactor: Double;
   LMethodAttributes: TArray<TCustomAttribute>;
   LAffinity: Integer;
+  LQualityFactor: Double;
+  LPosition, LCandidatePosition: Integer;
+  LUseDeclaredOrder: Boolean;
+
+  // the position of AMediaType in LAllowedMediaTypes, i.e. in the order of Accept or, when
+  // Accept is a wildcard, of [Produces]. Without a [Produces] the list is a synthetic default:
+  // every media type ranks the same and the affinity of the writers decides (scalars stay
+  // text/plain, see #231)
+  function PositionOf(const AMediaType: string): Integer;
+  begin
+    if not LUseDeclaredOrder then
+      Exit(0);
+    for Result := 0 to High(LAllowedMediaTypes) do
+      if LAllowedMediaTypes[Result] = AMediaType then
+        Exit;
+    Result := High(Integer);
+  end;
+
 begin
   LMethodAttributes := AActivation.MethodAttributes;
 
@@ -241,6 +259,7 @@ begin
   LCandidateAffinity := -1;
   LCandidateMediaType := '';
   LCandidateQualityFactor := -1;
+  LCandidatePosition := High(Integer);
 
   if not Assigned(AReturnType) then
     Exit; // no serialization
@@ -253,6 +272,7 @@ begin
     // consider Activation Produces list (method + super class + resource class)
     LMethodProducesMediaTypes := GetProducesMediaTypes(AActivation);
     try
+      LUseDeclaredOrder := LMethodProducesMediaTypes.Count > 0;
       if LMethodProducesMediaTypes.Count > 0 then
         LAllowedMediaTypes := TMediaTypeList.Intersect(LAcceptMediaTypes, LMethodProducesMediaTypes)
       else
@@ -287,18 +307,25 @@ begin
               LAffinity := LWriterEntry.GetAffinity(AReturnType, LMethodAttributes, LMediaType);
               if LWriterEntry.IsWritable(AReturnType, LMethodAttributes, LMediaType) then
               begin
+                LQualityFactor := LAcceptMediaTypes.GetQualityFactor(LMediaType);
+                LPosition := PositionOf(LMediaType);
+                // the quality factor of the client first, then the preference of the server
+                // (LAllowedMediaTypes keeps the order of Accept, or of [Produces] when Accept
+                // is a wildcard), then the specialization of the writer (#318)
                 if not LFound
-                   or (LCandidateAffinity < LAffinity)
+                   or (LCandidateQualityFactor < LQualityFactor)
+                   or ((LCandidateQualityFactor = LQualityFactor) and (LCandidatePosition > LPosition))
                    or (
-                     (LCandidateAffinity = LAffinity)
-                     and (LCandidateQualityFactor < LAcceptMediaTypes.GetQualityFactor(LMediaType))
+                     (LCandidateQualityFactor = LQualityFactor) and (LCandidatePosition = LPosition)
+                     and (LCandidateAffinity < LAffinity)
                    )
                 then
                 begin
                   LCandidate := LWriterEntry;
-                  LCandidateAffinity := LCandidate.GetAffinity(AReturnType, LMethodAttributes, LMediaType);
+                  LCandidateAffinity := LAffinity;
                   LCandidateMediaType := LMediaType;
-                  LCandidateQualityFactor := LAcceptMediaTypes.GetQualityFactor(LMediaType);
+                  LCandidateQualityFactor := LQualityFactor;
+                  LCandidatePosition := LPosition;
                   LFound := True;
                 end;
               end;

@@ -237,6 +237,10 @@ type
     function Wrong: TFDMemTable;
     [GET, Path('sets'), Produces(TMediaType.APPLICATION_JSON)]
     function Sets: TArray<TFDMemTable>;
+    // #318: with a wildcard Accept the first [Produces] must win over the (high affinity)
+    // application/json-firedac writer of TArray<TFDDataSet>
+    [GET, Path('summary'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
+    function Summary: TArray<TFDMemTable>;
     [POST, Path('deltas'), Consumes(TMediaType.APPLICATION_JSON_FireDAC), Produces(TMediaType.APPLICATION_JSON)]
     function Deltas([BodyParam] const ADeltas: TArray<TFDMemTable>): Integer;
     [POST, Path('rows'), Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
@@ -582,6 +586,11 @@ begin
 end;
 
 function TOpenAPIDataResource.Sets: TArray<TFDMemTable>;
+begin
+  Result := [];
+end;
+
+function TOpenAPIDataResource.Summary: TArray<TFDMemTable>;
 begin
   Result := [];
 end;

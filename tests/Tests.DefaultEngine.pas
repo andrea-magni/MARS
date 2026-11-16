@@ -145,6 +145,9 @@ type
     procedure TestDataSetBody;
 
     [Test]
+    procedure TestDataSetNegotiation;
+
+    [Test]
     procedure TestNativeDataSetBody;
 
     [Test]
@@ -535,6 +538,37 @@ begin
 
   // TDataSet itself cannot hold data: a mistake of the server
   Assert.AreEqual(500, Post('datasets/abstract', '[{"id":1}]', LContent));
+end;
+
+procedure TMARSDefaultEngineFixture.TestDataSetNegotiation;
+
+  function ContentTypeFor(const AAccept: string): string;
+  var
+    LHeader: TMARSHeader;
+  begin
+    LHeader.Name := 'Accept';
+    LHeader.Value := AAccept;
+    var LMock := MockRequestAndResponse('GET', ResourcePath('openapidata/summary'), '', [LHeader]);
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+    Assert.AreEqual(200, LMock.Response.StatusCode, AAccept);
+    Result := LMock.Response.ContentType;
+  end;
+
+begin
+  // #318: [Produces(JSON), Produces(JSON_FireDAC)] on TArray<TFDDataSet> — a wildcard Accept
+  // gets the first declared media type, not the high-affinity FireDAC representation
+  var LContentType := ContentTypeFor('*/*');
+  Assert.Contains(LContentType, TMediaType.APPLICATION_JSON, 'wildcard');
+  Assert.IsFalse(LContentType.Contains('firedac'), 'wildcard: ' + LContentType);
+  LContentType := ContentTypeFor('text/html,application/xhtml+xml,*/*;q=0.8');
+  Assert.Contains(LContentType, TMediaType.APPLICATION_JSON, 'browser');
+  Assert.IsFalse(LContentType.Contains('firedac'), 'browser: ' + LContentType);
+  // explicitly asked for: the FireDAC representation still wins
+  Assert.Contains(ContentTypeFor(TMediaType.APPLICATION_JSON_FireDAC), TMediaType.APPLICATION_JSON_FireDAC, 'explicit firedac');
+  // the Accept of TMARSFDResource (no q factors: the order of the client decides)
+  Assert.Contains(
+    ContentTypeFor(TMediaType.APPLICATION_JSON_FireDAC + ',' + TMediaType.APPLICATION_JSON)
+  , TMediaType.APPLICATION_JSON_FireDAC, 'Delphi FireDAC client');
 end;
 
 procedure TMARSDefaultEngineFixture.TestNativeDataSetBody;
