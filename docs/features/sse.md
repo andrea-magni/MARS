@@ -83,7 +83,7 @@ An SSE handler **occupies its worker thread for the lifetime of the connection**
 
 ## Consuming from a Delphi client
 
-`TMARSClientResourceSSE` (`MARS.Client.Resource.SSE.pas`) opens the stream and surfaces events through handlers:
+`TMARSClientResourceSSE` (`MARS.Client.Resource.SSE.pas`) opens the stream and surfaces events through handlers. Its client (the one of its `Application`, or its `SpecificClient`) must be a `TMARSHttpClient` (`MARS.Client.Client.Http`): the event source of the RTL works on its `THTTPClient`, so `TMARSNetClient` and `TMARSIndyClient`, fine for the other client resources, are refused when the stream is opened.
 
 ```pascal
 SSEResource.Resource := 'helloworld';

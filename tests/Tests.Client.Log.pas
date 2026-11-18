@@ -71,6 +71,8 @@ type
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
     [Test] procedure LogsStreamErrorAndClose;
+    // #319: a client of another kind is refused with a message that says what is needed
+    [Test] procedure NeedsAnHttpClient;
   end;
 
   // masking and formatting helpers, no server involved
@@ -86,7 +88,7 @@ type
 implementation
 
 uses
-  MARS.Utils.Parameters
+  MARS.Utils.Parameters, MARS.Client.Utils
 ;
 
 { TClientLogTestBase<C> }
@@ -395,6 +397,36 @@ begin
   end;
   if AEntry.Event = SSE_CLOSE then
     FClosed.SetEvent;
+end;
+
+procedure TSSEClientLogTest.NeedsAnHttpClient;
+begin
+  var LNetClient := TMARSNetClient.Create(nil);
+  var LResource := TMARSClientResourceSSE.Create(nil);
+  try
+    LNetClient.Name := 'NetClient1';
+    LResource.SpecificClient := LNetClient;
+    for var LOpen in [True, False] do
+      try
+        if LOpen then
+          LResource.Open
+        else
+          LResource.Active := True;
+        Assert.Fail('no exception');
+      except
+        on E: EMARSClientException do
+        begin
+          Assert.Contains(E.Message, 'TMARSHttpClient');
+          Assert.Contains(E.Message, 'NetClient1 is a TMARSNetClient');
+        end;
+      end;
+    // closing a stream never opened is not an error
+    LResource.Active := False;
+    LResource.Close;
+  finally
+    LResource.Free;
+    LNetClient.Free;
+  end;
 end;
 
 procedure TSSEClientLogTest.LogsStreamErrorAndClose;

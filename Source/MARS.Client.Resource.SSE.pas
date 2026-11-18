@@ -93,6 +93,8 @@ type
     procedure SetReconnectCallback(const Value: TMARSHTTPNotifyCallback);
   protected
     function GetMARSHttpClient: TMARSHttpClient; virtual;
+    // raises when Client is not a TMARSHttpClient: the event source of the RTL needs its THTTPClient
+    procedure CheckClient; virtual;
     function GetHttpClient: THttpClient; virtual;
 
     procedure SetActive(const Value: Boolean); virtual;
@@ -253,7 +255,18 @@ end;
 
 function TMARSClientResourceSSE.GetMARSHttpClient: TMARSHttpClient;
 begin
-  Result := Client as TMARSHttpClient;
+  // nil for another kind of client: CheckClient says so when the stream is opened (#319)
+  Result := nil;
+  if Client is TMARSHttpClient then
+    Result := TMARSHttpClient(Client);
+end;
+
+procedure TMARSClientResourceSSE.CheckClient;
+begin
+  if Assigned(Client) and not (Client is TMARSHttpClient) then
+    raise EMARSClientException.CreateFmt('%s needs a TMARSHttpClient as its Client (unit MARS.Client.Client.Http): '
+      + '%s is a %s. The other client resources work with any client, server-sent events do not.'
+      , [ClassName, Client.Name, Client.ClassName]);
 end;
 
 function TMARSClientResourceSSE.GetRetryTimeout: Cardinal;
@@ -273,6 +286,7 @@ end;
 
 procedure TMARSClientResourceSSE.Open;
 begin
+  CheckClient;
   SetupSource;
   if not FSource.Active then
     LogStart;
@@ -281,6 +295,8 @@ end;
 
 procedure TMARSClientResourceSSE.SetActive(const Value: Boolean);
 begin
+  if Value then
+    CheckClient;
   SetupSource;
   if not Value then
     CloseSource
