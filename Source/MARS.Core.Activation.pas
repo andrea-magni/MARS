@@ -721,6 +721,10 @@ begin
 
     FAuthorizationInfo.AllowedRoles := LAllowedRoles.ToStringArray;
   finally
+    // the second closure captures this variable, so it is a field of the shared
+    // activation record: holding the first closure there is a reference cycle
+    // (one leaked $ActRec per request unless broken here)
+    LProcessAuthorizationAttribute := nil;
     LAllowedRoles.Free;
   end;
 end;
