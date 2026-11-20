@@ -22,7 +22,7 @@ The self-hosted flavors (console, GUI, service, daemon) run their own HTTP serve
 
 The console flavor reads its commands from the keyboard: `start`, `stop`, `set port <number>`, `status`, `endpoints`, `help` and `exit`.
 
-When it starts, it writes the base URL of each application and, where the application has them, the URLs of its OpenAPI document, of Swagger UI and of the documentation page (most terminals make them clickable):
+When it starts, it writes the base URL of each application and, where the application has them, the URLs of its OpenAPI document, of Swagger UI and of the documentation page (most terminals make them clickable). Only what can work is shown: Swagger UI needs the OpenAPI document and its `index.html` in the folder of the static content on `www`, and a static content whose folder does not exist is left out:
 
 ```text
 ->- Starting HTTP Server on port 8080

@@ -114,6 +114,10 @@ type
   [Path('pages/{*}'), RootFolder('{bin}', True)]
   TStartupPagesResource = class(TFileSystemResource);
 
+  // its folder does not exist: nothing to show
+  [Path('nowhere/{*}'), RootFolder('{bin}no-such-folder', True)]
+  TStartupNowhereResource = class(TFileSystemResource);
+
   // its own [Path] wins over the inherited one
   [Path('ownpets')]
   TOwnPathResource = class(TInheritedPathResourceBase)
@@ -330,7 +334,7 @@ type
 implementation
 
 uses
-  System.Threading, System.SyncObjs, System.DateUtils, System.JSON, MARS.Core.Registry
+  System.Threading, System.SyncObjs, System.DateUtils, System.JSON, System.IOUtils, MARS.Core.Registry
 , MARS.Core.Engine, MARS.Core.Exceptions, MARS.Core.Activation, MARS.Core.Token
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
 {$IFDEF MSWINDOWS}
@@ -446,9 +450,20 @@ begin
   Assert.AreEqual('- RoutesApp: http://localhost:8080/rest/routes', MARSStartupURLsAsText(FEngine));
 
   for var LResource in ['TStartupOpenAPIResource', 'TStartupSwaggerUIResource', 'TStartupDocsResource'
-    , 'TStartupPagesResource'] do
+    , 'TStartupPagesResource', 'TStartupNowhereResource'] do
     Assert.IsTrue(FApplication.AddResource('Tests.Routes.' + LResource), LResource);
 
+  // Swagger UI only where it can work: without its page in the folder, "www" is a static content
+  var LSwaggerUIPage := TPath.Combine(ExtractFilePath(ParamStr(0)), 'index.html');
+  if TFile.Exists(LSwaggerUIPage) then
+    TFile.Delete(LSwaggerUIPage);
+  var LWithoutPage := MARSStartupURLsAsText(FEngine);
+  Assert.IsFalse(LWithoutPage.Contains('Swagger UI'), 'no page, no Swagger UI');
+  Assert.Contains(LWithoutPage, '  - Static content: http://localhost:8080/rest/routes/www/');
+  Assert.Contains(LWithoutPage, '  - Static content: http://localhost:8080/rest/routes/pages/');
+
+  TFile.WriteAllText(LSwaggerUIPage, '<html></html>');
+  try
   Assert.AreEqual(string.Join(sLineBreak, [
       '- RoutesApp: http://localhost:8080/rest/routes'
     , '  - OpenAPI: http://localhost:8080/rest/routes/openapi/document'
@@ -465,6 +480,9 @@ begin
   Assert.AreEqual('- RoutesApp: http://example.org:8080/rest/routes', LLines[0]);
   Assert.AreEqual('- RoutesApp: https://example.org:8443/rest/routes', LLines[5]);
   Assert.AreEqual('  - API docs: https://example.org:8443/rest/routes/docs', LLines[8]);
+  finally
+    TFile.Delete(LSwaggerUIPage);
+  end;
 end;
 
 { TNegotiationResource }
@@ -2288,7 +2306,8 @@ initialization
   MARSRegister(TOwnPathResource);
   MARSRegister(TTypedParamsResource);
   MARSRegister(TNegotiationResource);
-  MARSRegister([TStartupOpenAPIResource, TStartupSwaggerUIResource, TStartupDocsResource, TStartupPagesResource]);
+  MARSRegister([TStartupOpenAPIResource, TStartupSwaggerUIResource, TStartupDocsResource, TStartupPagesResource
+    , TStartupNowhereResource]);
   MARSRegister(TPermitAllClassResource);
 
   MARSRoutes('Tests.Routes.Middleware', 'mw',

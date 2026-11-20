@@ -26,7 +26,9 @@ function MARSEndpointsAsText(const AEngine: IMARSEngine): string;
 // the base URL of each application of AEngine and, where the application has them, its OpenAPI
 // document (a GET method returning TOpenAPI), Swagger UI (static content on "www", as in the
 // templates), the documentation page (TOpenAPIElementsResource) and the other static contents
-// (TFileSystemResource). With both Port and PortSSL, the http URLs and then the https ones.
+// (TFileSystemResource). Only what can work: a static content whose folder does not exist is
+// left out, and Swagger UI needs its index.html there (and the OpenAPI document).
+// With both Port and PortSSL, the http URLs and then the https ones.
 //
 //   - DefaultApp: http://localhost:8080/rest/default
 //     - OpenAPI: http://localhost:8080/rest/default/openapi
@@ -38,16 +40,44 @@ implementation
 
 uses
   System.Classes, System.SysUtils, System.Generics.Collections, System.Rtti, System.NetEncoding
+, System.IOUtils
 , MARS.Core.Application.Interfaces, MARS.Core.Registry.Utils, MARS.Core.Routes, MARS.Core.URL
-, MARS.Core.Attributes, MARS.Rtti.Utils
+, MARS.Core.Attributes, MARS.Rtti.Utils, MARS.WebServer.Resources
 ;
 
 const
-  // by name: no need to link the OpenAPI and web server units into every server
+  // by name: no need to link the OpenAPI units into every server
   OPENAPI_TYPE_NAME = 'TOpenAPI';
-  STATIC_CONTENT_CLASS_NAME = 'TFileSystemResource';
   DOCS_CLASS_NAME = 'TOpenAPIElementsResource';
   SWAGGER_UI_PATH = 'www';
+  SWAGGER_UI_PAGE = 'index.html';
+
+type
+  TFileSystemResourceClass = class of TFileSystemResource;
+
+// The folder a static content resource serves, with the trailing delimiter: '' when AClass is
+// not one, has no [RootFolder] or the folder does not exist
+function StaticContentFolder(const AClass: TClass): string;
+var
+  LResource: TFileSystemResource;
+begin
+  Result := '';
+  if not AClass.InheritsFrom(TFileSystemResource) then
+    Exit;
+  try
+    LResource := TFileSystemResourceClass(AClass).Create; // applies [RootFolder]
+    try
+      if LResource.RootFolder <> '' then
+        Result := IncludeTrailingPathDelimiter(TPath.GetFullPath(LResource.RootFolder));
+    finally
+      LResource.Free;
+    end;
+    if not TDirectory.Exists(Result) then
+      Result := '';
+  except
+    Result := ''; // cannot tell: not shown
+  end;
+end;
 
 // the parts joined with one slash, without the leading and trailing ones: 'rest/default/www'
 // for '/rest', '/default/' and 'www' (a "http://host" first part stays as it is)
@@ -97,7 +127,7 @@ begin
         var
           LAppURL, LOpenAPIURL, LDocsURL: string;
           LStaticURLs: TStringList;
-          LStaticURL: string;
+          LSwaggerUI, LIndex: Integer;
         begin
           LAppURL := JoinPath([LBaseURL, AEngine.BasePath, AApplication.BasePath]);
           LOpenAPIURL := '';
@@ -116,8 +146,12 @@ begin
                 LResourcePath := AInfo.Path.Replace(TMARSURL.PATH_PARAM_WILDCARD, '')
                   .TrimRight([TMARSURL.URL_PATH_SEPARATOR]);
 
-                if InheritsFromClassNamed(AInfo.TypeTClass, STATIC_CONTENT_CLASS_NAME) then
-                  LStaticURLs.Add(LResourcePath)
+                if AInfo.TypeTClass.InheritsFrom(TFileSystemResource) then
+                begin
+                  // path and folder; nothing to show when the folder is not there
+                  if StaticContentFolder(AInfo.TypeTClass) <> '' then
+                    LStaticURLs.AddPair(LResourcePath, StaticContentFolder(AInfo.TypeTClass));
+                end
                 else if InheritsFromClassNamed(AInfo.TypeTClass, DOCS_CLASS_NAME) then
                 begin
                   if LDocsURL = '' then
@@ -143,15 +177,20 @@ begin
             LLines.Add('- ' + AApplication.Name + ': ' + LAppURL);
             if LOpenAPIURL <> '' then
               LLines.Add('  - OpenAPI: ' + LOpenAPIURL);
-            for LStaticURL in LStaticURLs do
-              if SameText(LStaticURL, SWAGGER_UI_PATH) and (LOpenAPIURL <> '') then
-                LLines.Add('  - Swagger UI: ' + JoinPath([LAppURL, LStaticURL, 'index.html'])
-                  + '?openAPIURL=' + TURLEncoding.URL.Encode(LOpenAPIURL));
+            // Swagger UI only where it can work: its page in the folder, and a document to show
+            LSwaggerUI := LStaticURLs.IndexOfName(SWAGGER_UI_PATH);
+            if (LSwaggerUI <> -1) and ((LOpenAPIURL = '')
+              or not TFile.Exists(LStaticURLs.ValueFromIndex[LSwaggerUI] + SWAGGER_UI_PAGE)) then
+              LSwaggerUI := -1;
+            if LSwaggerUI <> -1 then
+              LLines.Add('  - Swagger UI: ' + JoinPath([LAppURL, SWAGGER_UI_PATH, SWAGGER_UI_PAGE])
+                + '?openAPIURL=' + TURLEncoding.URL.Encode(LOpenAPIURL));
             if LDocsURL <> '' then
               LLines.Add('  - API docs: ' + LDocsURL);
-            for LStaticURL in LStaticURLs do
-              if not (SameText(LStaticURL, SWAGGER_UI_PATH) and (LOpenAPIURL <> '')) then
-                LLines.Add('  - Static content: ' + JoinPath([LAppURL, LStaticURL]) + TMARSURL.URL_PATH_SEPARATOR);
+            for LIndex := 0 to LStaticURLs.Count - 1 do
+              if LIndex <> LSwaggerUI then
+                LLines.Add('  - Static content: ' + JoinPath([LAppURL, LStaticURLs.Names[LIndex]])
+                  + TMARSURL.URL_PATH_SEPARATOR);
           finally
             LStaticURLs.Free;
           end;
