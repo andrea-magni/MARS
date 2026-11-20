@@ -5,6 +5,14 @@ One server core (`Server.Ignition.pas` + resource units) can be hosted in severa
 - **Self-hosted (Indy)**: console, GUI (VCL/FMX), Windows service, Linux daemon — each creates `TMARShttpServerIndy.Create(TServerEngine.Default)` and toggles `Active`.
 - **WebBroker-hosted**: ISAPI (IIS), Apache module, FastCGI — dispatch goes through `Server.WebModule.pas`.
 
+## Console server
+
+The console host of the templates reads commands from the keyboard: `start`, `stop`, `set port <number>`, `status`, `endpoints`, `help`, `exit` (the command names are in `ServerConst.pas`).
+
+- On `start` it writes the base URL of each application and, where present, the URLs of the OpenAPI document, Swagger UI and the docs page (clickable in most terminals). Only what can work is shown: Swagger UI needs the OpenAPI document and `index.html` in the folder of the static content on `www`; a static content whose folder does not exist is left out.
+- `endpoints` lists the engine, its applications, their resources and groups of routes, and one line per endpoint (HTTP method and full path). The FastCGI program has this command too, but writes no URLs on start.
+- Both texts come from `MARS.Core.Engine.Endpoints`: `MARSStartupURLsAsText(TServerEngine.Default)` and `MARSEndpointsAsText(TServerEngine.Default)`. To add them to a project created before this feature, copy from `Demos/MARSTemplate`: the unit in the `uses` of the `.dpr`, the `WriteEndpoints` procedure, the `cCommandEndpoints` branch of the command loop, the `Writeln(MARSStartupURLsAsText(...))` in `StartServer`, and `cCommandEndpoints` plus the help line in `ServerConst.pas`.
+
 ## Windows service
 
 `MARSTemplateServerService.dpr` + `Server.Service.pas`: a standard `Vcl.SvcMgr` service (`TServerService = class(TService)`) holding `FServer: TMARShttpServerIndy`.

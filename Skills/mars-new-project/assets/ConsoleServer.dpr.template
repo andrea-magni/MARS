@@ -7,6 +7,7 @@ program {{PROJECT_NAME}}Server;
 uses
   System.SysUtils,
   MARS.http.Server.Indy,
+  MARS.Core.Engine.Endpoints,
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
   Server.Resources.Token in 'Server.Resources.Token.pas';
@@ -22,6 +23,9 @@ begin
       LServer.DefaultPort := TServerEngine.Default.Port;
       LServer.Active := True;
       Writeln(Format('{{PROJECT_NAME}} server running on port %d', [LServer.DefaultPort]));
+      // the URLs of the applications (and of OpenAPI, Swagger UI, docs where present), clickable
+      Writeln(MARSStartupURLsAsText(TServerEngine.Default));
+      // the endpoints of the server: Writeln(MARSEndpointsAsText(TServerEngine.Default));
       Writeln('Press ENTER to stop.');
       Readln;
       LServer.Active := False;
