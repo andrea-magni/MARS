@@ -14,6 +14,7 @@ uses
   System.SysUtils,
   MARS.http.Server.DCS,
   ServerConst in 'ServerConst.pas',
+  MARS.Core.Engine.Endpoints,
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
   Server.Resources.OpenAPI in 'Server.Resources.OpenAPI.pas',
@@ -41,6 +42,8 @@ begin
   end
   else
     Writeln(sServerRunning);
+  if AServer.Active then
+    Writeln(MARSStartupURLsAsText(TServerEngine.Default));
   Write(cArrow);
 end;
 
@@ -115,6 +118,12 @@ begin
   Write(cArrow);
 end;
 
+procedure WriteEndpoints;
+begin
+  Writeln(MARSEndpointsAsText(TServerEngine.Default));
+  Write(cArrow);
+end;
+
 procedure RunServer();
 var
   LServer: TMARShttpServerDCS;
@@ -134,6 +143,8 @@ begin
         StartServer(LServer)
       else if sametext(LResponse, cCommandStatus) then
         WriteStatus(LServer)
+      else if sametext(LResponse, cCommandEndpoints) then
+        WriteEndpoints
       else if sametext(LResponse, cCommandStop) then
         StopServer(LServer)
       else if LResponse.StartsWith(cCommandSetPort, True) then

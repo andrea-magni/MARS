@@ -15,6 +15,7 @@ uses
   StrUtils,
   Types,
   MARS.http.Server.Indy,
+  MARS.Core.Engine.Endpoints,
   Server.Ignition in 'Server.Ignition.pas',
   Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
   ServerConst in 'ServerConst.pas',
@@ -33,6 +34,8 @@ begin
   end
   else
     Writeln(sServerRunning);
+  if AServer.Active then
+    Writeln(MARSStartupURLsAsText(TServerEngine.Default));
   Write(cArrow);
 end;
 
@@ -85,6 +88,12 @@ begin
   Write(cArrow);
 end;
 
+procedure WriteEndpoints;
+begin
+  Writeln(MARSEndpointsAsText(TServerEngine.Default));
+  Write(cArrow);
+end;
+
 procedure RunServer();
 var
   LServer: TMARShttpServerIndy;
@@ -122,6 +131,8 @@ begin
         StartServer(LServer)
       else if sametext(LResponse, cCommandStatus) then
         WriteStatus(LServer)
+      else if sametext(LResponse, cCommandEndpoints) then
+        WriteEndpoints
       else if sametext(LResponse, cCommandStop) then
         StopServer(LServer)
       else if LResponse.StartsWith(cCommandSetPort, True) then

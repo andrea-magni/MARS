@@ -19,6 +19,7 @@ uses
   Web.WebReq,
   Web.WebBroker,
   ServerConst in 'ServerConst.pas',
+  MARS.Core.Engine.Endpoints,
   Server.Ignition in 'Server.Ignition.pas',
   Server.Routes in 'Server.Routes.pas',
   Server.Resources.HelloWorld in 'Server.Resources.HelloWorld.pas',
@@ -135,6 +136,12 @@ begin
   Write(cArrow);
 end;
 
+procedure WriteEndpoints;
+begin
+  Writeln(MARSEndpointsAsText(TServerEngine.Default));
+  Write(cArrow);
+end;
+
 procedure RunServer();
 var
   LServer: TFastCGIApplication;
@@ -154,6 +161,8 @@ begin
       StartServer(LServer)
     else if sametext(LResponse, cCommandStatus) then
       WriteStatus(LServer)
+    else if sametext(LResponse, cCommandEndpoints) then
+      WriteEndpoints
     else if sametext(LResponse, cCommandStop) then
       StopServer(LServer)
     else if sametext(LResponse, cCommandHelp) then

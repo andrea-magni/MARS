@@ -31,6 +31,7 @@ resourcestring
     '   - "set port" to change the default port'+ slineBreak +
     '   - "set sslport" to change the HTTPS port (0 = disabled)'+ slineBreak +
     '   - "status" for Server status'+ slineBreak +
+    '   - "endpoints" to list the endpoints of the server'+ slineBreak +
     '   - "help" to show commands'+ slineBreak +
     '   - "exit" to close the application';
 
@@ -39,6 +40,7 @@ const
   cCommandStart = 'start';
   cCommandStop = 'stop';
   cCommandStatus = 'status';
+  cCommandEndpoints = 'endpoints';
   cCommandHelp = 'help';
   cCommandSetPort = 'set port';
   cCommandSetSSLPort = 'set sslport';

@@ -10,6 +10,7 @@ uses
 , MARS.Core.Engine.Interfaces, MARS.Core.Application.Interfaces
 , MARS.Core.RequestAndResponse.Interfaces, MARS.Core.MediaType
 , MARS.Core.Routes, MARS.Core.URL, MARS.Core.Attributes
+, MARS.OpenAPI.v3, MARS.OpenAPI.Elements, MARS.WebServer.Resources
 ;
 
 type
@@ -94,6 +95,24 @@ type
     [GET, Path('signed'), Authenticated]
     function Signed: string;
   end;
+
+  // as in the templates: the OpenAPI document, Swagger UI, the documentation page, other pages
+  // (the URLs a console server shows when it starts)
+  [Path('openapi')]
+  TStartupOpenAPIResource = class
+  public
+    [GET, Path('document'), Produces(TMediaType.APPLICATION_JSON)]
+    function GetOpenAPI([Context] AOpenAPI: TOpenAPI): TOpenAPI;
+  end;
+
+  [Path('www/{*}'), RootFolder('{bin}', True)]
+  TStartupSwaggerUIResource = class(TFileSystemResource);
+
+  [Path('docs')]
+  TStartupDocsResource = class(TOpenAPIElementsResource);
+
+  [Path('pages/{*}'), RootFolder('{bin}', True)]
+  TStartupPagesResource = class(TFileSystemResource);
 
   // its own [Path] wins over the inherited one
   [Path('ownpets')]
@@ -202,6 +221,11 @@ type
     // #307: a [PermitAll] of the class (or group) does not waive the roles of a method (or route)
     [Test]
     procedure TestClassPermitAllKeepsMethodRoles;
+    // the "endpoints" command of the console servers and the URLs they show when they start
+    [Test]
+    procedure TestEndpointsAsText;
+    [Test]
+    procedure TestStartupURLsAsText;
     [Test]
     procedure TestApplicationMiddleware;
     [Test]
@@ -315,7 +339,7 @@ uses
 , MARS.JOSEJWT.Token
 {$ENDIF}
 , Mock.IMARSRequest, Mock.IMARSResponse
-, MARS.OpenAPI.v3, MARS.OpenAPI.v3.Utils
+, MARS.OpenAPI.v3.Utils, MARS.Core.Engine.Endpoints
 , MARS.Metadata.Engine.Resource, MARS.Metadata.ReadersAndWriters, MARS.Metadata.InjectionService
 , Tests.DefaultEngine.Resources, MARS.Core.JSON
 ;
@@ -382,6 +406,65 @@ end;
 function TPermitAllClassResource.Signed: string;
 begin
   Result := 'signed';
+end;
+
+{ TStartupOpenAPIResource }
+
+function TStartupOpenAPIResource.GetOpenAPI(AOpenAPI: TOpenAPI): TOpenAPI;
+begin
+  Result := AOpenAPI;
+end;
+
+procedure TMARSRoutesFixture.TestEndpointsAsText;
+begin
+  FEngine.Port := 8080;
+  var LLines := MARSEndpointsAsText(FEngine).Split([sLineBreak]);
+  Assert.AreEqual(FEngine.Name + '  /rest  (port 8080)', LLines[0]);
+  Assert.AreEqual('  RoutesApp  /rest/routes', LLines[1]);
+
+  // a resource with its endpoint, then the groups of routes
+  var LText := string.Join(#10, LLines);
+  Assert.Contains(LText, #10'    THelloWorldResource'#10'      GET     /rest/routes/helloworld'#10);
+  Assert.Contains(LText, #10'      GET     /rest/routes/ping'#10);
+  Assert.Contains(LText, #10'      GET     /rest/routes/signed'#10'      GET     /rest/routes/signed/admin'#10
+    , 'sorted by path');
+
+  // one line for each endpoint, and their number at the end
+  var LCount := 0;
+  for var LLine in LLines do
+    if LLine.StartsWith('      ') then
+      Inc(LCount);
+  Assert.IsTrue(LCount > 10);
+  Assert.AreEqual(LCount.ToString + ' endpoints', LLines[High(LLines)]);
+end;
+
+procedure TMARSRoutesFixture.TestStartupURLsAsText;
+begin
+  // nothing but the application
+  FEngine.Port := 8080;
+  FEngine.PortSSL := 0;
+  Assert.AreEqual('- RoutesApp: http://localhost:8080/rest/routes', MARSStartupURLsAsText(FEngine));
+
+  for var LResource in ['TStartupOpenAPIResource', 'TStartupSwaggerUIResource', 'TStartupDocsResource'
+    , 'TStartupPagesResource'] do
+    Assert.IsTrue(FApplication.AddResource('Tests.Routes.' + LResource), LResource);
+
+  Assert.AreEqual(string.Join(sLineBreak, [
+      '- RoutesApp: http://localhost:8080/rest/routes'
+    , '  - OpenAPI: http://localhost:8080/rest/routes/openapi/document'
+    , '  - Swagger UI: http://localhost:8080/rest/routes/www/index.html?openAPIURL='
+        + 'http%3A%2F%2Flocalhost%3A8080%2Frest%2Froutes%2Fopenapi%2Fdocument'
+    , '  - API docs: http://localhost:8080/rest/routes/docs'
+    , '  - Static content: http://localhost:8080/rest/routes/pages/'
+    ]), MARSStartupURLsAsText(FEngine));
+
+  // https too, and another host name
+  FEngine.PortSSL := 8443;
+  var LLines := MARSStartupURLsAsText(FEngine, 'example.org').Split([sLineBreak]);
+  Assert.AreEqual(10, Length(LLines));
+  Assert.AreEqual('- RoutesApp: http://example.org:8080/rest/routes', LLines[0]);
+  Assert.AreEqual('- RoutesApp: https://example.org:8443/rest/routes', LLines[5]);
+  Assert.AreEqual('  - API docs: https://example.org:8443/rest/routes/docs', LLines[8]);
 end;
 
 { TNegotiationResource }
@@ -2205,6 +2288,7 @@ initialization
   MARSRegister(TOwnPathResource);
   MARSRegister(TTypedParamsResource);
   MARSRegister(TNegotiationResource);
+  MARSRegister([TStartupOpenAPIResource, TStartupSwaggerUIResource, TStartupDocsResource, TStartupPagesResource]);
   MARSRegister(TPermitAllClassResource);
 
   MARSRoutes('Tests.Routes.Middleware', 'mw',

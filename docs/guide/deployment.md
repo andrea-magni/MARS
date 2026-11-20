@@ -18,6 +18,36 @@ A MARS server is one core (`Server.Ignition.pas` plus your resource units) that 
 
 The self-hosted flavors (console, GUI, service, daemon) run their own HTTP server: Indy (`TMARShttpServerIndy`, `MARSTemplate`, `MARSTemplateRoutes`) or Delphi Cross Socket (`TMARShttpServerDCS`, `MARSTemplateDCS`). The ISAPI, Apache and FastCGI flavors go through WebBroker and the web server does the HTTP part.
 
+## The console server
+
+The console flavor reads its commands from the keyboard: `start`, `stop`, `set port <number>`, `status`, `endpoints`, `help` and `exit`.
+
+When it starts, it writes the base URL of each application and, where the application has them, the URLs of its OpenAPI document, of Swagger UI and of the documentation page (most terminals make them clickable):
+
+```text
+->- Starting HTTP Server on port 8080
+- DefaultApp: http://localhost:8080/rest/default
+  - OpenAPI: http://localhost:8080/rest/default/openapi
+  - Swagger UI: http://localhost:8080/rest/default/www/index.html?openAPIURL=http%3A%2F%2Flocalhost%3A8080%2Frest%2Fdefault%2Fopenapi
+  - API docs: http://localhost:8080/rest/default/docs
+```
+
+`endpoints` lists what the server exposes: the engine, its applications, their resources and groups of [routes](/server/routes), and a line for each endpoint with the HTTP method and the path.
+
+```text
+->DefaultEngine  /rest  (port 8080)
+  DefaultApp  /rest/default
+    THelloWorldResource
+      GET     /rest/default/helloworld
+    TTokenResource
+      DELETE  /rest/default/token
+      GET     /rest/default/token
+      POST    /rest/default/token
+4 endpoints
+```
+
+Both texts come from the `MARS.Core.Engine.Endpoints` unit (`MARSStartupURLsAsText` and `MARSEndpointsAsText`, given an engine), for your own hosts too. The FastCGI program has the `endpoints` command as well; it writes no URLs on start, because they depend on the web server in front of it.
+
 ## Files to deploy
 
 Next to the executable:
