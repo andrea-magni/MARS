@@ -68,7 +68,7 @@ begin
   FNextId := 1;
 
   LPerson.Name := 'Andrea';
-  LPerson.City := 'Piacenza';
+  LPerson.City := 'Monza';
   Add(LPerson);
   LPerson.Name := 'Ada';
   LPerson.City := 'London';
