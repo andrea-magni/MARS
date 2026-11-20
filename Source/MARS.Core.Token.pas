@@ -215,7 +215,7 @@ uses
   , System.NetEncoding
 
   , System.JSON
-  , System.IOUtils, System.Generics.Collections
+  , System.IOUtils
   , MARS.Core.Utils, MARS.Utils.Parameters.JSON, MARS.Utils.JWT, MARS.Core.Exceptions
 {$IFDEF MSWINDOWS}, Winapi.Windows{$ENDIF}
 ;
