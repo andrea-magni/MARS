@@ -1,0 +1,5 @@
+# the image needs only the Linux64 daemon and its ini files
+*
+!bin/MARSTemplateServerDCSDaemon
+!bin/MARSTemplateServerDCSDaemon.ini
+!bin/Server.ini

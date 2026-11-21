@@ -48,7 +48,7 @@ type
     // the defaults of a new project (MARScmd_VCL has them in its form too)
     const DEFAULT_TEMPLATE = 'MARSTemplate';
     const DEFAULT_SEARCH_TEXT = 'MARSTemplate';
-    const DEFAULT_MATCHES = '*.pas|*.dpr|*.dproj|*.dfm|*.xfm|*.groupproj|*.deployproj';
+    const DEFAULT_MATCHES = '*.pas|*.dpr|*.dproj|*.dfm|*.xfm|*.groupproj|*.deployproj|*Dockerfile|*.dockerignore|*.yml|*.bat';
 
     constructor Create(const ABasePath: string);
     destructor Destroy; override;
@@ -398,17 +398,27 @@ procedure TMARSCmd.WriteTextFile(const AFileName: string; const AContent: string
   const AEncoding: TEncoding);
 var
   LFileStream: TFileStream;
-  LWriter: TStreamWriter;
+  LPreamble, LHead, LBytes: TBytes;
+  LHadPreamble: Boolean;
 begin
   LFileStream := TFileStream.Create(AFileName, fmOpenReadWrite or fmShareDenyWrite);
   try
-    LFileStream.Size := 0;
-    LWriter := TStreamWriter.Create(LFileStream, AEncoding);
-    try
-      LWriter.Write(AContent);
-    finally
-      LWriter.Free;
+    // a file without a BOM stays without: a BOM breaks batch files, Dockerfile and the like
+    LPreamble := AEncoding.GetPreamble;
+    LHadPreamble := False;
+    if (Length(LPreamble) > 0) and (LFileStream.Size >= Length(LPreamble)) then
+    begin
+      SetLength(LHead, Length(LPreamble));
+      LFileStream.ReadBuffer(LHead, Length(LHead));
+      LHadPreamble := CompareMem(@LHead[0], @LPreamble[0], Length(LPreamble));
     end;
+
+    LFileStream.Size := 0;
+    if LHadPreamble then
+      LFileStream.WriteBuffer(LPreamble, Length(LPreamble));
+    LBytes := AEncoding.GetBytes(AContent);
+    if Length(LBytes) > 0 then
+      LFileStream.WriteBuffer(LBytes, Length(LBytes));
   finally
     LFileStream.Free;
   end;
@@ -508,36 +518,17 @@ end;
 
 procedure TMARSCmd.ReplaceInFile(const AFileName: string);
 var
-  LReader: TStreamReader;
-  LContent: string;
+  LContent, LNewContent: string;
   LSearchReplace: TPair<string, string>;
   LEncoding: TEncoding;
-  LWriter: TStreamWriter;
-  LFileStream: TFileStream;
 begin
-  LReader := TStreamReader.Create(AFileName, True);
-  try
-    LContent := LReader.ReadToEnd;
-    LEncoding := LReader.CurrentEncoding;
+  LContent := ReadTextFile(AFileName, LEncoding);
+  LNewContent := LContent;
+  for LSearchReplace in ReplacePatterns do
+    LNewContent := LNewContent.Replace(LSearchReplace.Key, LSearchReplace.Value, [rfReplaceAll]);
 
-    for LSearchReplace in ReplacePatterns do
-      LContent := LContent.Replace(LSearchReplace.Key, LSearchReplace.Value, [rfReplaceAll]);
-  finally
-    LReader.Free;
-  end;
-
-  LFileStream := TFileStream.Create(AFileName, fmOpenReadWrite or fmShareDenyWrite);
-  try
-    LFileStream.Size := 0;
-    LWriter := TStreamWriter.Create(LFileStream, LEncoding);
-    try
-      LWriter.Write(LContent);
-    finally
-      LWriter.Free;
-    end;
-  finally
-    LFileStream.Free;
-  end;
+  if LNewContent <> LContent then
+    WriteTextFile(AFileName, LNewContent, LEncoding);
 end;
 
 procedure TMARSCmd.PrepareNewProject(const ASearchText, AReplaceText,

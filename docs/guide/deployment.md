@@ -124,7 +124,19 @@ journalctl -u myproject -f
 
 ## Docker
 
-Run the daemon in foreground as the main process of the container. A `Dockerfile` next to the Linux build output (`bin`):
+A project created with MARSCmd from a template is ready for Docker: next to its projects it has a `Dockerfile` (the Linux64 daemon in foreground, a non-root user), a `docker-compose.yml`, a `.dockerignore` and `docker-build.bat`.
+
+1. On Windows, run `docker-build.bat`: it builds the Linux64 daemon (Release) into `bin` from the command line. It needs RAD Studio with the Linux64 platform and a Linux SDK, no PAServer and no Linux machine; it finds RAD Studio by itself, or run it from the RAD Studio Command Prompt.
+2. Where Docker runs, in the folder of the project (the build needs only `Dockerfile`, `docker-compose.yml`, `.dockerignore`, and in `bin` the daemon, its `.ini` and `Server.ini`):
+
+   ```bash
+   docker compose up -d --build
+   curl http://localhost:8080/rest/default/helloworld
+   ```
+
+MARSCmd writes a random `JWT.Secret` in the `Server.ini` of a new project, and that file goes into the image: fine for a test, for production keep the secrets out of the image (see below).
+
+For a project created before, copy the four files from `Demos\MARSTemplate` and replace `MARSTemplate` with the name of the project. What they do, should you write your own: run the daemon in foreground as the main process of the container, with a `Dockerfile` next to the Linux build output (`bin`):
 
 ```dockerfile
 FROM ubuntu:24.04
@@ -150,7 +162,7 @@ docker logs -f myproject
 
 `docker stop` sends `SIGTERM` and the server stops cleanly. Use a base image close to the Linux SDK you build with (the RAD Studio Linux SDKs are Ubuntu based); `ldd ./MyProjectServerDCSDaemon` lists the libraries the binary needs. Keep secrets such as `JWT.Secret` out of the image: mount the `.ini` file holding them (`-v /etc/myproject/Server.ini:/app/Server.ini:ro`).
 
-The [DockerDemo](/demos/#dockerdemo) is a complete example: a project from the template with its `Dockerfile` (non-root user), `docker-compose.yml` and `.dockerignore`. The daemons of Delphi 13 need only `libc`, `libm`, `libgcc_s` and `libz`, all in the `ubuntu:24.04` base image. On Apple Silicon, Docker Desktop runs the `linux/amd64` image through Rosetta.
+The [DockerDemo](/demos/#dockerdemo) is a complete example: a project from the template with its `Dockerfile` (non-root user), `docker-compose.yml` and `.dockerignore`. The daemons of Delphi 13 need only `libc`, `libm`, `libgcc_s` and `libz`, all in the `ubuntu:24.04` base image. Delphi builds x86-64 binaries: on Apple Silicon, Docker Desktop runs the `linux/amd64` image through emulation (verified on an M1 with a daemon built on Windows).
 
 ## Behind a reverse proxy
 

@@ -46,7 +46,22 @@ LoadModule marstemplate_module modules/mod_marstemplate.dll   # .so on Linux
 
 `MARSTemplateServerDaemon.dpr` + `MARS.Linux.Daemon.pas` (LINUX only): `TMARSDaemon.Current.Name := '...'; TMARSDaemon.Current.Start;` performs classic daemonization (fork + setsid, stdio to /dev/null), creates the Indy server, handles SIGTERM/SIGHUP, and logs to a `.log` file next to the binary. With `--foreground` (or `-f`) it stays in the current process and logs to stdout: use it with systemd (`Type=simple`) and Docker.
 
-**Docker**: `Demos/DockerDemo` (a MARSCmd project from `MARSTemplate`) has a ready `Dockerfile` (`ubuntu:24.04`, `--platform=linux/amd64`, the Linux64 daemon and its ini files in `/app`, a non-root user, `CMD ["./<Name>ServerDaemon", "--foreground"]`), a `docker-compose.yml` and a `.dockerignore`. The Delphi 13 daemon needs only `libc`, `libm`, `libgcc_s`, `libz` (in the base image); add `libssl3` only for HTTPS in the server itself. Keep `JWT.Secret` out of the image: mount a `Server.ini` (`-v ./config/Server.ini:/app/Server.ini:ro`); a Release build without a secret refuses tokens.
+**Docker** (steps in [Docker](#docker) below): `Demos/DockerDemo` (a MARSCmd project from `MARSTemplate`) has a ready `Dockerfile` (`ubuntu:24.04`, `--platform=linux/amd64`, the Linux64 daemon and its ini files in `/app`, a non-root user, `CMD ["./<Name>ServerDaemon", "--foreground"]`), a `docker-compose.yml` and a `.dockerignore`. The Delphi 13 daemon needs only `libc`, `libm`, `libgcc_s`, `libz` (in the base image); add `libssl3` only for HTTPS in the server itself. Keep `JWT.Secret` out of the image: mount a `Server.ini` (`-v ./config/Server.ini:/app/Server.ini:ro`); a Release build without a secret refuses tokens.
+
+## Docker
+
+The three templates have `Dockerfile`, `docker-compose.yml`, `.dockerignore` and `docker-build.bat`, so a project created with MARSCmd (or MARSgen) is ready: MARSCmd puts the project name in them. The image runs the Linux64 daemon (`<Name>ServerDaemon`, `<Name>ServerDCSDaemon` for the DCS template) in foreground, as a non-root user.
+
+1. **Build the Linux64 daemon on Windows**: run `docker-build.bat` in the project folder (msbuild, `Config=Release`, `Platform=Linux64`, output in `bin`). It needs RAD Studio with the Linux64 platform and a Linux SDK added in the IDE; no PAServer, no Linux machine. It finds RAD Studio 13..10.4 in the default folder (or run it from the RAD Studio Command Prompt) and reads `MARSDIR` from the IDE environment variables when it is not set (a project outside the MARS folder refers to it with `$(MARSDIR)`; set it yourself to build against another MARS folder). About 40 seconds.
+2. **Bring the build context where Docker runs** (Docker is usually not on the Windows machine with RAD Studio): `Dockerfile`, `docker-compose.yml`, `.dockerignore` and, in `bin`, the daemon, `<daemon>.ini` and `Server.ini`. A shared folder, scp or a CI artifact.
+3. **Run**: `docker compose up -d --build`, then `docker compose logs` shows `Starting... / Running in foreground / Started`, and `curl http://localhost:8080/rest/default/helloworld` answers. `docker compose down` stops it cleanly (SIGTERM).
+
+Facts worth knowing:
+- Delphi builds x86-64 Linux binaries only; the `Dockerfile` and the compose file pin `linux/amd64`. On ARM hosts (Apple Silicon) Docker Desktop runs the image through emulation: it works (verified on an M1).
+- Image and container names must be lowercase: do not put the project name there (the template files do not).
+- Secrets: MARSCmd writes a random `JWT.Secret` into `bin/Server.ini`, which is copied into the image. For production mount a `Server.ini` instead (the commented `volumes` of `docker-compose.yml`). A Release build without a secret refuses to issue and verify tokens. MARS does not read settings from environment variables.
+- An existing project without these files: copy the four files from `Demos/MARSTemplate` (or `MARSTemplateDCS`) and replace `MARSTemplate` with the project name; keep the files without a BOM (a BOM breaks the batch file).
+- HTTPS in the container needs OpenSSL in the image (the commented `apt-get` lines of the `Dockerfile`); usually TLS is terminated by a reverse proxy in front.
 
 ## The WebBroker dispatch bridge
 

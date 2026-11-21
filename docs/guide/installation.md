@@ -120,7 +120,7 @@ MARScmd CustomersServer --template MARSTemplateRoutes --dest C:\Projects\Custome
 | `--dest <folder>` | `<projects folder>\<ProjectName>` | The folder of the new project: it must not exist, or be empty. The projects folder is the one proposed by MARSCmd (see above); the command line does not change it. |
 | `--allow-inside` | | Allows a destination inside the MARS folder (otherwise refused, as uninstalling or upgrading MARS deletes it). |
 | `--search <text>` | `MARSTemplate` | The text replaced by the project name. |
-| `--matches <patterns>` | `*.pas\|*.dpr\|*.dproj\|*.dfm\|*.xfm\|*.groupproj\|*.deployproj` | The files whose content is changed, separated by `\|`. |
+| `--matches <patterns>` | `*.pas\|*.dpr\|*.dproj\|*.dfm\|*.xfm\|*.groupproj\|*.deployproj\|*Dockerfile\|*.dockerignore\|*.yml\|*.bat` | The files whose content is changed, separated by `\|`. |
 | `--mars <folder>` | the folder of `MARScmd.exe` | The MARS folder (with the `Demos` of the templates). |
 
 `MARScmd --help` prints the usage. The exit code is 0 when the project is created, 1 on errors (i.e. a destination that is not empty), 2 on a wrong command line.

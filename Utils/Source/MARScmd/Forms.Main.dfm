@@ -1388,7 +1388,7 @@ object MainForm: TMainForm
         Height = 21
         Anchors = [akLeft, akTop, akRight]
         TabOrder = 2
-        Text = '*.pas|*.dpr|*.dproj|*.dfm|*.xfm|*.groupproj|*.deployproj'
+        Text = '*.pas|*.dpr|*.dproj|*.dfm|*.xfm|*.groupproj|*.deployproj|*Dockerfile|*.dockerignore|*.yml|*.bat'
         ExplicitWidth = 312
       end
     end
