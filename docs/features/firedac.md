@@ -207,7 +207,7 @@ begin
 end;
 ```
 
-`OpenStoredProc` returns a stored procedure owned by the request (freed after it), as `Query`; `ExecStoredProc` frees its own and returns the rows affected, as the driver reports them. A `TFDStoredProc` is a FireDAC dataset: it is written (JSON, the native formats) as a `TFDQuery`.
+The [FireDACDemo](/demos/#data-access-demos) has a working one (`GET customers/credit?min=1000`). `OpenStoredProc` returns a stored procedure owned by the request (freed after it), as `Query`; `ExecStoredProc` frees its own and returns the rows affected, as the driver reports them. A `TFDStoredProc` is a FireDAC dataset: it is written (JSON, the native formats) as a `TFDQuery`.
 
 ## Transactions
 

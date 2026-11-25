@@ -93,21 +93,6 @@ initialization
         end
       );
 
-      // a stored procedure as a dataset (FireDAC: uses MARS.Data.FireDAC, FireDAC.Comp.Client);
-      // its input parameters named after the request are filled, the others in the callback
-      R.Get<TFDStoredProc>('orders/{customerId}',
-        function (const C: TMARSRouteContext): TFDStoredProc
-        begin
-          Result := C.Inject<TMARSFireDAC>.OpenStoredProc('CUSTOMER_ORDERS', nil,
-            procedure (AProc: TFDStoredProc)
-            begin
-              AProc.ParamByName('CUSTOMER_ID').AsInteger := C.Path<Integer>('customerId');
-            end);
-        end
-      ).Produces(TMediaType.APPLICATION_JSON)
-       // the fields of the rows in the OpenAPI document (TOrderRow: a record of yours)
-       .MetaResult(TypeInfo(TArray<TOrderRow>), 'The orders');
-
       // a rate limit of its own for a route (uses MARS.Utils.RateLimiter): 5 requests per
       // minute for each client, on top of the RateLimit.* of the engine (Server.Ignition)
       R.Get<string>('expensive',

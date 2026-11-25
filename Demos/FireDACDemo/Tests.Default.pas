@@ -39,6 +39,7 @@ type
     [Test] procedure ListByCity;
     [Test] procedure ListAsXML;
     [Test] procedure Summary;
+    [Test] procedure WithCredit;
     [Test] procedure CustomersData;
     [Test] procedure CreateReadUpdateDelete;
     [Test] procedure Transfer;
@@ -167,6 +168,31 @@ begin
     Assert.IsNotNull(LJSON.Values['Cities'], 'Cities dataset');
   finally
     LJSON.Free;
+  end;
+end;
+
+procedure TCustomersTest.WithCredit;
+var
+  LId: Integer;
+  LResponse: IMARSResponse;
+  LRecords: TJSONArray;
+  LRecord: TJSONValue;
+begin
+  // the rows of a stored procedure: only the customers with that credit
+  LId := AddCustomer('Stored Procedure', 'Testville', 999000);
+  try
+    LResponse := Request('GET', 'customers/credit', 'min=999000');
+    Assert.AreEqual(200, LResponse.StatusCode, LResponse.Content);
+    LRecords := ParseArray(LResponse.Content);
+    try
+      Assert.IsTrue(LRecords.Count > 0, 'At least the new customer');
+      for LRecord in LRecords do
+        Assert.IsTrue(ValueOf(LRecord, 'credit').AsType<Currency> >= 999000, LRecord.ToJSON);
+    finally
+      LRecords.Free;
+    end;
+  finally
+    Request('DELETE', 'customers/' + LId.ToString);
   end;
 end;
 

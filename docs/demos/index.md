@@ -159,7 +159,7 @@ end;
 
 `FireDACDemo`, `UniDACDemo`, `MyDACDemo` and `IBDACDemo` are the same application written with each [data access integration](/features/data-access), created with MARSCmd from `MARSTemplate` (all the hosts, the client, the tests). Compare them file by file: only the library changes.
 
-- **Server**: a `customers` resource (`Server.Resources.Customers.pas`) on a CUSTOMERS table (id, name, city, credit). `Server.Database.pas` creates the table, with six customers, the first time the server starts (and the database file too, with Firebird).
+- **Server**: a `customers` resource (`Server.Resources.Customers.pas`) on a CUSTOMERS table (id, name, city, credit). `Server.Database.pas` creates the table, with six customers, the first time the server starts (and the database file too, with Firebird); in `FireDACDemo`, a stored procedure too.
 - **Client** (FMX): loads the customers and the totals by city into two grids, edits them (*New*, *Save*) and reloads them. The form is the same in the four demos; the data module uses the client components of the library.
 - **Tests** (DUnitX): the endpoints of `customers`, executed in process on the database of `Server.ini`; the tests add the records they need and delete them.
 
@@ -170,6 +170,7 @@ end;
 | `GET customers/{id}` | `:PathParam_id`, 404 when missing |
 | `POST customers`, `PUT customers/{id}`, `DELETE customers/{id}` | `ExecuteSQL` with parameters, the key of a new record |
 | `POST customers/transfer?from=1&to=2&amount=100` | `InTransaction`: commit, or rollback with 409/404 |
+| `GET customers/credit?min=1000` (FireDAC) | a stored procedure as a dataset (`OpenStoredProc`) |
 | `POST customers/import` (Devart) | datasets in the body (`TArray<TMemDataSet>`), an upsert |
 | `GET`/`POST customersdata` (FireDAC) | `TMARSFDDatasetResource`: datasets and deltas (`ApplyUpdates`) |
 

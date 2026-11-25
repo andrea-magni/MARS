@@ -57,6 +57,12 @@ type
     [GET, Path('summary'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
     function Summary: TArray<TFDDataSet>;
 
+    /// <summary> GET customers/credit?min=1000: the rows of a stored procedure
+    /// (CUSTOMERS_WITH_CREDIT, a selectable one), returned as any other dataset </summary>
+    [GET, Path('credit'), Produces(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON_FireDAC)]
+    [MetaResult(TypeInfo(TCustomerRow), True, 'Customers')]
+    function WithCredit([QueryParam('min')] const AMin: Currency): TFDStoredProc;
+
     /// <summary> POST customers/transfer?from=1&to=2&amount=100: moves credit between two
     /// customers in a transaction </summary>
     [POST, Path('transfer'), Produces(TMediaType.TEXT_PLAIN)]
@@ -122,6 +128,17 @@ begin
       'select city, count(*) as customers, sum(credit) as credit from customers group by city order by city'
     ), 'Cities')
   ];
+end;
+
+function TCustomersResource.WithCredit(const AMin: Currency): TFDStoredProc;
+begin
+  // the procedure is prepared: its parameters come from the database. ExecStoredProc for a
+  // procedure that returns no rows (its output parameters are read in the "after" callback)
+  Result := FD.OpenStoredProc('CUSTOMERS_WITH_CREDIT', nil,
+    procedure (AProc: TFDStoredProc)
+    begin
+      AProc.ParamByName('MIN_CREDIT').AsCurrency := AMin;
+    end);
 end;
 
 function TCustomersResource.Transfer: string;
