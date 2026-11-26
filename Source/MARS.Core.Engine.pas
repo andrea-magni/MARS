@@ -297,7 +297,15 @@ begin
 
   LEnginePath := GetBasePath;
 
-  LURL := TMARSURL.Create(ARequest);
+  // a URL that cannot be decoded (%zz) is the client's mistake: 400, not a 500 with the exception text
+  try
+    LURL := TMARSURL.Create(ARequest);
+  except
+    AResponse.StatusCode := 400;
+    AResponse.Content := 'Bad request: malformed URL';
+    AResponse.ContentType := TMediaType.TEXT_PLAIN_UTF8;
+    Exit(True);
+  end;
   try
     if Assigned(FBeforeHandleRequest) then
       if not FBeforeHandleRequest(Self, LURL, ARequest, AResponse, Result) then

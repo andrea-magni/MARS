@@ -26,6 +26,8 @@ type
     [Test] procedure WithoutFactoryIndyOpenSSL;
     // MaxRequestSize: a larger body is refused before it is read
     [Test] procedure RequestTooLarge;
+    // a URL that cannot be decoded: 400 (a real server: the request mock parses the URL itself)
+    [Test] procedure MalformedURLIs400;
   end;
 
 implementation
@@ -138,6 +140,40 @@ begin
 end;
 
 { TMARSIndyIOHandlerTest }
+
+procedure TMARSIndyIOHandlerTest.MalformedURLIs400;
+var
+  LServer: TMARShttpServerIndy;
+  LClient: TIdHTTP;
+  LStatus: Integer;
+  LContent: string;
+begin
+  FEngine.PortSSL := 0;
+  LServer := TMARShttpServerIndy.Create(FEngine);
+  try
+    LServer.Active := True;
+    LStatus := 0;
+    LClient := TIdHTTP.Create(nil);
+    try
+      try
+        LClient.Get(Format('http://localhost:%d/rest/default/iohandler/%%zz', [HTTP_PORT]));
+      except
+        on E: EIdHTTPProtocolException do
+        begin
+          LStatus := E.ErrorCode;
+          LContent := E.ErrorMessage;
+        end;
+      end;
+    finally
+      LClient.Free;
+    end;
+    Assert.AreEqual(400, LStatus);
+    Assert.AreEqual('Bad request: malformed URL', LContent);
+    Assert.AreEqual('ok', Get(HTTP_PORT), 'the server still answers');
+  finally
+    LServer.Free;
+  end;
+end;
 
 procedure TMARSIndyIOHandlerTest.RequestTooLarge;
 var
