@@ -319,6 +319,10 @@ type
     [Test] procedure WithoutPKCE_Refused;
     [Test] procedure WrongPassword_ReRendersLoginPage;
     [Test] procedure RefreshToken_RotatesAndWorks;
+    // a refresh does not move the expiration of the refresh token
+    [Test] procedure RefreshToken_KeepsItsExpiration;
+    // MaxClients: unused old registrations make room, then /register answers 429
+    [Test] procedure Register_LimitOfClients;
     [Test] procedure Persistence_ClientsSurviveRestart;
     [Test] procedure AuthorizePage_DefaultContainsMARSFooter;
     [Test] procedure AuthorizePage_TemplateFileOverride;
@@ -2461,6 +2465,94 @@ begin
     Assert.AreEqual('classified-resource', LValue);
   finally
     LJSON.Free;
+  end;
+end;
+
+function StoredRefreshExpiration(const AFile: string): string;
+begin
+  var LStore := TJSONObject.ParseJSONValue(TFile.ReadAllText(AFile, TEncoding.UTF8)) as TJSONObject;
+  try
+    var LTokens := LStore.GetValue<TJSONArray>('refreshTokens');
+    Assert.AreEqual(1, LTokens.Count, 'one refresh token in the store');
+    Result := (LTokens.Items[0] as TJSONObject).ReadStringValue('expiresAt');
+  finally
+    LStore.Free;
+  end;
+end;
+
+procedure TMCPOAuthFixture.RefreshToken_KeepsItsExpiration;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+  VERIFIER = 'expiry-verifier-0123456789-0123456789';
+begin
+  var LStoreFile := TPath.Combine(TPath.GetTempPath
+  , 'mars-mcp-oauth-test-' + TGUID.NewGuid.ToString + '.json');
+  TMCPOAuthServer.ResetState;
+  TMCPOAuthServer.SetPersistenceFile(LStoreFile);
+  try
+    var LClientId := RegisterTestClient(REDIRECT_URI);
+    var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+    , TMCPOAuthServer.ComputePKCES256(VERIFIER), 'secret');
+    var LJSON := ParseContent(SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+    , 'grant_type=authorization_code&code=' + LCode
+      + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
+      + '&client_id=' + LClientId
+      + '&code_verifier=' + VERIFIER));
+    var LRefreshToken := '';
+    try
+      LRefreshToken := LJSON.ReadStringValue('refresh_token');
+    finally
+      LJSON.Free;
+    end;
+    var LExpiration := StoredRefreshExpiration(LStoreFile);
+
+    Sleep(50);
+    var LRefreshCall := SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+    , 'grant_type=refresh_token&refresh_token=' + LRefreshToken + '&client_id=' + LClientId);
+    Assert.AreEqual(200, LRefreshCall.Response.StatusCode, LRefreshCall.Response.Content);
+    Assert.AreEqual(LExpiration, StoredRefreshExpiration(LStoreFile), 'the new refresh token expires when the old one did');
+    Assert.IsFalse(TFile.Exists(LStoreFile + '.tmp'), 'no temporary file left');
+  finally
+    TMCPOAuthServer.SetPersistenceFile('');
+    TMCPOAuthServer.ResetState;
+    if TFile.Exists(LStoreFile) then
+      TFile.Delete(LStoreFile);
+  end;
+end;
+
+procedure TMCPOAuthFixture.Register_LimitOfClients;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+  BODY = '{"client_name":"Test Client","redirect_uris":["' + REDIRECT_URI + '"]}';
+begin
+  var LStoreFile := TPath.Combine(TPath.GetTempPath
+  , 'mars-mcp-oauth-test-' + TGUID.NewGuid.ToString + '.json');
+  // two registrations of long ago: one never used, one with a refresh token
+  TFile.WriteAllText(LStoreFile,
+      '{"clients":['
+    + '{"clientId":"unused","clientName":"","redirectURIs":["' + REDIRECT_URI + '"],"issuedAt":"2020-01-01T00:00:00.000Z"},'
+    + '{"clientId":"inuse","clientName":"","redirectURIs":["' + REDIRECT_URI + '"],"issuedAt":"2020-01-01T00:00:00.000Z"}],'
+    + '"refreshTokens":[{"token":"t1","clientId":"inuse","scope":"","userName":"user","roles":"standard",'
+    + '"expiresAt":"2999-01-01T00:00:00.000Z"}]}', TEncoding.UTF8);
+  TMCPOAuthServer.ResetState;
+  TMCPOAuthServer.SetPersistenceFile(LStoreFile);
+  TMCPOAuthServer.MaxClients := 2;
+  try
+    // the unused one makes room
+    Assert.AreEqual(201, SendRaw('POST', 'oauth/register', 'application/json', BODY).Response.StatusCode);
+    // full: a new registration and the one in use
+    var LCall := SendRaw('POST', 'oauth/register', 'application/json', BODY);
+    Assert.AreEqual(429, LCall.Response.StatusCode, LCall.Response.Content);
+
+    var LStore := TFile.ReadAllText(LStoreFile, TEncoding.UTF8);
+    Assert.DoesNotContain(LStore, '"unused"');
+    Assert.Contains(LStore, '"inuse"');
+  finally
+    TMCPOAuthServer.MaxClients := 1000;
+    TMCPOAuthServer.SetPersistenceFile('');
+    TMCPOAuthServer.ResetState;
+    if TFile.Exists(LStoreFile) then
+      TFile.Delete(LStoreFile);
   end;
 end;
 

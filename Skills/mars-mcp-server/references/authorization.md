@@ -66,6 +66,8 @@ Roles assigned in `Authenticate` flow into the JWT, so per-tool `[RolesAllowed]`
 Production notes:
 - run behind HTTPS (TLS-terminating reverse proxy); public URLs in the metadata and in the 401 challenge are built by `TMCPOAuthMetadata.BaseURL`, which honors `X-Forwarded-Proto`/`-Host`/`-Port` (nginx, IIS ARR, ngrok...): make sure the proxy sets them, or override `TMCPResource.BuildResourceMetadataURL`;
 - client/code/refresh-token storage is in-memory by default: call `TMCPOAuthServer.SetPersistenceFile('<path>.json')` at startup or every server restart answers "Unknown client" to previously-registered MCP clients and breaks their sessions (the file stores refresh tokens in cleartext — protect it; override the `Store*`/`Consume*` virtuals for a custom store);
+- a refresh does not extend the login: the new refresh token expires when the first one would have (`GetRefreshTokenDuration`, 30 days after the login), then the user signs in again and `Authenticate` decides the roles again. A user sent back to the login page once a month is this, not a bug;
+- `/register` is open to anyone: `TMCPOAuthServer.MaxClients` (default 1000, 0 = no limit) caps the registered clients; at the limit unused registrations older than a day are dropped, then `/register` answers 429 ("Too many registered clients");
 - to delegate to an external IdP (Keycloak, Auth0, Entra) instead, MARS would validate RS256/JWKS tokens — not covered by the HMAC-based token layer today; the self-contained server is the supported path.
 
 ## Client-side pitfalls that look like server bugs

@@ -76,11 +76,15 @@ type
     class var FPersistenceFile: string;
     class var FPersistenceLoaded: Boolean;
     class var FAuthorizePageTemplateFile: string;
+    class var FMaxClients: Integer;
+    // of the refresh token being exchanged: its successor expires when it did (0: a new login)
+    var FRefreshTokenExpiresAt: TDateTime;
     class constructor ClassCreate;
     class destructor ClassDestroy;
     // both assume FCS is held by the caller
     class procedure EnsurePersistedLoaded;
     class procedure Persist;
+    class procedure PurgeExpired;
   protected
     [Context] Activation: IMARSActivation;
     [Context] Request: IMARSRequest;
@@ -93,6 +97,8 @@ type
       out ARoles: TArray<string>): Boolean; virtual; abstract;
 
     // storage (in-memory by default, override for persistence)
+    // False: no room for a new client (see MaxClients). Called by RegisterClient before StoreClient
+    function CanRegisterClient: Boolean; virtual;
     procedure StoreClient(const AClient: TMCPOAuthClient); virtual;
     function FindClient(const AClientId: string; out AClient: TMCPOAuthClient): Boolean; virtual;
     procedure StoreCode(const ACode: TMCPOAuthCode); virtual;
@@ -130,6 +136,10 @@ type
     class procedure SetPersistenceFile(const AFileName: string);
     // clears the in-memory stores (does not touch the persistence file)
     class procedure ResetState;
+    // how many registered clients are kept (default 1000, 0: no limit). Anyone can call
+    // /register: at the limit the registrations older than a day that never got a token are
+    // dropped, and if there is still no room the registration is refused (429)
+    class property MaxClients: Integer read FMaxClients write FMaxClients;
 
     // optional HTML file on disk overriding the built-in login & consent page.
     // The file is read (UTF-8) on each render, so it can be edited while the
@@ -204,6 +214,7 @@ implementation
 
 uses
   StrUtils, DateUtils, System.Hash, System.NetEncoding, System.IOUtils
+{$IFDEF MSWINDOWS}, Winapi.Windows{$ENDIF}
 , MARS.Utils.JWT, MARS.Core.Utils
 ;
 
@@ -330,6 +341,7 @@ begin
   FCodes := TDictionary<string, TMCPOAuthCode>.Create;
   FRefreshTokens := TDictionary<string, TMCPOAuthRefreshToken>.Create;
   FCS := TCriticalSection.Create;
+  FMaxClients := 1000;
 end;
 
 class destructor TMCPOAuthServer.ClassDestroy;
@@ -468,12 +480,74 @@ begin
     end;
 
     try
-      TFile.WriteAllText(FPersistenceFile, LJSON.ToJSON, TEncoding.UTF8);
+      // a new file that takes the place of the old one: a crash while writing leaves the old
+      // one whole, not half a file (that is read as an empty store)
+      TFile.WriteAllText(FPersistenceFile + '.tmp', LJSON.ToJSON, TEncoding.UTF8);
+{$IFDEF MSWINDOWS}
+      if not MoveFileEx(PChar(FPersistenceFile + '.tmp'), PChar(FPersistenceFile)
+        , MOVEFILE_REPLACE_EXISTING or MOVEFILE_WRITE_THROUGH)
+      then
+        RaiseLastOSError;
+{$ELSE}
+      RenameFile(FPersistenceFile + '.tmp', FPersistenceFile); // rename(): replaces, atomic
+{$ENDIF}
     except
       // persistence is best-effort: never break the request over a disk error
     end;
   finally
     LJSON.Free;
+  end;
+end;
+
+class procedure TMCPOAuthServer.PurgeExpired;
+var
+  LCode: TMCPOAuthCode;
+  LRefresh: TMCPOAuthRefreshToken;
+  LNow: TDateTime;
+begin
+  LNow := MARSNowUTC;
+  for LCode in FCodes.Values.ToArray do
+    if LCode.ExpiresAt < LNow then
+      FCodes.Remove(LCode.Code);
+  for LRefresh in FRefreshTokens.Values.ToArray do
+    if LRefresh.ExpiresAt < LNow then
+      FRefreshTokens.Remove(LRefresh.Token);
+end;
+
+function TMCPOAuthServer.CanRegisterClient: Boolean;
+var
+  LClient: TMCPOAuthClient;
+  LRefresh: TMCPOAuthRefreshToken;
+  LInUse: TDictionary<string, Boolean>;
+  LRemoved: Boolean;
+begin
+  FCS.Enter;
+  try
+    EnsurePersistedLoaded;
+    if (FMaxClients <= 0) or (FClients.Count < FMaxClients) then
+      Exit(True);
+
+    // room from the registrations nobody used: older than a day, no refresh token
+    PurgeExpired;
+    LRemoved := False;
+    LInUse := TDictionary<string, Boolean>.Create;
+    try
+      for LRefresh in FRefreshTokens.Values do
+        LInUse.AddOrSetValue(LRefresh.ClientId, True);
+      for LClient in FClients.Values.ToArray do
+        if (LClient.IssuedAt < MARSNowUTC - 1) and not LInUse.ContainsKey(LClient.ClientId) then
+        begin
+          FClients.Remove(LClient.ClientId);
+          LRemoved := True;
+        end;
+    finally
+      LInUse.Free;
+    end;
+    if LRemoved then
+      Persist;
+    Result := FClients.Count < FMaxClients;
+  finally
+    FCS.Leave;
   end;
 end;
 
@@ -505,6 +579,7 @@ procedure TMCPOAuthServer.StoreCode(const ACode: TMCPOAuthCode);
 begin
   FCS.Enter;
   try
+    PurgeExpired; // the codes nobody redeemed
     FCodes.AddOrSetValue(ACode.Code, ACode);
   finally
     FCS.Leave;
@@ -531,6 +606,7 @@ begin
   FCS.Enter;
   try
     EnsurePersistedLoaded;
+    PurgeExpired;
     FRefreshTokens.AddOrSetValue(AToken.Token, AToken);
     Persist;
   finally
@@ -752,7 +828,12 @@ begin
   LRefresh.Scope := AScope;
   LRefresh.UserName := AUserName;
   LRefresh.Roles := ARoles;
-  LRefresh.ExpiresAt := MARSNowUTC + GetRefreshTokenDuration;
+  // a refresh does not move the expiration: GetRefreshTokenDuration after the login the user
+  // signs in again, and Authenticate decides the roles again
+  if FRefreshTokenExpiresAt > 0 then
+    LRefresh.ExpiresAt := FRefreshTokenExpiresAt
+  else
+    LRefresh.ExpiresAt := MARSNowUTC + GetRefreshTokenDuration;
   StoreRefreshToken(LRefresh);
 
   Result := TJSONObject.Create;
@@ -802,6 +883,7 @@ begin
     if LRefresh.ClientId <> AClientId then
       Exit(BuildErrorResponse(400, 'invalid_grant', 'client_id mismatch'));
 
+    FRefreshTokenExpiresAt := LRefresh.ExpiresAt;
     Result := BuildAccessTokenResponse(LRefresh.UserName, LRefresh.Roles, AClientId, LRefresh.Scope);
   end
   else
@@ -820,6 +902,9 @@ begin
      or (LRedirectURIs.Count = 0)
   then
     Exit(BuildErrorResponse(400, 'invalid_client_metadata', 'redirect_uris is required'));
+
+  if not CanRegisterClient then
+    Exit(BuildErrorResponse(429, 'temporarily_unavailable', 'Too many registered clients'));
 
   LClient.ClientId := NewRandomString;
   LClient.ClientName := ARegistration.ReadStringValue('client_name');

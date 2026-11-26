@@ -274,6 +274,11 @@ The built-in login page carries a small *built with MARS-Curiosity* badge. To cu
 
 ::: warning
 Run behind HTTPS in production (a TLS-terminating reverse proxy or a tunnel like ngrok works fine: the public URLs of the OAuth metadata honor the `X-Forwarded-Proto`/`-Host`/`-Port` headers, so make sure the proxy sets them). Client/code/refresh-token storage is in-memory by default — call `TMCPOAuthServer.SetPersistenceFile('...')` at startup so registered clients and refresh tokens survive restarts (the file stores refresh tokens in cleartext: protect it), or override the `Store*`/`Consume*` virtual methods for a custom store.
+
+Two limits keep the store from growing and a login from lasting forever:
+
+- **Refresh tokens**: a refresh gives a new refresh token that expires when the first one would have, `GetRefreshTokenDuration` (30 days) after the login. Then the user signs in again and `Authenticate` decides the roles again: a user you disabled, or whose roles you changed, keeps the old ones for 30 days at most. Override `GetRefreshTokenDuration` for a shorter time.
+- **Registered clients**: anyone can call `/register`, so `TMCPOAuthServer.MaxClients` (1000 by default, `0` for no limit) caps how many are kept. At the limit the registrations older than a day that never got a token are dropped; if there is still no room, `/register` answers `429`. Put the [rate limit](/server/engine#rate-limiting) of the engine in front of it too.
 :::
 
 ## Protocol versions
