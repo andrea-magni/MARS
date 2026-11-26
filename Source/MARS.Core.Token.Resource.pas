@@ -116,6 +116,9 @@ begin
 
   BeforeLogin(LUserName, LPassword);
   try
+    // a new login starts from nothing: the claims of the token the request came with (another
+    // user, or the same one before a change) are not carried into the new token
+    Token.Claims.Clear;
     if Authenticate(LUserName, LPassword) then
     begin
       Token.Build(App.Parameters);

@@ -39,13 +39,15 @@ type
     [Test] procedure CookieSameSiteFromStringRejectsInvalidValues;
     // a cookie that cannot be decoded is like no cookie: not a 500
     [Test] procedure MalformedCookieIsIgnored;
+    // a login does not carry the claims of the token of the request into the new one
+    [Test] procedure LoginStartsFromNoClaims;
   end;
 
 implementation
 
 uses
   Web.HTTPApp, IdHTTP, IdCustomHTTPServer, IdHTTPWebBrokerBridge
-, MARS.Core.Token.Resource
+, MARS.Core.Token.Resource, MARS.Core.Token
 {$IFDEF MSWINDOWS}
 , MARS.mORMotJWT.Token
 {$ELSE}
@@ -234,6 +236,47 @@ begin
     end;
   finally
     LServer.Free;
+  end;
+end;
+
+procedure TMARSCookiesTest.LoginStartsFromNoClaims;
+var
+  LServer: TMARShttpServerIndy;
+  LClient: TIdHTTP;
+  LForm: TStringList;
+  LParameters: TMARSParameters;
+  LOld: TMARSToken;
+  LResponse: string;
+begin
+  // the token of another session, with a claim of its own
+  LParameters := TMARSParameters.Create('');
+  LOld := TMARSmORMotJWTToken.Create('', LParameters);
+  try
+    LOld.UserName := 'admin';
+    LOld.Claims['tenant'] := 'acme';
+    LOld.Build('cookies-test-secret-0123456789-0123456789-0123456789');
+
+    LServer := TMARShttpServerIndy.Create(FEngine);
+    LClient := TIdHTTP.Create(nil);
+    LForm := TStringList.Create;
+    try
+      LServer.DefaultPort := INDY_PORT;
+      LServer.Active := True;
+      LClient.Request.CustomHeaders.Values['Authorization'] := 'Bearer ' + LOld.Token;
+      LForm.Values['username'] := 'andrea';
+      LForm.Values['password'] := 'any';
+      LResponse := LClient.Post(Format('http://localhost:%d/rest/default/token', [INDY_PORT]), LForm);
+      Assert.Contains(LResponse, '"andrea"');
+      Assert.DoesNotContain(LResponse, 'tenant');
+      Assert.DoesNotContain(LResponse, 'acme');
+    finally
+      LForm.Free;
+      LClient.Free;
+      LServer.Free;
+    end;
+  finally
+    LOld.Free;
+    LParameters.Free;
   end;
 end;
 
