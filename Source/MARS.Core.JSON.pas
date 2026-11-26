@@ -633,10 +633,16 @@ begin
   else if AValue.TypeInfo = TypeInfo(TTime) then
     Result := TJSONString.Create( DateToJSON(AValue.AsType<TTime>, AOptions) )
 
+  // the unsigned types too: a UInt64 or a Cardinal over the signed range was written negative
   else if (AValue.Kind in [tkInt64]) then
-    Result := TJSONNumber.Create( AValue.AsType<Int64> )
+  begin
+    if AValue.TypeData^.MinInt64Value > AValue.TypeData^.MaxInt64Value then
+      Result := TJSONNumber.Create( UIntToStr(AValue.AsUInt64) )
+    else
+      Result := TJSONNumber.Create( AValue.AsType<Int64> );
+  end
   else if (AValue.Kind in [tkInteger]) then
-    Result := TJSONNumber.Create( AValue.AsType<Integer> )
+    Result := TJSONNumber.Create( AValue.AsOrdinal )
 
   else if (AValue.Kind in [tkFloat]) then
   begin
@@ -1782,10 +1788,15 @@ begin
   else if AValue is TJSONNumber then // Numbers (Integer and Float)
   begin
     if ADesiredType.TypeKind in [tkInt64] then
-      ATValue := TJSONNumber(AValue).AsInt64
+    begin
+      if ADesiredType.Handle.TypeData^.MinInt64Value > ADesiredType.Handle.TypeData^.MaxInt64Value then
+        ATValue := TValue.From<UInt64>(StrToUInt64(TJSONNumber(AValue).Value)) // unsigned
+      else
+        ATValue := TJSONNumber(AValue).AsInt64;
+    end
     else
     if ADesiredType.TypeKind in [tkInteger] then
-      ATValue := TJSONNumber(AValue).AsInt
+      ATValue := TValue.FromOrdinal(ADesiredType.Handle, TJSONNumber(AValue).AsInt64) // Cardinal too
     else
     begin
       if ADesiredType.Handle = TypeInfo(TValue) then

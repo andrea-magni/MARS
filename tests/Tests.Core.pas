@@ -70,6 +70,8 @@ type
     [Test] procedure ClassMembersGetDistinctInstances;
     // a name that is not of the enumerated type (or of Boolean) is refused
     [Test] procedure UnknownEnumNameRaises;
+    // Cardinal and UInt64 over the range of the signed types
+    [Test] procedure UnsignedIntegers;
   end;
 
   // raw JSON fields: TJSONRawString and TJSONValue
@@ -1027,6 +1029,36 @@ begin
   Assert.IsTrue(ReadEnumRecord('{"Color": "green", "Flag": "true"}').Flag);
   Assert.WillRaise(procedure begin ReadEnumRecord('{"Color": "Blue"}'); end, Exception);
   Assert.WillRaise(procedure begin ReadEnumRecord('{"Flag": "maybe"}'); end, Exception);
+end;
+
+type
+  TUnsignedRecord = record
+    C: Cardinal;
+    U: UInt64;
+    W: Word;
+    B: Byte;
+  end;
+
+procedure TMARSJSONToRecordTest.UnsignedIntegers;
+var
+  LRecord, LRead: TUnsignedRecord;
+  LJSON: TJSONObject;
+begin
+  LRecord.C := 4000000000;
+  LRecord.U := 18000000000000000000;
+  LRecord.W := 65535;
+  LRecord.B := 255;
+  LJSON := TJSONObject.RecordToJSON<TUnsignedRecord>(LRecord);
+  try
+    Assert.AreEqual('{"C":4000000000,"U":18000000000000000000,"W":65535,"B":255}', LJSON.ToJSON);
+    LRead := LJSON.ToRecord<TUnsignedRecord>;
+    Assert.AreEqual(LRecord.C, LRead.C);
+    Assert.AreEqual(LRecord.U, LRead.U);
+    Assert.AreEqual(LRecord.W, LRead.W);
+    Assert.AreEqual(LRecord.B, LRead.B);
+  finally
+    LJSON.Free;
+  end;
 end;
 
 procedure TMARSJSONToRecordTest.Basic;
