@@ -2,7 +2,9 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
-## Unreleased {#unreleased}
+## 2.1.0 {#v2-1-0}
+
+<Badge type="tip" text="latest" /> **26 November 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.1.0) · [changes since 2.0.3](https://github.com/andrea-magni/MARS/compare/v.2.0.3...v.2.1.0)
 
 **New**
 - MCP: the 2026-07-28 revision of the protocol, next to the 2025 ones (a "dual-era" server). Clients without the `initialize` handshake are served: `server/discover`, the protocol version read from `params._meta` of each request, `resultType`, `ttlMs`, `cacheScope` and the server identity in the results, the `MCP-Protocol-Version` / `Mcp-Method` / `Mcp-Name` headers checked against the body, `400` for an unsupported version (`-32022`) or a header mismatch (`-32020`) and `404` for an unknown method. Open WebUI 0.13 and the Python `mcp` SDK 2.x, which refused the results of a MARS server ("Failed to connect to MCP server", `ttlMs` / `resultType` / `cacheScope` "Field required"), connect again; clients using `initialize` see no change. [MCP ▸ Protocol versions](/features/mcp#protocol-versions) ([#326](https://github.com/andrea-magni/MARS/issues/326))
@@ -50,13 +52,22 @@ What changed in each MARS-Curiosity release, newest first. Each entry is a one-l
 
 **Upgrade notes**
 
+- **Security fixes**: this release closes flaws that are in 2.0.3 and earlier: request bodies without a limit ([#327](https://github.com/andrea-magni/MARS/issues/327)), the demo login in RELEASE builds ([#328](https://github.com/andrea-magni/MARS/issues/328)), MCP OAuth without PKCE ([#329](https://github.com/andrea-magni/MARS/issues/329)), deltas that write columns the server does not publish ([#345](https://github.com/andrea-magni/MARS/issues/345)), a `Host` header that replaces the path of the request ([#346](https://github.com/andrea-magni/MARS/issues/346)). Update the servers that are reachable from outside.
 - **`MaxRequestSize`** ([#327](https://github.com/andrea-magni/MARS/issues/327)): requests with a body over 30 MB are now refused (Indy: 413; DCS: 400). Servers that receive larger uploads must set `MaxRequestSize` in the ini (bytes, `0` for no limit).
 - **Demo login** ([#328](https://github.com/andrea-magni/MARS/issues/328)): a server that relied on the `Authenticate` of `TMARSTokenResource` (password: the current hour) answers 500 to the login when built in RELEASE. Override `Authenticate`.
 - **mORMot 2** ([#312](https://github.com/andrea-magni/MARS/issues/312)): the mORMot 1 units (`SynCommons`, `SynCrypto`, `SynEcc`, `SynLZ`, `SynTable`, `SynMustache`) are no longer shipped with MARS. A project with `ThirdParty\mORMot\Source` in its search path needs `ThirdParty\mORMot2\src\core`, `ThirdParty\mORMot2\src\crypt` and `ThirdParty\mORMot2\src\lib` instead (the setup and Smart Setup update the IDE library path). Code that used the mORMot 1 units from the MARS copy needs its own copy of mORMot 1 (the units of mORMot 2 have other names, `mormot.*`, so the two can coexist) or the mORMot 2 equivalents. Rebuild the packages: `MARS.mORMot` changed.
+- **Deltas** ([#345](https://github.com/andrea-magni/MARS/issues/345)): `ApplyUpdates` refuses (`400`) a delta with a column that the dataset of the server does not have. A client that sent more columns than the server publishes (fields added on the client and not marked as calculated, for example) must stop sending them, or the server dataset must select them.
+- **`+` in the path** ([#337](https://github.com/andrea-magni/MARS/issues/337)): a `+` in a segment of the path is a plus, not a space. A client that encoded the spaces of a path parameter as `+` must send `%20` (the MARS client does).
+- **Rate limit behind a proxy** ([#338](https://github.com/andrea-magni/MARS/issues/338)): with `RateLimit.ClientIPHeader` the client is the last address of the header, not the first. Behind two or more proxies in a row, use a header that the first proxy overwrites (`X-Real-IP`).
+- **MCP OAuth** ([#341](https://github.com/andrea-magni/MARS/issues/341), [#340](https://github.com/andrea-magni/MARS/issues/340)): a login lasts 30 days (`GetRefreshTokenDuration`), a refresh no longer extends it: then the user signs in again. No more than `TMCPOAuthServer.MaxClients` registered clients (1000 by default).
+- **Login** ([#350](https://github.com/andrea-magni/MARS/issues/350)): `TMARSTokenResource` clears the claims before `Authenticate`. An `Authenticate` that read the claims of the token the request came with does not find them any more.
+- **JSONP** ([#339](https://github.com/andrea-magni/MARS/issues/339)): the name of the callback may hold only letters, digits, `_`, `$` and `.`; anything else is a `400`.
+- **JSON** ([#335](https://github.com/andrea-magni/MARS/issues/335), [#352](https://github.com/andrea-magni/MARS/issues/352)): a string that is not a name of the enumerated type it is read into raises an exception (it became an ordinal outside the type); an object inside a record or an object is read with the options in use, so its dates follow `JSON.DateIsUTC` / `[JSONDateIsUTC]` like the ones next to it.
+- **Removed units** ([#344](https://github.com/andrea-magni/MARS/issues/344)): `MARS.Core.Reflection`, `MARS.Core.Token.InjectionService` and `MARS.Messaging.*`. Remove them from the `uses` clauses and from the projects that name them.
 
 ## 2.0.3 {#v2-0-3}
 
-<Badge type="tip" text="latest" /> **4 November 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.3) · [changes since 2.0.2](https://github.com/andrea-magni/MARS/compare/v.2.0.2...v.2.0.3)
+**4 November 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.0.3) · [changes since 2.0.2](https://github.com/andrea-magni/MARS/compare/v.2.0.2...v.2.0.3)
 
 **New**
 - JSON logger: `JSONLogging.RetentionDays` deletes the rotated log files older than that many days (when a new file is opened; `0`, the default, keeps them all), so the folder read by Grafana Alloy no longer grows forever. Thanks to @bobprog72. [Logging](/features/logging#configuration-parameters) ([#305](https://github.com/andrea-magni/MARS/pull/305))
