@@ -37,6 +37,8 @@ type
     [Test] procedure TokenCookieIsLaxByDefault;
     [Test] procedure TokenCookieSameSiteNone;
     [Test] procedure CookieSameSiteFromStringRejectsInvalidValues;
+    // a cookie that cannot be decoded is like no cookie: not a 500
+    [Test] procedure MalformedCookieIsIgnored;
   end;
 
 implementation
@@ -232,6 +234,57 @@ begin
     end;
   finally
     LServer.Free;
+  end;
+end;
+
+procedure TMARSCookiesTest.MalformedCookieIsIgnored;
+const
+  BAD_COOKIES = 'access_token=%zz; other=%zz';
+
+  function Status(const APort: Integer; const APath, ACookie: string): Integer;
+  var
+    LClient: TIdHTTP;
+  begin
+    LClient := TIdHTTP.Create(nil);
+    try
+      LClient.HTTPOptions := LClient.HTTPOptions + [hoNoProtocolErrorException, hoWantProtocolErrorContent];
+      LClient.AllowCookies := False;
+      if ACookie <> '' then
+        LClient.Request.CustomHeaders.Values['Cookie'] := ACookie;
+      LClient.Get(Format('http://localhost:%d/rest/default/%s', [APort, APath]));
+      Result := LClient.ResponseCode;
+    finally
+      LClient.Free;
+    end;
+  end;
+
+  procedure Check(const APort: Integer; const AServer: string);
+  begin
+    Assert.AreEqual(200, Status(APort, 'cookies/set', BAD_COOKIES), AServer + ', a resource without the token');
+    // the resource of the token reads the cookie: as without it
+    Assert.AreEqual(Status(APort, 'token', ''), Status(APort, 'token', BAD_COOKIES), AServer + ', the token resource');
+  end;
+
+var
+  LIndy: TMARShttpServerIndy;
+  LDCS: TMARShttpServerDCS;
+begin
+  LIndy := TMARShttpServerIndy.Create(FEngine);
+  try
+    LIndy.DefaultPort := INDY_PORT;
+    LIndy.Active := True;
+    Check(INDY_PORT, 'Indy');
+  finally
+    LIndy.Free;
+  end;
+  LDCS := TMARShttpServerDCS.Create(FEngine);
+  try
+    LDCS.DefaultPort := DCS_PORT;
+    LDCS.SSLPort := 0;
+    LDCS.Active := True;
+    Check(DCS_PORT, 'DCS');
+  finally
+    LDCS.Free;
   end;
 end;
 

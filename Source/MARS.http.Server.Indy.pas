@@ -37,6 +37,7 @@ type
     function GetAuthorization: string; inline;
     function GetContent: string; inline;
 
+    function CookieFields: TStrings;
     function GetCookieParamIndex(const AName: string): Integer; inline;
     function GetCookieParamValue(const AIndex: Integer): string; overload; inline;
     function GetCookieParamValue(const AName: string): string; overload; inline;
@@ -567,30 +568,41 @@ begin
   Result := FWebRequest.ContentFields.ToStringArray;
 end;
 
+function TMARSWebRequest.CookieFields: TStrings;
+begin
+  // WebBroker decodes the cookies and raises on one it cannot decode (name=%zz): a 500 for
+  // every request with that cookie. The list it was filling stays: the cookies read so far
+  try
+    Result := FWebRequest.CookieFields;
+  except
+    Result := FWebRequest.CookieFields;
+  end;
+end;
+
 function TMARSWebRequest.GetCookieParamCount: Integer;
 begin
-  Result := FWebRequest.CookieFields.Count;
+  Result := CookieFields.Count;
 end;
 
 function TMARSWebRequest.GetCookieParamIndex(const AName: string): Integer;
 begin
-  Result := FWebRequest.CookieFields.IndexOfName(AName);
+  Result := CookieFields.IndexOfName(AName);
 end;
 
 function TMARSWebRequest.GetCookieParamValue(const AName: string): string;
 begin
-  Result := FWebRequest.CookieFields.Values[AName];
+  Result := CookieFields.Values[AName];
 end;
 
 function TMARSWebRequest.GetCookies: TMARSCookies;
 var
   LIndex: Integer;
 begin
-  SetLength(Result, FWebRequest.CookieFields.Count);
+  SetLength(Result, CookieFields.Count);
   for LIndex := Low(Result) to High(Result) do
   begin
-     Result[LIndex].Name := FWebRequest.CookieFields.Names[LIndex];
-     Result[LIndex].Value := FWebRequest.CookieFields.ValueFromIndex[LIndex];
+     Result[LIndex].Name := CookieFields.Names[LIndex];
+     Result[LIndex].Value := CookieFields.ValueFromIndex[LIndex];
   end;
 end;
 
@@ -601,7 +613,7 @@ end;
 
 function TMARSWebRequest.GetCookieParamValue(const AIndex: Integer): string;
 begin
-  Result := FWebRequest.CookieFields.ValueFromIndex[AIndex];
+  Result := CookieFields.ValueFromIndex[AIndex];
 end;
 
 function TMARSWebRequest.GetFilesCount: Integer;

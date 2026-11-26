@@ -719,7 +719,11 @@ function TMARSToken.GetTokenFromCookie(const ARequest: IMARSRequest): string;
 begin
   Result := '';
   if CookieEnabled and (CookieName <> '') then
-    Result := TNetEncoding.URL.Decode(ARequest.GetCookieParamValue(CookieName));
+    try
+      Result := TNetEncoding.URL.Decode(ARequest.GetCookieParamValue(CookieName));
+    except
+      Result := ''; // a value that cannot be decoded is no token
+    end;
 end;
 
 function TMARSToken.GetUserName: string;
