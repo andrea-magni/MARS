@@ -226,6 +226,7 @@ Read by the [request/response loggers](/features/logging) (engine section). Each
 | --- | --- | --- | --- |
 | `JSONLogging.Enabled` | Boolean | `False` | Enable the NDJSON file logger (`MARS.Utils.ReqRespLogger.JSON`). |
 | `MemoryLogging.Enabled` | Boolean | `False` | Enable the in-memory logger (`MARS.Utils.ReqRespLogger.Memory`); it retains whole requests and responses in clear text. |
+| `MemoryLogging.MaxRecords` | Integer | `10000` | Records kept by the in-memory logger, the oldest go first (`0`: no limit). |
 | `JSONLogging.BuiltInEntries` | Boolean | `True` | Write the built-in `in`/`out`/`error` lines of the JSON logger; `False` leaves the file to the entries your code writes with `Log<T>`. |
 | `JSONLogging.Folder` | string | `<exe folder>\logs` | Target directory (created if missing). |
 | `JSONLogging.FileName` | string | `mars-reqresp.log` | Base log file name. |

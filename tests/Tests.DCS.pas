@@ -29,12 +29,15 @@ type
     [Test] procedure AbsoluteFormRequest;
     // MaxRequestSize: a larger body is refused
     [Test] procedure RequestTooLarge;
+    // the in-memory logger: on DCS too (it was a 500), and no more than MemoryLogging.MaxRecords
+    [Test] procedure MemoryLogger;
   end;
 
 implementation
 
 uses
-  IdHTTP, IdSSLOpenSSL, System.Rtti
+  IdHTTP, IdSSLOpenSSL, System.Rtti, Data.DB
+, MARS.Core.Activation, MARS.Core.Activation.Interfaces, MARS.Utils.ReqRespLogger.Memory
 , MARS.Core.Engine, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Registry, MARS.Core.URL
 , MARS.Core.RequestAndResponse.Interfaces
 , Net.CrossSslDemoCert
@@ -130,6 +133,57 @@ begin
     Assert.Contains(LBody, 'IsSecure=False');
   finally
     LServer.Free;
+  end;
+end;
+
+procedure TMARSDCSServerTest.MemoryLogger;
+var
+  LServer: TMARShttpServerDCS;
+  LSetCookie: string;
+  LCount: Integer;
+  LLastPath: string;
+  LLastStatus: Integer;
+begin
+  FEngine.Parameters.Values['MemoryLogging.Enabled'] := True;
+  FEngine.Parameters.Values['MemoryLogging.MaxRecords'] := 3;
+  // the hooks of the logger may have been cleared by another fixture: the same calls, here
+  TMARSActivation.RegisterBeforeInvoke(
+    procedure (const AR: IMARSActivation; out AIsAllowed: Boolean)
+    begin
+      AIsAllowed := True;
+      if AR.Engine = FEngine then
+        TMARSReqRespLoggerMemory.Instance.LogIncoming(AR);
+    end);
+  TMARSActivation.RegisterAfterInvoke(
+    procedure (const AR: IMARSActivation)
+    begin
+      if AR.Engine = FEngine then
+        TMARSReqRespLoggerMemory.Instance.LogOutgoing(AR);
+    end);
+  LServer := NewServer;
+  try
+    TMARSReqRespLoggerMemory.Instance.Clear;
+    LServer.Active := True;
+    for var LIndex := 1 to 4 do
+      Assert.Contains(Get(Format('http://localhost:%d/rest/default/dcscheck', [HTTP_PORT]), LSetCookie), 'IsSecure=');
+
+    TMARSReqRespLoggerMemory.Instance.ReadMemory(
+      procedure (AMemory: TDataSet)
+      begin
+        LCount := AMemory.RecordCount;
+        AMemory.Last;
+        LLastPath := AMemory.FieldByName('Path').AsString;
+        LLastStatus := AMemory.FieldByName('StatusCode').AsInteger;
+      end);
+    Assert.IsTrue((LCount > 0) and (LCount <= 3), 'records kept: ' + LCount.ToString);
+    Assert.AreEqual('/rest/default/dcscheck', LLastPath);
+    Assert.AreEqual(200, LLastStatus);
+  finally
+    LServer.Free;
+    TMARSActivation.ClearBeforeInvokes;
+    TMARSActivation.ClearAfterInvokes;
+    TMARSReqRespLoggerMemory.Instance.Clear;
+    FEngine.Parameters.Values['MemoryLogging.Enabled'] := False;
   end;
 end;
 

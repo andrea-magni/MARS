@@ -37,6 +37,11 @@ type
     // protected access to FMemory from outside
     procedure ReadMemory(const AProc: TProc<TDataset>);
     function GetMemorySnapshot: TDataset;
+  private
+    // the oldest records go when there are more than MemoryLogging.MaxRecords (FCriticalSection held)
+    procedure Trim(const AR: IMARSActivation);
+  public
+    const DEFAULT_MAX_RECORDS = 10000;
 
     class function Instance: TMARSReqRespLoggerMemory;
     class constructor ClassCreate;
@@ -189,6 +194,69 @@ begin
   Result := _Instance;
 end;
 
+// what every server knows of a request and of a response
+procedure RequestToDataSet(const ARequest: IMARSRequest; const ADataSet: TDataSet);
+var
+  LCookie: TMARSCookie;
+  LCookies: string;
+begin
+  ADataSet.FieldByName('Verb').AsString := ARequest.Method;
+  ADataSet.FieldByName('Path').AsString := ARequest.RawPath;
+  ADataSet.FieldByName('Query').AsString := StringArrayToString(ARequest.QueryFields, sLineBreak);
+  ADataSet.FieldByName('RemoteIP').AsString := ARequest.RemoteIP;
+  try
+    ADataSet.FieldByName('Content').AsString := ARequest.Content;
+  except on E: EEncodingError do
+    ADataSet.FieldByName('Content').AsString := E.ToString;
+  end;
+  ADataSet.FieldByName('ContentType').AsString := ARequest.GetHeaderParamValue('Content-Type');
+  ADataSet.FieldByName('ContentSize').AsInteger := Length(ARequest.RawContent);
+  ADataSet.FieldByName('CookieCount').AsInteger := ARequest.GetCookieParamCount;
+  LCookies := '';
+  for LCookie in ARequest.Cookies do
+    LCookies := LCookies + LCookie.Name + '=' + LCookie.Value + sLineBreak;
+  ADataSet.FieldByName('Cookie').AsString := LCookies;
+end;
+
+procedure ResponseToDataSet(const AResponse: IMARSResponse; const ADataSet: TDataSet);
+var
+  LStream: TStream;
+begin
+  ADataSet.FieldByName('StatusCode').AsInteger := AResponse.StatusCode;
+  ADataSet.FieldByName('StatusText').AsString := AResponse.ReasonString;
+  ADataSet.FieldByName('ContentType').AsString := AResponse.ContentType;
+  ADataSet.FieldByName('ContentSize').AsInteger := AResponse.ContentLength;
+  ADataSet.FieldByName('CookieCount').Clear;
+  ADataSet.FieldByName('Cookie').Clear;
+  LStream := AResponse.ContentStream;
+  if Assigned(LStream) then
+  begin
+    try
+      ADataSet.FieldByName('Content').AsString := StreamToString(LStream);
+    except on E: EEncodingError do
+      ADataSet.FieldByName('Content').AsString := E.ToString;
+    end;
+    LStream.Position := 0;
+  end
+  else
+    ADataSet.FieldByName('Content').AsString := AResponse.Content;
+end;
+
+procedure TMARSReqRespLoggerMemory.Trim(const AR: IMARSActivation);
+var
+  LMax: Integer;
+begin
+  LMax := StrToIntDef(AR.Engine.Parameters.ByName('MemoryLogging.MaxRecords', DEFAULT_MAX_RECORDS).ToString
+    , DEFAULT_MAX_RECORDS);
+  if LMax <= 0 then
+    Exit; // no limit
+  while FMemory.RecordCount > LMax do
+  begin
+    FMemory.First;
+    FMemory.Delete;
+  end;
+end;
+
 procedure TMARSReqRespLoggerMemory.LogIncoming(const AR: IMARSActivation);
 begin
   // attribute lists: routes (MARS.Core.Routes) have no RTTI resource and method
@@ -209,8 +277,14 @@ begin
       if Assigned( AR.Token ) then
         FMemory.FieldByName('TokenClaims').AsString := AR.Token.Claims.ToString;
 
-      (AR.Request as TMARSWebRequest).ToDataSet(FMemory);
+      // the WebBroker request has more to tell; any other server (DCS) through the interface
+      // (the cast to TMARSWebRequest raised there: every request was a 500)
+      if TObject(AR.Request) is TMARSWebRequest then
+        TMARSWebRequest(TObject(AR.Request)).ToDataSet(FMemory)
+      else
+        RequestToDataSet(AR.Request, FMemory);
       FMemory.Post;
+      Trim(AR);
     except
       FMemory.Cancel;
       raise;
@@ -241,8 +315,15 @@ begin
       if Assigned( AR.Token ) then
         FMemory.FieldByName('TokenClaims').AsString := AR.Token.Claims.ToString;
 
-      (AR.Response as TMARSWebResponse).ToDataSet(FMemory);
+      if TObject(AR.Response) is TMARSWebResponse then
+        TMARSWebResponse(TObject(AR.Response)).ToDataSet(FMemory)
+      else
+      begin
+        RequestToDataSet(AR.Request, FMemory);
+        ResponseToDataSet(AR.Response, FMemory);
+      end;
       FMemory.Post;
+      Trim(AR);
     except
       FMemory.Cancel;
       raise;

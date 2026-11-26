@@ -215,11 +215,12 @@ MemoryLogging.Enabled=True
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `MemoryLogging.Enabled` | Boolean | `False` | Master switch, checked on every activation. |
+| `MemoryLogging.MaxRecords` | Integer | `10000` | How many records are kept (a request is two: incoming and outgoing); the oldest go first. `0`: no limit. |
 
 ::: warning Clear-text retention
 The buffer holds complete requests and responses (bodies, cookies, token claims, login forms) in
-clear text, without a size limit, for the life of the process. Keep it off in production builds,
-or enable it only while diagnosing.
+clear text, for the life of the process (the last `MemoryLogging.MaxRecords` of them). Keep it off
+in production builds, or enable it only while diagnosing.
 :::
 
 ## See also
