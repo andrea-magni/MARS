@@ -42,7 +42,7 @@ type
     ClientId: string;
     ClientName: string;
     RedirectURIs: TArray<string>;
-    IssuedAt: TDateTime;
+    IssuedAt: TDateTime; // UTC, as every time of this unit (ExpiresAt of codes and refresh tokens)
     function HasRedirectURI(const AURI: string): Boolean;
   end;
 
@@ -397,7 +397,7 @@ begin
           if (LItem as TJSONObject).TryGetValue<TJSONArray>('redirectURIs', LURIs) then
             for LURI in LURIs do
               LClient.RedirectURIs := LClient.RedirectURIs + [LURI.Value];
-          LClient.IssuedAt := ISO8601ToDate((LItem as TJSONObject).ReadStringValue('issuedAt'), False);
+          LClient.IssuedAt := ISO8601ToDate((LItem as TJSONObject).ReadStringValue('issuedAt'), True);
           if LClient.ClientId <> '' then
             FClients.AddOrSetValue(LClient.ClientId, LClient);
         end;
@@ -411,8 +411,8 @@ begin
           LRefresh.Scope := (LItem as TJSONObject).ReadStringValue('scope');
           LRefresh.UserName := (LItem as TJSONObject).ReadStringValue('userName');
           LRefresh.Roles := (LItem as TJSONObject).ReadStringValue('roles').Split([',']);
-          LRefresh.ExpiresAt := ISO8601ToDate((LItem as TJSONObject).ReadStringValue('expiresAt'), False);
-          if (LRefresh.Token <> '') and (LRefresh.ExpiresAt > Now) then
+          LRefresh.ExpiresAt := ISO8601ToDate((LItem as TJSONObject).ReadStringValue('expiresAt'), True);
+          if (LRefresh.Token <> '') and (LRefresh.ExpiresAt > MARSNowUTC) then
             FRefreshTokens.AddOrSetValue(LRefresh.Token, LRefresh);
         end;
     finally
@@ -447,7 +447,7 @@ begin
       for LURI in LClient.RedirectURIs do
         LURIs.Add(LURI);
       LItem.AddPair('redirectURIs', LURIs);
-      LItem.AddPair('issuedAt', DateToISO8601(LClient.IssuedAt, False));
+      LItem.AddPair('issuedAt', DateToISO8601(LClient.IssuedAt, True));
       LClients.AddElement(LItem);
     end;
 
@@ -455,7 +455,7 @@ begin
     LJSON.AddPair('refreshTokens', LTokens);
     for LRefresh in FRefreshTokens.Values do
     begin
-      if LRefresh.ExpiresAt < Now then
+      if LRefresh.ExpiresAt < MARSNowUTC then
         Continue;
       LItem := TJSONObject.Create;
       LItem.AddPair('token', LRefresh.Token);
@@ -463,7 +463,7 @@ begin
       LItem.AddPair('scope', LRefresh.Scope);
       LItem.AddPair('userName', LRefresh.UserName);
       LItem.AddPair('roles', string.Join(',', LRefresh.Roles));
-      LItem.AddPair('expiresAt', DateToISO8601(LRefresh.ExpiresAt, False));
+      LItem.AddPair('expiresAt', DateToISO8601(LRefresh.ExpiresAt, True));
       LTokens.AddElement(LItem);
     end;
 
@@ -522,7 +522,7 @@ begin
   finally
     FCS.Leave;
   end;
-  if Result and (AData.ExpiresAt < Now) then
+  if Result and (AData.ExpiresAt < MARSNowUTC) then
     Result := False;
 end;
 
@@ -553,7 +553,7 @@ begin
   finally
     FCS.Leave;
   end;
-  if Result and (AData.ExpiresAt < Now) then
+  if Result and (AData.ExpiresAt < MARSNowUTC) then
     Result := False;
 end;
 
@@ -726,7 +726,7 @@ begin
   LCode.Scope := AScope;
   LCode.UserName := AUserName;
   LCode.Roles := LRoles;
-  LCode.ExpiresAt := Now + GetCodeDuration;
+  LCode.ExpiresAt := MARSNowUTC + GetCodeDuration;
   StoreCode(LCode);
 
   LLocation := ARedirectURI
@@ -752,7 +752,7 @@ begin
   LRefresh.Scope := AScope;
   LRefresh.UserName := AUserName;
   LRefresh.Roles := ARoles;
-  LRefresh.ExpiresAt := Now + GetRefreshTokenDuration;
+  LRefresh.ExpiresAt := MARSNowUTC + GetRefreshTokenDuration;
   StoreRefreshToken(LRefresh);
 
   Result := TJSONObject.Create;
@@ -826,13 +826,13 @@ begin
   LClient.RedirectURIs := [];
   for LURI in LRedirectURIs do
     LClient.RedirectURIs := LClient.RedirectURIs + [LURI.Value];
-  LClient.IssuedAt := Now;
+  LClient.IssuedAt := MARSNowUTC;
   StoreClient(LClient);
 
   Response.StatusCode := 201;
   Result := TJSONObject.Create;
   Result.AddPair('client_id', LClient.ClientId);
-  Result.AddPair('client_id_issued_at', TJSONNumber.Create(DateTimeToUnix(LClient.IssuedAt, False)));
+  Result.AddPair('client_id_issued_at', TJSONNumber.Create(DateTimeToUnix(LClient.IssuedAt, True)));
   if LClient.ClientName <> '' then
     Result.AddPair('client_name', LClient.ClientName);
   LURIsJSON := TJSONArray.Create;

@@ -734,7 +734,9 @@ end;
 
 function TMARSToken.GetIsExpired: Boolean;
 begin
-  Result := Expiration < Now;
+  // in UTC, as the claim is: a local time is ambiguous in the hour repeated in autumn.
+  // No "exp" claim: expired, as before
+  Result := FClaims.ByName(JWT_EXPIRATION_CLAIM, 0).AsInt64 < DateTimeToUnix(MARSNowUTC, True);
 end;
 
 function TMARSToken.HasRole(const ARoles: TArray<string>): Boolean;
@@ -769,10 +771,12 @@ begin
       , [AKey.KeyId, JWT_KEYID_PARAM, KEY_ID_MAX_LENGTH]);
   FKeyId := AKey.KeyId;
   FAlgorithm := AlgorithmOfKey(AKey);
-  LIssuedAt := Now;
+  // UTC all the way: "now plus the duration" as a local time may not exist (the hour skipped
+  // in spring), and converting it raised ELocalTimeInvalid
+  LIssuedAt := MARSNowUTC;
 
-  FClaims[JWT_ISSUED_AT_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt, False));
-  FClaims[JWT_EXPIRATION_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt + Duration, False));
+  FClaims[JWT_ISSUED_AT_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt, True));
+  FClaims[JWT_EXPIRATION_CLAIM] := TValue.From<Int64>(DateTimeToUnix(LIssuedAt + Duration, True));
   FClaims[JWT_ISSUER_CLAIM] := FIssuer;
   FClaims[JWT_DURATION_CLAIM] := TValue.From<TDateTime>(FDuration);
 

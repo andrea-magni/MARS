@@ -98,6 +98,10 @@ type
   // DateToISO8601 of the RTL, but a local time that does not exist (in the gap of a change to
   // daylight saving time, i.e. midnight where it starts at midnight) takes the offset before the
   // change instead of raising ELocalTimeInvalid. ATimeZone: nil for TTimeZone.Local.
+  // The current time as UTC, from the clock of the system: no conversion from the local time,
+  // which is ambiguous (or does not exist) around the daylight saving changes
+  function MARSNowUTC: TDateTime;
+
   function MARSDateToISO8601(const ADate: TDateTime; const AInputIsUTC: Boolean;
     const ATimeZone: TTimeZone = nil): string;
 
@@ -136,10 +140,29 @@ implementation
 uses
   TypInfo
   , StrUtils, Masks, TimeSpan
+{$IFDEF MSWINDOWS}, Winapi.Windows{$ENDIF}
+{$IFDEF POSIX}, Posix.SysTime{$ENDIF}
 {$IFDEF MARS_ZLIB}, ZLib {$ENDIF}
 {$IFDEF MARS_ZIP}, Zip {$ENDIF}
   , NetEncoding
 ;
+
+function MARSNowUTC: TDateTime;
+{$IFDEF MSWINDOWS}
+var
+  LSystemTime: TSystemTime;
+begin
+  GetSystemTime(LSystemTime);
+  Result := SystemTimeToDateTime(LSystemTime);
+end;
+{$ELSE}
+var
+  LTime: timeval;
+begin
+  gettimeofday(LTime, nil);
+  Result := IncMilliSecond(UnixToDateTime(LTime.tv_sec, True), LTime.tv_usec div 1000);
+end;
+{$ENDIF}
 
 function SetCookieHeaderValue(const AName, AValue, ADomain, APath: string;
   const AExpiration: TDateTime; const ASecure, AHttpOnly: Boolean;

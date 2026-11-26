@@ -52,6 +52,8 @@ type
     [Test] procedure Duration1sec;
     [Test] procedure ClaimTypes;
     [Test] procedure IatType_Built;
+    // iat and exp from the UTC clock, a whole duration apart (no local time in between)
+    [Test] procedure TimesAreUTC;
     [Test] procedure IatType_Parse;
     [Test] procedure RolesParsing;
     [Test] procedure RolesParsingAnyToken;
@@ -130,7 +132,7 @@ implementation
 uses
   System.IOUtils, mormot.core.base, mormot.core.text, mormot.core.unicode, mormot.core.variants, mormot.core.datetime
 , mormot.crypt.secure, mormot.crypt.factory, mormot.crypt.jwt
-, Math, TimeSpan, NetEncoding
+, Math, TimeSpan, NetEncoding, System.DateUtils
 , JOSE.Core.JWT, JOSE.Core.JWS, JOSE.Core.JWK, JOSE.Core.JWA, JOSE.Providers, JOSE.Providers.Interfaces
 , MARS.Utils.JWT, MARS.Core.Utils
 , System.JSON, MARS.Core.JSON
@@ -168,9 +170,10 @@ begin
       Assert.AreEqual('MARS-Curiosity', LToken.Issuer);
       Assert.IsFalse(LToken.IsExpired, 'Token expired');
 
+      // on the claims (UTC): as local times they differ by an hour across a daylight saving change
       if LToken.IssuedAt > 0 then
-        Assert.IsTrue(SameValue(LToken.IssuedAt + LToken.Duration, LToken.Expiration), 'IssuedAt [' + DateTimeToStr(LToken.IssuedAt)
-          + '] + Duration [' + IntToStr(Round(LToken.Duration * 24 * 60 * 60))+ ' seconds] = Expiration [' + DateTimeToStr(LToken.Expiration)+ ']');
+        Assert.AreEqual(Int64(Round(LToken.Duration * SecsPerDay))
+          , LToken.Claims.ByName('exp', 0).AsInt64 - LToken.Claims.ByName('iat', 0).AsInt64, 'exp = iat + Duration');
       Assert.IsTrue(1 = LToken.Claims.Values['LANGUAGE_ID'].AsInteger, 'Custom claims 1');
 
       Assert.AreEqual('Andrea1', LToken.UserName);
@@ -297,8 +300,10 @@ begin
 
       LToken.Load(LToken.Token, DUMMY_SECRET);
       Assert.IsFalse(LToken.IsExpired, 'Token expired');
-      Assert.IsTrue(SameValue(LToken.Expiration, LToken.IssuedAt + LDuration, (0.5 / SecsPerDay)) // half second as epsilon
-      , 'Expiration = IssuedAt + Duration |'
+      // on the claims (UTC): as local times they differ by an hour across a daylight saving change
+      Assert.IsTrue(Abs(LToken.Claims.ByName('exp', 0).AsInt64 - LToken.Claims.ByName('iat', 0).AsInt64
+          - Round(LDuration * SecsPerDay)) <= 1 // a second as epsilon
+      , 'exp = iat + Duration |'
       +' [' + DateTimeToStr(LToken.Expiration) + '] = '
       +' [' + DateTimeToStr(LToken.IssuedAt) + '] + '
       +' [' + DateTimeToStr(LToken.Duration) + ' = ' + IntToStr(LToken.DurationSecs) + ' s ]'
@@ -353,6 +358,38 @@ begin
    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9'
   +'.eyJkdXJhdGlvbiI6MTAwMDAwMCwiUm9sZXMiOiJzdGFuZGFyZCIsImlhdCI6MTUxMDczOTg0OCwiZXhwIjo4NzkxMDczNjI0OCwiQ2xhaW0yIjoxMjMsIlVzZXJOYW1lIjoiQW5kcmVhMSIsIkxBTkdVQUdFX0lEIjoxLCJpc3MiOiJNQVJTLUN1cmlvc2l0eSIsIkNsYWltMSI6IlByaW1vIn0'
   +'.WA573zhyw_TtJx7tI_BptXmtuRLAZbHiHvOBwQn6gj4';
+end;
+
+procedure TMARSJWT<T>.TimesAreUTC;
+var
+  LParams: TMARSParameters;
+  LToken: TMARSToken;
+  LNowUnix, LIssuedAt, LExpiration: Int64;
+begin
+  LParams := TMARSParameters.Create('');
+  try
+    LParams.Values[JWT_SECRET_PARAM] := DUMMY_SECRET;
+    LParams.Values[JWT_DURATION_PARAM] := TDateTime(1); // a day: across a daylight saving change, twice a year
+    LToken := T.Create('', LParams);
+    try
+      LToken.Build(DUMMY_SECRET);
+      LToken.Load(LToken.Token, DUMMY_SECRET);
+      LIssuedAt := LToken.Claims.ByName('iat', 0).AsInt64;
+      LExpiration := LToken.Claims.ByName('exp', 0).AsInt64;
+      LNowUnix := System.DateUtils.DateTimeToUnix(MARSNowUTC, True);
+
+      Assert.IsTrue(Abs(LNowUnix - LIssuedAt) <= 5, Format('iat %d is not now (%d)', [LIssuedAt, LNowUnix]));
+      Assert.AreEqual(Int64(SecsPerDay), LExpiration - LIssuedAt, 'exp - iat');
+      Assert.IsFalse(LToken.IsExpired);
+      // the clock of the system and the local time agree (but for the hour repeated in autumn)
+      Assert.IsTrue(Abs(LNowUnix - System.DateUtils.DateTimeToUnix(System.DateUtils.TTimeZone.Local.ToUniversalTime(Now), True)) mod 3600 <= 5
+        , 'MARSNowUTC is not the UTC time');
+    finally
+      LToken.Free;
+    end;
+  finally
+    LParams.Free;
+  end;
 end;
 
 procedure TMARSJWT<T>.IatType_Built;
