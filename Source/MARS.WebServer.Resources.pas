@@ -523,7 +523,7 @@ var
   LFileExt: string;
   LContentType: string;
 begin
-  LFileExt := ExtractFileExt(AFileName);
+  LFileExt := ExtractFileExt(AFileName).ToLower; // PHOTO.JPG is a .jpg
 
   AResponse.StatusCode := 200;
   AResponse.ContentStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyNone);
@@ -569,7 +569,7 @@ begin
   inherited;
   // AddOrSetValue (not Add): the defaults set by InitContentTypesForExt are already
   // there, so this attribute can both add a new extension and override a known one.
-  AResource.ContentTypesForExt.AddOrSetValue(FFileExt, FContentType);
+  AResource.ContentTypesForExt.AddOrSetValue(FFileExt.ToLower, FContentType);
 end;
 
 constructor ContentTypeForFileExt.Create(AContentType: string;

@@ -436,6 +436,17 @@ begin
   finally
     DeleteStaticFile(STATIC_FILE_NAME);
   end;
+
+  // the extension in any case
+  WriteStaticFile('MARS-STATIC-UPPER.TXT', STATIC_FILE_CONTENT);
+  try
+    var LMock := MockRequestAndResponse('GET', ResourcePath('static/MARS-STATIC-UPPER.TXT'));
+    Assert.IsTrue(DefaultEngine.Engine.HandleRequest(LMock.Request, LMock.Response));
+    Assert.AreEqual(200, LMock.Response.StatusCode);
+    Assert.Contains(LMock.Response.ContentType, 'text/plain', 'an upper case extension');
+  finally
+    DeleteStaticFile('MARS-STATIC-UPPER.TXT');
+  end;
 end;
 
 procedure TMARSDefaultEngineFixture.TestStaticFileHead;
