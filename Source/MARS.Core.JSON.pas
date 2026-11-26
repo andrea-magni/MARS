@@ -1801,7 +1801,14 @@ begin
   else if AValue is TJSONString then
   begin
     if ADesiredType is TRttiEnumerationType then  // enumerated types
-      ATValue := TValue.FromOrdinal(ADesiredType.Handle, GetEnumValue(ADesiredType.Handle, TJSONString(AValue).Value))
+    begin
+      // an unknown name is -1: an ordinal out of the type (and a Boolean that is neither True nor False)
+      var LOrdinal := GetEnumValue(ADesiredType.Handle, TJSONString(AValue).Value);
+      if LOrdinal < 0 then
+        raise Exception.CreateFmt('TJSONObjectHelper.TJSONValueToTValue: "%s" is not a value of %s',
+          [TJSONString(AValue).Value, ADesiredType.Name]);
+      ATValue := TValue.FromOrdinal(ADesiredType.Handle, LOrdinal);
+    end
     else if ADesiredType.Handle = TypeInfo(TDate) then // calendar dates ("2026-10-19") or dates
       ATValue := TValue.From<TDate>(JSONToDateOnly(TJSONString(AValue).Value, AOptions))
     else if (ADesiredType.Handle = TypeInfo(TDateTime)) // dates

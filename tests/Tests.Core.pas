@@ -68,6 +68,8 @@ type
     [Test] procedure Variants;
     [Test] procedure FilterProc;
     [Test] procedure ClassMembersGetDistinctInstances;
+    // a name that is not of the enumerated type (or of Boolean) is refused
+    [Test] procedure UnknownEnumNameRaises;
   end;
 
   // raw JSON fields: TJSONRawString and TJSONValue
@@ -992,6 +994,31 @@ begin
 end;
 
 { TMARSJSONToRecordTest }
+
+type
+  TEnumColor = (Red, Green);
+  TEnumRecord = record
+    Color: TEnumColor;
+    Flag: Boolean;
+  end;
+
+function ReadEnumRecord(const AJSON: string): TEnumRecord;
+begin
+  var LJSON := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;
+  try
+    Result := LJSON.ToRecord<TEnumRecord>;
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMARSJSONToRecordTest.UnknownEnumNameRaises;
+begin
+  Assert.AreEqual(Ord(Green), Ord(ReadEnumRecord('{"Color": "green", "Flag": "true"}').Color));
+  Assert.IsTrue(ReadEnumRecord('{"Color": "green", "Flag": "true"}').Flag);
+  Assert.WillRaise(procedure begin ReadEnumRecord('{"Color": "Blue"}'); end, Exception);
+  Assert.WillRaise(procedure begin ReadEnumRecord('{"Flag": "maybe"}'); end, Exception);
+end;
 
 procedure TMARSJSONToRecordTest.Basic;
 var
