@@ -28,6 +28,8 @@ type
     [Test] procedure RequestTooLarge;
     // a URL that cannot be decoded: 400 (a real server: the request mock parses the URL itself)
     [Test] procedure MalformedURLIs400;
+    // the Host header cannot replace the path of the request
+    [Test] procedure HostHeaderWithAPathIs400;
   end;
 
 implementation
@@ -140,6 +142,50 @@ begin
 end;
 
 { TMARSIndyIOHandlerTest }
+
+procedure TMARSIndyIOHandlerTest.HostHeaderWithAPathIs400;
+var
+  LServer: TMARShttpServerIndy;
+
+  // the status line of the response
+  function Request(const APath, AHost: string): string;
+  var
+    LTCP: TIdTCPClient;
+  begin
+    LTCP := TIdTCPClient.Create(nil);
+    try
+      LTCP.Host := 'localhost';
+      LTCP.Port := HTTP_PORT;
+      LTCP.ConnectTimeout := 5000;
+      LTCP.ReadTimeout := 5000;
+      LTCP.Connect;
+      try
+        LTCP.IOHandler.Write('GET ' + APath + ' HTTP/1.1'#13#10'Host: ' + AHost + #13#10
+          + 'Connection: close'#13#10#13#10);
+        Result := LTCP.IOHandler.ReadLn;
+      finally
+        LTCP.Disconnect;
+      end;
+    finally
+      LTCP.Free;
+    end;
+  end;
+
+begin
+  FEngine.PortSSL := 0;
+  LServer := TMARShttpServerIndy.Create(FEngine);
+  try
+    LServer.Active := True;
+    Assert.Contains(Request('/rest/default/iohandler', 'localhost'), ' 200 ');
+    Assert.Contains(Request('/rest/default/iohandler', '[::1]:' + HTTP_PORT.ToString), ' 200 ', 'an IPv6 host');
+    // it was a 200: the resource named by the Host
+    Assert.Contains(Request('/nothing', 'x/rest/default/iohandler#'), ' 400 ');
+    Assert.Contains(Request('/nothing', 'x/rest/default/iohandler?'), ' 400 ');
+    Assert.Contains(Request('/rest/default/iohandler', 'user@x'), ' 400 ');
+  finally
+    LServer.Free;
+  end;
+end;
 
 procedure TMARSIndyIOHandlerTest.MalformedURLIs400;
 var

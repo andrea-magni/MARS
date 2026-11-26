@@ -225,7 +225,14 @@ end;
 constructor TMARSURL.Create(ARequest: IMARSRequest);
 var
   LQuery: string;
+  LChar: Char;
 begin
+  // the host becomes part of the URL that is parsed below: with a slash, a question mark or a
+  // hash in it ("Host: x/rest/default/admin#") it would replace the path of the request
+  for LChar in ARequest.HostName do
+    if (LChar <= ' ') or CharInSet(LChar, ['/', '\', '?', '#', '@']) then
+      raise EMARSException.Create('Invalid Host header');
+
   LQuery := ARequest.QueryString;
   if LQuery <> '' then
     LQuery := URL_QUERY_PREFIX + LQuery;
