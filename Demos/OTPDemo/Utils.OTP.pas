@@ -162,11 +162,11 @@ end;
 class function TOTP.GenerateTotpSecret: string;
 var
   Bytes: TBytes;
-  I: Integer;
 begin
-  SetLength(Bytes, 20); // standard TOTP
-  for I := 0 to High(Bytes) do
-    Bytes[I] := Byte(Random(256));
+  // 20 bytes (standard TOTP) from two GUIDs: Random is predictable, and without Randomize it
+  // gives the same secrets at every start
+  Bytes := TGUID.NewGuid.ToByteArray + TGUID.NewGuid.ToByteArray;
+  SetLength(Bytes, 20);
 
   Result := Base32Encode(Bytes);
 end;
