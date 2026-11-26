@@ -37,7 +37,7 @@ initialization
   MARSRegister([TMyMCPResource]);
 ```
 
-That's all: the resource answers JSON-RPC 2.0 messages (`initialize`, `ping`, `tools/list`, `tools/call`) on POST, acknowledges notifications with `202 Accepted` and negotiates the MCP protocol version (`2025-06-18`, `2025-03-26`, `2024-11-05`).
+That's all: the resource answers JSON-RPC 2.0 messages (`initialize`, `ping`, `tools/list`, `tools/call`) on POST, acknowledges notifications with `202 Accepted` and negotiates the MCP protocol version (`2025-06-18`, `2025-03-26`, `2024-11-05`). Clients of the 2026-07-28 revision, which has no handshake, are served too: see [Protocol versions](#protocol-versions).
 
 With the default engine configuration the endpoint is:
 
@@ -276,9 +276,47 @@ The built-in login page carries a small *built with MARS-Curiosity* badge. To cu
 Run behind HTTPS in production (a TLS-terminating reverse proxy or a tunnel like ngrok works fine: the public URLs of the OAuth metadata honor the `X-Forwarded-Proto`/`-Host`/`-Port` headers, so make sure the proxy sets them). Client/code/refresh-token storage is in-memory by default — call `TMCPOAuthServer.SetPersistenceFile('...')` at startup so registered clients and refresh tokens survive restarts (the file stores refresh tokens in cleartext: protect it), or override the `Store*`/`Consume*` virtual methods for a custom store.
 :::
 
+## Protocol versions
+
+MARS serves both generations of the protocol on the same endpoint (a "dual-era" server, in the words of the specification):
+
+| | Legacy | Modern |
+| --- | --- | --- |
+| Revisions | `2025-06-18`, `2025-03-26`, `2024-11-05` | `2026-07-28` |
+| How a client starts | `initialize`, then `notifications/initialized` | no handshake: any request, or `server/discover` first |
+| Protocol version | negotiated by `initialize` | declared by every request in `params._meta` (`io.modelcontextprotocol/protocolVersion`) |
+| Results | as they were | `resultType` in every result, `ttlMs` and `cacheScope` in the lists and in `resources/read`, the server in `_meta` |
+
+The request decides: one whose `params._meta` declares `2026-07-28` (or a `server/discover`) is served as modern, anything else as legacy. Nothing changes for the clients that use `initialize`, and nothing has to be configured.
+
+For modern requests the server follows the 2026-07-28 rules:
+
+- `server/discover` answers the supported versions, the capabilities and the instructions of `[MCPServerInfo]`.
+- A version the server does not know is refused with `-32022` (Unsupported protocol version) and the list of the supported ones.
+- `initialize` and `ping` do not exist; a resource that is not found is an invalid parameter (`-32602` instead of `-32002`).
+- Over HTTP the request must mirror its body in the headers: `MCP-Protocol-Version`, `Mcp-Method` and, for `tools/call`, `resources/read` and `prompts/get`, `Mcp-Name`. A missing or different header is refused with `400` and `-32020` (Header mismatch).
+- HTTP status: `400` for an unsupported version or a header mismatch, `404` for an unknown method (legacy requests keep getting `200` with the JSON-RPC error in the body).
+
+`ttlMs` tells a client how long it may keep a list before asking again. The default is `0` (always ask) with `cacheScope` `private`, because what a client sees may depend on its token. Override `GetCacheTTLMs` and `GetCacheScope` in a dispatcher of yours ([`GetDispatcherClass`](#notes-and-current-scope)) when the lists do not change:
+
+```pascal
+type
+  TMyDispatcher = class(TMCPDispatcher)
+  protected
+    function GetCacheTTLMs(const AMethod: string): Integer; override;
+  end;
+
+function TMyDispatcher.GetCacheTTLMs(const AMethod: string): Integer;
+begin
+  Result := 5 * 60 * 1000; // five minutes
+end;
+```
+
+Not implemented, of the modern revision: `subscriptions/listen` (change notifications), multi round-trip requests (a tool asking the client for input) and the tasks extension.
+
 ## Notes and current scope
 
 - Transports: Streamable HTTP (`TMCPResource`) and stdio (`TMCPStdioServer`).
-- The implementation is **stateless**: no `Mcp-Session-Id` is issued, `GET`/`DELETE` answer `405` (allowed by the specification for servers that do not offer server-initiated streams). Every JSON-RPC request is answered with a single `application/json` response.
+- The implementation is **stateless**: no `Mcp-Session-Id` is issued, `GET`/`DELETE` answer `405` (allowed by the specification for servers that do not offer server-initiated streams). Every JSON-RPC request is answered with a single `application/json` response. This is also what the 2026-07-28 revision asks of every server (no sessions, no `GET` stream).
 - Advertised capabilities cover **tools**, **resources** and **prompts** (the latter two only when the resource class declares any); subscriptions and `listChanged` notifications are not offered (they require server-initiated streams). Additional protocol methods can be added by overriding `TMCPDispatcher.DispatchRequest`.
 - When exposing the server beyond localhost, follow the MCP security guidance: validate the `Origin` header (e.g. in the engine's `BeforeHandleRequest`), bind to localhost when possible and require authentication.

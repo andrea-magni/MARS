@@ -188,6 +188,14 @@ type
     [Test] procedure PromptsGet_MissingArgument_InvalidParams;
     [Test] procedure PromptsGet_Unknown_InvalidParams;
     [Test] procedure MethodFilter_HidesResourcesAndPrompts;
+
+    // the 2026-07-28 revision: no handshake, the version in params._meta
+    [Test] procedure Modern_Discover;
+    [Test] procedure Modern_ResultsCarryTypeCacheAndServer;
+    [Test] procedure Modern_UnsupportedVersion;
+    [Test] procedure Modern_ResourceNotFound_IsInvalidParams;
+    [Test] procedure Modern_InitializeAndPingAreGone;
+    [Test] procedure Legacy_ResultsUnchanged;
   end;
 
   // host for TMCPDataDispatcher tests: owns the dataset returned by the tool
@@ -233,7 +241,12 @@ type
   protected
     function MintToken(const AUserName: string; const ARoles: TArray<string>): string;
     function SendMCP(const AHttpMethod: string; const ABody: string = '';
-      const AToken: string = ''; const APath: string = 'mcp'): TMCPCall;
+      const AToken: string = ''; const APath: string = 'mcp';
+      const AExtraHeaders: TMARSHeaders = nil): TMCPCall;
+    // a 2026-07-28 request: the version in params._meta, mirrored in the headers
+    function ModernBody(const AMethod: string; const AParams: string = ''): string;
+    function ModernHeaders(const AMethod: string; const AName: string = ''): TMARSHeaders;
+    function ErrorCode(const ACall: TMCPCall): Integer;
     function ParseContent(const ACall: TMCPCall): TJSONObject;
   public
     [Setup]
@@ -269,6 +282,13 @@ type
     [Test] procedure Post_PromptsGet_Works;
     [Test] procedure Auth_Resource_HiddenWithoutAdminRole;
     [Test] procedure Auth_Resource_ReadableWithAdminRole;
+
+    // the 2026-07-28 revision over HTTP: mirrored headers, 400 and 404
+    [Test] procedure Modern_ToolsCall_Works;
+    [Test] procedure Modern_HeaderMismatch_Returns400;
+    [Test] procedure Modern_UnsupportedVersion_Returns400;
+    [Test] procedure Modern_UnknownMethod_Returns404;
+    [Test] procedure Legacy_UnknownMethod_Returns200;
   end;
 
   [TestFixture('MCP.OAuth')]
@@ -1241,6 +1261,130 @@ begin
   end;
 end;
 
+const
+  MODERN_META = '"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"'
+    + ',"io.modelcontextprotocol/clientCapabilities":{}}';
+
+procedure TMCPResourcesPromptsFixture.Modern_Discover;
+begin
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{' + MODERN_META + '}}');
+  try
+    Assert.IsTrue(FDispatcher.IsModernRequest);
+    var LResult := LResponse.GetValue<TJSONObject>('result');
+    Assert.AreEqual('["2026-07-28","2025-06-18","2025-03-26","2024-11-05"]'
+      , LResult.GetValue<TJSONArray>('supportedVersions').ToJSON);
+    Assert.AreEqual('complete', LResult.GetValue<string>('resultType'));
+    Assert.AreEqual(0, LResult.GetValue<Integer>('ttlMs'));
+    Assert.AreEqual('private', LResult.GetValue<string>('cacheScope'));
+    // capabilities: what the server has, as empty objects (no listChanged, no subscribe)
+    Assert.AreEqual('{"tools":{},"resources":{},"prompts":{}}', LResult.GetValue<TJSONObject>('capabilities').ToJSON);
+    Assert.Contains(LResult.GetValue('_meta').ToJSON
+      , '"io.modelcontextprotocol/serverInfo":{"name":"ResourceServer","version":"1.0.0"}');
+  finally
+    LResponse.Free;
+  end;
+
+  // a probe without _meta (a client that does not know the era of the server yet)
+  LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":2,"method":"server/discover"}');
+  try
+    Assert.IsNotNull(LResponse.FindValue('result.supportedVersions'), LResponse.ToJSON);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Modern_ResultsCarryTypeCacheAndServer;
+
+  procedure Check(const AMethod, AParams: string; const ACacheable: Boolean);
+  begin
+    var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"' + AMethod + '","params":{'
+      + AParams + MODERN_META + '}}');
+    try
+      var LResult := LResponse.GetValue<TJSONObject>('result');
+      Assert.AreEqual('complete', LResult.GetValue<string>('resultType'), AMethod);
+      Assert.AreEqual(ACacheable, Assigned(LResult.GetValue('ttlMs')), AMethod + ' ttlMs');
+      Assert.AreEqual(ACacheable, Assigned(LResult.GetValue('cacheScope')), AMethod + ' cacheScope');
+      Assert.Contains(LResult.GetValue('_meta').ToJSON, '"io.modelcontextprotocol/serverInfo":{"name":"ResourceServer"', AMethod);
+    finally
+      LResponse.Free;
+    end;
+  end;
+
+begin
+  Check('tools/list', '', True);
+  Check('resources/list', '', True);
+  Check('resources/templates/list', '', True);
+  Check('prompts/list', '', True);
+  Check('resources/read', '"uri":"data://config",', True);
+  Check('prompts/get', '"name":"review","arguments":{"topic":"x"},', False);
+end;
+
+procedure TMCPResourcesPromptsFixture.Modern_UnsupportedVersion;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{'
+    + '"_meta":{"io.modelcontextprotocol/protocolVersion":"1900-01-01"}}}');
+  try
+    AssertErrorCode(LResponse, MCP_UNSUPPORTED_PROTOCOL_VERSION);
+    Assert.AreEqual('1900-01-01', LResponse.GetValue<string>('error.data.requested'));
+    Assert.AreEqual(4, LResponse.GetValue<TJSONArray>('error.data.supported').Count);
+    Assert.IsTrue(FDispatcher.IsModernRequest);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Modern_ResourceNotFound_IsInvalidParams;
+begin
+  var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{'
+    + '"uri":"info://nope",' + MODERN_META + '}}');
+  try
+    AssertErrorCode(LResponse, JSONRPC_INVALID_PARAMS);
+  finally
+    LResponse.Free;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Modern_InitializeAndPingAreGone;
+begin
+  for var LMethod in ['initialize', 'ping'] do
+  begin
+    var LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"' + LMethod + '","params":{'
+      + MODERN_META + '}}');
+    try
+      AssertErrorCode(LResponse, JSONRPC_METHOD_NOT_FOUND);
+    finally
+      LResponse.Free;
+    end;
+  end;
+end;
+
+procedure TMCPResourcesPromptsFixture.Legacy_ResultsUnchanged;
+begin
+  // no version in _meta (a progress token is legacy too): the results of the 2025 revisions
+  var LResponse := ParseAndHandle(
+    '{"jsonrpc":"2.0","id":1,"method":"resources/list","params":{"_meta":{"progressToken":1}}}');
+  try
+    Assert.IsFalse(FDispatcher.IsModernRequest);
+    var LResult := LResponse.GetValue<TJSONObject>('result');
+    Assert.IsNull(LResult.GetValue('resultType'));
+    Assert.IsNull(LResult.GetValue('ttlMs'));
+    Assert.IsNull(LResult.GetValue('_meta'));
+  finally
+    LResponse.Free;
+  end;
+
+  // a legacy version declared in _meta is served as legacy
+  LResponse := ParseAndHandle('{"jsonrpc":"2.0","id":1,"method":"ping","params":{'
+    + '"_meta":{"io.modelcontextprotocol/protocolVersion":"2025-06-18"}}}');
+  try
+    Assert.IsNotNull(LResponse.GetValue('result'), LResponse.ToJSON);
+    Assert.IsFalse(FDispatcher.IsModernRequest);
+  finally
+    LResponse.Free;
+  end;
+end;
+
 procedure TMCPResourcesPromptsFixture.Read_UnknownURI_ResourceNotFound;
 begin
   var LResponse := ParseAndHandle(
@@ -1502,7 +1646,123 @@ begin
   end;
 end;
 
-function TMCPResourceFixture.SendMCP(const AHttpMethod, ABody, AToken, APath: string): TMCPCall;
+function TMCPResourceFixture.ModernBody(const AMethod, AParams: string): string;
+begin
+  var LParams := AParams;
+  if LParams <> '' then
+    LParams := LParams + ',';
+  Result := '{"jsonrpc":"2.0","id":1,"method":"' + AMethod + '","params":{' + LParams
+    + '"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"'
+    + ',"io.modelcontextprotocol/clientInfo":{"name":"Test","version":"1"}'
+    + ',"io.modelcontextprotocol/clientCapabilities":{}}}}';
+end;
+
+function TMCPResourceFixture.ModernHeaders(const AMethod, AName: string): TMARSHeaders;
+begin
+  Result := [
+    TMARSHeader.Create('MCP-Protocol-Version', '2026-07-28')
+  , TMARSHeader.Create('Mcp-Method', AMethod)
+  ];
+  if AName <> '' then
+    Result := Result + [TMARSHeader.Create('Mcp-Name', AName)];
+end;
+
+function TMCPResourceFixture.ErrorCode(const ACall: TMCPCall): Integer;
+begin
+  var LJSON := ParseContent(ACall);
+  try
+    Result := 0;
+    LJSON.TryGetValue<Integer>('error.code', Result);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+procedure TMCPResourceFixture.Modern_ToolsCall_Works;
+const
+  CALL = '"name":"add","arguments":{"A":39.5,"B":2.5}';
+begin
+  var LCall := SendMCP('POST', ModernBody('tools/call', CALL), '', 'mcp', ModernHeaders('tools/call', 'add'));
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+  var LJSON := ParseContent(LCall);
+  try
+    Assert.AreEqual('complete', LJSON.GetValue<string>('result.resultType'));
+    Assert.AreEqual(Double(42.0), LJSON.GetValue<Double>('result.structuredContent.value'), 0.0001);
+  finally
+    LJSON.Free;
+  end;
+
+  // the name as Base64 (what a client sends when it is not plain ASCII): "add"
+  LCall := SendMCP('POST', ModernBody('tools/call', CALL), '', 'mcp', ModernHeaders('tools/call', '=?base64?YWRk?='));
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+
+  // server/discover and a list: no Mcp-Name
+  LCall := SendMCP('POST', ModernBody('server/discover'), '', 'mcp', ModernHeaders('server/discover'));
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.Contains(LCall.Response.Content, '"supportedVersions":["2026-07-28"');
+  LCall := SendMCP('POST', ModernBody('tools/list'), '', 'mcp', ModernHeaders('tools/list'));
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.Contains(LCall.Response.Content, '"cacheScope":"private"');
+end;
+
+procedure TMCPResourceFixture.Modern_HeaderMismatch_Returns400;
+const
+  CALL = '"name":"add","arguments":{"A":1,"B":2}';
+
+  procedure AssertMismatch(const AHeaders: TMARSHeaders; const AWhat: string);
+  begin
+    var LCall := SendMCP('POST', ModernBody('tools/call', CALL), '', 'mcp', AHeaders);
+    Assert.AreEqual(400, LCall.Response.StatusCode, AWhat + ': ' + LCall.Response.Content);
+    Assert.AreEqual(MCP_HEADER_MISMATCH, ErrorCode(LCall), AWhat);
+  end;
+
+begin
+  AssertMismatch(nil, 'no headers');
+  AssertMismatch([TMARSHeader.Create('MCP-Protocol-Version', '2026-07-28')], 'no Mcp-Method');
+  AssertMismatch(ModernHeaders('tools/call'), 'no Mcp-Name');
+  AssertMismatch(ModernHeaders('tools/call', 'boom'), 'another tool in Mcp-Name');
+  AssertMismatch(ModernHeaders('tools/list', 'add'), 'another method in Mcp-Method');
+  AssertMismatch([TMARSHeader.Create('MCP-Protocol-Version', '2025-06-18')
+    , TMARSHeader.Create('Mcp-Method', 'tools/call'), TMARSHeader.Create('Mcp-Name', 'add')], 'another version');
+
+  // a modern version in the header, none in the body
+  var LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"tools/list"}', '', 'mcp', ModernHeaders('tools/list'));
+  Assert.AreEqual(400, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.AreEqual(MCP_HEADER_MISMATCH, ErrorCode(LCall));
+
+  // a legacy client: the header of its negotiated version, no _meta, no mirrored headers
+  LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"tools/list"}', '', 'mcp'
+    , [TMARSHeader.Create('MCP-Protocol-Version', '2025-06-18')]);
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.AreEqual(0, ErrorCode(LCall));
+end;
+
+procedure TMCPResourceFixture.Modern_UnsupportedVersion_Returns400;
+begin
+  var LCall := SendMCP('POST', ModernBody('tools/list').Replace('2026-07-28', '2099-01-01'), '', 'mcp'
+    , [TMARSHeader.Create('MCP-Protocol-Version', '2099-01-01'), TMARSHeader.Create('Mcp-Method', 'tools/list')]);
+  Assert.AreEqual(400, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.AreEqual(MCP_UNSUPPORTED_PROTOCOL_VERSION, ErrorCode(LCall));
+  Assert.Contains(LCall.Response.Content, '"requested":"2099-01-01"');
+  Assert.Contains(LCall.Response.Content, '"supported":["2026-07-28","2025-06-18"');
+end;
+
+procedure TMCPResourceFixture.Modern_UnknownMethod_Returns404;
+begin
+  var LCall := SendMCP('POST', ModernBody('no/such'), '', 'mcp', ModernHeaders('no/such'));
+  Assert.AreEqual(404, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.AreEqual(JSONRPC_METHOD_NOT_FOUND, ErrorCode(LCall));
+end;
+
+procedure TMCPResourceFixture.Legacy_UnknownMethod_Returns200;
+begin
+  var LCall := SendMCP('POST', '{"jsonrpc":"2.0","id":1,"method":"no/such"}');
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.AreEqual(JSONRPC_METHOD_NOT_FOUND, ErrorCode(LCall));
+end;
+
+function TMCPResourceFixture.SendMCP(const AHttpMethod, ABody, AToken, APath: string;
+  const AExtraHeaders: TMARSHeaders): TMCPCall;
 begin
   var LURL := 'http://localhost:8080' + FEngine.BasePath + '/mcptest/' + APath;
 
@@ -1512,6 +1772,7 @@ begin
   ];
   if AToken <> '' then
     LHeaders := LHeaders + [TMARSHeader.Create('Authorization', 'Bearer ' + AToken)];
+  LHeaders := LHeaders + AExtraHeaders;
 
   Result.ResponseMock := TMARSResponseMock.Create;
   Result.Response := Result.ResponseMock;

@@ -54,6 +54,15 @@ type
     function HasOAuthProtection: Boolean; virtual;
     function BuildResourceMetadataURL: string; virtual;
     function EnsureAuthenticated: Boolean; virtual;
+
+    // Modern requests (2026-07-28) mirror the body in the HTTP headers: MCP-Protocol-Version,
+    // Mcp-Method and, for tools/call, resources/read and prompts/get, Mcp-Name. Returns what
+    // does not match ('' when all is well): the request is refused with 400 and a
+    // HeaderMismatch error, as the specification requires.
+    function HeaderMismatch(const AMessage: TJSONValue): string; virtual;
+    // The HTTP status of an answer: legacy clients always get 200; modern ones 400 for an
+    // unsupported version or a header mismatch and 404 for an unknown method
+    function StatusCodeFor(const ADispatcher: TMCPDispatcher; const AAnswer: TJSONObject): Integer; virtual;
   public
     [POST, Consumes(TMediaType.APPLICATION_JSON), Produces(TMediaType.APPLICATION_JSON)]
     procedure HandleMessage([BodyParam] AMessage: TJSONValue); virtual;
@@ -68,7 +77,29 @@ type
 implementation
 
 uses
-  MARS.MCP.OAuth;
+  System.NetEncoding
+, MARS.MCP.OAuth;
+
+const
+  HEADER_PROTOCOL_VERSION = 'MCP-Protocol-Version';
+  HEADER_METHOD = 'Mcp-Method';
+  HEADER_NAME = 'Mcp-Name';
+  // a header value that is not plain ASCII: =?base64?<Base64 of the UTF-8 text>?=
+  BASE64_PREFIX = '=?base64?';
+  BASE64_SUFFIX = '?=';
+
+function DecodeHeaderValue(const AValue: string): string;
+begin
+  Result := AValue;
+  if AValue.StartsWith(BASE64_PREFIX) and AValue.EndsWith(BASE64_SUFFIX)
+    and (AValue.Length >= BASE64_PREFIX.Length + BASE64_SUFFIX.Length) then
+  try
+    Result := TEncoding.UTF8.GetString(TNetEncoding.Base64.DecodeStringToBytes(
+      AValue.Substring(BASE64_PREFIX.Length, AValue.Length - BASE64_PREFIX.Length - BASE64_SUFFIX.Length)));
+  except
+    Result := AValue; // not Base64: compared as it is, and it will not match
+  end;
+end;
 
 { TMCPResource }
 
@@ -227,22 +258,98 @@ begin
   Result := False;
 end;
 
+function TMCPResource.HeaderMismatch(const AMessage: TJSONValue): string;
+var
+  LRequest, LParams: TJSONObject;
+  LVersion, LHeaderVersion, LMethod, LNameMember, LName: string;
+
+  function Check(const AHeader, AExpected: string): string;
+  var
+    LValue: string;
+  begin
+    Result := '';
+    LValue := DecodeHeaderValue(Request.GetHeaderParamValue(AHeader));
+    if LValue = '' then
+      Result := Format('Header mismatch: the %s header is missing', [AHeader])
+    else if LValue <> AExpected then
+      Result := Format('Header mismatch: %s header value ''%s'' does not match body value ''%s'''
+        , [AHeader, LValue, AExpected]);
+  end;
+
+begin
+  Result := '';
+  LVersion := TMCPDispatcher.RequestProtocolVersion(AMessage);
+  LHeaderVersion := Request.GetHeaderParamValue(HEADER_PROTOCOL_VERSION);
+
+  if not TMCPDispatcher.IsModernVersion(LVersion) then
+  begin
+    // a modern version in the header and none in the body: the body is the source of truth
+    if (LVersion = '') and TMCPDispatcher.IsModernVersion(LHeaderVersion) then
+      Result := Format('Header mismatch: %s is %s but the request has no %s in params._meta'
+        , [HEADER_PROTOCOL_VERSION, LHeaderVersion, MCP_META_PROTOCOL_VERSION]);
+    Exit; // legacy (or a version the dispatcher refuses): no mirrored headers
+  end;
+
+  LRequest := AMessage as TJSONObject;
+  if not Assigned(LRequest.GetValue('id')) then
+    Exit; // a notification: the specification defines no headers for it
+
+  LMethod := LRequest.ReadStringValue('method');
+  Result := Check(HEADER_PROTOCOL_VERSION, LVersion);
+  if Result = '' then
+    Result := Check(HEADER_METHOD, LMethod);
+  if Result <> '' then
+    Exit;
+
+  if (LMethod = 'tools/call') or (LMethod = 'prompts/get') then
+    LNameMember := 'name'
+  else if LMethod = 'resources/read' then
+    LNameMember := 'uri'
+  else
+    Exit;
+  LParams := LRequest.GetValue('params') as TJSONObject; // there: it holds _meta
+  LName := LParams.ReadStringValue(LNameMember);
+  Result := Check(HEADER_NAME, LName);
+end;
+
+function TMCPResource.StatusCodeFor(const ADispatcher: TMCPDispatcher;
+  const AAnswer: TJSONObject): Integer;
+begin
+  Result := 200;
+  if not ADispatcher.IsModernRequest then
+    Exit;
+  case TMCPDispatcher.ErrorCodeOf(AAnswer) of
+    MCP_UNSUPPORTED_PROTOCOL_VERSION, MCP_HEADER_MISMATCH: Result := 400;
+    JSONRPC_METHOD_NOT_FOUND: Result := 404;
+  end;
+end;
+
 procedure TMCPResource.HandleMessage(AMessage: TJSONValue);
 var
   LDispatcher: TMCPDispatcher;
   LResponseJSON: TJSONObject;
+  LMismatch: string;
 begin
   if not EnsureAuthenticated then
     Exit;
 
   LDispatcher := CreateDispatcher;
   try
-    LResponseJSON := LDispatcher.HandleMessage(AMessage);
+    LMismatch := HeaderMismatch(AMessage);
+    if LMismatch <> '' then
+      LResponseJSON := LDispatcher.BuildErrorFor(AMessage, MCP_HEADER_MISMATCH, LMismatch)
+    else
+      LResponseJSON := LDispatcher.HandleMessage(AMessage);
     try
       Response.ContentType := TMediaType.APPLICATION_JSON;
-      if Assigned(LResponseJSON) then
+      if LMismatch <> '' then
       begin
-        Response.StatusCode := 200;
+        Response.StatusCode := 400;
+        Response.Content := LResponseJSON.ToJSON;
+      end
+      else if Assigned(LResponseJSON) then
+      begin
+        Response.StatusCode := StatusCodeFor(LDispatcher, LResponseJSON);
         Response.Content := LResponseJSON.ToJSON;
       end
       else

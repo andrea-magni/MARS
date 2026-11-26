@@ -25,7 +25,7 @@ function SalaryReviewPrompt(
 - **Serialization follows the return type**: `string` → `text` with `text/plain`; records/arrays/`TJSONValue` → JSON text with `application/json`; `TStream` → base64 `blob` (`application/octet-stream`); on a `TMCPDataResource`, `TDataSet` → rows as JSON (context-owned, never freed by the dispatcher — same rule as tools). The attribute's optional fourth argument forces the MIME type, otherwise it is inferred.
 - **Prompt arguments are strings** (per MCP spec) and are all listed as `required`. A prompt method returning a `string` produces a single `user` message; return a `TJSONArray` to supply a complete `messages` array verbatim (e.g. multi-turn or assistant-role messages).
 - **Authorization works like tools**: `[RolesAllowed]`/`[DenyAll]` on the method hide it from `resources/list`/`resources/templates/list`/`prompts/list`; direct access answers `-32002 Resource not found` / `Unknown prompt` — no existence leak.
-- **Capabilities are conditional**: `initialize` advertises `resources`/`prompts` only when the class declares at least one. Subscriptions and `listChanged` are not offered (stateless server).
+- **Capabilities are conditional**: `initialize` (and `server/discover`, for 2026-07-28 clients) advertises `resources`/`prompts` only when the class declares at least one. Subscriptions and `listChanged` are not offered (stateless server).
 
 ## Writing good prompts
 

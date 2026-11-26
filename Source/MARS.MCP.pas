@@ -21,9 +21,20 @@ uses
 ;
 
 const
-  MCP_PROTOCOL_VERSION = '2025-06-18';
+  // Two eras of the protocol, both served (a "dual-era" server):
+  // - legacy (2025-06-18 and earlier): a session opened by the initialize handshake;
+  // - modern (2026-07-28): no handshake, every request carries its protocol version and the
+  //   capabilities of the client in params._meta, and server/discover advertises the server.
+  // The era of a request is in its body: a modern version in _meta, or the server/discover method.
+  MCP_PROTOCOL_VERSION = '2025-06-18'; // the default of the initialize handshake
   MCP_SUPPORTED_PROTOCOL_VERSIONS: array [0..2] of string =
     ('2025-06-18', '2025-03-26', '2024-11-05');
+  MCP_MODERN_PROTOCOL_VERSION = '2026-07-28';
+
+  MCP_META = '_meta';
+  MCP_META_PROTOCOL_VERSION = 'io.modelcontextprotocol/protocolVersion';
+  MCP_META_SERVER_INFO = 'io.modelcontextprotocol/serverInfo';
+  MCP_METHOD_DISCOVER = 'server/discover';
 
   JSONRPC_VERSION = '2.0';
 
@@ -33,15 +44,21 @@ const
   JSONRPC_INVALID_PARAMS   = -32602;
   JSONRPC_INTERNAL_ERROR   = -32603;
 
-  MCP_RESOURCE_NOT_FOUND   = -32002;
+  MCP_RESOURCE_NOT_FOUND   = -32002; // legacy: a modern request gets JSONRPC_INVALID_PARAMS
+  // modern errors (the range the specification reserves for itself); HTTP: 400 Bad Request
+  MCP_HEADER_MISMATCH              = -32020;
+  MCP_UNSUPPORTED_PROTOCOL_VERSION = -32022;
 
 type
   EMCPError = class(Exception)
   private
     FCode: Integer;
+    FData: string;
   public
-    constructor Create(const ACode: Integer; const AMessage: string);
+    constructor Create(const ACode: Integer; const AMessage: string; const AData: string = '');
     property Code: Integer read FCode;
+    // the "data" member of the error: JSON text, '' for none
+    property Data: string read FData;
   end;
 
   TMCPTool = record
@@ -103,6 +120,7 @@ type
     function GetPrompts: TArray<TMCPPromptInfo>;
   protected
     FRttiContext: TRttiContext;
+    FIsModernRequest: Boolean;
 
     function ScanCapabilities: TMCPCapabilities; virtual;
     // "_meta" of a tool or resource from the attributes of its method ([MCPMeta],
@@ -118,6 +136,20 @@ type
 
     function DispatchRequest(const AMethod: string; const AParams: TJSONObject): TJSONValue; virtual;
     function HandleInitialize(const AParams: TJSONObject): TJSONValue; virtual;
+    // server/discover (2026-07-28): versions, capabilities, instructions
+    function HandleDiscover(const AParams: TJSONObject): TJSONValue; virtual;
+    // "capabilities" of initialize (legacy) and of server/discover (modern)
+    function BuildCapabilities(const AModern: Boolean): TJSONObject; virtual;
+    function BuildServerInfo: TJSONObject; virtual;
+    // The result of a modern request: "resultType", "ttlMs" and "cacheScope" where the
+    // specification requires them, the server in _meta. Values already there are kept.
+    procedure CompleteModernResult(const AMethod: string; const AResult: TJSONObject); virtual;
+    // How long a client may keep the result of a list (or discover, resources/read) before
+    // asking again, in milliseconds. Default 0 (always ask): what a user sees may depend on
+    // the token. Override for results that do not change.
+    function GetCacheTTLMs(const AMethod: string): Integer; virtual;
+    // "private" (default: results may differ for each user) or "public"
+    function GetCacheScope(const AMethod: string): string; virtual;
     function HandleToolsList(const AParams: TJSONObject): TJSONValue; virtual;
     function HandleToolsCall(const AParams: TJSONObject): TJSONValue; virtual;
     function HandleResourcesList(const AParams: TJSONObject): TJSONValue; virtual;
@@ -164,6 +196,18 @@ type
     // message is a notification (no response expected, HTTP 202).
     function HandleMessage(const AMessage: TJSONValue): TJSONObject; virtual;
 
+    // The protocol version a request declares in params._meta ('' when it does not: legacy)
+    class function RequestProtocolVersion(const AMessage: TJSONValue): string;
+    class function IsModernVersion(const AVersion: string): Boolean;
+    // An error response to AMessage (its id), for the transports: i.e. a header mismatch
+    function BuildErrorFor(const AMessage: TJSONValue; const ACode: Integer;
+      const AText: string): TJSONObject;
+    // The JSON-RPC error code of a response, 0 when it is not an error
+    class function ErrorCodeOf(const AResponse: TJSONObject): Integer;
+    // True when the last message handled was a modern (2026-07-28) request: the HTTP
+    // transport answers its errors with 400/404 instead of 200
+    property IsModernRequest: Boolean read FIsModernRequest;
+
     property Instance: TObject read FInstance;
     property ServerName: string read FServerName;
     property ServerVersion: string read FServerVersion;
@@ -189,10 +233,11 @@ uses
 
 { EMCPError }
 
-constructor EMCPError.Create(const ACode: Integer; const AMessage: string);
+constructor EMCPError.Create(const ACode: Integer; const AMessage, AData: string);
 begin
   inherited Create(AMessage);
   FCode := ACode;
+  FData := AData;
 end;
 
 { TMCPDispatcher }
@@ -547,6 +592,8 @@ begin
   end;
 end;
 
+function SupportedVersions: TJSONArray; forward;
+
 function TMCPDispatcher.HandleMessage(const AMessage: TJSONValue): TJSONObject;
 var
   LRequest: TJSONObject;
@@ -554,8 +601,11 @@ var
   LMethod: string;
   LParams: TJSONObject;
   LResult: TJSONValue;
+  LVersion: string;
+  LData: TJSONObject;
 begin
   Result := nil;
+  FIsModernRequest := False;
 
   if not Assigned(AMessage) then
     Exit(BuildErrorResponse(nil, JSONRPC_PARSE_ERROR, 'Parse error'));
@@ -584,11 +634,39 @@ begin
     LParams := TJSONObject(LRequest.GetValue('params'));
 
   try
+    // the era of the request: a version in _meta (a legacy one is served as legacy, an
+    // unknown one is refused with the versions that are supported), or server/discover
+    LVersion := RequestProtocolVersion(AMessage);
+    FIsModernRequest := IsModernVersion(LVersion) or SameText(LMethod, MCP_METHOD_DISCOVER);
+    if (LVersion <> '') and (not IsModernVersion(LVersion))
+      and (IndexStr(LVersion, MCP_SUPPORTED_PROTOCOL_VERSIONS) < 0) then
+    begin
+      FIsModernRequest := True; // only modern clients declare a version this way
+      LData := TJSONObject.Create;
+      try
+        LData.AddPair('supported', SupportedVersions);
+        LData.AddPair('requested', LVersion);
+        raise EMCPError.Create(MCP_UNSUPPORTED_PROTOCOL_VERSION, 'Unsupported protocol version', LData.ToJSON);
+      finally
+        LData.Free;
+      end;
+    end;
+
     LResult := DispatchRequest(LMethod, LParams);
+    if FIsModernRequest and (LResult is TJSONObject) then
+      CompleteModernResult(LMethod, TJSONObject(LResult));
     Result := BuildResultResponse(LId, LResult);
   except
     on E: EMCPError do
-      Result := BuildErrorResponse(LId, E.Code, E.Message);
+    begin
+      // "resource not found" is an invalid parameter since 2026-07-28
+      if FIsModernRequest and (E.Code = MCP_RESOURCE_NOT_FOUND) then
+        Result := BuildErrorResponse(LId, JSONRPC_INVALID_PARAMS, E.Message)
+      else
+        Result := BuildErrorResponse(LId, E.Code, E.Message);
+      if E.Data <> '' then
+        (Result.GetValue('error') as TJSONObject).AddPair('data', TJSONObject.ParseJSONValue(E.Data));
+    end;
     on E: Exception do
       Result := BuildErrorResponse(LId, JSONRPC_INTERNAL_ERROR, E.Message);
   end;
@@ -597,7 +675,12 @@ end;
 function TMCPDispatcher.DispatchRequest(const AMethod: string;
   const AParams: TJSONObject): TJSONValue;
 begin
-  if SameText(AMethod, 'initialize') then
+  // initialize and ping are not part of the modern protocol
+  if FIsModernRequest and (SameText(AMethod, 'initialize') or SameText(AMethod, 'ping')) then
+    raise EMCPError.Create(JSONRPC_METHOD_NOT_FOUND, 'Method not found: ' + AMethod)
+  else if SameText(AMethod, MCP_METHOD_DISCOVER) then
+    Result := HandleDiscover(AParams)
+  else if SameText(AMethod, 'initialize') then
     Result := HandleInitialize(AParams)
   else if SameText(AMethod, 'ping') then
     Result := TJSONObject.Create
@@ -619,10 +702,145 @@ begin
     raise EMCPError.Create(JSONRPC_METHOD_NOT_FOUND, 'Method not found: ' + AMethod);
 end;
 
+// modern first, then the legacy ones: owned by the caller
+function SupportedVersions: TJSONArray;
+var
+  LVersion: string;
+begin
+  Result := TJSONArray.Create;
+  Result.Add(MCP_MODERN_PROTOCOL_VERSION);
+  for LVersion in MCP_SUPPORTED_PROTOCOL_VERSIONS do
+    Result.Add(LVersion);
+end;
+
+class function TMCPDispatcher.IsModernVersion(const AVersion: string): Boolean;
+begin
+  Result := AVersion = MCP_MODERN_PROTOCOL_VERSION;
+end;
+
+class function TMCPDispatcher.RequestProtocolVersion(const AMessage: TJSONValue): string;
+var
+  LParams, LMeta: TJSONValue;
+begin
+  Result := '';
+  if not (AMessage is TJSONObject) then
+    Exit;
+  LParams := TJSONObject(AMessage).GetValue('params');
+  if not (LParams is TJSONObject) then
+    Exit;
+  LMeta := TJSONObject(LParams).GetValue(MCP_META);
+  if LMeta is TJSONObject then
+    Result := TJSONObject(LMeta).ReadStringValue(MCP_META_PROTOCOL_VERSION);
+end;
+
+function TMCPDispatcher.BuildErrorFor(const AMessage: TJSONValue; const ACode: Integer;
+  const AText: string): TJSONObject;
+var
+  LId: TJSONValue;
+begin
+  LId := nil;
+  if AMessage is TJSONObject then
+    LId := TJSONObject(AMessage).GetValue('id');
+  Result := BuildErrorResponse(LId, ACode, AText);
+end;
+
+class function TMCPDispatcher.ErrorCodeOf(const AResponse: TJSONObject): Integer;
+var
+  LError: TJSONValue;
+begin
+  Result := 0;
+  if not Assigned(AResponse) then
+    Exit;
+  LError := AResponse.GetValue('error');
+  if LError is TJSONObject then
+    Result := TJSONObject(LError).ReadIntegerValue('code');
+end;
+
+function TMCPDispatcher.BuildServerInfo: TJSONObject;
+begin
+  Result := TJSONObject.Create;
+  Result.AddPair('name', FServerName);
+  Result.AddPair('version', FServerVersion);
+end;
+
+function TMCPDispatcher.BuildCapabilities(const AModern: Boolean): TJSONObject;
+
+  // legacy: no list change notifications, no subscriptions. Modern: these are opted in
+  // with subscriptions/listen (not implemented), so the capability is an empty object.
+  function Capability(const ASubscribe: Boolean): TJSONObject;
+  begin
+    Result := TJSONObject.Create;
+    if AModern then
+      Exit;
+    if ASubscribe then
+      Result.AddPair('subscribe', TJSONFalse.Create);
+    Result.AddPair('listChanged', TJSONFalse.Create);
+  end;
+
+begin
+  Result := TJSONObject.Create;
+  Result.AddPair('tools', Capability(False));
+  if Length(FCapabilities.Resources) > 0 then
+    Result.AddPair('resources', Capability(True));
+  if Length(FCapabilities.Prompts) > 0 then
+    Result.AddPair('prompts', Capability(False));
+end;
+
+function TMCPDispatcher.HandleDiscover(const AParams: TJSONObject): TJSONValue;
+var
+  LResult: TJSONObject;
+begin
+  LResult := TJSONObject.Create;
+  LResult.AddPair('supportedVersions', SupportedVersions);
+  LResult.AddPair('capabilities', BuildCapabilities(True));
+  if FInstructions <> '' then
+    LResult.AddPair('instructions', FInstructions);
+  Result := LResult;
+end;
+
+function TMCPDispatcher.GetCacheTTLMs(const AMethod: string): Integer;
+begin
+  Result := 0;
+end;
+
+function TMCPDispatcher.GetCacheScope(const AMethod: string): string;
+begin
+  Result := 'private';
+end;
+
+procedure TMCPDispatcher.CompleteModernResult(const AMethod: string; const AResult: TJSONObject);
+var
+  LMeta: TJSONValue;
+begin
+  if not Assigned(AResult.GetValue('resultType')) then
+    AResult.AddPair('resultType', 'complete');
+
+  // the results a client may cache
+  if IndexText(AMethod, [MCP_METHOD_DISCOVER, 'tools/list', 'prompts/list', 'resources/list'
+    , 'resources/templates/list', 'resources/read']) >= 0 then
+  begin
+    if not Assigned(AResult.GetValue('ttlMs')) then
+      AResult.AddPair('ttlMs', TJSONNumber.Create(GetCacheTTLMs(AMethod)));
+    if not Assigned(AResult.GetValue('cacheScope')) then
+      AResult.AddPair('cacheScope', GetCacheScope(AMethod));
+  end;
+
+  // servers identify themselves in every result
+  LMeta := AResult.GetValue(MCP_META);
+  if not (LMeta is TJSONObject) then
+  begin
+    if Assigned(LMeta) then
+      Exit; // not an object: left alone
+    LMeta := TJSONObject.Create;
+    AResult.AddPair(MCP_META, LMeta);
+  end;
+  if not Assigned(TJSONObject(LMeta).GetValue(MCP_META_SERVER_INFO)) then
+    TJSONObject(LMeta).AddPair(MCP_META_SERVER_INFO, BuildServerInfo);
+end;
+
 function TMCPDispatcher.HandleInitialize(const AParams: TJSONObject): TJSONValue;
 var
   LResult: TJSONObject;
-  LCapabilities, LTools, LServerInfo: TJSONObject;
   LRequestedVersion, LVersion: string;
 begin
   LVersion := MCP_PROTOCOL_VERSION;
@@ -636,29 +854,8 @@ begin
   LResult := TJSONObject.Create;
   LResult.AddPair('protocolVersion', LVersion);
 
-  LCapabilities := TJSONObject.Create;
-  LTools := TJSONObject.Create;
-  LTools.AddPair('listChanged', TJSONFalse.Create);
-  LCapabilities.AddPair('tools', LTools);
-  if Length(FCapabilities.Resources) > 0 then
-  begin
-    var LResources := TJSONObject.Create;
-    LResources.AddPair('subscribe', TJSONFalse.Create);
-    LResources.AddPair('listChanged', TJSONFalse.Create);
-    LCapabilities.AddPair('resources', LResources);
-  end;
-  if Length(FCapabilities.Prompts) > 0 then
-  begin
-    var LPrompts := TJSONObject.Create;
-    LPrompts.AddPair('listChanged', TJSONFalse.Create);
-    LCapabilities.AddPair('prompts', LPrompts);
-  end;
-  LResult.AddPair('capabilities', LCapabilities);
-
-  LServerInfo := TJSONObject.Create;
-  LServerInfo.AddPair('name', FServerName);
-  LServerInfo.AddPair('version', FServerVersion);
-  LResult.AddPair('serverInfo', LServerInfo);
+  LResult.AddPair('capabilities', BuildCapabilities(False));
+  LResult.AddPair('serverInfo', BuildServerInfo);
 
   if FInstructions <> '' then
     LResult.AddPair('instructions', FInstructions);
