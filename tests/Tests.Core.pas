@@ -72,6 +72,8 @@ type
     [Test] procedure UnknownEnumNameRaises;
     // Cardinal and UInt64 over the range of the signed types
     [Test] procedure UnsignedIntegers;
+    // an object inside a record is read with the same options as the record
+    [Test] procedure NestedObjectsFollowTheOptions;
   end;
 
   // raw JSON fields: TJSONRawString and TJSONValue
@@ -1056,6 +1058,45 @@ begin
     Assert.AreEqual(LRecord.U, LRead.U);
     Assert.AreEqual(LRecord.W, LRead.W);
     Assert.AreEqual(LRecord.B, LRead.B);
+  finally
+    LJSON.Free;
+  end;
+end;
+
+type
+  TDatedChild = class
+  public
+    At: TDateTime;
+  end;
+
+  TDatedParent = record
+    At: TDateTime;
+    Child: TDatedChild;
+  end;
+
+procedure TMARSJSONToRecordTest.NestedObjectsFollowTheOptions;
+var
+  LJSON: TJSONObject;
+  LOptions: TMARSJSONSerializationOptions;
+  LParent: TDatedParent;
+  LIsUTC: Boolean;
+begin
+  LJSON := TJSONObject.ParseJSONValue(
+    '{"At": "2026-07-15T10:00:00.000Z", "Child": {"At": "2026-07-15T10:00:00.000Z"}}') as TJSONObject;
+  try
+    // whatever the default is on this machine: the two dates are read the same way
+    for LIsUTC in [False, True] do
+    begin
+      LOptions := DefaultMARSJSONSerializationOptions;
+      LOptions.DateIsUTC := LIsUTC;
+      LParent := LJSON.ToRecord<TDatedParent>(LOptions);
+      try
+        Assert.IsNotNull(LParent.Child);
+        Assert.AreEqual(LParent.At, LParent.Child.At, 'DateIsUTC ' + BoolToStr(LIsUTC, True));
+      finally
+        LParent.Child.Free;
+      end;
+    end;
   finally
     LJSON.Free;
   end;

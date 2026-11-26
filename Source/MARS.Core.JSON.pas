@@ -1854,7 +1854,7 @@ begin
       if Assigned(LInstance) then
         TJSONObject(AValue).ToObject(LInstance, ADesiredType, AOptions)
       else
-        ATValue := TJSONObject.JSONToObject(ADesiredType.AsInstance.MetaclassType, TJSONObject(AValue));
+        ATValue := TJSONObject.JSONToObject(ADesiredType.AsInstance.MetaclassType, TJSONObject(AValue), AOptions);
     end
     else
       raise Exception.Create('TJSONObjectHelper.TJSONValueToTValue: unknown type: ' + ADesiredType.Name);
