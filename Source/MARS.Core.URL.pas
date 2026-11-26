@@ -401,8 +401,9 @@ begin
   while (Length(Result) > 0) and (Result[High(Result)] = '') do
     SetLength(Result, High(Result));
 
+  // in a path a plus is a plus (only in a query string it stands for a space)
   for LIndex := Low(Result) to High(Result)do
-    Result[LIndex] := URLDecode(Result[LIndex]);
+    Result[LIndex] := URLDecode(StringReplace(Result[LIndex], '+', '%2B', [rfReplaceAll]));
 end;
 
 procedure TMARSURL.ParseQueryTokens;

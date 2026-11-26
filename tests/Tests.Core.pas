@@ -189,6 +189,15 @@ begin
     finally
       LURL.Free;
     end;
+
+    // a plus is a plus in the path, a space in the query string
+    LURL := TMARSURL.Create('http://localhost:8080/rest/default/myres/C++%20a+b?q=a+b');
+    try
+      Assert.AreEqual('C++ a+b', LURL.PathTokens[3]);
+      Assert.AreEqual('a b', LURL.QueryTokenByName('q'));
+    finally
+      LURL.Free;
+    end;
   finally
     LPrototype.Free;
   end;
