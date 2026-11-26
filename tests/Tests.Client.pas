@@ -85,13 +85,50 @@ type
     procedure CustomHeaders;
   end;
 
+  [TestFixture('Client Token')]
+  TMARSClientTokenTest = class
+  public
+    // IsExpired compares the exp claim with the UTC clock; Expiration stays a local time
+    [Test]
+    procedure IsExpiredInUTC;
+  end;
+
 // the X-Probe header in the JSON of test/requestDump
 function ProbeHeader(const AResponse: string): string;
 
 implementation
 
 uses
-  System.JSON;
+  System.JSON, System.DateUtils, MARS.Client.Token;
+
+procedure TMARSClientTokenTest.IsExpiredInUTC;
+var
+  LToken: TMARSClientToken;
+  LNow: Int64;
+
+  procedure Load(const AExpiration: Int64);
+  begin
+    LToken.SetData(TJSONObject.ParseJSONValue(Format(
+      '{"Token": "x", "IsVerified": true, "Claims": {"iat": %d, "exp": %d, "UserName": "a", "Roles": "r"}}'
+      , [LNow, AExpiration])) as TJSONObject);
+  end;
+
+begin
+  LNow := DateTimeToUnix(MARSNowUTC, True);
+  LToken := TMARSClientToken.Create(nil);
+  try
+    Assert.IsTrue(LToken.IsExpired, 'no token');
+    Load(LNow + 60);
+    Assert.IsFalse(LToken.IsExpired, 'a minute to go');
+    Assert.IsTrue(Abs(SecondsBetween(LToken.Expiration, Now)) <= 70, 'Expiration is a local time');
+    Load(LNow - 60);
+    Assert.IsTrue(LToken.IsExpired, 'a minute ago');
+    LToken.Clear;
+    Assert.IsTrue(LToken.IsExpired, 'cleared');
+  finally
+    LToken.Free;
+  end;
+end;
 
 function ProbeHeader(const AResponse: string): string;
 var
@@ -245,5 +282,6 @@ initialization
   TDUnitX.RegisterTestFixture(TSimpleNetClientTest);
   TDUnitX.RegisterTestFixture(TSimpleHttpClientTest);
   TDUnitX.RegisterTestFixture(TMARSJSONTest);
+  TDUnitX.RegisterTestFixture(TMARSClientTokenTest);
 
 end.

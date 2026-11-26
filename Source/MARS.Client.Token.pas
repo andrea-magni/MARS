@@ -170,7 +170,9 @@ end;
 
 function TMARSClientToken.GetIsExpired: Boolean;
 begin
-  Result := Expiration < Now;
+  // in UTC, as the claim is: a local time is ambiguous in the hour repeated in autumn.
+  // No "exp" claim (no token): expired, as before
+  Result := FClaims.ByName('exp', 0).AsInt64 < DateTimeToUnix(MARSNowUTC, True);
 end;
 
 procedure TMARSClientToken.LoadFromBytes(const ABytes: TBytes);
