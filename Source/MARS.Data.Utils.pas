@@ -90,7 +90,7 @@ function DatasetMetadataToJSONObject(const ADataSet: TDataSet): TJSONObject;
 implementation
 
 uses
-  Rtti, StrUtils, DateUtils, System.JSON, Generics.Collections, FMTBcd, Data.SqlTimSt
+  Rtti, StrUtils, DateUtils, System.JSON, Generics.Collections, FMTBcd, Data.SqlTimSt, System.NetEncoding
 , MARS.Rtti.Utils, MARS.Core.Utils, MARS.Utils.FloatText;
 
 type
@@ -385,7 +385,7 @@ begin
   for LField in ADataSet.Fields do
   begin
     Result := Result
-      + Format('<%s>%s</%s>', [LField.FieldName, LField.AsString, LField.FieldName]);
+      + Format('<%s>%s</%s>', [LField.FieldName, TNetEncoding.HTML.Encode(LField.AsString), LField.FieldName]);
   end;
 end;
 

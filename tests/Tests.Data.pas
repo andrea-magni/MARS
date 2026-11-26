@@ -25,6 +25,7 @@ type
     [Test] procedure UtilsDataSetToJSONArray();
     [Test] procedure UtilsDataSetToJSONArrayEx();
     [Test] procedure UtilsDataSetToJSONArrayEx2();
+    [Test] procedure UtilsDataSetToXMLEscapesValues();
   end;
 
 implementation
@@ -35,6 +36,20 @@ uses
 ;
 
 { TMARSDataTest }
+
+procedure TMARSDataTest.UtilsDataSetToXMLEscapesValues;
+begin
+  var LTable := TFDMemTable.Create(nil);
+  try
+    LTable.FieldDefs.Add('Name', ftString, 50);
+    LTable.CreateDataSet;
+    LTable.AppendRecord(['<b>Tom & "Jerry"</b>']);
+    Assert.AreEqual('<dataset><row><Name>&lt;b&gt;Tom &amp; &quot;Jerry&quot;&lt;/b&gt;</Name></row></dataset>'
+      , DataSetToXML(LTable));
+  finally
+    LTable.Free;
+  end;
+end;
 
 procedure TMARSDataTest.UtilsDataSetToJSONArray;
 begin
