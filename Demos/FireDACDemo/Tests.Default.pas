@@ -41,12 +41,18 @@ type
     [Test] procedure Summary;
     [Test] procedure WithCredit;
     [Test] procedure CustomersData;
+    [Test] procedure CustomersDataDelta;
     [Test] procedure CreateReadUpdateDelete;
     [Test] procedure Transfer;
     [Test] procedure NotFound;
   end;
 
 implementation
+
+uses
+  Data.DB, FireDAC.Stan.Intf, FireDAC.Comp.Client
+, MARS.Data.FireDAC.Utils
+;
 
 // the field names depend on the database (i.e. upper case with Firebird)
 function ValueOf(const AObject: TJSONValue; const AName: string): TJSONValue;
@@ -217,6 +223,83 @@ begin
   LResponse := Request('POST', 'customersdata', '', '{}', 'application/json');
   Assert.AreEqual(200, LResponse.StatusCode, LResponse.Content);
   Assert.AreEqual('[]', LResponse.Content.Trim);
+end;
+
+procedure TCustomersTest.CustomersDataDelta;
+var
+  LId: Integer;
+  LResponse: IMARSResponse;
+  LJSON: TJSONObject;
+  LResults: TJSONArray;
+  LTable, LForged: TFDMemTable;
+
+  // the changes of a table as TMARSFDResource sends them
+  function Delta(const ATable: TFDMemTable): string;
+  var
+    LBody: TJSONObject;
+  begin
+    ATable.ResourceOptions.StoreItems := [siMeta, siDelta];
+    LBody := TJSONObject.Create;
+    try
+      LBody.AddPair('Customers', TFDDataSets.DataSetToEncodedBinaryString(ATable));
+      Result := LBody.ToJSON;
+    finally
+      LBody.Free;
+    end;
+  end;
+
+begin
+  LId := AddCustomer('Test Delta', 'Test City', 100);
+  LTable := TFDMemTable.Create(nil);
+  LForged := TFDMemTable.Create(nil);
+  try
+    // the datasets as a Delphi client gets them
+    LResponse := Request('GET', 'customersdata', '', '', NATIVE_MEDIA_TYPE);
+    Assert.AreEqual(200, LResponse.StatusCode, LResponse.Content);
+    LJSON := TJSONObject.ParseJSONValue(LResponse.Content) as TJSONObject;
+    try
+      TFDDataSets.EncodedBinaryStringToDataSet(LJSON.GetValue<string>('Customers'), LTable);
+    finally
+      LJSON.Free;
+    end;
+
+    // a change on the client, sent as a delta and applied by the server
+    LTable.CachedUpdates := True;
+    Assert.IsTrue(LTable.Locate('ID', LId, []), 'the new customer is in the dataset');
+    LTable.Edit;
+    LTable.FieldByName('CREDIT').AsCurrency := 250;
+    LTable.Post;
+    LResponse := Request('POST', 'customersdata', '', Delta(LTable));
+    Assert.AreEqual(200, LResponse.StatusCode, LResponse.Content);
+    LResults := ParseArray(LResponse.Content);
+    try
+      Assert.AreEqual(1, LResults.Count, 'one result for each delta');
+      Assert.AreEqual(0, ValueOf(LResults.Items[0], 'errorCount').AsType<Integer>, LResponse.Content);
+    finally
+      LResults.Free;
+    end;
+    Assert.AreEqual<Currency>(250, GetCredit(LId));
+
+    // a delta with a column the dataset of the server does not have: refused, nothing written
+    LForged.FieldDefs.Add('ID', ftInteger);
+    LForged.FieldDefs.Add('CREDIT', ftCurrency);
+    LForged.FieldDefs.Add('NOT_PUBLISHED', ftString, 20);
+    LForged.CreateDataSet;
+    LForged.CachedUpdates := True;
+    LForged.AppendRecord([LId, 250, '']);
+    LForged.CommitUpdates;
+    LForged.Edit;
+    LForged.FieldByName('CREDIT').AsCurrency := 999;
+    LForged.FieldByName('NOT_PUBLISHED').AsString := 'x';
+    LForged.Post;
+    LResponse := Request('POST', 'customersdata', '', Delta(LForged));
+    Assert.AreEqual(400, LResponse.StatusCode, LResponse.Content);
+    Assert.AreEqual<Currency>(250, GetCredit(LId));
+  finally
+    LForged.Free;
+    LTable.Free;
+    Request('DELETE', 'customers/' + LId.ToString);
+  end;
 end;
 
 procedure TCustomersTest.CreateReadUpdateDelete;
