@@ -167,7 +167,8 @@ begin
   begin
     if Result <> '' then
       Result := Result + ';';
-    Result := Result + LParam.Key + '=' + LParam.Value.ToString;
+    // the text as written in the ini: the guessed value would turn Password=007 into 7
+    Result := Result + LParam.Key + '=' + AParameters.ByNameAsText(LParam.Key);
   end;
 end;
 

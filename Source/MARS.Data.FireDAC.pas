@@ -213,8 +213,9 @@ var
 begin
   Result := TStringList.Create;
   try
+    // the text as written in the ini: the guessed value would turn Password=007 into 7
     for LParam in AParameters do
-      Result.Values[LParam.Key] := LParam.Value.ToString;
+      Result.Values[LParam.Key] := AParameters.ByNameAsText(LParam.Key);
   except
     Result.Free;
     raise;

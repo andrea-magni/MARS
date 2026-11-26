@@ -41,14 +41,58 @@ type
     // #65: the values of the request go into input parameters only (stored procedures)
     [Test]
     procedure ParamsInjectionSkipsOutput;
+    // the parameters of a connection definition as written in the ini, not as guessed values
+    [Test]
+    procedure ConnectionDefsKeepTheTextOfTheIni;
   end;
 
 implementation
 
 uses
   IOUtils, Data.DB,
-  MARS.Core.Activation.Interfaces
+  MARS.Core.Activation.Interfaces, MARS.Utils.Parameters, MARS.Utils.Parameters.IniFile
 ;
+
+procedure TMARSFireDACReaderWriterTest.ConnectionDefsKeepTheTextOfTheIni;
+const
+  DEF_NAME = 'TEXT_TEST_DB';
+var
+  LIniFile: string;
+  LParameters: TMARSParameters;
+  LDefs: TArray<string>;
+  LParams: TStrings;
+begin
+  LIniFile := TPath.Combine(TPath.GetTempPath, 'MARSConnectionDefsText.ini');
+  // values that look like numbers and booleans: they are texts for the driver
+  TFile.WriteAllText(LIniFile,
+      '[DefaultEngine]' + sLineBreak
+    + 'FireDAC.' + DEF_NAME + '.DriverID=SQLite' + sLineBreak
+    + 'FireDAC.' + DEF_NAME + '.Database=:memory:' + sLineBreak
+    + 'FireDAC.' + DEF_NAME + '.Password=007' + sLineBreak
+    + 'FireDAC.' + DEF_NAME + '.User_Name=1e5' + sLineBreak
+    + 'FireDAC.' + DEF_NAME + '.Server=0x41' + sLineBreak
+    + 'FireDAC.' + DEF_NAME + '.CharacterSet=true' + sLineBreak
+    + 'FireDAC.' + DEF_NAME + '.Port=3050' + sLineBreak);
+  LParameters := TMARSParameters.Create('DefaultEngine');
+  try
+    TMARSParametersIniFileReaderWriter.Load(LParameters, LIniFile);
+    LDefs := TMARSFireDAC.LoadConnectionDefs(LParameters, 'FireDAC');
+    try
+      Assert.AreEqual(1, Length(LDefs));
+      LParams := FDManager.ConnectionDefs.ConnectionDefByName(DEF_NAME).Params;
+      Assert.AreEqual('007', LParams.Values['Password']);
+      Assert.AreEqual('1e5', LParams.Values['User_Name']);
+      Assert.AreEqual('0x41', LParams.Values['Server']);
+      Assert.AreEqual('true', LParams.Values['CharacterSet']);
+      Assert.AreEqual('3050', LParams.Values['Port']);
+    finally
+      TMARSFireDAC.CloseConnectionDefs(LDefs);
+    end;
+  finally
+    LParameters.Free;
+    TFile.Delete(LIniFile);
+  end;
+end;
 
 { TMARSFireDACWriterTest }
 
