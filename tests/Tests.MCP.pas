@@ -313,6 +313,8 @@ type
     [Test] procedure Unauthenticated_Returns401WithResourceMetadata;
     [Test] procedure StaticJWT_StillWorks;
     [Test] procedure FullFlow_RegisterAuthorizeTokenCall;
+    // expires_in is the duration of the token, whichever parameter sets it
+    [Test] procedure ExpiresIn_FollowsDurationInSeconds;
     [Test] procedure WrongVerifier_InvalidGrant;
     [Test] procedure WithoutPKCE_Refused;
     [Test] procedure WrongPassword_ReRendersLoginPage;
@@ -2220,6 +2222,32 @@ begin
     Assert.AreEqual(200, LCall.Response.StatusCode);
   finally
     LToken.Free;
+  end;
+end;
+
+procedure TMCPOAuthFixture.ExpiresIn_FollowsDurationInSeconds;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+  VERIFIER = 'test-verifier-0123456789-0123456789-0123456789';
+begin
+  FEngine.ApplicationByName('MCPTestApp').Parameters.Values['JWT.Duration.InSeconds'] := 120;
+
+  var LClientId := RegisterTestClient(REDIRECT_URI);
+  var LCode := AuthorizeAndGetCode(LClientId, REDIRECT_URI
+  , TMCPOAuthServer.ComputePKCES256(VERIFIER), 'secret');
+
+  var LCall := SendRaw('POST', 'oauth/token', 'application/x-www-form-urlencoded'
+  , 'grant_type=authorization_code&code=' + LCode
+    + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
+    + '&client_id=' + LClientId
+    + '&code_verifier=' + VERIFIER);
+  Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
+
+  var LJSON := ParseContent(LCall);
+  try
+    Assert.AreEqual(120, LJSON.GetValue<Integer>('expires_in'));
+  finally
+    LJSON.Free;
   end;
 end;
 

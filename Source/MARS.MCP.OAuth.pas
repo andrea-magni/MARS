@@ -564,8 +564,8 @@ end;
 
 function TMCPOAuthServer.GetAccessTokenDurationSeconds: Integer;
 begin
-  Result := Round(
-    App.Parameters.ByName(JWT_DURATION_PARAM, JWT_DURATION_PARAM_DEFAULT).AsType<TDateTime> * SecsPerDay);
+  // the duration of the token itself: it knows JWT.Duration.InSeconds / .InMinutes too
+  Result := Round(Token.Duration * SecsPerDay);
 end;
 
 function TMCPOAuthServer.GetCodeDuration: TDateTime;
