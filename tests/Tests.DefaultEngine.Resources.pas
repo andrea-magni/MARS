@@ -88,6 +88,8 @@ type
   public
     [GET]
     function GetContent: string;
+    [GET, Path('jsonp'), JSONP(True), Produces(TMediaType.APPLICATION_JSON)]
+    function GetJSONP: TJSONObject;
   end;
 
   [Path('wildcard/{*}')]
@@ -414,6 +416,11 @@ function TUnicodeJSONResource.GetContent: TJSONObject;
 begin
   Result := TJSONObject.Create;
   Result.AddPair('name', #$0413#$0430#$0440#$0434#$0435#$0440#$043E); // Cyrillic
+end;
+
+function THelloWorldResource.GetJSONP: TJSONObject;
+begin
+  Result := TJSONObject.Create;
 end;
 
 function THelloWorldResource.GetContent: string;

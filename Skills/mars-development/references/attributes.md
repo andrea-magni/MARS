@@ -76,7 +76,7 @@ No authorization attribute = public endpoint. `[PermitAll]` alone requires no to
 | `[IsReference]` (alias of deprecated `ResultIsReference`) | do not free the returned object after writing the response (use for shared/singleton instances) |
 | `[ContentType('...')]` | force response content type |
 | `[CustomHeader('X-Name', 'value')]` | add a response header |
-| `[JSONP]` | JSONP wrapping |
+| `[JSONP]` | JSONP wrapping (callback name: letters, digits, `_`, `$`, `.`; else 400) |
 | `[NoLog]` | exclude from request/response loggers |
 | `[SkipMiddleware('name')]` (unit `MARS.Core.Routes`) | leave out a named application middleware (`MARSRoutesOf(App).Use('name', ...)`), when application middlewares wrap resources (`Middlewares.Resources=true`) |
 

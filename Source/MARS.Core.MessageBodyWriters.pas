@@ -127,7 +127,7 @@ implementation
 
 uses
   System.TypInfo, Xml.XMLIntf
-, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils
+, MARS.Core.JSON, MARS.Core.Utils, MARS.Rtti.Utils, MARS.Core.Exceptions
 //, CodeSiteLogging
 ;
 
@@ -273,6 +273,10 @@ begin
       LCallbackName := AActivation.URL.QueryTokenByName(LCallbackKey, True, False);
       if LCallbackName = '' then
         LCallbackName := 'callback';
+      // the name is written as script in the response: a function name (a.b.c), nothing else
+      for var LChar in LCallbackName do
+        if not (CharInSet(LChar, ['A'..'Z', 'a'..'z', '0'..'9', '_', '$', '.'])) then
+          raise EMARSHttpException.Create('Invalid JSONP callback name', 400);
 
       if LJSONPEnabled then
       begin

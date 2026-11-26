@@ -152,6 +152,9 @@ type
 
     [Test]
     procedure TestUnknownApplicationOrEngineIs404;
+
+    [Test]
+    procedure TestJSONPCallbackName;
   end;
 
 implementation
@@ -487,6 +490,19 @@ begin
   Assert.IsTrue(LHandled, 'Request should be handled');
   Assert.AreEqual(200, LMock.Response.StatusCode, 'Status code should be 200 OK');
   Assert.AreEqual('[]', LMock.Response.Content, 'No item should match');
+end;
+
+procedure TMARSDefaultEngineFixture.TestJSONPCallbackName;
+var
+  LContent: string;
+begin
+  Assert.AreEqual(200, StaticRequestContent('helloworld/jsonp', LContent));
+  Assert.AreEqual('callback({});', LContent);
+  Assert.AreEqual(200, StaticRequestContent('helloworld/jsonp?callback=my.app_1.$done', LContent));
+  Assert.AreEqual('my.app_1.$done({});', LContent);
+  // the name is script: nothing but a function name
+  Assert.AreEqual(400, StaticRequestStatus('GET', 'helloworld/jsonp?callback=alert(1)%3Bx'));
+  Assert.AreEqual(400, StaticRequestStatus('GET', 'helloworld/jsonp?callback=a%20b'));
 end;
 
 procedure TMARSDefaultEngineFixture.TestUnknownApplicationOrEngineIs404;

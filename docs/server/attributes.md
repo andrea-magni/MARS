@@ -139,7 +139,7 @@ See [Authorization](/features/authorization).
 | `[CustomHeader('Name','Value')]` | Add a fixed response header. |
 | `[Encoding('UTF8')]` | Set the text encoding used when serializing (see below). |
 | `[IsReference]` | The returned object is a reference MARS must **not** free. |
-| `[JSONP(True)]` | Wrap a JSON response as JSONP using a `callback` query parameter. |
+| `[JSONP(True)]` | Wrap a JSON response as JSONP using a `callback` query parameter (a function name: letters, digits, `_`, `$`, `.`; anything else is a `400`). |
 
 ## Lifecycle hooks (method-level)
 
