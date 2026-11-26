@@ -240,7 +240,7 @@ Most MCP clients support Bearer tokens for remote servers: in Open WebUI set the
 
 ## OAuth 2.1 (automatic onboarding for MCP clients)
 
-Static tokens require copy-paste; consumer MCP clients (Claude, ChatGPT connectors) expect the [MCP authorization flow](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization) instead: automatic discovery, a browser login window, and token refresh. MARS ships a **self-contained OAuth 2.1 authorization server** in `MARS.MCP.OAuth`: authorization code + PKCE (S256), refresh token rotation, dynamic client registration (RFC 7591) and the RFC 8414/9728 metadata documents. The issued access token **is a regular MARS JWT**, so OAuth and statically issued tokens coexist on the same endpoint.
+Static tokens require copy-paste; consumer MCP clients (Claude, ChatGPT connectors) expect the [MCP authorization flow](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization) instead: automatic discovery, a browser login window, and token refresh. MARS ships a **self-contained OAuth 2.1 authorization server** in `MARS.MCP.OAuth`: authorization code + PKCE (S256, required: a request without `code_challenge` is refused), refresh token rotation, dynamic client registration (RFC 7591) and the RFC 8414/9728 metadata documents. The issued access token **is a regular MARS JWT**, so OAuth and statically issued tokens coexist on the same endpoint.
 
 Three steps:
 

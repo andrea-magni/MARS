@@ -294,6 +294,7 @@ type
     [Test] procedure StaticJWT_StillWorks;
     [Test] procedure FullFlow_RegisterAuthorizeTokenCall;
     [Test] procedure WrongVerifier_InvalidGrant;
+    [Test] procedure WithoutPKCE_Refused;
     [Test] procedure WrongPassword_ReRendersLoginPage;
     [Test] procedure RefreshToken_RotatesAndWorks;
     [Test] procedure Persistence_ClientsSurviveRestart;
@@ -2022,6 +2023,29 @@ begin
   end;
 end;
 
+procedure TMCPOAuthFixture.WithoutPKCE_Refused;
+const
+  REDIRECT_URI = 'http://localhost:9999/callback';
+begin
+  var LClientId := RegisterTestClient(REDIRECT_URI);
+  var LQuery := 'client_id=' + LClientId + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI);
+
+  // the login page: no challenge, or a method other than S256
+  var LCall := SendRaw('GET', 'oauth/authorize?' + LQuery + '&response_type=code', 'text/html', '');
+  Assert.Contains(LCall.Response.Content, 'PKCE required');
+  Assert.IsFalse(LCall.Response.Content.Contains('name="password"'), 'no login form');
+  LCall := SendRaw('GET', 'oauth/authorize?' + LQuery + '&response_type=code&code_challenge=abc&code_challenge_method=plain'
+    , 'text/html', '');
+  Assert.Contains(LCall.Response.Content, 'PKCE required');
+
+  // the login itself, with the right credentials: no code without a challenge
+  LCall := SendRaw('POST', 'oauth/authorize', 'application/x-www-form-urlencoded'
+    , 'username=guest&password=secret&state=xyz&' + LQuery);
+  Assert.AreEqual(400, LCall.Response.StatusCode, LCall.Response.Content);
+  Assert.Contains(LCall.Response.Content, 'PKCE required');
+  Assert.IsEmpty(LCall.ResponseMock.GetHeaderValue('Location'), 'no redirect with a code');
+end;
+
 procedure TMCPOAuthFixture.WrongPassword_ReRendersLoginPage;
 const
   REDIRECT_URI = 'http://localhost:9999/callback';
@@ -2184,7 +2208,7 @@ begin
 
   var LCall := SendRaw('GET', 'oauth/authorize?client_id=' + LClientId
     + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
-    + '&response_type=code&scope=mcp', 'text/html', '');
+    + '&response_type=code&scope=mcp&code_challenge=abc&code_challenge_method=S256', 'text/html', '');
   Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
   Assert.Contains(LCall.Response.Content, 'Test MCP Client');
   Assert.Contains(LCall.Response.Content, '(scope: mcp)');
@@ -2217,7 +2241,7 @@ begin
 
     var LCall := SendRaw('GET', 'oauth/authorize?client_id=' + LClientId
       + '&redirect_uri=' + TNetEncoding.URL.Encode(REDIRECT_URI)
-      + '&response_type=code', 'text/html', '');
+      + '&response_type=code&code_challenge=abc&code_challenge_method=S256', 'text/html', '');
     Assert.AreEqual(200, LCall.Response.StatusCode, LCall.Response.Content);
     Assert.Contains(LCall.Response.Content, 'ACME corporate login');
     Assert.Contains(LCall.Response.Content, 'Test MCP Client');

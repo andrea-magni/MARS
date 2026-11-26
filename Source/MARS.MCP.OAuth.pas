@@ -659,6 +659,13 @@ begin
     .Replace('{mars_footer}', MARS_FOOTER_HTML, [rfReplaceAll]);
 end;
 
+// a challenge is there and its method is S256 (a missing method is read as S256, as before)
+function IsValidPKCERequest(const ACodeChallenge, ACodeChallengeMethod: string): Boolean;
+begin
+  Result := (ACodeChallenge <> '')
+    and ((ACodeChallengeMethod = '') or SameText(ACodeChallengeMethod, 'S256'));
+end;
+
 function TMCPOAuthServer.AuthorizePage(const AClientId, ARedirectURI,
   AResponseType, AState, ACodeChallenge, ACodeChallengeMethod, AScope: string): string;
 var
@@ -670,6 +677,8 @@ begin
     Exit('<html><body><h1>Invalid redirect_uri</h1></body></html>');
   if (AResponseType <> '') and (AResponseType <> 'code') then
     Exit('<html><body><h1>Unsupported response_type</h1></body></html>');
+  if not IsValidPKCERequest(ACodeChallenge, ACodeChallengeMethod) then
+    Exit('<html><body><h1>PKCE required: code_challenge with code_challenge_method=S256</h1></body></html>');
 
   Result := RenderAuthorizePage(LClient, ARedirectURI, AState, ACodeChallenge,
     ACodeChallengeMethod, AScope, '');
@@ -688,6 +697,15 @@ begin
     Response.StatusCode := 400;
     Response.ContentType := TMediaType.TEXT_HTML;
     Response.Content := '<html><body><h1>Invalid client or redirect_uri</h1></body></html>';
+    Exit;
+  end;
+
+  // PKCE is not optional (OAuth 2.1): without it, whoever intercepts the code can redeem it
+  if not IsValidPKCERequest(ACodeChallenge, ACodeChallengeMethod) then
+  begin
+    Response.StatusCode := 400;
+    Response.ContentType := TMediaType.TEXT_HTML;
+    Response.Content := '<html><body><h1>PKCE required: code_challenge with code_challenge_method=S256</h1></body></html>';
     Exit;
   end;
 
@@ -769,14 +787,11 @@ begin
     if (LCode.ClientId <> AClientId) or (LCode.RedirectURI <> ARedirectURI) then
       Exit(BuildErrorResponse(400, 'invalid_grant', 'client_id or redirect_uri mismatch'));
 
-    // PKCE (required by OAuth 2.1 for public clients)
-    if LCode.CodeChallenge <> '' then
-    begin
-      if (LCode.CodeChallengeMethod <> '') and (not SameText(LCode.CodeChallengeMethod, 'S256')) then
-        Exit(BuildErrorResponse(400, 'invalid_request', 'Only S256 code_challenge_method is supported'));
-      if (ACodeVerifier = '') or (ComputePKCES256(ACodeVerifier) <> LCode.CodeChallenge) then
-        Exit(BuildErrorResponse(400, 'invalid_grant', 'PKCE verification failed'));
-    end;
+    // PKCE (required by OAuth 2.1): a code issued without a challenge is never redeemed
+    if not IsValidPKCERequest(LCode.CodeChallenge, LCode.CodeChallengeMethod) then
+      Exit(BuildErrorResponse(400, 'invalid_request', 'Only S256 code_challenge_method is supported'));
+    if (ACodeVerifier = '') or (ComputePKCES256(ACodeVerifier) <> LCode.CodeChallenge) then
+      Exit(BuildErrorResponse(400, 'invalid_grant', 'PKCE verification failed'));
 
     Result := BuildAccessTokenResponse(LCode.UserName, LCode.Roles, AClientId, LCode.Scope);
   end

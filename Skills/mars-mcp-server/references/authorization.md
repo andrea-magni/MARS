@@ -31,7 +31,7 @@ Issue static tokens with a standard MARS token resource (see the `mars-developme
 
 ## 3. OAuth 2.1 (automatic onboarding: Claude, ChatGPT, Open WebUI)
 
-Consumer MCP clients expect the MCP authorization spec: discovery → dynamic client registration → browser login window → tokens refreshed automatically. `MARS.MCP.OAuth` provides a self-contained authorization server: authorization code + PKCE (S256 only), refresh token rotation, RFC 7591 dynamic registration, RFC 8414/9728 metadata. The issued access token is a regular MARS JWT built with the application's `JWT.Secret`.
+Consumer MCP clients expect the MCP authorization spec: discovery → dynamic client registration → browser login window → tokens refreshed automatically. `MARS.MCP.OAuth` provides a self-contained authorization server: authorization code + PKCE (S256 only, required: no `code_challenge`, no code), refresh token rotation, RFC 7591 dynamic registration, RFC 8414/9728 metadata. The issued access token is a regular MARS JWT built with the application's `JWT.Secret`.
 
 Three pieces:
 
