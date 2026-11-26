@@ -91,4 +91,4 @@ For everything about writing resources (attributes, parameter binding, auth, Fir
 
 1. Compile (IDE or MSBuild against the `.dproj`).
 2. Run the server and hit `http://localhost:8080/rest/default/helloworld` — expect `Hello World!` as `text/plain`.
-3. Login check: `POST http://localhost:8080/rest/default/token` with form fields `username` and `password` returns a JSON token. Note: the sample `Authenticate` in `TMARSTokenResource` accepts the current hour (0-23) as password (`SameText(APassword, IntToStr(HourOf(Now)))`) and grants role `standard` (plus `admin` for username `admin`) — it exists only to make demos runnable. Override it before any real use.
+3. Login check: `POST http://localhost:8080/rest/default/token` with form fields `username` and `password` returns a JSON token. Note: the sample `Authenticate` in `TMARSTokenResource` accepts the current hour (0-23) as password (`SameText(APassword, IntToStr(HourOf(Now)))`) and grants role `standard` (plus `admin` for username `admin`) — it exists only to make demos runnable and works in DEBUG builds only (a RELEASE build raises, asking to override it). Override it before any real use.

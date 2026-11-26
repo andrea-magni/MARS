@@ -59,7 +59,7 @@ implementation
 
 uses
   DateUtils
-, MARS.Utils.JWT
+, MARS.Utils.JWT, MARS.Core.Exceptions
 ;
 
 { TMARSTokenResource }
@@ -76,7 +76,14 @@ end;
 
 function TMARSTokenResource.Authenticate(const AUserName, APassword: string): Boolean;
 begin
+{$IFDEF DEBUG}
+  // a stub to try a new project: the password is the current hour (0-23)
   Result := SameText(APassword, IntToStr(HourOf(Now)));
+{$ELSE}
+  // never in a RELEASE build: a server deployed without its own Authenticate would be open
+  raise EMARSException.CreateFmt('%s does not check the credentials: override Authenticate'
+    + ' (the demo implementation of TMARSTokenResource works in DEBUG builds only)', [ClassName]);
+{$ENDIF}
 
   if Result then
   begin

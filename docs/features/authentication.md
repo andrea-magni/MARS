@@ -80,7 +80,7 @@ end;
 Optional hooks let you run logic around the process: `BeforeLogin`, `AfterLogin`, `BeforeLogout`, `AfterLogout`, and `GetCredentials` (override the latter to read credentials from somewhere other than the form, e.g. JSON or Basic auth).
 
 ::: warning Default demo behavior
-The base `TMARSTokenResource.Authenticate` is a **demo stub** that accepts any user whose password equals the current hour. Always override it with real validation in production.
+The base `TMARSTokenResource.Authenticate` is a **demo stub** that accepts any user whose password equals the current hour, in DEBUG builds only. In a RELEASE build it raises an exception that asks to override it (the login answers 500): a server cannot be deployed with the stub. Always override it with real validation.
 :::
 
 ## What `Token.Build` does

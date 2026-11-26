@@ -41,7 +41,7 @@ The base class provides (all `[Produces(APPLICATION_JSON)]`, returning the token
 
 Overridable hooks: `Authenticate`, `GetCredentials`, `BeforeLogin`/`AfterLogin`, `BeforeLogout`/`AfterLogout`.
 
-WARNING: the default `Authenticate` implementation is a demo stub — it accepts the current hour (0-23) as the password and grants `['standard']` roles (`['standard','admin']` for username `admin`). Always override it.
+WARNING: the default `Authenticate` implementation is a demo stub — in DEBUG builds it accepts the current hour (0-23) as the password and grants `['standard']` roles (`['standard','admin']` for username `admin`); in RELEASE builds it raises ("override Authenticate", the login answers 500). Always override it.
 
 ## Protecting resources
 
