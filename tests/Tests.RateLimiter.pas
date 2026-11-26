@@ -154,6 +154,13 @@ begin
     Assert.Contains(RawRequest(8080, 'GET /rest/nothing HTTP/1.1', [LClient]), 'HTTP/1.1 429');
     // a request without the header: the remote IP (it was an Access Violation)
     Assert.Contains(RawRequest(8080, 'GET /rest/default/test/helloworld HTTP/1.1'), 'HTTP/1.1 200');
+    // behind a proxy that appends (client, proxy): the last address counts, the first is forged
+    var LReal := 'real-' + IntToStr(Random(MaxInt));
+    for var LIndex := 1 to 2 do
+      Assert.Contains(RawRequest(8080, 'GET /rest/default/test/helloworld HTTP/1.1',
+        [Format('X-Test-Client: forged-%d, %s', [LIndex, LReal])]), 'HTTP/1.1 200');
+    Assert.Contains(RawRequest(8080, 'GET /rest/default/test/helloworld HTTP/1.1',
+      ['X-Test-Client: forged-3, ' + LReal]), 'HTTP/1.1 429');
     // another client
     Assert.Contains(RawRequest(8080, 'GET /rest/default/test/helloworld HTTP/1.1',
       ['X-Test-Client: another-' + IntToStr(Random(MaxInt))]), 'HTTP/1.1 200');

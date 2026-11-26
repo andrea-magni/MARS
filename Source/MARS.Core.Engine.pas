@@ -374,10 +374,12 @@ begin
   LHeader := Parameters.ByName('RateLimit.ClientIPHeader', '').ToString;
   if LHeader <> '' then
   begin
-    // X-Forwarded-For: client, proxy1, proxy2 (a request without the header: no addresses)
+    // X-Forwarded-For: a proxy appends the address it sees to what the client sent, so only
+    // the last one is written by the proxy; the others are whatever the client likes
+    // (a request without the header: no addresses)
     LAddresses := ARequest.GetHeaderParamValue(LHeader).Split([',']);
     if Length(LAddresses) > 0 then
-      Result := LAddresses[0].Trim;
+      Result := LAddresses[High(LAddresses)].Trim;
   end;
   if Result = '' then
     Result := ARequest.RemoteIP;

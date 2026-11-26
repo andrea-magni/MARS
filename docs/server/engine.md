@@ -205,7 +205,7 @@ set the engine parameters:
 ; 120 requests per 60 seconds for each client, bursts up to 120
 RateLimit.Requests=120
 RateLimit.Window=60
-; behind a reverse proxy only: the client is the first address of this header
+; behind a reverse proxy only: the client is the last address of this header
 ;RateLimit.ClientIPHeader=X-Forwarded-For
 ```
 
@@ -216,8 +216,14 @@ the limit gets `429 Too Many Requests` with `Retry-After` (seconds).
 
 The client is the remote IP of the connection. Behind a reverse proxy every request comes from the
 proxy: set `RateLimit.ClientIPHeader` to the header where the proxy writes the address of the
-client (`X-Forwarded-For`, `X-Real-IP`). Set it only behind a proxy you trust, that overwrites the
-header: otherwise any client can send its own value and get a new limit at every request.
+client (`X-Forwarded-For`, `X-Real-IP`). Set it only behind a proxy you trust: without one, any
+client can send its own value and get a new limit at every request.
+
+When the header holds several addresses (`X-Forwarded-For: client, proxy`), the last one is used:
+it is the one your proxy wrote, while the others arrive from the client and can be forged (nginx
+with `$proxy_add_x_forwarded_for` appends to what the client sent). Behind two or more proxies in
+a row the last address is the previous proxy, the same for every client: there, make the first
+proxy write the address in a header of its own that it overwrites (`X-Real-IP`) and use that one.
 
 The counters live in memory, per engine: each server of a farm counts its own requests. For other
 keys or other limits (per user, per route), use `TMARSRateLimiter` (`MARS.Utils.RateLimiter`) in a

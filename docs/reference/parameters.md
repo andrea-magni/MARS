@@ -147,7 +147,7 @@ var LVersion := FEngine.Parameters.ByNameAsText('OpenAPI.info.version', '0.1.0')
 | `BasePath` | string | `/rest` | Root path stripped from every URL before application matching. |
 | `RateLimit.Requests` | Integer | `0` | Requests allowed to each client per `RateLimit.Window` (0: no limit); over the limit, `429` with `Retry-After`. See [Engine ▸ Rate limiting](/server/engine#rate-limiting). |
 | `RateLimit.Window` | Integer | `60` | The window of `RateLimit.Requests`, in seconds. |
-| `RateLimit.ClientIPHeader` | string | (empty) | Behind a trusted reverse proxy: the header with the address of the client (i.e. `X-Forwarded-For`, its first address); empty: the remote IP of the connection. |
+| `RateLimit.ClientIPHeader` | string | (empty) | Behind a trusted reverse proxy: the header with the address of the client (i.e. `X-Forwarded-For`, its last address: the one the proxy wrote); empty: the remote IP of the connection. |
 | `COM.Initialize` | Boolean | `false` | Windows: COM initialized (multithreaded apartment) for each request, in the thread that serves it, and uninitialized after it: for COM based components such as ADO, OLE DB providers (i.e. UniDAC or SDAC with SQL Server through OLE DB), MSXML, without `CoInitialize` in every method. |
 
 `OpenAPI.Header.<name>` (string, `[required|optional;]description`): a request header of every operation in the OpenAPI document, for the documentation only, i.e. an API key checked by a middleware; also per application (`DefaultApp.OpenAPI.Header.<name>`, which wins). See [OpenAPI ▸ Request headers](/features/openapi#request-headers).
