@@ -132,9 +132,19 @@ begin
 end;
 
 function TMARSFDDatasetResource.Update([BodyParam] const ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>;
+var
+  LDataSets: TArray<TFDDataSet>;
+  LDataSet: TFDDataSet;
 begin
   // apply updates (Retrieve calls SetupStatements: calling it here too added every statement twice)
-  Result := FD.ApplyUpdates(Retrieve, ADeltas);
+  LDataSets := Retrieve;
+  try
+    Result := FD.ApplyUpdates(LDataSets, ADeltas);
+  finally
+    // nobody else frees them: here they are not the result of the method
+    for LDataSet in LDataSets do
+      LDataSet.Free;
+  end;
 end;
 
 
