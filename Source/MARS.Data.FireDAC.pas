@@ -416,7 +416,7 @@ var
   LDelta: TFDMemTable;
   LDataSet: TFDAdaptedDataSet;
   LFDAdapter: TFDTableAdapter;
-
+  LField: TField;
 begin
   Result := [];
   for LDelta in ADeltas do
@@ -426,6 +426,15 @@ begin
     Assert(LDataSet.Command <> nil);
 
     InjectMacroAndParamValues(LDataSet.Command);
+
+    // the delta comes from the client, structure included: only the columns of the dataset of
+    // the server, or a column the SELECT does not publish (ROLE) could be written too
+    if not LDataSet.Active then
+      LDataSet.FieldDefs.Update;
+    for LField in LDelta.Fields do
+      if (LDataSet.FindField(LField.FieldName) = nil) and (LDataSet.FieldDefs.IndexOf(LField.FieldName) < 0) then
+        raise EMARSFireDACException.Create(
+          Format('Column %s is not in dataset %s', [LField.FieldName, LDataSet.Name]), 400);
 
     if Assigned(AOnBeforeApplyUpdates) then
       AOnBeforeApplyUpdates(LDataSet, LDelta);

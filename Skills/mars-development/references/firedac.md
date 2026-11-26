@@ -72,7 +72,7 @@ type
 ```
 
 - `[GET] Retrieve: TArray<TFDDataSet>` — opens every statement registered in `SetupStatements` (the default implementation collects all class-level `[SQLStatement(Name, SQL)]` attributes; alternatively override `SetupStatements` and call `Statements.Add(AName, ASQL)` in code) and returns them all.
-- `[POST] Update([BodyParam] ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>` — applies FireDAC deltas posted by a client (typically `TMARSFDResource` on the client side, media type `application/json-firedac`) and reports per-dataset results (`TMARSFDApplyUpdatesRes` has result/errors info).
+- `[POST] Update([BodyParam] ADeltas: TArray<TFDMemTable>): TArray<TMARSFDApplyUpdatesRes>` — applies FireDAC deltas posted by a client (typically `TMARSFDResource` on the client side, media type `application/json-firedac`) and reports per-dataset results (`TMARSFDApplyUpdatesRes` has result/errors info). A delta may hold only the columns of the server dataset (any other column: 400, "Column X is not in dataset Y"), so leave out of the `select` what a client must not write; the rows are not checked: do it in `BeforeApplyUpdates`.
 - Hooks: `BeforeOpenDataSet` / `AfterOpenDataSet`.
 
 The base class is already annotated `Produces/Consumes` for both `APPLICATION_JSON` and `APPLICATION_JSON_FireDAC`.

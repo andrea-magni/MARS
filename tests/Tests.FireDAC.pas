@@ -44,14 +44,118 @@ type
     // the parameters of a connection definition as written in the ini, not as guessed values
     [Test]
     procedure ConnectionDefsKeepTheTextOfTheIni;
+    // a delta is the client's: it cannot write a column the dataset of the server does not have
+    [Test]
+    procedure ApplyUpdatesRefusesUnknownColumns;
   end;
 
 implementation
 
 uses
-  IOUtils, Data.DB,
+  IOUtils, Data.DB, FireDAC.Stan.Intf, MARS.Core.Exceptions,
   MARS.Core.Activation.Interfaces, MARS.Utils.Parameters, MARS.Utils.Parameters.IniFile
 ;
+
+procedure TMARSFireDACReaderWriterTest.ApplyUpdatesRefusesUnknownColumns;
+var
+  LConnection: TFDConnection;
+  LQuery: TFDQuery;
+  LFD: TMARSFireDAC;
+
+  // the delta as it travels: saved by the client, loaded by the server
+  function Delta(const AWithRole: Boolean): TFDMemTable;
+  var
+    LClient: TFDMemTable;
+    LStream: TMemoryStream;
+  begin
+    LClient := TFDMemTable.Create(nil);
+    LStream := TMemoryStream.Create;
+    try
+      LClient.FieldDefs.Add('ID', ftInteger);
+      LClient.FieldDefs.Add('NAME', ftString, 30);
+      if AWithRole then
+        LClient.FieldDefs.Add('ROLE', ftString, 30);
+      LClient.CreateDataSet;
+      LClient.CachedUpdates := True;
+      if AWithRole then
+        LClient.AppendRecord([1, 'Ann', 'user'])
+      else
+        LClient.AppendRecord([1, 'Ann']);
+      LClient.CommitUpdates;
+      LClient.Edit;
+      if AWithRole then
+        LClient.FieldByName('ROLE').AsString := 'admin'
+      else
+        LClient.FieldByName('NAME').AsString := 'Bob';
+      LClient.Post;
+      LClient.ResourceOptions.StoreItems := [siMeta, siDelta];
+      LClient.SaveToStream(LStream, sfBinary);
+      LStream.Position := 0;
+      Result := TFDMemTable.Create(nil);
+      Result.LoadFromStream(LStream, sfBinary);
+      Result.Name := 'people';
+    finally
+      LStream.Free;
+      LClient.Free;
+    end;
+  end;
+
+  function Apply(const AWithRole: Boolean): Integer;
+  var
+    LDelta: TFDMemTable;
+  begin
+    LDelta := Delta(AWithRole);
+    try
+      Result := LFD.ApplyUpdates([LQuery], [LDelta])[0].errorCount;
+    finally
+      LDelta.Free;
+    end;
+  end;
+
+  function Refused: Boolean;
+  begin
+    Result := False;
+    try
+      Apply(True);
+    except
+      on E: EMARSFireDACException do
+        Result := E.Status = 400;
+    end;
+  end;
+
+begin
+  LConnection := TFDConnection.Create(nil);
+  LQuery := TFDQuery.Create(nil);
+  LFD := TMARSFireDAC.Create('', nil);
+  try
+    LConnection.DriverName := 'SQLite';
+    LConnection.Params.Database := ':memory:';
+    LConnection.LoginPrompt := False;
+    LConnection.Open;
+    LConnection.ExecSQL('create table PEOPLE (ID integer primary key, NAME varchar(30), ROLE varchar(30))');
+    LConnection.ExecSQL('insert into PEOPLE values (1, ''Ann'', ''user'')');
+    LQuery.Name := 'people';
+    LQuery.Connection := LConnection;
+    LQuery.SQL.Text := 'select ID, NAME from PEOPLE'; // ROLE is not published
+
+    // the columns of the dataset: applied (the dataset is closed, as the ones of a data module)
+    Assert.AreEqual(0, Apply(False));
+    Assert.AreEqual('Bob', string(LConnection.ExecSQLScalar('select NAME from PEOPLE where ID = 1')));
+
+    // a column of the table that the dataset does not have: refused, nothing written
+    Assert.IsTrue(Refused);
+    Assert.AreEqual('user', string(LConnection.ExecSQLScalar('select ROLE from PEOPLE where ID = 1')));
+
+    // the same with the dataset open
+    LQuery.Open;
+    Assert.IsTrue(Refused);
+    Assert.AreEqual('user', string(LConnection.ExecSQLScalar('select ROLE from PEOPLE where ID = 1')));
+  finally
+    LFD.Free;
+    LQuery.Free;
+    LConnection.Free;
+  end;
+end;
 
 procedure TMARSFireDACReaderWriterTest.ConnectionDefsKeepTheTextOfTheIni;
 const

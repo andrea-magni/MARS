@@ -238,6 +238,8 @@ end;
 
 A Delphi client with [`TMARSFDResource`](/client/firedac) receives datasets in the native format, keeps track of the changes in its `TFDMemTable`s and sends back only the changed records, the delta. The server applies it with `ApplyUpdates`, which generates the `insert`/`update`/`delete` statements from the query of each dataset.
 
+A delta is written by the client, its structure too: `ApplyUpdates` accepts only the columns that the dataset of the server has, and answers `400` to a delta with any other column. So the `select` decides what a client can write: a column you leave out of it (a role, a balance) cannot be changed with a delta. The rows are another matter: a client can send a delta for any row of the table, so check them in `BeforeApplyUpdates` (or in the `onBeforeApplyUpdates` callback) when not every row is for every user.
+
 ### `TMARSFDDatasetResource`
 
 Derive a resource from it and declare its datasets: `GET` returns them, `POST` applies the deltas.
