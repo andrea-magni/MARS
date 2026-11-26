@@ -2286,10 +2286,10 @@ begin
     end
     else if LJSONValue is TJSONBool then
       LDesiredType := LContext.GetType(TypeInfo(Boolean))
-    else if LJSONValue is TJSONArray then
-      raise ENotImplemented.Create('MARS ReadValue: conversion from JSONArray to TValue')
-    else if LJSONValue is TJSONObject then
-      raise ENotImplemented.Create('MARS ReadValue: conversion from JSONObject to TValue')
+    // an array or an object: its JSON text. It was an exception, and a token with such a claim
+    // ("aud": ["a", "b"], as other issuers write it) made every request fail
+    else if (LJSONValue is TJSONArray) or (LJSONValue is TJSONObject) then
+      Exit(LJSONValue.ToJSON)
     else if LJSONValue is TJSONNull then
       Exit; // Result = Empty
 

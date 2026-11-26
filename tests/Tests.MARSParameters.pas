@@ -141,6 +141,7 @@ type
     [Test] procedure MissingIncludeRaises;
     [Test] procedure IniIsCaseInsensitive;
     [Test] procedure JSONStaysCaseSensitive;
+    [Test] procedure JSONArraysAndObjectsAsText;
     [Test] procedure ApplicationCopyKeepsCaseInsensitivity;
     [Test] procedure IniValuesKeepTheirText;
     [Test] procedure OpenAPIInfoFromNumbersIsText;
@@ -543,6 +544,23 @@ begin
     LParameters.Values['feature.X'] := 'code';
     Assert.AreEqual(2, LParameters.Count);
     Assert.AreEqual('code', LParameters.ByName('Feature.X').AsString);
+  finally
+    LParameters.Free;
+  end;
+end;
+
+procedure TMARSParametersIniFixture.JSONArraysAndObjectsAsText;
+begin
+  // the claims of a token of another issuer: arrays and objects are kept as their JSON text
+  var LParameters := TMARSParameters.Create('');
+  try
+    LParameters.LoadFromJSON('{"sub": "ann", "exp": 1790000000, "aud": ["a", "b"], "realm": {"roles": ["x"]}, "none": null}');
+
+    Assert.AreEqual('ann', LParameters.ByName('sub').AsString);
+    Assert.AreEqual(Int64(1790000000), LParameters.ByName('exp').AsInt64);
+    Assert.AreEqual('["a","b"]', LParameters.ByName('aud').AsString);
+    Assert.AreEqual('{"roles":["x"]}', LParameters.ByName('realm').AsString);
+    Assert.IsTrue(LParameters.ByName('none').IsEmpty);
   finally
     LParameters.Free;
   end;
