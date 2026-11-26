@@ -23,6 +23,7 @@ FEngine.Parameters.LoadFromIniFile; // MARS.Utils.Parameters.IniFile
 | `Port` | 8080 | HTTP port |
 | `PortSSL` | 0 | 0 = disabled |
 | `ThreadPoolSize` | 75 | Indy thread pool |
+| `MaxRequestSize` | 31457280 (30 MB) | largest request body in bytes, Indy and DCS servers only; 0 = no limit. A larger request is refused before its body is read (Indy: 413, or the connection closed for a chunked body; DCS: 400), before routing, authentication and the rate limit. Raise it for larger uploads. NOT applied by ISAPI/Apache/FastCGI hosts: there the web server's limit counts (IIS `maxAllowedContentLength`, Apache `LimitRequestBody`, nginx `client_max_body_size`) |
 | `BasePath` | `/rest` | engine URL prefix |
 | `CORS.Enabled` | false | plus `CORS.Origin`, `CORS.Methods`, `CORS.Headers` |
 | `Compression.Enabled` | false | used by the template's gzip `AfterInvoke` handler |

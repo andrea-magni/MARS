@@ -24,15 +24,17 @@ type
     [Test] procedure UserAssignedIOHandlerSurvivesRestart;
     [Test] procedure FactoryReturningNilRaises;
     [Test] procedure WithoutFactoryIndyOpenSSL;
+    // MaxRequestSize: a larger body is refused before it is read
+    [Test] procedure RequestTooLarge;
   end;
 
 implementation
 
 uses
   IdSSL, IdSSLOpenSSL, IdServerIOHandler, IdSocketHandle, IdThread, IdYarn, IdIOHandler
-, IdIOHandlerStack, IdHTTP
+, IdIOHandlerStack, IdHTTP, IdTCPClient
 , MARS.Core.Engine, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Registry
-, MARS.Core.Exceptions
+, MARS.Core.Exceptions, MARS.Core.RequestAndResponse.Interfaces
 , MARS.http.Server.Indy
 ;
 
@@ -60,9 +62,13 @@ type
 
   [Path('iohandler')]
   TIOHandlerResource = class
+  protected
+    [Context] FRequest: IMARSRequest;
   public
     [GET, Produces(TMediaType.TEXT_PLAIN)]
     function Get: string;
+    [POST, Produces(TMediaType.TEXT_PLAIN)]
+    function BodySize: string;
   end;
 
   TMARShttpServerIndyAccess = class(TMARShttpServerIndy);
@@ -126,7 +132,93 @@ begin
   Result := 'ok';
 end;
 
+function TIOHandlerResource.BodySize: string;
+begin
+  Result := Length(FRequest.RawContent).ToString;
+end;
+
 { TMARSIndyIOHandlerTest }
+
+procedure TMARSIndyIOHandlerTest.RequestTooLarge;
+var
+  LServer: TMARShttpServerIndy;
+  LClient: TIdHTTP;
+  LBody: TStream;
+  LStatus: Integer;
+
+  function Post(const ASize: Integer): string;
+  begin
+    LBody := TBytesStream.Create(BytesOf(StringOfChar('x', ASize)));
+    LClient := TIdHTTP.Create(nil);
+    try
+      LClient.ReadTimeout := 10000;
+      Result := LClient.Post(Format('http://localhost:%d/rest/default/iohandler', [HTTP_PORT]), LBody);
+    finally
+      LClient.Free;
+      LBody.Free;
+    end;
+  end;
+
+  // a body in chunks, no Content-Length (TIdHTTP does not send one): the status line of the
+  // response, '' when the server closes the connection without answering
+  function PostChunked(const ASize: Integer): string;
+  var
+    LTCP: TIdTCPClient;
+  begin
+    Result := '';
+    LTCP := TIdTCPClient.Create(nil);
+    try
+      LTCP.Host := 'localhost';
+      LTCP.Port := HTTP_PORT;
+      LTCP.ReadTimeout := 10000;
+      LTCP.Connect;
+      try
+        LTCP.IOHandler.Write('POST /rest/default/iohandler HTTP/1.1'#13#10'Host: localhost'#13#10
+          + 'Transfer-Encoding: chunked'#13#10'Connection: close'#13#10#13#10
+          + IntToHex(ASize, 1) + #13#10 + StringOfChar('x', ASize) + #13#10'0'#13#10#13#10);
+        Result := LTCP.IOHandler.ReadLn;
+      except
+        Result := ''; // closed
+      end;
+    finally
+      LTCP.Free;
+    end;
+  end;
+
+begin
+  FEngine.PortSSL := 0;
+  FEngine.Parameters['MaxRequestSize'] := 1000;
+  LServer := TMARShttpServerIndy.Create(FEngine);
+  try
+    LServer.Active := True;
+    Assert.AreEqual('1000', Post(1000), 'a body of the maximum size');
+    Assert.Contains(PostChunked(1000), ' 200 ', 'chunked, the maximum size');
+
+    LStatus := 0;
+    try
+      Post(1001);
+    except
+      on E: EIdHTTPProtocolException do
+        LStatus := E.ErrorCode;
+    end;
+    Assert.AreEqual(413, LStatus, 'Content-Length over the limit');
+
+    // no Content-Length: the server stops reading at the limit and closes the connection
+    Assert.IsFalse(PostChunked(1001).Contains(' 200 '), 'chunked, over the limit');
+
+    Assert.AreEqual('ok', Get(HTTP_PORT), 'the server still answers');
+    LServer.Active := False;
+
+    // 0: no limit
+    FEngine.Parameters['MaxRequestSize'] := 0;
+    LServer.Active := True;
+    Assert.AreEqual('5000', Post(5000));
+    Assert.Contains(PostChunked(5000), ' 200 ');
+    LServer.Active := False;
+  finally
+    LServer.Free;
+  end;
+end;
 
 procedure TMARSIndyIOHandlerTest.Setup;
 begin

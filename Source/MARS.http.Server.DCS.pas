@@ -251,6 +251,9 @@ begin
   Result.Addr := IPv4v6_ALL; // IPv4v6
   Result.Port := APort;
   Result.Compressible := True;
+  // MaxRequestSize parameter (0: no limit): DCS refuses a larger body (400, from its parser)
+  Result.MaxPostDataSize := StrToInt64Def(FEngine.Parameters.ByName(MARS_MAX_REQUEST_SIZE_PARAM
+    , MARS_MAX_REQUEST_SIZE_DEFAULT).ToString, MARS_MAX_REQUEST_SIZE_DEFAULT);
 
   LEngine := FEngine;
   LHandler :=

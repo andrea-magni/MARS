@@ -27,12 +27,14 @@ type
     [Test] procedure NoPortFailsToStart;
     // the request-target in absolute-form (#30)
     [Test] procedure AbsoluteFormRequest;
+    // MaxRequestSize: a larger body is refused
+    [Test] procedure RequestTooLarge;
   end;
 
 implementation
 
 uses
-  IdHTTP, IdSSLOpenSSL
+  IdHTTP, IdSSLOpenSSL, System.Rtti
 , MARS.Core.Engine, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Registry, MARS.Core.URL
 , MARS.Core.RequestAndResponse.Interfaces
 , Net.CrossSslDemoCert
@@ -128,6 +130,39 @@ begin
     Assert.Contains(LBody, 'IsSecure=False');
   finally
     LServer.Free;
+  end;
+end;
+
+procedure TMARSDCSServerTest.RequestTooLarge;
+var
+  LServer: TMARShttpServerDCS;
+  LClient: TIdHTTP;
+  LBody: TStream;
+  LStatus: Integer;
+begin
+  FEngine.Parameters['MaxRequestSize'] := 1000;
+  LServer := NewServer;
+  try
+    LServer.Active := True;
+    LBody := TBytesStream.Create(BytesOf(StringOfChar('x', 5000)));
+    LClient := TIdHTTP.Create(nil);
+    try
+      LStatus := 0;
+      try
+        LClient.Post(Format('http://localhost:%d/rest/default/dcscheck', [HTTP_PORT]), LBody);
+      except
+        on E: EIdHTTPProtocolException do
+          LStatus := E.ErrorCode;
+      end;
+      // the parser of DCS refuses it as a bad request (400 "Post data too large")
+      Assert.AreEqual(400, LStatus);
+    finally
+      LClient.Free;
+      LBody.Free;
+    end;
+  finally
+    LServer.Free;
+    FEngine.Parameters.Values['MaxRequestSize'] := TValue.Empty;
   end;
 end;
 

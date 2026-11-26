@@ -3,6 +3,9 @@
 ;Port=8080
 ;PortSSL=0
 ThreadPoolSize=100
+;The largest request body the server accepts, in bytes (default 31457280, 30 MB; 0: no limit):
+;raise it for larger uploads. A larger request is refused before its body is read.
+;MaxRequestSize=31457280
 
 ;DefaultApp.JWT.Issuer=MARS-Curiosity
 ;DefaultApp.JWT.Secret={{PROJECT_NAME}}_change_this_secret

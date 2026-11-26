@@ -147,6 +147,8 @@ type
     FIOHandlerByMARS: Boolean;       // created by MARS (default, SSLIOHandler or a factory)
     FIOHandlerFromFactory: Boolean;  // configured by the factory, not by SetupSSLIOHandler
     FKeepIOHandler: Boolean;         // assigned by the user: not freed when the server stops
+    FMaxRequestSize: Int64;          // MaxRequestSize parameter, read when the server starts
+    function IsRequestTooLarge(const AHeaders: TIdHeaderList): Boolean;
     function GetUpTime: TTimeSpan;
     function GetSSLIOHandler: TIdServerIOHandlerSSLOpenSSL;
   protected
@@ -165,6 +167,16 @@ type
     procedure DoCommandError(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo;
       AResponseInfo: TIdHTTPResponseInfo; AException: Exception); override;
     procedure DoException(AContext: TIdContext; AException: Exception); override;
+
+    // MaxRequestSize: a request declaring a larger body gets 413 before the body is read;
+    // a body without Content-Length (chunked) is read into a stream that refuses to grow
+    // past the limit (the connection is closed)
+    function DoHeadersAvailable(ASender: TIdContext; const AUri: string;
+      AHeaders: TIdHeaderList): Boolean; override;
+    procedure DoHeadersBlocked(ASender: TIdContext; AHeaders: TIdHeaderList;
+      var VResponseNo: Integer; var VResponseText, VContentText: string); override;
+    procedure CreatePostStream(ASender: TIdContext; AHeaders: TIdHeaderList;
+      var VPostStream: TStream); override;
 
     procedure ParseAuthenticationHandler(AContext: TIdContext;
       const AAuthType, AAuthData: String; var VUsername, VPassword: String;
@@ -277,6 +289,62 @@ procedure TMARShttpServerIndy.DoCommandOther(AContext: TIdContext;
 begin
   inherited;
   DoCommandGet(AContext, ARequestInfo, AResponseInfo);
+end;
+
+type
+  // the body of a request: refuses to grow past the limit. Indy sets the size of the stream
+  // before reading each block into it, so SetSize is the only way in.
+  TMARSLimitedMemoryStream = class(TMemoryStream)
+  private
+    FMaxSize: Int64;
+  public
+    constructor Create(const AMaxSize: Int64);
+    procedure SetSize(const NewSize: Int64); override;
+  end;
+
+constructor TMARSLimitedMemoryStream.Create(const AMaxSize: Int64);
+begin
+  inherited Create;
+  FMaxSize := AMaxSize;
+end;
+
+procedure TMARSLimitedMemoryStream.SetSize(const NewSize: Int64);
+begin
+  if NewSize > FMaxSize then
+    raise EMARSException.CreateFmt('Request larger than %d bytes (%s)', [FMaxSize, MARS_MAX_REQUEST_SIZE_PARAM]);
+  inherited;
+end;
+
+function TMARShttpServerIndy.IsRequestTooLarge(const AHeaders: TIdHeaderList): Boolean;
+begin
+  Result := (FMaxRequestSize > 0)
+    and (StrToInt64Def(Trim(AHeaders.Values['Content-Length']), 0) > FMaxRequestSize);
+end;
+
+function TMARShttpServerIndy.DoHeadersAvailable(ASender: TIdContext; const AUri: string;
+  AHeaders: TIdHeaderList): Boolean;
+begin
+  Result := inherited DoHeadersAvailable(ASender, AUri, AHeaders) and not IsRequestTooLarge(AHeaders);
+end;
+
+procedure TMARShttpServerIndy.DoHeadersBlocked(ASender: TIdContext; AHeaders: TIdHeaderList;
+  var VResponseNo: Integer; var VResponseText, VContentText: string);
+begin
+  inherited;
+  if IsRequestTooLarge(AHeaders) then
+  begin
+    VResponseNo := 413;
+    VResponseText := 'Payload Too Large';
+    VContentText := Format('Request larger than %d bytes', [FMaxRequestSize]);
+  end;
+end;
+
+procedure TMARShttpServerIndy.CreatePostStream(ASender: TIdContext; AHeaders: TIdHeaderList;
+  var VPostStream: TStream);
+begin
+  inherited;
+  if (VPostStream = nil) and (FMaxRequestSize > 0) then
+    VPostStream := TMARSLimitedMemoryStream.Create(FMaxRequestSize);
 end;
 
 procedure TMARShttpServerIndy.DoException(AContext: TIdContext;
@@ -453,6 +521,8 @@ begin
   // connection holds a thread of the pool (ThreadPoolSize is also the maximum of connections)
   KeepAlive := FEngine.Parameters.ByName('Indy.KeepAlive', KeepAlive).AsBoolean;
   SetupThreadPooling(FEngine.ThreadPoolSize);
+  FMaxRequestSize := StrToInt64Def(FEngine.Parameters.ByName(MARS_MAX_REQUEST_SIZE_PARAM
+    , MARS_MAX_REQUEST_SIZE_DEFAULT).ToString, MARS_MAX_REQUEST_SIZE_DEFAULT);
   FStartedAt := Now;
   FStoppedAt := 0;
 

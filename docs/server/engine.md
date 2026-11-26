@@ -238,6 +238,47 @@ R.Post('login', ...).Use('login-limit',
   end);
 ```
 
+## Request size limit
+
+The standalone servers (Indy and DCS) refuse a request whose body is larger than `MaxRequestSize`,
+an engine parameter in bytes. The default is 31457280 (30 MB); `0` means no limit.
+
+```ini
+[DefaultEngine]
+; uploads up to 200 MB
+MaxRequestSize=209715200
+```
+
+The check comes before everything else: the body is not read into memory, and routing,
+authentication and the [rate limit](#rate-limiting) do not run. Without a limit, a few huge
+requests from anyone who can reach the port are enough to exhaust the memory of the server.
+
+| Server | Body larger than `MaxRequestSize` |
+| --- | --- |
+| Indy, with `Content-Length` | `413 Payload Too Large`, the connection is closed |
+| Indy, chunked (no `Content-Length`) | the server stops reading at the limit and closes the connection, without a response |
+| DCS | `400 Bad Request` ("Post data too large"), from the parser of the library |
+
+The parameter is read when the server starts. Keep it as low as the application allows: the
+value is per request, and the server may be reading as many bodies as it has threads
+(`ThreadPoolSize`).
+
+::: warning ISAPI, Apache module, FastCGI
+`MaxRequestSize` does **not** apply to these hosts: the web server reads the request, so its
+own limit is the one that counts.
+
+| Host | Setting of the web server | Its default |
+| --- | --- | --- |
+| ISAPI (IIS) | `maxAllowedContentLength` of request filtering (`<requestLimits>` in `web.config`), in bytes | 30000000 (about 28.6 MB) |
+| Apache module | `LimitRequestBody`, in bytes | 1 GiB since Apache 2.4.53, no limit before |
+| FastCGI behind nginx | `client_max_body_size` | `1m` |
+| FastCGI behind Apache | `LimitRequestBody`; with mod_fcgid also `FcgidMaxRequestLen` | see above |
+:::
+
+Behind a [reverse proxy](/guide/deployment#behind-a-reverse-proxy) both limits apply, the one
+of the proxy first: nginx refuses bodies over `client_max_body_size` (default `1m`) with its
+own 413 before MARS sees them. For large uploads raise both.
+
 ## Cross-cutting concerns at the engine level
 
 Two facilities are commonly configured during ignition:

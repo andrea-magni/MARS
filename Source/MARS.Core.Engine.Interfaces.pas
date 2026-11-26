@@ -17,6 +17,13 @@ uses
 , MARS.Core.Registry.Utils
 ;
 
+const
+  // MaxRequestSize parameter of the engine: the largest request body the standalone servers
+  // (Indy, DCS) accept, in bytes; 0: no limit. A larger request is refused (413) before its
+  // body is read into memory, and before routing, authentication and the rate limit.
+  MARS_MAX_REQUEST_SIZE_PARAM = 'MaxRequestSize';
+  MARS_MAX_REQUEST_SIZE_DEFAULT = 30 * 1024 * 1024;
+
 type
   IMARSEngine = interface; // fwd
 

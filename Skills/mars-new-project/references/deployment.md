@@ -27,6 +27,8 @@ The ini file must sit next to the exe (service working directory caveats apply �
 
 `MARSTemplateServerISAPI.dpr`: a `library` using `Web.Win.ISAPIApp`/`Web.Win.ISAPIThreadPool`, exporting `GetExtensionVersion`, `HttpExtensionProc`, `TerminateExtension`, with `Application.WebModuleClass := WebModuleClass`. Deploy the DLL to IIS (application with ISAPI-dll handler mapping enabled, 32/64 bit matching the build). HTTPS, ports and process lifetime are IIS's job here — `Port`/`PortSSL`/`Indy.SSL.*` parameters don't apply.
 
+**Request size on IIS**: the `MaxRequestSize` engine parameter does not apply to ISAPI (IIS reads the body). The limit is `maxAllowedContentLength` of request filtering, default 30000000 bytes (about 28.6 MB); for larger uploads set it in the `web.config` of the application: `<system.webServer><security><requestFiltering><requestLimits maxAllowedContentLength="209715200" /></requestFiltering></security></system.webServer>`.
+
 ## Apache module
 
 `MARSTemplateServerApacheModule.dpr`: a `library` using `Web.ApacheApp`/`Web.HTTPD24Impl` (Apache 2.4), exporting the module data variable (`exports GModuleData name 'marstemplate_module';` — rename per project). httpd.conf:
@@ -38,9 +40,13 @@ LoadModule marstemplate_module modules/mod_marstemplate.dll   # .so on Linux
 </Location>
 ```
 
+**Request size on Apache**: `MaxRequestSize` does not apply to the module (Apache reads the body). Use `LimitRequestBody <bytes>` in the `<Location>` (default 1 GiB since Apache 2.4.53, no limit before).
+
 ## FastCGI
 
 `MARSTemplateServerFCGI.dpr`: console program on `Web.FastCGIApp` (`TFastCGIApplication`), same `Server.WebModule` dispatch, port from `TServerEngine.Default.Port`. Put it behind nginx/Apache with FastCGI proxying.
+
+**Request size with FastCGI**: `MaxRequestSize` does not apply; the front web server decides: nginx `client_max_body_size` (default `1m`, so uploads over 1 MB fail with 413 until it is raised), Apache `LimitRequestBody` (and `FcgidMaxRequestLen` with mod_fcgid).
 
 ## Linux daemon
 
@@ -91,11 +97,17 @@ end;
 
 (`TMARSWebRequest`/`TMARSWebResponse` come from `MARS.http.Server.Indy`.)
 
+## Request size (self-hosted flavors)
+
+The Indy and DCS servers refuse a request whose body is larger than the `MaxRequestSize` engine parameter (bytes; default 31457280 = 30 MB; `0` = no limit), before reading the body and before routing, authentication and the rate limit. Indy answers 413 (a chunked body over the limit just closes the connection); DCS answers 400. If the application receives larger uploads, set it in the ini (`MaxRequestSize=209715200` under `[DefaultEngine]`; the templates have the commented line). Behind a reverse proxy the proxy's limit comes first (nginx `client_max_body_size`, default `1m`): raise both. It does not apply to ISAPI, Apache module and FastCGI hosts (see their sections).
+
 ## HTTPS / ports (self-hosted flavors)
 
 Engine parameters in the ini (`[DefaultEngine]`): `Port` (default 8080; set 0 to disable plain HTTP), `PortSSL` (default 0 = disabled), and Indy SSL settings `Indy.SSL.RootCertFile`/`CertFile`/`KeyFile` (defaults `localhost.pem`/`.crt`/`.key` in the bin folder), `Indy.SSL.Version` (e.g. `sslvTLSv1_2`), `Indy.SSL.Mode` (`sslmServer`). For finer control (multiple bindings, per-port SSL, IOHandler events) see the commented `SetupSSLIOHandler` block in `MARSTemplateServerConsoleApplication.dpr`. Indy's default IOHandler (`TIdServerIOHandlerSSLOpenSSL`) needs OpenSSL 1.0.2; to use another one (any `TIdServerIOHandlerSSLBase` descendant, e.g. from a library bringing OpenSSL 3 to Indy) assign `TMARShttpServerIndy.DefaultSSLIOHandlerFactory` (all servers, i.e. in Server.Ignition) or the server's `SSLIOHandlerFactory`: a function receiving the server that creates and configures the IOHandler (from `AServer.Engine.Parameters`); the server owns and frees it. MARS does not depend on that library.
 
 DCS hosts (`TMARShttpServerDCS`, `Demos/MARSTemplateDCS`) serve HTTPS directly too: `PortSSL` plus `DCS.SSL.CertFile`/`DCS.SSL.KeyFile` (PEM; the cert file may hold the chain, e.g. Let's Encrypt `fullchain.pem`; relative to the exe folder; defaults `localhost.crt`/`.key`), or the `SSLPort`/`CertificateFile`/`PrivateKeyFile`/`Certificate`/`PrivateKey` properties. Needs OpenSSL at run time: `libssl-3-x64.dll` + `libcrypto-3-x64.dll` (Win64) / `libssl-3.dll` + `libcrypto-3.dll` (Win32) next to the exe, `libssl` on Linux. `Port=0` disables plain HTTP. Startup failures raise `EMARSDCSServerException`. `Request.IsSecure` tells whether the request came in over TLS (behind a proxy use `X-Forwarded-Proto`).
+
+Before a RELEASE build goes to production, override `Authenticate` in the token resource: the demo implementation of `TMARSTokenResource` (password = current hour) works in DEBUG builds only, and in RELEASE the login raises (500, "override Authenticate").
 
 A common production setup is the console/service/daemon host on plain HTTP behind a reverse proxy (nginx, IIS ARR, Caddy) that terminates TLS; remember to enable `CORS.*` parameters if browsers call the API from another origin.
 

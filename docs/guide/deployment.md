@@ -184,6 +184,8 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
+        # the largest request body (default 1m): MaxRequestSize of MARS applies after it
+        client_max_body_size 30m;
         # server-sent events: no buffering, long reads
         proxy_buffering off;
         proxy_read_timeout 1h;
@@ -221,11 +223,40 @@ These flavors build a library or a FastCGI program that the web server loads; po
   On Linux64 the module leaves the Apache functions (`apr_*`, `ap_*`) to Apache, which provides them when it loads the module: the Linux64 configuration of the projects has `-z undefs` in the linker options (Project Options > Building > Delphi Compiler > Linking > *Options passed to the LD linker*), or Delphi 13 stops with `undefined symbol: apr_table_get`. Add it to Apache module projects created before. ([#282](https://github.com/andrea-magni/MARS/issues/282))
 - **FastCGI**: run `...ServerFCGI` and point nginx (`fastcgi_pass`) or Apache to it.
 
+The size of the requests is up to the web server too: the `MaxRequestSize` parameter does **not** apply to these flavors, because the web server reads the body before MARS is called. Set its own limit, especially if clients upload files:
+
+| Flavor | Setting of the web server | Its default |
+| --- | --- | --- |
+| ISAPI (IIS) | `maxAllowedContentLength`, in bytes | 30000000 (about 28.6 MB) |
+| Apache module | `LimitRequestBody`, in bytes | 1 GiB since Apache 2.4.53, no limit before |
+| FastCGI behind nginx | `client_max_body_size` | `1m` |
+| FastCGI behind Apache | `LimitRequestBody`; with mod_fcgid also `FcgidMaxRequestLen` | see above |
+
+```xml
+<!-- IIS, web.config of the application: 200 MB -->
+<system.webServer>
+  <security>
+    <requestFiltering>
+      <requestLimits maxAllowedContentLength="209715200" />
+    </requestFiltering>
+  </security>
+</system.webServer>
+```
+
+```apache
+# Apache: 200 MB for the location of the module
+<Location /rest>
+   SetHandler mod_myproject-handler
+   LimitRequestBody 209715200
+</Location>
+```
+
 ## Production checklist
 
 - **Release build**, with a strong `JWT.Secret` in `Server.ini` (MARSCmd generates one per project; a RELEASE build refuses to issue tokens without it). See [Authentication](/features/authentication).
 - **HTTPS**: a reverse proxy, or DCS directly (see above).
 - **Indy**: `Indy.KeepAlive=true` (the `MARSTemplate` default since 1.8.1) and `ThreadPoolSize` at least as large as the expected concurrent connections: each open connection holds a thread and the pool size is also the connection limit.
+- **Request size**: `MaxRequestSize` (default 30 MB) is the largest body the Indy and DCS servers accept; raise it if clients upload larger files, lower it if they never do. Behind a proxy, and with ISAPI, Apache or FastCGI, set the limit of the web server too. See [Engine ▸ Request size limit](/server/engine#request-size-limit).
 - **CORS** parameters if browsers call the API from other origins.
 - **Rate limit**: `RateLimit.Requests` and `RateLimit.Window` against floods and brute force; behind a proxy, `RateLimit.ClientIPHeader` too. See [Engine ▸ Rate limiting](/server/engine#rate-limiting).
 - **Logging**: the [JSON logger](/features/logging#file-logging-for-grafana-json) for Grafana/Loki, or the daemon output collected by journald or Docker.
