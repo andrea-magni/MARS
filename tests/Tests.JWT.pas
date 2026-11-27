@@ -177,7 +177,7 @@ begin
       Assert.IsTrue(1 = LToken.Claims.Values['LANGUAGE_ID'].AsInteger, 'Custom claims 1');
 
       Assert.AreEqual('Andrea1', LToken.UserName);
-      Assert.AreEqual(1, Length(LToken.Roles));
+      Assert.AreEqual(1, Integer(Length(LToken.Roles)));
       Assert.AreEqual('standard', LToken.Roles[0]);
 
     finally
@@ -484,7 +484,7 @@ begin
       LToken.Load(LToken.Token, DUMMY_SECRET);
 
       Assert.AreEqual('andrea.magni', LToken.UserName);
-      Assert.AreEqual(3, Length(LToken.Roles));
+      Assert.AreEqual(3, Integer(Length(LToken.Roles)));
 
     finally
       LToken.Free;
@@ -507,7 +507,7 @@ begin
     LToken.Load(LAnyToken, DUMMY_SECRET);
 
     Assert.AreEqual('andrea.magni', LToken.UserName);
-    Assert.AreEqual(3, Length(LToken.Roles));
+    Assert.AreEqual(3, Integer(Length(LToken.Roles)));
     Assert.AreEqual('standard', LToken.Roles[0]);
     Assert.AreEqual('extra', LToken.Roles[1]);
     Assert.AreEqual('admin', LToken.Roles[2]);
@@ -1034,7 +1034,7 @@ begin
   finally
     LIssuer.Free;
   end;
-  Assert.AreEqual(3, Length(LParts));
+  Assert.AreEqual(3, Integer(Length(LParts)));
 
   // the header is signed too: changing the kid breaks the signature, whatever key it names
   LTampered := TJWTTestUtils.Base64UrlEncode('{"alg":"HS256","typ":"JWT","kid":"k2"}')

@@ -227,7 +227,7 @@ Keep the private key out of the repository and readable only by the account of t
 
 What each [backend](#jwt-backends) needs:
 
-- **mORMot** (Windows): nothing else. RSA and ECDSA are part of the mORMot 2 units shipped with MARS, no DLL.
+- **mORMot** (Windows and Linux): nothing else. RSA and ECDSA are part of the mORMot 2 units shipped with MARS, no DLL.
 - **JOSE**: its default crypto providers rely on OpenSSL 1.0, which MARS never loads. Add the `MARS.JOSEJWT.TaurusTLS` unit to the `uses` of the ignition, after `MARS.JOSEJWT.Token`: it registers the providers based on [TaurusTLS](https://github.com/JPeterMugaas/TaurusTLS) and **OpenSSL 3**. TaurusTLS is not shipped with MARS: put its `Source` folder in the library path (or in the search path of the project), and deploy `libcrypto-3.dll` and `libssl-3.dll` (`libcrypto-3-x64.dll` and `libssl-3-x64.dll` for Win64), both of them, where the executable finds them. Without that unit an asymmetric `JWT.Algorithm` raises an error that says so. When the OpenSSL 3 libraries are not found, the error names the files it needs. HS256 needs none of this.
 
 The two backends read the same keys and verify each other's tokens.
@@ -282,16 +282,18 @@ On the [client](/client/authentication), `TMARSCustomClient.AuthEndorsement` cho
 
 Two interchangeable signing backends are provided; pick one by adding the corresponding unit to your ignition `uses`:
 
-- **mORMot** — `MARS.mORMotJWT.Token` (common on Windows).
-- **JOSE** — `MARS.JOSEJWT.Token` (used on Linux and where JOSE is preferred).
+- **mORMot** — `MARS.mORMotJWT.Token`, on Windows and Linux: the default of the templates there.
+- **JOSE** — `MARS.JOSEJWT.Token`, on every platform: the default on the others (macOS, Android, iOS), and where JOSE is preferred.
 
 ```pascal
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) or Defined(LINUX)}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
-{$ENDIF}
+{$IFEND}
 ```
+
+On Linux the mORMot backend relies on the Delphi POSIX layer of mORMot 2, which its authors do not support officially yet: MARS runs its JWT tests on it (Ubuntu 24.04, Delphi 13). A project created before MARS 2.1.1 uses JOSE on Linux: it keeps working as it is, and moves to mORMot by changing those lines of its `Server.Ignition.pas`. The tokens are the same, so the two can be mixed among servers.
 
 Both produce standard tokens, HS256 by default or with an [asymmetric algorithm](#asymmetric-algorithms), and accept only tokens of the configured algorithm (the `alg` in the token header never selects it); they differ in the underlying library.
 

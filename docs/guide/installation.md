@@ -32,7 +32,7 @@ Uninstalling MARS, which the setup also does before installing a new version, de
 
 Smart Setup clones the repository, compiles the runtime and design-time packages (Debug and Release), installs the design-time packages in the IDE and adds the MARS source folders to the library path. Later on, `tms update andreamagni.mars` gets the latest version and rebuilds it, and `tms uninstall andreamagni.mars` removes it.
 
-The JOSE [JWT backend](/features/authentication#jwt-backends) (`MARS.JOSE` package) uses the [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) library, which Smart Setup installs as a product of its own: `MARS.JOSE` is built only when it is installed. The mORMot backend, the default on Windows, needs nothing else. To use JOSE:
+The JOSE [JWT backend](/features/authentication#jwt-backends) (`MARS.JOSE` package) uses the [delphi-jose-jwt](https://github.com/paolo-rossi/delphi-jose-jwt) library, which Smart Setup installs as a product of its own: `MARS.JOSE` is built only when it is installed. The mORMot backend, the default on Windows and Linux, needs nothing else. To use JOSE:
 
 ```bash
 tms install paolo-rossi.delphi-jose-jwt

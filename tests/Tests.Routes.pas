@@ -337,11 +337,11 @@ uses
   System.Threading, System.SyncObjs, System.DateUtils, System.JSON, System.IOUtils, MARS.Core.Registry
 , MARS.Core.Engine, MARS.Core.Exceptions, MARS.Core.Activation, MARS.Core.Token
 , MARS.Core.MessageBodyWriters, MARS.Core.MessageBodyReaders
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) or Defined(LINUX)}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
-{$ENDIF}
+{$IFEND}
 , Mock.IMARSRequest, Mock.IMARSResponse
 , MARS.OpenAPI.v3.Utils, MARS.Core.Engine.Endpoints
 , MARS.Metadata.Engine.Resource, MARS.Metadata.ReadersAndWriters, MARS.Metadata.InjectionService

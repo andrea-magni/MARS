@@ -409,11 +409,11 @@ uses
 , MARS.Core.MessageBodyReaders, MARS.Core.MessageBodyWriters
 , MARS.Core.Token, MARS.Utils.JWT
 , MARS.MCP.OAuth
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) or Defined(LINUX)}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
-{$ENDIF}
+{$IFEND}
 , Mock.IMARSRequest
 , Tests.MCP.Resources
 ;

@@ -48,11 +48,11 @@ implementation
 uses
   Web.HTTPApp, IdHTTP, IdCustomHTTPServer, IdHTTPWebBrokerBridge
 , MARS.Core.Token.Resource, MARS.Core.Token
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) or Defined(LINUX)}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
-{$ENDIF}
+{$IFEND}
 , MARS.Core.Engine, MARS.Core.Attributes, MARS.Core.MediaType, MARS.Core.Registry
 , MARS.Core.RequestAndResponse.Interfaces
 , MARS.http.Server.Indy, MARS.http.Server.DCS

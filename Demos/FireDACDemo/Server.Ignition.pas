@@ -43,11 +43,11 @@ uses
 , MARS.Core.MessageBodyWriter, MARS.Core.MessageBodyWriters, MARS.Data.MessageBodyWriters
 , MARS.Core.MessageBodyReaders
 , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) or Defined(LINUX)}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
-{$ENDIF}
+{$IFEND}
 {$IFDEF MARS_YAML}
 , MARS.YAML.ReadersAndWriters
 {$ENDIF}

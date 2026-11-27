@@ -45,11 +45,11 @@ uses
 , FireDAC.Comp.Client, FireDAC.Stan.Option
 , FireDAC.Phys.SQLite, FireDAC.DApt
 , FireDAC.UI.Intf, FireDAC.ConsoleUI.Wait
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) or Defined(LINUX)}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
-{$ENDIF}
+{$IFEND}
 , MARS.MCP.OAuth
 , Server.Resources
 , Server.Resources.Token

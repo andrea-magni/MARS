@@ -2,6 +2,11 @@
 
 What changed in each MARS-Curiosity release, newest first. Each entry is a one-liner with a link to the documentation, the demo or the issue; the GitHub release has the full notes, upgrade notes included (the next release has them here too).
 
+## Unreleased {#unreleased}
+
+**New**
+- JWT: the mORMot backend (`MARS.mORMotJWT.Token`) works on Linux too, and it is the default there in the templates and in the demos, as on Windows: `{$IF Defined(MSWINDOWS) or Defined(LINUX)}` in `Server.Ignition.pas`. A Linux server gets the asymmetric algorithms (RS256, PS256, ES256) with nothing else to install: no TaurusTLS, no OpenSSL. `ThirdParty\mORMot2` gains the two files Delphi needs for Linux64 (`mormot.core.os.posix.inc`, `mormot.core.os.delphi.pas`). The Delphi POSIX layer of mORMot 2 is not supported officially by its authors yet; the JWT tests of MARS pass on it (Ubuntu 24.04, Delphi 13). JOSE stays the default on macOS, Android and iOS, and the projects created before keep the backend they have. [Authentication ▸ JWT backends](/features/authentication#jwt-backends) ([#354](https://github.com/andrea-magni/MARS/issues/354))
+
 ## 2.1.0 {#v2-1-0}
 
 <Badge type="tip" text="latest" /> **26 November 2026** · [GitHub release](https://github.com/andrea-magni/MARS/releases/tag/v.2.1.0) · [changes since 2.0.3](https://github.com/andrea-magni/MARS/compare/v.2.0.3...v.2.1.0)

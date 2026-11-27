@@ -45,11 +45,11 @@ uses
 , MARS.Data.FireDAC, FireDAC.Comp.Client, FireDAC.Stan.Option
 , FireDAC.Phys.SQLite
 {$ENDIF}
-{$IFDEF MSWINDOWS}
+{$IF Defined(MSWINDOWS) or Defined(LINUX)}
 , MARS.mORMotJWT.Token
 {$ELSE}
 , MARS.JOSEJWT.Token
-{$ENDIF}
+{$IFEND}
 {$IFDEF MARS_YAML}
 , MARS.YAML.ReadersAndWriters
 {$ENDIF}
